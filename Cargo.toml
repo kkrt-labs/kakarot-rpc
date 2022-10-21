@@ -9,4 +9,4 @@ edition = "2021"
 anyhow = "1.0.65"
 futures = "0.3.25"
 tarpc = { version = "0.30.0", features = ["tokio1"] }
-tokio = { version = "1.21.2", features = ["macros"] }
+tokio = { version = "1.21.2", features = ["rt", "rt-multi-thread", "macros"] }
