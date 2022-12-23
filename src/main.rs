@@ -1,17 +1,33 @@
-#![allow(unused)]
+pub mod methods;
+pub mod utils;
 
-use futures::{
-    future::{self, Ready},
-    prelude::*,
-};
+use clap::Parser;
+use jsonrpc_http_server::{jsonrpc_core::IoHandler, ServerBuilder};
 
-use tarpc::{
-    client, context,
-    server::{self, incoming::Incoming, Channel},
-};
+extern crate crypto;
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    println!("👋 Hello, Kakarot!");
-    Ok(())
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short, long)]
+    port: u16,
+}
+
+fn main() {
+    let args = Args::parse();
+    let mut io = IoHandler::default();
+    methods::init(&mut io);
+
+    let server = ServerBuilder::new(io)
+        .threads(3)
+        .start_http(
+            &("127.0.0.1:".to_string() + &args.port.to_string())
+                .parse()
+                .unwrap(),
+        )
+        .unwrap();
+
+    println!("Kakarot RPC Adapter running on port {} !", args.port);
+
+    server.wait();
 }
