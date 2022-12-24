@@ -12,13 +12,15 @@ Based on this specification: [ethereum.org](https://ethereum.org/en/developers/d
 - ✅ -> Implemented
 - 🟡 -> Not compatible with [specification](https://ethereum.org/en/developers/docs/apis/json-rpc/)
 
-All methods should be documented in `/docs/methods/{method}.md`
+### Contribute
+The template for the method file can be found [here](docs/contributing/method_template.md) copy it to the new method file and edit it corresponding to the method you're implementing.
+All methods should be documented in `docs/methods/{method}.md`
 
 | Name                                                                                            | Description                                                                                                                                                                                        | State |
 | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| [web3_clientVersion](docs/methods/web3_clientVersion.md)                                        | Returns the version of the RPC client                                                                                                                                                              | ❌     |
-| [web3_sha3](docs/methods/web3_sha3.md)                                                          | Returns the keccak256 hash of given value                                                                                                                                                          | ❌     |
-| [net_version](docs/methods/net_version.md)                                                      | Returns the network id [(see issue)](https://github.com/sayajin-labs/kakarot-rpc-adapter/issues/2)                                                                                                 | ❌     |
+| [web3_clientVersion](docs/methods/web3_clientVersion.md)                                        | Returns the version of the RPC client                                                                                                                                                              | ⚠️     |
+| [web3_sha3](docs/methods/web3_sha3.md)                                                          | Returns the keccak256 hash of given value                                                                                                                                                          | ⚠️     |
+| [net_version](docs/methods/net_version.md)                                                      | Returns the network id [(see issue)](https://github.com/sayajin-labs/kakarot-rpc-adapter/issues/2)                                                                                                 | ⚠️     |
 | [net_listening](docs/methods/net_listening.md)                                                  | Returns true if the client is actively listening for network connections                                                                                                                           | ❌     |
 | [net_peerCount](docs/methods/net_peerCount.md)                                                  | Returns number of peers currently connected to the client.                                                                                                                                         | ❌     |
 | [eth_protocolVersion](docs/methods/eth_protocolVersion)                                         | Returns the current Ethereum protocol version.                                                                                                                                                     | ❌     |

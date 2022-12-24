@@ -10,7 +10,7 @@ The method behaviour following the specification (copy & paste authorized)
 ### Parameters
 * Name - type - brief description (see [types](types.md))
 ### Returns
-* Name - type - brief description (see [types](types.md))
+* type - brief description (see [types](types.md))
 ## Kakarot Logic
 How is the method working with the kakarot and starknet solution
 ### Kakarot methods
