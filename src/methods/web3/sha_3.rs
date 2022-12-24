@@ -13,7 +13,7 @@ pub async fn execute(_params: Params) -> Result<Value, Error> {
     match _params.parse::<Vec<String>>() {
         Ok(data) => {
             if data.len() < 1 {
-                return Err(default_error_invalid_params());
+                return Err(default_error_invalid_params(None));
             }
             let mut hasher = Sha3::keccak256(); // image of an hasher https://yt3.ggpht.com/icJZDespcjNLPi-_1qA-_kYIfWq66_mJM-721fhpA1f-yZ6st5-Wooqn0MS9TQXj8jTbYNVpoQ=s176-c-k-c0x00ffffff-no-rj
             match parse_hex_bytes(&data[0]) {
@@ -24,6 +24,6 @@ pub async fn execute(_params: Params) -> Result<Value, Error> {
                 Err(e) => Err(e),
             }
         }
-        Err(_) => Err(default_error_invalid_params()),
+        Err(_) => Err(default_error_invalid_params(None)),
     }
 }
