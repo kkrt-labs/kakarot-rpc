@@ -1,4 +1,5 @@
 use jsonrpc_http_server::jsonrpc_core::IoHandler;
+pub mod eth;
 pub mod net;
 pub mod web3;
 
@@ -19,5 +20,6 @@ impl Method {
 pub fn init(io: &mut IoHandler) {
     web3::init(io);
     net::init(io);
+    eth::init(io);
     ()
 }

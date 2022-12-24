@@ -3,14 +3,17 @@ Kakarot ZK EVM Ethereum RPC adapter
 
 ## JSON-RPC API Methods
 
-Based on this specification: [ethereum.org](https://ethereum.org/en/developers/docs/apis/json-rpc/)
+Based on two specifications:
+* [ethereum.org](https://ethereum.org/en/developers/docs/apis/json-rpc/) (to support older clients)
+* [ethereum/execution-apis](https://github.com/ethereum/execution-apis)
+
 
 ### Method Implementation State
 - ❌ -> TODO
 - ⚠️ -> Logic created, to be verified
 - ⏳ -> Logic verified, being implemented
 - ✅ -> Implemented
-- 🟡 -> Not compatible with [specification](https://ethereum.org/en/developers/docs/apis/json-rpc/)
+- 🟡 -> Not compatible with specification
 
 ### Contribute
 The template for the method file can be found [here](docs/contributing/method_template.md) copy it to the new method file and edit it corresponding to the method you're implementing.
@@ -69,3 +72,12 @@ All methods should be documented in `docs/methods/{method}.md`
 | [eth_getWork](docs/methods/eth_getWork)                                                         | Returns the hash of the current block, the seedHash, and the boundary condition to be met ("target").                                                                                              | ❌     |
 | [eth_submitWork](docs/methods/eth_submitWork)                                                   | Used for submitting a proof-of-work solution.                                                                                                                                                      | ❌     |
 | [eth_getUncleByBlockHashAndIndex](docs/methods/eth_getUncleByBlockHashAndIndex)                 | Returns information about a uncle of a block by hash and uncle index position.                                                                                                                     | ❌     |
+| [eth_createAccessList](docs/methods/eth_createAccessList)                                       | Generates an access list for a transaction.                                                                                                                                                        | ❌     |
+| [eth_maxPriorityFeePerGas](docs/methods/eth_maxPriorityFeePerGas)                               | Returns the current maxPriorityFeePerGas per gas in wei.                                                                                                                                           | ❌     |
+| [eth_feeHistory](docs/methods/eth_feeHistory)                                                   | Returns transaction base fee per gas and effective priority fee per gas for the requested/supported block range.                                                                                   | ❌     |
+| [eth_feeHistory](docs/methods/eth_feeHistory)                                                   | Returns transaction base fee per gas and effective priority fee per gas for the requested/supported block range.                                                                                   | ❌     |
+| [eth_getProof](docs/methods/eth_getProof)                                                       | Returns the merkle proof for a given account and optionally some storage keys.                                                                                                                     | ❌     |
+| [eth_chainId](docs/methods/eth_chainId)                                                         | Returns the chain ID of the current network.                                                                                                                                                       | ❌     |
+
+
+// Do we implement debug_ methods ?
