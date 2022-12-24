@@ -8,6 +8,7 @@ pub fn parse_hex(hex: &String) -> Result<Vec<u8>, Error> {
         return Err(default_error_invalid_params());
     }
     match Vec::from_hex(&hex[2..]) {
+        // add padding 0 if odd length
         Ok(v) => Ok(v),
         Err(_) => Err(default_error_invalid_params()),
     }
