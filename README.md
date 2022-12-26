@@ -1,5 +1,10 @@
-# kakarot-rpc-adapter
-Kakarot ZK EVM Ethereum RPC adapter
+<div align="center">
+    <img src="https://raw.githubusercontent.com/sayajin-labs/kakarot/main/docs/img/kakarot_github_banner.png" height="200"/>
+    <h1>Kakarot RPC Adapter</h1>
+    The Kakarot ZK EVM Ethereum RPC adapter's goal is to allow users to interact with Kakarot with a standard EVM wallet.
+</div>
+
+---
 
 ## JSON-RPC API Methods
 
@@ -7,13 +12,12 @@ Based on two specifications:
 * [ethereum.org](https://ethereum.org/en/developers/docs/apis/json-rpc/) (to support older clients)
 * [ethereum/execution-apis](https://github.com/ethereum/execution-apis)
 
-
 ### Method Implementation State
 - ❌ -> TODO
 - ⚠️ -> Logic created, to be verified
 - ⏳ -> Logic verified, being implemented
 - ✅ -> Implemented
-- 🟡 -> Not compatible with specification
+- 🟡 -> Not respecting the specification
 
 ### Contribute
 The template for the method file can be found [here](docs/contributing/method_template.md) copy it to the new method file and edit it corresponding to the method you're implementing.
@@ -24,8 +28,8 @@ All methods should be documented in `docs/methods/{method}.md`
 | [web3_clientVersion](docs/methods/web3_clientVersion.md)                                        | Returns the version of the RPC client                                                                                                                                                              | ⚠️     |
 | [web3_sha3](docs/methods/web3_sha3.md)                                                          | Returns the keccak256 hash of given value                                                                                                                                                          | ⚠️     |
 | [net_version](docs/methods/net_version.md)                                                      | Returns the network id [(see issue)](https://github.com/sayajin-labs/kakarot-rpc-adapter/issues/2)                                                                                                 | ⚠️     |
-| [net_listening](docs/methods/net_listening.md)                                                  | Returns true if the client is actively listening for network connections                                                                                                                           | ❌     |
-| [net_peerCount](docs/methods/net_peerCount.md)                                                  | Returns number of peers currently connected to the client.                                                                                                                                         | ❌     |
+| [net_listening](docs/methods/net_listening.md)                                                  | Returns true if the client is actively listening for network connections                                                                                                                           | ⚠️, 🟡  |
+| [net_peerCount](docs/methods/net_peerCount.md)                                                  | Returns number of peers currently connected to the client.                                                                                                                                         | ⚠️, 🟡  |
 | [eth_protocolVersion](docs/methods/eth_protocolVersion)                                         | Returns the current Ethereum protocol version.                                                                                                                                                     | ❌     |
 | [eth_syncing](docs/methods/eth_syncing)                                                         | Returns an object with data about the sync status or false.version.                                                                                                                                | ❌     |
 | [eth_coinbase](docs/methods/eth_coinbase)                                                       | Returns the client coinbase address.                                                                                                                                                               | ❌     |
