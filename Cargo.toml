@@ -1,12 +1,12 @@
 [package]
 name = "kakarot-rpc-adapter"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "4.0.32", features = ["derive"] }
-rust-crypto = "0.2.36"
-jsonrpc-http-server = "18.0"
-hex = "0.4.3"
+anyhow = "1.0.65"
+futures = "0.3.25"
+tarpc = { version = "0.30.0", features = ["tokio1"] }
+tokio = { version = "1.21.2", features = ["rt", "rt-multi-thread", "macros"] }
