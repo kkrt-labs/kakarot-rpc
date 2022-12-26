@@ -1,9 +1,8 @@
 # {METHOD_NAME}
 ## Metadata
 * name: {method_name}
-* prefix: {"eth" | "web3" | "net"}
 * state: {❌ | ⚠️ |⏳ | ✅ |🟡}
-* [specification](link to specification ethereum.org or github.com/ethereum/execution-apis)
+* [specification](https://github.com/ethereum/execution-apis)
 * [issue](https://github.com/sayajin-labs/kakarot-rpc-adapter/issues/{issue_id})
 ## Specification Description
 The method behaviour following the specification (copy & paste authorized)
