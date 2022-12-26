@@ -1,6 +1,3 @@
-pub mod methods;
-pub mod utils;
-
 use clap::Parser;
 use jsonrpc_http_server::{jsonrpc_core::IoHandler, ServerBuilder};
 
@@ -15,8 +12,7 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let mut io = IoHandler::default();
-    methods::init(&mut io);
+    let io = IoHandler::default();
 
     let server = ServerBuilder::new(io)
         .threads(3)
