@@ -1,7 +1,7 @@
 <div align="center">
     <img src="https://raw.githubusercontent.com/sayajin-labs/kakarot/main/docs/img/kakarot_github_banner.png" height="200"/>
     <h1>Kakarot RPC Adapter</h1>
-    The Kakarot ZK EVM Ethereum RPC adapter's goal is to allow users to interact with Kakarot with a standard EVM wallet.
+    The Kakarot ZK EVM Ethereum RPC adapter's goal is to allow users to interact with Kakarot with a standard EVM client (wallet, SDK).
 </div>
 
 ---
