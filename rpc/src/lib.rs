@@ -8,7 +8,11 @@ use rocket::{Build, Rocket};
 use rocket_okapi::{openapi, openapi_get_routes};
 
 pub async fn build_rocket_server() -> Rocket<Build> {
-    rocket::build().mount("/", openapi_get_routes![index,])
+    // Build Kakarot RPC
+    let kakarot_rpc = eth_rpc::KakarotEthRpc::new().await;
+    rocket::build()
+        .manage(kakarot_rpc)
+        .mount("/", openapi_get_routes![index,])
 }
 
 #[openapi]
