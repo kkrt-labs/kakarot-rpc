@@ -1,0 +1,11 @@
+[package]
+name = "kakarot_rpc_core"
+version = "0.1.0"
+edition.workspace = true
+description.workspace = true
+homepage.workspace = true
+
+[dependencies]
+eyre = "0.6.8"
+log = "0.4.17"
+env_logger = "0.10.0"

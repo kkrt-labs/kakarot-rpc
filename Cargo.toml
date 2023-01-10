@@ -1,12 +1,26 @@
 [package]
-name = "kakarot-rpc-adapter"
+name = "kakarot-rpc"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = ["rpc", "starknet"]
 
-[dependencies]
-anyhow = "1.0.65"
-futures = "0.3.25"
-tarpc = { version = "0.30.0", features = ["tokio1"] }
-tokio = { version = "1.21.2", features = ["rt", "rt-multi-thread", "macros"] }
+[workspace.package]
+edition = "2021"
+authors = ["Abdelhamid Bakhta <@abdelhamidbakhta>"]
+description = "A fast, secure and portable light client for StarkNet"
+homepage = "https://github.com/sayajin-labs/kakarot-rpc"
+repository = "https://github.com/sayajin-labs/kakarot-rpc"
+readme = "./README.md"
+license = "MIT"
+
+[dev-dependencies.cargo-husky]
+version = "1.5.0"
+default-features = false
+features = [
+    "precommit-hook",
+    "run-for-all",
+    "run-cargo-clippy",
+    "run-cargo-fmt",
+]
