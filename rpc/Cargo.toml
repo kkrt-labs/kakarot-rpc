@@ -10,13 +10,23 @@ kakarot_rpc_core = { path = "../core" }
 eyre = "0.6.8"
 log = "0.4.17"
 env_logger = "0.10.0"
-rocket = { version = "0.5.0-rc.2", features = ["json"] }
-rocket_okapi = { git = "https://github.com/GREsau/okapi", rev = "b5b0a89b273f04342d1cb615fef0642beef33cef" }
-serde = { version = "1.0.147", features = ["derive"] }
-serde_json = "1.0"
+
+# rpc
+jsonrpsee = { version = "0.16" }
+
+# async
+async-trait = "0.1"
 tokio = { version = "1.21.2", features = ["macros"] }
 
+# misc
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+hex = "0.4"
+
 reth-rpc-api = { git = "https://github.com/paradigmxyz/reth" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth"}
+reth-primitives = { git = "https://github.com/paradigmxyz/reth"}
 
 [[bin]]
 name = "kakarot-rpc"
