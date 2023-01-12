@@ -13,14 +13,14 @@ use serde_json::Value;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug, Clone)]
-pub struct KakarotEthRpc {}
+pub struct KakarotEthRpc;
 
 /// Implementation for KakarotEthRpc.
 #[async_trait::async_trait]
 impl EthApiServer for KakarotEthRpc {
     /// Create a new KakarotEthRpc instance.
     fn protocol_version(&self) -> Result<U64> {
-        todo!()
+        Ok(1u64.into())
     }
 
     fn syncing(&self) -> Result<SyncStatus> {
