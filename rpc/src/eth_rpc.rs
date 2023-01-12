@@ -1,7 +1,5 @@
-use jsonrpsee::core::RpcResult as Result;
-use serde_json::Value;
-use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::core::{async_trait, RpcResult};
+use jsonrpsee::proc_macros::rpc;
 use kakarot_rpc_core::lightclient::StarknetClient;
 // use reth_primitives::{
 //     rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId},
@@ -13,28 +11,28 @@ use kakarot_rpc_core::lightclient::StarknetClient;
 //     TransactionReceipt, TransactionRequest, Work,
 // };
 
-
 /// The RPC module for the Ethereum protocol required by Kakarot.
-/// 
-/// 
+///
+///
 pub struct KakarotEthRpc {
-   pub starknet_client : StarknetClient,
+    pub starknet_client: StarknetClient,
 }
 
 #[rpc(server, client)]
-trait KakarotRpc {
-
+trait EthApi {
     #[method(name = "eth_blockNumber")]
-    async fn get_blockNumber(&self) -> RpcResult<u64>;
+    async fn get_block_number(&self) -> RpcResult<u64>;
 }
 
 #[async_trait]
-impl KakarotRpcServer for KakarotEthRpc {
-    async fn get_blockNumber(&self) -> RpcResult<u64>{
-        let block_number = self.starknet_client.block_number().await.map_err(|e| eyre::eyre!(e)).unwrap();
+impl EthApiServer for KakarotEthRpc {
+    async fn get_block_number(&self) -> RpcResult<u64> {
+        let block_number = self
+            .starknet_client
+            .block_number()
+            .await
+            .map_err(|e| eyre::eyre!(e))
+            .unwrap();
         Ok(block_number)
     }
-
 }
-
-
