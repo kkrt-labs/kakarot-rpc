@@ -48,7 +48,14 @@
 
 ## About
 
-> Kakarot RPC is a the Ethereum RPC adapter to interact with Kakarot ZK-EVM.
+> Kakarot RPC is the JSON-RPC server adapter to interact with Kakarot ZK-EVM in a fully EVM-compatible way.
+
+This adapter layer is based on:
+- [The Ethereum JSON-RPC spec](https://github.com/ethereum/execution-apis/tree/main/src/eth)
+- [The Starknet JSON-RPC spec](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json)
+- [And their differences](https://github.com/starkware-libs/starknet-specs/blob/master/starknet_vs_ethereum_node_apis.md)
+
+The Kakarot RPC layer's goal is to receive and output EVM-compatible JSON-RPC payloads & calls while interacting with the Starknet Blockchain. This enables Kakarot zkEVM to interact with the usual Ethereum tooling: Metamask, Hardhat, Foundry, etc.  
 
 ## Architecture
 
