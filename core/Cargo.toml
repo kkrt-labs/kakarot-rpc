@@ -9,3 +9,5 @@ homepage.workspace = true
 eyre = "0.6.8"
 log = "0.4.17"
 env_logger = "0.10.0"
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
+url = "2.3.1"
