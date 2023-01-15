@@ -1,5 +1,4 @@
 use eyre::{eyre, Result};
-use futures::future::pending;
 use kakarot_rpc::run_server;
 use kakarot_rpc_core::lightclient::StarknetClient;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -18,12 +17,12 @@ async fn main() -> Result<()> {
 
     let starknet_lightclient = StarknetClient::new(&starknet_rpc)?;
 
-    let server_addr = run_server(starknet_lightclient).await?;
+    let (server_addr, server_handle) = run_server(starknet_lightclient).await?;
     let url = format!("http://{server_addr}");
 
-    println!("{url}");
+    println!("RPC Server running on {url}...");
 
-    pending::<()>().await;
+    server_handle.stopped().await;
 
     Ok(())
 }
