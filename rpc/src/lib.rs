@@ -14,7 +14,7 @@ pub async fn run_server(starknet_client: StarknetClient) -> Result<SocketAddr> {
 
     let addr = server.local_addr();
 
-    let rpc_calls = KakarotEthRpc { starknet_client };
+    let rpc_calls = KakarotEthRpc::new(starknet_client);
     let handle = server.start(rpc_calls.into_rpc())?;
     tokio::spawn(handle.stopped());
     Ok(addr.unwrap())

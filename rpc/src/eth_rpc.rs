@@ -461,3 +461,9 @@ impl EthApiServer for KakarotEthRpc {
         todo!()
     }
 }
+
+impl KakarotEthRpc {
+    pub fn new(starknet_client: StarknetClient) -> Self {
+        Self { starknet_client }
+    }
+}
