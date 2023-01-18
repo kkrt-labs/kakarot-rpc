@@ -1,3 +1,4 @@
+use dotenv::dotenv;
 use eyre::{eyre, Result};
 use kakarot_rpc::run_server;
 use kakarot_rpc_core::lightclient::StarknetClient;
@@ -5,6 +6,8 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv().ok();
+
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()?
         .add_directive("jsonrpsee[method_call{name = \"eth_chainId\"}]=trace".parse()?);
     tracing_subscriber::FmtSubscriber::builder()
