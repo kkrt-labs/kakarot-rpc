@@ -21,7 +21,7 @@ pub struct KakarotEthRpc {
 #[rpc(server, client)]
 trait EthApi {
     #[method(name = "eth_blockNumber")]
-    async fn block_number(&self) -> Result<u64>;
+    async fn block_number(&self) -> Result<U64>;
 
     /// Returns the protocol version encoded as a string.
     #[method(name = "eth_protocolVersion")]
@@ -246,18 +246,21 @@ trait EthApi {
 
 #[async_trait]
 impl EthApiServer for KakarotEthRpc {
-    async fn block_number(&self) -> Result<u64> {
-        let block_number = self
-            .starknet_client
-            .block_number()
-            .await
-            .map_err(|e| eyre::eyre!(e))
-            .unwrap();
-        Ok(block_number)
+    async fn block_number(&self) -> Result<U64> {
+        let block_number = self.starknet_client.block_number().await?;
+        Ok(block_number.into())
     }
 
+    /// Get the protocol version of the Kakarot Starknet RPC.
+    ///
+    /// # Returns
+    /// * `protocol_version(u64)` - The protocol version.
+    ///
+    /// `Ok(protocol_version)` if the operation was successful.
+    /// `Err(LightClientError)` if the operation failed.
     fn protocol_version(&self) -> Result<U64> {
-        todo!()
+        let protocol_version = 1_u64;
+        Ok(protocol_version.into())
     }
 
     fn syncing(&self) -> Result<SyncStatus> {
