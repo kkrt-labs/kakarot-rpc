@@ -276,7 +276,8 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn chain_id(&self) -> Result<Option<U64>> {
-        todo!()
+        // CHAIN_ID = KKRT (0x4b4b5254) in ASCII
+        Ok(Some(1263227476_u64.into()))
     }
 
     async fn block_by_hash(&self, _hash: H256, _full: bool) -> Result<Option<RichBlock>> {
