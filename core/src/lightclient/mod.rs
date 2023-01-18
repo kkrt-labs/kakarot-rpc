@@ -1,13 +1,15 @@
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient, JsonRpcClientError};
 use thiserror::Error;
 use url::Url;
 
 #[derive(Error, Debug)]
 pub enum LightClientError {
     #[error(transparent)]
-    RequestError(#[from] anyhow::Error),
+    RequestError(#[from] JsonRpcClientError<reqwest::Error>),
+    #[error(transparent)]
+    OtherError(#[from] anyhow::Error),
 }
 
 pub struct StarknetClient {
@@ -17,7 +19,10 @@ pub struct StarknetClient {
 impl From<LightClientError> for jsonrpsee::core::Error {
     fn from(err: LightClientError) -> Self {
         match err {
-            LightClientError::RequestError(e) => jsonrpsee::core::Error::Call(CallError::Failed(e)),
+            LightClientError::RequestError(e) => jsonrpsee::core::Error::Call(CallError::Failed(
+                anyhow::anyhow!("Failed to get block number from Starknet RPC: {}", e),
+            )),
+            LightClientError::OtherError(e) => jsonrpsee::core::Error::Call(CallError::Failed(e)),
         }
     }
 }
@@ -44,12 +49,7 @@ impl StarknetClient {
     /// `Ok(ContractClass)` if the operation was successful.
     /// `Err(LightClientError)` if the operation failed.
     pub async fn block_number(&self) -> Result<u64, LightClientError> {
-        let block_number = self.client.block_number().await.map_err(|e| {
-            LightClientError::RequestError(anyhow::anyhow!(
-                "Failed to get block number from Starknet RPC: {}",
-                e
-            ))
-        })?;
+        let block_number = self.client.block_number().await?;
         Ok(block_number)
     }
 }
