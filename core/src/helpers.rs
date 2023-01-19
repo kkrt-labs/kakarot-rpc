@@ -67,7 +67,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     let parent_hash =
                         H256::from_slice(&pending_block_with_tx_hashes.parent_hash.to_bytes_be());
                     let sequencer = H160::from_slice(
-                        &pending_block_with_tx_hashes.sequencer_address.to_bytes_be()[0..20],
+                        &pending_block_with_tx_hashes.sequencer_address.to_bytes_be()[12..32],
                     );
                     let timestamp =
                         U256::from_be_bytes(pending_block_with_tx_hashes.timestamp.to_be_bytes());
@@ -120,7 +120,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     let parent_hash =
                         H256::from_slice(&block_with_tx_hashes.parent_hash.to_bytes_be());
                     let sequencer = H160::from_slice(
-                        &block_with_tx_hashes.sequencer_address.to_bytes_be()[0..20],
+                        &block_with_tx_hashes.sequencer_address.to_bytes_be()[12..32],
                     );
                     let state_root = H256::from_slice(&block_with_tx_hashes.new_root.to_bytes_be());
                     let number = U256::from(block_with_tx_hashes.block_number);
