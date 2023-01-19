@@ -24,7 +24,7 @@ impl From<LightClientError> for jsonrpsee::core::Error {
     fn from(err: LightClientError) -> Self {
         match err {
             LightClientError::RequestError(e) => jsonrpsee::core::Error::Call(CallError::Failed(
-                anyhow::anyhow!("Failed to get block number from Starknet RPC: {}", e),
+                anyhow::anyhow!("Kakarot Core: Light Client Request Error: {}", e),
             )),
             LightClientError::OtherError(e) => jsonrpsee::core::Error::Call(CallError::Failed(e)),
         }
