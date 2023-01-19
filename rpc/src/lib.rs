@@ -1,7 +1,7 @@
 // //! Kakarot RPC module for Ethereum.
 // //! It is an adapter layer to interact with Kakarot ZK-EVM.
 use std::net::{AddrParseError, SocketAddr};
-mod eth_rpc;
+pub mod eth_rpc;
 use eth_rpc::{EthApiServer, KakarotEthRpc};
 use eyre::Result;
 use jsonrpsee::server::{ServerBuilder, ServerHandle};
@@ -17,7 +17,7 @@ pub enum RpcError {
 }
 
 pub async fn run_server(
-    starknet_client: StarknetClient,
+    starknet_client: Box<dyn StarknetClient>,
 ) -> Result<(SocketAddr, ServerHandle), RpcError> {
     let server = ServerBuilder::default()
         .build("127.0.0.1:03030".parse::<SocketAddr>()?)

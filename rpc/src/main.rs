@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use eyre::{eyre, Result};
 use kakarot_rpc::run_server;
-use kakarot_rpc_core::lightclient::StarknetClient;
+use kakarot_rpc_core::lightclient::StarknetClientImpl;
 use tracing_subscriber::util::SubscriberInitExt;
 
 #[tokio::main]
@@ -18,9 +18,9 @@ async fn main() -> Result<()> {
     let starknet_rpc = std::env::var("STARKNET_RPC_URL")
         .map_err(|_| eyre!("Missing mandatory environment variable: STARKNET_RPC_URL"))?;
 
-    let starknet_lightclient = StarknetClient::new(&starknet_rpc)?;
+    let starknet_lightclient = StarknetClientImpl::new(&starknet_rpc)?;
 
-    let (server_addr, server_handle) = run_server(starknet_lightclient).await?;
+    let (server_addr, server_handle) = run_server(Box::new(starknet_lightclient)).await?;
     let url = format!("http://{server_addr}");
 
     println!("RPC Server running on {url}...");

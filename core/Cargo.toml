@@ -6,6 +6,7 @@ description.workspace = true
 homepage.workspace = true
 
 [dependencies]
+async-trait = "0.1.58"
 eyre = "0.6.8"
 log = "0.4.17"
 env_logger = "0.10.0"
@@ -19,3 +20,7 @@ hex = "0.4"
 reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git" }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git"}
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git"}
+httpmock = "0.6.7"
+mockall = "0.11.3"
+tokio = { version = "1.21.2", features = ["macros"] }
+

@@ -17,7 +17,7 @@ use serde_json::Value;
 ///
 ///
 pub struct KakarotEthRpc {
-    pub starknet_client: StarknetClient,
+    pub starknet_client: Box<dyn StarknetClient>,
 }
 
 #[rpc(server, client)]
@@ -394,7 +394,13 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn get_code(&self, _address: Address, _block_number: Option<BlockId>) -> Result<Bytes> {
-        todo!()
+        let starknet_block_id = ethers_block_id_to_starknet_block_id(_block_number.unwrap())?;
+
+        let code = self
+            .starknet_client
+            .get_code(_address, starknet_block_id)
+            .await?;
+        Ok(code)
     }
 
     async fn call(&self, _request: CallRequest, _block_number: Option<BlockId>) -> Result<Bytes> {
@@ -485,7 +491,7 @@ impl EthApiServer for KakarotEthRpc {
 }
 
 impl KakarotEthRpc {
-    pub fn new(starknet_client: StarknetClient) -> Self {
+    pub fn new(starknet_client: Box<dyn StarknetClient>) -> Self {
         Self { starknet_client }
     }
 }

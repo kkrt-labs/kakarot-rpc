@@ -1,6 +1,4 @@
-#[cfg(test)]
 mod test {
-    use kakarot_rpc::eth_rpc::KakarotEthRpc;
     use kakarot_rpc_core::lightclient::{MockStarknetClient, StarknetClient, StarknetClientImpl};
     use reth_primitives::{rpc::BlockId, Address, Bytes, H256, U256};
     use reth_rpc_types::{Block, BlockTransactions, Header, RichBlock};
@@ -24,11 +22,8 @@ mod test {
             .expect_block_number()
             .returning(|| Ok(1));
 
-        let kakarot_rpc_mock = KakarotEthRpc::new(Box::new(starknet_lightclient_mock));
-        let kakarot_rpc = KakarotEthRpc::new(Box::new(starknet_lightclient));
-
-        let result_mock = kakarot_rpc_mock.starknet_client.block_number().await;
-        let result_lightclient = kakarot_rpc.starknet_client.block_number().await;
+        let result_lightclient = starknet_lightclient.block_number().await;
+        let result_mock = starknet_lightclient_mock.block_number().await;
 
         assert!(result_lightclient.is_ok());
         // Then
@@ -53,11 +48,8 @@ mod test {
             .expect_get_code()
             .returning(move |_, _| Ok(bytes_result.clone()));
 
-        let kakarot_rpc_mock = KakarotEthRpc::new(Box::new(starknet_lightclient_mock));
-
         // When
-        let result = kakarot_rpc_mock
-            .starknet_client
+        let result = starknet_lightclient_mock
             .get_code(ethereum_address, starknet_block_id)
             .await;
         assert!(result.is_ok());
