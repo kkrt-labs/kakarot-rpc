@@ -1,9 +1,11 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
+use kakarot_rpc_core::helpers::ethers_block_id_to_starknet_block_id;
 use kakarot_rpc_core::lightclient::StarknetClient;
+use reth_primitives::rpc::BlockNumber;
 use reth_primitives::{
-    rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId},
-    Address, BlockNumber, Bytes, H256, H64, U256, U64,
+    rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, H256},
+    Address, Bytes, H64, U256, U64,
 };
 use reth_rpc_types::{
     CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
@@ -281,7 +283,15 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn block_by_hash(&self, _hash: H256, _full: bool) -> Result<Option<RichBlock>> {
-        todo!()
+        let block_id = BlockId::Hash(_hash);
+        let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
+        // TODO: Add support for full blocks.
+        // Currently only light blocks are supported. `_full: bool` is ignored and overwritten by false.
+        let block = self
+            .starknet_client
+            .get_eth_block_from_starknet_block(starknet_block_id, false)
+            .await?;
+        Ok(Some(block))
     }
 
     async fn block_by_number(
@@ -289,7 +299,15 @@ impl EthApiServer for KakarotEthRpc {
         _number: BlockNumber,
         _full: bool,
     ) -> Result<Option<RichBlock>> {
-        todo!()
+        let block_id = BlockId::Number(_number);
+        let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
+        // TODO: Add support for full blocks.
+        // Currently only light blocks are supported. `_full: bool` is ignored and overwritten by false.
+        let block = self
+            .starknet_client
+            .get_eth_block_from_starknet_block(starknet_block_id, false)
+            .await?;
+        Ok(Some(block))
     }
 
     async fn block_transaction_count_by_hash(&self, _hash: H256) -> Result<Option<U256>> {
