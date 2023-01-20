@@ -32,6 +32,7 @@ tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
 reqwest = "0.11.13"
 dotenv = "0.15.0"
+mockall = "0.11.3"
 
 [[bin]]
 name = "kakarot-rpc"
