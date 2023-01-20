@@ -1,5 +1,6 @@
 // constants.rs
-pub const ACCOUNT_REGISTRY_ADDRESS: &str = "0x1234567890abcdef";
+pub const ACCOUNT_REGISTRY_ADDRESS: &str =
+    "0x052a419fd88f53f9a29d22c3d8db24dd9a9a01a41a483ac660d88622f83c40db";
 
 pub mod selectors {
     use starknet::core::types::FieldElement;
