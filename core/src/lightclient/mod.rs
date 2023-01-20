@@ -3,7 +3,6 @@ use jsonrpsee::types::error::CallError;
 use reth_rpc_types::RichBlock;
 use starknet::{
     core::types::FieldElement,
-    macros::selector,
     providers::jsonrpc::{
         models::{BlockId as StarknetBlockId, FunctionCall},
         HttpTransport, JsonRpcClient, JsonRpcClientError,
@@ -19,6 +18,11 @@ use crate::helpers::{starknet_block_to_eth_block, MaybePendingStarknetBlock};
 use async_trait::async_trait;
 use mockall::predicate::*;
 use mockall::*;
+mod constants;
+use constants::{
+    selectors::{SELECTOR_BYTECODE, SELECTOR_GET_STARKNET_CONTRACT_ADDRESS},
+    ACCOUNT_REGISTRY_ADDRESS,
+};
 
 #[derive(Error, Debug)]
 pub enum LightClientError {
@@ -63,16 +67,10 @@ impl From<LightClientError> for jsonrpsee::core::Error {
 impl StarknetClientImpl {
     pub fn new(starknet_rpc: &str) -> Result<Self> {
         let url = Url::parse(starknet_rpc)?;
+        let kakarot_account_registry = FieldElement::from_hex_be(ACCOUNT_REGISTRY_ADDRESS)?;
         Ok(Self {
             client: JsonRpcClient::new(HttpTransport::new(url)),
-            // kakarot_contract_address: FieldElement::from_hex_be(
-            //     "0x031ddf73d0285cc2f08bd4a2c93229f595f2f6e64b25846fc0957a2faa7ef7bb",
-            // )
-            // .unwrap(),
-            kakarot_account_registry: FieldElement::from_hex_be(
-                "0x052a419fd88f53f9a29d22c3d8db24dd9a9a01a41a483ac660d88622f83c40db",
-            )
-            .unwrap(),
+            kakarot_account_registry,
         })
     }
 }
@@ -144,13 +142,19 @@ impl StarknetClient for StarknetClientImpl {
         // Convert the Ethereum address to a hex-encoded string
         let address_hex = hex::encode(ethereum_address);
         // Convert the hex-encoded string to a FieldElement
-        let ethereum_address_field_element = FieldElement::from_hex_be(&address_hex).unwrap();
+        // Convert the hex-encoded string to a FieldElement
+        let ethereum_address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
+            LightClientError::OtherError(anyhow::anyhow!(
+                "Kakarot Core: Failed to convert Ethereum address to FieldElement: {}",
+                e
+            ))
+        })?;
 
         // Prepare the calldata for the get_starknet_contract_address function call
-        let tx_calldata_vec = vec![ethereum_address_field_element];
+        let tx_calldata_vec = vec![ethereum_address_felt];
         let request = FunctionCall {
             contract_address: self.kakarot_account_registry,
-            entry_point_selector: selector!("get_starknet_contract_address"),
+            entry_point_selector: SELECTOR_GET_STARKNET_CONTRACT_ADDRESS,
             calldata: tx_calldata_vec,
         };
         // Make the function call to get the Starknet contract address
@@ -161,11 +165,10 @@ impl StarknetClient for StarknetClientImpl {
             .fold(FieldElement::ZERO, |acc, x| acc + x);
 
         // Prepare the calldata for the bytecode function call
-        let tx_calldata_vec2 = vec![];
         let request = FunctionCall {
             contract_address: concatenated_result,
-            entry_point_selector: selector!("bytecode"),
-            calldata: tx_calldata_vec2,
+            entry_point_selector: SELECTOR_BYTECODE,
+            calldata: vec![],
         };
         // Make the function call to get the contract bytecode
         let contract_bytecode = self.client.call(request, &starknet_block_id).await?;

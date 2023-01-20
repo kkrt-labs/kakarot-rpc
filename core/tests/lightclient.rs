@@ -55,11 +55,9 @@ mod test {
         assert!(result.is_ok());
 
         let result_value = result.unwrap();
+
         // Then
-        assert_eq!(
-            format!("{bytes_result_value:?}"),
-            format!("{result_value:?}")
-        );
+        assert_eq!(bytes_result_value, result_value);
     }
 
     fn config() -> (MockStarknetClient, StarknetClientImpl) {
