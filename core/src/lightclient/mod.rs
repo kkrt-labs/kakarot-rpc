@@ -20,7 +20,7 @@ use mockall::predicate::*;
 use mockall::*;
 mod constants;
 use constants::{
-    selectors::{SELECTOR_BYTECODE, SELECTOR_GET_STARKNET_CONTRACT_ADDRESS},
+    selectors::{BYTECODE, GET_STARKNET_CONTRACT_ADDRESS},
     ACCOUNT_REGISTRY_ADDRESS,
 };
 
@@ -154,7 +154,7 @@ impl StarknetClient for StarknetClientImpl {
         let tx_calldata_vec = vec![ethereum_address_felt];
         let request = FunctionCall {
             contract_address: self.kakarot_account_registry,
-            entry_point_selector: SELECTOR_GET_STARKNET_CONTRACT_ADDRESS,
+            entry_point_selector: GET_STARKNET_CONTRACT_ADDRESS,
             calldata: tx_calldata_vec,
         };
         // Make the function call to get the Starknet contract address
@@ -167,7 +167,7 @@ impl StarknetClient for StarknetClientImpl {
         // Prepare the calldata for the bytecode function call
         let request = FunctionCall {
             contract_address: concatenated_result,
-            entry_point_selector: SELECTOR_BYTECODE,
+            entry_point_selector: BYTECODE,
             calldata: vec![],
         };
         // Make the function call to get the contract bytecode

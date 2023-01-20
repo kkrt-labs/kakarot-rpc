@@ -6,7 +6,7 @@ pub mod selectors {
     use starknet::core::types::FieldElement;
     use starknet::macros::selector;
 
-    pub const SELECTOR_GET_STARKNET_CONTRACT_ADDRESS: FieldElement =
+    pub const GET_STARKNET_CONTRACT_ADDRESS: FieldElement =
         selector!("get_starknet_contract_address");
-    pub const SELECTOR_BYTECODE: FieldElement = selector!("bytecode");
+    pub const BYTECODE: FieldElement = selector!("bytecode");
 }
