@@ -17,7 +17,7 @@ mod test {
     async fn when_call_block_number_return_ok() {
         // Given
         // Mock config, ethereum light client and starknet light client.
-        let (mut starknet_lightclient_mock, starknet_lightclient) = config();
+        let mut starknet_lightclient_mock = config();
 
         // Set expect to testing RPC method
         starknet_lightclient_mock
@@ -25,12 +25,9 @@ mod test {
             .returning(|| Ok(1));
 
         let kakarot_rpc_mock = KakarotEthRpc::new(Box::new(starknet_lightclient_mock));
-        let kakarot_rpc = KakarotEthRpc::new(Box::new(starknet_lightclient));
 
         let result_mock = kakarot_rpc_mock.starknet_client.block_number().await;
-        let result_lightclient = kakarot_rpc.starknet_client.block_number().await;
 
-        assert!(result_lightclient.is_ok());
         // Then
         assert_eq!(1, result_mock.unwrap());
     }
@@ -38,7 +35,7 @@ mod test {
     #[tokio::test]
     async fn when_get_code_then_should_return_bytes() {
         // Given
-        let (mut starknet_lightclient_mock, starknet_lightclient) = config();
+        let mut starknet_lightclient_mock = config();
         let starknet_block_id = StarknetBlockId::Number(1);
         let ethereum_address = Address::from_slice(&[
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
@@ -70,7 +67,7 @@ mod test {
         );
     }
 
-    fn config() -> (MockStarknetClient, StarknetClientImpl) {
+    fn config() -> MockStarknetClient {
         // Given
         // Mock config, ethereum light client and starknet light client.
         let mut starknet_lightclient_mock = MockStarknetClient::new();
@@ -81,8 +78,7 @@ mod test {
             .returning(|| Ok(1));
 
         // Set lightclient
-        let lightclient = StarknetClientImpl::new("https://starknet-goerli.cartridge.gg/").unwrap();
 
-        (starknet_lightclient_mock, lightclient)
+        starknet_lightclient_mock
     }
 }
