@@ -443,8 +443,7 @@ fn vec_felt_to_bytes(contract_bytecode: Vec<FieldElement>) -> Bytes {
 }
 
 fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
-    let inner: H160 = H160::from_slice(&x.to_bytes_be());
-    Address::from(inner)
+    H160::from_slice(&x.to_bytes_be())
 }
 
 // #[cfg(test)]
