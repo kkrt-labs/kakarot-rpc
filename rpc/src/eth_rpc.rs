@@ -418,7 +418,7 @@ impl EthApiServer for KakarotEthRpc {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
         let result = self
             .starknet_client
-            .call_view(to, calldata, Some(starknet_block_id))
+            .call_view(to, calldata, starknet_block_id)
             .await?;
 
         Ok(result)

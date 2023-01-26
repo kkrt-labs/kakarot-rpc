@@ -5,7 +5,7 @@ use reth_rpc_types::RichBlock;
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
-        models::{BlockId as StarknetBlockId, BlockTag, FunctionCall},
+        models::{BlockId as StarknetBlockId, FunctionCall},
         HttpTransport, JsonRpcClient, JsonRpcClientError,
     },
 };
@@ -13,7 +13,10 @@ use thiserror::Error;
 use url::Url;
 extern crate hex;
 
-use crate::helpers::{starknet_block_to_eth_block, MaybePendingStarknetBlock};
+use crate::helpers::{
+    decode_execute_at_address_return, starknet_block_to_eth_block, FeltOrFeltArray,
+    MaybePendingStarknetBlock,
+};
 
 use async_trait::async_trait;
 use mockall::predicate::*;
@@ -52,7 +55,7 @@ pub trait StarknetClient: Send + Sync {
         &self,
         ethereum_address: Address,
         calldata: Bytes,
-        starknet_block_id: Option<StarknetBlockId>,
+        starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, LightClientError>;
 }
 pub struct StarknetClientImpl {
@@ -194,11 +197,9 @@ impl StarknetClient for StarknetClientImpl {
         &self,
         ethereum_address: Address,
         calldata: Bytes,
-        starknet_block_id: Option<StarknetBlockId>,
+        starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, LightClientError> {
         let address_hex = hex::encode(ethereum_address);
-
-        let block_id = starknet_block_id.unwrap_or(StarknetBlockId::Tag(BlockTag::Latest));
 
         let ethereum_address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
             LightClientError::OtherError(anyhow::anyhow!(
@@ -207,22 +208,6 @@ impl StarknetClient for StarknetClientImpl {
             ))
         })?;
 
-        let tx_calldata_vec = vec![ethereum_address_felt];
-
-        let address_request = FunctionCall {
-            contract_address: self.kakarot_account_registry,
-            entry_point_selector: GET_STARKNET_CONTRACT_ADDRESS,
-            calldata: tx_calldata_vec,
-        };
-
-        // Make the function call to get the Starknet contract address
-        let _starknet_contract_address = self.client.call(address_request, &block_id).await?;
-
-        // Concatenate the result of the function call
-        let starknet_contract_address = _starknet_contract_address
-            .into_iter()
-            .fold(FieldElement::ZERO, |acc, x| acc + x);
-
         let mut calldata_vec = calldata
             .clone()
             .into_iter()
@@ -230,7 +215,7 @@ impl StarknetClient for StarknetClientImpl {
             .collect::<Vec<FieldElement>>();
 
         let mut call_parameters = vec![
-            starknet_contract_address,
+            ethereum_address_felt,
             FieldElement::ZERO,
             FieldElement::MAX,
             calldata.len().into(),
@@ -244,14 +229,26 @@ impl StarknetClient for StarknetClientImpl {
             calldata: call_parameters,
         };
 
-        let call_result = self.client.call(request, &block_id).await?;
+        let call_result: Vec<FieldElement> = self.client.call(request, &starknet_block_id).await?;
+
+        // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
+        // fail is Kakarot API changes)
+        // Declare Vec of Result
+        let segmented_result = decode_execute_at_address_return(call_result)?;
 
         // Convert the result of the function call to a vector of bytes
-        let result: Vec<u8> = call_result
-            .into_iter()
-            .flat_map(|x| x.to_bytes_be())
-            .collect();
-        let bytes_result = Bytes::from(result);
-        Ok(bytes_result)
+        let return_data = segmented_result.last().ok_or_else(|| {
+            LightClientError::OtherError(anyhow::anyhow!(
+                "Cannot parse and decode last argument of Kakarot call",
+            ))
+        })?;
+        if let FeltOrFeltArray::FeltArray(felt_array) = return_data {
+            let result: Vec<u8> = felt_array.iter().flat_map(|x| x.to_bytes_be()).collect();
+            let bytes_result = Bytes::from(result);
+            return Ok(bytes_result);
+        }
+        Err(LightClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode the return data of Kakarot call"
+        )))
     }
 }
