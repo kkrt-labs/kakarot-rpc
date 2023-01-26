@@ -183,7 +183,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     pending_block_with_txs
                         .transactions
                         .into_iter()
-                        .map(from_starknet_transaction_ethers_transaction)
+                        .map(starknet_tx_into_eth_tx)
                         .collect(),
                 );
                 let header = Header {
@@ -235,7 +235,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     block_with_txs
                         .transactions
                         .into_iter()
-                        .map(from_starknet_transaction_ethers_transaction)
+                        .map(starknet_tx_into_eth_tx)
                         .collect(),
                 );
                 let header = Header {
@@ -276,7 +276,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
     }
 }
 
-fn from_starknet_transaction_ethers_transaction(tx: StarknetTransaction) -> EtherTransaction {
+fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> EtherTransaction {
     let mut ether_tx = EtherTransaction::default();
 
     match tx {
@@ -295,14 +295,14 @@ fn from_starknet_transaction_ethers_transaction(tx: StarknetTransaction) -> Ethe
                     ether_tx.v = field_element_to_u256(v0.signature[2]);
                     // Extracting the data (transform from calldata)
                     ether_tx.input = vec_felt_to_bytes(v0.calldata);
-                    // How to fetch to?
+                    //TODO:  Fetch transaction To
                     ether_tx.to = None;
-                    // How to fetch the value?
+                    //TODO:  Fetch value
                     ether_tx.value = U256::from(0);
-                    // How to fetch gas?
+                    //TODO: Fetch Gas
                     ether_tx.gas = U256::from(0);
                     // Extracting the chain_id
-                    ether_tx.chain_id = None;
+                    ether_tx.chain_id = Some(1263227476_u64.into());
                     // Extracting the standard_v
                     ether_tx.standard_v = U256::from(0);
                     // Extracting the creates
@@ -333,7 +333,7 @@ fn from_starknet_transaction_ethers_transaction(tx: StarknetTransaction) -> Ethe
                     // TODO:: Get Gas from Estimate
                     ether_tx.gas = U256::from(0);
                     // Extracting the chain_id
-                    ether_tx.chain_id = None;
+                    ether_tx.chain_id = Some(1263227476_u64.into());
                     // Extracting the standard_v
                     ether_tx.standard_v = U256::from(0);
                     // Extracting the creates
@@ -364,7 +364,7 @@ fn from_starknet_transaction_ethers_transaction(tx: StarknetTransaction) -> Ethe
             // TODO: Get from estimate gas
             ether_tx.gas = U256::from(0);
             // Extracting the chain_id
-            ether_tx.chain_id = None;
+            ether_tx.chain_id = Some(1263227476_u64.into());
             // Extracting the creates
             ether_tx.creates = None;
             // Extracting the public_key
@@ -388,7 +388,7 @@ fn from_starknet_transaction_ethers_transaction(tx: StarknetTransaction) -> Ethe
             // Extracting the gas
             ether_tx.gas = U256::from(0);
             // Extracting the chain_id
-            ether_tx.chain_id = None;
+            ether_tx.chain_id = Some(1263227476_u64.into());
             // Extracting the standard_v
             ether_tx.standard_v = U256::from(0);
             // Extracting the public_key
@@ -418,7 +418,7 @@ fn from_starknet_transaction_ethers_transaction(tx: StarknetTransaction) -> Ethe
             // Extracting the gas
             ether_tx.gas = U256::from(0);
             // Extracting the chain_id
-            ether_tx.chain_id = None;
+            ether_tx.chain_id = Some(1263227476_u64.into());
             // Extracting the standard_v
             ether_tx.standard_v = U256::from(0);
             // Extracting the public_key
@@ -443,7 +443,7 @@ fn vec_felt_to_bytes(contract_bytecode: Vec<FieldElement>) -> Bytes {
 }
 
 fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
-    let inner: u64 = x.to_string().parse().unwrap();
+    let inner: H160 = H160::from_slice(&x.to_bytes_be());
     Address::from(inner)
 }
 
