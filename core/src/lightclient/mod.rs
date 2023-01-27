@@ -234,6 +234,8 @@ impl StarknetClient for StarknetClientImpl {
         // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
         // fail is Kakarot API changes)
         // Declare Vec of Result
+        // TODO: Change to decode based on ABI or use starknet-rs future feature to decode return
+        // params
         let segmented_result = decode_execute_at_address_return(call_result)?;
 
         // Convert the result of the function call to a vector of bytes
@@ -243,7 +245,11 @@ impl StarknetClient for StarknetClientImpl {
             ))
         })?;
         if let FeltOrFeltArray::FeltArray(felt_array) = return_data {
-            let result: Vec<u8> = felt_array.iter().flat_map(|x| x.to_bytes_be()).collect();
+            let result: Vec<u8> = felt_array
+                .iter()
+                .map(|x| x.to_string())
+                .filter_map(|s| s.parse().ok())
+                .collect();
             let bytes_result = Bytes::from(result);
             return Ok(bytes_result);
         }
