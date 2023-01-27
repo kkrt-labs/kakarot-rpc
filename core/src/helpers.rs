@@ -17,7 +17,8 @@ use starknet::{
     },
 };
 
-use crate::lightclient::LightClientError;
+use crate::lightclient::{constants::CHAIN_ID, LightClientError};
+
 extern crate hex;
 
 #[derive(Debug)]
@@ -297,14 +298,14 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
                 InvokeTransaction::V0(v0) => {
                     // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                     ether_tx.hash = H256::from_slice(&v0.transaction_hash.to_bytes_be());
-                    ether_tx.nonce = field_element_to_u256(v0.nonce);
+                    ether_tx.nonce = felt_to_u256(v0.nonce);
                     ether_tx.from = starknet_address_to_ethereum_address(v0.contract_address);
                     // Define gas_price data
                     ether_tx.gas_price = None;
                     // Extracting the signature
-                    ether_tx.r = field_option_element_to_u256(v0.signature.get(0))?;
-                    ether_tx.s = field_option_element_to_u256(v0.signature.get(1))?;
-                    ether_tx.v = field_option_element_to_u256(v0.signature.get(2))?;
+                    ether_tx.r = felt_option_to_u256(v0.signature.get(0))?;
+                    ether_tx.s = felt_option_to_u256(v0.signature.get(1))?;
+                    ether_tx.v = felt_option_to_u256(v0.signature.get(2))?;
                     // Extracting the data (transform from calldata)
                     ether_tx.input = vec_felt_to_bytes(v0.calldata);
                     //TODO:  Fetch transaction To
@@ -314,7 +315,7 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
                     //TODO: Fetch Gas
                     ether_tx.gas = U256::from(0);
                     // Extracting the chain_id
-                    ether_tx.chain_id = Some(1263227476_u64.into());
+                    ether_tx.chain_id = Some(CHAIN_ID.into());
                     // Extracting the standard_v
                     ether_tx.standard_v = U256::from(0);
                     // Extracting the creates
@@ -327,14 +328,14 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
                 InvokeTransaction::V1(v1) => {
                     // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                     ether_tx.hash = H256::from_slice(&v1.transaction_hash.to_bytes_be());
-                    ether_tx.nonce = field_element_to_u256(v1.nonce);
+                    ether_tx.nonce = felt_to_u256(v1.nonce);
                     ether_tx.from = starknet_address_to_ethereum_address(v1.sender_address);
                     // Define gas_price data
                     ether_tx.gas_price = None;
                     // Extracting the signature
-                    ether_tx.r = field_option_element_to_u256(v1.signature.get(0))?;
-                    ether_tx.s = field_option_element_to_u256(v1.signature.get(1))?;
-                    ether_tx.v = field_option_element_to_u256(v1.signature.get(2))?;
+                    ether_tx.r = felt_option_to_u256(v1.signature.get(0))?;
+                    ether_tx.s = felt_option_to_u256(v1.signature.get(1))?;
+                    ether_tx.v = felt_option_to_u256(v1.signature.get(2))?;
                     // Extracting the data
                     ether_tx.input = vec_felt_to_bytes(v1.calldata);
                     // Extracting the to address
@@ -345,7 +346,7 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
                     // TODO:: Get Gas from Estimate
                     ether_tx.gas = U256::from(0);
                     // Extracting the chain_id
-                    ether_tx.chain_id = Some(1263227476_u64.into());
+                    ether_tx.chain_id = Some(CHAIN_ID.into());
                     // Extracting the standard_v
                     ether_tx.standard_v = U256::from(0);
                     // Extracting the creates
@@ -376,7 +377,7 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
             // TODO: Get from estimate gas
             ether_tx.gas = U256::from(0);
             // Extracting the chain_id
-            ether_tx.chain_id = Some(1263227476_u64.into());
+            ether_tx.chain_id = Some(CHAIN_ID.into());
             // Extracting the creates
             ether_tx.creates = None;
             // Extracting the public_key
@@ -385,14 +386,14 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
         StarknetTransaction::Declare(declare_tx) => {
             // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
             ether_tx.hash = H256::from_slice(&declare_tx.transaction_hash.to_bytes_be());
-            ether_tx.nonce = field_element_to_u256(declare_tx.nonce);
+            ether_tx.nonce = felt_to_u256(declare_tx.nonce);
             ether_tx.from = starknet_address_to_ethereum_address(declare_tx.sender_address);
             // Define gas_price data
             ether_tx.gas_price = None;
             // Extracting the signature
-            ether_tx.r = field_option_element_to_u256(declare_tx.signature.get(0))?;
-            ether_tx.s = field_option_element_to_u256(declare_tx.signature.get(1))?;
-            ether_tx.v = field_option_element_to_u256(declare_tx.signature.get(2))?;
+            ether_tx.r = felt_option_to_u256(declare_tx.signature.get(0))?;
+            ether_tx.s = felt_option_to_u256(declare_tx.signature.get(1))?;
+            ether_tx.v = felt_option_to_u256(declare_tx.signature.get(2))?;
             // Extracting the to address
             ether_tx.to = None;
             // Extracting the value
@@ -400,7 +401,7 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
             // Extracting the gas
             ether_tx.gas = U256::from(0);
             // Extracting the chain_id
-            ether_tx.chain_id = Some(1263227476_u64.into());
+            ether_tx.chain_id = Some(CHAIN_ID.into());
             // Extracting the standard_v
             ether_tx.standard_v = U256::from(0);
             // Extracting the public_key
@@ -418,19 +419,19 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
         }
         StarknetTransaction::DeployAccount(deploy_account_tx) => {
             ether_tx.hash = H256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be());
-            ether_tx.nonce = field_element_to_u256(deploy_account_tx.nonce);
+            ether_tx.nonce = felt_to_u256(deploy_account_tx.nonce);
             // TODO: Get from estimate gas
             ether_tx.gas_price = None;
             // Extracting the signature
-            ether_tx.r = field_option_element_to_u256(deploy_account_tx.signature.get(0))?;
-            ether_tx.s = field_option_element_to_u256(deploy_account_tx.signature.get(1))?;
-            ether_tx.v = field_option_element_to_u256(deploy_account_tx.signature.get(2))?;
+            ether_tx.r = felt_option_to_u256(deploy_account_tx.signature.get(0))?;
+            ether_tx.s = felt_option_to_u256(deploy_account_tx.signature.get(1))?;
+            ether_tx.v = felt_option_to_u256(deploy_account_tx.signature.get(2))?;
             // Extracting the to address
             ether_tx.to = None;
             // Extracting the gas
             ether_tx.gas = U256::from(0);
             // Extracting the chain_id
-            ether_tx.chain_id = Some(1263227476_u64.into());
+            ether_tx.chain_id = Some(CHAIN_ID.into());
             // Extracting the standard_v
             ether_tx.standard_v = U256::from(0);
             // Extracting the public_key
@@ -441,7 +442,7 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
     Ok(ether_tx)
 }
 
-fn field_option_element_to_u256(element: Option<&FieldElement>) -> Result<U256, Error> {
+fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, Error> {
     match element {
         Some(x) => {
             let inner = x.to_bytes_be();
@@ -451,7 +452,7 @@ fn field_option_element_to_u256(element: Option<&FieldElement>) -> Result<U256, 
     }
 }
 
-fn field_element_to_u256(element: FieldElement) -> U256 {
+fn felt_to_u256(element: FieldElement) -> U256 {
     let inner = element.to_bytes_be();
     U256::from_be_bytes(inner)
 }
