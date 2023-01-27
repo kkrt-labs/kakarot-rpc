@@ -1,10 +1,9 @@
-use std::collections::BTreeMap;
-
-use eyre::Result;
+use eyre::{ErrReport, Error, Result};
 use reth_primitives::{
     rpc::{BlockId as EthBlockId, BlockNumber},
     Bloom, Bytes, H160, H256, H64, U256,
 };
+use std::collections::BTreeMap;
 
 use reth_primitives::Address;
 use reth_rpc_types::{
@@ -20,6 +19,17 @@ use starknet::{
 
 use crate::lightclient::LightClientError;
 extern crate hex;
+
+#[derive(Debug)]
+struct InvalidFieldElementError;
+
+impl std::error::Error for InvalidFieldElementError {}
+
+impl std::fmt::Display for InvalidFieldElementError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Invalid FieldElement")
+    }
+}
 
 pub enum MaybePendingStarknetBlock {
     BlockWithTxHashes(MaybePendingBlockWithTxHashes),
@@ -184,6 +194,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                         .transactions
                         .into_iter()
                         .map(starknet_tx_into_eth_tx)
+                        .filter_map(Result::ok)
                         .collect(),
                 );
                 let header = Header {
@@ -236,6 +247,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                         .transactions
                         .into_iter()
                         .map(starknet_tx_into_eth_tx)
+                        .filter_map(Result::ok)
                         .collect(),
                 );
                 let header = Header {
@@ -276,7 +288,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
     }
 }
 
-fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> EtherTransaction {
+fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, Error> {
     let mut ether_tx = EtherTransaction::default();
 
     match tx {
@@ -290,9 +302,9 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> EtherTransaction {
                     // Define gas_price data
                     ether_tx.gas_price = None;
                     // Extracting the signature
-                    ether_tx.r = field_option_element_to_u256(v0.signature.get(0));
-                    ether_tx.s = field_option_element_to_u256(v0.signature.get(1));
-                    ether_tx.v = field_option_element_to_u256(v0.signature.get(2));
+                    ether_tx.r = field_option_element_to_u256(v0.signature.get(0))?;
+                    ether_tx.s = field_option_element_to_u256(v0.signature.get(1))?;
+                    ether_tx.v = field_option_element_to_u256(v0.signature.get(2))?;
                     // Extracting the data (transform from calldata)
                     ether_tx.input = vec_felt_to_bytes(v0.calldata);
                     //TODO:  Fetch transaction To
@@ -320,9 +332,9 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> EtherTransaction {
                     // Define gas_price data
                     ether_tx.gas_price = None;
                     // Extracting the signature
-                    ether_tx.r = field_option_element_to_u256(v1.signature.get(0));
-                    ether_tx.s = field_option_element_to_u256(v1.signature.get(1));
-                    ether_tx.v = field_option_element_to_u256(v1.signature.get(2));
+                    ether_tx.r = field_option_element_to_u256(v1.signature.get(0))?;
+                    ether_tx.s = field_option_element_to_u256(v1.signature.get(1))?;
+                    ether_tx.v = field_option_element_to_u256(v1.signature.get(2))?;
                     // Extracting the data
                     ether_tx.input = vec_felt_to_bytes(v1.calldata);
                     // Extracting the to address
@@ -378,9 +390,9 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> EtherTransaction {
             // Define gas_price data
             ether_tx.gas_price = None;
             // Extracting the signature
-            ether_tx.r = field_option_element_to_u256(declare_tx.signature.get(0));
-            ether_tx.s = field_option_element_to_u256(declare_tx.signature.get(1));
-            ether_tx.v = field_option_element_to_u256(declare_tx.signature.get(2));
+            ether_tx.r = field_option_element_to_u256(declare_tx.signature.get(0))?;
+            ether_tx.s = field_option_element_to_u256(declare_tx.signature.get(1))?;
+            ether_tx.v = field_option_element_to_u256(declare_tx.signature.get(2))?;
             // Extracting the to address
             ether_tx.to = None;
             // Extracting the value
@@ -410,9 +422,9 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> EtherTransaction {
             // TODO: Get from estimate gas
             ether_tx.gas_price = None;
             // Extracting the signature
-            ether_tx.r = field_option_element_to_u256(deploy_account_tx.signature.get(0));
-            ether_tx.s = field_option_element_to_u256(deploy_account_tx.signature.get(1));
-            ether_tx.v = field_option_element_to_u256(deploy_account_tx.signature.get(2));
+            ether_tx.r = field_option_element_to_u256(deploy_account_tx.signature.get(0))?;
+            ether_tx.s = field_option_element_to_u256(deploy_account_tx.signature.get(1))?;
+            ether_tx.v = field_option_element_to_u256(deploy_account_tx.signature.get(2))?;
             // Extracting the to address
             ether_tx.to = None;
             // Extracting the gas
@@ -426,22 +438,22 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> EtherTransaction {
         }
     }
 
-    ether_tx
+    Ok(ether_tx)
 }
 
-fn field_option_element_to_u256(element: Option<&FieldElement>) -> U256 {
+fn field_option_element_to_u256(element: Option<&FieldElement>) -> Result<U256, Error> {
     match element {
         Some(x) => {
-            let inner: u64 = x.to_string().parse().unwrap();
-            U256::from(inner)
+            let inner = x.to_bytes_be();
+            Ok(U256::from_be_bytes(inner))
         }
-        None => U256::from(0),
+        None => Err(ErrReport::new(InvalidFieldElementError)),
     }
 }
 
 fn field_element_to_u256(element: FieldElement) -> U256 {
-    let inner: u64 = element.to_string().parse().unwrap();
-    U256::from(inner)
+    let inner = element.to_bytes_be();
+    U256::from_be_bytes(inner)
 }
 
 fn vec_felt_to_bytes(contract_bytecode: Vec<FieldElement>) -> Bytes {
