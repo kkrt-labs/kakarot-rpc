@@ -18,7 +18,7 @@ use crate::helpers::{starknet_block_to_eth_block, MaybePendingStarknetBlock};
 use async_trait::async_trait;
 use mockall::predicate::*;
 use mockall::*;
-mod constants;
+pub mod constants;
 use constants::{
     selectors::{BYTECODE, GET_STARKNET_CONTRACT_ADDRESS},
     ACCOUNT_REGISTRY_ADDRESS,

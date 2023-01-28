@@ -285,11 +285,9 @@ impl EthApiServer for KakarotEthRpc {
     async fn block_by_hash(&self, _hash: H256, _full: bool) -> Result<Option<RichBlock>> {
         let block_id = BlockId::Hash(_hash);
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
-        // TODO: Add support for full blocks.
-        // Currently only light blocks are supported. `_full: bool` is ignored and overwritten by false.
         let block = self
             .starknet_client
-            .get_eth_block_from_starknet_block(starknet_block_id, false)
+            .get_eth_block_from_starknet_block(starknet_block_id, _full)
             .await?;
         Ok(Some(block))
     }
@@ -301,11 +299,9 @@ impl EthApiServer for KakarotEthRpc {
     ) -> Result<Option<RichBlock>> {
         let block_id = BlockId::Number(_number);
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
-        // TODO: Add support for full blocks.
-        // Currently only light blocks are supported. `_full: bool` is ignored and overwritten by false.
         let block = self
             .starknet_client
-            .get_eth_block_from_starknet_block(starknet_block_id, false)
+            .get_eth_block_from_starknet_block(starknet_block_id, _full)
             .await?;
         Ok(Some(block))
     }
