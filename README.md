@@ -61,7 +61,7 @@ The Kakarot RPC layer's goal is to receive and output EVM-compatible JSON-RPC pa
 
 Here is a high level overview of the architecture of Kakarot RPC.
 
-![Kakarot RPC Adapter flow](https://user-images.github usercontent.com/66871571/215438348-26ac2aee-bf30-4429-bbca-a7b901ac0594.png)
+![Kakarot RPC Adapter flow](https://user-images.githubusercontent.com/66871571/215438348-26ac2aee-bf30-4429-bbca-a7b901ac0594.png)
 
 ## Getting Started
 
