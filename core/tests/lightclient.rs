@@ -1,18 +1,9 @@
 mod test {
-    use kakarot_rpc_core::lightclient::{MockStarknetClient, StarknetClient, StarknetClientImpl};
+    use kakarot_rpc_core::lightclient::{MockStarknetClient, StarknetClient};
 
-    use reth_primitives::{rpc::BlockId, Address, Bloom, Bytes, H160, H256, H64, U256};
-    use reth_rpc_types::{
-        Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction,
-    };
-    use starknet::{
-        core::types::FieldElement,
-        macros::selector,
-        providers::jsonrpc::{
-            models::{BlockId as StarknetBlockId, FunctionCall},
-            HttpTransport, JsonRpcClient, JsonRpcClientError,
-        },
-    };
+    use reth_primitives::{Address, Bloom, Bytes, H160, H256, H64, U256};
+    use reth_rpc_types::{Block, BlockTransactions, Header, Rich};
+    use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
 
     use std::collections::BTreeMap;
 
