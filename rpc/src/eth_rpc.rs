@@ -280,7 +280,7 @@ impl EthApiServer for KakarotEthRpc {
 
     async fn chain_id(&self) -> Result<Option<U64>> {
         // CHAIN_ID = KKRT (0x4b4b5254) in ASCII
-        Ok(Some(150_u64.into()))
+        Ok(Some(1263227476_u64.into()))
     }
 
     async fn block_by_hash(&self, _hash: H256, _full: bool) -> Result<Option<RichBlock>> {
@@ -443,6 +443,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn gas_price(&self) -> Result<U256> {
+        //TODO: Fetch correct gas price from Starknet / AA
         Ok(U256::from(100))
     }
 
