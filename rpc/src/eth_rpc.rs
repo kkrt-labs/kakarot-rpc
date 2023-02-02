@@ -2,15 +2,15 @@ use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::helpers::ethers_block_id_to_starknet_block_id;
-use kakarot_rpc_core::lightclient::StarknetClient;
+use kakarot_rpc_core::lightclient::{types::RichBlock, StarknetClient};
 use reth_primitives::rpc::BlockNumber;
 use reth_primitives::{
     rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, H256},
     Address, Bytes, H64, U256, U64,
 };
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
-    Transaction, TransactionReceipt, TransactionRequest, Work,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, SyncStatus, Transaction,
+    TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
 
@@ -27,7 +27,7 @@ trait EthApi {
     async fn block_number(&self) -> Result<U64>;
 
     /// Returns the protocol version encoded as a string.
-    #[method(name = "eth_protocolVersion")]
+    #[method(name = "net_version")]
     fn protocol_version(&self) -> Result<U64>;
 
     /// Returns an object with data about the sync status or false.
@@ -262,7 +262,7 @@ impl EthApiServer for KakarotEthRpc {
     /// `Ok(protocol_version)` if the operation was successful.
     /// `Err(LightClientError)` if the operation failed.
     fn protocol_version(&self) -> Result<U64> {
-        let protocol_version = 1_u64;
+        let protocol_version = 1263227476_u64;
         Ok(protocol_version.into())
     }
 
@@ -346,7 +346,9 @@ impl EthApiServer for KakarotEthRpc {
         &self,
         _hash: H256,
     ) -> Result<Option<reth_rpc_types::Transaction>> {
-        todo!()
+        let ether_tx = Transaction::default();
+
+        Ok(Some(ether_tx))
     }
 
     async fn transaction_by_block_hash_and_index(
@@ -370,7 +372,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn balance(&self, _address: Address, _block_number: Option<BlockId>) -> Result<U256> {
-        todo!()
+        Ok(U256::from(0))
     }
 
     async fn storage_at(
@@ -441,7 +443,8 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn gas_price(&self) -> Result<U256> {
-        todo!()
+        //TODO: Fetch correct gas price from Starknet / AA
+        Ok(U256::from(100))
     }
 
     async fn fee_history(
@@ -450,11 +453,23 @@ impl EthApiServer for KakarotEthRpc {
         _newest_block: BlockNumber,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
-        todo!()
+        let base_fee_per_gas: Vec<U256> = vec![U256::from(32), U256::from(0), U256::from(0)];
+
+        let gas_used_ratio: Vec<f64> = vec![];
+        let newest_block = _newest_block.as_number().unwrap().as_u64();
+        let oldest_block: U256 = U256::from(newest_block) - _block_count;
+
+        let reward: Option<Vec<Vec<U256>>> = None;
+        Ok(FeeHistory {
+            base_fee_per_gas,
+            gas_used_ratio,
+            oldest_block,
+            reward,
+        })
     }
 
     async fn max_priority_fee_per_gas(&self) -> Result<U256> {
-        todo!()
+        Ok(U256::from(32))
     }
 
     async fn is_mining(&self) -> Result<bool> {
@@ -462,7 +477,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn hashrate(&self) -> Result<U256> {
-        todo!()
+        Ok(U256::from(32))
     }
 
     async fn get_work(&self) -> Result<Work> {
@@ -482,7 +497,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn send_raw_transaction(&self, _bytes: Bytes) -> Result<H256> {
-        todo!()
+        Ok(H256::from_low_u64_be(0))
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {

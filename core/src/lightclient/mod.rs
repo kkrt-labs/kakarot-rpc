@@ -1,7 +1,7 @@
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
+
 use reth_primitives::{Address, Bytes};
-use reth_rpc_types::RichBlock;
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
@@ -26,6 +26,8 @@ use constants::{
     selectors::{BYTECODE, GET_STARKNET_CONTRACT_ADDRESS},
     ACCOUNT_REGISTRY_ADDRESS, KAKAROT_MAIN_CONTRACT_ADDRESS,
 };
+pub mod types;
+use types::RichBlock;
 
 use self::constants::selectors::EXECUTE_AT_ADDRESS;
 
@@ -121,6 +123,7 @@ impl StarknetClient for StarknetClientImpl {
         block_id: StarknetBlockId,
         hydrated_tx: bool,
     ) -> Result<RichBlock, LightClientError> {
+        // let hydrated_tx = false;
         let starknet_block = if hydrated_tx {
             MaybePendingStarknetBlock::BlockWithTxs(
                 self.client.get_block_with_txs(&block_id).await?,
@@ -130,6 +133,8 @@ impl StarknetClient for StarknetClientImpl {
                 self.client.get_block_with_tx_hashes(&block_id).await?,
             )
         };
+        // fetch gas limit, public key, and nonce from starknet rpc
+
         let block = starknet_block_to_eth_block(starknet_block);
         Ok(block)
     }

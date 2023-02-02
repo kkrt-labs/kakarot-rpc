@@ -6,9 +6,9 @@ use reth_primitives::{
 use std::collections::BTreeMap;
 
 use reth_primitives::Address;
-use reth_rpc_types::{
-    Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction,
-};
+// use reth_rpc_types::{
+//     Block, BlockTransactions, Header, Rich, Transaction as EtherTransaction,
+// };
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::models::{
@@ -17,7 +17,11 @@ use starknet::{
     },
 };
 
-use crate::lightclient::{constants::CHAIN_ID, LightClientError};
+use crate::lightclient::{
+    constants::CHAIN_ID,
+    types::{Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction},
+    LightClientError,
+};
 
 extern crate hex;
 
@@ -70,15 +74,27 @@ pub fn ethers_block_id_to_starknet_block_id(
 
 pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBlock {
     // Fixed fields in the Ethereum block as Starknet does not have these fields
-    let gas_limit = U256::ZERO;
-    let gas_used = U256::ZERO;
-    let difficulty = U256::ZERO;
-    let nonce: Option<H64> = None;
-    let size: Option<U256> = None;
+
+    //InvokeTransactionReceipt -
+    //TODO: Fetch real data
+    let gas_limit = U256::from(1000000); // Hard Code
+                                         //TODO: Fetch real data
+    let gas_used = U256::from(500000); // Hard Code (Sum of actual_fee's)
+                                       //TODO: Fetch real data
+    let difficulty = U256::from(1000000); // Fixed
+                                          //TODO: Fetch real data
+    let nonce: Option<H64> = Some(H64::from_low_u64_be(0));
+    //TODO: Fetch real data
+    let size: Option<U256> = Some(U256::from(100));
     // Bloom is a byte array of length 256
     let logs_bloom = Bloom::default();
     let extra_data = Bytes::from(b"0x00");
-    let total_difficulty: U256 = U256::ZERO;
+    //TODO: Fetch real data
+    let total_difficulty: U256 = U256::from(1000000);
+    //TODO: Fetch real data
+    let base_fee_per_gas = U256::from(32);
+    //TODO: Fetch real data
+    let mix_hash = H256::from_low_u64_be(0);
 
     match block {
         MaybePendingStarknetBlock::BlockWithTxHashes(maybe_pending_block) => {
@@ -121,6 +137,8 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                         difficulty,
                         nonce,
                         size,
+                        base_fee_per_gas,
+                        mix_hash,
                     };
                     let block = Block {
                         header,
@@ -172,6 +190,8 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                         difficulty,
                         nonce,
                         size,
+                        base_fee_per_gas,
+                        mix_hash,
                     };
                     let block = Block {
                         header,
@@ -227,6 +247,8 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     difficulty,
                     nonce,
                     size,
+                    base_fee_per_gas,
+                    mix_hash,
                 };
                 let block = Block {
                     header,
@@ -242,13 +264,25 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                 }
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
+                println!("1. Calling Block With Txs");
                 let hash = H256::from_slice(&block_with_txs.block_hash.to_bytes_be());
                 let parent_hash = H256::from_slice(&block_with_txs.parent_hash.to_bytes_be());
                 let sequencer =
                     H160::from_slice(&block_with_txs.sequencer_address.to_bytes_be()[12..32]);
                 let state_root = H256::from_slice(&block_with_txs.new_root.to_bytes_be());
+                let transactions_root = H256::from_slice(
+                    &"0xac91334ba861cb94cba2b1fd63df7e87c15ca73666201abd10b5462255a5c642"
+                        .as_bytes()[1..33],
+                );
+                let receipts_root = H256::from_slice(
+                    &"0xf2c8755adf35e78ffa84999e48aba628e775bb7be3c70209738d736b67a9b549"
+                        .as_bytes()[1..33],
+                );
+
                 let number = U256::from(block_with_txs.block_number);
                 let timestamp = U256::from(block_with_txs.timestamp);
+                println!("2. Getting transactions");
+
                 let transactions = BlockTransactions::Full(
                     block_with_txs
                         .transactions
@@ -257,6 +291,8 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                         .filter_map(Result::ok)
                         .collect(),
                 );
+                println!("3. After Getting transactions");
+
                 let header = Header {
                     hash: Some(hash),
                     parent_hash,
@@ -265,9 +301,9 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     miner: sequencer,
                     state_root,
                     // BlockWithTxHashes doesn't have a transactions root
-                    transactions_root: H256::zero(),
+                    transactions_root,
                     // BlockWithTxHashes doesn't have a receipts root
-                    receipts_root: H256::zero(),
+                    receipts_root,
                     number: Some(number),
                     gas_used,
                     gas_limit,
@@ -277,6 +313,8 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     difficulty,
                     nonce,
                     size,
+                    base_fee_per_gas,
+                    mix_hash,
                 };
                 let block = Block {
                     header,
@@ -405,11 +443,14 @@ pub fn decode_execute_at_address_return(
 
 fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, Error> {
     let mut ether_tx = EtherTransaction::default();
+    println!("2.1 Inside Getting transactions");
 
     match tx {
         StarknetTransaction::Invoke(invoke_tx) => {
             match invoke_tx {
                 InvokeTransaction::V0(v0) => {
+                    println!("2.X Inside InvokeV0");
+
                     // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                     ether_tx.hash = H256::from_slice(&v0.transaction_hash.to_bytes_be());
                     ether_tx.nonce = felt_to_u256(v0.nonce);
@@ -425,9 +466,9 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
                     //TODO:  Fetch transaction To
                     ether_tx.to = None;
                     //TODO:  Fetch value
-                    ether_tx.value = U256::from(0);
+                    ether_tx.value = U256::from(100);
                     //TODO: Fetch Gas
-                    ether_tx.gas = U256::from(0);
+                    ether_tx.gas = U256::from(100);
                     // Extracting the chain_id
                     ether_tx.chain_id = Some(CHAIN_ID.into());
                     // Extracting the standard_v
@@ -441,6 +482,8 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
 
                 InvokeTransaction::V1(v1) => {
                     // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
+                    println!("2.X Inside InvokeV1");
+
                     ether_tx.hash = H256::from_slice(&v1.transaction_hash.to_bytes_be());
                     ether_tx.nonce = felt_to_u256(v1.nonce);
                     ether_tx.from = starknet_address_to_ethereum_address(v1.sender_address);
@@ -456,9 +499,9 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
                     // TODO: Get Data from Calldata
                     ether_tx.to = None;
                     // Extracting the value
-                    ether_tx.value = U256::from(0);
+                    ether_tx.value = U256::from(100);
                     // TODO:: Get Gas from Estimate
-                    ether_tx.gas = U256::from(0);
+                    ether_tx.gas = U256::from(100);
                     // Extracting the chain_id
                     ether_tx.chain_id = Some(CHAIN_ID.into());
                     // Extracting the standard_v
@@ -552,6 +595,7 @@ fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, 
             ether_tx.public_key = None;
         }
     }
+    println!("2.2 Before Returning Inside Getting transactions");
 
     Ok(ether_tx)
 }
@@ -580,7 +624,7 @@ fn vec_felt_to_bytes(contract_bytecode: Vec<FieldElement>) -> Bytes {
 }
 
 fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
-    H160::from_slice(&x.to_bytes_be())
+    H160::from_slice(&x.to_bytes_be()[12..32])
 }
 
 #[cfg(test)]
