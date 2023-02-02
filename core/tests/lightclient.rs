@@ -1,8 +1,10 @@
 mod test {
-    use kakarot_rpc_core::lightclient::{MockStarknetClient, StarknetClient};
+    use kakarot_rpc_core::lightclient::{
+        types::{Block, BlockTransactions, Header, Rich},
+        MockStarknetClient, StarknetClient,
+    };
 
     use reth_primitives::{Address, Bloom, Bytes, H160, H256, H64, U256};
-    use reth_rpc_types::{Block, BlockTransactions, Header, Rich};
     use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
 
     use std::collections::BTreeMap;
@@ -76,6 +78,8 @@ mod test {
         let logs_bloom = Bloom::default();
         let extra_data = Bytes::from(b"0x00");
         let total_difficulty: U256 = U256::ZERO;
+        let mix_hash = H256::default();
+        let base_fee_per_gas = U256::ZERO;
         let header = Header {
             hash: Some(hash),
             parent_hash,
@@ -96,6 +100,8 @@ mod test {
             difficulty,
             nonce,
             size,
+            mix_hash,
+            base_fee_per_gas,
         };
         let block = Block {
             header,
