@@ -1,5 +1,6 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
+use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::helpers::ethers_block_id_to_starknet_block_id;
 use kakarot_rpc_core::lightclient::StarknetClient;
 use reth_primitives::rpc::BlockNumber;
@@ -400,7 +401,27 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn call(&self, _request: CallRequest, _block_number: Option<BlockId>) -> Result<Bytes> {
-        todo!()
+        // unwrap option or return jsonrpc error
+        let to = _request.to.ok_or_else(|| {
+            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
+                "CallRequest `to` field is None. Cannot process a Kakarot call",
+            )))
+        })?;
+
+        let calldata = _request.data.ok_or_else(|| {
+            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
+                "CallRequest `data` field is None. Cannot process a Kakarot call",
+            )))
+        })?;
+
+        let block_id = _block_number.unwrap_or(BlockId::Number(BlockNumber::Latest));
+        let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
+        let result = self
+            .starknet_client
+            .call_view(to, calldata, starknet_block_id)
+            .await?;
+
+        Ok(result)
     }
 
     async fn create_access_list(

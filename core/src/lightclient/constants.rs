@@ -1,6 +1,8 @@
 // constants.rs
 pub const ACCOUNT_REGISTRY_ADDRESS: &str =
-    "0x052a419fd88f53f9a29d22c3d8db24dd9a9a01a41a483ac660d88622f83c40db";
+    "0x702ff500f359a185fafbdef2fadad75b04e21a814abc5e6257e2e65ceffdf15";
+pub const KAKAROT_MAIN_CONTRACT_ADDRESS: &str =
+    "0xb5644ba96891f73151973d76f914ee6eea75479a1fe5fbe0098afa50027385";
 pub const CHAIN_ID: u64 = 1263227476;
 
 pub mod selectors {
@@ -10,4 +12,6 @@ pub mod selectors {
     pub const GET_STARKNET_CONTRACT_ADDRESS: FieldElement =
         selector!("get_starknet_contract_address");
     pub const BYTECODE: FieldElement = selector!("bytecode");
+
+    pub const EXECUTE_AT_ADDRESS: FieldElement = selector!("execute_at_address");
 }
