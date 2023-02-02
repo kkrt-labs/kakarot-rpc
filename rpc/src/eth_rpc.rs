@@ -262,7 +262,7 @@ impl EthApiServer for KakarotEthRpc {
     /// `Ok(protocol_version)` if the operation was successful.
     /// `Err(LightClientError)` if the operation failed.
     fn protocol_version(&self) -> Result<U64> {
-        let protocol_version = 1_u64;
+        let protocol_version = 1263227476_u64;
         Ok(protocol_version.into())
     }
 
