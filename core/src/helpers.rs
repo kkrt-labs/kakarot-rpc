@@ -41,6 +41,12 @@ pub enum MaybePendingStarknetBlock {
     BlockWithTxs(MaybePendingBlockWithTxs),
 }
 
+#[derive(Debug, PartialEq)]
+pub enum FeltOrFeltArray {
+    Felt(FieldElement),
+    FeltArray(Vec<FieldElement>),
+}
+
 pub fn ethers_block_id_to_starknet_block_id(
     block: EthBlockId,
 ) -> Result<StarknetBlockId, LightClientError> {
@@ -319,6 +325,114 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
     }
 }
 
+pub fn decode_execute_at_address_return(
+    call_result: Vec<FieldElement>,
+) -> Result<Vec<FeltOrFeltArray>, LightClientError> {
+    // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
+    // fail is Kakarot API changes)
+    // Declare Vec of Result
+    let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
+    let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
+        LightClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call",
+        ))
+    })?;
+    let mut tmp_counter = 1_usize;
+    segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
+    // Parse first array: stack_accesses
+    while tmp_array_len != FieldElement::ZERO {
+        let element = call_result.get(tmp_counter).ok_or_else(|| {
+            LightClientError::OtherError(anyhow::anyhow!(
+                "Cannot parse and decode return arguments of Kakarot call: stack accesses array",
+            ))
+        })?;
+        match segmented_result.last_mut() {
+            Some(FeltOrFeltArray::FeltArray(felt_array)) => felt_array.push(*element),
+            Some(FeltOrFeltArray::Felt(_felt)) => (),
+            _ => (),
+        }
+        tmp_counter += 1;
+        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+    }
+    // Parse stack_len
+    let stack_len = call_result.get(tmp_counter).ok_or_else(|| {
+        LightClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call: stack_len"
+        ))
+    })?;
+    segmented_result.push(FeltOrFeltArray::Felt(*stack_len));
+    tmp_counter += 1;
+    // Parse second array: memory_accesses
+    tmp_array_len = *(call_result.get(tmp_counter).ok_or_else(|| {
+        LightClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call: memory_accesses_len",
+        ))
+    })?);
+    segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
+    tmp_counter += 1;
+    while tmp_array_len != FieldElement::ZERO {
+        let element = call_result.get(tmp_counter).ok_or_else(|| {
+            LightClientError::OtherError(anyhow::anyhow!(
+                "Cannot parse and decode return arguments of Kakarot call: memory accesses array",
+            ))
+        })?;
+        match segmented_result.last_mut() {
+            Some(FeltOrFeltArray::FeltArray(felt_array)) => felt_array.push(*element),
+            Some(FeltOrFeltArray::Felt(_felt)) => (),
+            _ => (),
+        }
+        tmp_counter += 1;
+        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+    }
+    // Parse memory_len
+    let memory_len = call_result.get(tmp_counter).ok_or_else(|| {
+        LightClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call: memory len"
+        ))
+    })?;
+    segmented_result.push(FeltOrFeltArray::Felt(*memory_len));
+    tmp_counter += 1;
+    // Parse EVM address
+    let evm_address = call_result.get(tmp_counter).ok_or_else(|| {
+        LightClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call: evm address"
+        ))
+    })?;
+    segmented_result.push(FeltOrFeltArray::Felt(*evm_address));
+    tmp_counter += 1;
+    // Parse Starknet Address
+    let starknet_address = call_result.get(tmp_counter).ok_or_else(|| {
+        LightClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call: starknet address"
+        ))
+    })?;
+    segmented_result.push(FeltOrFeltArray::Felt(*starknet_address));
+    tmp_counter += 1;
+    // Parse last array: return_data
+    tmp_array_len = *(call_result.get(tmp_counter).ok_or_else(|| {
+        LightClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call: return_data_len",
+        ))
+    })?);
+    segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
+    tmp_counter += 1;
+    while tmp_array_len != FieldElement::ZERO {
+        let element = call_result.get(tmp_counter).ok_or_else(|| {
+            LightClientError::OtherError(anyhow::anyhow!(
+                "Cannot parse and decode return arguments of Kakarot call: return data array",
+            ))
+        })?;
+        match segmented_result.last_mut() {
+            Some(FeltOrFeltArray::FeltArray(felt_array)) => felt_array.push(*element),
+            Some(FeltOrFeltArray::Felt(_felt)) => (),
+            _ => (),
+        }
+        tmp_counter += 1;
+        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+    }
+    Ok(segmented_result)
+}
+
 fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, Error> {
     let mut ether_tx = EtherTransaction::default();
     println!("2.1 Inside Getting transactions");
@@ -505,18 +619,225 @@ fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
     H160::from_slice(&x.to_bytes_be()[12..32])
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use reth_primitives::rpc::{BlockId as EthBlockId, BlockNumber};
-//     use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
-//     extern crate hex;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_ethers_block_id_to_starknet_block_id() {
-//         let block_id = EthBlockId::Number(BlockNumber::Number(1.into()));
-//         let starknet_block_id: StarknetBlockId =
-//             ethers_block_id_to_starknet_block_id(block_id).unwrap();
-//         assert_eq!(starknet_block_id, StarknetBlockId::Number(1));
-//     }
-// }
+    #[test]
+    fn test_decode_execute_at_address() {
+        let call_result = vec![
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000002",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000001",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000002",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000009",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000001",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000006661abd",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000007",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0x000000000000000000000000abde1007e67126e0755af0ff0173f919738f8373",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0x062897a9e931ba1ae4721548bd963e3fe67126e0755af0ff0173f919738f8373",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000020",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000000000002",
+            )
+            .unwrap(),
+        ];
+        let result = decode_execute_at_address_return(call_result).unwrap();
+        assert_eq!(result.len(), 7);
+        assert_eq!(
+            result[0],
+            FeltOrFeltArray::FeltArray(vec![FieldElement::from(1_u64), FieldElement::from(2_u64)])
+        );
+        assert_eq!(result[1], FeltOrFeltArray::Felt(FieldElement::from(9_u64)));
+        assert_eq!(
+            result[2],
+            FeltOrFeltArray::FeltArray(vec![FieldElement::from_hex_be(
+                "0000000000000000000000000000000000000000000000000000000006661abd",
+            )
+            .unwrap()])
+        );
+        assert_eq!(result[3], FeltOrFeltArray::Felt(FieldElement::from(7_u64)));
+        assert_eq!(
+            result[4],
+            FeltOrFeltArray::Felt(
+                FieldElement::from_hex_be(
+                    "0x000000000000000000000000abde1007e67126e0755af0ff0173f919738f8373",
+                )
+                .unwrap(),
+            )
+        );
+        assert_eq!(
+            result[5],
+            FeltOrFeltArray::Felt(
+                FieldElement::from_hex_be(
+                    "0x062897a9e931ba1ae4721548bd963e3fe67126e0755af0ff0173f919738f8373",
+                )
+                .unwrap(),
+            )
+        );
+        let mut return_data_vec = Vec::new();
+        for _ in 0..31 {
+            return_data_vec.push(FieldElement::from(0_u64));
+        }
+        return_data_vec.push(FieldElement::from(2_u64));
+        assert_eq!(result[6], FeltOrFeltArray::FeltArray(return_data_vec));
+        if let FeltOrFeltArray::FeltArray(felt_array) = &result[6] {
+            assert_eq!(felt_array.len(), 32);
+        } else {
+            panic!("Expected FeltArray of length 32");
+        }
+    }
+}

@@ -1,17 +1,10 @@
 #[cfg(test)]
 mod test {
     use kakarot_rpc::eth_rpc::KakarotEthRpc;
-    use kakarot_rpc_core::lightclient::{MockStarknetClient, StarknetClient, StarknetClientImpl};
-    use reth_primitives::{rpc::BlockId, Address, Bytes, H256, U256};
-    use reth_rpc_types::{Block, BlockTransactions, Header, RichBlock};
-    use starknet::{
-        core::types::FieldElement,
-        macros::selector,
-        providers::jsonrpc::{
-            models::{BlockId as StarknetBlockId, FunctionCall},
-            HttpTransport, JsonRpcClient, JsonRpcClientError,
-        },
-    };
+    use kakarot_rpc_core::lightclient::{MockStarknetClient, StarknetClientImpl};
+    use reth_primitives::{Address, Bytes};
+
+    use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
 
     #[tokio::test]
     async fn when_call_block_number_return_ok() {
