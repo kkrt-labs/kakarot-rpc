@@ -623,21 +623,44 @@ fn felt_to_u256(element: FieldElement) -> U256 {
     U256::from_be_bytes(inner)
 }
 
-fn vec_felt_to_bytes(contract_bytecode: Vec<FieldElement>) -> Bytes {
-    let contract_bytecode_in_u8: Vec<u8> = contract_bytecode
-        .into_iter()
-        .flat_map(|x| x.to_bytes_be())
-        .collect();
-    Bytes::from(contract_bytecode_in_u8)
+fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
+    let felt_vec_in_u8: Vec<u8> = felt_vec.into_iter().flat_map(|x| x.to_bytes_be()).collect();
+    Bytes::from(felt_vec_in_u8)
 }
 
 fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
     H160::from_slice(&x.to_bytes_be()[12..32])
 }
 
+pub fn bytes_to_felt_vec(bytes: Bytes) -> Vec<FieldElement> {
+    bytes.to_vec().into_iter().map(FieldElement::from).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_bytes_to_felt_vec() {
+        let bytes = Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let felt_vec = bytes_to_felt_vec(bytes);
+        assert_eq!(felt_vec.len(), 10);
+        assert_eq!(
+            felt_vec,
+            vec![
+                FieldElement::from(1_u64),
+                FieldElement::from(2_u64),
+                FieldElement::from(3_u64),
+                FieldElement::from(4_u64),
+                FieldElement::from(5_u64),
+                FieldElement::from(6_u64),
+                FieldElement::from(7_u64),
+                FieldElement::from(8_u64),
+                FieldElement::from(9_u64),
+                FieldElement::from(10_u64)
+            ]
+        );
+    }
 
     #[test]
     fn test_decode_execute_at_address() {

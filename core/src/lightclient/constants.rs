@@ -14,4 +14,6 @@ pub mod selectors {
     pub const BYTECODE: FieldElement = selector!("bytecode");
 
     pub const EXECUTE_AT_ADDRESS: FieldElement = selector!("execute_at_address");
+
+    pub const COMPUTE_STARKNET_ADDRESS: FieldElement = selector!("compute_starknet_address");
 }
