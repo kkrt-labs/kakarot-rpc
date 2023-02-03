@@ -266,6 +266,19 @@ impl StarknetClient for StarknetClientImpl {
         )))
     }
 
+    /// Get the number of transactions in a block given a block number.
+    /// The number of transactions in a block.
+    ///
+    /// # Arguments
+    ///
+    /// * `number(u64)` - The block number.
+    ///
+    /// # Returns
+    ///
+    ///  * `transaction_count(U256)` - The number of transactions.
+    ///
+    /// `Ok(Bytes)` if the operation was successful.
+    /// `Err(LightClientError)` if the operation failed.
     async fn block_transaction_count_by_number(
         &self,
         number: BlockNumber,
