@@ -1,11 +1,11 @@
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
-use reth_primitives::{Address, Bytes};
+use reth_primitives::{rpc::BlockNumber, Address, Bytes, U256};
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
-        models::{BlockId as StarknetBlockId, FunctionCall},
+        models::{BlockId as StarknetBlockId, FunctionCall, MaybePendingBlockWithTxHashes},
         HttpTransport, JsonRpcClient, JsonRpcClientError,
     },
 };
@@ -14,8 +14,8 @@ use url::Url;
 extern crate hex;
 
 use crate::helpers::{
-    decode_execute_at_address_return, starknet_block_to_eth_block, FeltOrFeltArray,
-    MaybePendingStarknetBlock,
+    decode_execute_at_address_return, ethers_block_number_to_starknet_block_id,
+    starknet_block_to_eth_block, FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 
 use async_trait::async_trait;
@@ -59,6 +59,10 @@ pub trait StarknetClient: Send + Sync {
         calldata: Bytes,
         starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, LightClientError>;
+    async fn block_transaction_count_by_number(
+        &self,
+        number: BlockNumber,
+    ) -> Result<Option<U256>, LightClientError>;
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -89,7 +93,6 @@ impl StarknetClientImpl {
         })
     }
 }
-
 #[async_trait]
 impl StarknetClient for StarknetClientImpl {
     /// Get the number of transactions in a block given a block id.
@@ -261,5 +264,22 @@ impl StarknetClient for StarknetClientImpl {
         Err(LightClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode the return data of Kakarot call"
         )))
+    }
+
+    async fn block_transaction_count_by_number(
+        &self,
+        number: BlockNumber,
+    ) -> Result<Option<U256>, LightClientError> {
+        let starknet_block_id = ethers_block_number_to_starknet_block_id(number)?;
+        let starknet_block = self
+            .client
+            .get_block_with_tx_hashes(&starknet_block_id)
+            .await?;
+        match starknet_block {
+            MaybePendingBlockWithTxHashes::Block(block) => {
+                Ok(Some(U256::from(block.transactions.len())))
+            }
+            MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
+        }
     }
 }
