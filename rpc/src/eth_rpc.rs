@@ -32,7 +32,7 @@ trait EthApi {
 
     /// Returns an object with data about the sync status or false.
     #[method(name = "eth_syncing")]
-    fn syncing(&self) -> Result<SyncStatus>;
+    async fn syncing(&self) -> Result<SyncStatus>;
 
     /// Returns the client coinbase address.
     #[method(name = "eth_coinbase")]
@@ -266,8 +266,9 @@ impl EthApiServer for KakarotEthRpc {
         Ok(protocol_version.into())
     }
 
-    fn syncing(&self) -> Result<SyncStatus> {
-        todo!()
+    async fn syncing(&self) -> Result<SyncStatus> {
+        let status = self.starknet_client.syncing().await?;
+        Ok(status)
     }
 
     async fn author(&self) -> Result<Address> {
