@@ -61,14 +61,20 @@ pub fn ethers_block_id_to_starknet_block_id(
             })?;
             Ok(StarknetBlockId::Hash(address_felt))
         }
-        EthBlockId::Number(number) => match number {
-            BlockNumber::Latest => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
-            BlockNumber::Finalized => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
-            BlockNumber::Safe => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
-            BlockNumber::Earliest => Ok(StarknetBlockId::Number(0)),
-            BlockNumber::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
-            BlockNumber::Number(num) => Ok(StarknetBlockId::Number(num.as_u64())),
-        },
+        EthBlockId::Number(number) => ethers_block_number_to_starknet_block_id(number),
+    }
+}
+
+pub fn ethers_block_number_to_starknet_block_id(
+    block: BlockNumber,
+) -> Result<StarknetBlockId, LightClientError> {
+    match block {
+        BlockNumber::Latest => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
+        BlockNumber::Finalized => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
+        BlockNumber::Safe => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
+        BlockNumber::Earliest => Ok(StarknetBlockId::Number(0)),
+        BlockNumber::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
+        BlockNumber::Number(num) => Ok(StarknetBlockId::Number(num.as_u64())),
     }
 }
 
