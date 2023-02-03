@@ -481,15 +481,15 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn is_mining(&self) -> Result<bool> {
-        todo!()
+        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_mining. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn hashrate(&self) -> Result<U256> {
-        Ok(U256::from(32))
+        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_hashrate. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn get_work(&self) -> Result<Work> {
-        todo!()
+        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_getWork. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn submit_hashrate(&self, _hashrate: U256, _id: H256) -> Result<bool> {
