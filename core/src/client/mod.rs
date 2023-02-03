@@ -10,7 +10,7 @@ use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
         models::{
-            BlockId as StarknetBlockId, BroadcastedInvokeTransaction,
+            BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction,
             BroadcastedInvokeTransactionV1, DeployAccountTransactionReceipt,
             DeployTransactionReceipt, FunctionCall, InvokeTransaction, InvokeTransactionReceipt,
             MaybePendingBlockWithTxHashes, MaybePendingTransactionReceipt, SyncStatusType,
@@ -106,6 +106,10 @@ pub trait StarknetClient: Send + Sync {
         &self,
         hash: H256,
     ) -> Result<Option<TransactionReceipt>, KakarotClientError>;
+    async fn get_last_transactions(
+        &self,
+        max: Option<usize>,
+    ) -> Result<Vec<InvokeTransaction>, KakarotClientError>;
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -306,6 +310,21 @@ impl StarknetClient for StarknetClientImpl {
         )))
     }
 
+    async fn transaction_by_block_number_and_index(
+        &self,
+        block_id: StarknetBlockId,
+        tx_index: Index,
+    ) -> Result<EtherTransaction, KakarotClientError> {
+        let usize_index: usize = tx_index.into();
+        let index: u64 = usize_index as u64;
+        let starknet_tx = self
+            .client
+            .get_transaction_by_block_id_and_index(&block_id, index)
+            .await?;
+        let eth_tx = starknet_tx_into_eth_tx(starknet_tx)?;
+        Ok(eth_tx)
+    }
+
     /// Get the syncing status of the light client
     /// # Arguments
     /// # Returns
@@ -366,7 +385,6 @@ impl StarknetClient for StarknetClientImpl {
             MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
         }
     }
-
     /// Get the number of transactions in a block given a block hash.
     /// The number of transactions in a block.
     /// # Arguments
@@ -392,20 +410,6 @@ impl StarknetClient for StarknetClientImpl {
             }
             MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
         }
-    }
-    async fn transaction_by_block_number_and_index(
-        &self,
-        block_id: StarknetBlockId,
-        tx_index: Index,
-    ) -> Result<EtherTransaction, KakarotClientError> {
-        let usize_index: usize = tx_index.into();
-        let index: u64 = usize_index as u64;
-        let starknet_tx = self
-            .client
-            .get_transaction_by_block_id_and_index(&block_id, index)
-            .await?;
-        let eth_tx = starknet_tx_into_eth_tx(starknet_tx)?;
-        Ok(eth_tx)
     }
 
     /// Returns the Starknet address associated with a given Ethereum address.
@@ -571,5 +575,37 @@ impl StarknetClient for StarknetClientImpl {
         };
 
         Ok(Some(res_receipt))
+    }
+
+    async fn get_last_transactions(
+        &self,
+        max: Option<usize>,
+    ) -> Result<Vec<InvokeTransaction>, KakarotClientError> {
+        let tx_limit = max.unwrap_or(10);
+        let mut txs = Vec::new();
+
+        let transactions_hash = match self
+            .client
+            .get_block_with_tx_hashes(&StarknetBlockId::Tag(BlockTag::Latest))
+            .await?
+        {
+            MaybePendingBlockWithTxHashes::Block(b) => b.transactions,
+            MaybePendingBlockWithTxHashes::PendingBlock(b) => b.transactions,
+        };
+
+        let mut limit = 0;
+        for tx_hash in transactions_hash {
+            if limit < tx_limit {
+                break;
+            }
+
+            let tx = self.client.get_transaction_by_hash(tx_hash).await?;
+            if let StarknetTransaction::Invoke(tx) = tx {
+                txs.push(tx);
+                limit += 1;
+            }
+        }
+
+        Ok(txs)
     }
 }

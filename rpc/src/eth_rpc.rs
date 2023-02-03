@@ -1,8 +1,13 @@
+use std::ops::{Add, Div};
+
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
 
 use jsonrpsee::types::error::CallError;
-use kakarot_rpc_core::client::{types::RichBlock, StarknetClient};
+use kakarot_rpc_core::client::{
+    types::{RichBlock, Transaction as EtherTransaction},
+    StarknetClient,
+};
 use kakarot_rpc_core::helpers::{ethers_block_id_to_starknet_block_id, raw_calldata};
 use reth_primitives::{
     rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, H256},
@@ -15,9 +20,9 @@ use reth_rpc_types::{
 };
 use serde_json::Value;
 use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag};
-
-use kakarot_rpc_core::client::types::Transaction as EtherTransaction;
+use starknet::providers::jsonrpc::models::{
+    BlockId as StarknetBlockId, BlockTag, InvokeTransaction,
+};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 ///
@@ -489,8 +494,30 @@ impl EthApiServer for KakarotEthRpc {
         })
     }
 
+    /// Get max priority fee per gas. Not available directly from starknet.
+    /// Getting last block and calculating average on these blocks.
+    /// # Arguments
+    /// # Returns
+    ///  `Ok(U256)` if the operation was successful.
     async fn max_priority_fee_per_gas(&self) -> Result<U256> {
-        Ok(U256::from(32))
+        let transactions = self.starknet_client.get_last_transactions(None).await?;
+        let mut last_tx_max_fees: Vec<U256> = Vec::new();
+        for tx in transactions.iter() {
+            match tx {
+                InvokeTransaction::V0(t) => {
+                    last_tx_max_fees.push(U256::from_be_bytes(t.max_fee.to_bytes_be()))
+                }
+                InvokeTransaction::V1(t) => {
+                    last_tx_max_fees.push(U256::from_be_bytes(t.max_fee.to_bytes_be()))
+                }
+            }
+        }
+
+        let tx_count = last_tx_max_fees.len();
+        Ok(last_tx_max_fees
+            .into_iter()
+            .fold(U256::ZERO, |acc, fee| acc.add(fee))
+            .div(U256::from(tx_count)))
     }
 
     async fn is_mining(&self) -> Result<bool> {

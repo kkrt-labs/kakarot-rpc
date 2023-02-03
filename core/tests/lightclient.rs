@@ -6,8 +6,14 @@ mod test {
 
     use reth_primitives::{Address, Bloom, Bytes, H160, H256, H64, U256};
     use reth_rpc_types::{SyncInfo, SyncStatus};
-    use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
-
+    use starknet::{
+        core::types::FieldElement,
+        macros::selector,
+        providers::jsonrpc::{
+            models::{BlockId as StarknetBlockId, FunctionCall},
+            HttpTransport, JsonRpcClient, JsonRpcClientError,
+        },
+    };
     use std::collections::BTreeMap;
 
     #[tokio::test]
