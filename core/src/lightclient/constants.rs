@@ -1,8 +1,6 @@
-// constants.rs
-pub const ACCOUNT_REGISTRY_ADDRESS: &str =
-    "0x702ff500f359a185fafbdef2fadad75b04e21a814abc5e6257e2e65ceffdf15";
 pub const KAKAROT_MAIN_CONTRACT_ADDRESS: &str =
-    "0xb5644ba96891f73151973d76f914ee6eea75479a1fe5fbe0098afa50027385";
+    "0x4615a6affcb60711b961585219a942a12539495e24443d280e1c73e443555b";
+
 pub const CHAIN_ID: u64 = 1263227476;
 
 pub mod selectors {

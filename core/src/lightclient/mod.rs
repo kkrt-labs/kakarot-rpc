@@ -34,10 +34,7 @@ use mockall::predicate::*;
 use mockall::*;
 use reth_rpc_types::Index;
 pub mod constants;
-use constants::{
-    selectors::{BYTECODE, GET_STARKNET_CONTRACT_ADDRESS},
-    ACCOUNT_REGISTRY_ADDRESS, KAKAROT_MAIN_CONTRACT_ADDRESS,
-};
+use constants::{selectors::BYTECODE, KAKAROT_MAIN_CONTRACT_ADDRESS};
 pub mod types;
 use types::RichBlock;
 
@@ -107,7 +104,6 @@ pub trait StarknetClient: Send + Sync {
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
-    kakarot_account_registry: FieldElement,
     kakarot_main_contract: FieldElement,
 }
 
@@ -125,11 +121,9 @@ impl From<LightClientError> for jsonrpsee::core::Error {
 impl StarknetClientImpl {
     pub fn new(starknet_rpc: &str) -> Result<Self> {
         let url = Url::parse(starknet_rpc)?;
-        let kakarot_account_registry = FieldElement::from_hex_be(ACCOUNT_REGISTRY_ADDRESS)?;
         let kakarot_main_contract = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
         Ok(Self {
             client: JsonRpcClient::new(HttpTransport::new(url)),
-            kakarot_account_registry,
             kakarot_main_contract,
         })
     }
@@ -214,8 +208,8 @@ impl StarknetClient for StarknetClientImpl {
         // Prepare the calldata for the get_starknet_contract_address function call
         let tx_calldata_vec = vec![ethereum_address_felt];
         let request = FunctionCall {
-            contract_address: self.kakarot_account_registry,
-            entry_point_selector: GET_STARKNET_CONTRACT_ADDRESS,
+            contract_address: self.kakarot_main_contract,
+            entry_point_selector: COMPUTE_STARKNET_ADDRESS,
             calldata: tx_calldata_vec,
         };
         // Make the function call to get the Starknet contract address
@@ -442,28 +436,39 @@ impl StarknetClient for StarknetClientImpl {
                 "Kakarot Core: Failed to get Starknet address from Kakarot"
             ))
         })?;
+
+        println!("Starknet address: {result}");
+
         Ok(*result)
     }
 
     async fn submit_starknet_transaction(
         &self,
-        max_fee: FieldElement,
+        _max_fee: FieldElement,
         signature: Vec<FieldElement>,
         nonce: FieldElement,
         sender_address: FieldElement,
         calldata: Vec<FieldElement>,
     ) -> Result<H256, LightClientError> {
         let transaction_v1 = BroadcastedInvokeTransactionV1 {
-            max_fee,
+            // TODO: Use a real max fee
+            max_fee: FieldElement::from(u64::MAX),
             signature,
             nonce,
             sender_address,
             calldata,
         };
+
         let transaction_result = self
             .client
             .add_invoke_transaction(&BroadcastedInvokeTransaction::V1(transaction_v1))
             .await?;
+
+        println!(
+            "Kakarot Core: Submitted Starknet transaction with hash: {0}",
+            transaction_result.transaction_hash,
+        );
+
         Ok(H256::from(
             transaction_result.transaction_hash.to_bytes_be(),
         ))

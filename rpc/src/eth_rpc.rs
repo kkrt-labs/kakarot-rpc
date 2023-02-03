@@ -526,6 +526,7 @@ impl EthApiServer for KakarotEthRpc {
                 anyhow::anyhow!("Raw transaction data is empty. Cannot process a Kakarot call",),
             )));
         };
+
         let transaction = TransactionSigned::decode(&mut data).map_err(|_| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
                 "Failed to decode raw transaction data. Cannot process a Kakarot call",
