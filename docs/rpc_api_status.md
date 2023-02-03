@@ -10,6 +10,7 @@ Based on this specification: [ethereum/execution-apis](https://github.com/ethere
 - ⏳ -> Logic verified, being implemented
 - ✅ -> Implemented
 - 🟡 -> Not respecting the specification
+- ❎ -> Unsupported method (e.g. PoW specific methods, deprecated methods, etc.)
 
 ### Contribute
 The template for the method file can be found [here](docs/contributing/method_template.md) copy it to the new method file and edit it corresponding to the method you're implementing.
