@@ -19,12 +19,15 @@ extern crate hex;
 
 use crate::helpers::{
     decode_execute_at_address_return, ethers_block_number_to_starknet_block_id,
-    starknet_block_to_eth_block, FeltOrFeltArray, MaybePendingStarknetBlock,
+    starknet_block_to_eth_block, starknet_tx_into_eth_tx, FeltOrFeltArray,
+    MaybePendingStarknetBlock,
 };
 
+use crate::lightclient::types::Transaction as EtherTransaction;
 use async_trait::async_trait;
 use mockall::predicate::*;
 use mockall::*;
+use reth_rpc_types::Index;
 pub mod constants;
 use constants::{
     selectors::{BYTECODE, GET_STARKNET_CONTRACT_ADDRESS},
@@ -63,6 +66,11 @@ pub trait StarknetClient: Send + Sync {
         calldata: Bytes,
         starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, LightClientError>;
+    async fn transaction_by_block_number_and_index(
+        &self,
+        block_id: StarknetBlockId,
+        tx_index: Index,
+    ) -> Result<EtherTransaction, LightClientError>;
     async fn syncing(&self) -> Result<SyncStatus, LightClientError>;
     async fn block_transaction_count_by_number(
         &self,
@@ -330,5 +338,20 @@ impl StarknetClient for StarknetClientImpl {
             }
             MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
         }
+    }
+
+    async fn transaction_by_block_number_and_index(
+        &self,
+        block_id: StarknetBlockId,
+        tx_index: Index,
+    ) -> Result<EtherTransaction, LightClientError> {
+        let usize_index: usize = tx_index.into();
+        let index: u64 = usize_index as u64;
+        let starknet_tx = self
+            .client
+            .get_transaction_by_block_id_and_index(&block_id, index)
+            .await?;
+        let eth_tx = starknet_tx_into_eth_tx(starknet_tx)?;
+        Ok(eth_tx)
     }
 }
