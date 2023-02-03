@@ -5,7 +5,7 @@ mod test {
     };
 
     use reth_primitives::{Address, Bloom, Bytes, H160, H256, H64, U256};
-    use reth_rpc_types::SyncStatus;
+    use reth_rpc_types::{SyncInfo, SyncStatus};
     use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
 
     use std::collections::BTreeMap;
@@ -35,13 +35,23 @@ mod test {
         let mut starknet_lightclient_mock = config();
 
         // Set expect to testing RPC method
+
+        let status_info = SyncInfo {
+            starting_block: U256::from(1),
+            current_block: U256::from(1),
+            highest_block: U256::from(2),
+            warp_chunks_amount: None,
+            warp_chunks_processed: None,
+        };
+        let status = status_info.clone();
+
         starknet_lightclient_mock
             .expect_syncing()
-            .returning(|| Ok(SyncStatus::None));
+            .returning(move || Ok(SyncStatus::Info(status_info.clone())));
 
         let result_mock = starknet_lightclient_mock.syncing().await;
 
-        assert_eq!(SyncStatus::None, result_mock.unwrap());
+        assert_eq!(SyncStatus::Info(status), result_mock.unwrap());
     }
 
     #[tokio::test]
