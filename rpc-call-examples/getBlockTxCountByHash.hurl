@@ -2,6 +2,6 @@ POST http://127.0.0.1:3030
 Content-Type: application/json
 {
     "jsonrpc":"2.0","method":"eth_getBlockTransactionCountByHash","params":[
-        "0x001024f915325c4bfa27583b43cc9c8977fb5d22feae126f708a52a1a5b66fbe"
-    ],"id":4
+        "0xb396cbe7ea9d7b9669c37fd2792a159d47c34dd72a486bb839bdfdbc0df23f90"
+    ],"id":1337
 }

@@ -22,9 +22,7 @@ extern crate hex;
 
 use crate::helpers::{
     decode_execute_at_address_return, ethers_block_id_to_starknet_block_id,
-    ethers_block_number_to_starknet_block_id, starknet_block_to_eth_block, FeltOrFeltArray,
-
-    MaybePendingStarknetBlock,
+    starknet_block_to_eth_block, FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 
 use crate::lightclient::types::Transaction as EtherTransaction;
@@ -330,13 +328,13 @@ impl StarknetClient for StarknetClientImpl {
     ///
     ///  * `transaction_count(U256)` - The number of transactions.
     ///
-    /// `Ok(Bytes)` if the operation was successful.
+    /// `Ok(Option<U256>)` if the operation was successful.
     /// `Err(LightClientError)` if the operation failed.
     async fn block_transaction_count_by_number(
         &self,
         number: BlockNumber,
     ) -> Result<Option<U256>, LightClientError> {
-        let starknet_block_id = ethers_block_number_to_starknet_block_id(number)?;
+        let starknet_block_id = ethers_block_id_to_starknet_block_id(BlockId::Number(number))?;
         let starknet_block = self
             .client
             .get_block_with_tx_hashes(&starknet_block_id)
@@ -374,7 +372,7 @@ impl StarknetClient for StarknetClientImpl {
             }
             MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
         }
-      }
+    }
     async fn transaction_by_block_number_and_index(
         &self,
         block_id: StarknetBlockId,
