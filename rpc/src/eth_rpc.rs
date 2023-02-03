@@ -316,7 +316,14 @@ impl EthApiServer for KakarotEthRpc {
         &self,
         _number: BlockNumber,
     ) -> Result<Option<U256>> {
-        todo!()
+        let transaction_count = self
+            .starknet_client
+            .block_transaction_count_by_number(_number)
+            .await?;
+        match transaction_count {
+            Some(transaction_count) => Ok(Some(transaction_count)),
+            None => Ok(None),
+        }
     }
 
     async fn block_uncles_count_by_hash(&self, _hash: H256) -> Result<U256> {
@@ -474,15 +481,15 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn is_mining(&self) -> Result<bool> {
-        todo!()
+        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_mining. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn hashrate(&self) -> Result<U256> {
-        Ok(U256::from(32))
+        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_hashrate. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn get_work(&self) -> Result<Work> {
-        todo!()
+        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_getWork. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn submit_hashrate(&self, _hashrate: U256, _id: H256) -> Result<bool> {

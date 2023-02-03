@@ -1,22 +1,25 @@
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
-use reth_primitives::{Address, Bytes, U256};
+use reth_primitives::{rpc::BlockNumber, Address, Bytes, U256};
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
-        models::{BlockId as StarknetBlockId, FunctionCall, SyncStatusType},
+        models::{
+            BlockId as StarknetBlockId, FunctionCall, MaybePendingBlockWithTxHashes, SyncStatusType,
+        },
         HttpTransport, JsonRpcClient, JsonRpcClientError,
     },
 };
+
 use thiserror::Error;
 use url::Url;
 extern crate hex;
 
 use crate::helpers::{
-    decode_execute_at_address_return, starknet_block_to_eth_block, FeltOrFeltArray,
-    MaybePendingStarknetBlock,
+    decode_execute_at_address_return, ethers_block_number_to_starknet_block_id,
+    starknet_block_to_eth_block, FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 
 use async_trait::async_trait;
@@ -61,6 +64,10 @@ pub trait StarknetClient: Send + Sync {
         starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, LightClientError>;
     async fn syncing(&self) -> Result<SyncStatus, LightClientError>;
+    async fn block_transaction_count_by_number(
+        &self,
+        number: BlockNumber,
+    ) -> Result<Option<U256>, LightClientError>;
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -91,7 +98,6 @@ impl StarknetClientImpl {
         })
     }
 }
-
 #[async_trait]
 impl StarknetClient for StarknetClientImpl {
     /// Get the number of transactions in a block given a block id.
@@ -293,6 +299,36 @@ impl StarknetClient for StarknetClientImpl {
 
                 Ok(SyncStatus::Info(status_info))
             }
+        }
+    }
+
+    /// Get the number of transactions in a block given a block number.
+    /// The number of transactions in a block.
+    ///
+    /// # Arguments
+    ///
+    /// * `number(u64)` - The block number.
+    ///
+    /// # Returns
+    ///
+    ///  * `transaction_count(U256)` - The number of transactions.
+    ///
+    /// `Ok(Bytes)` if the operation was successful.
+    /// `Err(LightClientError)` if the operation failed.
+    async fn block_transaction_count_by_number(
+        &self,
+        number: BlockNumber,
+    ) -> Result<Option<U256>, LightClientError> {
+        let starknet_block_id = ethers_block_number_to_starknet_block_id(number)?;
+        let starknet_block = self
+            .client
+            .get_block_with_tx_hashes(&starknet_block_id)
+            .await?;
+        match starknet_block {
+            MaybePendingBlockWithTxHashes::Block(block) => {
+                Ok(Some(U256::from(block.transactions.len())))
+            }
+            MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
         }
     }
 }
