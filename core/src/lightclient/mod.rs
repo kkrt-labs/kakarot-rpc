@@ -2,13 +2,17 @@ use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
 use reth_primitives::{rpc::BlockNumber, Address, Bytes, U256};
+use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
-        models::{BlockId as StarknetBlockId, FunctionCall, MaybePendingBlockWithTxHashes},
+        models::{
+            BlockId as StarknetBlockId, FunctionCall, MaybePendingBlockWithTxHashes, SyncStatusType,
+        },
         HttpTransport, JsonRpcClient, JsonRpcClientError,
     },
 };
+
 use thiserror::Error;
 use url::Url;
 extern crate hex;
@@ -59,6 +63,7 @@ pub trait StarknetClient: Send + Sync {
         calldata: Bytes,
         starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, LightClientError>;
+    async fn syncing(&self) -> Result<SyncStatus, LightClientError>;
     async fn block_transaction_count_by_number(
         &self,
         number: BlockNumber,
@@ -264,6 +269,37 @@ impl StarknetClient for StarknetClientImpl {
         Err(LightClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode the return data of Kakarot call"
         )))
+    }
+
+    /// Get the syncing status of the light client
+    /// # Arguments
+    /// # Returns
+    ///  `Ok(SyncStatus)` if the operation was successful.
+    ///  `Err(LightClientError)` if the operation failed.
+    async fn syncing(&self) -> Result<SyncStatus, LightClientError> {
+        let status = self.client.syncing().await?;
+
+        match status {
+            SyncStatusType::NotSyncing => Ok(SyncStatus::None),
+
+            SyncStatusType::Syncing(data) => {
+                let starting_block: U256 = U256::from(data.starting_block_num);
+                let current_block: U256 = U256::from(data.current_block_num);
+                let highest_block: U256 = U256::from(data.highest_block_num);
+                let warp_chunks_amount: Option<U256> = None;
+                let warp_chunks_processed: Option<U256> = None;
+
+                let status_info = SyncInfo {
+                    starting_block,
+                    current_block,
+                    highest_block,
+                    warp_chunks_amount,
+                    warp_chunks_processed,
+                };
+
+                Ok(SyncStatus::Info(status_info))
+            }
+        }
     }
 
     /// Get the number of transactions in a block given a block number.
