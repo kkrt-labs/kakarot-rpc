@@ -66,7 +66,7 @@ pub trait StarknetClient: Send + Sync {
         calldata: Bytes,
         starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, LightClientError>;
-    async fn transaction_by_block_number_and_index(
+    async fn transaction_by_block_id_and_index(
         &self,
         block_id: StarknetBlockId,
         tx_index: Index,
@@ -340,7 +340,7 @@ impl StarknetClient for StarknetClientImpl {
         }
     }
 
-    async fn transaction_by_block_number_and_index(
+    async fn transaction_by_block_id_and_index(
         &self,
         block_id: StarknetBlockId,
         tx_index: Index,
