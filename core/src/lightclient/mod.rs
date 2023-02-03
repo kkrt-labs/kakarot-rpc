@@ -22,7 +22,8 @@ extern crate hex;
 
 use crate::helpers::{
     decode_execute_at_address_return, ethers_block_id_to_starknet_block_id,
-    starknet_block_to_eth_block, FeltOrFeltArray, MaybePendingStarknetBlock,
+    starknet_block_to_eth_block, starknet_tx_into_eth_tx, FeltOrFeltArray,
+    MaybePendingStarknetBlock,
 };
 
 use crate::lightclient::types::Transaction as EtherTransaction;
