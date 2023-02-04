@@ -1,7 +1,7 @@
 use reth_primitives::rpc::transaction::eip2930::AccessListItem;
-use reth_primitives::H512;
-use reth_primitives::U64;
+use reth_primitives::{rpc::Log, H160, H512, U128, U64};
 use reth_primitives::{Address, Bloom, Bytes, H256, H64, U256};
+use reth_rpc_types::TransactionReceipt;
 use serde::{ser::Error, Deserialize, Serialize, Serializer};
 use std::{collections::BTreeMap, ops::Deref};
 
@@ -182,5 +182,36 @@ impl<T: Serialize> Serialize for Rich<T> {
                 "Unserializable structures: expected objects",
             ))
         }
+    }
+}
+
+// TransactionReceipt
+pub struct MyTransactionReceipt(pub TransactionReceipt);
+
+impl Default for MyTransactionReceipt {
+    fn default() -> Self {
+        Self(TransactionReceipt {
+            transaction_hash: None,
+            transaction_index: None,
+            block_hash: None,
+            block_number: None,
+            from: H160::from(0),
+            to: None,
+            //TODO: Fetch real data
+            cumulative_gas_used: U256::from(1000000),
+            gas_used: None,
+            contract_address: None,
+            // TODO : default log value
+            logs: vec![Log::default()],
+            // Bloom is a byte array of length 256
+            logs_bloom: Bloom::default(),
+            //TODO: Fetch real data
+            state_root: None,
+            status_code: None,
+            //TODO: Fetch real data
+            effective_gas_price: U128::from(1000000),
+            //TODO: Fetch real data
+            transaction_type: U256::from(0),
+        })
     }
 }
