@@ -444,15 +444,14 @@ impl StarknetClient for StarknetClientImpl {
 
     async fn submit_starknet_transaction(
         &self,
-        _max_fee: FieldElement,
+        max_fee: FieldElement,
         signature: Vec<FieldElement>,
         nonce: FieldElement,
         sender_address: FieldElement,
         calldata: Vec<FieldElement>,
     ) -> Result<H256, LightClientError> {
         let transaction_v1 = BroadcastedInvokeTransactionV1 {
-            // TODO: Use a real max fee
-            max_fee: FieldElement::from(u64::MAX),
+            max_fee,
             signature,
             nonce,
             sender_address,

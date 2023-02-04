@@ -10,6 +10,7 @@ use reth_primitives::Address;
 //     Block, BlockTransactions, Header, Rich, Transaction as EtherTransaction,
 // };
 use starknet::{
+    accounts::Call,
     core::types::FieldElement,
     providers::jsonrpc::models::{
         BlockId as StarknetBlockId, BlockTag, InvokeTransaction, MaybePendingBlockWithTxHashes,
@@ -18,7 +19,7 @@ use starknet::{
 };
 
 use crate::lightclient::{
-    constants::CHAIN_ID,
+    constants::{selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_MAIN_CONTRACT_ADDRESS},
     types::{Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction},
     LightClientError,
 };
@@ -634,6 +635,41 @@ fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
 
 pub fn bytes_to_felt_vec(bytes: Bytes) -> Vec<FieldElement> {
     bytes.to_vec().into_iter().map(FieldElement::from).collect()
+}
+
+/// Author: https://github.com/xJonathanLEI/starknet-rs/blob/447182a90839a3e4f096a01afe75ef474186d911/starknet-accounts/src/account/execution.rs#L166
+/// Constructs the calldata for a raw Starknet invoke transaction call
+/// ## Arguments
+/// * `bytes` - The calldata to be passed to the contract - RLP encoded raw EVM transaction
+///
+///
+/// ## Returns
+/// * `Result<Vec<FieldElement>>` - The calldata for the raw Starknet invoke transaction call
+pub fn raw_calldata(bytes: Bytes) -> Result<Vec<FieldElement>> {
+    let kakarot_address_felt = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
+    let calls: Vec<Call> = vec![Call {
+        to: kakarot_address_felt,
+        selector: EXECUTE_AT_ADDRESS,
+        calldata: bytes_to_felt_vec(bytes),
+    }];
+    let mut concated_calldata: Vec<FieldElement> = vec![];
+    let mut execute_calldata: Vec<FieldElement> = vec![calls.len().into()];
+    for call in calls.iter() {
+        execute_calldata.push(call.to); // to
+        execute_calldata.push(call.selector); // selector
+        execute_calldata.push(concated_calldata.len().into()); // data_offset
+        execute_calldata.push(call.calldata.len().into()); // data_len
+
+        for item in call.calldata.iter() {
+            concated_calldata.push(*item);
+        }
+    }
+    execute_calldata.push(concated_calldata.len().into()); // calldata_len
+    for item in concated_calldata.into_iter() {
+        execute_calldata.push(item); // calldata
+    }
+
+    Ok(execute_calldata)
 }
 
 #[cfg(test)]
