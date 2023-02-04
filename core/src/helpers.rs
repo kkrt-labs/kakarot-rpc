@@ -447,7 +447,7 @@ pub fn decode_execute_at_address_return(
     Ok(segmented_result)
 }
 
-fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, Error> {
+pub fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, Error> {
     let mut ether_tx = EtherTransaction::default();
     println!("2.1 Inside Getting transactions");
 
@@ -616,7 +616,7 @@ fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, Error> {
     }
 }
 
-fn felt_to_u256(element: FieldElement) -> U256 {
+pub fn felt_to_u256(element: FieldElement) -> U256 {
     let inner = element.to_bytes_be();
     U256::from_be_bytes(inner)
 }
@@ -629,7 +629,7 @@ fn vec_felt_to_bytes(contract_bytecode: Vec<FieldElement>) -> Bytes {
     Bytes::from(contract_bytecode_in_u8)
 }
 
-fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
+pub fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
     H160::from_slice(&x.to_bytes_be()[12..32])
 }
 

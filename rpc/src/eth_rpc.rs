@@ -376,7 +376,8 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn transaction_receipt(&self, _hash: H256) -> Result<Option<TransactionReceipt>> {
-        todo!()
+        let receipt = self.starknet_client.get_transaction_receipt(_hash).await?;
+        Ok(receipt)
     }
 
     async fn balance(&self, _address: Address, _block_number: Option<BlockId>) -> Result<U256> {
