@@ -342,7 +342,18 @@ impl StarknetClient for StarknetClientImpl {
             MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
         }
     }
-
+    /// Returns the receipt of a transaction by transaction hash.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash(H256)` - The block hash.
+    ///
+    /// # Returns
+    ///
+    ///  * `transaction_receipt(TransactionReceipt)` - The transaction receipt.
+    ///
+    /// `Ok(Option<TransactionReceipt>)` if the operation was successful.
+    /// `Err(LightClientError)` if the operation failed.
     async fn get_transaction_receipt(
         &self,
         hash: H256,
@@ -517,19 +528,3 @@ impl StarknetClient for StarknetClientImpl {
         Ok(Some(res_receipt))
     }
 }
-
-// Receipt information to return
-// ✅ transactionHash
-// transactionIndex
-// ✅ blockHash
-// ✅ blockNumber
-// ✅ from
-// ✅ to : address of receiver, 0 if account deployment
-// cumulativeGasUsed : The sum of gas used by this transaction and all preceding transactions in the same block.
-// ✅ gasUsed
-// ✅ contractAddress
-// logs : Array - Array of log objects, which this transaction generated.
-// logsBloom
-// root : The post-transaction state root. Only specified for transactions included before the Byzantium upgrade.
-// ✅ status
-// effectiveGasPrice > get from estimateGasPrice
