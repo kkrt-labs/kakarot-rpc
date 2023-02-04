@@ -278,7 +278,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn accounts(&self) -> Result<Vec<Address>> {
-        todo!()
+        Ok(Vec::new())
     }
 
     async fn chain_id(&self) -> Result<Option<U64>> {
