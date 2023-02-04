@@ -12,6 +12,7 @@ pub mod selectors {
     pub const GET_STARKNET_CONTRACT_ADDRESS: FieldElement =
         selector!("get_starknet_contract_address");
     pub const BYTECODE: FieldElement = selector!("bytecode");
+    pub const STORAGE: FieldElement = selector!("storage");
 
     pub const EXECUTE_AT_ADDRESS: FieldElement = selector!("execute_at_address");
 }

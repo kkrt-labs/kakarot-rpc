@@ -1,36 +1,29 @@
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
-use reth_primitives::{rpc::BlockNumber, Address, Bytes, U256};
-use reth_rpc_types::{SyncInfo, SyncStatus};
+use reth_primitives::{Address, Bytes, U256};
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
-        models::{
-            BlockId as StarknetBlockId, FunctionCall, MaybePendingBlockWithTxHashes, SyncStatusType,
-        },
+        models::{BlockId as StarknetBlockId, FunctionCall},
         HttpTransport, JsonRpcClient, JsonRpcClientError,
     },
 };
-
 use thiserror::Error;
 use url::Url;
 extern crate hex;
 
 use crate::helpers::{
-    decode_execute_at_address_return, ethers_block_number_to_starknet_block_id,
-    starknet_block_to_eth_block, starknet_tx_into_eth_tx, FeltOrFeltArray,
+    decode_execute_at_address_return, starknet_block_to_eth_block, FeltOrFeltArray,
     MaybePendingStarknetBlock,
 };
 
-use crate::lightclient::types::Transaction as EtherTransaction;
 use async_trait::async_trait;
 use mockall::predicate::*;
 use mockall::*;
-use reth_rpc_types::Index;
 pub mod constants;
 use constants::{
-    selectors::{BYTECODE, GET_STARKNET_CONTRACT_ADDRESS},
+    selectors::{BYTECODE, GET_STARKNET_CONTRACT_ADDRESS, STORAGE},
     ACCOUNT_REGISTRY_ADDRESS, KAKAROT_MAIN_CONTRACT_ADDRESS,
 };
 pub mod types;
@@ -66,16 +59,12 @@ pub trait StarknetClient: Send + Sync {
         calldata: Bytes,
         starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, LightClientError>;
-    async fn transaction_by_block_number_and_index(
+    async fn storage_at(
         &self,
-        block_id: StarknetBlockId,
-        tx_index: Index,
-    ) -> Result<EtherTransaction, LightClientError>;
-    async fn syncing(&self) -> Result<SyncStatus, LightClientError>;
-    async fn block_transaction_count_by_number(
-        &self,
-        number: BlockNumber,
-    ) -> Result<Option<U256>, LightClientError>;
+        ethereum_address: Address,
+        index: U256,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<Bytes, LightClientError>;
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -106,6 +95,7 @@ impl StarknetClientImpl {
         })
     }
 }
+
 #[async_trait]
 impl StarknetClient for StarknetClientImpl {
     /// Get the number of transactions in a block given a block id.
@@ -278,80 +268,56 @@ impl StarknetClient for StarknetClientImpl {
             "Cannot parse and decode the return data of Kakarot call"
         )))
     }
-
-    /// Get the syncing status of the light client
-    /// # Arguments
-    /// # Returns
-    ///  `Ok(SyncStatus)` if the operation was successful.
-    ///  `Err(LightClientError)` if the operation failed.
-    async fn syncing(&self) -> Result<SyncStatus, LightClientError> {
-        let status = self.client.syncing().await?;
-
-        match status {
-            SyncStatusType::NotSyncing => Ok(SyncStatus::None),
-
-            SyncStatusType::Syncing(data) => {
-                let starting_block: U256 = U256::from(data.starting_block_num);
-                let current_block: U256 = U256::from(data.current_block_num);
-                let highest_block: U256 = U256::from(data.highest_block_num);
-                let warp_chunks_amount: Option<U256> = None;
-                let warp_chunks_processed: Option<U256> = None;
-
-                let status_info = SyncInfo {
-                    starting_block,
-                    current_block,
-                    highest_block,
-                    warp_chunks_amount,
-                    warp_chunks_processed,
-                };
-
-                Ok(SyncStatus::Info(status_info))
-            }
-        }
-    }
-
-    /// Get the number of transactions in a block given a block number.
-    /// The number of transactions in a block.
-    ///
-    /// # Arguments
-    ///
-    /// * `number(u64)` - The block number.
-    ///
-    /// # Returns
-    ///
-    ///  * `transaction_count(U256)` - The number of transactions.
-    ///
-    /// `Ok(Bytes)` if the operation was successful.
-    /// `Err(LightClientError)` if the operation failed.
-    async fn block_transaction_count_by_number(
+    async fn storage_at(
         &self,
-        number: BlockNumber,
-    ) -> Result<Option<U256>, LightClientError> {
-        let starknet_block_id = ethers_block_number_to_starknet_block_id(number)?;
-        let starknet_block = self
-            .client
-            .get_block_with_tx_hashes(&starknet_block_id)
-            .await?;
-        match starknet_block {
-            MaybePendingBlockWithTxHashes::Block(block) => {
-                Ok(Some(U256::from(block.transactions.len())))
-            }
-            MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
-        }
-    }
+        ethereum_address: Address,
+        index: U256,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<Bytes, LightClientError> {
+        // Convert the Ethereum address to a hex-encoded string
+        let address_hex = hex::encode(ethereum_address);
+        // Convert the hex-encoded string to a FieldElement
+        let ethereum_address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
+            LightClientError::OtherError(anyhow::anyhow!(
+                "Kakarot Core: Failed to convert Ethereum address to FieldElement: {}",
+                e
+            ))
+        })?;
+        // Prepare the calldata for the get_starknet_contract_address function call
+        let tx_calldata_vec = vec![ethereum_address_felt];
+        let request = FunctionCall {
+            contract_address: self.kakarot_account_registry,
+            entry_point_selector: GET_STARKNET_CONTRACT_ADDRESS,
+            calldata: tx_calldata_vec,
+        };
+        // Make the function call to get the Starknet contract address
+        let starknet_contract_address = self.client.call(request, &starknet_block_id).await?;
+        // Concatenate the result of the function call
+        let concatenated_result = starknet_contract_address
+            .into_iter()
+            .fold(FieldElement::ZERO, |acc, x| acc + x);
 
-    async fn transaction_by_block_number_and_index(
-        &self,
-        block_id: StarknetBlockId,
-        tx_index: Index,
-    ) -> Result<EtherTransaction, LightClientError> {
-        let usize_index: usize = tx_index.into();
-        let index: u64 = usize_index as u64;
-        let starknet_tx = self
-            .client
-            .get_transaction_by_block_id_and_index(&block_id, index)
-            .await?;
-        let eth_tx = starknet_tx_into_eth_tx(starknet_tx)?;
-        Ok(eth_tx)
+        // Prepare the calldata for the storage function call
+        // FieldElement::from(index);
+        let bytes = index.to_be_bytes();
+
+        let f = FieldElement::from_bytes_be(&bytes).unwrap();
+        let request = FunctionCall {
+            contract_address: concatenated_result,
+            entry_point_selector: STORAGE,
+            calldata: vec![f],
+        };
+
+        // Make function call to get the contract storage
+        let contract_storage = self.client.call(request, &starknet_block_id).await?;
+
+        // Convert the result of the function call to bytes
+        let contract_storage_in_u8: Vec<u8> = contract_storage
+            .into_iter()
+            .flat_map(|x| x.to_bytes_be())
+            .collect();
+        let bytes_result = Bytes::from(contract_storage_in_u8);
+
+        Ok(bytes_result)
     }
 }
