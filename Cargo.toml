@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["rpc", "starknet"]
+members = ["rpc", "starknet", "internal/utils"]
 
 [workspace.package]
 edition = "2021"
@@ -24,3 +24,6 @@ features = [
     "run-cargo-clippy",
     "run-cargo-fmt",
 ]
+
+[dependencies]
+reqwest = "0.11.14"
