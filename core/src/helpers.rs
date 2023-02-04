@@ -1,4 +1,4 @@
-use eyre::{ErrReport, Error, Result};
+use eyre::Result;
 use reth_primitives::{
     rpc::{BlockId as EthBlockId, BlockNumber},
     Bloom, Bytes, H160, H256, H64, U256,
@@ -447,7 +447,9 @@ pub fn decode_execute_at_address_return(
     Ok(segmented_result)
 }
 
-pub fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransaction, Error> {
+pub fn starknet_tx_into_eth_tx(
+    tx: StarknetTransaction,
+) -> Result<EtherTransaction, LightClientError> {
     let mut ether_tx = EtherTransaction::default();
     println!("2.1 Inside Getting transactions");
 
@@ -606,13 +608,13 @@ pub fn starknet_tx_into_eth_tx(tx: StarknetTransaction) -> Result<EtherTransacti
     Ok(ether_tx)
 }
 
-fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, Error> {
+fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, LightClientError> {
     match element {
         Some(x) => {
             let inner = x.to_bytes_be();
             Ok(U256::from_be_bytes(inner))
         }
-        None => Err(ErrReport::new(InvalidFieldElementError)),
+        None => Ok(U256::from(0)),
     }
 }
 

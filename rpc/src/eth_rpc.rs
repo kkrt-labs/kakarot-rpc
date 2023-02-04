@@ -9,10 +9,12 @@ use reth_primitives::{
     Address, Bytes, H64, U256, U64,
 };
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, SyncStatus, Transaction,
-    TransactionReceipt, TransactionRequest, Work,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, SyncStatus, TransactionReceipt,
+    TransactionRequest, Work,
 };
 use serde_json::Value;
+
+use kakarot_rpc_core::lightclient::types::Transaction as EtherTransaction;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 ///
@@ -88,7 +90,7 @@ trait EthApi {
 
     /// Returns the information about a transaction requested by transaction hash.
     #[method(name = "eth_getTransactionByHash")]
-    async fn transaction_by_hash(&self, hash: H256) -> Result<Option<Transaction>>;
+    async fn transaction_by_hash(&self, hash: H256) -> Result<Option<EtherTransaction>>;
 
     /// Returns information about a transaction by block hash and transaction index position.
     #[method(name = "eth_getTransactionByBlockHashAndIndex")]
@@ -96,7 +98,7 @@ trait EthApi {
         &self,
         hash: H256,
         index: Index,
-    ) -> Result<Option<Transaction>>;
+    ) -> Result<Option<EtherTransaction>>;
 
     /// Returns information about a transaction by block number and transaction index position.
     #[method(name = "eth_getTransactionByBlockNumberAndIndex")]
@@ -104,7 +106,7 @@ trait EthApi {
         &self,
         number: BlockNumber,
         index: Index,
-    ) -> Result<Option<Transaction>>;
+    ) -> Result<Option<EtherTransaction>>;
 
     /// Returns the receipt of a transaction by transaction hash.
     #[method(name = "eth_getTransactionReceipt")]
@@ -350,11 +352,8 @@ impl EthApiServer for KakarotEthRpc {
         todo!()
     }
 
-    async fn transaction_by_hash(
-        &self,
-        _hash: H256,
-    ) -> Result<Option<reth_rpc_types::Transaction>> {
-        let ether_tx = Transaction::default();
+    async fn transaction_by_hash(&self, _hash: H256) -> Result<Option<EtherTransaction>> {
+        let ether_tx = EtherTransaction::default();
 
         Ok(Some(ether_tx))
     }
@@ -363,7 +362,7 @@ impl EthApiServer for KakarotEthRpc {
         &self,
         _hash: H256,
         _index: Index,
-    ) -> Result<Option<reth_rpc_types::Transaction>> {
+    ) -> Result<Option<EtherTransaction>> {
         todo!()
     }
 
@@ -371,8 +370,14 @@ impl EthApiServer for KakarotEthRpc {
         &self,
         _number: BlockNumber,
         _index: Index,
-    ) -> Result<Option<reth_rpc_types::Transaction>> {
-        todo!()
+    ) -> Result<Option<EtherTransaction>> {
+        let block_id = BlockId::Number(_number);
+        let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
+        let tx = self
+            .starknet_client
+            .transaction_by_block_number_and_index(starknet_block_id, _index)
+            .await?;
+        Ok(Some(tx))
     }
 
     async fn transaction_receipt(&self, _hash: H256) -> Result<Option<TransactionReceipt>> {
