@@ -2,9 +2,13 @@
   <h1>Kakarot RPC</h1>
   <img src="docs/images/logo.png" height="200">
   <br />
-  <a href="https://github.com/sayajin-labs/kakarot-rpc/issues/new?assignees=&labels=bug&template=01_BUG_REPORT.md&title=bug%3A+">Report a Bug</a>
+  <a href="https://github.com/sayajin-labs/kakarot-rpc/issues/new?assignees=&labels=bug&template=01_BUG_REPORT.md&title=bug%3A+">
+  Report a Bug
+  </a>
   -
-  <a href="https://github.com/sayajin-labs/kakarot-rpc/issues/new?assignees=&labels=enhancement&template=02_FEATURE_REQUEST.md&title=feat%3A+">Request a Feature</a>
+  <a href="https://github.com/sayajin-labs/kakarot-rpc/issues/new?assignees=&labels=enhancement&template=02_FEATURE_REQUEST.md&title=feat%3A+">
+  Request a Feature
+  </a>
   -
   <a href="https://github.com/sayajin-labs/kakarot-rpc/discussions">Ask a Question</a>
 </div>
@@ -21,8 +25,8 @@
 <details open="open">
 <summary>Table of Contents</summary>
 
-- [Report a Bug](#report-a-bug)
-- [Request a Feature](#request-a-feature)
+- [Report a Bug](https://github.com/sayajin-labs/kakarot-rpc/issues/new?assignees=&labels=bug&template=01_BUG_REPORT.md&title=bug%3A+")
+- [Request a Feature](https://github.com/sayajin-labs/kakarot-rpc/issues/new?assignees=&labels=enhancement&template=02_FEATURE_REQUEST.md&title=feat%3A+≠≠≠≠≠≠≠)
 - [About](#about)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
@@ -48,14 +52,19 @@
 
 ## About
 
-> Kakarot RPC is the JSON-RPC server adapter to interact with Kakarot ZK-EVM in a fully EVM-compatible way.
+> Kakarot RPC is the JSON-RPC server adapter to interact with Kakarot ZK-EVM in
+> a fully EVM-compatible way.
 
 This adapter layer is based on:
+
 - [The Ethereum JSON-RPC spec](https://github.com/ethereum/execution-apis/tree/main/src/eth)
 - [The Starknet JSON-RPC spec](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json)
 - [And their differences](https://github.com/starkware-libs/starknet-specs/blob/master/starknet_vs_ethereum_node_apis.md)
 
-The Kakarot RPC layer's goal is to receive and output EVM-compatible JSON-RPC payloads & calls while interacting with the Starknet Blockchain. This enables Kakarot zkEVM to interact with the usual Ethereum tooling: Metamask, Hardhat, Foundry, etc.  
+The Kakarot RPC layer's goal is to receive and output EVM-compatible JSON-RPC
+payloads & calls while interacting with the Starknet Blockchain. This enables
+Kakarot zkEVM to interact with the usual Ethereum tooling: Metamask, Hardhat,
+Foundry, etc.
 
 ## Architecture
 
@@ -66,6 +75,7 @@ Here is a high level overview of the architecture of Kakarot RPC.
 ## Getting Started
 
 TL;DR:
+
 - Run `kakarotup` to install Kakarot RPC.
 - Test with `cargo test --all`.
 - Run Kakarot RPC in dev mode: `RUST_LOG=debug cargo run -p kakarot_rpc`
@@ -104,13 +114,14 @@ Build from source:
 cargo build --all --release
 ```
 
-The binaries will be located in `target/release/`. 
+The binaries will be located in `target/release/`.
 
 Specify the environment variables and run the binary.
 
 ```bash
 source .env && cargo run -p kakarot_rpc
 ```
+
 ### Configuration
 
 Kakarot RPC is configurable through environment variables.
@@ -129,8 +140,8 @@ Here is the list of all the available environment variables:
 
 ## Roadmap
 
-See the [open issues](https://github.com/sayajin-labs/kakarot-rpc/issues) for
-a list of proposed features (and known issues).
+See the [open issues](https://github.com/sayajin-labs/kakarot-rpc/issues) for a
+list of proposed features (and known issues).
 
 - [Top Feature Requests](https://github.com/sayajin-labs/kakarot-rpc/issues?q=label%3Aenhancement+is%3Aopen+sort%3Areactions-%2B1-desc)
   (Add your votes using the 👍 reaction)
@@ -148,7 +159,8 @@ Reach out to the maintainer at one of the following places:
 
 ## Project assistance
 
-If you want to say **thank you** or/and support active development of Kakarot RPC:
+If you want to say **thank you** or/and support active development of Kakarot
+RPC:
 
 - Add a [GitHub Star](https://github.com/sayajin-labs/kakarot-rpc) to the
   project.
@@ -175,8 +187,9 @@ For a full list of all authors and contributors, see
 
 ## Security
 
-Kakarot RPC follows good practices of security, but 100% security cannot be assured.
-Kakarot RPC is provided **"as is"** without any **warranty**. Use at your own risk.
+Kakarot RPC follows good practices of security, but 100% security cannot be
+assured. Kakarot RPC is provided **"as is"** without any **warranty**. Use at
+your own risk.
 
 _For more information and to report security issues, please refer to our
 [security documentation](docs/SECURITY.md)._
@@ -188,9 +201,11 @@ This project is licensed under the **MIT license**.
 See [LICENSE](LICENSE) for more information.
 
 ## Acknowledgements
+
 ## Contributors ✨
 
-Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+Thanks goes to these wonderful people
+([emoji key](https://allcontributors.org/docs/en/emoji-key)):
 
 <!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
 <!-- prettier-ignore-start -->
@@ -221,4 +236,6 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+This project follows the
+[all-contributors](https://github.com/all-contributors/all-contributors)
+specification. Contributions of any kind welcome!
