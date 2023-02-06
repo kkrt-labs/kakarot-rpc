@@ -21,15 +21,15 @@ use starknet::{
     },
 };
 
-use crate::lightclient::types::MyTransactionReceipt;
 use thiserror::Error;
 use url::Url;
 extern crate hex;
 
 use crate::helpers::{
-    decode_execute_at_address_return, ethers_block_number_to_starknet_block_id, felt_to_u256,
-    starknet_address_to_ethereum_address, starknet_block_to_eth_block, starknet_tx_into_eth_tx,
-    FeltOrFeltArray, MaybePendingStarknetBlock,
+    create_default_transaction_receipt, decode_execute_at_address_return,
+    ethers_block_number_to_starknet_block_id, felt_to_u256, starknet_address_to_ethereum_address,
+    starknet_block_to_eth_block, starknet_tx_into_eth_tx, FeltOrFeltArray,
+    MaybePendingStarknetBlock,
 };
 
 use crate::lightclient::types::Transaction as EtherTransaction;
@@ -384,7 +384,7 @@ impl StarknetClient for StarknetClientImpl {
         &self,
         hash: H256,
     ) -> Result<Option<TransactionReceipt>, LightClientError> {
-        let mut res_receipt = MyTransactionReceipt::default().0;
+        let mut res_receipt = create_default_transaction_receipt();
 
         //TODO: Error when trying to transform 32 bytes hash to FieldElement
         let hash_hex = hex::encode(hash);
@@ -472,6 +472,7 @@ impl StarknetClient for StarknetClientImpl {
                     InvokeTransaction::V1(_) => {}
                 };
             }
+            //TODO: Kakarot does not handle L1-L2 messaging
             StarknetTransaction::L1Handler(l1_handler_tx) => {
                 res_receipt.contract_address = Some(starknet_address_to_ethereum_address(
                     l1_handler_tx.contract_address,
