@@ -1,7 +1,6 @@
 use reth_primitives::rpc::transaction::eip2930::AccessListItem;
-use reth_primitives::H512;
-use reth_primitives::U64;
 use reth_primitives::{Address, Bloom, Bytes, H256, H64, U256};
+use reth_primitives::{H512, U64};
 use serde::{ser::Error, Deserialize, Serialize, Serializer};
 use std::{collections::BTreeMap, ops::Deref};
 
