@@ -10,11 +10,10 @@ use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
         models::{
-            BlockId as StarknetBlockId, DeclareTransactionReceipt, DeployAccountTransactionReceipt,
-            DeployTransactionReceipt, FunctionCall, InvokeTransaction, InvokeTransactionReceipt,
-            L1HandlerTransactionReceipt, MaybePendingBlockWithTxHashes,
-            MaybePendingTransactionReceipt, SyncStatusType, Transaction as StarknetTransaction,
-            TransactionReceipt as StarknetTransactionReceipt,
+            BlockId as StarknetBlockId, DeployAccountTransactionReceipt, DeployTransactionReceipt,
+            FunctionCall, InvokeTransaction, InvokeTransactionReceipt,
+            MaybePendingBlockWithTxHashes, MaybePendingTransactionReceipt, SyncStatusType,
+            Transaction as StarknetTransaction, TransactionReceipt as StarknetTransactionReceipt,
             TransactionStatus as StarknetTransactionStatus,
         },
         HttpTransport, JsonRpcClient, JsonRpcClientError,
@@ -27,9 +26,9 @@ extern crate hex;
 
 use crate::helpers::{
     create_default_transaction_receipt, decode_execute_at_address_return,
-    ethers_block_number_to_starknet_block_id, felt_to_u256, starknet_address_to_ethereum_address,
-    starknet_block_to_eth_block, starknet_tx_into_eth_tx, FeltOrFeltArray,
-    MaybePendingStarknetBlock,
+    ethers_block_number_to_starknet_block_id, felt_to_u256, hash_to_field_element,
+    starknet_address_to_ethereum_address, starknet_block_to_eth_block, starknet_tx_into_eth_tx,
+    FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 
 use crate::lightclient::types::Transaction as EtherTransaction;
@@ -387,75 +386,48 @@ impl StarknetClient for StarknetClientImpl {
         let mut res_receipt = create_default_transaction_receipt();
 
         //TODO: Error when trying to transform 32 bytes hash to FieldElement
-        let hash_hex = hex::encode(hash);
-        let hash_felt = FieldElement::from_hex_be(&hash_hex).map_err(|e| {
-            LightClientError::OtherError(anyhow::anyhow!(
-                "Failed to convert Starknet block hash to FieldElement: {}",
-                e
-            ))
-        })?;
+        let hash_felt = hash_to_field_element(PrimitiveH256::from(hash.0))?;
         let starknet_tx_receipt = self.client.get_transaction_receipt(hash_felt).await?;
 
         match starknet_tx_receipt {
-            MaybePendingTransactionReceipt::Receipt(receipt) => {
-                match receipt {
-                    StarknetTransactionReceipt::Invoke(InvokeTransactionReceipt {
-                        transaction_hash,
-                        actual_fee,
-                        status,
-                        block_hash,
-                        block_number,
-                        ..
-                    })
-                    | StarknetTransactionReceipt::L1Handler(L1HandlerTransactionReceipt {
-                        transaction_hash,
-                        actual_fee,
-                        status,
-                        block_hash,
-                        block_number,
-                        ..
-                    })
-                    | StarknetTransactionReceipt::Declare(DeclareTransactionReceipt {
-                        transaction_hash,
-                        actual_fee,
-                        status,
-                        block_hash,
-                        block_number,
-                        ..
-                    })
-                    | StarknetTransactionReceipt::Deploy(DeployTransactionReceipt {
-                        transaction_hash,
-                        actual_fee,
-                        status,
-                        block_hash,
-                        block_number,
-                        ..
-                    })
-                    | StarknetTransactionReceipt::DeployAccount(
-                        DeployAccountTransactionReceipt {
-                            transaction_hash,
-                            actual_fee,
-                            status,
-                            block_hash,
-                            block_number,
-                            ..
-                        },
-                    ) => {
-                        res_receipt.transaction_hash =
-                            Some(PrimitiveH256::from_slice(&transaction_hash.to_bytes_be()));
-                        res_receipt.gas_used = Some(felt_to_u256(actual_fee));
-                        res_receipt.status_code = match status {
-                            StarknetTransactionStatus::Pending => Some(U64::from(0)),
-                            StarknetTransactionStatus::AcceptedOnL1 => Some(U64::from(1)),
-                            StarknetTransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
-                            StarknetTransactionStatus::Rejected => Some(U64::from(0)),
-                        };
-                        res_receipt.block_hash =
-                            Some(PrimitiveH256::from_slice(&block_hash.to_bytes_be()));
-                        res_receipt.block_number = Some(felt_to_u256(block_number.into()));
-                    }
-                };
-            }
+            MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
+                StarknetTransactionReceipt::Invoke(InvokeTransactionReceipt {
+                    transaction_hash,
+                    status,
+                    block_hash,
+                    block_number,
+                    ..
+                })
+                | StarknetTransactionReceipt::Deploy(DeployTransactionReceipt {
+                    transaction_hash,
+                    status,
+                    block_hash,
+                    block_number,
+                    ..
+                })
+                | StarknetTransactionReceipt::DeployAccount(DeployAccountTransactionReceipt {
+                    transaction_hash,
+                    status,
+                    block_hash,
+                    block_number,
+                    ..
+                }) => {
+                    res_receipt.transaction_hash =
+                        Some(PrimitiveH256::from_slice(&transaction_hash.to_bytes_be()));
+                    res_receipt.status_code = match status {
+                        StarknetTransactionStatus::Pending => Some(U64::from(0)),
+                        StarknetTransactionStatus::AcceptedOnL1 => Some(U64::from(1)),
+                        StarknetTransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
+                        StarknetTransactionStatus::Rejected => Some(U64::from(0)),
+                    };
+                    res_receipt.block_hash =
+                        Some(PrimitiveH256::from_slice(&block_hash.to_bytes_be()));
+                    res_receipt.block_number = Some(felt_to_u256(block_number.into()));
+                }
+                // L1Handler and Declare transactions not supported for now in Kakarot
+                StarknetTransactionReceipt::L1Handler(_)
+                | StarknetTransactionReceipt::Declare(_) => return Ok(None),
+            },
             MaybePendingTransactionReceipt::PendingReceipt(_) => {
                 return Ok(None);
             }
@@ -472,13 +444,8 @@ impl StarknetClient for StarknetClientImpl {
                     InvokeTransaction::V1(_) => {}
                 };
             }
-            //TODO: Kakarot does not handle L1-L2 messaging
-            StarknetTransaction::L1Handler(l1_handler_tx) => {
-                res_receipt.contract_address = Some(starknet_address_to_ethereum_address(
-                    l1_handler_tx.contract_address,
-                ));
-            }
-            _ => {}
+            StarknetTransaction::DeployAccount(_) | StarknetTransaction::Deploy(_) => {}
+            _ => return Ok(None),
         };
 
         let eth_tx = starknet_tx_into_eth_tx(starknet_tx);

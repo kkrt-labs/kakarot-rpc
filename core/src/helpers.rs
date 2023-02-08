@@ -662,6 +662,17 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
     }
 }
 
+pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, LightClientError> {
+    let hash_hex = hex::encode(hash);
+    let hash_felt = FieldElement::from_hex_be(&hash_hex).map_err(|e| {
+        LightClientError::OtherError(anyhow::anyhow!(
+            "Failed to convert Starknet block hash to FieldElement: {}",
+            e
+        ))
+    })?;
+    Ok(hash_felt)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
