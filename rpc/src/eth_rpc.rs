@@ -310,8 +310,12 @@ impl EthApiServer for KakarotEthRpc {
         Ok(Some(block))
     }
 
-    async fn block_transaction_count_by_hash(&self, _hash: H256) -> Result<Option<U256>> {
-        todo!()
+    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<Option<U256>> {
+        let count = self
+            .starknet_client
+            .block_transaction_count_by_hash(hash)
+            .await?;
+        Ok(count)
     }
 
     async fn block_transaction_count_by_number(

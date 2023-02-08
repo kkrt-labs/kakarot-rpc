@@ -1,10 +1,9 @@
-
-
 ## JSON-RPC API Methods
 
 Based on this specification: [ethereum/execution-apis](https://github.com/ethereum/execution-apis)
 
 ### Method Implementation State
+
 - ❌ -> TODO
 - ⚠️ -> Logic created, to be verified
 - ⏳ -> Logic verified, being implemented
@@ -13,13 +12,14 @@ Based on this specification: [ethereum/execution-apis](https://github.com/ethere
 - ❎ -> Unsupported method (e.g. PoW specific methods, deprecated methods, etc.)
 
 ### Contribute
+
 The template for the method file can be found [here](docs/contributing/method_template.md) copy it to the new method file and edit it corresponding to the method you're implementing.
 All methods should be documented in `docs/methods/{method}.md`
 
 | Name                                                                                            | Description                                                                                                                                                                                        | State |
 | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | [eth_chainId](docs/methods/eth_chainId)                                                         | Returns the chain ID of the current network.                                                                                                                                                       | ✅     |
-| [eth_syncing](docs/methods/eth_syncing)                                                         | Returns an object with data about the sync status or false.version.                                                                                                                                | ❌     |
+| [eth_syncing](docs/methods/eth_syncing)                                                         | Returns an object with data about the sync status or false.version.                                                                                                                                | ✅     |
 | [eth_coinbase](docs/methods/eth_coinbase)                                                       | Returns the client coinbase address.                                                                                                                                                               | ❌     |
 | [eth_mining](docs/methods/eth_mining)                                                           | Returns true if client is actively mining new blocks.                                                                                                                                              | ❎     |
 | [eth_hashrate](docs/methods/eth_hashrate)                                                       | Returns the number of hashes per second that the node is mining with.                                                                                                                              | ❎     |
