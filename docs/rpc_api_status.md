@@ -1,10 +1,9 @@
-
-
 ## JSON-RPC API Methods
 
 Based on this specification: [ethereum/execution-apis](https://github.com/ethereum/execution-apis)
 
 ### Method Implementation State
+
 - ❌ -> TODO
 - ⚠️ -> Logic created, to be verified
 - ⏳ -> Logic verified, being implemented
@@ -13,18 +12,19 @@ Based on this specification: [ethereum/execution-apis](https://github.com/ethere
 - ❎ -> Unsupported method (e.g. PoW specific methods, deprecated methods, etc.)
 
 ### Contribute
+
 The template for the method file can be found [here](docs/contributing/method_template.md) copy it to the new method file and edit it corresponding to the method you're implementing.
 All methods should be documented in `docs/methods/{method}.md`
 
 | Name                                                                                            | Description                                                                                                                                                                                        | State |
 | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | [eth_chainId](docs/methods/eth_chainId)                                                         | Returns the chain ID of the current network.                                                                                                                                                       | ✅     |
-| [eth_syncing](docs/methods/eth_syncing)                                                         | Returns an object with data about the sync status or false.version.                                                                                                                                | ❌     |
+| [eth_syncing](docs/methods/eth_syncing)                                                         | Returns an object with data about the sync status or false.version.                                                                                                                                | ✅     |
 | [eth_coinbase](docs/methods/eth_coinbase)                                                       | Returns the client coinbase address.                                                                                                                                                               | ❌     |
 | [eth_mining](docs/methods/eth_mining)                                                           | Returns true if client is actively mining new blocks.                                                                                                                                              | ❎     |
 | [eth_hashrate](docs/methods/eth_hashrate)                                                       | Returns the number of hashes per second that the node is mining with.                                                                                                                              | ❎     |
 | [eth_gasPrice](docs/methods/eth_gasPrice)                                                       | Returns the current price per gas in wei.                                                                                                                                                          | ❌     |
-| [eth_accounts](docs/methods/eth_accounts)                                                       | Returns a list of addresses owned by client.                                                                                                                                                       | ❌     |
+| [eth_accounts](docs/methods/eth_accounts)                                                       | Returns a list of addresses owned by client.                                                                                                                                                       | ✅    |
 | [eth_blockNumber](docs/methods/eth_blockNumber)                                                 | Returns the number of most recent block.                                                                                                                                                           | ❌     |
 | [eth_getBalance](docs/methods/eth_getBalances)                                                  | Returns the balance of the account of given address.                                                                                                                                               | ❌     |
 | [eth_getStorageAt](docs/methods/eth_getStorageAt)                                               | Returns the value from a storage position at a given address.                                                                                                                                      | ❌     |
@@ -38,7 +38,7 @@ All methods should be documented in `docs/methods/{method}.md`
 | [eth_signTransaction](docs/methods/eth_signTransaction)                                         | Signs a transaction that can be submitted to the network at a later time using with eth_sendRawTransaction.                                                                                        | ❌     |
 | [eth_sendTransaction](docs/methods/eth_sendTransaction)                                         | Creates new message call transaction or a contract creation, if the data field contains code.                                                                                                      | ❌     |
 | [eth_sendRawTransaction](docs/methods/eth_sendRawTransaction)                                   | Creates new message call transaction or a contract creation for signed transactions.                                                                                                               | ❌     |
-| [eth_call](docs/methods/eth_call)                                                               | Executes a new message call immediately without creating a transaction on the block chain.                                                                                                         | ❌     |
+| [eth_call](docs/methods/eth_call)                                                               | Executes a new message call immediately without creating a transaction on the blockchain.                                                                                                         | ❌     |
 | [eth_estimateGas](docs/methods/eth_estimateGas)                                                 | Generates and returns an estimate of how much gas is necessary to allow the transaction to complete.                                                                                               | ❌     |
 | [eth_getBlockByHash](docs/methods/eth_getBlockByHash)                                           | Returns information about a block by hash.                                                                                                                                                         | ✅     |
 | [eth_getBlockByNumber](docs/methods/eth_getBlockByNumber)                                       | Returns information about a block by block number.                                                                                                                                                 | ✅     |
