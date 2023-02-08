@@ -30,3 +30,44 @@ pub async fn run_server(
 
     Ok((addr, handle))
 }
+
+pub mod test_utils {
+    use jsonrpsee::server::ServerHandle;
+    use kakarot_rpc_core::{client::StarknetClientImpl, utils::wiremock_utils::setup_wiremock};
+
+    use crate::run_server;
+
+    /// Run wiremock to fake starknet rpc and then run our own kakarot_rpc_server.
+    ///
+    /// Example :
+    /// ```
+    ///   use kakarot_rpc::test_utils::setup_rpc_server;
+    ///
+    ///   #[tokio::test]
+    ///   async fn test_case() {
+    ///       // Run base server
+    ///       let (_, server_handle) = setup_rpc_server().await;
+    ///
+    ///       //Query whatever eth_rpc endpoints
+    ///       let client = reqwest::Client::new();
+    ///        let res = client
+    ///            .post("http://127.0.0.1:3030")
+    ///            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_chainId\", \"params\": [] }")
+    ///            .header("content-type", "application/json")
+    ///            .send()
+    ///            .await
+    ///            .unwrap();
+    ///
+    ///        // Dont forget to close server at the end.
+    ///        let _has_stop = server_handle.stop().unwrap();
+    ///   }
+    /// ```
+    pub async fn setup_rpc_server() -> (String, ServerHandle) {
+        let starknet_rpc = setup_wiremock().await;
+
+        let starknet_lightclient = StarknetClientImpl::new(&starknet_rpc).unwrap();
+        let (_rpc_server_uri, server_handle) =
+            run_server(Box::new(starknet_lightclient)).await.unwrap();
+        (starknet_rpc, server_handle)
+    }
+}

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["rpc", "starknet", "internal/utils"]
+members = ["rpc", "starknet"]
 
 [workspace.package]
 edition = "2021"

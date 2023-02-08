@@ -8,7 +8,6 @@ homepage.workspace = true
 [dependencies]
 kakarot_rpc_core = { path = "../core" }
 kakarot_rpc = { path = "../rpc" }
-kakarot_rpc_utils = { path = "../internal/utils" }
 eyre = "0.6.8"
 log = "0.4.17"
 env_logger = "0.10.0"

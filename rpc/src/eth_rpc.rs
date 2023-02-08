@@ -2,7 +2,9 @@ use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
 
 use jsonrpsee::types::error::CallError;
-use kakarot_rpc_core::client::{types::RichBlock, StarknetClient};
+use kakarot_rpc_core::client::{
+    constants::selectors::KKRT_CHAIN_ID, types::RichBlock, StarknetClient,
+};
 use kakarot_rpc_core::helpers::{ethers_block_id_to_starknet_block_id, raw_calldata};
 use reth_primitives::{
     rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, H256},
@@ -286,7 +288,7 @@ impl EthApiServer for KakarotEthRpc {
 
     async fn chain_id(&self) -> Result<Option<U64>> {
         // CHAIN_ID = KKRT (0x4b4b5254) in ASCII
-        Ok(Some(1263227476_u64.into()))
+        Ok(Some(KKRT_CHAIN_ID.into()))
     }
 
     async fn block_by_hash(&self, _hash: H256, _full: bool) -> Result<Option<RichBlock>> {
