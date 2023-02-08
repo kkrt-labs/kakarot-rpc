@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod test {
     use kakarot_rpc::eth_rpc::KakarotEthRpc;
-    use kakarot_rpc_core::lightclient::{MockStarknetClient, StarknetClientImpl};
+    use kakarot_rpc_core::lightclient::MockStarknetClient;
     use reth_primitives::{Address, Bytes};
 
     use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
