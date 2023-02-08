@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use eyre::{eyre, Result};
 use kakarot_rpc::run_server;
-use kakarot_rpc_core::lightclient::StarknetClientImpl;
+use kakarot_rpc_core::client::StarknetClientImpl;
 use tracing_subscriber::util::SubscriberInitExt;
 
 #[tokio::main]

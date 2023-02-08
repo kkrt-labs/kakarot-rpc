@@ -4,6 +4,10 @@
 
 Time spent on this PR:
 
+<!-- Which issue is this PR related to? -->
+
+Closes #NUMBER_OF_ISSUE
+
 # Pull Request type
 
 <!-- Please try to limit your pull request to one type; submit multiple pull requests if needed. -->
