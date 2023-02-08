@@ -18,10 +18,10 @@ use starknet::{
     },
 };
 
-use crate::lightclient::{
+use crate::client::{
     constants::{selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_MAIN_CONTRACT_ADDRESS},
     types::{Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction},
-    LightClientError,
+    KakarotClientError,
 };
 
 extern crate hex;
@@ -50,12 +50,12 @@ pub enum FeltOrFeltArray {
 
 pub fn ethers_block_id_to_starknet_block_id(
     block: EthBlockId,
-) -> Result<StarknetBlockId, LightClientError> {
+) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
         EthBlockId::Hash(hash) => {
             let address_hex = hex::encode(hash);
             let address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
-                LightClientError::OtherError(anyhow::anyhow!(
+                KakarotClientError::OtherError(anyhow::anyhow!(
                     "Failed to convert Starknet block hash to FieldElement: {}",
                     e
                 ))
@@ -68,7 +68,7 @@ pub fn ethers_block_id_to_starknet_block_id(
 
 pub fn ethers_block_number_to_starknet_block_id(
     block: BlockNumber,
-) -> Result<StarknetBlockId, LightClientError> {
+) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
         BlockNumber::Latest => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
         BlockNumber::Finalized => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
@@ -342,13 +342,13 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
 
 pub fn decode_execute_at_address_return(
     call_result: Vec<FieldElement>,
-) -> Result<Vec<FeltOrFeltArray>, LightClientError> {
+) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
     // Declare Vec of Result
     let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
     let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
-        LightClientError::OtherError(anyhow::anyhow!(
+        KakarotClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call",
         ))
     })?;
@@ -357,7 +357,7 @@ pub fn decode_execute_at_address_return(
     // Parse first array: stack_accesses
     while tmp_array_len != FieldElement::ZERO {
         let element = call_result.get(tmp_counter).ok_or_else(|| {
-            LightClientError::OtherError(anyhow::anyhow!(
+            KakarotClientError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode return arguments of Kakarot call: stack accesses array",
             ))
         })?;
@@ -371,7 +371,7 @@ pub fn decode_execute_at_address_return(
     }
     // Parse stack_len
     let stack_len = call_result.get(tmp_counter).ok_or_else(|| {
-        LightClientError::OtherError(anyhow::anyhow!(
+        KakarotClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: stack_len"
         ))
     })?;
@@ -379,7 +379,7 @@ pub fn decode_execute_at_address_return(
     tmp_counter += 1;
     // Parse second array: memory_accesses
     tmp_array_len = *(call_result.get(tmp_counter).ok_or_else(|| {
-        LightClientError::OtherError(anyhow::anyhow!(
+        KakarotClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: memory_accesses_len",
         ))
     })?);
@@ -387,7 +387,7 @@ pub fn decode_execute_at_address_return(
     tmp_counter += 1;
     while tmp_array_len != FieldElement::ZERO {
         let element = call_result.get(tmp_counter).ok_or_else(|| {
-            LightClientError::OtherError(anyhow::anyhow!(
+            KakarotClientError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode return arguments of Kakarot call: memory accesses array",
             ))
         })?;
@@ -401,7 +401,7 @@ pub fn decode_execute_at_address_return(
     }
     // Parse memory_len
     let memory_len = call_result.get(tmp_counter).ok_or_else(|| {
-        LightClientError::OtherError(anyhow::anyhow!(
+        KakarotClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: memory len"
         ))
     })?;
@@ -409,7 +409,7 @@ pub fn decode_execute_at_address_return(
     tmp_counter += 1;
     // Parse EVM address
     let evm_address = call_result.get(tmp_counter).ok_or_else(|| {
-        LightClientError::OtherError(anyhow::anyhow!(
+        KakarotClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: evm address"
         ))
     })?;
@@ -417,7 +417,7 @@ pub fn decode_execute_at_address_return(
     tmp_counter += 1;
     // Parse Starknet Address
     let starknet_address = call_result.get(tmp_counter).ok_or_else(|| {
-        LightClientError::OtherError(anyhow::anyhow!(
+        KakarotClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: starknet address"
         ))
     })?;
@@ -425,7 +425,7 @@ pub fn decode_execute_at_address_return(
     tmp_counter += 1;
     // Parse last array: return_data
     tmp_array_len = *(call_result.get(tmp_counter).ok_or_else(|| {
-        LightClientError::OtherError(anyhow::anyhow!(
+        KakarotClientError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: return_data_len",
         ))
     })?);
@@ -433,7 +433,7 @@ pub fn decode_execute_at_address_return(
     tmp_counter += 1;
     while tmp_array_len != FieldElement::ZERO {
         let element = call_result.get(tmp_counter).ok_or_else(|| {
-            LightClientError::OtherError(anyhow::anyhow!(
+            KakarotClientError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode return arguments of Kakarot call: return data array",
             ))
         })?;
@@ -445,12 +445,20 @@ pub fn decode_execute_at_address_return(
         tmp_counter += 1;
         tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
     }
+    // Parse gas_used return value
+    let gas_used = call_result.get(tmp_counter).ok_or_else(|| {
+        KakarotClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call: gas used"
+        ))
+    })?;
+    segmented_result.push(FeltOrFeltArray::Felt(*gas_used));
+
     Ok(segmented_result)
 }
 
 pub fn starknet_tx_into_eth_tx(
     tx: StarknetTransaction,
-) -> Result<EtherTransaction, LightClientError> {
+) -> Result<EtherTransaction, KakarotClientError> {
     let mut ether_tx = EtherTransaction::default();
     println!("2.1 Inside Getting transactions");
 
@@ -609,7 +617,7 @@ pub fn starknet_tx_into_eth_tx(
     Ok(ether_tx)
 }
 
-fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, LightClientError> {
+fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, KakarotClientError> {
     match element {
         Some(x) => {
             let inner = x.to_bytes_be();
@@ -869,9 +877,13 @@ mod tests {
                 "0000000000000000000000000000000000000000000000000000000000000002",
             )
             .unwrap(),
+            FieldElement::from_hex_be(
+                "00000000000000000000000000000000000000000000000000000000000fffff",
+            )
+            .unwrap(),
         ];
         let result = decode_execute_at_address_return(call_result).unwrap();
-        assert_eq!(result.len(), 7);
+        assert_eq!(result.len(), 8);
         assert_eq!(
             result[0],
             FeltOrFeltArray::FeltArray(vec![FieldElement::from(1_u64), FieldElement::from(2_u64)])
@@ -914,5 +926,9 @@ mod tests {
         } else {
             panic!("Expected FeltArray of length 32");
         }
+        assert_eq!(
+            result[7],
+            FeltOrFeltArray::Felt(FieldElement::from(0x00000fffff_u64))
+        )
     }
 }
