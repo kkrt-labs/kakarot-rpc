@@ -13,7 +13,7 @@ env_logger = "0.10.0"
 url = "2.3.1"
 
 # rpc
-jsonrpsee = { version = "^0.16", features=["full"] }
+jsonrpsee = { version = "^0.16", features = ["full"] }
 
 # async
 async-trait = "0.1"
@@ -24,9 +24,10 @@ serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "1.0.38"
 hex = "0.4"
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git"}
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git"}
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "13eea35c" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "13eea35c" }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "13eea35c" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "13eea35c" }
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
