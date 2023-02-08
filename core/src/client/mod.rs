@@ -282,7 +282,7 @@ impl StarknetClient for StarknetClientImpl {
         let segmented_result = decode_execute_at_address_return(call_result)?;
 
         // Convert the result of the function call to a vector of bytes
-        let return_data = segmented_result.last().ok_or_else(|| {
+        let return_data = segmented_result.get(6).ok_or_else(|| {
             KakarotClientError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode last argument of Kakarot call",
             ))

@@ -445,6 +445,14 @@ pub fn decode_execute_at_address_return(
         tmp_counter += 1;
         tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
     }
+    // Parse gas_used return value
+    let gas_used = call_result.get(tmp_counter).ok_or_else(|| {
+        KakarotClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call: gas used"
+        ))
+    })?;
+    segmented_result.push(FeltOrFeltArray::Felt(*gas_used));
+
     Ok(segmented_result)
 }
 
@@ -869,9 +877,13 @@ mod tests {
                 "0000000000000000000000000000000000000000000000000000000000000002",
             )
             .unwrap(),
+            FieldElement::from_hex_be(
+                "00000000000000000000000000000000000000000000000000000000000fffff",
+            )
+            .unwrap(),
         ];
         let result = decode_execute_at_address_return(call_result).unwrap();
-        assert_eq!(result.len(), 7);
+        assert_eq!(result.len(), 8);
         assert_eq!(
             result[0],
             FeltOrFeltArray::FeltArray(vec![FieldElement::from(1_u64), FieldElement::from(2_u64)])
@@ -914,5 +926,9 @@ mod tests {
         } else {
             panic!("Expected FeltArray of length 32");
         }
+        assert_eq!(
+            result[7],
+            FeltOrFeltArray::Felt(FieldElement::from(0x00000fffff_u64))
+        )
     }
 }
