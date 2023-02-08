@@ -5,8 +5,8 @@ use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::helpers::{ethers_block_id_to_starknet_block_id, raw_calldata};
 use kakarot_rpc_core::lightclient::{types::RichBlock, StarknetClient};
 use reth_primitives::{
-    rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, H256, BlockNumber},
-    Address, Bytes, H64, U256, U64, TransactionSigned,
+    rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, H256},
+    Address, Bytes, TransactionSigned, H64, U256, U64,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
