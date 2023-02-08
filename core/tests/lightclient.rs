@@ -1,5 +1,5 @@
 mod test {
-    use kakarot_rpc_core::lightclient::{
+    use kakarot_rpc_core::client::{
         types::{Block, BlockTransactions, Header, Rich},
         MockStarknetClient, StarknetClient,
     };

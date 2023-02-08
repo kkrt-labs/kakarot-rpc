@@ -2,8 +2,8 @@ use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
 
 use jsonrpsee::types::error::CallError;
+use kakarot_rpc_core::client::{types::RichBlock, StarknetClient};
 use kakarot_rpc_core::helpers::{ethers_block_id_to_starknet_block_id, raw_calldata};
-use kakarot_rpc_core::lightclient::{types::RichBlock, StarknetClient};
 use reth_primitives::{
     rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, H256},
     Address, Bytes, TransactionSigned, H64, U256, U64,
@@ -17,7 +17,7 @@ use serde_json::Value;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag};
 
-use kakarot_rpc_core::lightclient::types::Transaction as EtherTransaction;
+use kakarot_rpc_core::client::types::Transaction as EtherTransaction;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 ///
@@ -265,7 +265,7 @@ impl EthApiServer for KakarotEthRpc {
     /// * `protocol_version(u64)` - The protocol version.
     ///
     /// `Ok(protocol_version)` if the operation was successful.
-    /// `Err(LightClientError)` if the operation failed.
+    /// `Err(KakarotClientError)` if the operation failed.
     fn protocol_version(&self) -> Result<U64> {
         let protocol_version = 1263227476_u64;
         Ok(protocol_version.into())

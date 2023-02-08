@@ -5,7 +5,7 @@ pub mod eth_rpc;
 use eth_rpc::{EthApiServer, KakarotEthRpc};
 use eyre::Result;
 use jsonrpsee::server::{ServerBuilder, ServerHandle};
-use kakarot_rpc_core::lightclient::StarknetClient;
+use kakarot_rpc_core::client::StarknetClient;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
