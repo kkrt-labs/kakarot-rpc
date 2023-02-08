@@ -1,0 +1,10 @@
+POST http://127.0.0.1:3030 
+Content-Type: application/json
+{
+  "id": 5442803678897,
+  "jsonrpc": "2.0",
+  "method": "eth_sendRawTransaction",
+  "params": [
+    "0x02f87283013881818c849502f900849502f92082673d94da875638d19941dcea5b7dfb5a0324b78a8fd52b8084371303c0c080a090281abf5beb62f277673bf7959856154f72e20edaf8683463fdf90c199c9ca3a01f9e257b31671270e11f4d06b6cb3f1a79ef82765b796cec3d73b42002dfe4f9"
+  ]
+}

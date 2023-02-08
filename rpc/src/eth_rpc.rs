@@ -1,18 +1,23 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
+
 use jsonrpsee::types::error::CallError;
-use kakarot_rpc_core::helpers::ethers_block_id_to_starknet_block_id;
+use kakarot_rpc_core::helpers::{ethers_block_id_to_starknet_block_id, raw_calldata};
 use kakarot_rpc_core::lightclient::{types::RichBlock, StarknetClient};
-use reth_primitives::rpc::BlockNumber;
+use reth_primitives::rpc::{BlockNumber, Log};
 use reth_primitives::{
     rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, H256},
-    Address, Bytes, H64, U256, U64,
+    Address, Bloom, Bytes, H160, H64, U256, U64,
 };
+use reth_primitives::{TransactionSigned, U128};
+use reth_rlp::Decodable;
 use reth_rpc_types::{
     CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, SyncStatus, TransactionReceipt,
     TransactionRequest, Work,
 };
 use serde_json::Value;
+use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag};
 
 use kakarot_rpc_core::lightclient::types::Transaction as EtherTransaction;
 
@@ -391,11 +396,34 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn transaction_receipt(&self, _hash: H256) -> Result<Option<TransactionReceipt>> {
-        todo!()
+        let res_receipt = TransactionReceipt {
+            transaction_hash: None,
+            transaction_index: None,
+            block_hash: None,
+            block_number: None,
+            from: H160::from(0),
+            to: None,
+            //TODO: Fetch real data
+            cumulative_gas_used: U256::from(1000000),
+            gas_used: None,
+            contract_address: None,
+            // TODO : default log value
+            logs: vec![Log::default()],
+            // Bloom is a byte array of length 256
+            state_root: None,
+            //TODO: Fetch real data
+            logs_bloom: Bloom::default(),
+            status_code: None,
+            //TODO: Fetch real data
+            effective_gas_price: U128::from(0),
+            //TODO: Fetch real data
+            transaction_type: U256::from(0),
+        };
+        Ok(Some(res_receipt))
     }
 
     async fn balance(&self, _address: Address, _block_number: Option<BlockId>) -> Result<U256> {
-        Ok(U256::from(0))
+        Ok(U256::MAX)
     }
 
     async fn storage_at(
@@ -412,7 +440,7 @@ impl EthApiServer for KakarotEthRpc {
         _address: Address,
         _block_number: Option<BlockId>,
     ) -> Result<U256> {
-        todo!()
+        Ok(U256::from(3))
     }
 
     async fn get_code(&self, _address: Address, _block_number: Option<BlockId>) -> Result<Bytes> {
@@ -462,7 +490,7 @@ impl EthApiServer for KakarotEthRpc {
         _request: CallRequest,
         _block_number: Option<BlockId>,
     ) -> Result<U256> {
-        todo!()
+        Ok(U256::ZERO)
     }
 
     async fn gas_price(&self) -> Result<U256> {
@@ -520,7 +548,59 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn send_raw_transaction(&self, _bytes: Bytes) -> Result<H256> {
-        Ok(H256::from_low_u64_be(0))
+        let mut data = _bytes.as_ref();
+
+        if data.is_empty() {
+            return Err(jsonrpsee::core::Error::Call(CallError::InvalidParams(
+                anyhow::anyhow!("Raw transaction data is empty. Cannot process a Kakarot call",),
+            )));
+        };
+
+        let transaction = TransactionSigned::decode(&mut data).map_err(|_| {
+            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
+                "Failed to decode raw transaction data. Cannot process a Kakarot call",
+            )))
+        })?;
+
+        println!("Transaction: {transaction:?}");
+
+        let evm_address = transaction.recover_signer().ok_or_else(|| {
+            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
+                "Failed to recover signer from raw transaction data. Cannot process a Kakarot call",
+            )))
+        })?;
+
+        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
+
+        let starknet_address = self
+            .starknet_client
+            .compute_starknet_address(evm_address, starknet_block_id)
+            .await
+            .map_err(|_| {
+                jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
+                    "Failed to get starknet address from evm address. Cannot process a Kakarot call",
+                )))
+            })?;
+
+        // TODO: Get nonce from Starknet
+        let nonce = FieldElement::from(transaction.nonce());
+        // TODO: Get gas price from Starknet
+        let max_fee = FieldElement::from(u64::MAX);
+        // TODO: Provide signature
+        let signature = vec![];
+
+        let calldata = raw_calldata(_bytes).map_err(|_| {
+            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
+                "Failed to get calldata from raw transaction data. Cannot process a Kakarot call",
+            )))
+        })?;
+
+        let starknet_transaction_hash = self
+            .starknet_client
+            .submit_starknet_transaction(max_fee, signature, nonce, starknet_address, calldata)
+            .await?;
+
+        Ok(starknet_transaction_hash)
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
