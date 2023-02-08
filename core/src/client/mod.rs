@@ -3,16 +3,19 @@ use jsonrpsee::types::error::CallError;
 
 use reth_primitives::{
     rpc::{BlockId, BlockNumber, H256},
-    Address, Bytes, U256,
+    Address, Bytes, H256 as PrimitiveH256, U256, U64,
 };
-use reth_rpc_types::{SyncInfo, SyncStatus};
+use reth_rpc_types::{SyncInfo, SyncStatus, TransactionReceipt};
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
         models::{
             BlockId as StarknetBlockId, BroadcastedInvokeTransaction,
-            BroadcastedInvokeTransactionV1, FunctionCall, MaybePendingBlockWithTxHashes,
-            SyncStatusType,
+            BroadcastedInvokeTransactionV1, DeployAccountTransactionReceipt,
+            DeployTransactionReceipt, FunctionCall, InvokeTransaction, InvokeTransactionReceipt,
+            MaybePendingBlockWithTxHashes, MaybePendingTransactionReceipt, SyncStatusType,
+            Transaction as StarknetTransaction, TransactionReceipt as StarknetTransactionReceipt,
+            TransactionStatus as StarknetTransactionStatus,
         },
         HttpTransport, JsonRpcClient, JsonRpcClientError,
     },
@@ -23,9 +26,10 @@ use url::Url;
 extern crate hex;
 
 use crate::helpers::{
-    decode_execute_at_address_return, ethers_block_id_to_starknet_block_id,
-    starknet_block_to_eth_block, starknet_tx_into_eth_tx, FeltOrFeltArray,
-    MaybePendingStarknetBlock,
+    create_default_transaction_receipt, decode_execute_at_address_return,
+    ethers_block_id_to_starknet_block_id, felt_to_u256, hash_to_field_element,
+    starknet_address_to_ethereum_address, starknet_block_to_eth_block, starknet_tx_into_eth_tx,
+    FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 
 use crate::client::types::Transaction as EtherTransaction;
@@ -86,18 +90,15 @@ pub trait StarknetClient: Send + Sync {
         &self,
         number: BlockNumber,
     ) -> Result<Option<U256>, KakarotClientError>;
-
     async fn block_transaction_count_by_hash(
         &self,
         hash: H256,
     ) -> Result<Option<U256>, KakarotClientError>;
-
     async fn compute_starknet_address(
         &self,
         ethereum_address: Address,
         starknet_block_id: StarknetBlockId,
     ) -> Result<FieldElement, KakarotClientError>;
-
     async fn submit_starknet_transaction(
         &self,
         max_fee: FieldElement,
@@ -106,6 +107,10 @@ pub trait StarknetClient: Send + Sync {
         sender_address: FieldElement,
         calldata: Vec<FieldElement>,
     ) -> Result<H256, KakarotClientError>;
+    async fn get_transaction_receipt(
+        &self,
+        hash: H256,
+    ) -> Result<Option<TransactionReceipt>, KakarotClientError>;
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -480,5 +485,100 @@ impl StarknetClient for StarknetClientImpl {
         Ok(H256::from(
             transaction_result.transaction_hash.to_bytes_be(),
         ))
+    }
+
+    /// Returns the receipt of a transaction by transaction hash.
+    ///
+    /// # Arguments
+    ///
+    /// * `hash(H256)` - The block hash.
+    ///
+    /// # Returns
+    ///
+    ///  * `transaction_receipt(TransactionReceipt)` - The transaction receipt.
+    ///
+    /// `Ok(Option<TransactionReceipt>)` if the operation was successful.
+    /// `Err(KakarotClientError)` if the operation failed.
+    async fn get_transaction_receipt(
+        &self,
+        hash: H256,
+    ) -> Result<Option<TransactionReceipt>, KakarotClientError> {
+        let mut res_receipt = create_default_transaction_receipt();
+
+        //TODO: Error when trying to transform 32 bytes hash to FieldElement
+        let hash_felt = hash_to_field_element(PrimitiveH256::from(hash.0))?;
+        let starknet_tx_receipt = self.client.get_transaction_receipt(hash_felt).await?;
+
+        match starknet_tx_receipt {
+            MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
+                StarknetTransactionReceipt::Invoke(InvokeTransactionReceipt {
+                    transaction_hash,
+                    status,
+                    block_hash,
+                    block_number,
+                    ..
+                })
+                | StarknetTransactionReceipt::Deploy(DeployTransactionReceipt {
+                    transaction_hash,
+                    status,
+                    block_hash,
+                    block_number,
+                    ..
+                })
+                | StarknetTransactionReceipt::DeployAccount(DeployAccountTransactionReceipt {
+                    transaction_hash,
+                    status,
+                    block_hash,
+                    block_number,
+                    ..
+                }) => {
+                    res_receipt.transaction_hash =
+                        Some(PrimitiveH256::from_slice(&transaction_hash.to_bytes_be()));
+                    res_receipt.status_code = match status {
+                        StarknetTransactionStatus::Pending => Some(U64::from(0)),
+                        StarknetTransactionStatus::AcceptedOnL1 => Some(U64::from(1)),
+                        StarknetTransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
+                        StarknetTransactionStatus::Rejected => Some(U64::from(0)),
+                    };
+                    res_receipt.block_hash =
+                        Some(PrimitiveH256::from_slice(&block_hash.to_bytes_be()));
+                    res_receipt.block_number = Some(felt_to_u256(block_number.into()));
+                }
+                // L1Handler and Declare transactions not supported for now in Kakarot
+                StarknetTransactionReceipt::L1Handler(_)
+                | StarknetTransactionReceipt::Declare(_) => return Ok(None),
+            },
+            MaybePendingTransactionReceipt::PendingReceipt(_) => {
+                return Ok(None);
+            }
+        };
+
+        let starknet_tx = self.client.get_transaction_by_hash(hash_felt).await?;
+        match starknet_tx.clone() {
+            StarknetTransaction::Invoke(invoke_tx) => {
+                match invoke_tx {
+                    InvokeTransaction::V0(v0) => {
+                        res_receipt.contract_address =
+                            Some(starknet_address_to_ethereum_address(v0.contract_address));
+                    }
+                    InvokeTransaction::V1(_) => {}
+                };
+            }
+            StarknetTransaction::DeployAccount(_) | StarknetTransaction::Deploy(_) => {}
+            _ => return Ok(None),
+        };
+
+        let eth_tx = starknet_tx_into_eth_tx(starknet_tx);
+        match eth_tx {
+            Ok(tx) => {
+                res_receipt.from = tx.from;
+                res_receipt.to = tx.to;
+            }
+            _ => {
+                return Ok(None);
+            }
+        };
+
+        Ok(Some(res_receipt))
     }
 }

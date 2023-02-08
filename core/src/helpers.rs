@@ -1,8 +1,9 @@
 use eyre::Result;
 use reth_primitives::{
-    rpc::{BlockId as EthBlockId, BlockNumber},
-    Bloom, Bytes, H160, H256, H64, U256,
+    rpc::{BlockId as EthBlockId, BlockNumber, Log},
+    Bloom, Bytes, H160, H256, H64, U128, U256,
 };
+use reth_rpc_types::TransactionReceipt;
 use std::collections::BTreeMap;
 
 use reth_primitives::Address;
@@ -627,7 +628,7 @@ fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, KakarotCl
     }
 }
 
-fn felt_to_u256(element: FieldElement) -> U256 {
+pub fn felt_to_u256(element: FieldElement) -> U256 {
     let inner = element.to_bytes_be();
     U256::from_be_bytes(inner)
 }
@@ -637,8 +638,45 @@ fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
     Bytes::from(felt_vec_in_u8)
 }
 
-fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
+pub fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
     H160::from_slice(&x.to_bytes_be()[12..32])
+}
+
+pub fn create_default_transaction_receipt() -> TransactionReceipt {
+    TransactionReceipt {
+        transaction_hash: None,
+        transaction_index: None,
+        block_hash: None,
+        block_number: None,
+        from: H160::from(0),
+        to: None,
+        //TODO: Fetch real data
+        cumulative_gas_used: U256::from(1000000),
+        gas_used: None,
+        contract_address: None,
+        // TODO : default log value
+        logs: vec![Log::default()],
+        // Bloom is a byte array of length 256
+        logs_bloom: Bloom::default(),
+        //TODO: Fetch real data
+        state_root: None,
+        status_code: None,
+        //TODO: Fetch real data
+        effective_gas_price: U128::from(1000000),
+        //TODO: Fetch real data
+        transaction_type: U256::from(0),
+    }
+}
+
+pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, KakarotClientError> {
+    let hash_hex = hex::encode(hash);
+    let hash_felt = FieldElement::from_hex_be(&hash_hex).map_err(|e| {
+        KakarotClientError::OtherError(anyhow::anyhow!(
+            "Failed to convert Starknet block hash to FieldElement: {}",
+            e
+        ))
+    })?;
+    Ok(hash_felt)
 }
 
 pub fn bytes_to_felt_vec(bytes: Bytes) -> Vec<FieldElement> {
