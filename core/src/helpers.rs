@@ -10,6 +10,7 @@ use reth_primitives::Address;
 //     Block, BlockTransactions, Header, Rich, Transaction as EtherTransaction,
 // };
 use starknet::{
+    accounts::Call,
     core::types::FieldElement,
     providers::jsonrpc::models::{
         BlockId as StarknetBlockId, BlockTag, InvokeTransaction, MaybePendingBlockWithTxHashes,
@@ -18,7 +19,7 @@ use starknet::{
 };
 
 use crate::lightclient::{
-    constants::CHAIN_ID,
+    constants::{selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_MAIN_CONTRACT_ADDRESS},
     types::{Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction},
     LightClientError,
 };
@@ -623,21 +624,79 @@ fn felt_to_u256(element: FieldElement) -> U256 {
     U256::from_be_bytes(inner)
 }
 
-fn vec_felt_to_bytes(contract_bytecode: Vec<FieldElement>) -> Bytes {
-    let contract_bytecode_in_u8: Vec<u8> = contract_bytecode
-        .into_iter()
-        .flat_map(|x| x.to_bytes_be())
-        .collect();
-    Bytes::from(contract_bytecode_in_u8)
+fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
+    let felt_vec_in_u8: Vec<u8> = felt_vec.into_iter().flat_map(|x| x.to_bytes_be()).collect();
+    Bytes::from(felt_vec_in_u8)
 }
 
 fn starknet_address_to_ethereum_address(x: FieldElement) -> Address {
     H160::from_slice(&x.to_bytes_be()[12..32])
 }
 
+pub fn bytes_to_felt_vec(bytes: Bytes) -> Vec<FieldElement> {
+    bytes.to_vec().into_iter().map(FieldElement::from).collect()
+}
+
+/// Author: https://github.com/xJonathanLEI/starknet-rs/blob/447182a90839a3e4f096a01afe75ef474186d911/starknet-accounts/src/account/execution.rs#L166
+/// Constructs the calldata for a raw Starknet invoke transaction call
+/// ## Arguments
+/// * `bytes` - The calldata to be passed to the contract - RLP encoded raw EVM transaction
+///
+///
+/// ## Returns
+/// * `Result<Vec<FieldElement>>` - The calldata for the raw Starknet invoke transaction call
+pub fn raw_calldata(bytes: Bytes) -> Result<Vec<FieldElement>> {
+    let kakarot_address_felt = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
+    let calls: Vec<Call> = vec![Call {
+        to: kakarot_address_felt,
+        selector: EXECUTE_AT_ADDRESS,
+        calldata: bytes_to_felt_vec(bytes),
+    }];
+    let mut concated_calldata: Vec<FieldElement> = vec![];
+    let mut execute_calldata: Vec<FieldElement> = vec![calls.len().into()];
+    for call in calls.iter() {
+        execute_calldata.push(call.to); // to
+        execute_calldata.push(call.selector); // selector
+        execute_calldata.push(concated_calldata.len().into()); // data_offset
+        execute_calldata.push(call.calldata.len().into()); // data_len
+
+        for item in call.calldata.iter() {
+            concated_calldata.push(*item);
+        }
+    }
+    execute_calldata.push(concated_calldata.len().into()); // calldata_len
+    for item in concated_calldata.into_iter() {
+        execute_calldata.push(item); // calldata
+    }
+
+    Ok(execute_calldata)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_bytes_to_felt_vec() {
+        let bytes = Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let felt_vec = bytes_to_felt_vec(bytes);
+        assert_eq!(felt_vec.len(), 10);
+        assert_eq!(
+            felt_vec,
+            vec![
+                FieldElement::from(1_u64),
+                FieldElement::from(2_u64),
+                FieldElement::from(3_u64),
+                FieldElement::from(4_u64),
+                FieldElement::from(5_u64),
+                FieldElement::from(6_u64),
+                FieldElement::from(7_u64),
+                FieldElement::from(8_u64),
+                FieldElement::from(9_u64),
+                FieldElement::from(10_u64)
+            ]
+        );
+    }
 
     #[test]
     fn test_decode_execute_at_address() {
