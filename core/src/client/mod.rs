@@ -55,7 +55,7 @@ pub enum KakarotClientError {
 #[automock]
 #[async_trait]
 pub trait StarknetClient: Send + Sync {
-    async fn block_number(&self) -> Result<u64, KakarotClientError>;
+    async fn block_number(&self) -> Result<U256, KakarotClientError>;
 
     async fn get_eth_block_from_starknet_block(
         &self,
