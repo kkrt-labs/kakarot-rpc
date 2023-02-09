@@ -1,10 +1,5 @@
-use crate::client::{constants::selectors::GET_STARKNET_CONTRACT_ADDRESS, StarknetClientImpl};
-use jsonrpsee::server::ServerHandle;
 use serde::{Deserialize, Serialize};
-use starknet::{
-    core::types::FieldElement,
-    providers::jsonrpc::models::{BlockId, BlockTag, FunctionCall},
-};
+use starknet::providers::jsonrpc::models::{BlockId, BlockTag};
 use wiremock::{
     matchers::{body_json, method},
     Mock, MockServer, ResponseTemplate,

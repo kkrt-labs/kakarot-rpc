@@ -413,7 +413,41 @@ impl StarknetClient for StarknetClientImpl {
             .client
             .get_transaction_by_block_id_and_index(&block_id, index)
             .await?;
-        let eth_tx = starknet_tx_into_eth_tx(starknet_tx)?;
+        let tx_hash = match &starknet_tx {
+            StarknetTransaction::Invoke(InvokeTransaction::V0(tx)) => tx.transaction_hash,
+            StarknetTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.transaction_hash,
+            StarknetTransaction::L1Handler(tx) => tx.transaction_hash,
+            StarknetTransaction::Declare(tx) => tx.transaction_hash,
+            StarknetTransaction::Deploy(tx) => tx.transaction_hash,
+            StarknetTransaction::DeployAccount(tx) => tx.transaction_hash,
+        };
+        let tx_receipt = self.client.get_transaction_receipt(tx_hash).await?;
+        let (blockhash_opt, blocknum_opt) = match tx_receipt {
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => (
+                Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
+                Some(U256::from(tr.block_number)),
+            ),
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::L1Handler(tr)) => (
+                Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
+                Some(U256::from(tr.block_number)),
+            ),
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Declare(tr)) => (
+                Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
+                Some(U256::from(tr.block_number)),
+            ),
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Deploy(tr)) => (
+                Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
+                Some(U256::from(tr.block_number)),
+            ),
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::DeployAccount(
+                tr,
+            )) => (
+                Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
+                Some(U256::from(tr.block_number)),
+            ),
+            MaybePendingTransactionReceipt::PendingReceipt(_) => (None, None),
+        };
+        let eth_tx = starknet_tx_into_eth_tx(starknet_tx, blockhash_opt, blocknum_opt)?;
         Ok(eth_tx)
     }
 
@@ -568,7 +602,7 @@ impl StarknetClient for StarknetClientImpl {
             _ => return Ok(None),
         };
 
-        let eth_tx = starknet_tx_into_eth_tx(starknet_tx);
+        let eth_tx = starknet_tx_into_eth_tx(starknet_tx, None, None);
         match eth_tx {
             Ok(tx) => {
                 res_receipt.from = tx.from;

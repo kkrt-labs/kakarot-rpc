@@ -228,7 +228,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     pending_block_with_txs
                         .transactions
                         .into_iter()
-                        .map(starknet_tx_into_eth_tx)
+                        .map(|t| starknet_tx_into_eth_tx(t, None, None))
                         .filter_map(Result::ok)
                         .collect(),
                 );
@@ -291,11 +291,14 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                 let timestamp = U256::from(block_with_txs.timestamp);
                 println!("2. Getting transactions");
 
+                let blockhash_opt =
+                    Some(H256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
+                let blocknum_opt = Some(U256::from(block_with_txs.block_number));
                 let transactions = BlockTransactions::Full(
                     block_with_txs
                         .transactions
                         .into_iter()
-                        .map(starknet_tx_into_eth_tx)
+                        .map(|t| starknet_tx_into_eth_tx(t, blockhash_opt, blocknum_opt))
                         .filter_map(Result::ok)
                         .collect(),
                 );
@@ -459,6 +462,8 @@ pub fn decode_execute_at_address_return(
 
 pub fn starknet_tx_into_eth_tx(
     tx: StarknetTransaction,
+    block_hash: Option<H256>,
+    block_number: Option<U256>,
 ) -> Result<EtherTransaction, KakarotClientError> {
     let mut ether_tx = EtherTransaction::default();
     println!("2.1 Inside Getting transactions");
@@ -496,6 +501,8 @@ pub fn starknet_tx_into_eth_tx(
                     // How to fetch the public_key?
                     ether_tx.public_key = None;
                     // ...
+                    ether_tx.block_hash = block_hash;
+                    ether_tx.block_number = block_number;
                 }
 
                 InvokeTransaction::V1(v1) => {
@@ -532,6 +539,8 @@ pub fn starknet_tx_into_eth_tx(
                     ether_tx.access_list = None;
                     // Extracting the transaction_type
                     ether_tx.transaction_type = None;
+                    ether_tx.block_hash = block_hash;
+                    ether_tx.block_number = block_number;
                 }
             }
         }
@@ -557,6 +566,8 @@ pub fn starknet_tx_into_eth_tx(
             ether_tx.creates = None;
             // Extracting the public_key
             ether_tx.public_key = None;
+            ether_tx.block_hash = block_hash;
+            ether_tx.block_number = block_number;
         }
         StarknetTransaction::Declare(declare_tx) => {
             // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
@@ -581,6 +592,8 @@ pub fn starknet_tx_into_eth_tx(
             ether_tx.standard_v = U256::from(0);
             // Extracting the public_key
             ether_tx.public_key = None;
+            ether_tx.block_hash = block_hash;
+            ether_tx.block_number = block_number;
         }
         StarknetTransaction::Deploy(deploy_tx) => {
             // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
@@ -591,6 +604,8 @@ pub fn starknet_tx_into_eth_tx(
             ether_tx.creates = None;
             // Extracting the public_key
             ether_tx.public_key = None;
+            ether_tx.block_hash = block_hash;
+            ether_tx.block_number = block_number;
         }
         StarknetTransaction::DeployAccount(deploy_account_tx) => {
             ether_tx.hash = H256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be());
@@ -611,6 +626,8 @@ pub fn starknet_tx_into_eth_tx(
             ether_tx.standard_v = U256::from(0);
             // Extracting the public_key
             ether_tx.public_key = None;
+            ether_tx.block_hash = block_hash;
+            ether_tx.block_number = block_number;
         }
     }
     println!("2.2 Before Returning Inside Getting transactions");
