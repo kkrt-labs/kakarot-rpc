@@ -1,15 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use kakarot_rpc::eth_rpc::KakarotEthRpc;
-    use kakarot_rpc::test_utils::setup_rpc_server;
-    use kakarot_rpc_core::client::MockStarknetClient;
-    use reth_primitives::{Address, Bytes};
 
-    use kakarot_rpc_core::{
-        client::constants::selectors::KKRT_CHAIN_ID, utils::wiremock_utils::EthJsonRpcResponse,
-    };
-    use reth_primitives::{BlockHash, ChainId};
-    use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
+    use kakarot_rpc::test_utils::setup_rpc_server;
+
+    use kakarot_rpc_core::utils::wiremock_utils::EthJsonRpcResponse;
 
     #[tokio::test]
     async fn test_eth_chain_id_is_ok() {
