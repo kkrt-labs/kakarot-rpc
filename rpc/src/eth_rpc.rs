@@ -138,11 +138,19 @@ trait EthApi {
 
     /// Returns code at a given address at given block number.
     #[method(name = "eth_getCode")]
-    async fn get_code(&self, address: Address, block_number: Option<BlockId>) -> Result<Bytes>;
+    async fn get_code(
+        &self,
+        address: Address,
+        block_number: Option<BlockId>,
+    ) -> Result<PrimitiveBytes>;
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "eth_call")]
-    async fn call(&self, request: CallRequest, block_number: Option<BlockId>) -> Result<Bytes>;
+    async fn call(
+        &self,
+        request: CallRequest,
+        block_number: Option<BlockId>,
+    ) -> Result<PrimitiveBytes>;
 
     /// Generates an access list for a transaction.
     ///
@@ -427,7 +435,11 @@ impl EthApiServer for KakarotEthRpc {
         Ok(U256::from(3))
     }
 
-    async fn get_code(&self, _address: Address, _block_number: Option<BlockId>) -> Result<Bytes> {
+    async fn get_code(
+        &self,
+        _address: Address,
+        _block_number: Option<BlockId>,
+    ) -> Result<PrimitiveBytes> {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(_block_number.unwrap())?;
 
         let code = self
@@ -437,7 +449,11 @@ impl EthApiServer for KakarotEthRpc {
         Ok(code)
     }
 
-    async fn call(&self, _request: CallRequest, _block_number: Option<BlockId>) -> Result<Bytes> {
+    async fn call(
+        &self,
+        _request: CallRequest,
+        _block_number: Option<BlockId>,
+    ) -> Result<PrimitiveBytes> {
         // unwrap option or return jsonrpc error
         let to = _request.to.ok_or_else(|| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
@@ -455,7 +471,7 @@ impl EthApiServer for KakarotEthRpc {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
         let result = self
             .kakarot_client
-            .call_view(to, Bytes::from(calldata.0), starknet_block_id)
+            .call_view(to, PrimitiveBytes::from(calldata.0), starknet_block_id)
             .await?;
 
         Ok(result)

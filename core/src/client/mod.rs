@@ -2,13 +2,13 @@ use std::str::FromStr;
 
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
+use std::convert::From;
 
 use reth_primitives::{
     keccak256,
-    rpc::{BlockId, BlockNumber, Bytes, Log, H160, H256},
-    Address, H160, H256 as PrimitiveH256, U256, U64,
+    rpc::{BlockId, BlockNumber, Bytes as RpcBytes, Log, H160 as RpcH160, H256},
+    Address, Bytes, H256 as PrimitiveH256, U256, U64,
 };
-
 use reth_rpc_types::{SyncInfo, SyncStatus, TransactionReceipt};
 use starknet::{
     core::types::FieldElement,
@@ -29,7 +29,6 @@ use starknet::{
 use thiserror::Error;
 use url::Url;
 extern crate hex;
-use std::str::FromStr;
 
 use crate::helpers::{
     create_default_transaction_receipt, decode_execute_at_address_return,
@@ -44,7 +43,10 @@ use reth_primitives::{Bloom, H64};
 use std::collections::BTreeMap;
 
 use crate::client::{
-    constants::{selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_MAIN_CONTRACT_ADDRESS},
+    constants::{
+        selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH,
+        KAKAROT_MAIN_CONTRACT_ADDRESS,
+    },
     types::{Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction},
 };
 use async_trait::async_trait;
@@ -57,11 +59,11 @@ pub mod types;
 use types::{RichBlock, TokenBalance, TokenBalances};
 
 use self::constants::{
-    selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS, GET_EVM_ADDRESS},
+    selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS},
     STARKNET_NATIVE_TOKEN,
 };
 
-#[derive(Error, Debug)]
+#[derive(Debug, Error)]
 pub enum KakarotClientError {
     #[error(transparent)]
     RequestError(#[from] JsonRpcClientError<reqwest::Error>),
@@ -138,6 +140,22 @@ pub trait KakarotClient: Send + Sync {
         address: Address,
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, KakarotClientError>;
+    async fn starknet_tx_into_eth_tx(
+        &self,
+        tx: StarknetTransaction,
+        block_hash: Option<PrimitiveH256>,
+        block_number: Option<U256>,
+    ) -> Result<EtherTransaction, KakarotClientError>;
+    async fn starknet_block_to_eth_block(
+        &self,
+        block: MaybePendingStarknetBlock,
+    ) -> Result<RichBlock, KakarotClientError>;
+    async fn filter_starknet_into_eth_txs(
+        &self,
+        initial_transactions: Vec<StarknetTransaction>,
+        blockhash_opt: Option<PrimitiveH256>,
+        blocknum_opt: Option<U256>,
+    ) -> Result<BlockTransactions, KakarotClientError>;
 }
 pub struct KakarotClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -234,7 +252,7 @@ impl KakarotClient for KakarotClientImpl {
         };
         // fetch gas limit, public key, and nonce from starknet rpc
 
-        let block = starknet_block_to_eth_block(starknet_block);
+        let block = self.starknet_block_to_eth_block(starknet_block).await?;
         Ok(block)
     }
 
@@ -463,7 +481,7 @@ impl KakarotClient for KakarotClientImpl {
         let tx_hash = match &starknet_tx {
             StarknetTransaction::Invoke(InvokeTransaction::V0(tx)) => tx.transaction_hash,
             StarknetTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.transaction_hash,
-            StarknetTransaction::L1Handler(tx) => tx.transaction_hash,
+            StarknetTransaction::L1Handler(_) => FieldElement::ZERO,
             StarknetTransaction::Declare(tx) => tx.transaction_hash,
             StarknetTransaction::Deploy(tx) => tx.transaction_hash,
             StarknetTransaction::DeployAccount(tx) => tx.transaction_hash,
@@ -474,10 +492,9 @@ impl KakarotClient for KakarotClientImpl {
                 Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
                 Some(U256::from(tr.block_number)),
             ),
-            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::L1Handler(tr)) => (
-                Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
-                Some(U256::from(tr.block_number)),
-            ),
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::L1Handler(_)) => {
+                (None, None)
+            }
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Declare(tr)) => (
                 Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
                 Some(U256::from(tr.block_number)),
@@ -494,7 +511,9 @@ impl KakarotClient for KakarotClientImpl {
             ),
             MaybePendingTransactionReceipt::PendingReceipt(_) => (None, None),
         };
-        let eth_tx = starknet_tx_into_eth_tx(starknet_tx, blockhash_opt, blocknum_opt)?;
+        let eth_tx = self
+            .starknet_tx_into_eth_tx(starknet_tx, blockhash_opt, blocknum_opt)
+            .await?;
         Ok(eth_tx)
     }
 
@@ -669,9 +688,9 @@ impl KakarotClient for KakarotClientImpl {
                         let log = Log {
                             // TODO: fetch correct address from Kakarot.
                             // Contract Address is the account contract's address (EOA or KakarotAA)
-                            address: H160::from_slice(&contract_address.0),
+                            address: RpcH160::from_slice(&contract_address.0),
                             topics,
-                            data: Bytes::from(data.0),
+                            data: RpcBytes::from(data.0),
                             block_hash: None,
                             block_number: None,
                             transaction_hash: None,
@@ -713,7 +732,7 @@ impl KakarotClient for KakarotClientImpl {
             _ => return Ok(None),
         };
 
-        let eth_tx = starknet_tx_into_eth_tx(starknet_tx, None, None);
+        let eth_tx = self.starknet_tx_into_eth_tx(starknet_tx, None, None).await;
         match eth_tx {
             Ok(tx) => {
                 res_receipt.from = tx.from;
@@ -873,458 +892,545 @@ impl KakarotClient for KakarotClientImpl {
             token_balances,
         })
     }
-}
 
-pub fn starknet_tx_into_eth_tx(
-    tx: StarknetTransaction,
-    block_hash: Option<PrimitiveH256>,
-    block_number: Option<U256>,
-) -> Result<EtherTransaction, KakarotClientError> {
-    let mut ether_tx = EtherTransaction::default();
-    println!("2.1 Inside Getting transactions");
+    async fn starknet_tx_into_eth_tx(
+        &self,
+        tx: StarknetTransaction,
+        block_hash: Option<PrimitiveH256>,
+        block_number: Option<U256>,
+    ) -> Result<EtherTransaction, KakarotClientError> {
+        let mut ether_tx = EtherTransaction::default();
+        let class_hash;
+        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
 
-    match tx {
-        StarknetTransaction::Invoke(invoke_tx) => {
-            match invoke_tx {
-                InvokeTransaction::V0(v0) => {
-                    println!("2.X Inside InvokeV0");
+        match tx {
+            StarknetTransaction::Invoke(invoke_tx) => {
+                match invoke_tx {
+                    InvokeTransaction::V0(v0) => {
+                        // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
+                        ether_tx.hash =
+                            PrimitiveH256::from_slice(&v0.transaction_hash.to_bytes_be());
+                        class_hash = self
+                            .client
+                            .get_class_hash_at(
+                                &StarknetBlockId::Tag(BlockTag::Latest),
+                                v0.contract_address,
+                            )
+                            .await?;
 
-                    // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-                    ether_tx.hash = PrimitiveH256::from_slice(&v0.transaction_hash.to_bytes_be());
-                    ether_tx.nonce = felt_to_u256(v0.nonce);
-                    ether_tx.from = starknet_address_to_ethereum_address(&v0.contract_address);
-                    // Define gas_price data
-                    ether_tx.gas_price = None;
-                    // Extracting the signature
-                    ether_tx.r = felt_option_to_u256(v0.signature.get(0))?;
-                    ether_tx.s = felt_option_to_u256(v0.signature.get(1))?;
-                    ether_tx.v = felt_option_to_u256(v0.signature.get(2))?;
-                    // Extracting the data (transform from calldata)
-                    ether_tx.input = vec_felt_to_bytes(v0.calldata);
-                    //TODO:  Fetch transaction To
-                    ether_tx.to = None;
-                    //TODO:  Fetch value
-                    ether_tx.value = U256::from(100);
-                    //TODO: Fetch Gas
-                    ether_tx.gas = U256::from(100);
-                    // Extracting the chain_id
-                    ether_tx.chain_id = Some(CHAIN_ID.into());
-                    // Extracting the standard_v
-                    ether_tx.standard_v = U256::from(0);
-                    // Extracting the creates
-                    ether_tx.creates = None;
-                    // How to fetch the public_key?
-                    ether_tx.public_key = None;
-                    // ...
-                    ether_tx.block_hash = block_hash;
-                    ether_tx.block_number = block_number;
-                }
-
-                InvokeTransaction::V1(v1) => {
-                    // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-                    println!("2.X Inside InvokeV1");
-
-                    ether_tx.hash = PrimitiveH256::from_slice(&v1.transaction_hash.to_bytes_be());
-                    ether_tx.nonce = felt_to_u256(v1.nonce);
-                    ether_tx.from = starknet_address_to_ethereum_address(&v1.sender_address);
-                    // Define gas_price data
-                    ether_tx.gas_price = None;
-                    // Extracting the signature
-                    ether_tx.r = felt_option_to_u256(v1.signature.get(0))?;
-                    ether_tx.s = felt_option_to_u256(v1.signature.get(1))?;
-                    ether_tx.v = felt_option_to_u256(v1.signature.get(2))?;
-                    // Extracting the data
-                    ether_tx.input = vec_felt_to_bytes(v1.calldata);
-                    // Extracting the to address
-                    // TODO: Get Data from Calldata
-                    ether_tx.to = None;
-                    // Extracting the value
-                    ether_tx.value = U256::from(100);
-                    // TODO:: Get Gas from Estimate
-                    ether_tx.gas = U256::from(100);
-                    // Extracting the chain_id
-                    ether_tx.chain_id = Some(CHAIN_ID.into());
-                    // Extracting the standard_v
-                    ether_tx.standard_v = U256::from(0);
-                    // Extracting the creates
-                    ether_tx.creates = None;
-                    // Extracting the public_key
-                    ether_tx.public_key = None;
-                    // Extracting the access_list
-                    ether_tx.access_list = None;
-                    // Extracting the transaction_type
-                    ether_tx.transaction_type = None;
-                    ether_tx.block_hash = block_hash;
-                    ether_tx.block_number = block_number;
-                }
-            }
-        }
-        // Repeat the process for each variant of StarknetTransaction
-        StarknetTransaction::L1Handler(l1_handler_tx) => {
-            // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-            ether_tx.hash =
-                PrimitiveH256::from_slice(&l1_handler_tx.transaction_hash.to_bytes_be());
-            ether_tx.nonce = U256::from(l1_handler_tx.nonce);
-            ether_tx.from = starknet_address_to_ethereum_address(&l1_handler_tx.contract_address);
-            // Define gas_price data
-            ether_tx.gas_price = None;
-            // Extracting the data
-            ether_tx.input = vec_felt_to_bytes(l1_handler_tx.calldata);
-            // Extracting the to address
-            ether_tx.to = None;
-            // Extracting the value
-            ether_tx.value = U256::from(0);
-            // TODO: Get from estimate gas
-            ether_tx.gas = U256::from(0);
-            // Extracting the chain_id
-            ether_tx.chain_id = Some(CHAIN_ID.into());
-            // Extracting the creates
-            ether_tx.creates = None;
-            // Extracting the public_key
-            ether_tx.public_key = None;
-            ether_tx.block_hash = block_hash;
-            ether_tx.block_number = block_number;
-        }
-        StarknetTransaction::Declare(declare_tx) => {
-            // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-            ether_tx.hash = PrimitiveH256::from_slice(&declare_tx.transaction_hash.to_bytes_be());
-            ether_tx.nonce = felt_to_u256(declare_tx.nonce);
-            ether_tx.from = starknet_address_to_ethereum_address(&declare_tx.sender_address);
-            // Define gas_price data
-            ether_tx.gas_price = None;
-            // Extracting the signature
-            ether_tx.r = felt_option_to_u256(declare_tx.signature.get(0))?;
-            ether_tx.s = felt_option_to_u256(declare_tx.signature.get(1))?;
-            ether_tx.v = felt_option_to_u256(declare_tx.signature.get(2))?;
-            // Extracting the to address
-            ether_tx.to = None;
-            // Extracting the value
-            ether_tx.value = U256::from(0);
-            // Extracting the gas
-            ether_tx.gas = U256::from(0);
-            // Extracting the chain_id
-            ether_tx.chain_id = Some(CHAIN_ID.into());
-            // Extracting the standard_v
-            ether_tx.standard_v = U256::from(0);
-            // Extracting the public_key
-            ether_tx.public_key = None;
-            ether_tx.block_hash = block_hash;
-            ether_tx.block_number = block_number;
-        }
-        StarknetTransaction::Deploy(deploy_tx) => {
-            // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-            ether_tx.hash = PrimitiveH256::from_slice(&deploy_tx.transaction_hash.to_bytes_be());
-            // Define gas_price data
-            ether_tx.gas_price = None;
-
-            ether_tx.creates = None;
-            // Extracting the public_key
-            ether_tx.public_key = None;
-            ether_tx.block_hash = block_hash;
-            ether_tx.block_number = block_number;
-        }
-        StarknetTransaction::DeployAccount(deploy_account_tx) => {
-            ether_tx.hash =
-                PrimitiveH256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be());
-            ether_tx.nonce = felt_to_u256(deploy_account_tx.nonce);
-            // TODO: Get from estimate gas
-            ether_tx.gas_price = None;
-            // Extracting the signature
-            ether_tx.r = felt_option_to_u256(deploy_account_tx.signature.get(0))?;
-            ether_tx.s = felt_option_to_u256(deploy_account_tx.signature.get(1))?;
-            ether_tx.v = felt_option_to_u256(deploy_account_tx.signature.get(2))?;
-            // Extracting the to address
-            ether_tx.to = None;
-            // Extracting the gas
-            ether_tx.gas = U256::from(0);
-            // Extracting the chain_id
-            ether_tx.chain_id = Some(CHAIN_ID.into());
-            // Extracting the standard_v
-            ether_tx.standard_v = U256::from(0);
-            // Extracting the public_key
-            ether_tx.public_key = None;
-            ether_tx.block_hash = block_hash;
-            ether_tx.block_number = block_number;
-        }
-    }
-    println!("2.2 Before Returning Inside Getting transactions");
-
-    let kakarot_h256_contract = PrimitiveH256::from_str(KAKAROT_MAIN_CONTRACT_ADDRESS).unwrap();
-
-    if ether_tx.hash == kakarot_h256_contract {
-        Ok(ether_tx)
-    } else {
-        Err(KakarotClientError::OtherError(anyhow::anyhow!(
-            "Kakarot Core: Failed to cast EVM address from 32 bytes to 20 bytes EVM format"
-        )))
-    }
-}
-
-pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBlock {
-    // Fixed fields in the Ethereum block as Starknet does not have these fields
-
-    //InvokeTransactionReceipt -
-    //TODO: Fetch real data
-    let gas_limit = U256::from(1000000); // Hard Code
-                                         //TODO: Fetch real data
-    let gas_used = U256::from(500000); // Hard Code (Sum of actual_fee's)
-                                       //TODO: Fetch real data
-    let difficulty = U256::from(1000000); // Fixed
-                                          //TODO: Fetch real data
-    let nonce: Option<H64> = Some(H64::from_low_u64_be(0));
-    //TODO: Fetch real data
-    let size: Option<U256> = Some(U256::from(100));
-    // Bloom is a byte array of length 256
-    let logs_bloom = Bloom::default();
-    let extra_data = Bytes::from(b"0x00");
-    //TODO: Fetch real data
-    let total_difficulty: U256 = U256::from(1000000);
-    //TODO: Fetch real data
-    let base_fee_per_gas = U256::from(32);
-    //TODO: Fetch real data
-    let mix_hash = PrimitiveH256::from_low_u64_be(0);
-
-    match block {
-        MaybePendingStarknetBlock::BlockWithTxHashes(maybe_pending_block) => {
-            match maybe_pending_block {
-                MaybePendingBlockWithTxHashes::PendingBlock(pending_block_with_tx_hashes) => {
-                    let parent_hash = PrimitiveH256::from_slice(
-                        &pending_block_with_tx_hashes.parent_hash.to_bytes_be(),
-                    );
-                    let sequencer = H160::from_slice(
-                        &pending_block_with_tx_hashes.sequencer_address.to_bytes_be()[12..32],
-                    );
-                    let timestamp =
-                        U256::from_be_bytes(pending_block_with_tx_hashes.timestamp.to_be_bytes());
-                    let transactions = BlockTransactions::Hashes(
-                        pending_block_with_tx_hashes
-                            .transactions
-                            .into_iter()
-                            .map(|tx| PrimitiveH256::from_slice(&tx.to_bytes_be()))
-                            .collect(),
-                    );
-                    let header = Header {
-                        // PendingblockWithTxHashes doesn't have a block hash
-                        hash: None,
-                        parent_hash,
-                        uncles_hash: parent_hash,
-                        author: sequencer,
-                        miner: sequencer,
-                        // PendingblockWithTxHashes doesn't have a state root
-                        state_root: PrimitiveH256::zero(),
-                        // PendingblockWithTxHashes doesn't have a transactions root
-                        transactions_root: PrimitiveH256::zero(),
-                        // PendingblockWithTxHashes doesn't have a receipts root
-                        receipts_root: PrimitiveH256::zero(),
-                        // PendingblockWithTxHashes doesn't have a block number
-                        number: None,
-                        gas_used,
-                        gas_limit,
-                        extra_data,
-                        logs_bloom,
-                        timestamp,
-                        difficulty,
-                        nonce,
-                        size,
-                        base_fee_per_gas,
-                        mix_hash,
-                    };
-                    let block = Block {
-                        header,
-                        total_difficulty,
-                        uncles: vec![],
-                        transactions,
-                        base_fee_per_gas: None,
-                        size,
-                    };
-                    Rich::<Block> {
-                        inner: block,
-                        extra_info: BTreeMap::default(),
+                        ether_tx.nonce = felt_to_u256(v0.nonce);
+                        ether_tx.from = self
+                            .get_evm_address(&v0.contract_address, &starknet_block_id)
+                            .await?;
+                        // Define gas_price data
+                        ether_tx.gas_price = None;
+                        // Extracting the signature
+                        ether_tx.r = felt_option_to_u256(v0.signature.get(0))?;
+                        ether_tx.s = felt_option_to_u256(v0.signature.get(1))?;
+                        ether_tx.v = felt_option_to_u256(v0.signature.get(2))?;
+                        // Extracting the data (transform from calldata)
+                        ether_tx.input = vec_felt_to_bytes(v0.calldata);
+                        //TODO:  Fetch transaction To
+                        ether_tx.to = None;
+                        //TODO:  Fetch value
+                        ether_tx.value = U256::from(100);
+                        //TODO: Fetch Gas
+                        ether_tx.gas = U256::from(100);
+                        // Extracting the chain_id
+                        ether_tx.chain_id = Some(CHAIN_ID.into());
+                        // Extracting the standard_v
+                        ether_tx.standard_v = U256::from(0);
+                        // Extracting the creates
+                        ether_tx.creates = None;
+                        // How to fetch the public_key?
+                        ether_tx.public_key = None;
+                        // ...
+                        ether_tx.block_hash = block_hash;
+                        ether_tx.block_number = block_number;
                     }
-                }
-                MaybePendingBlockWithTxHashes::Block(block_with_tx_hashes) => {
-                    let hash =
-                        PrimitiveH256::from_slice(&block_with_tx_hashes.block_hash.to_bytes_be());
-                    let parent_hash =
-                        PrimitiveH256::from_slice(&block_with_tx_hashes.parent_hash.to_bytes_be());
-                    let sequencer = H160::from_slice(
-                        &block_with_tx_hashes.sequencer_address.to_bytes_be()[12..32],
-                    );
-                    let state_root =
-                        PrimitiveH256::from_slice(&block_with_tx_hashes.new_root.to_bytes_be());
-                    let number = U256::from(block_with_tx_hashes.block_number);
-                    let timestamp = U256::from(block_with_tx_hashes.timestamp);
-                    let transactions = BlockTransactions::Hashes(
-                        block_with_tx_hashes
-                            .transactions
-                            .into_iter()
-                            .map(|tx| PrimitiveH256::from_slice(&tx.to_bytes_be()))
-                            .collect(),
-                    );
-                    let header = Header {
-                        hash: Some(hash),
-                        parent_hash,
-                        uncles_hash: parent_hash,
-                        author: sequencer,
-                        miner: sequencer,
-                        state_root,
-                        // BlockWithTxHashes doesn't have a transactions root
-                        transactions_root: PrimitiveH256::zero(),
-                        // BlockWithTxHashes doesn't have a receipts root
-                        receipts_root: PrimitiveH256::zero(),
-                        number: Some(number),
-                        gas_used,
-                        gas_limit,
-                        extra_data,
-                        logs_bloom,
-                        timestamp,
-                        difficulty,
-                        nonce,
-                        size,
-                        base_fee_per_gas,
-                        mix_hash,
-                    };
-                    let block = Block {
-                        header,
-                        total_difficulty,
-                        uncles: vec![],
-                        transactions,
-                        base_fee_per_gas: None,
-                        size,
-                    };
-                    Rich::<Block> {
-                        inner: block,
-                        extra_info: BTreeMap::default(),
+
+                    InvokeTransaction::V1(v1) => {
+                        // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
+
+                        ether_tx.hash =
+                            PrimitiveH256::from_slice(&v1.transaction_hash.to_bytes_be());
+                        class_hash = self
+                            .client
+                            .get_class_hash_at(
+                                &StarknetBlockId::Tag(BlockTag::Latest),
+                                v1.sender_address,
+                            )
+                            .await?;
+
+                        ether_tx.nonce = felt_to_u256(v1.nonce);
+                        ether_tx.from = self
+                            .get_evm_address(&v1.sender_address, &starknet_block_id)
+                            .await?;
+                        // Define gas_price data
+                        ether_tx.gas_price = None;
+                        // Extracting the signature
+                        ether_tx.r = felt_option_to_u256(v1.signature.get(0))?;
+                        ether_tx.s = felt_option_to_u256(v1.signature.get(1))?;
+                        ether_tx.v = felt_option_to_u256(v1.signature.get(2))?;
+                        // Extracting the data
+                        ether_tx.input = vec_felt_to_bytes(v1.calldata);
+                        ether_tx.to = None;
+                        // Extracting the to address
+                        // TODO: Get Data from Calldata
+                        ether_tx.to = None;
+                        // Extracting the value
+                        ether_tx.value = U256::from(100);
+                        // TODO:: Get Gas from Estimate
+                        ether_tx.gas = U256::from(100);
+                        // Extracting the chain_id
+                        ether_tx.chain_id = Some(CHAIN_ID.into());
+                        // Extracting the standard_v
+                        ether_tx.standard_v = U256::from(0);
+                        // Extracting the creates
+                        ether_tx.creates = None;
+                        // Extracting the public_key
+                        ether_tx.public_key = None;
+                        // Extracting the access_list
+                        ether_tx.access_list = None;
+                        // Extracting the transaction_type
+                        ether_tx.transaction_type = None;
+                        ether_tx.block_hash = block_hash;
+                        ether_tx.block_number = block_number;
                     }
                 }
             }
+            // Repeat the process for each variant of StarknetTransaction
+            StarknetTransaction::L1Handler(_) => {
+                class_hash = FieldElement::ZERO;
+            }
+            StarknetTransaction::Declare(declare_tx) => {
+                // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
+                ether_tx.hash =
+                    PrimitiveH256::from_slice(&declare_tx.transaction_hash.to_bytes_be());
+                class_hash = self
+                    .client
+                    .get_class_hash_at(
+                        &StarknetBlockId::Tag(BlockTag::Latest),
+                        declare_tx.sender_address,
+                    )
+                    .await?;
+                ether_tx.nonce = felt_to_u256(declare_tx.nonce);
+                ether_tx.from = self
+                    .get_evm_address(&declare_tx.sender_address, &starknet_block_id)
+                    .await?;
+                // Define gas_price data
+                ether_tx.gas_price = None;
+                // Extracting the signature
+                ether_tx.r = felt_option_to_u256(declare_tx.signature.get(0))?;
+                ether_tx.s = felt_option_to_u256(declare_tx.signature.get(1))?;
+                ether_tx.v = felt_option_to_u256(declare_tx.signature.get(2))?;
+                // Extracting the to address
+                ether_tx.to = None;
+                // Extracting the value
+                ether_tx.value = U256::from(0);
+                // Extracting the gas
+                ether_tx.gas = U256::from(0);
+                // Extracting the chain_id
+                ether_tx.chain_id = Some(CHAIN_ID.into());
+                // Extracting the standard_v
+                ether_tx.standard_v = U256::from(0);
+                // Extracting the public_key
+                ether_tx.public_key = None;
+                ether_tx.block_hash = block_hash;
+                ether_tx.block_number = block_number;
+            }
+            StarknetTransaction::Deploy(deploy_tx) => {
+                // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
+                ether_tx.hash =
+                    PrimitiveH256::from_slice(&deploy_tx.transaction_hash.to_bytes_be());
+                class_hash = deploy_tx.class_hash;
+                // Define gas_price data
+                ether_tx.gas_price = None;
+
+                ether_tx.creates = None;
+                // Extracting the public_key
+                ether_tx.public_key = None;
+                ether_tx.to = None;
+                ether_tx.block_hash = block_hash;
+                ether_tx.block_number = block_number;
+            }
+            StarknetTransaction::DeployAccount(deploy_account_tx) => {
+                ether_tx.hash =
+                    PrimitiveH256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be());
+                class_hash = deploy_account_tx.class_hash;
+
+                ether_tx.nonce = felt_to_u256(deploy_account_tx.nonce);
+                // TODO: Get from estimate gas
+                ether_tx.gas_price = None;
+                // Extracting the signature
+                ether_tx.r = felt_option_to_u256(deploy_account_tx.signature.get(0))?;
+                ether_tx.s = felt_option_to_u256(deploy_account_tx.signature.get(1))?;
+                ether_tx.v = felt_option_to_u256(deploy_account_tx.signature.get(2))?;
+                // Extracting the to address
+                ether_tx.to = None;
+                // Extracting the gas
+                ether_tx.gas = U256::from(0);
+                // Extracting the chain_id
+                ether_tx.chain_id = Some(CHAIN_ID.into());
+                // Extracting the standard_v
+                ether_tx.standard_v = U256::from(0);
+                // Extracting the public_key
+                ether_tx.public_key = None;
+                ether_tx.block_hash = block_hash;
+                ether_tx.block_number = block_number;
+            }
         }
-        MaybePendingStarknetBlock::BlockWithTxs(maybe_pending_block) => match maybe_pending_block {
-            MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
-                let parent_hash =
-                    PrimitiveH256::from_slice(&pending_block_with_txs.parent_hash.to_bytes_be());
-                let sequencer = H160::from_slice(
-                    &pending_block_with_txs.sequencer_address.to_bytes_be()[12..32],
-                );
-                let timestamp = U256::from_be_bytes(pending_block_with_txs.timestamp.to_be_bytes());
-                let transactions = BlockTransactions::Full(
-                    pending_block_with_txs
-                        .transactions
-                        .into_iter()
-                        .map(|t| starknet_tx_into_eth_tx(t, None, None))
-                        .filter_map(Result::ok)
-                        .collect(),
-                );
-                let header = Header {
-                    // PendingBlockWithTxs doesn't have a block hash
-                    hash: None,
-                    parent_hash,
-                    uncles_hash: parent_hash,
-                    author: sequencer,
-                    miner: sequencer,
-                    // PendingBlockWithTxs doesn't have a state root
-                    state_root: PrimitiveH256::zero(),
-                    // PendingBlockWithTxs doesn't have a transactions root
-                    transactions_root: PrimitiveH256::zero(),
-                    // PendingBlockWithTxs doesn't have a receipts root
-                    receipts_root: PrimitiveH256::zero(),
-                    // PendingBlockWithTxs doesn't have a block number
-                    number: None,
-                    gas_used,
-                    gas_limit,
-                    extra_data,
-                    logs_bloom,
-                    timestamp,
-                    difficulty,
-                    nonce,
-                    size,
-                    base_fee_per_gas,
-                    mix_hash,
-                };
-                let block = Block {
-                    header,
-                    total_difficulty,
-                    uncles: vec![],
-                    transactions,
-                    base_fee_per_gas: None,
-                    size,
-                };
-                Rich::<Block> {
-                    inner: block,
-                    extra_info: BTreeMap::default(),
+        let kakarot_class_hash = FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH)
+            .map_err(|e| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Failed to convert Starknet block hash to FieldElement: {}",
+                    e
+                ))
+            })?;
+        if class_hash == kakarot_class_hash {
+            Ok(ether_tx)
+        } else {
+            Err(KakarotClientError::OtherError(anyhow::anyhow!(
+                "Kakarot Filter: Tx is not part of Kakarot"
+            )))
+        }
+    }
+
+    async fn starknet_block_to_eth_block(
+        &self,
+        block: MaybePendingStarknetBlock,
+    ) -> Result<RichBlock, KakarotClientError> {
+        // Fixed fields in the Ethereum block as Starknet does not have these fields
+
+        //InvokeTransactionReceipt -
+        //TODO: Fetch real data
+        let gas_limit = U256::from(1000000); // Hard Code
+                                             //TODO: Fetch real data
+        let gas_used = U256::from(500000); // Hard Code (Sum of actual_fee's)
+                                           //TODO: Fetch real data
+        let difficulty = U256::from(1000000); // Fixed
+                                              //TODO: Fetch real data
+        let nonce: Option<H64> = Some(H64::from_low_u64_be(0));
+        //TODO: Fetch real data
+        let size: Option<U256> = Some(U256::from(100));
+        // Bloom is a byte array of length 256
+        let logs_bloom = Bloom::default();
+        let extra_data = Bytes::from(b"0x00");
+        //TODO: Fetch real data
+        let total_difficulty: U256 = U256::from(1000000);
+        //TODO: Fetch real data
+        let base_fee_per_gas = U256::from(32);
+        //TODO: Fetch real data
+        let mix_hash = PrimitiveH256::from_low_u64_be(0);
+
+        match block {
+            MaybePendingStarknetBlock::BlockWithTxHashes(maybe_pending_block) => {
+                match maybe_pending_block {
+                    MaybePendingBlockWithTxHashes::PendingBlock(pending_block_with_tx_hashes) => {
+                        let parent_hash = PrimitiveH256::from_slice(
+                            &pending_block_with_tx_hashes.parent_hash.to_bytes_be(),
+                        );
+                        let sequencer = starknet_address_to_ethereum_address(
+                            &pending_block_with_tx_hashes.sequencer_address,
+                        );
+                        let timestamp = U256::from_be_bytes(
+                            pending_block_with_tx_hashes.timestamp.to_be_bytes(),
+                        );
+                        //TODO: Add filter to tx_hashes
+                        let transactions = BlockTransactions::Hashes(
+                            pending_block_with_tx_hashes
+                                .transactions
+                                .into_iter()
+                                .map(|tx| PrimitiveH256::from_slice(&tx.to_bytes_be()))
+                                .collect(),
+                        );
+
+                        let header = Header {
+                            // PendingblockWithTxHashes doesn't have a block hash
+                            hash: None,
+                            parent_hash,
+                            uncles_hash: parent_hash,
+                            author: sequencer,
+                            miner: sequencer,
+                            // PendingblockWithTxHashes doesn't have a state root
+                            state_root: PrimitiveH256::zero(),
+                            // PendingblockWithTxHashes doesn't have a transactions root
+                            transactions_root: PrimitiveH256::zero(),
+                            // PendingblockWithTxHashes doesn't have a receipts root
+                            receipts_root: PrimitiveH256::zero(),
+                            // PendingblockWithTxHashes doesn't have a block number
+                            number: None,
+                            gas_used,
+                            gas_limit,
+                            extra_data,
+                            logs_bloom,
+                            timestamp,
+                            difficulty,
+                            nonce,
+                            size,
+                            base_fee_per_gas,
+                            mix_hash,
+                        };
+                        let block = Block {
+                            header,
+                            total_difficulty,
+                            uncles: vec![],
+                            transactions,
+                            base_fee_per_gas: None,
+                            size,
+                        };
+                        Ok(Rich::<Block> {
+                            inner: block,
+                            extra_info: BTreeMap::default(),
+                        })
+                    }
+                    MaybePendingBlockWithTxHashes::Block(block_with_tx_hashes) => {
+                        let hash = PrimitiveH256::from_slice(
+                            &block_with_tx_hashes.block_hash.to_bytes_be(),
+                        );
+                        let parent_hash = PrimitiveH256::from_slice(
+                            &block_with_tx_hashes.parent_hash.to_bytes_be(),
+                        );
+
+                        let sequencer = starknet_address_to_ethereum_address(
+                            &block_with_tx_hashes.sequencer_address,
+                        );
+
+                        let state_root =
+                            PrimitiveH256::from_slice(&block_with_tx_hashes.new_root.to_bytes_be());
+                        let number = U256::from(block_with_tx_hashes.block_number);
+                        let timestamp = U256::from(block_with_tx_hashes.timestamp);
+                        //TODO: Add filter to tx_hashes
+                        let transactions = BlockTransactions::Hashes(
+                            block_with_tx_hashes
+                                .transactions
+                                .into_iter()
+                                .map(|tx| PrimitiveH256::from_slice(&tx.to_bytes_be()))
+                                .collect(),
+                        );
+                        let header = Header {
+                            hash: Some(hash),
+                            parent_hash,
+                            uncles_hash: parent_hash,
+                            author: sequencer,
+                            miner: sequencer,
+                            state_root,
+                            // BlockWithTxHashes doesn't have a transactions root
+                            transactions_root: PrimitiveH256::zero(),
+                            // BlockWithTxHashes doesn't have a receipts root
+                            receipts_root: PrimitiveH256::zero(),
+                            number: Some(number),
+                            gas_used,
+                            gas_limit,
+                            extra_data,
+                            logs_bloom,
+                            timestamp,
+                            difficulty,
+                            nonce,
+                            size,
+                            base_fee_per_gas,
+                            mix_hash,
+                        };
+                        let block = Block {
+                            header,
+                            total_difficulty,
+                            uncles: vec![],
+                            transactions,
+                            base_fee_per_gas: None,
+                            size,
+                        };
+                        Ok(Rich::<Block> {
+                            inner: block,
+                            extra_info: BTreeMap::default(),
+                        })
+                    }
                 }
             }
-            MaybePendingBlockWithTxs::Block(block_with_txs) => {
-                println!("1. Calling Block With Txs");
-                let hash = PrimitiveH256::from_slice(&block_with_txs.block_hash.to_bytes_be());
-                let parent_hash =
-                    PrimitiveH256::from_slice(&block_with_txs.parent_hash.to_bytes_be());
-                let sequencer =
-                    H160::from_slice(&block_with_txs.sequencer_address.to_bytes_be()[12..32]);
-                let state_root = PrimitiveH256::from_slice(&block_with_txs.new_root.to_bytes_be());
-                let transactions_root = PrimitiveH256::from_slice(
-                    &"0xac91334ba861cb94cba2b1fd63df7e87c15ca73666201abd10b5462255a5c642"
-                        .as_bytes()[1..33],
-                );
-                let receipts_root = PrimitiveH256::from_slice(
-                    &"0xf2c8755adf35e78ffa84999e48aba628e775bb7be3c70209738d736b67a9b549"
-                        .as_bytes()[1..33],
-                );
+            MaybePendingStarknetBlock::BlockWithTxs(maybe_pending_block) => {
+                match maybe_pending_block {
+                    MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
+                        let parent_hash = PrimitiveH256::from_slice(
+                            &pending_block_with_txs.parent_hash.to_bytes_be(),
+                        );
 
-                let number = U256::from(block_with_txs.block_number);
-                let timestamp = U256::from(block_with_txs.timestamp);
-                println!("2. Getting transactions");
+                        let sequencer = starknet_address_to_ethereum_address(
+                            &pending_block_with_txs.sequencer_address,
+                        );
 
-                let blockhash_opt = Some(PrimitiveH256::from_slice(
-                    &(block_with_txs.block_hash).to_bytes_be(),
-                ));
-                let blocknum_opt = Some(U256::from(block_with_txs.block_number));
-                let transactions = BlockTransactions::Full(
-                    block_with_txs
-                        .transactions
-                        .into_iter()
-                        .map(|t| starknet_tx_into_eth_tx(t, blockhash_opt, blocknum_opt))
-                        .filter_map(Result::ok)
-                        .collect(),
-                );
-                println!("3. After Getting transactions");
+                        let timestamp =
+                            U256::from_be_bytes(pending_block_with_txs.timestamp.to_be_bytes());
 
-                let header = Header {
-                    hash: Some(hash),
-                    parent_hash,
-                    uncles_hash: parent_hash,
-                    author: sequencer,
-                    miner: sequencer,
-                    state_root,
-                    // BlockWithTxHashes doesn't have a transactions root
-                    transactions_root,
-                    // BlockWithTxHashes doesn't have a receipts root
-                    receipts_root,
-                    number: Some(number),
-                    gas_used,
-                    gas_limit,
-                    extra_data,
-                    logs_bloom,
-                    timestamp,
-                    difficulty,
-                    nonce,
-                    size,
-                    base_fee_per_gas,
-                    mix_hash,
-                };
-                let block = Block {
-                    header,
-                    total_difficulty,
-                    uncles: vec![],
-                    transactions,
-                    base_fee_per_gas: None,
-                    size,
-                };
-                Rich::<Block> {
-                    inner: block,
-                    extra_info: BTreeMap::default(),
+                        let transactions = self
+                            .filter_starknet_into_eth_txs(
+                                pending_block_with_txs.transactions,
+                                None,
+                                None,
+                            )
+                            .await?;
+                        let header = Header {
+                            // PendingBlockWithTxs doesn't have a block hash
+                            hash: None,
+                            parent_hash,
+                            uncles_hash: parent_hash,
+                            author: sequencer,
+                            miner: sequencer,
+                            // PendingBlockWithTxs doesn't have a state root
+                            state_root: PrimitiveH256::zero(),
+                            // PendingBlockWithTxs doesn't have a transactions root
+                            transactions_root: PrimitiveH256::zero(),
+                            // PendingBlockWithTxs doesn't have a receipts root
+                            receipts_root: PrimitiveH256::zero(),
+                            // PendingBlockWithTxs doesn't have a block number
+                            number: None,
+                            gas_used,
+                            gas_limit,
+                            extra_data,
+                            logs_bloom,
+                            timestamp,
+                            difficulty,
+                            nonce,
+                            size,
+                            base_fee_per_gas,
+                            mix_hash,
+                        };
+                        let block = Block {
+                            header,
+                            total_difficulty,
+                            uncles: vec![],
+                            transactions,
+                            base_fee_per_gas: None,
+                            size,
+                        };
+                        Ok(Rich::<Block> {
+                            inner: block,
+                            extra_info: BTreeMap::default(),
+                        })
+                    }
+                    MaybePendingBlockWithTxs::Block(block_with_txs) => {
+                        let hash =
+                            PrimitiveH256::from_slice(&block_with_txs.block_hash.to_bytes_be());
+                        let parent_hash =
+                            PrimitiveH256::from_slice(&block_with_txs.parent_hash.to_bytes_be());
+
+                        let sequencer =
+                            starknet_address_to_ethereum_address(&block_with_txs.sequencer_address);
+
+                        let state_root = PrimitiveH256::zero();
+                        let transactions_root = PrimitiveH256::zero();
+                        let receipts_root = PrimitiveH256::zero();
+
+                        let number = U256::from(block_with_txs.block_number);
+                        let timestamp = U256::from(block_with_txs.timestamp);
+
+                        let blockhash_opt = Some(PrimitiveH256::from_slice(
+                            &(block_with_txs.block_hash).to_bytes_be(),
+                        ));
+                        let blocknum_opt = Some(U256::from(block_with_txs.block_number));
+
+                        let transactions = self
+                            .filter_starknet_into_eth_txs(
+                                block_with_txs.transactions,
+                                blockhash_opt,
+                                blocknum_opt,
+                            )
+                            .await?;
+
+                        let header = Header {
+                            hash: Some(hash),
+                            parent_hash,
+                            uncles_hash: parent_hash,
+                            author: sequencer,
+                            miner: sequencer,
+                            state_root,
+                            // BlockWithTxHashes doesn't have a transactions root
+                            transactions_root,
+                            // BlockWithTxHashes doesn't have a receipts root
+                            receipts_root,
+                            number: Some(number),
+                            gas_used,
+                            gas_limit,
+                            extra_data,
+                            logs_bloom,
+                            timestamp,
+                            difficulty,
+                            nonce,
+                            size,
+                            base_fee_per_gas,
+                            mix_hash,
+                        };
+                        let block = Block {
+                            header,
+                            total_difficulty,
+                            uncles: vec![],
+                            transactions,
+                            base_fee_per_gas: None,
+                            size,
+                        };
+                        Ok(Rich::<Block> {
+                            inner: block,
+                            extra_info: BTreeMap::default(),
+                        })
+                    }
                 }
             }
-        },
+        }
+    }
+    async fn filter_starknet_into_eth_txs(
+        &self,
+        initial_transactions: Vec<StarknetTransaction>,
+        blockhash_opt: Option<PrimitiveH256>,
+        blocknum_opt: Option<U256>,
+    ) -> Result<BlockTransactions, KakarotClientError> {
+        let mut transactions_vec = vec![];
+        for transaction in initial_transactions {
+            let tx_value = self
+                .starknet_tx_into_eth_tx(transaction, blockhash_opt, blocknum_opt)
+                .await;
+            if let Ok(val) = tx_value {
+                transactions_vec.push(val)
+            }
+        }
+        Ok(BlockTransactions::Full(transactions_vec))
+    }
+    /// Get the balance in Starknet's native token of a specific EVM address.
+    /// Reproduces the principle of Kakarot native coin by using Starknet's native ERC20 token (gas-utility token)
+    /// ### Arguments
+    /// * `ethereum_address` - The EVM address to get the balance of
+    /// * `block_id` - The block to get the balance at
+    ///
+    /// ### Returns
+    /// * `Result<U256, KakarotClientError>` - The balance of the EVM address in Starknet's native token
+    ///
+    ///
+    async fn balance(
+        &self,
+        ethereum_address: Address,
+        block_id: StarknetBlockId,
+    ) -> Result<U256, KakarotClientError> {
+        let starknet_address = self
+            .compute_starknet_address(ethereum_address, &block_id)
+            .await?;
+
+        let request = FunctionCall {
+            // This FieldElement::from_dec_str cannot fail as the value is a constant
+            contract_address: FieldElement::from_dec_str(STARKNET_NATIVE_TOKEN).unwrap(),
+            entry_point_selector: BALANCE_OF,
+            calldata: vec![starknet_address],
+        };
+
+        let balance_felt = self.client.call(request, &block_id).await?;
+
+        let balance = balance_felt
+            .first()
+            .ok_or_else(|| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot Core: Failed to get native token balance"
+                ))
+            })?
+            .to_bytes_be();
+
+        let balance = U256::from_be_bytes(balance);
+
+        Ok(balance)
     }
 }
