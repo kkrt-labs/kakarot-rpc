@@ -10,7 +10,7 @@ use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
         models::{
-            BlockId as StarknetBlockId, BroadcastedInvokeTransaction,
+            BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction,
             BroadcastedInvokeTransactionV1, DeployAccountTransactionReceipt,
             DeployTransactionReceipt, FunctionCall, InvokeTransaction, InvokeTransactionReceipt,
             MaybePendingBlockWithTxHashes, MaybePendingTransactionReceipt, SyncStatusType,
@@ -42,7 +42,7 @@ use constants::{selectors::BYTECODE, KAKAROT_MAIN_CONTRACT_ADDRESS};
 pub mod types;
 use types::RichBlock;
 
-use self::constants::selectors::{COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS};
+use self::constants::selectors::{COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS, GET_EVM_ADDRESS};
 
 #[derive(Error, Debug)]
 pub enum KakarotClientError {
@@ -55,7 +55,7 @@ pub enum KakarotClientError {
 #[automock]
 #[async_trait]
 pub trait StarknetClient: Send + Sync {
-    async fn block_number(&self) -> Result<u64, KakarotClientError>;
+    async fn block_number(&self) -> Result<U256, KakarotClientError>;
 
     async fn get_eth_block_from_starknet_block(
         &self,
@@ -106,6 +106,12 @@ pub trait StarknetClient: Send + Sync {
         &self,
         hash: H256,
     ) -> Result<Option<TransactionReceipt>, KakarotClientError>;
+
+    async fn get_evm_address(
+        &self,
+        starknet_address: FieldElement,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<Address, KakarotClientError>;
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -132,7 +138,31 @@ impl StarknetClientImpl {
             kakarot_main_contract,
         })
     }
+
+    /// Get the Ethereum address of a Starknet Kakarot smart-contract by calling get_evm_address on it.
+    /// If the contract's get_evm_address errors, returns the Starknet address sliced to 20 bytes to conform with EVM addresses formats.
+    ///
+    /// ## Arguments
+    ///
+    /// * `starknet_address` - The Starknet address of the contract.
+    /// * `starknet_block_id` - The block id to query the contract at.
+    ///
+    /// ## Returns
+    ///
+    /// * `eth_address` - The Ethereum address of the contract.
+    pub async fn safe_get_evm_address(
+        &self,
+        starknet_address: FieldElement,
+        starknet_block_id: StarknetBlockId,
+    ) -> Address {
+        let eth_address = self
+            .get_evm_address(starknet_address, starknet_block_id)
+            .await
+            .unwrap_or_else(|_| starknet_address_to_ethereum_address(starknet_address));
+        eth_address
+    }
 }
+
 #[async_trait]
 impl StarknetClient for StarknetClientImpl {
     /// Get the number of transactions in a block given a block id.
@@ -148,9 +178,9 @@ impl StarknetClient for StarknetClientImpl {
     ///
     /// `Ok(ContractClass)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
-    async fn block_number(&self) -> Result<u64, KakarotClientError> {
+    async fn block_number(&self) -> Result<U256, KakarotClientError> {
         let block_number = self.client.block_number().await?;
-        Ok(block_number)
+        Ok(U256::from(block_number))
     }
 
     /// Get the block given a block id.
@@ -583,8 +613,13 @@ impl StarknetClient for StarknetClientImpl {
             StarknetTransaction::Invoke(invoke_tx) => {
                 match invoke_tx {
                     InvokeTransaction::V0(v0) => {
-                        res_receipt.contract_address =
-                            Some(starknet_address_to_ethereum_address(v0.contract_address));
+                        let eth_address = self
+                            .safe_get_evm_address(
+                                v0.contract_address,
+                                StarknetBlockId::Tag(BlockTag::Latest),
+                            )
+                            .await;
+                        res_receipt.contract_address = Some(eth_address);
                     }
                     InvokeTransaction::V1(_) => {}
                 };
@@ -605,5 +640,39 @@ impl StarknetClient for StarknetClientImpl {
         };
 
         Ok(Some(res_receipt))
+    }
+
+    async fn get_evm_address(
+        &self,
+        starknet_address: FieldElement,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<Address, KakarotClientError> {
+        let request = FunctionCall {
+            contract_address: starknet_address,
+            entry_point_selector: GET_EVM_ADDRESS,
+            calldata: vec![],
+        };
+
+        let evm_address_felt = self.client.call(request, &starknet_block_id).await?;
+        let evm_address = evm_address_felt
+            .first()
+            .ok_or_else(|| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot Core: Failed to get EVM address from smart contract on Kakarot"
+                ))
+            })?
+            .to_bytes_be();
+
+        // Workaround as .get(12..32) does not dynamically size the slice
+        let slice: &[u8] = evm_address.get(12..32).ok_or_else(|| {
+            KakarotClientError::OtherError(anyhow::anyhow!(
+                "Kakarot Core: Failed to cast EVM address from 32 bytes to 20 bytes EVM format"
+            ))
+        })?;
+        let mut tmp_slice = [0u8; 20];
+        tmp_slice.copy_from_slice(slice);
+        let evm_address_sliced = &tmp_slice;
+
+        Ok(Address::from(evm_address_sliced))
     }
 }
