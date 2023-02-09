@@ -26,7 +26,6 @@ use starknet::{
 use thiserror::Error;
 use url::Url;
 extern crate hex;
-use std::str::FromStr;
 
 use crate::helpers::{
     create_default_transaction_receipt, decode_execute_at_address_return,
@@ -859,9 +858,9 @@ pub fn starknet_tx_into_eth_tx(
     }
     println!("2.2 Before Returning Inside Getting transactions");
 
-    let kakarot_h256_contract = PrimitiveH256::from_str(KAKAROT_MAIN_CONTRACT_ADDRESS).unwrap();
+    let kakarot_h256_contract = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS).unwrap();
 
-    if ether_tx.hash == kakarot_h256_contract {
+    if ether_tx.from == starknet_address_to_ethereum_address(kakarot_h256_contract) {
         Ok(ether_tx)
     } else {
         Err(KakarotClientError::OtherError(anyhow::anyhow!(
