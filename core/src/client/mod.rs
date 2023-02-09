@@ -40,7 +40,7 @@ use reth_rpc_types::Index;
 pub mod constants;
 use constants::{selectors::BYTECODE, KAKAROT_MAIN_CONTRACT_ADDRESS};
 pub mod types;
-use types::RichBlock;
+use types::{RichBlock, TokenBalances};
 
 use self::constants::selectors::{COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS};
 
@@ -106,6 +106,11 @@ pub trait StarknetClient: Send + Sync {
         &self,
         hash: H256,
     ) -> Result<Option<TransactionReceipt>, KakarotClientError>;
+    async fn get_token_balances(
+        &self,
+        address: Address,
+        contract_addresses: Vec<Address>,
+    ) -> Result<TokenBalances, KakarotClientError>;
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -605,5 +610,14 @@ impl StarknetClient for StarknetClientImpl {
         };
 
         Ok(Some(res_receipt))
+    }
+
+    /// Returns the balance of the account of given address.
+    async fn get_token_balances(
+        &self,
+        _address: Address,
+        _contract_addresses: Vec<Address>,
+    ) -> Result<TokenBalances, KakarotClientError> {
+        todo!()
     }
 }

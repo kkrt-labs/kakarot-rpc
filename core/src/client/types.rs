@@ -183,3 +183,16 @@ impl<T: Serialize> Serialize for Rich<T> {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TokenBalance {
+    pub contract_address: Address,
+    pub token_balance: String,
+    pub error: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TokenBalances {
+    pub address: Address,
+    pub token_balances: Vec<TokenBalance>,
+}
