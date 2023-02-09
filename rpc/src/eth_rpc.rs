@@ -2,9 +2,7 @@ use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
 
 use jsonrpsee::types::error::CallError;
-use kakarot_rpc_core::client::{
-    constants::selectors::KKRT_CHAIN_ID, types::RichBlock, StarknetClient,
-};
+use kakarot_rpc_core::client::{constants::selectors::CHAIN_ID, types::RichBlock, StarknetClient};
 use kakarot_rpc_core::helpers::{ethers_block_id_to_starknet_block_id, raw_calldata};
 use reth_primitives::{
     rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, H256},
@@ -31,7 +29,7 @@ pub struct KakarotEthRpc {
 #[rpc(server, client)]
 trait EthApi {
     #[method(name = "eth_blockNumber")]
-    async fn block_number(&self) -> Result<U64>;
+    async fn block_number(&self) -> Result<U256>;
 
     /// Returns the protocol version encoded as a string.
     #[method(name = "net_version")]
@@ -256,9 +254,9 @@ trait EthApi {
 
 #[async_trait]
 impl EthApiServer for KakarotEthRpc {
-    async fn block_number(&self) -> Result<U64> {
+    async fn block_number(&self) -> Result<U256> {
         let block_number = self.starknet_client.block_number().await?;
-        Ok(block_number.into())
+        Ok(block_number)
     }
 
     /// Get the protocol version of the Kakarot Starknet RPC.
@@ -288,7 +286,7 @@ impl EthApiServer for KakarotEthRpc {
 
     async fn chain_id(&self) -> Result<Option<U64>> {
         // CHAIN_ID = KKRT (0x4b4b5254) in ASCII
-        Ok(Some(KKRT_CHAIN_ID.into()))
+        Ok(Some(CHAIN_ID.into()))
     }
 
     async fn block_by_hash(&self, _hash: H256, _full: bool) -> Result<Option<RichBlock>> {
