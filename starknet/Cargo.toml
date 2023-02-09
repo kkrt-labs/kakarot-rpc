@@ -7,6 +7,15 @@ homepage.workspace = true
 
 [dependencies]
 kakarot_rpc_core = { path = "../core" }
+kakarot_rpc = { path = "../rpc" }
 eyre = "0.6.8"
 log = "0.4.17"
 env_logger = "0.10.0"
+serde = "1.0.152"
+serde_json = "1.0.91"
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
+tokio = "1.25.0"
+reqwest = "0.11.14"
+
+[dev-dependencies]
+wiremock = "0.5.17"

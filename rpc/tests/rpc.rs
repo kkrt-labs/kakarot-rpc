@@ -1,77 +1,32 @@
 #[cfg(test)]
-mod test {
+mod tests {
     use kakarot_rpc::eth_rpc::KakarotEthRpc;
+    use kakarot_rpc::test_utils::setup_rpc_server;
     use kakarot_rpc_core::client::MockStarknetClient;
     use reth_primitives::{Address, Bytes};
 
+    use kakarot_rpc_core::{
+        client::constants::selectors::KKRT_CHAIN_ID, utils::wiremock_utils::EthJsonRpcResponse,
+    };
+    use reth_primitives::{BlockHash, ChainId};
     use starknet::providers::jsonrpc::models::BlockId as StarknetBlockId;
 
     #[tokio::test]
-    async fn when_call_block_number_return_ok() {
-        // Given
-        // Mock config, ethereum light client and starknet light client.
-        let mut starknet_lightclient_mock = config();
+    async fn test_eth_chain_id_is_ok() {
+        let (_, server_handle) = setup_rpc_server().await;
+        let client = reqwest::Client::new();
+        let res = client
+            .post("http://127.0.0.1:3030")
+            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_chainId\", \"params\": [] }")
+            .header("content-type", "application/json")
+            .send()
+            .await
+            .unwrap();
 
-        // Set expect to testing RPC method
-        starknet_lightclient_mock
-            .expect_block_number()
-            .returning(|| Ok(1));
+        let block_hash = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
+        // see rpc/src/eth_rpc.rs:286 to get ASCII String
+        assert_eq!(block_hash.result, String::from("0x4b4b5254"));
 
-        let kakarot_rpc_mock = KakarotEthRpc::new(Box::new(starknet_lightclient_mock));
-
-        let result_mock = kakarot_rpc_mock.starknet_client.block_number().await;
-
-        // Then
-        assert_eq!(1, result_mock.unwrap());
-    }
-
-    #[tokio::test]
-    async fn when_get_code_then_should_return_bytes() {
-        // Given
-        let mut starknet_lightclient_mock = config();
-        let starknet_block_id = StarknetBlockId::Number(1);
-        let ethereum_address = Address::from_slice(&[
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
-        ]);
-        let bytes = vec![
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-        ];
-        let bytes_result = Bytes::from(bytes.clone());
-        let bytes_result_value = bytes_result.clone();
-
-        starknet_lightclient_mock
-            .expect_get_code()
-            .returning(move |_, _| Ok(bytes_result.clone()));
-
-        let kakarot_rpc_mock = KakarotEthRpc::new(Box::new(starknet_lightclient_mock));
-
-        // When
-        let result = kakarot_rpc_mock
-            .starknet_client
-            .get_code(ethereum_address, starknet_block_id)
-            .await;
-        assert!(result.is_ok());
-
-        let result_value = result.unwrap();
-        // Then
-        assert_eq!(
-            format!("{bytes_result_value:?}"),
-            format!("{result_value:?}")
-        );
-    }
-
-    fn config() -> MockStarknetClient {
-        // Given
-        // Mock config, ethereum light client and starknet light client.
-        let mut starknet_lightclient_mock = MockStarknetClient::new();
-
-        // Set expect to testing RPC method
-        starknet_lightclient_mock
-            .expect_block_number()
-            .returning(|| Ok(1));
-
-        // Set lightclient
-
-        starknet_lightclient_mock
+        server_handle.stop().unwrap();
     }
 }
