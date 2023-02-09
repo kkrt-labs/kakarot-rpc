@@ -40,7 +40,7 @@ pub mod test_utils {
     /// Run wiremock to fake starknet rpc and then run our own kakarot_rpc_server.
     ///
     /// Example :
-    /// ```
+    /// ```ignore
     ///   use kakarot_rpc::test_utils::setup_rpc_server;
     ///
     ///   #[tokio::test]

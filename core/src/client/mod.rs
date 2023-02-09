@@ -2,8 +2,8 @@ use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
 use reth_primitives::{
-    rpc::{BlockId, BlockNumber, H256},
-    Address, Bytes, H256 as PrimitiveH256, U256, U64,
+    rpc::{BlockId, BlockNumber, Bytes, Log, H160, H256},
+    Address, H256 as PrimitiveH256, U256, U64,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus, TransactionReceipt};
 use starknet::{
@@ -27,9 +27,9 @@ extern crate hex;
 
 use crate::helpers::{
     create_default_transaction_receipt, decode_execute_at_address_return,
-    ethers_block_id_to_starknet_block_id, felt_to_u256, hash_to_field_element,
+    ethers_block_id_to_starknet_block_id, hash_to_field_element, left_shift,
     starknet_address_to_ethereum_address, starknet_block_to_eth_block, starknet_tx_into_eth_tx,
-    FeltOrFeltArray, MaybePendingStarknetBlock,
+    vec_felt_to_bytes, FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 
 use crate::client::types::Transaction as EtherTransaction;
@@ -109,8 +109,8 @@ pub trait StarknetClient: Send + Sync {
 
     async fn get_evm_address(
         &self,
-        starknet_address: FieldElement,
-        starknet_block_id: StarknetBlockId,
+        starknet_address: &FieldElement,
+        starknet_block_id: &StarknetBlockId,
     ) -> Result<Address, KakarotClientError>;
 }
 pub struct StarknetClientImpl {
@@ -152,8 +152,8 @@ impl StarknetClientImpl {
     /// * `eth_address` - The Ethereum address of the contract.
     pub async fn safe_get_evm_address(
         &self,
-        starknet_address: FieldElement,
-        starknet_block_id: StarknetBlockId,
+        starknet_address: &FieldElement,
+        starknet_block_id: &StarknetBlockId,
     ) -> Address {
         let eth_address = self
             .get_evm_address(starknet_address, starknet_block_id)
@@ -564,6 +564,8 @@ impl StarknetClient for StarknetClientImpl {
         let hash_felt = hash_to_field_element(PrimitiveH256::from(hash.0))?;
         let starknet_tx_receipt = self.client.get_transaction_receipt(hash_felt).await?;
 
+        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
+
         match starknet_tx_receipt {
             MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
                 StarknetTransactionReceipt::Invoke(InvokeTransactionReceipt {
@@ -571,6 +573,7 @@ impl StarknetClient for StarknetClientImpl {
                     status,
                     block_hash,
                     block_number,
+                    events,
                     ..
                 })
                 | StarknetTransactionReceipt::Deploy(DeployTransactionReceipt {
@@ -578,6 +581,7 @@ impl StarknetClient for StarknetClientImpl {
                     status,
                     block_hash,
                     block_number,
+                    events,
                     ..
                 })
                 | StarknetTransactionReceipt::DeployAccount(DeployAccountTransactionReceipt {
@@ -585,19 +589,66 @@ impl StarknetClient for StarknetClientImpl {
                     status,
                     block_hash,
                     block_number,
+                    events,
                     ..
                 }) => {
                     res_receipt.transaction_hash =
-                        Some(PrimitiveH256::from_slice(&transaction_hash.to_bytes_be()));
+                        Some(PrimitiveH256::from(&transaction_hash.to_bytes_be()));
                     res_receipt.status_code = match status {
                         StarknetTransactionStatus::Pending => Some(U64::from(0)),
                         StarknetTransactionStatus::AcceptedOnL1 => Some(U64::from(1)),
                         StarknetTransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
                         StarknetTransactionStatus::Rejected => Some(U64::from(0)),
                     };
-                    res_receipt.block_hash =
-                        Some(PrimitiveH256::from_slice(&block_hash.to_bytes_be()));
-                    res_receipt.block_number = Some(felt_to_u256(block_number.into()));
+                    res_receipt.block_hash = Some(PrimitiveH256::from(&block_hash.to_bytes_be()));
+                    res_receipt.block_number = Some(U256::from(block_number));
+                    let mut tmp_logs = Vec::new();
+
+                    // Cannot use `map` because of the `await` call.
+                    for event in events {
+                        let contract_address = self
+                            .safe_get_evm_address(&event.from_address, &starknet_block_id)
+                            .await;
+
+                        // event "keys" in cairo are event "topics" in solidity
+                        // they're returned as list where consecutive values are
+                        // low, high, low, high, etc. of the Uint256 Cairo representation
+                        // of the bytes32 topics. This recomputes the original topic
+                        let topics = (0..event.keys.len())
+                            .step_by(2)
+                            .map(|i| {
+                                let next_key =
+                                    &event.keys.get(i + 1).unwrap_or(&FieldElement::ZERO);
+                                let shifted_next_key = left_shift(&next_key.to_bytes_be(), 16_u8);
+                                let felt_shifted_next_key =
+                                    FieldElement::from_bytes_be(&shifted_next_key)
+                                        .unwrap_or_default();
+
+                                event.keys[i] + felt_shifted_next_key
+                            })
+                            .map(|topic| H256::from(&topic.to_bytes_be()))
+                            .collect::<Vec<_>>();
+
+                        let data = vec_felt_to_bytes(event.data);
+
+                        let log = Log {
+                            address: H160::from_slice(&contract_address.0),
+                            topics,
+                            data: Bytes::from(data.0),
+                            block_hash: None,
+                            block_number: None,
+                            transaction_hash: None,
+                            transaction_index: None,
+                            log_index: None,
+                            transaction_log_index: None,
+                            log_type: None,
+                            removed: None,
+                        };
+
+                        tmp_logs.push(log);
+                    }
+
+                    res_receipt.logs = tmp_logs;
                 }
                 // L1Handler and Declare transactions not supported for now in Kakarot
                 StarknetTransactionReceipt::L1Handler(_)
@@ -614,10 +665,7 @@ impl StarknetClient for StarknetClientImpl {
                 match invoke_tx {
                     InvokeTransaction::V0(v0) => {
                         let eth_address = self
-                            .safe_get_evm_address(
-                                v0.contract_address,
-                                StarknetBlockId::Tag(BlockTag::Latest),
-                            )
+                            .safe_get_evm_address(&v0.contract_address, &starknet_block_id)
                             .await;
                         res_receipt.contract_address = Some(eth_address);
                     }
@@ -644,16 +692,16 @@ impl StarknetClient for StarknetClientImpl {
 
     async fn get_evm_address(
         &self,
-        starknet_address: FieldElement,
-        starknet_block_id: StarknetBlockId,
+        starknet_address: &FieldElement,
+        starknet_block_id: &StarknetBlockId,
     ) -> Result<Address, KakarotClientError> {
         let request = FunctionCall {
-            contract_address: starknet_address,
+            contract_address: *starknet_address,
             entry_point_selector: GET_EVM_ADDRESS,
             calldata: vec![],
         };
 
-        let evm_address_felt = self.client.call(request, &starknet_block_id).await?;
+        let evm_address_felt = self.client.call(request, starknet_block_id).await?;
         let evm_address = evm_address_felt
             .first()
             .ok_or_else(|| {

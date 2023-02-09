@@ -5,8 +5,8 @@ use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::client::{constants::selectors::CHAIN_ID, types::RichBlock, StarknetClient};
 use kakarot_rpc_core::helpers::{ethers_block_id_to_starknet_block_id, raw_calldata};
 use reth_primitives::{
-    rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, H256},
-    Address, Bytes, TransactionSigned, H64, U256, U64,
+    rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, Bytes, H256},
+    Address, Bytes as PrimitiveBytes, TransactionSigned, H64, U256, U64,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
@@ -267,7 +267,7 @@ impl EthApiServer for KakarotEthRpc {
     /// `Ok(protocol_version)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
     fn protocol_version(&self) -> Result<U64> {
-        let protocol_version = 1263227476_u64;
+        let protocol_version = 1_u64;
         Ok(protocol_version.into())
     }
 
@@ -441,7 +441,7 @@ impl EthApiServer for KakarotEthRpc {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
         let result = self
             .starknet_client
-            .call_view(to, calldata, starknet_block_id)
+            .call_view(to, Bytes::from(calldata.0), starknet_block_id)
             .await?;
 
         Ok(result)
@@ -559,7 +559,7 @@ impl EthApiServer for KakarotEthRpc {
         // TODO: Provide signature
         let signature = vec![];
 
-        let calldata = raw_calldata(_bytes).map_err(|_| {
+        let calldata = raw_calldata(PrimitiveBytes::from(_bytes.0)).map_err(|_| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
                 "Failed to get calldata from raw transaction data. Cannot process a Kakarot call",
             )))
