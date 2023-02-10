@@ -54,14 +54,13 @@ pub fn ethers_block_id_to_starknet_block_id(
 ) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
         EthBlockId::Hash(hash) => {
-            let address_hex = hex::encode(hash);
-            let address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
+            let hash_felt = FieldElement::from_bytes_be(&hash.0).map_err(|e| {
                 KakarotClientError::OtherError(anyhow::anyhow!(
                     "Failed to convert Starknet block hash to FieldElement: {}",
                     e
                 ))
             })?;
-            Ok(StarknetBlockId::Hash(address_felt))
+            Ok(StarknetBlockId::Hash(hash_felt))
         }
         EthBlockId::Number(number) => ethers_block_number_to_starknet_block_id(number),
     }
