@@ -823,7 +823,7 @@ impl StarknetClient for StarknetClientImpl {
 
                 ether_tx.nonce = U256::from(l1_handler_tx.nonce);
                 ether_tx.from =
-                    starknet_address_to_ethereum_address(l1_handler_tx.contract_address);
+                    self.get_evm_address(l1_handler_tx.contract_address, StarknetBlockId::Tag(BlockTag::Latest)).await?;
                 // Define gas_price data
                 ether_tx.gas_price = None;
                 // Extracting the data
