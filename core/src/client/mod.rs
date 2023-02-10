@@ -641,6 +641,8 @@ impl StarknetClient for StarknetClientImpl {
                         let data = vec_felt_to_bytes(event.data);
 
                         let log = Log {
+                            // TODO: fetch correct address from Kakarot.
+                            // Contract Address is the account contract's address (EOA or KakarotAA)
                             address: H160::from_slice(&contract_address.0),
                             topics,
                             data: Bytes::from(data.0),
