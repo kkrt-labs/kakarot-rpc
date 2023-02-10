@@ -190,7 +190,6 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                 }
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
-                println!("1. Calling Block With Txs");
                 let hash = PrimitiveH256::from_slice(&block_with_txs.block_hash.to_bytes_be());
                 let parent_hash = PrimitiveH256::from_slice(&block_with_txs.parent_hash.to_bytes_be());
                 let sequencer =
@@ -207,7 +206,6 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
 
                 let number = U256::from(block_with_txs.block_number);
                 let timestamp = U256::from(block_with_txs.timestamp);
-                println!("2. Getting transactions");
 
                 let blockhash_opt =
                     Some(PrimitiveH256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
@@ -220,7 +218,6 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                         .filter_map(Result::ok)
                         .collect(),
                 );
-                println!("3. After Getting transactions");
 
                 let header = Header {
                     hash: Some(hash),

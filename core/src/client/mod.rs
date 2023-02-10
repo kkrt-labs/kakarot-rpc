@@ -714,14 +714,11 @@ impl StarknetClient for StarknetClientImpl {
     ) -> Result<EtherTransaction, KakarotClientError> {
         let mut ether_tx = EtherTransaction::default();
         let class_hash;
-        println!("2.1 Inside Getting transactions");
 
         match tx {
             StarknetTransaction::Invoke(invoke_tx) => {
                 match invoke_tx {
                     InvokeTransaction::V0(v0) => {
-                        println!("2.X Inside InvokeV0");
-
                         // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                         ether_tx.hash =
                             PrimitiveH256::from_slice(&v0.transaction_hash.to_bytes_be());
@@ -764,7 +761,6 @@ impl StarknetClient for StarknetClientImpl {
 
                     InvokeTransaction::V1(v1) => {
                         // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-                        println!("2.X Inside InvokeV1");
 
                         ether_tx.hash =
                             PrimitiveH256::from_slice(&v1.transaction_hash.to_bytes_be());
@@ -921,7 +917,6 @@ impl StarknetClient for StarknetClientImpl {
                 ether_tx.block_number = block_number;
             }
         }
-        println!("2.2 Before Returning Inside Getting transactions");
         let kakarot_class_hash =
             FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH).unwrap();
         let kakarot_starknet_address =
@@ -1142,7 +1137,6 @@ impl StarknetClient for StarknetClientImpl {
                         })
                     }
                     MaybePendingBlockWithTxs::Block(block_with_txs) => {
-                        println!("1. Calling Block With Txs");
                         let hash =
                             PrimitiveH256::from_slice(&block_with_txs.block_hash.to_bytes_be());
                         let parent_hash =
@@ -1163,7 +1157,6 @@ impl StarknetClient for StarknetClientImpl {
 
                         let number = U256::from(block_with_txs.block_number);
                         let timestamp = U256::from(block_with_txs.timestamp);
-                        println!("2. Getting transactions");
 
                         let blockhash_opt = Some(PrimitiveH256::from_slice(
                             &(block_with_txs.block_hash).to_bytes_be(),
@@ -1177,7 +1170,6 @@ impl StarknetClient for StarknetClientImpl {
                                 blocknum_opt,
                             )
                             .await?;
-                        println!("3. After Getting transactions");
 
                         let header = Header {
                             hash: Some(hash),
