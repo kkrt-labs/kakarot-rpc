@@ -1,12 +1,10 @@
 use eyre::Result;
-use futures::future::try_join_all;
 use jsonrpsee::types::error::CallError;
 
 use reth_primitives::{
     rpc::{BlockId, BlockNumber, H256},
     Address, Bytes, H160, H256 as PrimitiveH256, U256, U64,
 };
-
 use reth_rpc_types::{SyncInfo, SyncStatus, TransactionReceipt};
 use starknet::{
     core::types::FieldElement,
@@ -39,7 +37,10 @@ use reth_primitives::{Bloom, H64};
 use std::collections::BTreeMap;
 
 use crate::client::{
-    constants::{selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_MAIN_CONTRACT_ADDRESS},
+    constants::{
+        selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH,
+        KAKAROT_MAIN_CONTRACT_ADDRESS,
+    },
     types::{Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction},
 };
 use async_trait::async_trait;
@@ -130,6 +131,12 @@ pub trait StarknetClient: Send + Sync {
         &self,
         block: MaybePendingStarknetBlock,
     ) -> Result<RichBlock, KakarotClientError>;
+    async fn filter_transactions(
+        &self,
+        initial_transactions: Vec<StarknetTransaction>,
+        blockhash_opt: Option<PrimitiveH256>,
+        blocknum_opt: Option<U256>,
+    ) -> Result<BlockTransactions, KakarotClientError>;
 }
 pub struct StarknetClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -706,6 +713,7 @@ impl StarknetClient for StarknetClientImpl {
         block_number: Option<U256>,
     ) -> Result<EtherTransaction, KakarotClientError> {
         let mut ether_tx = EtherTransaction::default();
+        let class_hash;
         println!("2.1 Inside Getting transactions");
 
         match tx {
@@ -717,12 +725,14 @@ impl StarknetClient for StarknetClientImpl {
                         // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                         ether_tx.hash =
                             PrimitiveH256::from_slice(&v0.transaction_hash.to_bytes_be());
-                        let tx_receipt = self
-                            .get_transaction_receipt(H256::from_slice(
-                                &v0.transaction_hash.to_bytes_be(),
-                            ))
-                            .await?
-                            .unwrap();
+                        class_hash = self
+                            .client
+                            .get_class_hash_at(
+                                &StarknetBlockId::Tag(BlockTag::Latest),
+                                v0.contract_address,
+                            )
+                            .await?;
+
                         ether_tx.nonce = felt_to_u256(v0.nonce);
                         ether_tx.from = starknet_address_to_ethereum_address(v0.contract_address);
                         // Define gas_price data
@@ -734,7 +744,7 @@ impl StarknetClient for StarknetClientImpl {
                         // Extracting the data (transform from calldata)
                         ether_tx.input = vec_felt_to_bytes(v0.calldata);
                         //TODO:  Fetch transaction To
-                        ether_tx.to = tx_receipt.to;
+                        ether_tx.to = None;
                         //TODO:  Fetch value
                         ether_tx.value = U256::from(100);
                         //TODO: Fetch Gas
@@ -758,12 +768,14 @@ impl StarknetClient for StarknetClientImpl {
 
                         ether_tx.hash =
                             PrimitiveH256::from_slice(&v1.transaction_hash.to_bytes_be());
-                        let tx_receipt = self
-                            .get_transaction_receipt(H256::from_slice(
-                                &v1.transaction_hash.to_bytes_be(),
-                            ))
-                            .await?
-                            .unwrap();
+                        class_hash = self
+                            .client
+                            .get_class_hash_at(
+                                &StarknetBlockId::Tag(BlockTag::Latest),
+                                v1.sender_address,
+                            )
+                            .await?;
+
                         ether_tx.nonce = felt_to_u256(v1.nonce);
                         ether_tx.from = starknet_address_to_ethereum_address(v1.sender_address);
                         // Define gas_price data
@@ -774,7 +786,7 @@ impl StarknetClient for StarknetClientImpl {
                         ether_tx.v = felt_option_to_u256(v1.signature.get(2))?;
                         // Extracting the data
                         ether_tx.input = vec_felt_to_bytes(v1.calldata);
-                        ether_tx.to = tx_receipt.to;
+                        ether_tx.to = None;
                         // Extracting the to address
                         // TODO: Get Data from Calldata
                         ether_tx.to = None;
@@ -804,12 +816,14 @@ impl StarknetClient for StarknetClientImpl {
                 // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                 ether_tx.hash =
                     PrimitiveH256::from_slice(&l1_handler_tx.transaction_hash.to_bytes_be());
-                let tx_receipt = self
-                    .get_transaction_receipt(H256::from_slice(
-                        &l1_handler_tx.transaction_hash.to_bytes_be(),
-                    ))
-                    .await?
-                    .unwrap();
+                class_hash = self
+                    .client
+                    .get_class_hash_at(
+                        &StarknetBlockId::Tag(BlockTag::Latest),
+                        l1_handler_tx.contract_address,
+                    )
+                    .await?;
+
                 ether_tx.nonce = U256::from(l1_handler_tx.nonce);
                 ether_tx.from =
                     starknet_address_to_ethereum_address(l1_handler_tx.contract_address);
@@ -818,7 +832,7 @@ impl StarknetClient for StarknetClientImpl {
                 // Extracting the data
                 ether_tx.input = vec_felt_to_bytes(l1_handler_tx.calldata);
                 // Extracting the to address
-                ether_tx.to = tx_receipt.to;
+                ether_tx.to = None;
                 // Extracting the value
                 ether_tx.value = U256::from(0);
                 // TODO: Get from estimate gas
@@ -836,12 +850,13 @@ impl StarknetClient for StarknetClientImpl {
                 // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                 ether_tx.hash =
                     PrimitiveH256::from_slice(&declare_tx.transaction_hash.to_bytes_be());
-                let tx_receipt = self
-                    .get_transaction_receipt(H256::from_slice(
-                        &declare_tx.transaction_hash.to_bytes_be(),
-                    ))
-                    .await?
-                    .unwrap();
+                class_hash = self
+                    .client
+                    .get_class_hash_at(
+                        &StarknetBlockId::Tag(BlockTag::Latest),
+                        declare_tx.sender_address,
+                    )
+                    .await?;
                 ether_tx.nonce = felt_to_u256(declare_tx.nonce);
                 ether_tx.from = starknet_address_to_ethereum_address(declare_tx.sender_address);
                 // Define gas_price data
@@ -851,7 +866,7 @@ impl StarknetClient for StarknetClientImpl {
                 ether_tx.s = felt_option_to_u256(declare_tx.signature.get(1))?;
                 ether_tx.v = felt_option_to_u256(declare_tx.signature.get(2))?;
                 // Extracting the to address
-                ether_tx.to = tx_receipt.to;
+                ether_tx.to = None;
                 // Extracting the value
                 ether_tx.value = U256::from(0);
                 // Extracting the gas
@@ -869,31 +884,22 @@ impl StarknetClient for StarknetClientImpl {
                 // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                 ether_tx.hash =
                     PrimitiveH256::from_slice(&deploy_tx.transaction_hash.to_bytes_be());
-                let tx_receipt = self
-                    .get_transaction_receipt(H256::from_slice(
-                        &deploy_tx.transaction_hash.to_bytes_be(),
-                    ))
-                    .await?
-                    .unwrap();
+                class_hash = deploy_tx.class_hash;
                 // Define gas_price data
                 ether_tx.gas_price = None;
 
                 ether_tx.creates = None;
                 // Extracting the public_key
                 ether_tx.public_key = None;
-                ether_tx.to = tx_receipt.to;
+                ether_tx.to = None;
                 ether_tx.block_hash = block_hash;
                 ether_tx.block_number = block_number;
             }
             StarknetTransaction::DeployAccount(deploy_account_tx) => {
                 ether_tx.hash =
                     PrimitiveH256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be());
-                let tx_receipt = self
-                    .get_transaction_receipt(H256::from_slice(
-                        &deploy_account_tx.transaction_hash.to_bytes_be(),
-                    ))
-                    .await?
-                    .unwrap();
+                class_hash = deploy_account_tx.class_hash;
+
                 ether_tx.nonce = felt_to_u256(deploy_account_tx.nonce);
                 // TODO: Get from estimate gas
                 ether_tx.gas_price = None;
@@ -902,7 +908,7 @@ impl StarknetClient for StarknetClientImpl {
                 ether_tx.s = felt_option_to_u256(deploy_account_tx.signature.get(1))?;
                 ether_tx.v = felt_option_to_u256(deploy_account_tx.signature.get(2))?;
                 // Extracting the to address
-                ether_tx.to = tx_receipt.to;
+                ether_tx.to = None;
                 // Extracting the gas
                 ether_tx.gas = U256::from(0);
                 // Extracting the chain_id
@@ -916,18 +922,21 @@ impl StarknetClient for StarknetClientImpl {
             }
         }
         println!("2.2 Before Returning Inside Getting transactions");
+        let kakarot_class_hash =
+            FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH).unwrap();
+        let kakarot_starknet_address =
+            FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH).unwrap();
 
-        let kakarot_main_contract =
-            FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS).unwrap();
-
-        if ether_tx.to.unwrap() == starknet_address_to_ethereum_address(kakarot_main_contract) {
+        if class_hash == kakarot_class_hash {
+            ether_tx.to = Some(starknet_address_to_ethereum_address(
+                kakarot_starknet_address,
+            ));
             Ok(ether_tx)
         } else {
             Err(KakarotClientError::OtherError(anyhow::anyhow!(
-                "Kakarot Core: Failed to cast EVM address from 32 bytes to 20 bytes EVM format"
+                "Kakarot Filter: Tx is not part of Kakarot"
             )))
         }
-        // Ok(ether_tx)
     }
 
     async fn starknet_block_to_eth_block(
@@ -970,6 +979,7 @@ impl StarknetClient for StarknetClientImpl {
                         let timestamp = U256::from_be_bytes(
                             pending_block_with_tx_hashes.timestamp.to_be_bytes(),
                         );
+                        //TODO: Add filter to tx_hashes
                         let transactions = BlockTransactions::Hashes(
                             pending_block_with_tx_hashes
                                 .transactions
@@ -977,6 +987,7 @@ impl StarknetClient for StarknetClientImpl {
                                 .map(|tx| PrimitiveH256::from_slice(&tx.to_bytes_be()))
                                 .collect(),
                         );
+
                         let header = Header {
                             // PendingblockWithTxHashes doesn't have a block hash
                             hash: None,
@@ -1030,6 +1041,7 @@ impl StarknetClient for StarknetClientImpl {
                             PrimitiveH256::from_slice(&block_with_tx_hashes.new_root.to_bytes_be());
                         let number = U256::from(block_with_tx_hashes.block_number);
                         let timestamp = U256::from(block_with_tx_hashes.timestamp);
+                        //TODO: Add filter to tx_hashes
                         let transactions = BlockTransactions::Hashes(
                             block_with_tx_hashes
                                 .transactions
@@ -1086,15 +1098,10 @@ impl StarknetClient for StarknetClientImpl {
                         );
                         let timestamp =
                             U256::from_be_bytes(pending_block_with_txs.timestamp.to_be_bytes());
-                        let transactions = BlockTransactions::Full(
-                            try_join_all(
-                                pending_block_with_txs
-                                    .transactions
-                                    .into_iter()
-                                    .map(|t| self.starknet_tx_into_eth_tx(t, None, None)),
-                            )
-                            .await?,
-                        );
+
+                        let transactions = self
+                            .filter_transactions(pending_block_with_txs.transactions, None, None)
+                            .await?;
                         let header = Header {
                             // PendingBlockWithTxs doesn't have a block hash
                             hash: None,
@@ -1162,12 +1169,14 @@ impl StarknetClient for StarknetClientImpl {
                             &(block_with_txs.block_hash).to_bytes_be(),
                         ));
                         let blocknum_opt = Some(U256::from(block_with_txs.block_number));
-                        let transactions = BlockTransactions::Full(
-                            try_join_all(block_with_txs.transactions.into_iter().map(|t| {
-                                self.starknet_tx_into_eth_tx(t, blockhash_opt, blocknum_opt)
-                            }))
-                            .await?,
-                        );
+
+                        let transactions = self
+                            .filter_transactions(
+                                block_with_txs.transactions,
+                                blockhash_opt,
+                                blocknum_opt,
+                            )
+                            .await?;
                         println!("3. After Getting transactions");
 
                         let header = Header {
@@ -1209,5 +1218,22 @@ impl StarknetClient for StarknetClientImpl {
                 }
             }
         }
+    }
+    async fn filter_transactions(
+        &self,
+        initial_transactions: Vec<StarknetTransaction>,
+        blockhash_opt: Option<PrimitiveH256>,
+        blocknum_opt: Option<U256>,
+    ) -> Result<BlockTransactions, KakarotClientError> {
+        let mut transactions_vec = vec![];
+        for transaction in initial_transactions {
+            let tx_value = self
+                .starknet_tx_into_eth_tx(transaction, blockhash_opt, blocknum_opt)
+                .await;
+            if let Ok(val) = tx_value {
+                transactions_vec.push(val)
+            }
+        }
+        Ok(BlockTransactions::Full(transactions_vec))
     }
 }
