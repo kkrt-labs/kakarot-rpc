@@ -1,5 +1,6 @@
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
+use std::convert::From;
 
 use reth_primitives::{
     rpc::{BlockId, BlockNumber, H256},
@@ -53,7 +54,7 @@ pub mod types;
 
 use self::constants::selectors::{COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
 
-#[derive(Error, Debug)]
+#[derive(Debug, Error)]
 pub enum KakarotClientError {
     #[error(transparent)]
     RequestError(#[from] JsonRpcClientError<reqwest::Error>),
@@ -917,11 +918,20 @@ impl StarknetClient for StarknetClientImpl {
                 ether_tx.block_number = block_number;
             }
         }
-        let kakarot_class_hash =
-            FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH).unwrap();
+        let kakarot_class_hash = FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH)
+            .map_err(|e| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Failed to convert Starknet block hash to FieldElement: {}",
+                    e
+                ))
+            })?;
         let kakarot_starknet_address =
-            FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH).unwrap();
-
+            FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH).map_err(|e| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Failed to convert Starknet block hash to FieldElement: {}",
+                    e
+                ))
+            })?;
         if class_hash == kakarot_class_hash {
             ether_tx.to = Some(starknet_address_to_ethereum_address(
                 kakarot_starknet_address,
