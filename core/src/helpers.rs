@@ -650,7 +650,7 @@ pub fn felt_to_u256(element: FieldElement) -> U256 {
     U256::from_be_bytes(inner)
 }
 
-fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
+pub fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
     let felt_vec_in_u8: Vec<u8> = felt_vec.into_iter().flat_map(|x| x.to_bytes_be()).collect();
     Bytes::from(felt_vec_in_u8)
 }

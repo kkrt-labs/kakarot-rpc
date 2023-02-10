@@ -17,7 +17,7 @@ use serde_json::Value;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag};
 
-use kakarot_rpc_core::client::types::Transaction as EtherTransaction;
+use kakarot_rpc_core::client::types::{TokenBalances, Transaction as EtherTransaction};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 ///
@@ -592,6 +592,31 @@ impl EthApiServer for KakarotEthRpc {
         _block_number: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse> {
         todo!()
+    }
+}
+
+#[rpc(server, client)]
+trait KakarotCustomApi {
+    #[method(name = "kakarot_getTokenBalances")]
+    async fn get_token_balances(
+        &self,
+        address: Address,
+        contract_addresses: Vec<Address>,
+    ) -> Result<TokenBalances>;
+}
+
+#[async_trait]
+impl KakarotCustomApiServer for KakarotEthRpc {
+    async fn get_token_balances(
+        &self,
+        address: Address,
+        contract_addresses: Vec<Address>,
+    ) -> Result<TokenBalances> {
+        let token_balances = self
+            .starknet_client
+            .get_token_balances(address, contract_addresses)
+            .await?;
+        Ok(token_balances)
     }
 }
 

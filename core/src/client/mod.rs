@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
@@ -29,7 +31,7 @@ use crate::helpers::{
     create_default_transaction_receipt, decode_execute_at_address_return,
     ethers_block_id_to_starknet_block_id, felt_to_u256, hash_to_field_element,
     starknet_address_to_ethereum_address, starknet_block_to_eth_block, starknet_tx_into_eth_tx,
-    FeltOrFeltArray, MaybePendingStarknetBlock,
+    vec_felt_to_bytes, FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 
 use crate::client::types::Transaction as EtherTransaction;
@@ -40,7 +42,7 @@ use reth_rpc_types::Index;
 pub mod constants;
 use constants::{selectors::BYTECODE, KAKAROT_MAIN_CONTRACT_ADDRESS};
 pub mod types;
-use types::{RichBlock, TokenBalances};
+use types::{RichBlock, TokenBalance, TokenBalances};
 
 use self::constants::selectors::{COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS, GET_EVM_ADDRESS};
 
@@ -680,12 +682,62 @@ impl StarknetClient for StarknetClientImpl {
         Ok(Address::from(evm_address_sliced))
     }
 
-    /// Returns the balance of the account of given address.
+    /// Returns token balances for a specific address given a list of contracts.
+    ///
+    /// # Arguments
+    ///
+    /// * `address(Address)` - specific address
+    /// * `contract_addresses(Vec<Address>)` - List of contract addresses
+    ///
+    /// # Returns
+    ///
+    ///  * `token_balances(TokenBalances)` - Token balances
+    ///
+    /// `Ok(<TokenBalances>)` if the operation was successful.
+    /// `Err(KakarotClientError)` if the operation failed.
     async fn get_token_balances(
         &self,
-        _address: Address,
-        _contract_addresses: Vec<Address>,
+        address: Address,
+        contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, KakarotClientError> {
-        todo!()
+        let mut token_balances = Vec::new();
+        let starknet_user_address = self
+            .compute_starknet_address(address, StarknetBlockId::Tag(BlockTag::Latest))
+            .await?;
+        let entrypoint = FieldElement::from_str("balanceOf").map_err(|e| {
+            KakarotClientError::OtherError(anyhow::anyhow!(
+                "Failed to convert entrypoint to FieldElement: {}",
+                e
+            ))
+        })?;
+
+        for token_address in contract_addresses.into_iter() {
+            let calldata = vec![entrypoint, starknet_user_address];
+            let call = self
+                .call_view(
+                    token_address,
+                    vec_felt_to_bytes(calldata),
+                    StarknetBlockId::Tag(BlockTag::Latest),
+                )
+                .await;
+            let token_balance = match call {
+                Ok(call) => TokenBalance {
+                    contract_address: address,
+                    token_balance: call.to_string(),
+                    error: "".to_string(),
+                },
+                Err(_) => TokenBalance {
+                    contract_address: address,
+                    token_balance: "".to_string(),
+                    error: "Failed to get token balance".to_string(),
+                },
+            };
+            token_balances.push(token_balance);
+        }
+
+        Ok(TokenBalances {
+            address,
+            token_balances,
+        })
     }
 }
