@@ -27,7 +27,7 @@ extern crate hex;
 
 use crate::helpers::{
     create_default_transaction_receipt, decode_execute_at_address_return,
-    ethers_block_id_to_starknet_block_id, hash_to_field_element, left_shift,
+    ethers_block_id_to_starknet_block_id, hash_to_field_element,
     starknet_address_to_ethereum_address, starknet_block_to_eth_block, starknet_tx_into_eth_tx,
     vec_felt_to_bytes, FeltOrFeltArray, MaybePendingStarknetBlock,
 };
@@ -602,6 +602,8 @@ impl StarknetClient for StarknetClientImpl {
                     };
                     res_receipt.block_hash = Some(PrimitiveH256::from(&block_hash.to_bytes_be()));
                     res_receipt.block_number = Some(U256::from(block_number));
+
+                    // Handle events -- Will error if the event is not a Kakarot event
                     let mut tmp_logs = Vec::new();
 
                     // Cannot use `map` because of the `await` call.
@@ -617,13 +619,20 @@ impl StarknetClient for StarknetClientImpl {
                         let topics = (0..event.keys.len())
                             .step_by(2)
                             .map(|i| {
-                                let next_key =
-                                    &event.keys.get(i + 1).unwrap_or(&FieldElement::ZERO);
-                                let shifted_next_key = left_shift(&next_key.to_bytes_be(), 16_u8);
-                                let felt_shifted_next_key =
-                                    FieldElement::from_bytes_be(&shifted_next_key)
-                                        .unwrap_or_default();
+                                let next_key = event
+                                    .keys
+                                    .get(i + 1)
+                                    .unwrap_or(&FieldElement::ZERO)
+                                    .to_owned();
 
+                                // Can unwrap here as we know 2^128 is a valid FieldElement
+                                let two_pow_16: FieldElement = FieldElement::from_hex_be(
+                                    "0x100000000000000000000000000000000",
+                                )
+                                .unwrap();
+
+                                //TODO: May wrap around prime field - Investigate edge cases
+                                let felt_shifted_next_key = next_key * two_pow_16;
                                 event.keys[i] + felt_shifted_next_key
                             })
                             .map(|topic| H256::from(&topic.to_bytes_be()))

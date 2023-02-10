@@ -746,21 +746,6 @@ pub fn raw_calldata(bytes: Bytes) -> Result<Vec<FieldElement>> {
     Ok(execute_calldata)
 }
 
-pub fn left_shift(bytes: &[u8; 32], shift: u8) -> [u8; 32] {
-    let mut padded_vec = vec![];
-    padded_vec.resize(shift.into(), 0_u8);
-    let mut shifted_res = bytes
-        .to_vec()
-        .iter()
-        .skip(shift.into())
-        .copied()
-        .collect::<Vec<_>>();
-    shifted_res.extend_from_slice(padded_vec.as_slice());
-    let mut result_array = [0; 32];
-    result_array.copy_from_slice(&shifted_res);
-    result_array
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -783,24 +768,6 @@ mod tests {
                 FieldElement::from(8_u64),
                 FieldElement::from(9_u64),
                 FieldElement::from(10_u64)
-            ]
-        );
-    }
-
-    #[test]
-    fn test_left_shift_bytes() {
-        let bytes: [u8; 32] = [
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
-            0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
-            0x1d, 0x1e, 0x1f, 0x20,
-        ];
-        let res = left_shift(&bytes, 16);
-        assert_eq!(
-            res,
-            [
-                0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
-                0x1f, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00,
             ]
         );
     }
