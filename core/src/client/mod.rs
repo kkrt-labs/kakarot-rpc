@@ -234,10 +234,7 @@ impl StarknetClient for StarknetClientImpl {
         };
         // fetch gas limit, public key, and nonce from starknet rpc
 
-        let block = self
-            .starknet_block_to_eth_block(starknet_block)
-            .await
-            .unwrap();
+        let block = self.starknet_block_to_eth_block(starknet_block).await?;
         Ok(block)
     }
 
