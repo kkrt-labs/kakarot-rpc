@@ -370,7 +370,13 @@ impl EthApiServer for KakarotEthRpc {
         _hash: H256,
         _index: Index,
     ) -> Result<Option<EtherTransaction>> {
-        todo!()
+        let block_id = BlockId::Hash(_hash);
+        let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
+        let tx = self
+            .starknet_client
+            .transaction_by_block_id_and_index(starknet_block_id, _index)
+            .await?;
+        Ok(Some(tx))
     }
 
     async fn transaction_by_block_number_and_index(
@@ -382,7 +388,7 @@ impl EthApiServer for KakarotEthRpc {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
         let tx = self
             .starknet_client
-            .transaction_by_block_number_and_index(starknet_block_id, _index)
+            .transaction_by_block_id_and_index(starknet_block_id, _index)
             .await?;
         Ok(Some(tx))
     }
