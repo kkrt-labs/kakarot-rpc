@@ -54,14 +54,13 @@ pub fn ethers_block_id_to_starknet_block_id(
 ) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
         EthBlockId::Hash(hash) => {
-            let address_hex = hex::encode(hash);
-            let address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
+            let hash_felt = FieldElement::from_bytes_be(&hash.0).map_err(|e| {
                 KakarotClientError::OtherError(anyhow::anyhow!(
                     "Failed to convert Starknet block hash to FieldElement: {}",
                     e
                 ))
             })?;
-            Ok(StarknetBlockId::Hash(address_felt))
+            Ok(StarknetBlockId::Hash(hash_felt))
         }
         EthBlockId::Number(number) => ethers_block_number_to_starknet_block_id(number),
     }
@@ -83,26 +82,33 @@ pub fn ethers_block_number_to_starknet_block_id(
 pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBlock {
     // Fixed fields in the Ethereum block as Starknet does not have these fields
 
-    //InvokeTransactionReceipt -
     //TODO: Fetch real data
-    let gas_limit = U256::from(1000000); // Hard Code
-                                         //TODO: Fetch real data
-    let gas_used = U256::from(500000); // Hard Code (Sum of actual_fee's)
-                                       //TODO: Fetch real data
-    let difficulty = U256::from(1000000); // Fixed
-                                          //TODO: Fetch real data
-    let nonce: Option<H64> = Some(H64::from_low_u64_be(0));
+    let gas_limit = U256::from(u64::MAX);
+
     //TODO: Fetch real data
-    let size: Option<U256> = Some(U256::from(100));
+    let gas_used = U256::ZERO; // Hard Code (Sum of actual_fee's)
+
+    // TODO: Fetch real data
+    let difficulty = U256::ZERO;
+
+    //TODO: Fetch real data
+    let nonce: Option<H64> = Some(H64::zero());
+
+    //TODO: Fetch real data
+    let size: Option<U256> = None;
+
     // Bloom is a byte array of length 256
     let logs_bloom = Bloom::default();
     let extra_data = Bytes::from(b"0x00");
+
     //TODO: Fetch real data
-    let total_difficulty: U256 = U256::from(1000000);
+    let total_difficulty: U256 = U256::ZERO;
+
     //TODO: Fetch real data
-    let base_fee_per_gas = U256::from(32);
+    let base_fee_per_gas = U256::from(1000000000);
+
     //TODO: Fetch real data
-    let mix_hash = H256::from_low_u64_be(0);
+    let mix_hash = H256::zero();
 
     match block {
         MaybePendingStarknetBlock::BlockWithTxHashes(maybe_pending_block) => {
@@ -110,11 +116,10 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                 MaybePendingBlockWithTxHashes::PendingBlock(pending_block_with_tx_hashes) => {
                     let parent_hash =
                         H256::from_slice(&pending_block_with_tx_hashes.parent_hash.to_bytes_be());
-                    let sequencer = H160::from_slice(
-                        &pending_block_with_tx_hashes.sequencer_address.to_bytes_be()[12..32],
+                    let sequencer = starknet_address_to_ethereum_address(
+                        &pending_block_with_tx_hashes.sequencer_address,
                     );
-                    let timestamp =
-                        U256::from_be_bytes(pending_block_with_tx_hashes.timestamp.to_be_bytes());
+                    let timestamp = U256::from(pending_block_with_tx_hashes.timestamp);
                     let transactions = BlockTransactions::Hashes(
                         pending_block_with_tx_hashes
                             .transactions
@@ -477,7 +482,7 @@ pub fn starknet_tx_into_eth_tx(
                     // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
                     ether_tx.hash = H256::from_slice(&v0.transaction_hash.to_bytes_be());
                     ether_tx.nonce = felt_to_u256(v0.nonce);
-                    ether_tx.from = starknet_address_to_ethereum_address(v0.contract_address);
+                    ether_tx.from = starknet_address_to_ethereum_address(&v0.contract_address);
                     // Define gas_price data
                     ether_tx.gas_price = None;
                     // Extracting the signature
@@ -511,7 +516,7 @@ pub fn starknet_tx_into_eth_tx(
 
                     ether_tx.hash = H256::from_slice(&v1.transaction_hash.to_bytes_be());
                     ether_tx.nonce = felt_to_u256(v1.nonce);
-                    ether_tx.from = starknet_address_to_ethereum_address(v1.sender_address);
+                    ether_tx.from = starknet_address_to_ethereum_address(&v1.sender_address);
                     // Define gas_price data
                     ether_tx.gas_price = None;
                     // Extracting the signature
@@ -549,7 +554,7 @@ pub fn starknet_tx_into_eth_tx(
             // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
             ether_tx.hash = H256::from_slice(&l1_handler_tx.transaction_hash.to_bytes_be());
             ether_tx.nonce = U256::from(l1_handler_tx.nonce);
-            ether_tx.from = starknet_address_to_ethereum_address(l1_handler_tx.contract_address);
+            ether_tx.from = starknet_address_to_ethereum_address(&l1_handler_tx.contract_address);
             // Define gas_price data
             ether_tx.gas_price = None;
             // Extracting the data
@@ -573,7 +578,7 @@ pub fn starknet_tx_into_eth_tx(
             // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
             ether_tx.hash = H256::from_slice(&declare_tx.transaction_hash.to_bytes_be());
             ether_tx.nonce = felt_to_u256(declare_tx.nonce);
-            ether_tx.from = starknet_address_to_ethereum_address(declare_tx.sender_address);
+            ether_tx.from = starknet_address_to_ethereum_address(&declare_tx.sender_address);
             // Define gas_price data
             ether_tx.gas_price = None;
             // Extracting the signature
@@ -660,7 +665,7 @@ pub fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
 /// In order to get the correct/true EVM address of a Kakarot smart contract or account,
 /// use the client.get_evm_address() method.
 /// `starknet_address_to_ethereum_address` is only used for Starknet addresses that do not have an EVM address equivalent.
-pub fn starknet_address_to_ethereum_address(starknet_address: FieldElement) -> Address {
+pub fn starknet_address_to_ethereum_address(starknet_address: &FieldElement) -> Address {
     H160::from_slice(&starknet_address.to_bytes_be()[12..32])
 }
 
