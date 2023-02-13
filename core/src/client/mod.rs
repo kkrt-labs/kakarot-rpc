@@ -1155,16 +1155,9 @@ impl StarknetClient for StarknetClientImpl {
                         let sequencer = H160::from_slice(
                             &block_with_txs.sequencer_address.to_bytes_be()[12..32],
                         );
-                        let state_root =
-                            PrimitiveH256::from_slice(&block_with_txs.new_root.to_bytes_be());
-                        let transactions_root = PrimitiveH256::from_slice(
-                            &"0xac91334ba861cb94cba2b1fd63df7e87c15ca73666201abd10b5462255a5c642"
-                                .as_bytes()[1..33],
-                        );
-                        let receipts_root = PrimitiveH256::from_slice(
-                            &"0xf2c8755adf35e78ffa84999e48aba628e775bb7be3c70209738d736b67a9b549"
-                                .as_bytes()[1..33],
-                        );
+                        let state_root = PrimitiveH256::zero();
+                        let transactions_root = PrimitiveH256::zero();
+                        let receipts_root = PrimitiveH256::zero();
 
                         let number = U256::from(block_with_txs.block_number);
                         let timestamp = U256::from(block_with_txs.timestamp);
