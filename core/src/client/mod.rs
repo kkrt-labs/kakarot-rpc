@@ -720,16 +720,25 @@ impl StarknetClient for StarknetClientImpl {
                     StarknetBlockId::Tag(BlockTag::Latest),
                 )
                 .await;
+
             let token_balance = match call {
-                Ok(call) => TokenBalance {
-                    contract_address: address,
-                    token_balance: call.to_string(),
-                    error: "".to_string(),
-                },
+                Ok(call) => {
+                    let hex_balance = U256::from_str_radix(&call.to_string(), 16).map_err(|e| {
+                        KakarotClientError::OtherError(anyhow::anyhow!(
+                            "Failed to convert token balance to U256: {}",
+                            e
+                        ))
+                    })?;
+                    TokenBalance {
+                        contract_address: address,
+                        token_balance: Some(U256::from(hex_balance)),
+                        error: Some("".to_string()),
+                    }
+                }
                 Err(_) => TokenBalance {
                     contract_address: address,
-                    token_balance: "".to_string(),
-                    error: "Failed to get token balance".to_string(),
+                    token_balance: None,
+                    error: Some("Failed to get token balance".to_string()),
                 },
             };
             token_balances.push(token_balance);
