@@ -3,9 +3,8 @@ use jsonrpsee::types::error::CallError;
 use std::convert::From;
 
 use reth_primitives::{
-
-    rpc::{BlockId, BlockNumber, Bytes, Log, H160, H256},
-    Address, H256 as PrimitiveH256, U256, U64,
+    rpc::{BlockId, BlockNumber, Bytes as RpcBytes, Log, H160 as RpcH160, H256},
+    Address, Bytes, H160, H256 as PrimitiveH256, U256, U64,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus, TransactionReceipt};
 use starknet::{
@@ -33,7 +32,6 @@ use crate::helpers::{
     ethers_block_id_to_starknet_block_id, felt_option_to_u256, felt_to_u256, hash_to_field_element,
     starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray,
     MaybePendingStarknetBlock,
-
 };
 
 use reth_primitives::{Bloom, H64};
@@ -673,9 +671,9 @@ impl StarknetClient for StarknetClientImpl {
                         let log = Log {
                             // TODO: fetch correct address from Kakarot.
                             // Contract Address is the account contract's address (EOA or KakarotAA)
-                            address: H160::from_slice(&contract_address.0),
+                            address: RpcH160::from_slice(&contract_address.0),
                             topics,
-                            data: Bytes::from(data.0),
+                            data: RpcBytes::from(data.0),
                             block_hash: None,
                             block_number: None,
                             transaction_hash: None,
@@ -790,7 +788,7 @@ impl StarknetClient for StarknetClientImpl {
                             .await?;
 
                         ether_tx.nonce = felt_to_u256(v0.nonce);
-                        ether_tx.from = starknet_address_to_ethereum_address(v0.contract_address);
+                        ether_tx.from = starknet_address_to_ethereum_address(&v0.contract_address);
                         // Define gas_price data
                         ether_tx.gas_price = None;
                         // Extracting the signature
@@ -832,7 +830,7 @@ impl StarknetClient for StarknetClientImpl {
                             .await?;
 
                         ether_tx.nonce = felt_to_u256(v1.nonce);
-                        ether_tx.from = starknet_address_to_ethereum_address(v1.sender_address);
+                        ether_tx.from = starknet_address_to_ethereum_address(&v1.sender_address);
                         // Define gas_price data
                         ether_tx.gas_price = None;
                         // Extracting the signature
@@ -882,8 +880,8 @@ impl StarknetClient for StarknetClientImpl {
                 ether_tx.nonce = U256::from(l1_handler_tx.nonce);
                 ether_tx.from = self
                     .get_evm_address(
-                        l1_handler_tx.contract_address,
-                        StarknetBlockId::Tag(BlockTag::Latest),
+                        &l1_handler_tx.contract_address,
+                        &StarknetBlockId::Tag(BlockTag::Latest),
                     )
                     .await?;
                 // Define gas_price data
@@ -917,7 +915,7 @@ impl StarknetClient for StarknetClientImpl {
                     )
                     .await?;
                 ether_tx.nonce = felt_to_u256(declare_tx.nonce);
-                ether_tx.from = starknet_address_to_ethereum_address(declare_tx.sender_address);
+                ether_tx.from = starknet_address_to_ethereum_address(&declare_tx.sender_address);
                 // Define gas_price data
                 ether_tx.gas_price = None;
                 // Extracting the signature
@@ -996,7 +994,7 @@ impl StarknetClient for StarknetClientImpl {
             })?;
         if class_hash == kakarot_class_hash {
             ether_tx.to = Some(starknet_address_to_ethereum_address(
-                kakarot_starknet_address,
+                &kakarot_starknet_address,
             ));
             Ok(ether_tx)
         } else {
