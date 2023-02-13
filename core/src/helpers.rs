@@ -52,14 +52,13 @@ pub fn ethers_block_id_to_starknet_block_id(
 ) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
         EthBlockId::Hash(hash) => {
-            let address_hex = hex::encode(hash);
-            let address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
+            let hash_felt = FieldElement::from_bytes_be(&hash.0).map_err(|e| {
                 KakarotClientError::OtherError(anyhow::anyhow!(
                     "Failed to convert Starknet block hash to FieldElement: {}",
                     e
                 ))
             })?;
-            Ok(StarknetBlockId::Hash(address_felt))
+            Ok(StarknetBlockId::Hash(hash_felt))
         }
         EthBlockId::Number(number) => ethers_block_number_to_starknet_block_id(number),
     }
@@ -219,7 +218,7 @@ pub fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
 /// In order to get the correct/true EVM address of a Kakarot smart contract or account,
 /// use the client.get_evm_address() method.
 /// `starknet_address_to_ethereum_address` is only used for Starknet addresses that do not have an EVM address equivalent.
-pub fn starknet_address_to_ethereum_address(starknet_address: FieldElement) -> Address {
+pub fn starknet_address_to_ethereum_address(starknet_address: &FieldElement) -> Address {
     H160::from_slice(&starknet_address.to_bytes_be()[12..32])
 }
 
