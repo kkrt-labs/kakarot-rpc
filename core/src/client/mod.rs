@@ -775,7 +775,7 @@ impl StarknetClient for StarknetClientImpl {
             let call = self
                 .call_view(
                     token_address,
-                    vec_felt_to_bytes(calldata),
+                    Bytes::from(vec_felt_to_bytes(calldata).0),
                     StarknetBlockId::Tag(BlockTag::Latest),
                 )
                 .await;
