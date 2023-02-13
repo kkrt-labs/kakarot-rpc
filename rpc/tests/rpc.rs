@@ -4,12 +4,12 @@ mod tests {
     use kakarot_rpc_core::{
         client::{
             constants::CHAIN_ID,
-            types::{Block, BlockTransactions},
+            types::{Block, BlockTransactions, Transaction},
         },
         helpers::{felt_option_to_u256, felt_to_u256},
         utils::wiremock_utils::EthJsonRpcResponse,
     };
-    use reth_primitives::{Bloom, Bytes, H160, H256, H64, U256};
+    use reth_primitives::{Bloom, Bytes, H160, H256, H64, U128, U256, U64};
     use reth_rpc_types::TransactionReceipt;
     use starknet::core::types::FieldElement;
     use std::str::FromStr;
@@ -363,29 +363,90 @@ mod tests {
             .await
             .unwrap();
 
-        let _transaction_receipt = res
+        let transaction_receipt = res
             .json::<EthJsonRpcResponse<TransactionReceipt>>()
             .await
-            .unwrap();
-        //TODO add test logic
+            .unwrap()
+            .result;
+
+        assert_eq!(
+            transaction_receipt.transaction_hash,
+            Some(H256::from_slice(
+                &FieldElement::from_str(
+                    "0x32e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258"
+                )
+                .unwrap()
+                .to_bytes_be()
+            ))
+        );
+        assert_eq!(
+            transaction_receipt.block_hash,
+            Some(H256::from_slice(
+                &FieldElement::from_str(
+                    "0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e"
+                )
+                .unwrap()
+                .to_bytes_be()
+            ))
+        );
+        assert_eq!(transaction_receipt.block_number, Some(U256::from(19639)));
+        assert_eq!(transaction_receipt.status_code, Some(U64::from(1)));
+
+        // assert_eq!(transaction_receipt.from, H160::from(0));
+        // assert_eq!(transaction_receipt.contract_address, Some(U64::from(1)));
+        // assert_eq!(transaction_receipt.logs, None);
+
+        assert_eq!(transaction_receipt.transaction_index, None);
+        assert_eq!(transaction_receipt.to, None);
+        assert_eq!(transaction_receipt.cumulative_gas_used, U256::from(1000000));
+        assert_eq!(transaction_receipt.gas_used, None);
+        assert_eq!(transaction_receipt.logs_bloom, Bloom::default());
+        assert_eq!(transaction_receipt.state_root, None);
+        assert_eq!(transaction_receipt.effective_gas_price, U128::from(1000000));
+        assert_eq!(transaction_receipt.transaction_type, U256::from(0));
 
         server_handle.stop().unwrap();
     }
 
-    // #[tokio::test]
-    // async fn test_transaction_by_block_number_and_index_is_ok() {
-    //     let (_, server_handle) = setup_rpc_server().await;
-    //     let client = reqwest::Client::new();
-    //     let res = client
-    //             .post("http://127.0.0.1:3030")
-    //             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionByBlockNumberAndIndex\", \"params\": [\"latest\", 1] }")
-    //             .header("content-type", "application/json")
-    //             .send()
-    //             .await
-    //             .unwrap();
+    #[tokio::test]
+    async fn test_transaction_by_block_number_and_index_is_ok() {
+        let (_, server_handle) = setup_rpc_server().await;
+        let client = reqwest::Client::new();
+        let res = client
+                .post("http://127.0.0.1:3030")
+                .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionByBlockNumberAndIndex\", \"params\": [\"latest\", 1] }")
+                .header("content-type", "application/json")
+                .send()
+                .await
+                .unwrap();
 
-    //     println!("res = {:?}", res.text().await.unwrap());
+        let _transaction = res
+            .json::<EthJsonRpcResponse<Transaction>>()
+            .await
+            .unwrap()
+            .result;
 
-    //     server_handle.stop().unwrap();
-    // }
+        server_handle.stop().unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_transaction_by_block_hash_and_index_is_ok() {
+        let (_, server_handle) = setup_rpc_server().await;
+        let client = reqwest::Client::new();
+        let res = client
+                .post("http://127.0.0.1:3030")
+                .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionByBlockHashAndIndex\", \"params\": [\"0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9\", 1] }")
+                .header("content-type", "application/json")
+                .send()
+                .await
+                .unwrap();
+
+        let _transaction = res
+            .json::<EthJsonRpcResponse<Transaction>>()
+            .await
+            .unwrap()
+            .result;
+
+        server_handle.stop().unwrap();
+    }
 }

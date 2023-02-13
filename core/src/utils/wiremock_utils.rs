@@ -311,11 +311,12 @@ pub async fn setup_wiremock() -> String {
         .mount(&mock_server)
         .await;
 
+    // * test_transaction_by_block_hash_and_index_is_ok
     // transaction_by_block_hash_and_index from block hash
     Mock::given(method("POST"))
         .and(body_json(
             StarknetRpcBaseData::get_transaction_by_block_id_and_index([
-                serde_json::to_value(&starknet_block_id).unwrap(),
+                serde_json::to_value(serde_json::json!({"block_hash":"0x449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9"})).unwrap(),
                 serde_json::to_value(1).unwrap(),
             ]),
         ))
@@ -331,6 +332,24 @@ pub async fn setup_wiremock() -> String {
         .mount(&mock_server)
         .await;
 
+    // get_transaction_receipt for transaction_by_block_hash_and_index from block hash
+    Mock::given(method("POST"))
+        .and(body_json(StarknetRpcBaseData::get_transaction_receipt([
+            "0x7c5df940744056d337c3de6e8f4500db4b9bfc821eb534b891555e90c39c048",
+        ])))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_raw(
+                    include_str!("data/transactions/starknet_getTransactionReceipt.json"),
+                    "application/json",
+                )
+                .append_header("vary", "Accept-Encoding")
+                .append_header("vary", "Origin"),
+        )
+        .mount(&mock_server)
+        .await;
+
+    // * test_transaction_receipt_invoke_is_ok
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::get_transaction_receipt([
             "0x32e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258",
