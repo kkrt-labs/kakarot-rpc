@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-
     use kakarot_rpc::test_utils::setup_rpc_server;
     use kakarot_rpc_core::{
         client::{
@@ -13,6 +12,7 @@ mod tests {
     use reth_primitives::{Bloom, Bytes, H160, H256, H64, U256};
     use reth_rpc_types::TransactionReceipt;
     use starknet::core::types::FieldElement;
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn test_block_number_is_ok() {
@@ -47,8 +47,8 @@ mod tests {
 
         let block = res.json::<EthJsonRpcResponse<Block>>().await.unwrap();
         // Header data
-        let starknet_block_hash = FieldElement::from_hex_be(
-            &"0x449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9".to_string(),
+        let starknet_block_hash = FieldElement::from_str(
+            "0x449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9",
         )
         .unwrap();
         assert_eq!(
@@ -57,24 +57,24 @@ mod tests {
         );
         assert_eq!(block.result.header.number, Some(U256::from(19612)));
 
-        let starknet_parent_hash = FieldElement::from_hex_be(
-            &"0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1".to_string(),
+        let starknet_parent_hash = FieldElement::from_str(
+            "0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1",
         )
         .unwrap();
         let parent_hash = H256::from_slice(&starknet_parent_hash.to_bytes_be());
         assert_eq!(block.result.header.parent_hash, parent_hash);
         assert_eq!(block.result.header.uncles_hash, parent_hash);
 
-        let starknet_sequencer = FieldElement::from_hex_be(
-            &"0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9".to_string(),
+        let starknet_sequencer = FieldElement::from_str(
+            "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
         )
         .unwrap();
         let sequencer = H160::from_slice(&starknet_sequencer.to_bytes_be()[12..32]);
         assert_eq!(block.result.header.author, sequencer);
         assert_eq!(block.result.header.miner, sequencer);
 
-        let starknet_new_root = FieldElement::from_hex_be(
-            &"0x67cde84ecff30c4ca55cb46df37940df87a94cc416cb893eaa9fb4fb67ec513".to_string(),
+        let starknet_new_root = FieldElement::from_str(
+            "0x67cde84ecff30c4ca55cb46df37940df87a94cc416cb893eaa9fb4fb67ec513",
         )
         .unwrap();
         let state_root = H256::from_slice(&starknet_new_root.to_bytes_be());
@@ -126,9 +126,8 @@ mod tests {
                         Some(H256::from_slice(&starknet_block_hash.to_bytes_be()))
                     );
 
-                    let starknet_hash = FieldElement::from_hex_be(
-                        &"0x36b9fcadfafec68effe5c23bbacaf6197745a5e6317d3f174b80765942b5abb"
-                            .to_string(),
+                    let starknet_hash = FieldElement::from_str(
+                        "0x36b9fcadfafec68effe5c23bbacaf6197745a5e6317d3f174b80765942b5abb",
                     )
                     .unwrap();
                     assert_eq!(
@@ -139,11 +138,9 @@ mod tests {
                     let starknet_nonce = FieldElement::from_hex_be(&"0x34b".to_string()).unwrap();
                     assert_eq!(first_tx.nonce, felt_to_u256(starknet_nonce));
 
-                    // let starknet_sender_address = FieldElement::from_hex_be(
-                    //     &"0xd90fd6aa27edd344c5cbe1fe999611416b268658e866a54265aaf50d9cf28d"
-                    //         .to_string(),
-                    // )
-                    // .unwrap();
+                    // let starknet_sender_address = FieldElement::from_str(
+                    //     "0xd90fd6aa27edd344c5cbe1fe999611416b268658e866a54265aaf50d9cf28d"
+                    // ).unwrap();
                     // assert_eq!(
                     //     first_tx.from,
                     //     starknet_address_to_ethereum_address(&starknet_sender_address)
@@ -155,14 +152,12 @@ mod tests {
                     assert_eq!(first_tx.access_list, None);
                     assert_eq!(first_tx.transaction_type, None);
 
-                    let starknet_signature_r = FieldElement::from_hex_be(
-                        &"0x5267c0d93467ddb5cfe0ab9db124ed5d57345e92a45111e7a08f8afa7666fae"
-                            .to_string(),
+                    let starknet_signature_r = FieldElement::from_str(
+                        "0x5267c0d93467ddb5cfe0ab9db124ed5d57345e92a45111e7a08f8afa7666fae",
                     )
                     .unwrap();
-                    let starknet_signature_s = FieldElement::from_hex_be(
-                        &"0x622c1e743ae1060293085a9702ea1c6a7f642eb47b8eb9fb51ca0d156c5f5dd"
-                            .to_string(),
+                    let starknet_signature_s = FieldElement::from_str(
+                        "0x622c1e743ae1060293085a9702ea1c6a7f642eb47b8eb9fb51ca0d156c5f5dd",
                     )
                     .unwrap();
                     assert_eq!(
@@ -205,8 +200,8 @@ mod tests {
         let block = res.json::<EthJsonRpcResponse<Block>>().await.unwrap();
 
         // Header data
-        let starknet_block_hash = FieldElement::from_hex_be(
-            &"0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e".to_string(),
+        let starknet_block_hash = FieldElement::from_str(
+            "0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e",
         )
         .unwrap();
         assert_eq!(
@@ -215,24 +210,24 @@ mod tests {
         );
         assert_eq!(block.result.header.number, Some(U256::from(19639)));
 
-        let starknet_parent_hash = FieldElement::from_hex_be(
-            &"0x13310ddd53ba41bd8b71dadbf1eb002c215ca8a790cb298d851ba7446e77d38".to_string(),
+        let starknet_parent_hash = FieldElement::from_str(
+            "0x13310ddd53ba41bd8b71dadbf1eb002c215ca8a790cb298d851ba7446e77d38",
         )
         .unwrap();
         let parent_hash = H256::from_slice(&starknet_parent_hash.to_bytes_be());
         assert_eq!(block.result.header.parent_hash, parent_hash);
         assert_eq!(block.result.header.uncles_hash, parent_hash);
 
-        let starknet_sequencer = FieldElement::from_hex_be(
-            &"0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9".to_string(),
+        let starknet_sequencer = FieldElement::from_str(
+            "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
         )
         .unwrap();
         let sequencer = H160::from_slice(&starknet_sequencer.to_bytes_be()[12..32]);
         assert_eq!(block.result.header.author, sequencer);
         assert_eq!(block.result.header.miner, sequencer);
 
-        let starknet_new_root = FieldElement::from_hex_be(
-            &"0x5549eb2dffae1d468fff16454cb2f44cdeea63ca79f56730304b170faecdd3b".to_string(),
+        let starknet_new_root = FieldElement::from_str(
+            "0x5549eb2dffae1d468fff16454cb2f44cdeea63ca79f56730304b170faecdd3b",
         )
         .unwrap();
         let state_root = H256::from_slice(&starknet_new_root.to_bytes_be());
@@ -265,9 +260,8 @@ mod tests {
         match transactions {
             BlockTransactions::Hashes(transactions) => {
                 if let Some(first_tx) = transactions.first() {
-                    let starknet_tx = FieldElement::from_hex_be(
-                        &"0x32e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258"
-                            .to_string(),
+                    let starknet_tx = FieldElement::from_str(
+                        "0x32e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258",
                     )
                     .unwrap();
                     assert_eq!(first_tx, &H256::from_slice(&starknet_tx.to_bytes_be()));
