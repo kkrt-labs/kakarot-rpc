@@ -635,7 +635,7 @@ pub fn starknet_tx_into_eth_tx(
     Ok(ether_tx)
 }
 
-fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, KakarotClientError> {
+pub fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, KakarotClientError> {
     match element {
         Some(x) => {
             let inner = x.to_bytes_be();
