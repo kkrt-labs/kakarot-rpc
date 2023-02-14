@@ -382,7 +382,6 @@ pub async fn setup_wiremock() -> String {
         .await;
 
     // Get kakarot contract addess
-    // TODO: Change this method with associated correct code
     // let tx_calldata_vec =
     //     vec![FieldElement::from_hex_be("0xabde1007dcf45cb509ddde375162399a99880064").unwrap()];
     // let request = FunctionCall {
@@ -390,23 +389,28 @@ pub async fn setup_wiremock() -> String {
     //     entry_point_selector: GET_STARKNET_CONTRACT_ADDRESS,
     //     calldata: tx_calldata_vec,
     // };
-    // let block_id = BlockId::Tag(BlockTag::Latest);
-    // Mock::given(method("POST"))
-    //     .and(body_json(StarknetRpcBaseData::call([
-    //         serde_json::to_value(request).unwrap(),
-    //         serde_json::to_value(block_id).unwrap(),
-    //     ])))
-    //     .respond_with(
-    //         ResponseTemplate::new(200)
-    //             .set_body_raw(
-    //                 include_str!("data/starknet_getCode.json"),
-    //                 "application/json",
-    //             )
-    //             .append_header("vary", "Accept-Encoding")
-    //             .append_header("vary", "Origin"),
-    //     )
-    //     .mount(&mock_server)
-    //     .await;
+
+    let call_request = serde_json::json!({
+        "contract_address": "0x46bfa580e4fa55a38eaa7f51a3469f86b336eed59a6136a07b7adcd095b0eb2",
+        "entry_point_selector": "0x158359fe4236681f6236a2f303f9350495f73f078c9afd1ca0890fa4143c2ed",
+        "calldata": [],
+    });
+    Mock::given(method("POST"))
+        .and(body_json(StarknetRpcBaseData::call([
+            serde_json::to_value(call_request).unwrap(),
+            serde_json::to_value(&latest_block).unwrap(),
+        ])))
+        .respond_with(
+            ResponseTemplate::new(200)
+                .set_body_raw(
+                    include_str!("data/starknet_getCode.json"),
+                    "application/json",
+                )
+                .append_header("vary", "Accept-Encoding")
+                .append_header("vary", "Origin"),
+        )
+        .mount(&mock_server)
+        .await;
 
     // Get kakarot contract bytecode
     // TODO: Use the latest mapping between starknet and EVM adresses
