@@ -29,7 +29,7 @@ pub struct KakarotEthRpc {
 #[rpc(server, client)]
 trait EthApi {
     #[method(name = "eth_blockNumber")]
-    async fn block_number(&self) -> Result<U256>;
+    async fn block_number(&self) -> Result<U64>;
 
     /// Returns the protocol version encoded as a string.
     #[method(name = "net_version")]
@@ -254,7 +254,7 @@ trait EthApi {
 
 #[async_trait]
 impl EthApiServer for KakarotEthRpc {
-    async fn block_number(&self) -> Result<U256> {
+    async fn block_number(&self) -> Result<U64> {
         let block_number = self.kakarot_client.block_number().await?;
         Ok(block_number)
     }

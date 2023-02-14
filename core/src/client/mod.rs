@@ -58,7 +58,7 @@ pub enum KakarotClientError {
 #[automock]
 #[async_trait]
 pub trait KakarotClient: Send + Sync {
-    async fn block_number(&self) -> Result<U256, KakarotClientError>;
+    async fn block_number(&self) -> Result<U64, KakarotClientError>;
 
     async fn get_eth_block_from_starknet_block(
         &self,
@@ -187,9 +187,9 @@ impl KakarotClient for KakarotClientImpl {
     ///
     /// `Ok(ContractClass)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
-    async fn block_number(&self) -> Result<U256, KakarotClientError> {
+    async fn block_number(&self) -> Result<U64, KakarotClientError> {
         let block_number = self.client.block_number().await?;
-        Ok(U256::from(block_number))
+        Ok(U64::from(block_number))
     }
 
     /// Get the block given a block id.
