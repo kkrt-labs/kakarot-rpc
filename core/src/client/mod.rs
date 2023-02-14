@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
@@ -759,18 +761,21 @@ impl StarknetClient for StarknetClientImpl {
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, KakarotClientError> {
         let mut token_balances = Vec::new();
-        let starknet_user_address = self
-            .compute_starknet_address(address, StarknetBlockId::Tag(BlockTag::Latest))
-            .await?;
         let entrypoint = hash_to_field_element(keccak256("balanceOf(address)")).map_err(|e| {
             KakarotClientError::OtherError(anyhow::anyhow!(
                 "Failed to convert entrypoint to FieldElement: {}",
                 e
             ))
         })?;
+        let felt_address = FieldElement::from_str(&address.to_string()).map_err(|e| {
+            KakarotClientError::OtherError(anyhow::anyhow!(
+                "Failed to convert address to FieldElement: {}",
+                e
+            ))
+        })?;
 
         for token_address in contract_addresses.into_iter() {
-            let calldata = vec![entrypoint, starknet_user_address];
+            let calldata = vec![entrypoint, felt_address];
             let call = self
                 .call_view(
                     token_address,
