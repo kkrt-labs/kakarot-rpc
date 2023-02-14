@@ -1,9 +1,8 @@
-use std::str::FromStr;
-
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
 use reth_primitives::{
+    keccak256,
     rpc::{BlockId, BlockNumber, Bytes, Log, H160, H256},
     Address, H256 as PrimitiveH256, U256, U64,
 };
@@ -763,7 +762,7 @@ impl StarknetClient for StarknetClientImpl {
         let starknet_user_address = self
             .compute_starknet_address(address, StarknetBlockId::Tag(BlockTag::Latest))
             .await?;
-        let entrypoint = FieldElement::from_str("balanceOf").map_err(|e| {
+        let entrypoint = hash_to_field_element(keccak256("balanceOf(address)")).map_err(|e| {
             KakarotClientError::OtherError(anyhow::anyhow!(
                 "Failed to convert entrypoint to FieldElement: {}",
                 e
