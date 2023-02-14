@@ -790,14 +790,14 @@ impl StarknetClient for StarknetClientImpl {
                     })?;
                     TokenBalance {
                         contract_address: address,
-                        token_balance: Some(U256::from(hex_balance)),
-                        error: Some("".to_string()),
+                        token_balance: Some(hex_balance),
+                        error: None,
                     }
                 }
-                Err(_) => TokenBalance {
+                Err(e) => TokenBalance {
                     contract_address: address,
                     token_balance: None,
-                    error: Some("Failed to get token balance".to_string()),
+                    error: Some(format!("kakarot_getTokenBalances Error: {e}")),
                 },
             };
             token_balances.push(token_balance);
