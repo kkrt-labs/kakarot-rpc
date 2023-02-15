@@ -194,7 +194,6 @@ trait EthApi {
     ) -> Result<FeeHistory>;
 
     /// Returns the current maxPriorityFeePerGas per gas in wei.
-    /// ⚠️ This method's return parameter is denominated in GWEI in Remix (tbd if this is a bug)
     #[method(name = "eth_maxPriorityFeePerGas")]
     async fn max_priority_fee_per_gas(&self) -> Result<U256>;
 
@@ -491,9 +490,7 @@ impl EthApiServer for KakarotEthRpc {
     ) -> Result<FeeHistory> {
         // ⚠️ Experimental ⚠️
         // This is a temporary implementation of the fee history API based on the idea that priority fee is estimated from former blocks
-        // Currently, the Remix IDE reads the maxPriorityFeePerGas as GWei
-        // This causes Remix to suggest Metamask a transaction with: maxPriorityFeePerGas = 1 wei AND maxFee = 16 wei <- will cause an error maxFee > maxPriorityFeePerGas
-        const DEFAULT_REWARD: u64 = 1_000_000_000_u64;
+        const DEFAULT_REWARD: u64 = 10_u64;
         let block_count_usize = usize::from_str_radix(&_block_count.to_string(), 16).unwrap_or(1);
 
         let base_fee_per_gas: Vec<U256> = vec![U256::from(16); block_count_usize + 1];
@@ -525,7 +522,6 @@ impl EthApiServer for KakarotEthRpc {
         })
     }
 
-    /// ⚠️ This method's return parameter is denominated in GWEI in Remix (tbd if this is a bug)
     async fn max_priority_fee_per_gas(&self) -> Result<U256> {
         Ok(U256::from(1))
     }
