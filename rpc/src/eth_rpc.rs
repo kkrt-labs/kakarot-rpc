@@ -194,6 +194,7 @@ trait EthApi {
     ) -> Result<FeeHistory>;
 
     /// Returns the current maxPriorityFeePerGas per gas in wei.
+    /// ⚠️ This method's return parameter is denominated in GWEI in Remix (tbd if this is a bug)
     #[method(name = "eth_maxPriorityFeePerGas")]
     async fn max_priority_fee_per_gas(&self) -> Result<U256>;
 
@@ -488,13 +489,26 @@ impl EthApiServer for KakarotEthRpc {
         _newest_block: BlockNumber,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
+        const DEFAULT_REWARD: u64 = 1_000_000_000_u64;
+
         let base_fee_per_gas: Vec<U256> = vec![U256::from(16), U256::from(16), U256::from(16)];
 
         let gas_used_ratio: Vec<f64> = vec![];
-        let newest_block = _newest_block.as_number().unwrap().as_u64();
+        let newest_block = _newest_block.as_number().unwrap_or_default().as_u64();
         let oldest_block: U256 = U256::from(newest_block) - _block_count;
 
-        let reward: Option<Vec<Vec<U256>>> = None;
+        let reward: Option<Vec<Vec<U256>>> = match _reward_percentiles {
+            Some(reward_percentiles) => {
+                let num_percentiles = reward_percentiles.len();
+                let reward_vec = vec![
+                    vec![U256::from(DEFAULT_REWARD); num_percentiles];
+                    usize::from_str_radix(&_block_count.to_string(), 16)
+                        .unwrap_or(1)
+                ];
+                Some(reward_vec)
+            }
+            None => None,
+        };
         Ok(FeeHistory {
             base_fee_per_gas,
             gas_used_ratio,
@@ -503,8 +517,9 @@ impl EthApiServer for KakarotEthRpc {
         })
     }
 
+    /// ⚠️ This method's return parameter is denominated in GWEI in Remix (tbd if this is a bug)
     async fn max_priority_fee_per_gas(&self) -> Result<U256> {
-        Ok(U256::from(100))
+        Ok(U256::from(1))
     }
 
     async fn is_mining(&self) -> Result<bool> {
@@ -569,7 +584,7 @@ impl EthApiServer for KakarotEthRpc {
         // TODO: Get nonce from Starknet
         let nonce = FieldElement::from(transaction.nonce());
         // TODO: Get gas price from Starknet
-        let max_fee = FieldElement::from(1_000_000_000_000_u64);
+        let max_fee = FieldElement::from(1_000_000_000_000_000_000_u64);
         // TODO: Provide signature
         let signature = vec![];
 
