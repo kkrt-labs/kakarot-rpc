@@ -475,7 +475,7 @@ impl EthApiServer for KakarotEthRpc {
         _request: CallRequest,
         _block_number: Option<BlockId>,
     ) -> Result<U256> {
-        Ok(U256::ZERO)
+        Ok(U256::from(1_000_000_000_u64))
     }
 
     async fn gas_price(&self) -> Result<U256> {
@@ -489,26 +489,34 @@ impl EthApiServer for KakarotEthRpc {
         _newest_block: BlockNumber,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
+        // ⚠️ Experimental ⚠️
+        // This is a temporary implementation of the fee history API based on the idea that priority fee is estimated from former blocks
+        // Currently, the Remix IDE reads the maxPriorityFeePerGas as GWei
+        // This causes Remix to suggest Metamask a transaction with: maxPriorityFeePerGas = 1 wei AND maxFee = 16 wei <- will cause an error maxFee > maxPriorityFeePerGas
         const DEFAULT_REWARD: u64 = 1_000_000_000_u64;
+        let block_count_usize = usize::from_str_radix(&_block_count.to_string(), 16).unwrap_or(1);
 
-        let base_fee_per_gas: Vec<U256> = vec![U256::from(16), U256::from(16), U256::from(16)];
+        let base_fee_per_gas: Vec<U256> = vec![U256::from(16); block_count_usize + 1];
+        let newest_block = match _newest_block {
+            BlockNumber::Number(n) => n.as_u64(),
+            // TODO: Add Genesis block number
+            BlockNumber::Earliest => 1_u64,
+            _ => self.kakarot_client.block_number().await?.as_u64(),
+        };
 
-        let gas_used_ratio: Vec<f64> = vec![];
-        let newest_block = _newest_block.as_number().unwrap_or_default().as_u64();
+        let gas_used_ratio: Vec<f64> = vec![0.9; block_count_usize];
         let oldest_block: U256 = U256::from(newest_block) - _block_count;
 
         let reward: Option<Vec<Vec<U256>>> = match _reward_percentiles {
             Some(reward_percentiles) => {
                 let num_percentiles = reward_percentiles.len();
-                let reward_vec = vec![
-                    vec![U256::from(DEFAULT_REWARD); num_percentiles];
-                    usize::from_str_radix(&_block_count.to_string(), 16)
-                        .unwrap_or(1)
-                ];
+                let reward_vec =
+                    vec![vec![U256::from(DEFAULT_REWARD); num_percentiles]; block_count_usize];
                 Some(reward_vec)
             }
             None => None,
         };
+
         Ok(FeeHistory {
             base_fee_per_gas,
             gas_used_ratio,
