@@ -488,7 +488,7 @@ impl EthApiServer for KakarotEthRpc {
         _newest_block: BlockNumber,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
-        let base_fee_per_gas: Vec<U256> = vec![U256::from(32), U256::from(0), U256::from(0)];
+        let base_fee_per_gas: Vec<U256> = vec![U256::from(16), U256::from(16), U256::from(16)];
 
         let gas_used_ratio: Vec<f64> = vec![];
         let newest_block = _newest_block.as_number().unwrap().as_u64();
@@ -504,7 +504,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn max_priority_fee_per_gas(&self) -> Result<U256> {
-        Ok(U256::from(32))
+        Ok(U256::from(100))
     }
 
     async fn is_mining(&self) -> Result<bool> {
@@ -569,7 +569,7 @@ impl EthApiServer for KakarotEthRpc {
         // TODO: Get nonce from Starknet
         let nonce = FieldElement::from(transaction.nonce());
         // TODO: Get gas price from Starknet
-        let max_fee = FieldElement::from(u64::MAX);
+        let max_fee = FieldElement::from(1_000_000_000_000_u64);
         // TODO: Provide signature
         let signature = vec![];
 
