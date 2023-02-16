@@ -1,3 +1,6 @@
 {
-  "cSpell.words": ["lightclient"]
+  "cSpell.words": ["lightclient"],
+  "files.exclude": {
+    "**/.git": false
+  }
 }

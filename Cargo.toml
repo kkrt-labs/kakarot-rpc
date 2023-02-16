@@ -1,29 +1,11 @@
-[package]
-name = "kakarot-rpc"
-version = "0.1.0"
-edition = "2021"
-
 [workspace]
 members = ["rpc", "starknet"]
 
 [workspace.package]
 edition = "2021"
 authors = ["Abdelhamid Bakhta <@abdelhamidbakhta>"]
-description = "A fast, secure and portable light client for StarkNet"
+description = "RPC node for the Kakarot zk EVM"
 homepage = "https://github.com/sayajin-labs/kakarot-rpc"
 repository = "https://github.com/sayajin-labs/kakarot-rpc"
 readme = "./README.md"
 license = "MIT"
-
-[dev-dependencies.cargo-husky]
-version = "1.5.0"
-default-features = false
-features = [
-    "precommit-hook",
-    "run-for-all",
-    "run-cargo-clippy",
-    "run-cargo-fmt",
-]
-
-[dependencies]
-reqwest = "0.11.14"
