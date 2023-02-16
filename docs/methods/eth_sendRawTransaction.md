@@ -22,7 +22,6 @@ Sends a raw transaction (RLP Encoded) to be submitted to the network.
 
 ## Kakarot Logic
 
-This method does not interact with the Kakarot contract directly.
-It calls the Starknet sequencer => Starknet sequencer calls EOA account => EOA account calls validate and then execute.
-
-
+This method does not interact with the Kakarot contract directly. It calls the
+Starknet sequencer => Starknet sequencer calls EOA account => EOA account calls
+validate and then execute.

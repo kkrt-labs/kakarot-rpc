@@ -5,7 +5,7 @@ pub mod eth_rpc;
 use eth_rpc::{EthApiServer, KakarotEthRpc};
 use eyre::Result;
 use jsonrpsee::server::{ServerBuilder, ServerHandle};
-use kakarot_rpc_core::client::StarknetClient;
+use kakarot_rpc_core::client::KakarotClient;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -17,7 +17,7 @@ pub enum RpcError {
 }
 
 pub async fn run_server(
-    starknet_client: Box<dyn StarknetClient>,
+    starknet_client: Box<dyn KakarotClient>,
 ) -> Result<(SocketAddr, ServerHandle), RpcError> {
     let server = ServerBuilder::default()
         .build("127.0.0.1:3030".parse::<SocketAddr>()?)
@@ -33,7 +33,7 @@ pub async fn run_server(
 
 pub mod test_utils {
     use jsonrpsee::server::ServerHandle;
-    use kakarot_rpc_core::{client::StarknetClientImpl, utils::wiremock_utils::setup_wiremock};
+    use kakarot_rpc_core::{client::KakarotClientImpl, utils::wiremock_utils::setup_wiremock};
 
     use crate::run_server;
 
@@ -65,7 +65,7 @@ pub mod test_utils {
     pub async fn setup_rpc_server() -> (String, ServerHandle) {
         let starknet_rpc = setup_wiremock().await;
 
-        let starknet_lightclient = StarknetClientImpl::new(&starknet_rpc).unwrap();
+        let starknet_lightclient = KakarotClientImpl::new(&starknet_rpc).unwrap();
         let (_rpc_server_uri, server_handle) =
             run_server(Box::new(starknet_lightclient)).await.unwrap();
         (starknet_rpc, server_handle)

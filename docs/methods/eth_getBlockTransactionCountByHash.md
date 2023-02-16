@@ -6,7 +6,7 @@
 - prefix: eth
 - state: ⚠️
 - [specification](https://github.com/ethereum/execution-apis/blob/main/src/eth/block.yaml#L33)
-- [issue]()
+- [issue](https://github.com/sayajin-labs/kakarot-rpc/issues/61)
 
 ## Specification Description
 
@@ -14,7 +14,7 @@ Returns the number of transactions in a block matching the given block hash.
 
 ### Parameters
 
-- [BlockNumberOrTagOrHash](https://github.com/ethereum/execution-apis/blob/main/src/schemas/block.yaml#L117) - Block (required)
+- [BlockNumberOrTagOrHash](https://github.com/ethereum/execution-apis/blob/main/src/schemas/block.yaml#L117)
 
 ### Returns
 
@@ -22,8 +22,9 @@ Returns the number of transactions in a block matching the given block hash.
 
 ## Kakarot Logic
 
-This method does not interact with the Kakarot contract or any other Starknet contract.
-It calls a Starknet JSON-RPC client and returns the number of transactions in a block matching the given block number.
+This method does not interact with the Kakarot contract or any other Starknet
+contract. It calls a Starknet JSON-RPC client and returns the number of
+transactions in a block matching the given block number.
 
 ### Starknet methods
 

@@ -83,7 +83,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
     // Fixed fields in the Ethereum block as Starknet does not have these fields
 
     //TODO: Fetch real data
-    let gas_limit = U256::from(u64::MAX);
+    let gas_limit = U256::from(1_000_000_000_000_u64);
 
     //TODO: Fetch real data
     let gas_used = U256::ZERO; // Hard Code (Sum of actual_fee's)
@@ -105,7 +105,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
     let total_difficulty: U256 = U256::ZERO;
 
     //TODO: Fetch real data
-    let base_fee_per_gas = U256::from(1000000000);
+    let base_fee_per_gas = U256::from(10000);
 
     //TODO: Fetch real data
     let mix_hash = H256::zero();
@@ -158,7 +158,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                         total_difficulty,
                         uncles: vec![],
                         transactions,
-                        base_fee_per_gas: None,
+                        base_fee_per_gas: Some(U256::from(16)),
                         size,
                     };
                     Rich::<Block> {
@@ -211,7 +211,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                         total_difficulty,
                         uncles: vec![],
                         transactions,
-                        base_fee_per_gas: None,
+                        base_fee_per_gas: Some(U256::from(16)),
                         size,
                     };
                     Rich::<Block> {
@@ -268,7 +268,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     total_difficulty,
                     uncles: vec![],
                     transactions,
-                    base_fee_per_gas: None,
+                    base_fee_per_gas: Some(U256::from(16)),
                     size,
                 };
                 Rich::<Block> {
@@ -337,7 +337,7 @@ pub fn starknet_block_to_eth_block(block: MaybePendingStarknetBlock) -> RichBloc
                     total_difficulty,
                     uncles: vec![],
                     transactions,
-                    base_fee_per_gas: None,
+                    base_fee_per_gas: Some(U256::from(16)),
                     size,
                 };
                 Rich::<Block> {
