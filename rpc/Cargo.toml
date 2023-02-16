@@ -36,6 +36,12 @@ dotenv = "0.15.0"
 mockall = "0.11.3"
 anyhow = "1.0.68"
 
+[dev-dependencies.cargo-husky]
+version = "1.5.0"
+default-features = false
+features = ["precommit-hook", "run-for-all", "run-cargo-clippy", "run-cargo-fmt"]
+
+
 [[bin]]
 name = "kakarot-rpc"
 path = "src/main.rs"
