@@ -1,5 +1,5 @@
 [workspace]
-members = ["rpc", "starknet"]
+members = ["rpc"]
 
 [workspace.package]
 edition = "2021"
