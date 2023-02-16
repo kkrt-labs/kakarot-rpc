@@ -22,7 +22,9 @@ Returns the chain ID of the current network.
 
 ## Kakarot Logic
 
-This method does not interact with the Kakarot contract or any other Starknet contract. The method returns a constant variable name `CHAIN_ID` that is equal to the ASCII representation of KKRT.
+This method does not interact with the Kakarot contract or any other Starknet
+contract. The method returns a constant variable name `CHAIN_ID` that is equal
+to the ASCII representation of KKRT.
 
 ### Kakarot methods
 
