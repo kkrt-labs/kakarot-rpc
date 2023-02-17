@@ -6,7 +6,7 @@
 - prefix: eth
 - state: ⚠️
 - [specification](https://github.com/ethereum/execution-apis/blob/main/src/eth/block.yaml#L43)
-- [issue]()
+- [issue](https://github.com/sayajin-labs/kakarot-rpc/issues/92)
 
 ## Specification Description
 
@@ -14,7 +14,7 @@ Returns the number of transactions in a block matching the given block number.
 
 ### Parameters
 
-- [BlockNumberOrTag](https://github.com/ethereum/execution-apis/blob/main/src/schemas/block.yaml#L102) - Block (required)
+- [BlockNumberOrTag](https://github.com/ethereum/execution-apis/blob/main/src/schemas/block.yaml#L102)
 
 ### Returns
 
@@ -22,8 +22,9 @@ Returns the number of transactions in a block matching the given block number.
 
 ## Kakarot Logic
 
-This method does not interact with the Kakarot contract or any other Starknet contract.
-It calls a Starknet JSON-RPC client and returns the number of transactions in a block matching the given block number.
+This method does not interact with the Kakarot contract or any other Starknet
+contract. It calls a Starknet JSON-RPC client and returns the number of
+transactions in a block matching the given block number.
 
 ### Kakarot methods
 
@@ -47,10 +48,9 @@ Example call:
 Example responses:
 
 ```json
-
 {
-  "jsonrpc":"2.0",
-  "result":"0x00000000000000000000000000000000000000000000000000000000000000df",
+  "jsonrpc": "2.0",
+  "result": "0x00000000000000000000000000000000000000000000000000000000000000df",
   "id": 0
 }
 ```

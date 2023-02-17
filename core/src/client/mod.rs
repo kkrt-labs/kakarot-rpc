@@ -42,7 +42,10 @@ use constants::{selectors::BYTECODE, KAKAROT_MAIN_CONTRACT_ADDRESS};
 pub mod types;
 use types::RichBlock;
 
-use self::constants::selectors::{COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS, GET_EVM_ADDRESS};
+use self::constants::{
+    selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS, GET_EVM_ADDRESS},
+    STARKNET_NATIVE_TOKEN,
+};
 
 #[derive(Error, Debug)]
 pub enum KakarotClientError {
@@ -54,8 +57,8 @@ pub enum KakarotClientError {
 
 #[automock]
 #[async_trait]
-pub trait StarknetClient: Send + Sync {
-    async fn block_number(&self) -> Result<U256, KakarotClientError>;
+pub trait KakarotClient: Send + Sync {
+    async fn block_number(&self) -> Result<U64, KakarotClientError>;
 
     async fn get_eth_block_from_starknet_block(
         &self,
@@ -92,7 +95,7 @@ pub trait StarknetClient: Send + Sync {
     async fn compute_starknet_address(
         &self,
         ethereum_address: Address,
-        starknet_block_id: StarknetBlockId,
+        starknet_block_id: &StarknetBlockId,
     ) -> Result<FieldElement, KakarotClientError>;
     async fn submit_starknet_transaction(
         &self,
@@ -112,8 +115,14 @@ pub trait StarknetClient: Send + Sync {
         starknet_address: &FieldElement,
         starknet_block_id: &StarknetBlockId,
     ) -> Result<Address, KakarotClientError>;
+
+    async fn balance(
+        &self,
+        ethereum_address: Address,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<U256, KakarotClientError>;
 }
-pub struct StarknetClientImpl {
+pub struct KakarotClientImpl {
     client: JsonRpcClient<HttpTransport>,
     kakarot_main_contract: FieldElement,
 }
@@ -129,7 +138,7 @@ impl From<KakarotClientError> for jsonrpsee::core::Error {
     }
 }
 
-impl StarknetClientImpl {
+impl KakarotClientImpl {
     pub fn new(starknet_rpc: &str) -> Result<Self> {
         let url = Url::parse(starknet_rpc)?;
         let kakarot_main_contract = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
@@ -164,7 +173,7 @@ impl StarknetClientImpl {
 }
 
 #[async_trait]
-impl StarknetClient for StarknetClientImpl {
+impl KakarotClient for KakarotClientImpl {
     /// Get the number of transactions in a block given a block id.
     /// The number of transactions in a block.
     ///
@@ -178,9 +187,9 @@ impl StarknetClient for StarknetClientImpl {
     ///
     /// `Ok(ContractClass)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
-    async fn block_number(&self) -> Result<U256, KakarotClientError> {
+    async fn block_number(&self) -> Result<U64, KakarotClientError> {
         let block_number = self.client.block_number().await?;
-        Ok(U256::from(block_number))
+        Ok(U64::from(block_number))
     }
 
     /// Get the block given a block id.
@@ -481,7 +490,7 @@ impl StarknetClient for StarknetClientImpl {
     async fn compute_starknet_address(
         &self,
         ethereum_address: Address,
-        starknet_block_id: StarknetBlockId,
+        starknet_block_id: &StarknetBlockId,
     ) -> Result<FieldElement, KakarotClientError> {
         let address_hex = hex::encode(ethereum_address);
 
@@ -498,7 +507,7 @@ impl StarknetClient for StarknetClientImpl {
             calldata: vec![ethereum_address_felt],
         };
 
-        let starknet_contract_address = self.client.call(request, &starknet_block_id).await?;
+        let starknet_contract_address = self.client.call(request, starknet_block_id).await?;
 
         let result = starknet_contract_address.first().ok_or_else(|| {
             KakarotClientError::OtherError(anyhow::anyhow!(
@@ -733,5 +742,47 @@ impl StarknetClient for StarknetClientImpl {
         let evm_address_sliced = &tmp_slice;
 
         Ok(Address::from(evm_address_sliced))
+    }
+
+    /// Get the balance in Starknet's native token of a specific EVM address.
+    /// Reproduces the principle of Kakarot native coin by using Starknet's native ERC20 token (gas-utility token)
+    /// ### Arguments
+    /// * `ethereum_address` - The EVM address to get the balance of
+    /// * `block_id` - The block to get the balance at
+    ///
+    /// ### Returns
+    /// * `Result<U256, KakarotClientError>` - The balance of the EVM address in Starknet's native token
+    ///
+    ///
+    async fn balance(
+        &self,
+        ethereum_address: Address,
+        block_id: StarknetBlockId,
+    ) -> Result<U256, KakarotClientError> {
+        let starknet_address = self
+            .compute_starknet_address(ethereum_address, &block_id)
+            .await?;
+
+        let request = FunctionCall {
+            // This FieldElement::from_dec_str cannot fail as the value is a constant
+            contract_address: FieldElement::from_dec_str(STARKNET_NATIVE_TOKEN).unwrap(),
+            entry_point_selector: BALANCE_OF,
+            calldata: vec![starknet_address],
+        };
+
+        let balance_felt = self.client.call(request, &block_id).await?;
+
+        let balance = balance_felt
+            .first()
+            .ok_or_else(|| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot Core: Failed to get native token balance"
+                ))
+            })?
+            .to_bytes_be();
+
+        let balance = U256::from_be_bytes(balance);
+
+        Ok(balance)
     }
 }
