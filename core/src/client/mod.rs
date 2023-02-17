@@ -4,7 +4,7 @@ use std::convert::From;
 
 use reth_primitives::{
     rpc::{BlockId, BlockNumber, Bytes as RpcBytes, Log, H160 as RpcH160, H256},
-    Address, Bytes, H160, H256 as PrimitiveH256, U256, U64,
+    Address, Bytes, H256 as PrimitiveH256, U256, U64,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus, TransactionReceipt};
 use starknet::{
@@ -471,7 +471,7 @@ impl KakarotClient for KakarotClientImpl {
         let tx_hash = match &starknet_tx {
             StarknetTransaction::Invoke(InvokeTransaction::V0(tx)) => tx.transaction_hash,
             StarknetTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.transaction_hash,
-            StarknetTransaction::L1Handler(_) => FieldElement::from_dec_str("0").unwrap(),
+            StarknetTransaction::L1Handler(_) => FieldElement::ZERO,
             StarknetTransaction::Declare(tx) => tx.transaction_hash,
             StarknetTransaction::Deploy(tx) => tx.transaction_hash,
             StarknetTransaction::DeployAccount(tx) => tx.transaction_hash,
@@ -878,7 +878,7 @@ impl KakarotClient for KakarotClientImpl {
             }
             // Repeat the process for each variant of StarknetTransaction
             StarknetTransaction::L1Handler(_) => {
-                class_hash = FieldElement::from_dec_str("0").unwrap();
+                class_hash = FieldElement::ZERO;
             }
             StarknetTransaction::Declare(declare_tx) => {
                 // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
@@ -1007,8 +1007,8 @@ impl KakarotClient for KakarotClientImpl {
                         let parent_hash = PrimitiveH256::from_slice(
                             &pending_block_with_tx_hashes.parent_hash.to_bytes_be(),
                         );
-                        let sequencer = H160::from_slice(
-                            &pending_block_with_tx_hashes.sequencer_address.to_bytes_be()[12..32],
+                        let sequencer = starknet_address_to_ethereum_address(
+                            &pending_block_with_tx_hashes.sequencer_address,
                         );
                         let timestamp = U256::from_be_bytes(
                             pending_block_with_tx_hashes.timestamp.to_be_bytes(),
@@ -1068,9 +1068,11 @@ impl KakarotClient for KakarotClientImpl {
                         let parent_hash = PrimitiveH256::from_slice(
                             &block_with_tx_hashes.parent_hash.to_bytes_be(),
                         );
-                        let sequencer = H160::from_slice(
-                            &block_with_tx_hashes.sequencer_address.to_bytes_be()[12..32],
+
+                        let sequencer = starknet_address_to_ethereum_address(
+                            &block_with_tx_hashes.sequencer_address,
                         );
+
                         let state_root =
                             PrimitiveH256::from_slice(&block_with_tx_hashes.new_root.to_bytes_be());
                         let number = U256::from(block_with_tx_hashes.block_number);
@@ -1127,9 +1129,11 @@ impl KakarotClient for KakarotClientImpl {
                         let parent_hash = PrimitiveH256::from_slice(
                             &pending_block_with_txs.parent_hash.to_bytes_be(),
                         );
-                        let sequencer = H160::from_slice(
-                            &pending_block_with_txs.sequencer_address.to_bytes_be()[12..32],
+
+                        let sequencer = starknet_address_to_ethereum_address(
+                            &pending_block_with_txs.sequencer_address,
                         );
+
                         let timestamp =
                             U256::from_be_bytes(pending_block_with_txs.timestamp.to_be_bytes());
 
@@ -1184,9 +1188,10 @@ impl KakarotClient for KakarotClientImpl {
                             PrimitiveH256::from_slice(&block_with_txs.block_hash.to_bytes_be());
                         let parent_hash =
                             PrimitiveH256::from_slice(&block_with_txs.parent_hash.to_bytes_be());
-                        let sequencer = H160::from_slice(
-                            &block_with_txs.sequencer_address.to_bytes_be()[12..32],
-                        );
+
+                        let sequencer =
+                            starknet_address_to_ethereum_address(&block_with_txs.sequencer_address);
+
                         let state_root = PrimitiveH256::zero();
                         let transactions_root = PrimitiveH256::zero();
                         let receipts_root = PrimitiveH256::zero();
