@@ -132,7 +132,7 @@ pub trait StarknetClient: Send + Sync {
         &self,
         block: MaybePendingStarknetBlock,
     ) -> Result<RichBlock, KakarotClientError>;
-    async fn filter_transactions(
+    async fn filter_starknet_into_eth_txss(
         &self,
         initial_transactions: Vec<StarknetTransaction>,
         blockhash_opt: Option<PrimitiveH256>,
@@ -463,7 +463,7 @@ impl StarknetClient for StarknetClientImpl {
         let tx_hash = match &starknet_tx {
             StarknetTransaction::Invoke(InvokeTransaction::V0(tx)) => tx.transaction_hash,
             StarknetTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.transaction_hash,
-            StarknetTransaction::L1Handler(tx) => tx.transaction_hash,
+            StarknetTransaction::L1Handler(_) => FieldElement::from_dec_str("0").unwrap(),
             StarknetTransaction::Declare(tx) => tx.transaction_hash,
             StarknetTransaction::Deploy(tx) => tx.transaction_hash,
             StarknetTransaction::DeployAccount(tx) => tx.transaction_hash,
@@ -474,10 +474,9 @@ impl StarknetClient for StarknetClientImpl {
                 Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
                 Some(U256::from(tr.block_number)),
             ),
-            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::L1Handler(tr)) => (
-                Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
-                Some(U256::from(tr.block_number)),
-            ),
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::L1Handler(_)) => {
+                (None, None)
+            }
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Declare(tr)) => (
                 Some(PrimitiveH256::from_slice(&(tr.block_hash).to_bytes_be())),
                 Some(U256::from(tr.block_number)),
@@ -865,43 +864,8 @@ impl StarknetClient for StarknetClientImpl {
                 }
             }
             // Repeat the process for each variant of StarknetTransaction
-            StarknetTransaction::L1Handler(l1_handler_tx) => {
-                // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-                ether_tx.hash =
-                    PrimitiveH256::from_slice(&l1_handler_tx.transaction_hash.to_bytes_be());
-                class_hash = self
-                    .client
-                    .get_class_hash_at(
-                        &StarknetBlockId::Tag(BlockTag::Latest),
-                        l1_handler_tx.contract_address,
-                    )
-                    .await?;
-
-                ether_tx.nonce = U256::from(l1_handler_tx.nonce);
-                ether_tx.from = self
-                    .get_evm_address(
-                        &l1_handler_tx.contract_address,
-                        &StarknetBlockId::Tag(BlockTag::Latest),
-                    )
-                    .await?;
-                // Define gas_price data
-                ether_tx.gas_price = None;
-                // Extracting the data
-                ether_tx.input = vec_felt_to_bytes(l1_handler_tx.calldata);
-                // Extracting the to address
-                ether_tx.to = None;
-                // Extracting the value
-                ether_tx.value = U256::from(0);
-                // TODO: Get from estimate gas
-                ether_tx.gas = U256::from(0);
-                // Extracting the chain_id
-                ether_tx.chain_id = Some(CHAIN_ID.into());
-                // Extracting the creates
-                ether_tx.creates = None;
-                // Extracting the public_key
-                ether_tx.public_key = None;
-                ether_tx.block_hash = block_hash;
-                ether_tx.block_number = block_number;
+            StarknetTransaction::L1Handler(_) => {
+                class_hash = FieldElement::from_dec_str("0").unwrap();
             }
             StarknetTransaction::Declare(declare_tx) => {
                 // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
@@ -1165,7 +1129,11 @@ impl StarknetClient for StarknetClientImpl {
                             U256::from_be_bytes(pending_block_with_txs.timestamp.to_be_bytes());
 
                         let transactions = self
-                            .filter_transactions(pending_block_with_txs.transactions, None, None)
+                            .filter_starknet_into_eth_txss(
+                                pending_block_with_txs.transactions,
+                                None,
+                                None,
+                            )
                             .await?;
                         let header = Header {
                             // PendingBlockWithTxs doesn't have a block hash
@@ -1227,7 +1195,7 @@ impl StarknetClient for StarknetClientImpl {
                         let blocknum_opt = Some(U256::from(block_with_txs.block_number));
 
                         let transactions = self
-                            .filter_transactions(
+                            .filter_starknet_into_eth_txss(
                                 block_with_txs.transactions,
                                 blockhash_opt,
                                 blocknum_opt,
@@ -1274,7 +1242,7 @@ impl StarknetClient for StarknetClientImpl {
             }
         }
     }
-    async fn filter_transactions(
+    async fn filter_starknet_into_eth_txss(
         &self,
         initial_transactions: Vec<StarknetTransaction>,
         blockhash_opt: Option<PrimitiveH256>,
