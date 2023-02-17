@@ -14,24 +14,27 @@ Returns information about a block by number.
 
 ### Parameters
 
-- [BlockNumberOrTag](https://github.com/ethereum/execution-apis/blob/main/src/schemas/block.yaml#L102) - Block (required)
+- [BlockNumberOrTag](https://github.com/ethereum/execution-apis/blob/main/src/schemas/block.yaml#L102)
 - boolean - Hydrated transactions (required)
 
 ### Returns
 
-- [Block](https://github.com/ethereum/execution-apis/blob/main/src/schemas/block.yaml#L1) - Block information
+- [Block](https://github.com/ethereum/execution-apis/blob/main/src/schemas/block.yaml#L1)
 
 ## Kakarot Logic
 
-This method does not interact with the Kakarot contract or any other Starknet contract.
-It calls a Starknet JSON-RPC client and fetches information about a block by block number.
+This method does not interact with the Kakarot contract or any other Starknet
+contract. It calls a Starknet JSON-RPC client and fetches information about a
+block by block number.
 
 ### Kakarot methods
 
 ### Starknet methods
 
-- [starknet_getBlockWithTxHashes](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json#L11) if Hydrated transactions == false
-- [starknet_getBlockWithTxs](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json#L44) if Hydrated transactions == true
+- [starknet_getBlockWithTxHashes](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json#L11)
+  if Hydrated transactions == false
+- [starknet_getBlockWithTxs](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json#L44)
+  if Hydrated transactions == true
 
 ### Example
 
