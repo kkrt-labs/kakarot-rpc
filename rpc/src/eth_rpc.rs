@@ -470,7 +470,7 @@ impl EthApiServer for KakarotEthRpc {
         let block_id = _block_number.unwrap_or(BlockId::Number(BlockNumber::Latest));
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
         let result = self
-            .starknet_client
+            .kakarot_client
             .call_view(to, PrimitiveBytes::from(calldata.0), starknet_block_id)
             .await?;
 

@@ -3,7 +3,6 @@ pub const KAKAROT_MAIN_CONTRACT_ADDRESS: &str =
 pub const KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH: &str =
     "0x66c10f53c8a56619225c3b46ed020f1b46d1cfa20e2e48be0141ef01ca8b5e7";
 
-
 pub const CHAIN_ID: u64 = 1263227476;
 
 pub const STARKNET_NATIVE_TOKEN: &str =

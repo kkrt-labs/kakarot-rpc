@@ -52,9 +52,8 @@ pub mod constants;
 use constants::selectors::BYTECODE;
 pub mod types;
 
-
 use self::constants::{
-    selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS, GET_EVM_ADDRESS},
+    selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS},
     STARKNET_NATIVE_TOKEN,
 };
 
@@ -1264,7 +1263,7 @@ impl KakarotClient for KakarotClientImpl {
             }
         }
         Ok(BlockTransactions::Full(transactions_vec))
-}
+    }
     /// Get the balance in Starknet's native token of a specific EVM address.
     /// Reproduces the principle of Kakarot native coin by using Starknet's native ERC20 token (gas-utility token)
     /// ### Arguments
