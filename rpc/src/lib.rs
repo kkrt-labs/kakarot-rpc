@@ -20,7 +20,7 @@ pub async fn run_server(
     starknet_client: Box<dyn KakarotClient>,
 ) -> Result<(SocketAddr, ServerHandle), RpcError> {
     let server = ServerBuilder::default()
-        .build("127.0.0.1:3030".parse::<SocketAddr>()?)
+        .build("0.0.0.0:3030".parse::<SocketAddr>()?)
         .await?;
 
     let addr = server.local_addr()?;
