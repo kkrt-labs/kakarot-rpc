@@ -13,7 +13,7 @@ use starknet::{
 };
 use std::str::FromStr;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct StarknetBlockTest {
     block_hash: String,
     block_number: u64,
@@ -24,6 +24,16 @@ struct StarknetBlockTest {
     timestamp: u64,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+struct BlockTransactionObj {
+    transactions: Vec<StarknetTransaction>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct BlockTransactionHashesObj {
+    transactions: Vec<FieldElement>,
+}
+
 pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hydrated: bool) {
     let starknet_data = serde_json::from_str::<StarknetBlockTest>(&starknet_res).unwrap();
 
@@ -32,15 +42,12 @@ pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hy
     assert_eq!(block.size, None);
     assert_eq!(block.base_fee_per_gas, Some(U256::from(16)));
 
+    let starknet_block_hash = FieldElement::from_str(starknet_data.block_hash.as_str()).unwrap();
+    let res_transactions = block.transactions;
     if hydrated {
-        let starknet_block_hash =
-            FieldElement::from_str(starknet_data.block_hash.as_str()).unwrap();
+        let starknet_txs = serde_json::from_str::<BlockTransactionObj>(&starknet_txs).unwrap();
 
-        let starknet_txs: Vec<StarknetTransaction> =
-            serde_json::from_str::<Vec<StarknetTransaction>>(&starknet_txs).unwrap();
-        let transactions = block.transactions;
-
-        match transactions {
+        match res_transactions {
             BlockTransactions::Full(transactions) => {
                 if let Some(first_tx) = transactions.first() {
                     assert_eq!(
@@ -62,8 +69,13 @@ pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hy
                     assert_eq!(first_tx.value, U256::from(100));
                     assert_eq!(first_tx.gas, U256::from(100));
                     assert_eq!(first_tx.gas_price, None);
+                    assert_eq!(first_tx.public_key, None);
+                    assert_eq!(first_tx.transaction_index, None);
+                    assert_eq!(first_tx.max_fee_per_gas, None);
+                    assert_eq!(first_tx.max_priority_fee_per_gas, None);
+                    assert_eq!(first_tx.raw, Bytes::default());
 
-                    if let Some(first_starknet_tx) = starknet_txs.first() {
+                    if let Some(first_starknet_tx) = starknet_txs.transactions.first() {
                         match first_starknet_tx {
                             StarknetTransaction::Invoke(invoke_tx) => {
                                 match invoke_tx {
@@ -71,6 +83,13 @@ pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hy
                                         assert_eq!(
                                             first_tx.hash,
                                             H256::from_slice(&v0.transaction_hash.to_bytes_be())
+                                        );
+                                        assert_eq!(first_tx.nonce, felt_to_u256(v0.nonce));
+                                        assert_eq!(
+                                            first_tx.from,
+                                            starknet_address_to_ethereum_address(
+                                                &v0.contract_address
+                                            )
                                         );
                                         assert_eq!(
                                             first_tx.r,
@@ -80,18 +99,12 @@ pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hy
                                             first_tx.s,
                                             felt_option_to_u256(Some(&v0.signature[1])).unwrap()
                                         );
-
-                                        // nonce vaut None
-                                        // from vaut None
                                     }
                                     InvokeTransaction::V1(v1) => {
                                         assert_eq!(
                                             first_tx.hash,
                                             H256::from_slice(&v1.transaction_hash.to_bytes_be())
                                         );
-
-                                        // let starknet_nonce =
-                                        // FieldElement::from_hex_be(&"0x34b".to_string()).unwrap();
                                         assert_eq!(first_tx.nonce, felt_to_u256(v1.nonce));
                                         assert_eq!(
                                             first_tx.from,
@@ -107,41 +120,75 @@ pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hy
                                             first_tx.s,
                                             felt_option_to_u256(Some(&v1.signature[1])).unwrap()
                                         );
+                                        // TODO test first_tx.input
                                     }
                                 }
                             }
-                            _ => {}
+                            StarknetTransaction::Deploy(deploy_tx) => {
+                                assert_eq!(
+                                    first_tx.hash,
+                                    H256::from_slice(&deploy_tx.transaction_hash.to_bytes_be())
+                                );
+                                // pub nonce: U256,
+                                // pub from: Address,
+                                // pub input: Bytes,
+                                // pub v: U256,
+                                // pub r: U256,
+                                // pub s: U256,
+                            }
+                            StarknetTransaction::DeployAccount(deploy_account_tx) => {
+                                assert_eq!(
+                                    first_tx.hash,
+                                    H256::from_slice(
+                                        &deploy_account_tx.transaction_hash.to_bytes_be()
+                                    )
+                                );
+                                assert_eq!(first_tx.nonce, felt_to_u256(deploy_account_tx.nonce));
+                                assert_eq!(
+                                    first_tx.r,
+                                    felt_option_to_u256(Some(&deploy_account_tx.signature[0]))
+                                        .unwrap()
+                                );
+                                assert_eq!(
+                                    first_tx.s,
+                                    felt_option_to_u256(Some(&deploy_account_tx.signature[1]))
+                                        .unwrap()
+                                );
+                                // from
+                            }
+                            StarknetTransaction::L1Handler(_) | StarknetTransaction::Declare(_) => {
+                                // L1Handler & Declare transactions not supported for now in Kakarot
+                                todo!();
+                            }
                         };
                     };
-
-                    // let starknet_signature_r = FieldElement::from_str(
-                    //     "0x5267c0d93467ddb5cfe0ab9db124ed5d57345e92a45111e7a08f8afa7666fae",
-                    // )
-                    // .unwrap();
-                    // let starknet_signature_s = FieldElement::from_str(
-                    //     "0x622c1e743ae1060293085a9702ea1c6a7f642eb47b8eb9fb51ca0d156c5f5dd",
-                    // )
-                    // .unwrap();
-                    // assert_eq!(
-                    //     first_tx.r,
-                    //     felt_option_to_u256(Some(&starknet_signature_r)).unwrap()
-                    // );
-                    // assert_eq!(
-                    //     first_tx.s,
-                    //     felt_option_to_u256(Some(&starknet_signature_s)).unwrap()
-                    // );
-
-                    // TODO test first_tx.input
                 }
             }
-            _ => {}
+            BlockTransactions::Hashes(_) => {
+                panic!("BlockTransactions::Hashes should not be returned")
+            }
         }
     } else {
-        assert_eq!(block.transactions, BlockTransactions::Hashes(vec![]));
+        let starknet_tx_hashes =
+            serde_json::from_str::<BlockTransactionHashesObj>(&starknet_txs).unwrap();
+
+        match res_transactions {
+            BlockTransactions::Hashes(transactions) => {
+                for i in 0..starknet_tx_hashes.transactions.len() {
+                    assert_eq!(
+                        transactions[i],
+                        H256::from_slice(&starknet_tx_hashes.transactions[i].to_bytes_be())
+                    );
+                }
+            }
+            BlockTransactions::Full(_) => {
+                panic!("BlockTransactions::Full should not be returned")
+            }
+        }
     }
 }
 
-pub fn assert_block_header(block: Block, starknet_res: String) {
+pub fn assert_block_header(block: Block, starknet_res: String, hydrated: bool) {
     let header = block.header;
     let starknet_data = serde_json::from_str::<StarknetBlockTest>(&starknet_res).unwrap();
 
@@ -150,44 +197,47 @@ pub fn assert_block_header(block: Block, starknet_res: String) {
         header.hash,
         Some(H256::from_slice(&starknet_block_hash.to_bytes_be()))
     );
-    assert_eq!(header.number, Some(U256::from(19612)));
+    assert_eq!(header.number, Some(U256::from(starknet_data.block_number)));
 
-    let starknet_parent_hash =
-        FieldElement::from_str("0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1")
-            .unwrap();
+    let starknet_parent_hash = FieldElement::from_str(starknet_data.parent_hash.as_str()).unwrap();
     let parent_hash = H256::from_slice(&starknet_parent_hash.to_bytes_be());
     assert_eq!(header.parent_hash, parent_hash);
     assert_eq!(header.uncles_hash, parent_hash);
 
     let starknet_sequencer =
-        FieldElement::from_str("0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9")
-            .unwrap();
+        FieldElement::from_str(starknet_data.sequencer_address.as_str()).unwrap();
     let sequencer = H160::from_slice(&starknet_sequencer.to_bytes_be()[12..32]);
     assert_eq!(header.author, sequencer);
     assert_eq!(header.miner, sequencer);
 
-    let starknet_new_root =
-        FieldElement::from_str("0x67cde84ecff30c4ca55cb46df37940df87a94cc416cb893eaa9fb4fb67ec513")
-            .unwrap();
+    let starknet_new_root = FieldElement::from_str(starknet_data.new_root.as_str()).unwrap();
     let state_root = H256::from_slice(&starknet_new_root.to_bytes_be());
     assert_eq!(header.state_root, state_root);
 
-    assert_eq!(
-        header.transactions_root,
-        H256::from_slice(
-            &"0xac91334ba861cb94cba2b1fd63df7e87c15ca73666201abd10b5462255a5c642".as_bytes()[1..33],
-        )
-    );
-    assert_eq!(
-        header.receipts_root,
-        H256::from_slice(
-            &"0xf2c8755adf35e78ffa84999e48aba628e775bb7be3c70209738d736b67a9b549".as_bytes()[1..33],
-        )
-    );
+    assert_eq!(header.timestamp, U256::from(starknet_data.timestamp));
+
+    if hydrated {
+        assert_eq!(
+            header.transactions_root,
+            H256::from_slice(
+                &"0xac91334ba861cb94cba2b1fd63df7e87c15ca73666201abd10b5462255a5c642".as_bytes()
+                    [1..33],
+            )
+        );
+        assert_eq!(
+            header.receipts_root,
+            H256::from_slice(
+                &"0xf2c8755adf35e78ffa84999e48aba628e775bb7be3c70209738d736b67a9b549".as_bytes()
+                    [1..33],
+            )
+        );
+    } else {
+        assert_eq!(header.transactions_root, H256::zero());
+        assert_eq!(header.receipts_root, H256::zero());
+    };
 
     assert_eq!(header.extra_data, Bytes::from(b"0x00"));
     assert_eq!(header.logs_bloom, Bloom::default());
-    assert_eq!(header.timestamp, U256::from(1675461581));
 
     assert_eq!(header.gas_used, U256::ZERO);
     assert_eq!(header.gas_limit, U256::from(1_000_000_000_000_u64));
