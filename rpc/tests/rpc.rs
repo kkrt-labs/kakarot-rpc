@@ -2,20 +2,20 @@ mod testing_helpers;
 
 #[cfg(test)]
 mod tests {
-    use crate::testing_helpers::{assert_block, assert_block_header};
+    use crate::testing_helpers::{assert_block, assert_block_header, assert_transaction};
     use kakarot_rpc::test_utils::setup_rpc_server;
     use kakarot_rpc_core::{
-        client::{
-            constants::CHAIN_ID,
-            types::{Block, Transaction},
-        },
-        helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address},
+        client::types::{Block, Transaction},
+        helpers::starknet_address_to_ethereum_address,
         utils::wiremock_utils::EthJsonRpcResponse,
     };
     use reth_primitives::{H256, U256, U64};
     use reth_rpc_types::TransactionReceipt;
     use serde_json::json;
-    use starknet::core::types::FieldElement;
+    use starknet::{
+        core::types::FieldElement, macros::felt,
+        providers::jsonrpc::models::Transaction as StarknetTransaction,
+    };
     use std::str::FromStr;
 
     #[tokio::test]
@@ -375,76 +375,56 @@ mod tests {
             .unwrap()
             .result;
 
-        assert_eq!(
-            transaction.hash,
-            H256::from(
-                &FieldElement::from_str(
-                    "0x7c5df940744056d337c3de6e8f4500db4b9bfc821eb534b891555e90c39c048"
-                )
-                .unwrap()
-                .to_bytes_be()
-            )
+        let starknet_tx = json!({
+            "calldata":[
+                "0x2",
+                "0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+                "0x219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c",
+                "0x0",
+                "0x3",
+                "0x41fd22b238fa21cfcf5dd45a8548974d8263b3a531a60388411c5e230f97023",
+                "0x3276861cf5e05d6daf8f352cabb47df623eb10c383ab742fcc7abea94d5c5cc",
+                "0x3",
+                "0x9",
+                "0xc",
+                "0x41fd22b238fa21cfcf5dd45a8548974d8263b3a531a60388411c5e230f97023",
+                "0x47d3079",
+                "0x0",
+                "0x47d3079",
+                "0x0",
+                "0xaeda7450a74d13",
+                "0x0",
+                "0x2",
+                "0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21",
+                "0x63e78743"
+             ],
+             "max_fee":"0x28551b4c2e91c",
+             "nonce":"0x13",
+             "sender_address":"0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21",
+             "signature":[
+                "0x7d82e8c230ee321acefb67eaccfc55b7c90bf66c9af3b6975405f221587b974",
+                "0x5949c38b6a6f570ea1fdc840f93f875d46fe75619982ac300084ea0d27c4b14"
+             ],
+             "transaction_hash":"0x7c5df940744056d337c3de6e8f4500db4b9bfc821eb534b891555e90c39c048",
+             "type":"INVOKE",
+             "version":"0x1"
+        });
+
+        assert_transaction(
+            transaction.clone(),
+            serde_json::from_str::<StarknetTransaction>(&starknet_tx.to_string()).unwrap(),
         );
-        assert_eq!(
-            transaction.nonce,
-            felt_to_u256(FieldElement::from_str("0x13").unwrap())
-        );
+
         assert_eq!(
             transaction.block_hash,
             Some(H256::from(
-                &FieldElement::from_str(
-                    "0xa641151e9067e3919ca8d59191c473e2ecfb714578708c0cb0f99de000df05"
-                )
-                .unwrap()
-                .to_bytes_be()
+                felt!("0xa641151e9067e3919ca8d59191c473e2ecfb714578708c0cb0f99de000df05")
+                    .to_bytes_be()
             ))
         );
         assert_eq!(transaction.block_number, Some(U256::from(20129)));
-        assert_eq!(
-            transaction.from,
-            starknet_address_to_ethereum_address(
-                &FieldElement::from_str(
-                    "0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21"
-                )
-                .unwrap()
-            )
-        );
-
-        let starknet_signature_r = FieldElement::from_str(
-            "0x7d82e8c230ee321acefb67eaccfc55b7c90bf66c9af3b6975405f221587b974",
-        )
-        .unwrap();
-        let starknet_signature_s = FieldElement::from_str(
-            "0x5949c38b6a6f570ea1fdc840f93f875d46fe75619982ac300084ea0d27c4b14",
-        )
-        .unwrap();
-        assert_eq!(
-            transaction.r,
-            felt_option_to_u256(Some(&starknet_signature_r)).unwrap()
-        );
-        assert_eq!(
-            transaction.s,
-            felt_option_to_u256(Some(&starknet_signature_s)).unwrap()
-        );
-
-        assert_eq!(transaction.creates, None);
-        assert_eq!(transaction.public_key, None);
-        assert_eq!(transaction.chain_id, Some(CHAIN_ID.into()));
-        assert_eq!(transaction.access_list, None);
-        assert_eq!(transaction.transaction_type, None);
-        assert_eq!(transaction.standard_v, U256::from(0));
-
-        // TODO
-        // assert_eq!(transaction.input, None);
-
-        // assert_eq!(transaction.to, None);
-        // assert_eq!(transaction.transaction_index, None);
-        // assert_eq!(transaction.value, U256::from(100));
-        // assert_eq!(transaction.gas_price, None);
-        // assert_eq!(transaction.max_fee_per_gas, None);
-        // assert_eq!(transaction.max_priority_fee_per_gas, None);
-        // assert_eq!(transaction.gas, U256::from(100));
-        // assert_eq!(transaction.raw, None);
 
         server_handle.stop().unwrap();
     }
@@ -467,76 +447,56 @@ mod tests {
             .unwrap()
             .result;
 
-        assert_eq!(
-            transaction.hash,
-            H256::from(
-                &FieldElement::from_str(
-                    "0x7c5df940744056d337c3de6e8f4500db4b9bfc821eb534b891555e90c39c048"
-                )
-                .unwrap()
-                .to_bytes_be()
-            )
+        let starknet_tx = json!({
+            "calldata":[
+                "0x2",
+                "0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+                "0x219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c",
+                "0x0",
+                "0x3",
+                "0x41fd22b238fa21cfcf5dd45a8548974d8263b3a531a60388411c5e230f97023",
+                "0x3276861cf5e05d6daf8f352cabb47df623eb10c383ab742fcc7abea94d5c5cc",
+                "0x3",
+                "0x9",
+                "0xc",
+                "0x41fd22b238fa21cfcf5dd45a8548974d8263b3a531a60388411c5e230f97023",
+                "0x47d3079",
+                "0x0",
+                "0x47d3079",
+                "0x0",
+                "0xaeda7450a74d13",
+                "0x0",
+                "0x2",
+                "0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
+                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                "0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21",
+                "0x63e78743"
+             ],
+             "max_fee":"0x28551b4c2e91c",
+             "nonce":"0x13",
+             "sender_address":"0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21",
+             "signature":[
+                "0x7d82e8c230ee321acefb67eaccfc55b7c90bf66c9af3b6975405f221587b974",
+                "0x5949c38b6a6f570ea1fdc840f93f875d46fe75619982ac300084ea0d27c4b14"
+             ],
+             "transaction_hash":"0x7c5df940744056d337c3de6e8f4500db4b9bfc821eb534b891555e90c39c048",
+             "type":"INVOKE",
+             "version":"0x1"
+        });
+
+        assert_transaction(
+            transaction.clone(),
+            serde_json::from_str::<StarknetTransaction>(&starknet_tx.to_string()).unwrap(),
         );
-        assert_eq!(
-            transaction.nonce,
-            felt_to_u256(FieldElement::from_str("0x13").unwrap())
-        );
+
         assert_eq!(
             transaction.block_hash,
             Some(H256::from(
-                &FieldElement::from_str(
-                    "0xa641151e9067e3919ca8d59191c473e2ecfb714578708c0cb0f99de000df05"
-                )
-                .unwrap()
-                .to_bytes_be()
+                felt!("0xa641151e9067e3919ca8d59191c473e2ecfb714578708c0cb0f99de000df05")
+                    .to_bytes_be()
             ))
         );
         assert_eq!(transaction.block_number, Some(U256::from(20129)));
-        assert_eq!(
-            transaction.from,
-            starknet_address_to_ethereum_address(
-                &FieldElement::from_str(
-                    "0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21"
-                )
-                .unwrap()
-            )
-        );
-
-        let starknet_signature_r = FieldElement::from_str(
-            "0x7d82e8c230ee321acefb67eaccfc55b7c90bf66c9af3b6975405f221587b974",
-        )
-        .unwrap();
-        let starknet_signature_s = FieldElement::from_str(
-            "0x5949c38b6a6f570ea1fdc840f93f875d46fe75619982ac300084ea0d27c4b14",
-        )
-        .unwrap();
-        assert_eq!(
-            transaction.r,
-            felt_option_to_u256(Some(&starknet_signature_r)).unwrap()
-        );
-        assert_eq!(
-            transaction.s,
-            felt_option_to_u256(Some(&starknet_signature_s)).unwrap()
-        );
-
-        assert_eq!(transaction.creates, None);
-        assert_eq!(transaction.public_key, None);
-        assert_eq!(transaction.chain_id, Some(CHAIN_ID.into()));
-        assert_eq!(transaction.access_list, None);
-        assert_eq!(transaction.transaction_type, None);
-        assert_eq!(transaction.standard_v, U256::from(0));
-
-        // TODO
-        // assert_eq!(transaction.input, None);
-
-        // assert_eq!(transaction.to, None);
-        // assert_eq!(transaction.transaction_index, None);
-        // assert_eq!(transaction.value, U256::from(100));
-        // assert_eq!(transaction.gas_price, None);
-        // assert_eq!(transaction.max_fee_per_gas, None);
-        // assert_eq!(transaction.max_priority_fee_per_gas, None);
-        // assert_eq!(transaction.gas, U256::from(100));
-        // assert_eq!(transaction.raw, None);
 
         server_handle.stop().unwrap();
     }
