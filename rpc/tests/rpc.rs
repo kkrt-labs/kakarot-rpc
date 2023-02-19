@@ -30,10 +30,7 @@ mod tests {
             .await
             .unwrap();
         let block_number = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
-        assert_eq!(
-            block_number.result,
-            "0x0000000000000000000000000000000000000000000000000000000000004cb8"
-        );
+        assert_eq!(block_number.result, format!("0x{:x}", 19640));
 
         server_handle.stop().unwrap();
     }
