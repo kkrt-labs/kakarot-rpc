@@ -1,0 +1,29 @@
+{
+   "jsonrpc":"2.0",
+   "id":1,
+   "result":{
+      "actual_fee":"0x28b7e34548b5",
+      "block_hash":"0x4403fe326a1439d7c8d1e3553db4a9a162570eb7815e0352644b37d1a386a0d",
+      "block_number":20084,
+      "events":[
+         {
+            "data":[
+               "0x6046345aeb7059cac2d5cc82ecdce4dd969c7ddeb2763c9fadebf52eeda8dc9",
+               "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
+               "0x28b7e34548b5",
+               "0x0"
+            ],
+            "from_address":"0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            "keys":[
+               "0x99cd8bde557814842a3121e8ddfd433a539b8c9f14bf31ebf108d12e6196e9"
+            ]
+         }
+      ],
+      "messages_sent":[
+         
+      ],
+      "status":"ACCEPTED_ON_L1",
+      "transaction_hash":"0x2375bdb92b131fc291032bcd8378604798baccebb3877a509b378ff23c664f8",
+      "type":"DECLARE"
+   }
+}
