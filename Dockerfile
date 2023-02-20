@@ -25,13 +25,14 @@ COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin
 
 # Expose the port that the RPC server will run on
 EXPOSE 9545
+EXPOSE 3030
 
 # this is required to have exposing ports work from docker, the default is not this.
 ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:9545"
 
 # Seen in https://github.com/eqlabs/pathfinder/blob/4ab915a830953ed6f02af907937b46cb447d9a92/Dockerfile#L120 - 
 # Allows for passing args down to the underlying binary easily
-ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/pathfinder"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
 
 # empty CMD is needed and cannot be --help because otherwise configuring from
 # environment variables only would be impossible and require a workaround.
