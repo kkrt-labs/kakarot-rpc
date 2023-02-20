@@ -49,18 +49,18 @@ pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hy
 
         match res_transactions {
             BlockTransactions::Full(transactions) => {
-                for i in 0..starknet_txs.transactions.len() {
+                for (i, transaction) in transactions.into_iter().enumerate() {
                     assert_eq!(
-                        transactions[i].block_number,
+                        transaction.block_number,
                         Some(U256::from(starknet_data.block_number))
                     );
                     assert_eq!(
-                        transactions[i].block_hash,
+                        transaction.block_hash,
                         Some(H256::from_slice(&starknet_block_hash.to_bytes_be()))
                     );
 
                     assert_transaction(
-                        transactions[i].to_owned(),
+                        transaction.to_owned(),
                         starknet_txs.transactions[i].to_owned(),
                     );
                 }
@@ -75,9 +75,9 @@ pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hy
 
         match res_transactions {
             BlockTransactions::Hashes(transactions) => {
-                for i in 0..starknet_tx_hashes.transactions.len() {
+                for (i, transaction) in transactions.into_iter().enumerate() {
                     assert_eq!(
-                        transactions[i],
+                        transaction,
                         H256::from_slice(&starknet_tx_hashes.transactions[i].to_bytes_be())
                     );
                 }

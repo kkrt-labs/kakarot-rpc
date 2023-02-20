@@ -32,11 +32,9 @@ extern crate hex;
 
 use crate::helpers::{
     create_default_transaction_receipt, decode_execute_at_address_return,
-    ethers_block_id_to_starknet_block_id, ethers_block_id_to_starknet_block_id,
-    felt_option_to_u256, felt_to_u256, hash_to_field_element, hash_to_field_element,
-    starknet_address_to_ethereum_address, starknet_address_to_ethereum_address,
-    starknet_block_to_eth_block, starknet_tx_into_eth_tx, vec_felt_to_bytes, vec_felt_to_bytes,
-    FeltOrFeltArray, FeltOrFeltArray, MaybePendingStarknetBlock, MaybePendingStarknetBlock,
+    ethers_block_id_to_starknet_block_id, felt_option_to_u256, felt_to_u256, hash_to_field_element,
+    starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray,
+    MaybePendingStarknetBlock,
 };
 
 use reth_primitives::{Bloom, H64};
@@ -56,7 +54,7 @@ use reth_rpc_types::Index;
 pub mod constants;
 use constants::selectors::BYTECODE;
 pub mod types;
-use types::{RichBlock, TokenBalance, TokenBalances};
+use types::{TokenBalance, TokenBalances};
 
 use self::constants::{
     selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS},
@@ -1391,46 +1389,5 @@ impl KakarotClient for KakarotClientImpl {
             }
         }
         Ok(BlockTransactions::Full(transactions_vec))
-    }
-    /// Get the balance in Starknet's native token of a specific EVM address.
-    /// Reproduces the principle of Kakarot native coin by using Starknet's native ERC20 token (gas-utility token)
-    /// ### Arguments
-    /// * `ethereum_address` - The EVM address to get the balance of
-    /// * `block_id` - The block to get the balance at
-    ///
-    /// ### Returns
-    /// * `Result<U256, KakarotClientError>` - The balance of the EVM address in Starknet's native token
-    ///
-    ///
-    async fn balance(
-        &self,
-        ethereum_address: Address,
-        block_id: StarknetBlockId,
-    ) -> Result<U256, KakarotClientError> {
-        let starknet_address = self
-            .compute_starknet_address(ethereum_address, &block_id)
-            .await?;
-
-        let request = FunctionCall {
-            // This FieldElement::from_dec_str cannot fail as the value is a constant
-            contract_address: FieldElement::from_dec_str(STARKNET_NATIVE_TOKEN).unwrap(),
-            entry_point_selector: BALANCE_OF,
-            calldata: vec![starknet_address],
-        };
-
-        let balance_felt = self.client.call(request, &block_id).await?;
-
-        let balance = balance_felt
-            .first()
-            .ok_or_else(|| {
-                KakarotClientError::OtherError(anyhow::anyhow!(
-                    "Kakarot Core: Failed to get native token balance"
-                ))
-            })?
-            .to_bytes_be();
-
-        let balance = U256::from_be_bytes(balance);
-
-        Ok(balance)
     }
 }

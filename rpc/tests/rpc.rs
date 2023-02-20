@@ -83,7 +83,7 @@ mod tests {
             starknet_txs.to_string(),
             true,
         );
-        assert_block_header(block.result.clone(), starknet_res.to_string(), true);
+        assert_block_header(block.result, starknet_res.to_string(), true);
 
         server_handle.stop().unwrap();
     }
@@ -134,7 +134,7 @@ mod tests {
             starknet_txs.to_string(),
             false,
         );
-        assert_block_header(block.result.clone(), starknet_res.to_string(), false);
+        assert_block_header(block.result, starknet_res.to_string(), false);
 
         server_handle.stop().unwrap();
     }
@@ -187,7 +187,7 @@ mod tests {
             starknet_txs.to_string(),
             true,
         );
-        assert_block_header(block.result.clone(), starknet_res.to_string(), true);
+        assert_block_header(block.result, starknet_res.to_string(), true);
 
         server_handle.stop().unwrap();
     }
@@ -242,7 +242,7 @@ mod tests {
             starknet_txs.to_string(),
             false,
         );
-        assert_block_header(block.clone(), starknet_res.to_string(), false);
+        assert_block_header(block, starknet_res.to_string(), false);
 
         server_handle.stop().unwrap();
     }
@@ -260,10 +260,7 @@ mod tests {
             .unwrap();
 
         let transaction_count = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
-        assert_eq!(
-            transaction_count.result,
-            String::from(format!("0x{:0>64x}", 172))
-        );
+        assert_eq!(transaction_count.result, format!("0x{:0>64x}", 172));
         server_handle.stop().unwrap();
     }
 
@@ -280,10 +277,7 @@ mod tests {
             .unwrap();
 
         let transaction_count = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
-        assert_eq!(
-            transaction_count.result,
-            String::from(format!("0x{:0>64x}", 172))
-        );
+        assert_eq!(transaction_count.result, format!("0x{:0>64x}", 172));
         server_handle.stop().unwrap();
     }
 
