@@ -15,19 +15,25 @@ RUN cargo build --all --release
 FROM debian:buster-slim
 
 # Install any necessary dependencies
-RUN apt-get update && apt-get install -y libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
-
-# RUN update-ca-certificates
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates tini && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /usr/src/app
 
 # Copy the built binary from the previous container
-COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc .
+COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin
 
 # Expose the port that the RPC server will run on
-EXPOSE 3030
+EXPOSE 9545
 
-# Run the binary
-CMD ["./kakarot-rpc"]
+# this is required to have exposing ports work from docker, the default is not this.
+ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:9545"
+
+# Seen in https://github.com/eqlabs/pathfinder/blob/4ab915a830953ed6f02af907937b46cb447d9a92/Dockerfile#L120 - 
+# Allows for passing args down to the underlying binary easily
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/pathfinder"]
+
+# empty CMD is needed and cannot be --help because otherwise configuring from
+# environment variables only would be impossible and require a workaround.
+CMD []
 
