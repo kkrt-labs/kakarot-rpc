@@ -1037,26 +1037,30 @@ impl KakarotClient for KakarotClientImpl {
     ) -> Result<RichBlock, KakarotClientError> {
         // Fixed fields in the Ethereum block as Starknet does not have these fields
 
-        //InvokeTransactionReceipt -
         //TODO: Fetch real data
-        let gas_limit = U256::from(1_000_000); // Hard Code
-                                               //TODO: Fetch real data
-        let gas_used = U256::from(500_000); // Hard Code (Sum of actual_fee's)
-                                            //TODO: Fetch real data
-        let difficulty = U256::from(1_000_000); // Fixed
-                                                //TODO: Fetch real data
-        let nonce: Option<H64> = Some(H64::from_low_u64_be(0));
+        let gas_limit = U256::from(1_000_000);
+
         //TODO: Fetch real data
-        let size: Option<U256> = Some(U256::from(100));
+        let gas_used = U256::from(500_000);
+
+        //TODO: Fetch real data
+        let difficulty = U256::ZERO;
+
+        //TODO: Fetch real data
+        let nonce: Option<H64> = Some(H64::zero());
+
+        //TODO: Fetch real data
+        let size: Option<U256> = Some(U256::from(1_000_000));
+
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
         let extra_data = Bytes::from(b"0x00");
         //TODO: Fetch real data
-        let total_difficulty: U256 = U256::from(1_000_000);
+        let total_difficulty: U256 = U256::ZERO;
         //TODO: Fetch real data
-        let base_fee_per_gas = U256::from(32);
+        let base_fee_per_gas = U256::from(16);
         //TODO: Fetch real data
-        let mix_hash = PrimitiveH256::from_low_u64_be(0);
+        let mix_hash = PrimitiveH256::zero();
 
         match block {
             MaybePendingStarknetBlock::BlockWithTxHashes(maybe_pending_block) => {
