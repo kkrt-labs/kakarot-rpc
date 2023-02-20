@@ -133,7 +133,7 @@ pub trait KakarotClient: Send + Sync {
         ethereum_address: Address,
         starknet_block_id: StarknetBlockId,
     ) -> Result<U256, KakarotClientError>;
-    async fn get_token_balances(
+    async fn token_balances(
         &self,
         address: Address,
         contract_addresses: Vec<Address>,
@@ -470,20 +470,26 @@ impl KakarotClient for KakarotClientImpl {
         block_id: StarknetBlockId,
         tx_index: Index,
     ) -> Result<EtherTransaction, KakarotClientError> {
-        let usize_index: usize = tx_index.into();
-        let index: u64 = usize_index as u64;
+        let index: u64 = usize::from(tx_index) as u64;
+
         let starknet_tx = self
             .client
             .get_transaction_by_block_id_and_index(&block_id, index)
             .await?;
+
         let tx_hash = match &starknet_tx {
             StarknetTransaction::Invoke(InvokeTransaction::V0(tx)) => tx.transaction_hash,
             StarknetTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.transaction_hash,
-            StarknetTransaction::L1Handler(_) => FieldElement::ZERO,
-            StarknetTransaction::Declare(tx) => tx.transaction_hash,
-            StarknetTransaction::Deploy(tx) => tx.transaction_hash,
-            StarknetTransaction::DeployAccount(tx) => tx.transaction_hash,
+            StarknetTransaction::L1Handler(_)
+            | StarknetTransaction::Declare(_)
+            | StarknetTransaction::Deploy(_)
+            | StarknetTransaction::DeployAccount(_) => {
+                return Err(KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot get_transaction_by_block_id_and_index: L1Handler, Declare, Deploy and DeployAccount transactions unsupported"
+                )))
+            }
         };
+
         let tx_receipt = self.client.get_transaction_receipt(tx_hash).await?;
         let (blockhash_opt, blocknum_opt) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => (
@@ -833,7 +839,7 @@ impl KakarotClient for KakarotClientImpl {
     ///
     /// `Ok(<TokenBalances>)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
-    async fn get_token_balances(
+    async fn token_balances(
         &self,
         address: Address,
         contract_addresses: Vec<Address>,

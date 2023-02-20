@@ -647,7 +647,7 @@ impl EthApiServer for KakarotEthRpc {
 #[rpc(server, client)]
 trait KakarotCustomApi {
     #[method(name = "kakarot_getTokenBalances")]
-    async fn get_token_balances(
+    async fn token_balances(
         &self,
         address: Address,
         contract_addresses: Vec<Address>,
@@ -656,14 +656,14 @@ trait KakarotCustomApi {
 
 #[async_trait]
 impl KakarotCustomApiServer for KakarotEthRpc {
-    async fn get_token_balances(
+    async fn token_balances(
         &self,
         address: Address,
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances> {
         let token_balances = self
             .kakarot_client
-            .get_token_balances(address, contract_addresses)
+            .token_balances(address, contract_addresses)
             .await?;
         Ok(token_balances)
     }
