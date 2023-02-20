@@ -30,7 +30,7 @@ transactions in a block matching the given block number.
 
 ### Starknet methods
 
-- [starknet_getBlockWithTxs](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json#L44)
+- [starknet_getBlockTransactionCount](https://github.com/starkware-libs/starknet-specs/blob/a789ccc3432c57777beceaa53a34a7ae2f25fda0/api/starknet_api_openrpc.json#L373)
 
 ### Example
 
@@ -50,7 +50,7 @@ Example responses:
 ```json
 {
   "jsonrpc": "2.0",
-  "result": "0x00000000000000000000000000000000000000000000000000000000000000df",
+  "result": "0x6",
   "id": 0
 }
 ```
