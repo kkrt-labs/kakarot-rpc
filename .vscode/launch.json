@@ -1,0 +1,102 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'kakarot_rpc'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=kakarot_rpc"],
+        "filter": {
+          "name": "kakarot_rpc",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'kakarot-rpc'",
+      "cargo": {
+        "args": ["build", "--bin=kakarot-rpc", "--package=kakarot_rpc"],
+        "filter": {
+          "name": "kakarot-rpc",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'kakarot-rpc'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=kakarot-rpc",
+          "--package=kakarot_rpc"
+        ],
+        "filter": {
+          "name": "kakarot-rpc",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'rpc'",
+      "cargo": {
+        "args": ["test", "--no-run", "--test=rpc", "--package=kakarot_rpc"],
+        "filter": {
+          "name": "rpc",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'kakarot_rpc_core'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=kakarot_rpc_core"],
+        "filter": {
+          "name": "kakarot_rpc_core",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'client'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--test=client",
+          "--package=kakarot_rpc_core"
+        ],
+        "filter": {
+          "name": "client",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
