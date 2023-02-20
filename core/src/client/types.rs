@@ -87,7 +87,7 @@ pub struct Block {
     /// Size in bytes
     pub size: Option<U256>,
     /// Base Fee for post-EIP1559 blocks.
-    #[serde(skip_serializing_if = "Option::is_none")]
+    // #[serde(skip_serializing_if = "Option::is_none")]
     pub base_fee_per_gas: Option<U256>,
 }
 
@@ -129,10 +129,12 @@ pub struct Header {
     /// Nonce
     pub nonce: Option<H64>,
     /// Size in bytes
+    #[serde(rename = "sizeHeader")]
     pub size: Option<U256>,
 
     pub mix_hash: H256,
 
+    #[serde(rename = "baseFeePerGasHeader")]
     pub base_fee_per_gas: U256,
 }
 
