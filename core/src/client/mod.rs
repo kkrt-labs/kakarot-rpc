@@ -138,7 +138,7 @@ pub trait KakarotClient: Send + Sync {
         address: Address,
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, KakarotClientError>;
-    async fn starknet_tx_into_eth_tx(
+    async fn starknet_tx_into_kakarot_tx(
         &self,
         tx: StarknetTransaction,
         block_hash: Option<PrimitiveH256>,
@@ -517,7 +517,7 @@ impl KakarotClient for KakarotClientImpl {
             MaybePendingTransactionReceipt::PendingReceipt(_) => (None, None),
         };
         let eth_tx = self
-            .starknet_tx_into_eth_tx(starknet_tx, blockhash_opt, blocknum_opt)
+            .starknet_tx_into_kakarot_tx(starknet_tx, blockhash_opt, blocknum_opt)
             .await?;
         Ok(eth_tx)
     }
@@ -734,7 +734,9 @@ impl KakarotClient for KakarotClientImpl {
             _ => return Ok(None),
         };
 
-        let eth_tx = self.starknet_tx_into_eth_tx(starknet_tx, None, None).await;
+        let eth_tx = self
+            .starknet_tx_into_kakarot_tx(starknet_tx, None, None)
+            .await;
         match eth_tx {
             Ok(tx) => {
                 res_receipt.from = tx.from;
@@ -895,7 +897,7 @@ impl KakarotClient for KakarotClientImpl {
         })
     }
 
-    async fn starknet_tx_into_eth_tx(
+    async fn starknet_tx_into_kakarot_tx(
         &self,
         tx: StarknetTransaction,
         block_hash: Option<PrimitiveH256>,
@@ -1002,93 +1004,24 @@ impl KakarotClient for KakarotClientImpl {
                 }
             }
             // Repeat the process for each variant of StarknetTransaction
-            StarknetTransaction::L1Handler(_) => {
-                class_hash = FieldElement::ZERO;
-            }
-            StarknetTransaction::Declare(declare_tx) => {
-                // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-                ether_tx.hash =
-                    PrimitiveH256::from_slice(&declare_tx.transaction_hash.to_bytes_be());
-                class_hash = self
-                    .client
-                    .get_class_hash_at(
-                        &StarknetBlockId::Tag(BlockTag::Latest),
-                        declare_tx.sender_address,
-                    )
-                    .await?;
-                ether_tx.nonce = felt_to_u256(declare_tx.nonce);
-                ether_tx.from = self
-                    .get_evm_address(&declare_tx.sender_address, &starknet_block_id)
-                    .await?;
-                // Define gas_price data
-                ether_tx.gas_price = None;
-                // Extracting the signature
-                ether_tx.r = felt_option_to_u256(declare_tx.signature.get(0))?;
-                ether_tx.s = felt_option_to_u256(declare_tx.signature.get(1))?;
-                ether_tx.v = felt_option_to_u256(declare_tx.signature.get(2))?;
-                // Extracting the to address
-                ether_tx.to = None;
-                // Extracting the value
-                ether_tx.value = U256::from(0);
-                // Extracting the gas
-                ether_tx.gas = U256::from(0);
-                // Extracting the chain_id
-                ether_tx.chain_id = Some(CHAIN_ID.into());
-                // Extracting the standard_v
-                ether_tx.standard_v = U256::from(0);
-                // Extracting the public_key
-                ether_tx.public_key = None;
-                ether_tx.block_hash = block_hash;
-                ether_tx.block_number = block_number;
-            }
-            StarknetTransaction::Deploy(deploy_tx) => {
-                // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-                ether_tx.hash =
-                    PrimitiveH256::from_slice(&deploy_tx.transaction_hash.to_bytes_be());
-                class_hash = deploy_tx.class_hash;
-                // Define gas_price data
-                ether_tx.gas_price = None;
-
-                ether_tx.creates = None;
-                // Extracting the public_key
-                ether_tx.public_key = None;
-                ether_tx.to = None;
-                ether_tx.block_hash = block_hash;
-                ether_tx.block_number = block_number;
-            }
-            StarknetTransaction::DeployAccount(deploy_account_tx) => {
-                ether_tx.hash =
-                    PrimitiveH256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be());
-                class_hash = deploy_account_tx.class_hash;
-
-                ether_tx.nonce = felt_to_u256(deploy_account_tx.nonce);
-                // TODO: Get from estimate gas
-                ether_tx.gas_price = None;
-                // Extracting the signature
-                ether_tx.r = felt_option_to_u256(deploy_account_tx.signature.get(0))?;
-                ether_tx.s = felt_option_to_u256(deploy_account_tx.signature.get(1))?;
-                ether_tx.v = felt_option_to_u256(deploy_account_tx.signature.get(2))?;
-                // Extracting the to address
-                ether_tx.to = None;
-                // Extracting the gas
-                ether_tx.gas = U256::from(0);
-                // Extracting the chain_id
-                ether_tx.chain_id = Some(CHAIN_ID.into());
-                // Extracting the standard_v
-                ether_tx.standard_v = U256::from(0);
-                // Extracting the public_key
-                ether_tx.public_key = None;
-                ether_tx.block_hash = block_hash;
-                ether_tx.block_number = block_number;
-            }
+            StarknetTransaction::L1Handler(_) |
+            StarknetTransaction::Declare(_) |
+            StarknetTransaction::Deploy(_) |
+            StarknetTransaction::DeployAccount(_) => {
+                 return Err(KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot starknet_tx_into_eth_tx: L1Handler, Declare, Deploy and DeployAccount transactions unsupported"
+                )))
+            },
         }
+
         let kakarot_class_hash = FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH)
             .map_err(|e| {
                 KakarotClientError::OtherError(anyhow::anyhow!(
-                    "Failed to convert Starknet block hash to FieldElement: {}",
+                    "Kakarot Failed to convert Kakarot custom proxy contract class hash to FieldElement: {}",
                     e
                 ))
             })?;
+
         if class_hash == kakarot_class_hash {
             Ok(ether_tx)
         } else {
@@ -1377,6 +1310,7 @@ impl KakarotClient for KakarotClientImpl {
             }
         }
     }
+
     async fn filter_starknet_into_eth_txs(
         &self,
         initial_transactions: Vec<StarknetTransaction>,
@@ -1386,7 +1320,7 @@ impl KakarotClient for KakarotClientImpl {
         let mut transactions_vec = vec![];
         for transaction in initial_transactions {
             let tx_value = self
-                .starknet_tx_into_eth_tx(transaction, blockhash_opt, blocknum_opt)
+                .starknet_tx_into_kakarot_tx(transaction, blockhash_opt, blocknum_opt)
                 .await;
             if let Ok(val) = tx_value {
                 transactions_vec.push(val)
