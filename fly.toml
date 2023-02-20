@@ -16,7 +16,7 @@ auto_rollback = true
 
 [[services]]
 http_checks = []
-internal_port = 8080
+internal_port = 3030
 processes = ["app"]
 protocol = "tcp"
 script_checks = []

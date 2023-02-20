@@ -1,10 +1,12 @@
-FROM rust:1.66 as builder
+FROM rust:1.64 as builder
 
 # Set working directory
 WORKDIR /usr/src/rpc
 
 # Copy source code
 COPY . .
+
+RUN rustup self update
 
 # Build the application
 RUN cargo build --all --release
