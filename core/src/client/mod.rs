@@ -1,7 +1,10 @@
+use std::str::FromStr;
+
 use eyre::Result;
 use jsonrpsee::types::error::CallError;
 
 use reth_primitives::{
+    keccak256,
     rpc::{BlockId, BlockNumber, Bytes, Log, H160, H256},
     Address, H256 as PrimitiveH256, U256, U64,
 };
@@ -40,7 +43,7 @@ use reth_rpc_types::Index;
 pub mod constants;
 use constants::{selectors::BYTECODE, KAKAROT_MAIN_CONTRACT_ADDRESS};
 pub mod types;
-use types::RichBlock;
+use types::{RichBlock, TokenBalance, TokenBalances};
 
 use self::constants::{
     selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, EXECUTE_AT_ADDRESS, GET_EVM_ADDRESS},
@@ -109,18 +112,21 @@ pub trait KakarotClient: Send + Sync {
         &self,
         hash: H256,
     ) -> Result<Option<TransactionReceipt>, KakarotClientError>;
-
     async fn get_evm_address(
         &self,
         starknet_address: &FieldElement,
         starknet_block_id: &StarknetBlockId,
     ) -> Result<Address, KakarotClientError>;
-
     async fn balance(
         &self,
         ethereum_address: Address,
         starknet_block_id: StarknetBlockId,
     ) -> Result<U256, KakarotClientError>;
+    async fn get_token_balances(
+        &self,
+        address: Address,
+        contract_addresses: Vec<Address>,
+    ) -> Result<TokenBalances, KakarotClientError>;
 }
 pub struct KakarotClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -784,5 +790,76 @@ impl KakarotClient for KakarotClientImpl {
         let balance = U256::from_be_bytes(balance);
 
         Ok(balance)
+    }
+
+    /// Returns token balances for a specific address given a list of contracts.
+    ///
+    /// # Arguments
+    ///
+    /// * `address(Address)` - specific address
+    /// * `contract_addresses(Vec<Address>)` - List of contract addresses
+    ///
+    /// # Returns
+    ///
+    ///  * `token_balances(TokenBalances)` - Token balances
+    ///
+    /// `Ok(<TokenBalances>)` if the operation was successful.
+    /// `Err(KakarotClientError)` if the operation failed.
+    async fn get_token_balances(
+        &self,
+        address: Address,
+        contract_addresses: Vec<Address>,
+    ) -> Result<TokenBalances, KakarotClientError> {
+        let mut token_balances = Vec::new();
+        let entrypoint = hash_to_field_element(keccak256("balanceOf(address)")).map_err(|e| {
+            KakarotClientError::OtherError(anyhow::anyhow!(
+                "Failed to convert entrypoint to FieldElement: {}",
+                e
+            ))
+        })?;
+        let felt_address = FieldElement::from_str(&address.to_string()).map_err(|e| {
+            KakarotClientError::OtherError(anyhow::anyhow!(
+                "Failed to convert address to FieldElement: {}",
+                e
+            ))
+        })?;
+
+        for token_address in contract_addresses.into_iter() {
+            let calldata = vec![entrypoint, felt_address];
+            let call = self
+                .call_view(
+                    token_address,
+                    Bytes::from(vec_felt_to_bytes(calldata).0),
+                    StarknetBlockId::Tag(BlockTag::Latest),
+                )
+                .await;
+
+            let token_balance = match call {
+                Ok(call) => {
+                    let hex_balance = U256::from_str_radix(&call.to_string(), 16).map_err(|e| {
+                        KakarotClientError::OtherError(anyhow::anyhow!(
+                            "Failed to convert token balance to U256: {}",
+                            e
+                        ))
+                    })?;
+                    TokenBalance {
+                        contract_address: address,
+                        token_balance: Some(hex_balance),
+                        error: None,
+                    }
+                }
+                Err(e) => TokenBalance {
+                    contract_address: address,
+                    token_balance: None,
+                    error: Some(format!("kakarot_getTokenBalances Error: {e}")),
+                },
+            };
+            token_balances.push(token_balance);
+        }
+
+        Ok(TokenBalances {
+            address,
+            token_balances,
+        })
     }
 }
