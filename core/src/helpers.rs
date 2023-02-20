@@ -41,7 +41,7 @@ pub enum MaybePendingStarknetBlock {
     BlockWithTxs(MaybePendingBlockWithTxs),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum FeltOrFeltArray {
     Felt(FieldElement),
     FeltArray(Vec<FieldElement>),
@@ -216,7 +216,7 @@ pub fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
 /// Slice the last 20 bytes of the field element and convert it to an Ethereum address
 /// ⚠️ BE CAREFUL ⚠️:
 /// In order to get the correct/true EVM address of a Kakarot smart contract or account,
-/// use the client.get_evm_address() method.
+/// use the `client.get_evm_address`() method.
 /// `starknet_address_to_ethereum_address` is only used for Starknet addresses that do not have an EVM address equivalent.
 pub fn starknet_address_to_ethereum_address(starknet_address: &FieldElement) -> Address {
     H160::from_slice(&starknet_address.to_bytes_be()[12..32])
@@ -231,7 +231,7 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         from: H160::from(0),
         to: None,
         //TODO: Fetch real data
-        cumulative_gas_used: U256::from(1000000),
+        cumulative_gas_used: U256::from(1_000_000),
         gas_used: None,
         contract_address: None,
         // TODO : default log value
@@ -242,7 +242,7 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         state_root: None,
         status_code: None,
         //TODO: Fetch real data
-        effective_gas_price: U128::from(1000000),
+        effective_gas_price: U128::from(1_000_000),
         //TODO: Fetch real data
         transaction_type: U256::from(0),
     }
@@ -280,18 +280,18 @@ pub fn raw_calldata(bytes: Bytes) -> Result<Vec<FieldElement>> {
     }];
     let mut concated_calldata: Vec<FieldElement> = vec![];
     let mut execute_calldata: Vec<FieldElement> = vec![calls.len().into()];
-    for call in calls.iter() {
+    for call in &calls {
         execute_calldata.push(call.to); // to
         execute_calldata.push(call.selector); // selector
         execute_calldata.push(concated_calldata.len().into()); // data_offset
         execute_calldata.push(call.calldata.len().into()); // data_len
 
-        for item in call.calldata.iter() {
+        for item in &call.calldata {
             concated_calldata.push(*item);
         }
     }
     execute_calldata.push(concated_calldata.len().into()); // calldata_len
-    for item in concated_calldata.into_iter() {
+    for item in concated_calldata {
         execute_calldata.push(item); // calldata
     }
 
@@ -546,7 +546,7 @@ mod tests {
         }
         assert_eq!(
             result[7],
-            FeltOrFeltArray::Felt(FieldElement::from(0x00000fffff_u64))
+            FeltOrFeltArray::Felt(FieldElement::from(0x0000_000f_ffff_u64))
         )
     }
 }

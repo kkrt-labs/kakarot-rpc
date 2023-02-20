@@ -56,7 +56,7 @@ mod tests {
             "parent_hash": "0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
-            "timestamp": 1675461581,
+            "timestamp": 1_675_461_581,
         });
 
         let starknet_txs = json!({
@@ -109,7 +109,7 @@ mod tests {
             "parent_hash": "0x13310ddd53ba41bd8b71dadbf1eb002c215ca8a790cb298d851ba7446e77d38",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
-            "timestamp": 1675496282,
+            "timestamp": 1_675_496_282,
         });
 
         let starknet_txs = json!({
@@ -160,7 +160,7 @@ mod tests {
             "parent_hash": "0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
-            "timestamp": 1675461581,
+            "timestamp": 1_675_461_581,
         });
 
         let starknet_txs = json!({
@@ -217,7 +217,7 @@ mod tests {
             "parent_hash": "0x13310ddd53ba41bd8b71dadbf1eb002c215ca8a790cb298d851ba7446e77d38",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
-            "timestamp": 1675496282,
+            "timestamp": 1_675_496_282,
         });
 
         let starknet_txs = json!({

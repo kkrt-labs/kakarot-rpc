@@ -59,10 +59,7 @@ pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hy
                         Some(H256::from_slice(&starknet_block_hash.to_bytes_be()))
                     );
 
-                    assert_transaction(
-                        transaction.to_owned(),
-                        starknet_txs.transactions[i].to_owned(),
-                    );
+                    assert_transaction(transaction.clone(), starknet_txs.transactions[i].clone());
                 }
             }
             BlockTransactions::Hashes(_) => {

@@ -48,8 +48,8 @@ use crate::client::{
     types::{Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction},
 };
 use async_trait::async_trait;
-use mockall::predicate::*;
-use mockall::*;
+use mockall::automock;
+use mockall::predicate::str;
 use reth_rpc_types::Index;
 pub mod constants;
 use constants::selectors::BYTECODE;
@@ -163,10 +163,11 @@ pub struct KakarotClientImpl {
 impl From<KakarotClientError> for jsonrpsee::core::Error {
     fn from(err: KakarotClientError) -> Self {
         match err {
-            KakarotClientError::RequestError(e) => jsonrpsee::core::Error::Call(CallError::Failed(
-                anyhow::anyhow!("Kakarot Core: Light Client Request Error: {}", e),
-            )),
-            KakarotClientError::OtherError(e) => jsonrpsee::core::Error::Call(CallError::Failed(e)),
+            KakarotClientError::RequestError(e) => Self::Call(CallError::Failed(anyhow::anyhow!(
+                "Kakarot Core: Light Client Request Error: {}",
+                e
+            ))),
+            KakarotClientError::OtherError(e) => Self::Call(CallError::Failed(e)),
         }
     }
 }
@@ -181,8 +182,8 @@ impl KakarotClientImpl {
         })
     }
 
-    /// Get the Ethereum address of a Starknet Kakarot smart-contract by calling get_evm_address on it.
-    /// If the contract's get_evm_address errors, returns the Starknet address sliced to 20 bytes to conform with EVM addresses formats.
+    /// Get the Ethereum address of a Starknet Kakarot smart-contract by calling `get_evm_address` on it.
+    /// If the contract's `get_evm_address` errors, returns the Starknet address sliced to 20 bytes to conform with EVM addresses formats.
     ///
     /// ## Arguments
     ///
@@ -367,7 +368,7 @@ impl KakarotClient for KakarotClientImpl {
         if let FeltOrFeltArray::FeltArray(felt_array) = return_data {
             let result: Vec<u8> = felt_array
                 .iter()
-                .map(|x| x.to_string())
+                .map(std::string::ToString::to_string)
                 .filter_map(|s| s.parse().ok())
                 .collect();
             let bytes_result = Bytes::from(result);
@@ -668,11 +669,8 @@ impl KakarotClient for KakarotClientImpl {
                         let topics = (0..event.keys.len())
                             .step_by(2)
                             .map(|i| {
-                                let next_key = event
-                                    .keys
-                                    .get(i + 1)
-                                    .unwrap_or(&FieldElement::ZERO)
-                                    .to_owned();
+                                let next_key =
+                                    *event.keys.get(i + 1).unwrap_or(&FieldElement::ZERO);
 
                                 // Can unwrap here as we know 2^128 is a valid FieldElement
                                 let two_pow_16: FieldElement = FieldElement::from_hex_be(
@@ -858,7 +856,7 @@ impl KakarotClient for KakarotClientImpl {
             ))
         })?;
 
-        for token_address in contract_addresses.into_iter() {
+        for token_address in contract_addresses {
             let calldata = vec![entrypoint, felt_address];
             let call = self
                 .call_view(
@@ -1108,12 +1106,12 @@ impl KakarotClient for KakarotClientImpl {
 
         //InvokeTransactionReceipt -
         //TODO: Fetch real data
-        let gas_limit = U256::from(1000000); // Hard Code
-                                             //TODO: Fetch real data
-        let gas_used = U256::from(500000); // Hard Code (Sum of actual_fee's)
-                                           //TODO: Fetch real data
-        let difficulty = U256::from(1000000); // Fixed
-                                              //TODO: Fetch real data
+        let gas_limit = U256::from(1_000_000); // Hard Code
+                                               //TODO: Fetch real data
+        let gas_used = U256::from(500_000); // Hard Code (Sum of actual_fee's)
+                                            //TODO: Fetch real data
+        let difficulty = U256::from(1_000_000); // Fixed
+                                                //TODO: Fetch real data
         let nonce: Option<H64> = Some(H64::from_low_u64_be(0));
         //TODO: Fetch real data
         let size: Option<U256> = Some(U256::from(100));
@@ -1121,7 +1119,7 @@ impl KakarotClient for KakarotClientImpl {
         let logs_bloom = Bloom::default();
         let extra_data = Bytes::from(b"0x00");
         //TODO: Fetch real data
-        let total_difficulty: U256 = U256::from(1000000);
+        let total_difficulty: U256 = U256::from(1_000_000);
         //TODO: Fetch real data
         let base_fee_per_gas = U256::from(32);
         //TODO: Fetch real data
