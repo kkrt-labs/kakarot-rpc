@@ -1,7 +1,6 @@
 use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
 use serde_with::{serde_as, DeserializeAs, SerializeAs};
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::JsonRpcMethod;
+use starknet::{core::types::FieldElement, providers::jsonrpc::JsonRpcMethod};
 
 impl SerializeAs<FieldElement> for UfeHex {
     fn serialize_as<S>(value: &FieldElement, serializer: S) -> Result<S::Ok, S::Error>

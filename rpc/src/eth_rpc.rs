@@ -1,9 +1,13 @@
-use jsonrpsee::core::{async_trait, RpcResult as Result};
-use jsonrpsee::proc_macros::rpc;
+use jsonrpsee::{
+    core::{async_trait, RpcResult as Result},
+    proc_macros::rpc,
+};
 
 use jsonrpsee::types::error::CallError;
-use kakarot_rpc_core::client::{constants::selectors::CHAIN_ID, types::RichBlock, KakarotClient};
-use kakarot_rpc_core::helpers::{ethers_block_id_to_starknet_block_id, raw_calldata};
+use kakarot_rpc_core::{
+    client::{constants::selectors::CHAIN_ID, types::RichBlock, KakarotClient},
+    helpers::{ethers_block_id_to_starknet_block_id, raw_calldata},
+};
 use reth_primitives::{
     rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, Bytes, H256},
     Address, Bytes as PrimitiveBytes, TransactionSigned, H64, U256, U64,
@@ -14,14 +18,14 @@ use reth_rpc_types::{
     TransactionRequest, Work,
 };
 use serde_json::Value;
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag};
+use starknet::{
+    core::types::FieldElement,
+    providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag},
+};
 
 use kakarot_rpc_core::client::types::{TokenBalances, Transaction as EtherTransaction};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
-///
-///
 pub struct KakarotEthRpc {
     pub kakarot_client: Box<dyn KakarotClient>,
 }
@@ -505,7 +509,8 @@ impl EthApiServer for KakarotEthRpc {
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
         // ⚠️ Experimental ⚠️
-        // This is a temporary implementation of the fee history API based on the idea that priority fee is estimated from former blocks
+        // This is a temporary implementation of the fee history API based on the idea that priority
+        // fee is estimated from former blocks
         const DEFAULT_REWARD: u64 = 10_u64;
         let block_count_usize = usize::from_str_radix(&_block_count.to_string(), 16).unwrap_or(1);
 
