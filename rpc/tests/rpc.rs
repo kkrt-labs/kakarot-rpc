@@ -56,7 +56,7 @@ mod tests {
             "parent_hash": "0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
-            "timestamp": 1675461581,
+            "timestamp": 1_675_461_581,
         });
 
         let starknet_txs = json!({
@@ -83,7 +83,7 @@ mod tests {
             starknet_txs.to_string(),
             true,
         );
-        assert_block_header(block.result.clone(), starknet_res.to_string(), true);
+        assert_block_header(block.result, starknet_res.to_string(), true);
 
         server_handle.stop().unwrap();
     }
@@ -109,7 +109,7 @@ mod tests {
             "parent_hash": "0x13310ddd53ba41bd8b71dadbf1eb002c215ca8a790cb298d851ba7446e77d38",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
-            "timestamp": 1675496282,
+            "timestamp": 1_675_496_282,
         });
 
         let starknet_txs = json!({
@@ -134,7 +134,7 @@ mod tests {
             starknet_txs.to_string(),
             false,
         );
-        assert_block_header(block.result.clone(), starknet_res.to_string(), false);
+        assert_block_header(block.result, starknet_res.to_string(), false);
 
         server_handle.stop().unwrap();
     }
@@ -160,7 +160,7 @@ mod tests {
             "parent_hash": "0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
-            "timestamp": 1675461581,
+            "timestamp": 1_675_461_581,
         });
 
         let starknet_txs = json!({
@@ -187,7 +187,7 @@ mod tests {
             starknet_txs.to_string(),
             true,
         );
-        assert_block_header(block.result.clone(), starknet_res.to_string(), true);
+        assert_block_header(block.result, starknet_res.to_string(), true);
 
         server_handle.stop().unwrap();
     }
@@ -217,7 +217,7 @@ mod tests {
             "parent_hash": "0x13310ddd53ba41bd8b71dadbf1eb002c215ca8a790cb298d851ba7446e77d38",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
-            "timestamp": 1675496282,
+            "timestamp": 1_675_496_282,
         });
 
         let starknet_txs = json!({
@@ -242,7 +242,7 @@ mod tests {
             starknet_txs.to_string(),
             false,
         );
-        assert_block_header(block.clone(), starknet_res.to_string(), false);
+        assert_block_header(block, starknet_res.to_string(), false);
 
         server_handle.stop().unwrap();
     }
@@ -260,10 +260,7 @@ mod tests {
             .unwrap();
 
         let transaction_count = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
-        assert_eq!(
-            transaction_count.result,
-            String::from(format!("0x{:0>64x}", 172))
-        );
+        assert_eq!(transaction_count.result, format!("0x{:0>64x}", 172));
         server_handle.stop().unwrap();
     }
 
@@ -280,10 +277,7 @@ mod tests {
             .unwrap();
 
         let transaction_count = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
-        assert_eq!(
-            transaction_count.result,
-            String::from(format!("0x{:0>64x}", 172))
-        );
+        assert_eq!(transaction_count.result, format!("0x{:0>64x}", 172));
         server_handle.stop().unwrap();
     }
 
