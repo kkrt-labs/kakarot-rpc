@@ -38,17 +38,3 @@ struct JsonRpcRequest<T> {
     method: JsonRpcMethod,
     params: T,
 }
-
-pub(crate) fn debug_entry_param(method: JsonRpcMethod, params: Vec<serde_json::Value>) -> String {
-    let request = JsonRpcRequest {
-        id: 1,
-        jsonrpc: "2.0",
-        method,
-        params,
-    };
-    println!(
-        "JsonRpcRequest: {:?}",
-        serde_json::to_string(&request).unwrap()
-    );
-    serde_json::to_string(&request).unwrap()
-}
