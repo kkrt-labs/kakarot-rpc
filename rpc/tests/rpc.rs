@@ -3,14 +3,17 @@ mod testing_helpers;
 #[cfg(test)]
 mod tests {
     use crate::testing_helpers::{assert_block, assert_block_header, assert_transaction};
+    use jsonrpsee::server::ServerHandle;
     use kakarot_rpc::test_utils::setup_rpc_server;
     use kakarot_rpc_core::{
         client::types::{Block, Transaction},
         helpers::starknet_address_to_ethereum_address,
         utils::wiremock_utils::EthJsonRpcResponse,
     };
+    use reqwest::Client;
     use reth_primitives::{H256, U256, U64};
     use reth_rpc_types::TransactionReceipt;
+    use rstest::*;
     use serde_json::json;
     use starknet::{
         core::types::FieldElement, macros::felt,
@@ -18,10 +21,34 @@ mod tests {
     };
     use std::str::FromStr;
 
-    #[tokio::test]
-    async fn test_block_number_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
+    macro_rules! block_on {
+        ($async_expr:expr) => {{
+            tokio::task::block_in_place(|| {
+                let handle = tokio::runtime::Handle::current();
+                handle.block_on($async_expr)
+            })
+        }};
+    }
+
+    #[fixture]
+    #[once]
+    fn setup_server() -> ServerHandle {
+        block_on!(async {
+            let server_handle = setup_rpc_server().await;
+            server_handle
+        })
+    }
+
+    #[fixture]
+    #[once]
+    fn setup_slice_of_hashes() -> Client {
         let client = reqwest::Client::new();
+        client
+    }
+
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_block_number_is_ok(_setup_server: &ServerHandle, client: &Client) {
         let res = client
             .post("http://127.0.0.1:3030")
             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_blockNumber\", \"params\": [] }")
@@ -31,14 +58,11 @@ mod tests {
             .unwrap();
         let block_number = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
         assert_eq!(block_number.result, format!("0x{:x}", 19640));
-
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_get_block_by_hash_hydrated_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_get_block_by_hash_hydrated_is_ok(_setup_server: &ServerHandle, client: &Client) {
         let res = client
             .post("http://127.0.0.1:3030")
             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockByHash\", \"params\": [\"0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9\", true] }")
@@ -84,14 +108,14 @@ mod tests {
             true,
         );
         assert_block_header(block.result.clone(), starknet_res.to_string(), true);
-
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_get_block_by_hash_not_hydrated_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_get_block_by_hash_not_hydrated_is_ok(
+        _setup_server: &ServerHandle,
+        client: &Client,
+    ) {
         let res = client
             .post("http://127.0.0.1:3030")
             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockByHash\", \"params\": [\"0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e\", false] }")
@@ -135,14 +159,14 @@ mod tests {
             false,
         );
         assert_block_header(block.result.clone(), starknet_res.to_string(), false);
-
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_get_block_by_number_hydrated_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_get_block_by_number_hydrated_is_ok(
+        _setup_server: &ServerHandle,
+        client: &Client,
+    ) {
         let res = client
             .post("http://127.0.0.1:3030")
             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockByNumber\", \"params\": [\"latest\", true] }")
@@ -188,14 +212,14 @@ mod tests {
             true,
         );
         assert_block_header(block.result.clone(), starknet_res.to_string(), true);
-
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_get_block_by_number_not_hydrated_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_get_block_by_number_not_hydrated_is_ok(
+        _setup_server: &ServerHandle,
+        client: &Client,
+    ) {
         let res = client
             .post("http://127.0.0.1:3030")
             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockByNumber\", \"params\": [\"latest\", false] }")
@@ -243,14 +267,14 @@ mod tests {
             false,
         );
         assert_block_header(block.clone(), starknet_res.to_string(), false);
-
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_block_transaction_count_by_hash_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_block_transaction_count_by_hash_is_ok(
+        _setup_server: &ServerHandle,
+        client: &Client,
+    ) {
         let res = client
             .post("http://127.0.0.1:3030")
             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockTransactionCountByHash\", \"params\": [\"0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e\"] }")
@@ -264,13 +288,14 @@ mod tests {
             transaction_count.result,
             String::from(format!("0x{:0>64x}", 172))
         );
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_block_transaction_count_by_number_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_block_transaction_count_by_number_is_ok(
+        _setup_server: &ServerHandle,
+        client: &Client,
+    ) {
         let res = client
             .post("http://127.0.0.1:3030")
             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockTransactionCountByNumber\", \"params\": [\"latest\"] }")
@@ -284,13 +309,11 @@ mod tests {
             transaction_count.result,
             String::from(format!("0x{:0>64x}", 172))
         );
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_transaction_receipt_invoke_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_transaction_receipt_invoke_is_ok(_setup_server: &ServerHandle, client: &Client) {
         let res = client
             .post("http://127.0.0.1:3030")
             .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionReceipt\", \"params\": [\"0x032e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258\"] }")
@@ -350,14 +373,14 @@ mod tests {
         // assert_eq!(transaction_receipt.state_root, None);
         // assert_eq!(transaction_receipt.effective_gas_price, U128::from(1000000));
         // assert_eq!(transaction_receipt.transaction_type, U256::from(0));
-
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_transaction_by_block_number_and_index_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_transaction_by_block_number_and_index_is_ok(
+        _setup_server: &ServerHandle,
+        client: &Client,
+    ) {
         let res = client
                 .post("http://127.0.0.1:3030")
                 .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionByBlockNumberAndIndex\", \"params\": [\"latest\", 1] }")
@@ -422,14 +445,14 @@ mod tests {
             ))
         );
         assert_eq!(transaction.block_number, Some(U256::from(20129)));
-
-        server_handle.stop().unwrap();
     }
 
-    #[tokio::test]
-    async fn test_transaction_by_block_hash_and_index_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_transaction_by_block_hash_and_index_is_ok(
+        _setup_server: &ServerHandle,
+        client: &Client,
+    ) {
         let res = client
                 .post("http://127.0.0.1:3030")
                 .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionByBlockHashAndIndex\", \"params\": [\"0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9\", 1] }")
@@ -494,7 +517,5 @@ mod tests {
             ))
         );
         assert_eq!(transaction.block_number, Some(U256::from(20129)));
-
-        server_handle.stop().unwrap();
     }
 }

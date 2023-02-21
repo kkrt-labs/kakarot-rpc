@@ -17,7 +17,7 @@ jsonrpsee = { version = "^0.16", features = ["full"] }
 
 # async
 async-trait = "0.1"
-tokio = { version = "1.21.2", features = ["macros"] }
+tokio = { version = "1.21.2", features = ["full"] }
 
 # misc
 serde = { version = "1.0.147", features = ["derive"] }
@@ -37,10 +37,19 @@ mockall = "0.11.3"
 anyhow = "1.0.68"
 serde_with = "2.2.0"
 
+[dev-dependencies]
+rstest = "0.16.0"
+async-std = { version = "1.5", features = ["attributes"] }
+
 [dev-dependencies.cargo-husky]
 version = "1.5.0"
 default-features = false
-features = ["precommit-hook", "run-for-all", "run-cargo-clippy", "run-cargo-fmt"]
+features = [
+    "precommit-hook",
+    "run-for-all",
+    "run-cargo-clippy",
+    "run-cargo-fmt",
+]
 
 
 [[bin]]

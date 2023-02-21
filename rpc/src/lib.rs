@@ -65,12 +65,11 @@ pub mod test_utils {
     ///        let _has_stop = server_handle.stop().unwrap();
     ///   }
     /// ```
-    pub async fn setup_rpc_server() -> (String, ServerHandle) {
+    pub async fn setup_rpc_server() -> ServerHandle {
         let starknet_rpc = setup_wiremock().await;
 
-        let starknet_lightclient = KakarotClientImpl::new(&starknet_rpc).unwrap();
-        let (_rpc_server_uri, server_handle) =
-            run_server(Box::new(starknet_lightclient)).await.unwrap();
-        (starknet_rpc, server_handle)
+        let kakarot_client = KakarotClientImpl::new(&starknet_rpc).unwrap();
+        let (_rpc_server_uri, server_handle) = run_server(Box::new(kakarot_client)).await.unwrap();
+        server_handle
     }
 }
