@@ -40,7 +40,7 @@ pub mod test_utils {
 
     use crate::run_server;
 
-    /// Run wiremock to fake starknet rpc and then run our own kakarot_rpc_server.
+    /// Run wiremock to fake starknet rpc and then run our own `kakarot_rpc_server`.
     ///
     /// Example :
     /// ```ignore
