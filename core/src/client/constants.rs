@@ -10,8 +10,7 @@ pub const STARKNET_NATIVE_TOKEN: &str =
     "2087021424722619777119509474943472645767659996348769578120564519014510906823";
 
 pub mod selectors {
-    use starknet::core::types::FieldElement;
-    use starknet::macros::selector;
+    use starknet::{core::types::FieldElement, macros::selector};
 
     pub const GET_STARKNET_CONTRACT_ADDRESS: FieldElement =
         selector!("get_starknet_contract_address");
