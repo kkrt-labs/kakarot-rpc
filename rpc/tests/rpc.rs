@@ -5,12 +5,10 @@ mod tests {
     use crate::testing_helpers::{assert_block, assert_block_header, assert_transaction};
     use kakarot_rpc::test_utils::setup_rpc_server;
     use kakarot_rpc_core::{
-        client::types::{Block, Transaction},
-        helpers::starknet_address_to_ethereum_address,
-        utils::wiremock_utils::EthJsonRpcResponse,
+        helpers::starknet_address_to_ethereum_address, utils::wiremock_utils::EthJsonRpcResponse,
     };
     use reth_primitives::{H256, U256, U64};
-    use reth_rpc_types::TransactionReceipt;
+    use reth_rpc_types::{Block, Transaction, TransactionReceipt};
     use serde_json::json;
     use starknet::{
         core::types::FieldElement, macros::felt,

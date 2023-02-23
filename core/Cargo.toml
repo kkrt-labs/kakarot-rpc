@@ -17,9 +17,9 @@ anyhow = "1.0.68"
 jsonrpsee = "0.16.2"
 reqwest = "0.11.13"
 hex = "0.4"
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "13eea35c" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "13eea35c" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "13eea35c" }
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "3c77dd9" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "3c77dd9" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "3c77dd9" }
 httpmock = "0.6.7"
 mockall = "0.11.3"
 tokio = { version = "1.21.2", features = ["macros"] }
