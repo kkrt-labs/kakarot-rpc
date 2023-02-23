@@ -216,7 +216,8 @@ pub fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
 /// ⚠️ BE CAREFUL ⚠️:
 /// In order to get the correct/true EVM address of a Kakarot smart contract or account,
 /// use the `client.get_evm_address`() method.
-/// `starknet_address_to_ethereum_address` is only used for Starknet addresses that do not have an EVM address equivalent.
+/// `starknet_address_to_ethereum_address` is only used for Starknet addresses that do not have an
+/// EVM address equivalent.
 pub fn starknet_address_to_ethereum_address(starknet_address: &FieldElement) -> Address {
     H160::from_slice(&starknet_address.to_bytes_be()[12..32])
 }
