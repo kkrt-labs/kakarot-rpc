@@ -48,8 +48,7 @@ use crate::client::{
     types::{Block, BlockTransactions, Header, Rich, RichBlock, Transaction as EtherTransaction},
 };
 use async_trait::async_trait;
-use mockall::automock;
-use mockall::predicate::str;
+use mockall::{automock, predicate::str};
 use reth_rpc_types::Index;
 pub mod constants;
 use constants::selectors::BYTECODE;
@@ -179,8 +178,9 @@ impl KakarotClientImpl {
         })
     }
 
-    /// Get the Ethereum address of a Starknet Kakarot smart-contract by calling `get_evm_address` on it.
-    /// If the contract's `get_evm_address` errors, returns the Starknet address sliced to 20 bytes to conform with EVM addresses formats.
+    /// Get the Ethereum address of a Starknet Kakarot smart-contract by calling `get_evm_address`
+    /// on it. If the contract's `get_evm_address` errors, returns the Starknet address sliced
+    /// to 20 bytes to conform with EVM addresses formats.
     ///
     /// ## Arguments
     ///
@@ -511,7 +511,6 @@ impl KakarotClient for KakarotClientImpl {
     /// ## Arguments
     /// * `ethereum_address` - The Ethereum address to convert to a Starknet address.
     /// * `starknet_block_id` - The block ID to use for the Starknet contract call.
-    ///
     async fn compute_starknet_address(
         &self,
         ethereum_address: Address,
@@ -769,15 +768,14 @@ impl KakarotClient for KakarotClientImpl {
     }
 
     /// Get the balance in Starknet's native token of a specific EVM address.
-    /// Reproduces the principle of Kakarot native coin by using Starknet's native ERC20 token (gas-utility token)
-    /// ### Arguments
+    /// Reproduces the principle of Kakarot native coin by using Starknet's native ERC20 token
+    /// (gas-utility token) ### Arguments
     /// * `ethereum_address` - The EVM address to get the balance of
     /// * `block_id` - The block to get the balance at
     ///
     /// ### Returns
-    /// * `Result<U256, KakarotClientError>` - The balance of the EVM address in Starknet's native token
-    ///
-    ///
+    /// * `Result<U256, KakarotClientError>` - The balance of the EVM address in Starknet's native
+    ///   token
     async fn balance(
         &self,
         ethereum_address: Address,

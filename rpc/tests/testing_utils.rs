@@ -1,7 +1,6 @@
 use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
 use serde_with::{serde_as, DeserializeAs, SerializeAs};
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::JsonRpcMethod;
+use starknet::{core::types::FieldElement, providers::jsonrpc::JsonRpcMethod};
 
 impl SerializeAs<FieldElement> for UfeHex {
     fn serialize_as<S>(value: &FieldElement, serializer: S) -> Result<S::Ok, S::Error>
@@ -37,18 +36,4 @@ struct JsonRpcRequest<T> {
     jsonrpc: &'static str,
     method: JsonRpcMethod,
     params: T,
-}
-
-pub(crate) fn debug_entry_param(method: JsonRpcMethod, params: Vec<serde_json::Value>) -> String {
-    let request = JsonRpcRequest {
-        id: 1,
-        jsonrpc: "2.0",
-        method,
-        params,
-    };
-    println!(
-        "JsonRpcRequest: {:?}",
-        serde_json::to_string(&request).unwrap()
-    );
-    serde_json::to_string(&request).unwrap()
 }
