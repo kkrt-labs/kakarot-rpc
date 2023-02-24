@@ -2,5 +2,6 @@
   "cSpell.words": ["cairo", "hashrate", "KKRT", "lightclient"],
   "files.exclude": {
     "**/.git": false
-  }
+  },
+  "rust-analyzer.check.command": "clippy"
 }
