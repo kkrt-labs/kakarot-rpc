@@ -1,11 +1,9 @@
 use kakarot_rpc_core::{
-    client::{
-        constants::CHAIN_ID,
-        types::{Block, BlockTransactions, Rich, Transaction},
-    },
+    client::constants::CHAIN_ID,
     helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address},
 };
 use reth_primitives::{Bloom, Bytes, H160, H256, H64, U256};
+use reth_rpc_types::{Block, BlockTransactions, Rich, Signature, Transaction};
 use serde::{Deserialize, Serialize};
 use starknet::{
     core::types::FieldElement,
@@ -137,15 +135,12 @@ pub fn assert_block_header(block: &Rich<Block>, starknet_res: String, hydrated: 
     assert_eq!(block.header.gas_limit, U256::from(1_000_000));
     assert_eq!(block.header.difficulty, U256::ZERO);
     assert_eq!(block.header.size, Some(U256::from(1_000_000)));
-    assert_eq!(block.header.base_fee_per_gas, U256::from(16));
     assert_eq!(block.header.mix_hash, H256::zero());
     assert_eq!(block.header.nonce, Some(H64::zero()));
 }
 
 pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransaction) {
     assert_eq!(ether_tx.chain_id, Some(CHAIN_ID.into()));
-    assert_eq!(ether_tx.standard_v, U256::from(0));
-    assert_eq!(ether_tx.creates, None);
     assert_eq!(ether_tx.access_list, None);
     assert_eq!(ether_tx.transaction_type, None);
 
@@ -153,11 +148,9 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
     assert_eq!(ether_tx.value, U256::from(100));
     assert_eq!(ether_tx.gas, U256::from(100));
     assert_eq!(ether_tx.gas_price, None);
-    assert_eq!(ether_tx.public_key, None);
     assert_eq!(ether_tx.transaction_index, None);
     assert_eq!(ether_tx.max_fee_per_gas, None);
     assert_eq!(ether_tx.max_priority_fee_per_gas, None);
-    assert_eq!(ether_tx.raw, Bytes::default());
 
     match starknet_tx {
         StarknetTransaction::Invoke(invoke_tx) => {
@@ -172,14 +165,12 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                         ether_tx.from,
                         starknet_address_to_ethereum_address(&v0.contract_address)
                     );
-                    assert_eq!(
-                        ether_tx.r,
-                        felt_option_to_u256(Some(&v0.signature[0])).unwrap()
-                    );
-                    assert_eq!(
-                        ether_tx.s,
-                        felt_option_to_u256(Some(&v0.signature[1])).unwrap()
-                    );
+                    let signature = Signature {
+                        v: felt_option_to_u256(Some(&v0.signature[2])).unwrap(),
+                        r: felt_option_to_u256(Some(&v0.signature[0])).unwrap(),
+                        s: felt_option_to_u256(Some(&v0.signature[1])).unwrap(),
+                    };
+                    assert_eq!(ether_tx.signature, Some(signature));
                 }
                 InvokeTransaction::V1(v1) => {
                     assert_eq!(
@@ -191,14 +182,12 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                         ether_tx.from,
                         H160::from_str("0x9296be4959e56b5df2200dbfa30594504a7fed61").unwrap()
                     );
-                    assert_eq!(
-                        ether_tx.r,
-                        felt_option_to_u256(Some(&v1.signature[0])).unwrap()
-                    );
-                    assert_eq!(
-                        ether_tx.s,
-                        felt_option_to_u256(Some(&v1.signature[1])).unwrap()
-                    );
+                    let signature = Signature {
+                        v: U256::ZERO,
+                        r: felt_option_to_u256(Some(&v1.signature[0])).unwrap(),
+                        s: felt_option_to_u256(Some(&v1.signature[1])).unwrap(),
+                    };
+                    assert_eq!(ether_tx.signature, Some(signature));
                     // TODO: test ether_tx.input
                 }
             }
@@ -216,14 +205,12 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                 H256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be())
             );
             assert_eq!(ether_tx.nonce, felt_to_u256(deploy_account_tx.nonce));
-            assert_eq!(
-                ether_tx.r,
-                felt_option_to_u256(Some(&deploy_account_tx.signature[0])).unwrap()
-            );
-            assert_eq!(
-                ether_tx.s,
-                felt_option_to_u256(Some(&deploy_account_tx.signature[1])).unwrap()
-            );
+            let signature = Signature {
+                v: felt_option_to_u256(Some(&deploy_account_tx.signature[2])).unwrap(),
+                r: felt_option_to_u256(Some(&deploy_account_tx.signature[0])).unwrap(),
+                s: felt_option_to_u256(Some(&deploy_account_tx.signature[1])).unwrap(),
+            };
+            assert_eq!(ether_tx.signature, Some(signature));
             // TODO: from
         }
         StarknetTransaction::L1Handler(_) | StarknetTransaction::Declare(_) => {

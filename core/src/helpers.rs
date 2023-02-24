@@ -1,7 +1,6 @@
 use eyre::Result;
 use reth_primitives::{
-    rpc::{BlockId as EthBlockId, BlockNumber, Log},
-    Bloom, Bytes, H160, H256, U128, U256,
+    rpc::Log, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, H160, H256, U128, U256,
 };
 use reth_rpc_types::TransactionReceipt;
 
@@ -52,7 +51,7 @@ pub fn ethers_block_id_to_starknet_block_id(
 ) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
         EthBlockId::Hash(hash) => {
-            let hash_felt = FieldElement::from_bytes_be(&hash.0).map_err(|e| {
+            let hash_felt = FieldElement::from_bytes_be(&hash.block_hash).map_err(|e| {
                 KakarotClientError::OtherError(anyhow::anyhow!(
                     "Failed to convert Starknet block hash to FieldElement: {}",
                     e
@@ -65,15 +64,15 @@ pub fn ethers_block_id_to_starknet_block_id(
 }
 
 pub fn ethers_block_number_to_starknet_block_id(
-    block: BlockNumber,
+    block: BlockNumberOrTag,
 ) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
-        BlockNumber::Latest => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
-        BlockNumber::Finalized => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
-        BlockNumber::Safe => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
-        BlockNumber::Earliest => Ok(StarknetBlockId::Number(0)),
-        BlockNumber::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
-        BlockNumber::Number(num) => Ok(StarknetBlockId::Number(num.as_u64())),
+        BlockNumberOrTag::Latest => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
+        BlockNumberOrTag::Finalized => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
+        BlockNumberOrTag::Safe => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
+        BlockNumberOrTag::Earliest => Ok(StarknetBlockId::Number(0)),
+        BlockNumberOrTag::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
+        BlockNumberOrTag::Number(num) => Ok(StarknetBlockId::Number(num)),
     }
 }
 

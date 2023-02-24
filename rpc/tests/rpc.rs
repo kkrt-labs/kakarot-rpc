@@ -8,10 +8,7 @@ mod tests {
         utils::setup_kakarot_eth_rpc,
     };
     use kakarot_rpc::eth_rpc::EthApiServer;
-    use reth_primitives::{
-        rpc::{BlockNumber, H256, U256, U64},
-        H160, H256 as PrimitiveH256,
-    };
+    use reth_primitives::{BlockNumberOrTag, H160, H256, U256, U64};
     use reth_rpc_types::Index;
     use serde_json::json;
     use starknet::{
@@ -130,7 +127,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_block_by_number_hydrated_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let block_number = BlockNumber::Latest;
+        let block_number = BlockNumberOrTag::Latest;
         let hydrated = true;
 
         let block = kakarot_rpc
@@ -179,7 +176,7 @@ mod tests {
     #[tokio::test]
     async fn test_get_block_by_number_not_hydrated_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let block_number = BlockNumber::Latest;
+        let block_number = BlockNumberOrTag::Latest;
         let hydrated = false;
 
         let block = kakarot_rpc
@@ -241,7 +238,7 @@ mod tests {
     #[tokio::test]
     async fn test_block_transaction_count_by_number_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let block_number = BlockNumber::Latest;
+        let block_number = BlockNumberOrTag::Latest;
 
         let transaction_count = kakarot_rpc
             .block_transaction_count_by_number(block_number)
@@ -266,7 +263,7 @@ mod tests {
 
         assert_eq!(
             transaction_receipt.transaction_hash,
-            Some(PrimitiveH256::from_slice(
+            Some(H256::from_slice(
                 &FieldElement::from_str(
                     "0x32e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258"
                 )
@@ -277,7 +274,7 @@ mod tests {
 
         assert_eq!(
             transaction_receipt.block_hash,
-            Some(PrimitiveH256::from_slice(
+            Some(H256::from_slice(
                 &FieldElement::from_str(
                     "0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e"
                 )
@@ -314,7 +311,7 @@ mod tests {
     #[tokio::test]
     async fn test_transaction_by_block_number_and_index_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let block_number = BlockNumber::Latest;
+        let block_number = BlockNumberOrTag::Latest;
 
         // workaround as Index does not implement new()
         let index: Index = Index::default();
@@ -369,7 +366,7 @@ mod tests {
 
         assert_eq!(
             transaction.block_hash,
-            Some(PrimitiveH256::from(
+            Some(H256::from(
                 felt!("0xa641151e9067e3919ca8d59191c473e2ecfb714578708c0cb0f99de000df05")
                     .to_bytes_be()
             ))
@@ -441,7 +438,7 @@ mod tests {
 
         assert_eq!(
             transaction.block_hash,
-            Some(PrimitiveH256::from(
+            Some(H256::from(
                 felt!("0xa641151e9067e3919ca8d59191c473e2ecfb714578708c0cb0f99de000df05")
                     .to_bytes_be()
             ))
