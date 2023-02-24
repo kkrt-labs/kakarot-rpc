@@ -3,13 +3,14 @@ mod utils;
 
 #[cfg(test)]
 mod tests {
-    use crate::assert_helpers::{assert_block, assert_block_header, assert_transaction};
-    use crate::utils::setup_kakarot_eth_rpc;
+    use crate::{
+        assert_helpers::{assert_block, assert_block_header, assert_transaction},
+        utils::setup_kakarot_eth_rpc,
+    };
     use kakarot_rpc::eth_rpc::EthApiServer;
-    use reth_primitives::H256 as PrimitiveH256;
     use reth_primitives::{
         rpc::{BlockNumber, H256, U256, U64},
-        H160,
+        H160, H256 as PrimitiveH256,
     };
     use reth_rpc_types::Index;
     use serde_json::json;
