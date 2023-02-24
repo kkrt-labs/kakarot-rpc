@@ -227,15 +227,14 @@ mod tests {
     async fn test_block_transaction_count_by_hash_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
         let hash =
-            H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e")
+            H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
                 .unwrap();
 
         let transaction_count = kakarot_rpc
             .block_transaction_count_by_hash(hash)
             .await
-            .unwrap()
             .unwrap();
-        assert_eq!(U256::from(transaction_count), U256::from(172));
+        assert_eq!(transaction_count.as_u64(), 42);
     }
 
     #[tokio::test]
@@ -246,9 +245,8 @@ mod tests {
         let transaction_count = kakarot_rpc
             .block_transaction_count_by_number(block_number)
             .await
-            .unwrap()
             .unwrap();
-        assert_eq!(U256::from(transaction_count), U256::from(172));
+        assert_eq!(transaction_count.as_u64(), 42);
     }
 
     #[tokio::test]
