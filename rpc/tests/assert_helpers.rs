@@ -3,7 +3,7 @@ use kakarot_rpc_core::{
     helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address},
 };
 use reth_primitives::{Bloom, Bytes, H160, H256, H64, U256};
-use reth_rpc_types::{Block, BlockTransactions, Signature, Transaction};
+use reth_rpc_types::{Block, BlockTransactions, Rich, Signature, Transaction};
 use serde::{Deserialize, Serialize};
 use starknet::{
     core::types::FieldElement,
@@ -32,116 +32,111 @@ struct BlockTransactionHashesObj {
     transactions: Vec<FieldElement>,
 }
 
-pub fn assert_block(block: Block, starknet_res: String, starknet_txs: String, hydrated: bool) {
+pub fn assert_block(
+    block: &Rich<Block>,
+    starknet_res: String,
+    starknet_txs: String,
+    hydrated: bool,
+) {
     let starknet_data = serde_json::from_str::<StarknetBlockTest>(&starknet_res).unwrap();
 
     assert_eq!(block.total_difficulty, U256::ZERO);
     assert_eq!(block.uncles, vec![]);
-    assert_eq!(block.size, None);
+    assert_eq!(block.size, Some(U256::from(1_000_000)));
     assert_eq!(block.base_fee_per_gas, Some(U256::from(16)));
 
     let starknet_block_hash = FieldElement::from_str(starknet_data.block_hash.as_str()).unwrap();
-    let res_transactions = block.transactions;
+
     if hydrated {
         let starknet_txs = serde_json::from_str::<BlockTransactionObj>(&starknet_txs).unwrap();
+        if let BlockTransactions::Full(transactions) = block.transactions.clone() {
+            for (i, transaction) in starknet_txs.transactions.into_iter().enumerate() {
+                assert_eq!(
+                    transactions[i].block_number,
+                    Some(U256::from(starknet_data.block_number))
+                );
+                assert_eq!(
+                    transactions[i].block_hash,
+                    Some(H256::from_slice(&starknet_block_hash.to_bytes_be()))
+                );
 
-        match res_transactions {
-            BlockTransactions::Full(transactions) => {
-                for (i, transaction) in transactions.into_iter().enumerate() {
-                    assert_eq!(
-                        transaction.block_number,
-                        Some(U256::from(starknet_data.block_number))
-                    );
-                    assert_eq!(
-                        transaction.block_hash,
-                        Some(H256::from_slice(&starknet_block_hash.to_bytes_be()))
-                    );
-
-                    assert_transaction(transaction.clone(), starknet_txs.transactions[i].clone());
-                }
+                assert_transaction(transactions[i].clone(), transaction.clone());
             }
-            BlockTransactions::Hashes(_) => {
-                panic!("BlockTransactions::Hashes should not be returned")
-            }
+        } else {
+            panic!("BlockTransactions::Hashes should not be returned")
         }
     } else {
         let starknet_tx_hashes =
             serde_json::from_str::<BlockTransactionHashesObj>(&starknet_txs).unwrap();
 
-        match res_transactions {
-            BlockTransactions::Hashes(transactions) => {
-                for (i, transaction) in transactions.into_iter().enumerate() {
-                    assert_eq!(
-                        transaction,
-                        H256::from_slice(&starknet_tx_hashes.transactions[i].to_bytes_be())
-                    );
-                }
+        if let BlockTransactions::Hashes(transactions) = block.transactions.clone() {
+            for (i, transaction) in starknet_tx_hashes.transactions.into_iter().enumerate() {
+                assert_eq!(
+                    transactions[i],
+                    H256::from_slice(&transaction.to_bytes_be())
+                );
             }
-            BlockTransactions::Full(_) => {
-                panic!("BlockTransactions::Full should not be returned")
-            }
+        } else {
+            panic!("BlockTransactions::Full should not be returned")
         }
     }
 }
 
-pub fn assert_block_header(block: Block, starknet_res: String, hydrated: bool) {
-    let header = block.header;
+pub fn assert_block_header(block: &Rich<Block>, starknet_res: String, hydrated: bool) {
     let starknet_data = serde_json::from_str::<StarknetBlockTest>(&starknet_res).unwrap();
 
     let starknet_block_hash = FieldElement::from_str(starknet_data.block_hash.as_str()).unwrap();
     assert_eq!(
-        header.hash,
+        block.header.hash,
         Some(H256::from_slice(&starknet_block_hash.to_bytes_be()))
     );
-    assert_eq!(header.number, Some(U256::from(starknet_data.block_number)));
+    assert_eq!(
+        block.header.number,
+        Some(U256::from(starknet_data.block_number))
+    );
 
     let starknet_parent_hash = FieldElement::from_str(starknet_data.parent_hash.as_str()).unwrap();
     let parent_hash = H256::from_slice(&starknet_parent_hash.to_bytes_be());
-    assert_eq!(header.parent_hash, parent_hash);
-    assert_eq!(header.uncles_hash, parent_hash);
+    assert_eq!(block.header.parent_hash, parent_hash);
+    assert_eq!(block.header.uncles_hash, parent_hash);
 
     let starknet_sequencer =
         FieldElement::from_str(starknet_data.sequencer_address.as_str()).unwrap();
     let sequencer = H160::from_slice(&starknet_sequencer.to_bytes_be()[12..32]);
-    assert_eq!(header.author, sequencer);
-    assert_eq!(header.miner, sequencer);
+    assert_eq!(block.header.author, sequencer);
+    assert_eq!(block.header.miner, sequencer);
 
     let starknet_new_root = FieldElement::from_str(starknet_data.new_root.as_str()).unwrap();
     let state_root = H256::from_slice(&starknet_new_root.to_bytes_be());
-    assert_eq!(header.state_root, state_root);
+    assert_eq!(block.header.state_root, state_root);
 
-    assert_eq!(header.timestamp, U256::from(starknet_data.timestamp));
+    assert_eq!(block.header.timestamp, U256::from(starknet_data.timestamp));
 
     if hydrated {
         assert_eq!(
-            header.transactions_root,
-            H256::from_slice(
-                &"0xac91334ba861cb94cba2b1fd63df7e87c15ca73666201abd10b5462255a5c642".as_bytes()
-                    [1..33],
-            )
+            block.header.transactions_root,
+            H256::from_str("0x0000000000000000000000000000000000000000000000000000000000000000")
+                .unwrap()
         );
         assert_eq!(
-            header.receipts_root,
-            H256::from_slice(
-                &"0xf2c8755adf35e78ffa84999e48aba628e775bb7be3c70209738d736b67a9b549".as_bytes()
-                    [1..33],
-            )
+            block.header.receipts_root,
+            H256::from_str("0x0000000000000000000000000000000000000000000000000000000000000000")
+                .unwrap()
         );
     } else {
-        assert_eq!(header.transactions_root, H256::zero());
-        assert_eq!(header.receipts_root, H256::zero());
+        assert_eq!(block.header.transactions_root, H256::zero());
+        assert_eq!(block.header.receipts_root, H256::zero());
     };
 
-    assert_eq!(header.extra_data, Bytes::from(b"0x00"));
-    assert_eq!(header.logs_bloom, Bloom::default());
+    assert_eq!(block.header.extra_data, Bytes::from(b"0x00"));
+    assert_eq!(block.header.logs_bloom, Bloom::default());
 
-    assert_eq!(header.gas_used, U256::ZERO);
-    assert_eq!(header.gas_limit, U256::from(1_000_000_000_000_u64));
-    assert_eq!(header.difficulty, U256::ZERO);
-    assert_eq!(header.size, None);
-    assert_eq!(header.mix_hash, H256::zero());
-    assert_eq!(header.nonce, Some(H64::zero()));
-    // TODO , test one more value
+    assert_eq!(block.header.gas_used, U256::from(500_000));
+    assert_eq!(block.header.gas_limit, U256::from(1_000_000));
+    assert_eq!(block.header.difficulty, U256::ZERO);
+    assert_eq!(block.header.size, Some(U256::from(1_000_000)));
+    assert_eq!(block.header.mix_hash, H256::zero());
+    assert_eq!(block.header.nonce, Some(H64::zero()));
 }
 
 pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransaction) {
@@ -185,10 +180,10 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                     assert_eq!(ether_tx.nonce, felt_to_u256(v1.nonce));
                     assert_eq!(
                         ether_tx.from,
-                        starknet_address_to_ethereum_address(&v1.sender_address)
+                        H160::from_str("0x9296be4959e56b5df2200dbfa30594504a7fed61").unwrap()
                     );
                     let signature = Signature {
-                        v: felt_option_to_u256(Some(&v1.signature[2])).unwrap(),
+                        v: U256::ZERO,
                         r: felt_option_to_u256(Some(&v1.signature[0])).unwrap(),
                         s: felt_option_to_u256(Some(&v1.signature[1])).unwrap(),
                     };

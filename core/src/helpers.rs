@@ -232,7 +232,7 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         to: None,
         //TODO: Fetch real data
         cumulative_gas_used: U256::from(1_000_000),
-        gas_used: None,
+        gas_used: Some(U256::from(500_000)),
         contract_address: None,
         // TODO : default log value
         logs: vec![Log::default()],

@@ -405,7 +405,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn transaction_receipt(&self, _hash: H256) -> Result<Option<TransactionReceipt>> {
-        let receipt = self.kakarot_client.get_transaction_receipt(_hash).await?;
+        let receipt = self.kakarot_client.transaction_receipt(_hash).await?;
         Ok(receipt)
     }
 
@@ -576,8 +576,6 @@ impl EthApiServer for KakarotEthRpc {
                 "Failed to decode raw transaction data. Cannot process a Kakarot call",
             )))
         })?;
-
-        println!("Transaction: {transaction:?}");
 
         let evm_address = transaction.recover_signer().ok_or_else(|| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(

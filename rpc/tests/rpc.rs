@@ -1,14 +1,15 @@
-mod testing_helpers;
+mod assert_helpers;
+mod utils;
 
 #[cfg(test)]
 mod tests {
-    use crate::testing_helpers::{assert_block, assert_block_header, assert_transaction};
-    use kakarot_rpc::test_utils::setup_rpc_server;
-    use kakarot_rpc_core::{
-        helpers::starknet_address_to_ethereum_address, utils::wiremock_utils::EthJsonRpcResponse,
+    use crate::{
+        assert_helpers::{assert_block, assert_block_header, assert_transaction},
+        utils::setup_kakarot_eth_rpc,
     };
-    use reth_primitives::{H256, U256, U64};
-    use reth_rpc_types::{Block, Transaction, TransactionReceipt};
+    use kakarot_rpc::eth_rpc::EthApiServer;
+    use reth_primitives::{BlockNumberOrTag, H160, H256, U256, U64};
+    use reth_rpc_types::Index;
     use serde_json::json;
     use starknet::{
         core::types::FieldElement, macros::felt,
@@ -18,39 +19,30 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_number_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-            .post("http://127.0.0.1:3030")
-            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_blockNumber\", \"params\": [] }")
-            .header("content-type", "application/json")
-            .send()
-            .await
-            .unwrap();
-        let block_number = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
-        assert_eq!(block_number.result, format!("0x{:x}", 19640));
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
 
-        server_handle.stop().unwrap();
+        let block_number = kakarot_rpc.block_number().await.unwrap();
+        assert_eq!(block_number.as_u64(), 19640);
     }
 
     #[tokio::test]
     async fn test_get_block_by_hash_hydrated_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-            .post("http://127.0.0.1:3030")
-            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockByHash\", \"params\": [\"0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9\", true] }")
-            .header("content-type", "application/json")
-            .send()
-            .await
-            .unwrap();
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let hash =
+            H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
+                .unwrap();
 
-        let block = res.json::<EthJsonRpcResponse<Block>>().await.unwrap();
+        let hydrated = true;
+        let block = kakarot_rpc
+            .block_by_hash(hash, hydrated)
+            .await
+            .unwrap()
+            .unwrap();
 
         let starknet_res = json!({
             "block_hash": "0x449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9",
             "block_number": 19612,
-            "new_root": "0x67cde84ecff30c4ca55cb46df37940df87a94cc416cb893eaa9fb4fb67ec513",
+            "new_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "parent_hash": "0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
@@ -76,34 +68,31 @@ mod tests {
         });
 
         assert_block(
-            block.result.clone(),
+            &block,
             starknet_res.to_string(),
             starknet_txs.to_string(),
             true,
         );
-        assert_block_header(block.result, starknet_res.to_string(), true);
-
-        server_handle.stop().unwrap();
+        assert_block_header(&block, starknet_res.to_string(), true);
     }
 
     #[tokio::test]
     async fn test_get_block_by_hash_not_hydrated_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-            .post("http://127.0.0.1:3030")
-            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockByHash\", \"params\": [\"0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e\", false] }")
-            .header("content-type", "application/json")
-            .send()
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let hash =
+            H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e")
+                .unwrap();
+        let hydrated = false;
+        let block = kakarot_rpc
+            .block_by_hash(hash, hydrated)
             .await
+            .unwrap()
             .unwrap();
-
-        let block = res.json::<EthJsonRpcResponse<Block>>().await.unwrap();
 
         let starknet_res = json!({
             "block_hash": "0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e",
             "block_number": 19639,
-            "new_root": "0x5549eb2dffae1d468fff16454cb2f44cdeea63ca79f56730304b170faecdd3b",
+            "new_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "parent_hash": "0x13310ddd53ba41bd8b71dadbf1eb002c215ca8a790cb298d851ba7446e77d38",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
@@ -127,34 +116,30 @@ mod tests {
         });
 
         assert_block(
-            block.result.clone(),
+            &block,
             starknet_res.to_string(),
             starknet_txs.to_string(),
             false,
         );
-        assert_block_header(block.result, starknet_res.to_string(), false);
-
-        server_handle.stop().unwrap();
+        assert_block_header(&block, starknet_res.to_string(), false);
     }
 
     #[tokio::test]
     async fn test_get_block_by_number_hydrated_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-            .post("http://127.0.0.1:3030")
-            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockByNumber\", \"params\": [\"latest\", true] }")
-            .header("content-type", "application/json")
-            .send()
-            .await
-            .unwrap();
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let block_number = BlockNumberOrTag::Latest;
+        let hydrated = true;
 
-        let block = res.json::<EthJsonRpcResponse<Block>>().await.unwrap();
+        let block = kakarot_rpc
+            .block_by_number(block_number, hydrated)
+            .await
+            .unwrap()
+            .unwrap();
 
         let starknet_res = json!({
             "block_hash": "0x449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9",
             "block_number": 19612,
-            "new_root": "0x67cde84ecff30c4ca55cb46df37940df87a94cc416cb893eaa9fb4fb67ec513",
+            "new_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "parent_hash": "0x137970a5417cf7d35eb4eeb04efe6312166f828eec76342338b0e3797ebf3c1",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
@@ -180,38 +165,30 @@ mod tests {
         });
 
         assert_block(
-            block.result.clone(),
+            &block,
             starknet_res.to_string(),
             starknet_txs.to_string(),
             true,
         );
-        assert_block_header(block.result, starknet_res.to_string(), true);
-
-        server_handle.stop().unwrap();
+        assert_block_header(&block, starknet_res.to_string(), true);
     }
 
     #[tokio::test]
     async fn test_get_block_by_number_not_hydrated_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-            .post("http://127.0.0.1:3030")
-            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockByNumber\", \"params\": [\"latest\", false] }")
-            .header("content-type", "application/json")
-            .send()
-            .await
-            .unwrap();
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let block_number = BlockNumberOrTag::Latest;
+        let hydrated = false;
 
-        let block = res
-            .json::<EthJsonRpcResponse<Block>>()
+        let block = kakarot_rpc
+            .block_by_number(block_number, hydrated)
             .await
             .unwrap()
-            .result;
+            .unwrap();
 
         let starknet_res = json!({
             "block_hash": "0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e",
             "block_number": 19639,
-            "new_root": "0x5549eb2dffae1d468fff16454cb2f44cdeea63ca79f56730304b170faecdd3b",
+            "new_root": "0x0000000000000000000000000000000000000000000000000000000000000000",
             "parent_hash": "0x13310ddd53ba41bd8b71dadbf1eb002c215ca8a790cb298d851ba7446e77d38",
             "sequencer_address": "0x5dcd266a80b8a5f29f04d779c6b166b80150c24f2180a75e82427242dab20a9",
             "status": "ACCEPTED_ON_L2",
@@ -235,67 +212,54 @@ mod tests {
         });
 
         assert_block(
-            block.clone(),
+            &block,
             starknet_res.to_string(),
             starknet_txs.to_string(),
             false,
         );
-        assert_block_header(block, starknet_res.to_string(), false);
-
-        server_handle.stop().unwrap();
+        assert_block_header(&block, starknet_res.to_string(), false);
     }
 
     #[tokio::test]
     async fn test_block_transaction_count_by_hash_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-            .post("http://127.0.0.1:3030")
-            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockTransactionCountByHash\", \"params\": [\"0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e\"] }")
-            .header("content-type", "application/json")
-            .send()
-            .await
-            .unwrap();
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let hash =
+            H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e")
+                .unwrap();
 
-        let transaction_count = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
-        assert_eq!(transaction_count.result, format!("0x{:0>64x}", 172));
-        server_handle.stop().unwrap();
+        let transaction_count = kakarot_rpc
+            .block_transaction_count_by_hash(hash)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(U256::from(transaction_count), U256::from(172));
     }
 
     #[tokio::test]
     async fn test_block_transaction_count_by_number_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-            .post("http://127.0.0.1:3030")
-            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getBlockTransactionCountByNumber\", \"params\": [\"latest\"] }")
-            .header("content-type", "application/json")
-            .send()
-            .await
-            .unwrap();
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let block_number = BlockNumberOrTag::Latest;
 
-        let transaction_count = res.json::<EthJsonRpcResponse<String>>().await.unwrap();
-        assert_eq!(transaction_count.result, format!("0x{:0>64x}", 172));
-        server_handle.stop().unwrap();
+        let transaction_count = kakarot_rpc
+            .block_transaction_count_by_number(block_number)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(U256::from(transaction_count), U256::from(172));
     }
 
     #[tokio::test]
     async fn test_transaction_receipt_invoke_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-            .post("http://127.0.0.1:3030")
-            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionReceipt\", \"params\": [\"0x032e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258\"] }")
-            .header("content-type", "application/json")
-            .send()
-            .await
-            .unwrap();
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let hash =
+            H256::from_str("0x032e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258")
+                .unwrap();
 
-        let transaction_receipt = res
-            .json::<EthJsonRpcResponse<TransactionReceipt>>()
+        let transaction_receipt = kakarot_rpc
+            .transaction_receipt(hash)
             .await
             .unwrap()
-            .result;
+            .unwrap();
 
         assert_eq!(
             transaction_receipt.transaction_hash,
@@ -307,6 +271,7 @@ mod tests {
                 .to_bytes_be()
             ))
         );
+
         assert_eq!(
             transaction_receipt.block_hash,
             Some(H256::from_slice(
@@ -317,17 +282,16 @@ mod tests {
                 .to_bytes_be()
             ))
         );
-        assert_eq!(transaction_receipt.block_number, Some(U256::from(19639)));
+
+        assert_eq!(
+            U256::from(transaction_receipt.block_number.unwrap()),
+            U256::from(19639)
+        );
         assert_eq!(transaction_receipt.status_code, Some(U64::from(1)));
 
         assert_eq!(
             transaction_receipt.from,
-            starknet_address_to_ethereum_address(
-                &FieldElement::from_str(
-                    "0x38240162a8eea5142d507ba750385497465a1bb55d4ca014bd34c8fdd5f63d8"
-                )
-                .unwrap()
-            )
+            H160::from_str("0x9296be4959e56b5df2200dbfa30594504a7fed61").unwrap()
         );
 
         // TODO
@@ -342,27 +306,21 @@ mod tests {
         // assert_eq!(transaction_receipt.state_root, None);
         // assert_eq!(transaction_receipt.effective_gas_price, U128::from(1000000));
         // assert_eq!(transaction_receipt.transaction_type, U256::from(0));
-
-        server_handle.stop().unwrap();
     }
 
     #[tokio::test]
     async fn test_transaction_by_block_number_and_index_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-                .post("http://127.0.0.1:3030")
-                .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionByBlockNumberAndIndex\", \"params\": [\"latest\", 1] }")
-                .header("content-type", "application/json")
-                .send()
-                .await
-                .unwrap();
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let block_number = BlockNumberOrTag::Latest;
 
-        let transaction = res
-            .json::<EthJsonRpcResponse<Transaction>>()
+        // workaround as Index does not implement new()
+        let index: Index = Index::default();
+
+        let transaction = kakarot_rpc
+            .transaction_by_block_number_and_index(block_number, index)
             .await
             .unwrap()
-            .result;
+            .unwrap();
 
         let starknet_tx = json!({
             "calldata":[
@@ -391,7 +349,7 @@ mod tests {
              ],
              "max_fee":"0x28551b4c2e91c",
              "nonce":"0x13",
-             "sender_address":"0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21",
+             "sender_address":"0xd90fd6aa27edd344c5cbe1fe999611416b268658e866a54265aaf50d9cf28d",
              "signature":[
                 "0x7d82e8c230ee321acefb67eaccfc55b7c90bf66c9af3b6975405f221587b974",
                 "0x5949c38b6a6f570ea1fdc840f93f875d46fe75619982ac300084ea0d27c4b14"
@@ -413,28 +371,28 @@ mod tests {
                     .to_bytes_be()
             ))
         );
-        assert_eq!(transaction.block_number, Some(U256::from(20129)));
 
-        server_handle.stop().unwrap();
+        assert_eq!(
+            U256::from(transaction.block_number.unwrap()),
+            U256::from(20129)
+        );
     }
 
     #[tokio::test]
     async fn test_transaction_by_block_hash_and_index_is_ok() {
-        let (_, server_handle) = setup_rpc_server().await;
-        let client = reqwest::Client::new();
-        let res = client
-                .post("http://127.0.0.1:3030")
-                .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_getTransactionByBlockHashAndIndex\", \"params\": [\"0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9\", 1] }")
-                .header("content-type", "application/json")
-                .send()
-                .await
+        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let hash =
+            H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
                 .unwrap();
 
-        let transaction = res
-            .json::<EthJsonRpcResponse<Transaction>>()
+        // workaround as Index does not implement new()
+        let index: Index = Index::default();
+
+        let transaction = kakarot_rpc
+            .transaction_by_block_hash_and_index(hash, index)
             .await
             .unwrap()
-            .result;
+            .unwrap();
 
         let starknet_tx = json!({
             "calldata":[
@@ -463,7 +421,7 @@ mod tests {
              ],
              "max_fee":"0x28551b4c2e91c",
              "nonce":"0x13",
-             "sender_address":"0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21",
+             "sender_address":"0xd90fd6aa27edd344c5cbe1fe999611416b268658e866a54265aaf50d9cf28d",
              "signature":[
                 "0x7d82e8c230ee321acefb67eaccfc55b7c90bf66c9af3b6975405f221587b974",
                 "0x5949c38b6a6f570ea1fdc840f93f875d46fe75619982ac300084ea0d27c4b14"
@@ -485,8 +443,9 @@ mod tests {
                     .to_bytes_be()
             ))
         );
-        assert_eq!(transaction.block_number, Some(U256::from(20129)));
-
-        server_handle.stop().unwrap();
+        assert_eq!(
+            U256::from(transaction.block_number.unwrap()),
+            U256::from(20129)
+        );
     }
 }

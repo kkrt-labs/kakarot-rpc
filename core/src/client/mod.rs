@@ -48,7 +48,6 @@ use crate::client::constants::{
     KAKAROT_MAIN_CONTRACT_ADDRESS,
 };
 use async_trait::async_trait;
-use mockall::{automock, predicate::str};
 use reth_rpc_types::Index;
 pub mod constants;
 use constants::selectors::BYTECODE;
@@ -68,7 +67,6 @@ pub enum KakarotClientError {
     OtherError(#[from] anyhow::Error),
 }
 
-#[automock]
 #[async_trait]
 pub trait KakarotClient: Send + Sync {
     async fn block_number(&self) -> Result<U64, KakarotClientError>;
@@ -118,7 +116,7 @@ pub trait KakarotClient: Send + Sync {
         sender_address: FieldElement,
         calldata: Vec<FieldElement>,
     ) -> Result<H256, KakarotClientError>;
-    async fn get_transaction_receipt(
+    async fn transaction_receipt(
         &self,
         hash: H256,
     ) -> Result<Option<TransactionReceipt>, KakarotClientError>;
@@ -239,7 +237,6 @@ impl KakarotClient for KakarotClientImpl {
         block_id: StarknetBlockId,
         hydrated_tx: bool,
     ) -> Result<RichBlock, KakarotClientError> {
-        // let hydrated_tx = false;
         let starknet_block = if hydrated_tx {
             MaybePendingStarknetBlock::BlockWithTxs(
                 self.client.get_block_with_txs(&block_id).await?,
@@ -249,8 +246,6 @@ impl KakarotClient for KakarotClientImpl {
                 self.client.get_block_with_tx_hashes(&block_id).await?,
             )
         };
-        // fetch gas limit, public key, and nonce from starknet rpc
-
         let block = self.starknet_block_to_eth_block(starknet_block).await?;
         Ok(block)
     }
@@ -555,8 +550,6 @@ impl KakarotClient for KakarotClientImpl {
             ))
         })?;
 
-        println!("Starknet address: {result}");
-
         Ok(*result)
     }
 
@@ -581,11 +574,6 @@ impl KakarotClient for KakarotClientImpl {
             .add_invoke_transaction(&BroadcastedInvokeTransaction::V1(transaction_v1))
             .await?;
 
-        println!(
-            "Kakarot Core: Submitted Starknet transaction with hash: {0}",
-            transaction_result.transaction_hash,
-        );
-
         Ok(H256::from(
             transaction_result.transaction_hash.to_bytes_be(),
         ))
@@ -603,7 +591,7 @@ impl KakarotClient for KakarotClientImpl {
     ///
     /// `Ok(Option<TransactionReceipt>)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
-    async fn get_transaction_receipt(
+    async fn transaction_receipt(
         &self,
         hash: H256,
     ) -> Result<Option<TransactionReceipt>, KakarotClientError> {
@@ -909,9 +897,9 @@ impl KakarotClient for KakarotClientImpl {
             StarknetTransaction::Invoke(invoke_tx) => {
                 match invoke_tx {
                     InvokeTransaction::V0(v0) => {
-                        // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
-                        ether_tx.hash =
-                            H256::from_slice(&v0.transaction_hash.to_bytes_be());
+                        // Extract relevant fields from InvokeTransactionV0 and convert them to the
+                        // corresponding fields in EtherTransaction
+                        ether_tx.hash = H256::from_slice(&v0.transaction_hash.to_bytes_be());
                         class_hash = self
                             .client
                             .get_class_hash_at(
@@ -948,10 +936,10 @@ impl KakarotClient for KakarotClientImpl {
                     }
 
                     InvokeTransaction::V1(v1) => {
-                        // Extract relevant fields from InvokeTransactionV0 and convert them to the corresponding fields in EtherTransaction
+                        // Extract relevant fields from InvokeTransactionV0 and convert them to the
+                        // corresponding fields in EtherTransaction
 
-                        ether_tx.hash =
-                            H256::from_slice(&v1.transaction_hash.to_bytes_be());
+                        ether_tx.hash = H256::from_slice(&v1.transaction_hash.to_bytes_be());
                         class_hash = self
                             .client
                             .get_class_hash_at(
@@ -961,9 +949,11 @@ impl KakarotClient for KakarotClientImpl {
                             .await?;
 
                         ether_tx.nonce = felt_to_u256(v1.nonce);
+
                         ether_tx.from = self
                             .get_evm_address(&v1.sender_address, &starknet_block_id)
                             .await?;
+
                         // Define gas_price data
                         ether_tx.gas_price = None;
                         // Extracting the signature
@@ -994,14 +984,14 @@ impl KakarotClient for KakarotClientImpl {
                 }
             }
             // Repeat the process for each variant of StarknetTransaction
-            StarknetTransaction::L1Handler(_) |
-            StarknetTransaction::Declare(_) |
-            StarknetTransaction::Deploy(_) |
-            StarknetTransaction::DeployAccount(_) => {
-                 return Err(KakarotClientError::OtherError(anyhow::anyhow!(
+            StarknetTransaction::L1Handler(_)
+            | StarknetTransaction::Declare(_)
+            | StarknetTransaction::Deploy(_)
+            | StarknetTransaction::DeployAccount(_) => {
+                return Err(KakarotClientError::OtherError(anyhow::anyhow!(
                     "Kakarot starknet_tx_into_eth_tx: L1Handler, Declare, Deploy and DeployAccount transactions unsupported"
-                )))
-            },
+                )));
+            }
         }
 
         let kakarot_class_hash = FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH)
@@ -1048,6 +1038,8 @@ impl KakarotClient for KakarotClientImpl {
         //TODO: Fetch real data
         let total_difficulty: U256 = U256::ZERO;
         //TODO: Fetch real data
+        let base_fee_per_gas = U256::from(16);
+        //TODO: Fetch real data
         let mix_hash = H256::zero();
 
         match block {
@@ -1063,6 +1055,7 @@ impl KakarotClient for KakarotClientImpl {
                         let timestamp = U256::from_be_bytes(
                             pending_block_with_tx_hashes.timestamp.to_be_bytes(),
                         );
+
                         //TODO: Add filter to tx_hashes
                         let transactions = BlockTransactions::Hashes(
                             pending_block_with_tx_hashes
@@ -1103,7 +1096,7 @@ impl KakarotClient for KakarotClientImpl {
                             total_difficulty,
                             uncles: vec![],
                             transactions,
-                            base_fee_per_gas: None,
+                            base_fee_per_gas: Some(base_fee_per_gas),
                             size,
                             withdrawals: Some(vec![]),
                         };
@@ -1121,8 +1114,7 @@ impl KakarotClient for KakarotClientImpl {
                             &block_with_tx_hashes.sequencer_address,
                         );
 
-                        let state_root =
-                            H256::from_slice(&block_with_tx_hashes.new_root.to_bytes_be());
+                        let state_root = H256::zero();
                         let number = U256::from(block_with_tx_hashes.block_number);
                         let timestamp = U256::from(block_with_tx_hashes.timestamp);
                         //TODO: Add filter to tx_hashes
@@ -1161,7 +1153,7 @@ impl KakarotClient for KakarotClientImpl {
                             total_difficulty,
                             uncles: vec![],
                             transactions,
-                            base_fee_per_gas: None,
+                            base_fee_per_gas: Some(base_fee_per_gas),
                             size,
                             withdrawals: Some(vec![]),
                         };
@@ -1223,7 +1215,7 @@ impl KakarotClient for KakarotClientImpl {
                             total_difficulty,
                             uncles: vec![],
                             transactions,
-                            base_fee_per_gas: None,
+                            base_fee_per_gas: Some(base_fee_per_gas),
                             size,
                             withdrawals: Some(vec![]),
                         };
@@ -1287,7 +1279,7 @@ impl KakarotClient for KakarotClientImpl {
                             total_difficulty,
                             uncles: vec![],
                             transactions,
-                            base_fee_per_gas: None,
+                            base_fee_per_gas: Some(base_fee_per_gas),
                             size,
                             withdrawals: Some(vec![]),
                         };

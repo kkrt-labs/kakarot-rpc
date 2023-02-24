@@ -17,13 +17,13 @@ anyhow = "1.0.68"
 jsonrpsee = "0.16.2"
 reqwest = "0.11.13"
 hex = "0.4"
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "3c77dd9" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "3c77dd9" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "3c77dd9" }
-httpmock = "0.6.7"
-mockall = "0.11.3"
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "8094ab18dbb230f177babceeb3d72c7a4c424490" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "8094ab18dbb230f177babceeb3d72c7a4c424490" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "8094ab18dbb230f177babceeb3d72c7a4c424490" }
+
 tokio = { version = "1.21.2", features = ["macros"] }
 serde_json = "1.0"
 serde = { version = "1.0" }
-wiremock = "0.5.17"
 futures = "0.3.26"
+
+wiremock = "0.5.17"
