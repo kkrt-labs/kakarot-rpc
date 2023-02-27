@@ -5,12 +5,18 @@ use jsonrpsee::{
 
 use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::{
-    client::{constants::CHAIN_ID, KakarotClient},
+    client::{
+        constants::{
+            gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS},
+            CHAIN_ID,
+        },
+        KakarotClient,
+    },
     helpers::{ethers_block_id_to_starknet_block_id, raw_calldata},
 };
 use reth_primitives::{
     rpc::{transaction::eip2930::AccessListWithGasUsed, Bytes as RPCBytes},
-    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, H256, H64, U256, U64,
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, H256, H64, U128, U256, U64,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
@@ -203,7 +209,7 @@ trait EthApi {
 
     /// Returns the current maxPriorityFeePerGas per gas in wei.
     #[method(name = "eth_maxPriorityFeePerGas")]
-    async fn max_priority_fee_per_gas(&self) -> Result<U256>;
+    async fn max_priority_fee_per_gas(&self) -> Result<U128>;
 
     /// Returns whether the client is actively mining new blocks.
     #[method(name = "eth_mining")]
@@ -496,7 +502,7 @@ impl EthApiServer for KakarotEthRpc {
         const DEFAULT_REWARD: u64 = 10_u64;
         let block_count_usize = usize::from_str_radix(&_block_count.to_string(), 16).unwrap_or(1);
 
-        let base_fee_per_gas: Vec<U256> = vec![U256::from(16); block_count_usize + 1];
+        let base_fee_per_gas: Vec<U256> = vec![U256::from(BASE_FEE_PER_GAS); block_count_usize + 1];
         let newest_block = match _newest_block {
             BlockNumberOrTag::Number(n) => n,
             // TODO: Add Genesis block number
@@ -525,8 +531,8 @@ impl EthApiServer for KakarotEthRpc {
         })
     }
 
-    async fn max_priority_fee_per_gas(&self) -> Result<U256> {
-        Ok(U256::from(1))
+    async fn max_priority_fee_per_gas(&self) -> Result<U128> {
+        Ok(MAX_PRIORITY_FEE_PER_GAS)
     }
 
     async fn is_mining(&self) -> Result<bool> {
