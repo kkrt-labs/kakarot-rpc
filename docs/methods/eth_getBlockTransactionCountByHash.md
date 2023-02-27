@@ -28,7 +28,7 @@ transactions in a block matching the given block hash.
 
 ### Starknet methods
 
-- [starknet_getBlockTransactionCount](https://github.com/starkware-libs/starknet-specs/blob/a789ccc3432c57777beceaa53a34a7ae2f25fda0/api/starknet_api_openrpc.json#L373)
+- [starknet_getBlockWithTxs](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json#L44)
 
 Example call:
 
