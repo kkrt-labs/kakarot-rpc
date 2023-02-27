@@ -44,15 +44,6 @@ impl<'a, StarknetParams> StarknetRpcBaseData<'a, StarknetParams> {
         }
     }
 
-    pub fn get_block_transaction_count(params: StarknetParams) -> Self {
-        Self {
-            id: 1,
-            jsonrpc: "2.0",
-            method: "starknet_getBlockTransactionCount",
-            params,
-        }
-    }
-
     pub fn block_with_txs(params: StarknetParams) -> Self {
         Self {
             id: 1,
