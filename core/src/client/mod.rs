@@ -9,22 +9,25 @@ use std::convert::From;
 use reth_primitives::{
     keccak256,
     rpc::{Bytes as RpcBytes, Log, H160 as RpcH160, H256 as RpcH256},
-    Address, BlockId, BlockNumberOrTag, Bloom, Bytes, H256, H64, U256, U64,
+    Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H256, H64, U256, U64,
 };
+
+use reth_rlp::Decodable;
+
 use reth_rpc_types::{
-    Block, BlockTransactions, Header, Rich, RichBlock, Signature, SyncInfo, SyncStatus,
-    Transaction as EtherTransaction, TransactionReceipt,
+    Block, BlockTransactions, CallRequest, FeeHistory, Header, Rich, RichBlock, Signature,
+    SyncInfo, SyncStatus, Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::{
     core::types::FieldElement,
     providers::jsonrpc::{
         models::{
             BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction,
-            BroadcastedInvokeTransactionV1, DeployAccountTransactionReceipt,
-            DeployTransactionReceipt, FunctionCall, InvokeTransaction, InvokeTransactionReceipt,
-            MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-            MaybePendingTransactionReceipt, SyncStatusType, Transaction as StarknetTransaction,
-            TransactionReceipt as StarknetTransactionReceipt,
+            BroadcastedInvokeTransactionV1, BroadcastedTransaction,
+            DeployAccountTransactionReceipt, DeployTransactionReceipt, FunctionCall,
+            InvokeTransaction, InvokeTransactionReceipt, MaybePendingBlockWithTxHashes,
+            MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, SyncStatusType,
+            Transaction as StarknetTransaction, TransactionReceipt as StarknetTransactionReceipt,
             TransactionStatus as StarknetTransactionStatus,
         },
         HttpTransport, JsonRpcClient, JsonRpcClientError,
@@ -38,8 +41,8 @@ extern crate hex;
 use crate::helpers::{
     create_default_transaction_receipt, decode_execute_at_address_return,
     ethers_block_id_to_starknet_block_id, felt_option_to_u256, felt_to_u256, hash_to_field_element,
-    starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray,
-    MaybePendingStarknetBlock,
+    raw_starknet_calldata, starknet_address_to_ethereum_address, vec_felt_to_bytes,
+    FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 use std::collections::BTreeMap;
 
@@ -111,11 +114,7 @@ pub trait KakarotClient: Send + Sync {
     ) -> Result<FieldElement, KakarotClientError>;
     async fn submit_starknet_transaction(
         &self,
-        max_fee: FieldElement,
-        signature: Vec<FieldElement>,
-        nonce: FieldElement,
-        sender_address: FieldElement,
-        calldata: Vec<FieldElement>,
+        request: BroadcastedInvokeTransactionV1,
     ) -> Result<H256, KakarotClientError>;
     async fn transaction_receipt(
         &self,
@@ -152,6 +151,24 @@ pub trait KakarotClient: Send + Sync {
         blockhash_opt: Option<H256>,
         blocknum_opt: Option<U256>,
     ) -> Result<BlockTransactions, KakarotClientError>;
+    async fn send_transaction(&self, bytes: Bytes) -> Result<H256, KakarotClientError>;
+    async fn base_fee_per_gas(
+        &self,
+        starknet_block_id: Option<&StarknetBlockId>,
+    ) -> Result<U256, KakarotClientError>;
+
+    async fn fee_history(
+        &self,
+        _block_count: U256,
+        _newest_block: BlockNumberOrTag,
+        _reward_percentiles: Option<Vec<f64>>,
+    ) -> Result<FeeHistory, KakarotClientError>;
+
+    async fn estimate_gas(
+        &self,
+        call_request: CallRequest,
+        block_number: Option<BlockId>,
+    ) -> Result<U256, KakarotClientError>;
 }
 pub struct KakarotClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -556,23 +573,11 @@ impl KakarotClient for KakarotClientImpl {
 
     async fn submit_starknet_transaction(
         &self,
-        max_fee: FieldElement,
-        signature: Vec<FieldElement>,
-        nonce: FieldElement,
-        sender_address: FieldElement,
-        calldata: Vec<FieldElement>,
+        request: BroadcastedInvokeTransactionV1,
     ) -> Result<H256, KakarotClientError> {
-        let transaction_v1 = BroadcastedInvokeTransactionV1 {
-            max_fee,
-            signature,
-            nonce,
-            sender_address,
-            calldata,
-        };
-
         let transaction_result = self
             .client
-            .add_invoke_transaction(&BroadcastedInvokeTransaction::V1(transaction_v1))
+            .add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request))
             .await?;
 
         Ok(H256::from(
@@ -1040,7 +1045,8 @@ impl KakarotClient for KakarotClientImpl {
         //TODO: Fetch real data
         let total_difficulty: U256 = U256::ZERO;
         //TODO: Fetch real data
-        let base_fee_per_gas = U256::from(BASE_FEE_PER_GAS);
+        // let base_fee_per_gas =  U256::from(BASE_FEE_PER_GAS);
+
         //TODO: Fetch real data
         let mix_hash = H256::zero();
 
@@ -1057,6 +1063,11 @@ impl KakarotClient for KakarotClientImpl {
                         let timestamp = U256::from_be_bytes(
                             pending_block_with_tx_hashes.timestamp.to_be_bytes(),
                         );
+
+                        let base_fee_per_gas = self
+                            .base_fee_per_gas(None)
+                            .await
+                            .unwrap_or(U256::from(BASE_FEE_PER_GAS));
 
                         //TODO: Add filter to tx_hashes
                         let transactions = BlockTransactions::Hashes(
@@ -1115,6 +1126,12 @@ impl KakarotClient for KakarotClientImpl {
                         let sequencer = starknet_address_to_ethereum_address(
                             &block_with_tx_hashes.sequencer_address,
                         );
+                        let base_fee_per_gas = self
+                            .base_fee_per_gas(Some(&StarknetBlockId::Hash(
+                                block_with_tx_hashes.block_hash,
+                            )))
+                            .await
+                            .unwrap_or(U256::from(BASE_FEE_PER_GAS));
 
                         let state_root = H256::zero();
                         let number = U256::from(block_with_tx_hashes.block_number);
@@ -1179,6 +1196,11 @@ impl KakarotClient for KakarotClientImpl {
                         let timestamp =
                             U256::from_be_bytes(pending_block_with_txs.timestamp.to_be_bytes());
 
+                        let base_fee_per_gas = self
+                            .base_fee_per_gas(None)
+                            .await
+                            .unwrap_or(U256::from(BASE_FEE_PER_GAS));
+
                         let transactions = self
                             .filter_starknet_into_eth_txs(
                                 pending_block_with_txs.transactions,
@@ -1240,6 +1262,13 @@ impl KakarotClient for KakarotClientImpl {
 
                         let number = U256::from(block_with_txs.block_number);
                         let timestamp = U256::from(block_with_txs.timestamp);
+
+                        let base_fee_per_gas = self
+                            .base_fee_per_gas(Some(&StarknetBlockId::Hash(
+                                block_with_txs.block_hash,
+                            )))
+                            .await
+                            .unwrap_or(U256::from(BASE_FEE_PER_GAS));
 
                         let blockhash_opt =
                             Some(H256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
@@ -1311,5 +1340,188 @@ impl KakarotClient for KakarotClientImpl {
             }
         }
         Ok(BlockTransactions::Full(transactions_vec))
+    }
+
+    async fn send_transaction(&self, bytes: Bytes) -> Result<H256, KakarotClientError> {
+        let mut data = bytes.as_ref();
+
+        if data.is_empty() {
+            return Err(KakarotClientError::OtherError(anyhow::anyhow!(
+                "Kakarot send_transaction: Transaction bytes are empty"
+            )));
+        };
+
+        let transaction = TransactionSigned::decode(&mut data).map_err(|_| {
+            KakarotClientError::OtherError(anyhow::anyhow!(
+                "Kakarot send_transaction: transaction bytes failed to be decoded"
+            ))
+        })?;
+
+        let evm_address = transaction.recover_signer().ok_or_else(|| {
+            KakarotClientError::OtherError(anyhow::anyhow!(
+                "Kakarot send_transaction: signature ecrecover failed"
+            ))
+        })?;
+
+        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
+
+        let starknet_address = self
+            .compute_starknet_address(evm_address, &starknet_block_id)
+            .await?;
+
+        let nonce = FieldElement::from(transaction.nonce());
+
+        // TODO: Provide signature
+        let signature = vec![];
+
+        let kakarot_address_felt = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)
+            .map_err(|error| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot send_transaction: failed to convert KAKAROT_MAIN_CONTRACT_ADDRESS hexadecimal string to FieldElement - {error}"
+                ))
+            })?;
+
+        let calldata = raw_starknet_calldata(kakarot_address_felt, Bytes::from(bytes.0));
+
+        // Get estimated_fee from Starknet
+        let max_fee = FieldElement::ONE;
+
+        let estimate_request = BroadcastedInvokeTransactionV1 {
+            max_fee,
+            signature: signature.clone(),
+            nonce,
+            sender_address: starknet_address,
+            calldata: calldata.clone(),
+        };
+
+        let starknet_estimated_fee = self
+            .client
+            .estimate_fee(
+                BroadcastedTransaction::Invoke(BroadcastedInvokeTransaction::V1(estimate_request)),
+                &StarknetBlockId::Tag(BlockTag::Latest),
+            )
+            .await?;
+
+        let request = BroadcastedInvokeTransactionV1 {
+            max_fee: starknet_estimated_fee.overall_fee.into(),
+            signature,
+            nonce,
+            sender_address: starknet_address,
+            calldata,
+        };
+
+        let starknet_transaction_hash = self.submit_starknet_transaction(request).await?;
+
+        Ok(starknet_transaction_hash)
+    }
+
+    /// Returns the fixed base_fee_per_gas of Kakarot
+    /// Since Starknet works on a FCFS basis (FIFO queue), it is not possible to tip miners to
+    /// incentivize faster transaction inclusion
+    /// As a result, in Kakarot, gas_price := base_fee_per_gas
+    ///
+    /// Computes the Starknet gas_price using starknet_estimateFee RPC method
+    async fn base_fee_per_gas(
+        &self,
+        starknet_block_id: Option<&StarknetBlockId>,
+    ) -> Result<U256, KakarotClientError> {
+        // Get estimated_fee from Starknet
+        let max_fee = FieldElement::ZERO;
+        let signature = vec![];
+        let nonce = FieldElement::ZERO;
+        let sender_address = FieldElement::ZERO;
+        let calldata = vec![];
+
+        let estimate_request = BroadcastedInvokeTransactionV1 {
+            max_fee,
+            signature,
+            nonce,
+            sender_address,
+            calldata,
+        };
+
+        let starknet_estimated_fee = self
+            .client
+            .estimate_fee(
+                BroadcastedTransaction::Invoke(BroadcastedInvokeTransaction::V1(estimate_request)),
+                starknet_block_id.unwrap_or(&StarknetBlockId::Tag(BlockTag::Latest)),
+            )
+            .await?;
+
+        Ok(U256::from(starknet_estimated_fee.gas_price))
+    }
+
+    async fn fee_history(
+        &self,
+        _block_count: U256,
+        _newest_block: BlockNumberOrTag,
+        _reward_percentiles: Option<Vec<f64>>,
+    ) -> Result<FeeHistory, KakarotClientError> {
+        let block_count_usize = usize::from_str_radix(&_block_count.to_string(), 16).unwrap_or(1);
+
+        let base_fee = self
+            .base_fee_per_gas(None)
+            .await
+            .unwrap_or(U256::from(BASE_FEE_PER_GAS));
+
+        let base_fee_per_gas: Vec<U256> = vec![base_fee; block_count_usize + 1];
+        let newest_block = match _newest_block {
+            BlockNumberOrTag::Number(n) => n,
+            // TODO: Add Genesis block number
+            BlockNumberOrTag::Earliest => 1_u64,
+            _ => self.block_number().await?.as_u64(),
+        };
+
+        let gas_used_ratio: Vec<f64> = vec![0.9; block_count_usize];
+        let oldest_block: U256 = U256::from(newest_block) - _block_count;
+
+        Ok(FeeHistory {
+            base_fee_per_gas,
+            gas_used_ratio,
+            oldest_block,
+            reward: None,
+        })
+    }
+
+    async fn estimate_gas(
+        &self,
+        call_request: CallRequest,
+        block_number: Option<BlockId>,
+    ) -> Result<U256, KakarotClientError> {
+        // Convert block number
+        let block_id = ethers_block_id_to_starknet_block_id(
+            block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)),
+        )?;
+        // Convert call request
+        let sender_address = self
+            .compute_starknet_address(call_request.from.unwrap_or_default(), &block_id)
+            .await?;
+        let nonce = call_request.nonce.unwrap_or_default();
+        let overall_fee = call_request.gas.unwrap_or_default()
+            * U256::from(call_request.max_fee_per_gas.unwrap_or_default());
+
+        let estimate_request = BroadcastedInvokeTransactionV1 {
+            max_fee: FieldElement::from_byte_slice_be(&overall_fee.to_be_bytes_vec())
+                .unwrap_or_default(),
+            signature: vec![],
+            nonce: FieldElement::from_byte_slice_be(&nonce.to_be_bytes_vec()).unwrap_or_default(),
+            sender_address,
+            calldata: raw_starknet_calldata(
+                self.kakarot_main_contract,
+                call_request.data.unwrap_or(Bytes::default()),
+            ),
+        };
+
+        // Estimate gas
+        let starknet_estimated_fee = self
+            .client
+            .estimate_fee(
+                BroadcastedTransaction::Invoke(BroadcastedInvokeTransaction::V1(estimate_request)),
+                &StarknetBlockId::Tag(BlockTag::Latest),
+            )
+            .await?;
+
+        let gas = starknet_estimated_fee.gas_consumed;
+        Ok(U256::from(gas))
     }
 }

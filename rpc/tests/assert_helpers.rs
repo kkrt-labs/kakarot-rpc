@@ -1,5 +1,5 @@
 use kakarot_rpc_core::{
-    client::constants::CHAIN_ID,
+    client::constants::{gas::BASE_FEE_PER_GAS, CHAIN_ID},
     helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address},
 };
 use reth_primitives::{Bloom, Bytes, H160, H256, H64, U128, U256};
@@ -43,7 +43,7 @@ pub fn assert_block(
     assert_eq!(block.total_difficulty, U256::ZERO);
     assert_eq!(block.uncles, vec![]);
     assert_eq!(block.size, Some(U256::from(1_000_000)));
-    assert_eq!(block.base_fee_per_gas, Some(U256::from(10)));
+    assert_eq!(block.base_fee_per_gas, Some(U256::from(BASE_FEE_PER_GAS)));
 
     let starknet_block_hash = FieldElement::from_str(starknet_data.block_hash.as_str()).unwrap();
 

@@ -17,10 +17,7 @@ use starknet::{
     },
 };
 
-use crate::client::{
-    constants::{selectors::EXECUTE_AT_ADDRESS, KAKAROT_MAIN_CONTRACT_ADDRESS},
-    KakarotClientError,
-};
+use crate::client::{constants::selectors::EXECUTE_AT_ADDRESS, KakarotClientError};
 
 extern crate hex;
 
@@ -271,8 +268,10 @@ pub fn bytes_to_felt_vec(bytes: Bytes) -> Vec<FieldElement> {
 ///
 /// ## Returns
 /// * `Result<Vec<FieldElement>>` - The calldata for the raw Starknet invoke transaction call
-pub fn raw_calldata(bytes: Bytes) -> Result<Vec<FieldElement>> {
-    let kakarot_address_felt = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
+pub fn raw_starknet_calldata(
+    kakarot_address_felt: FieldElement,
+    bytes: Bytes,
+) -> Vec<FieldElement> {
     let calls: Vec<Call> = vec![Call {
         to: kakarot_address_felt,
         selector: EXECUTE_AT_ADDRESS,
@@ -295,7 +294,7 @@ pub fn raw_calldata(bytes: Bytes) -> Result<Vec<FieldElement>> {
         execute_calldata.push(item); // calldata
     }
 
-    Ok(execute_calldata)
+    execute_calldata
 }
 
 #[cfg(test)]
