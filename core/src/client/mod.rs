@@ -55,6 +55,7 @@ pub mod types;
 use types::{TokenBalance, TokenBalances};
 
 use self::constants::{
+    gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS},
     selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS},
     STARKNET_NATIVE_TOKEN,
 };
@@ -930,9 +931,9 @@ impl KakarotClient for KakarotClientImpl {
                         ether_tx.gas = U256::from(100);
                         // Extracting the chain_id
                         ether_tx.chain_id = Some(CHAIN_ID.into());
-                        // ...
                         ether_tx.block_hash = block_hash;
                         ether_tx.block_number = block_number;
+                        ether_tx.max_priority_fee_per_gas = Some(MAX_PRIORITY_FEE_PER_GAS);
                     }
 
                     InvokeTransaction::V1(v1) => {
@@ -980,6 +981,7 @@ impl KakarotClient for KakarotClientImpl {
                         ether_tx.transaction_type = None;
                         ether_tx.block_hash = block_hash;
                         ether_tx.block_number = block_number;
+                        ether_tx.max_priority_fee_per_gas = Some(MAX_PRIORITY_FEE_PER_GAS);
                     }
                 }
             }
@@ -1038,7 +1040,7 @@ impl KakarotClient for KakarotClientImpl {
         //TODO: Fetch real data
         let total_difficulty: U256 = U256::ZERO;
         //TODO: Fetch real data
-        let base_fee_per_gas = U256::from(16);
+        let base_fee_per_gas = U256::from(BASE_FEE_PER_GAS);
         //TODO: Fetch real data
         let mix_hash = H256::zero();
 

@@ -24,3 +24,23 @@ pub mod selectors {
 
     pub const BALANCE_OF: FieldElement = selector!("balanceOf");
 }
+
+/// This module contains constants related to EVM gas fees.
+pub mod gas {
+    use reth_primitives::U128;
+
+    /// The base fee for a transaction in wei.
+    ///
+    /// Since Starknet does not currently have a market for gas fees
+    pub const BASE_FEE_PER_GAS: u64 = 10;
+
+    /// The maximum priority fee for a transaction in wei.
+    ///
+    /// This fee is the maximum amount a user is willing to pay to have their transaction
+    /// included in a block quickly.
+    ///
+    /// Since Starknet does not currently have a market for gas fees, transactions are processed
+    /// on a "first come first served" basis by the Sequencer.
+    /// As a result, the priority fee is set to 0.
+    pub const MAX_PRIORITY_FEE_PER_GAS: U128 = U128::ZERO;
+}
