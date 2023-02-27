@@ -16,11 +16,14 @@ pub enum RpcError {
     ParseError(#[from] AddrParseError),
 }
 
+/// # Errors
+///
+/// Will return `Err` if an error occurs when running the `ServerBuilder` start fails.
 pub async fn run_server(
     starknet_client: Box<dyn KakarotClient>,
 ) -> Result<(SocketAddr, ServerHandle), RpcError> {
     let socket_addr =
-        std::env::var("KAKAROT_HTTP_RPC_ADDRESS").unwrap_or("0.0.0.0:3030".to_owned());
+        std::env::var("KAKAROT_HTTP_RPC_ADDRESS").unwrap_or_else(|_| "0.0.0.0:3030".to_owned());
 
     let server = ServerBuilder::default()
         .build(socket_addr.parse::<SocketAddr>()?)

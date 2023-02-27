@@ -46,6 +46,10 @@ pub enum FeltOrFeltArray {
     FeltArray(Vec<FieldElement>),
 }
 
+/// # Errors
+///
+/// Will return `KakarotClientError` If an error occurs when converting a `Starknet` block hash to a
+/// `FieldElement`
 pub fn ethers_block_id_to_starknet_block_id(
     block: EthBlockId,
 ) -> Result<StarknetBlockId, KakarotClientError> {
@@ -63,19 +67,25 @@ pub fn ethers_block_id_to_starknet_block_id(
     }
 }
 
-pub fn ethers_block_number_to_starknet_block_id(
+/// # Errors
+///
+/// TODO: Will return `KakarotClientError`..
+pub const fn ethers_block_number_to_starknet_block_id(
     block: BlockNumberOrTag,
 ) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
-        BlockNumberOrTag::Latest => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
-        BlockNumberOrTag::Finalized => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
-        BlockNumberOrTag::Safe => Ok(StarknetBlockId::Tag(BlockTag::Latest)),
+        BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
+            Ok(StarknetBlockId::Tag(BlockTag::Latest))
+        }
         BlockNumberOrTag::Earliest => Ok(StarknetBlockId::Number(0)),
         BlockNumberOrTag::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
         BlockNumberOrTag::Number(num) => Ok(StarknetBlockId::Number(num)),
     }
 }
 
+/// # Errors
+///
+/// TODO: Will return `KakarotClientError`..
 pub fn decode_execute_at_address_return(
     call_result: Vec<FieldElement>,
 ) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
@@ -103,7 +113,7 @@ pub fn decode_execute_at_address_return(
             _ => (),
         }
         tmp_counter += 1;
-        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+        tmp_array_len -= FieldElement::from(1_u64);
     }
     // Parse stack_len
     let stack_len = call_result.get(tmp_counter).ok_or_else(|| {
@@ -133,7 +143,7 @@ pub fn decode_execute_at_address_return(
             _ => (),
         }
         tmp_counter += 1;
-        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+        tmp_array_len -= FieldElement::from(1_u64);
     }
     // Parse memory_len
     let memory_len = call_result.get(tmp_counter).ok_or_else(|| {
@@ -179,7 +189,7 @@ pub fn decode_execute_at_address_return(
             _ => (),
         }
         tmp_counter += 1;
-        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+        tmp_array_len -= FieldElement::from(1_u64);
     }
     // Parse gas_used return value
     let gas_used = call_result.get(tmp_counter).ok_or_else(|| {
@@ -192,21 +202,26 @@ pub fn decode_execute_at_address_return(
     Ok(segmented_result)
 }
 
+/// # Errors
+///
+/// TODO: add error case message
 pub fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, KakarotClientError> {
-    match element {
-        Some(x) => {
+    element.map_or_else(
+        || Ok(U256::from(0)),
+        |x| {
             let inner = x.to_bytes_be();
             Ok(U256::from_be_bytes(inner))
-        }
-        None => Ok(U256::from(0)),
-    }
+        },
+    )
 }
 
+#[must_use]
 pub fn felt_to_u256(element: FieldElement) -> U256 {
     let inner = element.to_bytes_be();
     U256::from_be_bytes(inner)
 }
 
+#[must_use]
 pub fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
     let felt_vec_in_u8: Vec<u8> = felt_vec.into_iter().flat_map(|x| x.to_bytes_be()).collect();
     Bytes::from(felt_vec_in_u8)
@@ -218,10 +233,12 @@ pub fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
 /// use the `client.get_evm_address`() method.
 /// `starknet_address_to_ethereum_address` is only used for Starknet addresses that do not have an
 /// EVM address equivalent.
+#[must_use]
 pub fn starknet_address_to_ethereum_address(starknet_address: &FieldElement) -> Address {
     H160::from_slice(&starknet_address.to_bytes_be()[12..32])
 }
 
+#[must_use]
 pub fn create_default_transaction_receipt() -> TransactionReceipt {
     TransactionReceipt {
         transaction_hash: None,
@@ -248,6 +265,9 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
     }
 }
 
+/// # Errors
+///
+/// TODO: add error case message
 pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, KakarotClientError> {
     let hash_hex = hex::encode(hash);
     let hash_felt = FieldElement::from_hex_be(&hash_hex).map_err(|e| {
@@ -259,11 +279,11 @@ pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, KakarotClientEr
     Ok(hash_felt)
 }
 
-pub fn bytes_to_felt_vec(bytes: Bytes) -> Vec<FieldElement> {
+pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
     bytes.to_vec().into_iter().map(FieldElement::from).collect()
 }
 
-/// Author: https://github.com/xJonathanLEI/starknet-rs/blob/447182a90839a3e4f096a01afe75ef474186d911/starknet-accounts/src/account/execution.rs#L166
+/// Author: <https://github.com/xJonathanLEI/starknet-rs/blob/447182a90839a3e4f096a01afe75ef474186d911/starknet-accounts/src/account/execution.rs#L166>
 /// Constructs the calldata for a raw Starknet invoke transaction call
 /// ## Arguments
 /// * `bytes` - The calldata to be passed to the contract - RLP encoded raw EVM transaction
@@ -271,7 +291,11 @@ pub fn bytes_to_felt_vec(bytes: Bytes) -> Vec<FieldElement> {
 ///
 /// ## Returns
 /// * `Result<Vec<FieldElement>>` - The calldata for the raw Starknet invoke transaction call
-pub fn raw_calldata(bytes: Bytes) -> Result<Vec<FieldElement>> {
+///
+/// # Errors
+///
+/// TODO: add error case message
+pub fn raw_calldata(bytes: &Bytes) -> Result<Vec<FieldElement>> {
     let kakarot_address_felt = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
     let calls: Vec<Call> = vec![Call {
         to: kakarot_address_felt,
@@ -305,7 +329,7 @@ mod tests {
     #[test]
     fn test_bytes_to_felt_vec() {
         let bytes = Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-        let felt_vec = bytes_to_felt_vec(bytes);
+        let felt_vec = bytes_to_felt_vec(&bytes);
         assert_eq!(felt_vec.len(), 10);
         assert_eq!(
             felt_vec,

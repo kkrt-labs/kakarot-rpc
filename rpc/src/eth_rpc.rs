@@ -340,10 +340,7 @@ impl EthApiServer for KakarotEthRpc {
             .kakarot_client
             .block_transaction_count_by_number(_number)
             .await?;
-        match transaction_count {
-            Some(transaction_count) => Ok(Some(transaction_count)),
-            None => Ok(None),
-        }
+        transaction_count.map_or_else(|| Ok(None), |transaction_count| Ok(Some(transaction_count)))
     }
 
     async fn block_uncles_count_by_hash(&self, _hash: H256) -> Result<U256> {
@@ -516,15 +513,12 @@ impl EthApiServer for KakarotEthRpc {
         let gas_used_ratio: Vec<f64> = vec![0.9; block_count_usize];
         let oldest_block: U256 = U256::from(newest_block) - _block_count;
 
-        let reward: Option<Vec<Vec<U256>>> = match _reward_percentiles {
-            Some(reward_percentiles) => {
-                let num_percentiles = reward_percentiles.len();
-                let reward_vec =
-                    vec![vec![U256::from(DEFAULT_REWARD); num_percentiles]; block_count_usize];
-                Some(reward_vec)
-            }
-            None => None,
-        };
+        let reward: Option<Vec<Vec<U256>>> = _reward_percentiles.map(|reward_percentiles| {
+            let num_percentiles = reward_percentiles.len();
+            let reward_vec =
+                vec![vec![U256::from(DEFAULT_REWARD); num_percentiles]; block_count_usize];
+            reward_vec
+        });
 
         Ok(FeeHistory {
             base_fee_per_gas,
@@ -602,7 +596,7 @@ impl EthApiServer for KakarotEthRpc {
         // TODO: Provide signature
         let signature = vec![];
 
-        let calldata = raw_calldata(Bytes::from(_bytes.0)).map_err(|_| {
+        let calldata = raw_calldata(&Bytes::from(_bytes.0)).map_err(|_| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
                 "Failed to get calldata from raw transaction data. Cannot process a Kakarot call",
             )))
@@ -664,6 +658,7 @@ impl KakarotCustomApiServer for KakarotEthRpc {
 }
 
 impl KakarotEthRpc {
+    #[must_use]
     pub fn new(kakarot_client: Box<dyn KakarotClient>) -> Self {
         Self { kakarot_client }
     }

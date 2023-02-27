@@ -170,6 +170,15 @@ impl From<KakarotClientError> for jsonrpsee::core::Error {
 }
 
 impl KakarotClientImpl {
+    /// Create a new `KakarotClient`.
+    ///
+    /// # Arguments
+    ///
+    /// * `starknet_rpc(&str)` - `StarkNet` RPC
+    ///
+    /// # Errors
+    ///
+    /// `Err(KakarotClientError)` if the operation failed.
     pub fn new(starknet_rpc: &str) -> Result<Self> {
         let url = Url::parse(starknet_rpc)?;
         let kakarot_main_contract = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
@@ -632,10 +641,10 @@ impl KakarotClient for KakarotClientImpl {
                     res_receipt.transaction_hash =
                         Some(H256::from(&transaction_hash.to_bytes_be()));
                     res_receipt.status_code = match status {
-                        StarknetTransactionStatus::Pending => Some(U64::from(0)),
-                        StarknetTransactionStatus::AcceptedOnL1 => Some(U64::from(1)),
-                        StarknetTransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
-                        StarknetTransactionStatus::Rejected => Some(U64::from(0)),
+                        StarknetTransactionStatus::Rejected
+                        | StarknetTransactionStatus::Pending => Some(U64::from(0)),
+                        StarknetTransactionStatus::AcceptedOnL1
+                        | StarknetTransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
                     };
                     res_receipt.block_hash = Some(H256::from(&block_hash.to_bytes_be()));
                     res_receipt.block_number = Some(U256::from(block_number));
@@ -1305,7 +1314,7 @@ impl KakarotClient for KakarotClientImpl {
                 .starknet_tx_into_kakarot_tx(transaction, blockhash_opt, blocknum_opt)
                 .await;
             if let Ok(val) = tx_value {
-                transactions_vec.push(val)
+                transactions_vec.push(val);
             }
         }
         Ok(BlockTransactions::Full(transactions_vec))
