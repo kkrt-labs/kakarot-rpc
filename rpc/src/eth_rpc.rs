@@ -5,17 +5,17 @@ use jsonrpsee::{
 
 use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::{
-    client::{constants::selectors::CHAIN_ID, types::RichBlock, KakarotClient},
+    client::{constants::selectors::CHAIN_ID, KakarotClient},
     helpers::{ethers_block_id_to_starknet_block_id, raw_calldata},
 };
 use reth_primitives::{
-    rpc::{transaction::eip2930::AccessListWithGasUsed, BlockId, BlockNumber, Bytes, H256},
-    Address, Bytes as PrimitiveBytes, TransactionSigned, H64, U256, U64,
+    rpc::{transaction::eip2930::AccessListWithGasUsed, Bytes as RPCBytes},
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, H256, H64, U256, U64,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, SyncStatus, TransactionReceipt,
-    TransactionRequest, Work,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
+    Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
 use starknet::{
@@ -23,7 +23,7 @@ use starknet::{
     providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag},
 };
 
-use kakarot_rpc_core::client::types::{TokenBalances, Transaction as EtherTransaction};
+use kakarot_rpc_core::client::types::TokenBalances;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 pub struct KakarotEthRpc {
@@ -61,7 +61,11 @@ trait EthApi {
 
     /// Returns information about a block by number.
     #[method(name = "eth_getBlockByNumber")]
-    async fn block_by_number(&self, number: BlockNumber, full: bool) -> Result<Option<RichBlock>>;
+    async fn block_by_number(
+        &self,
+        number: BlockNumberOrTag,
+        full: bool,
+    ) -> Result<Option<RichBlock>>;
 
     /// Returns the number of transactions in a block from a block matching the given block hash.
     #[method(name = "eth_getBlockTransactionCountByHash")]
@@ -69,7 +73,7 @@ trait EthApi {
 
     /// Returns the number of transactions in a block matching the given block number.
     #[method(name = "eth_getBlockTransactionCountByNumber")]
-    async fn block_transaction_count_by_number(&self, number: BlockNumber) -> Result<U64>;
+    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64>;
 
     /// Returns the number of uncles in a block from a block matching the given block hash.
     #[method(name = "eth_getUncleCountByBlockHash")]
@@ -77,7 +81,7 @@ trait EthApi {
 
     /// Returns the number of uncles in a block with given block number.
     #[method(name = "eth_getUncleCountByBlockNumber")]
-    async fn block_uncles_count_by_number(&self, number: BlockNumber) -> Result<U256>;
+    async fn block_uncles_count_by_number(&self, number: BlockNumberOrTag) -> Result<U256>;
 
     /// Returns an uncle block of the given block and index.
     #[method(name = "eth_getUncleByBlockHashAndIndex")]
@@ -91,7 +95,7 @@ trait EthApi {
     #[method(name = "eth_getUncleByBlockNumberAndIndex")]
     async fn uncle_by_block_number_and_index(
         &self,
-        number: BlockNumber,
+        number: BlockNumberOrTag,
         index: Index,
     ) -> Result<Option<RichBlock>>;
 
@@ -111,7 +115,7 @@ trait EthApi {
     #[method(name = "eth_getTransactionByBlockNumberAndIndex")]
     async fn transaction_by_block_number_and_index(
         &self,
-        number: BlockNumber,
+        number: BlockNumberOrTag,
         index: Index,
     ) -> Result<Option<EtherTransaction>>;
 
@@ -142,19 +146,11 @@ trait EthApi {
 
     /// Returns code at a given address at given block number.
     #[method(name = "eth_getCode")]
-    async fn get_code(
-        &self,
-        address: Address,
-        block_number: Option<BlockId>,
-    ) -> Result<PrimitiveBytes>;
+    async fn get_code(&self, address: Address, block_number: Option<BlockId>) -> Result<Bytes>;
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "eth_call")]
-    async fn call(
-        &self,
-        request: CallRequest,
-        block_number: Option<BlockId>,
-    ) -> Result<PrimitiveBytes>;
+    async fn call(&self, request: CallRequest, block_number: Option<BlockId>) -> Result<Bytes>;
 
     /// Generates an access list for a transaction.
     ///
@@ -201,7 +197,7 @@ trait EthApi {
     async fn fee_history(
         &self,
         block_count: U256,
-        newest_block: BlockNumber,
+        newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory>;
 
@@ -237,21 +233,21 @@ trait EthApi {
 
     /// Sends signed transaction, returning its hash.
     #[method(name = "eth_sendRawTransaction")]
-    async fn send_raw_transaction(&self, bytes: Bytes) -> Result<H256>;
+    async fn send_raw_transaction(&self, bytes: RPCBytes) -> Result<H256>;
 
     /// Returns an Ethereum specific signature with: sign(keccak256("\x19Ethereum Signed Message:\n"
     /// + len(message) + message))).
     #[method(name = "eth_sign")]
-    async fn sign(&self, address: Address, message: Bytes) -> Result<Bytes>;
+    async fn sign(&self, address: Address, message: RPCBytes) -> Result<RPCBytes>;
 
     /// Signs a transaction that can be submitted to the network at a later time using with
     /// `eth_sendRawTransaction.`
     #[method(name = "eth_signTransaction")]
-    async fn sign_transaction(&self, transaction: CallRequest) -> Result<Bytes>;
+    async fn sign_transaction(&self, transaction: CallRequest) -> Result<RPCBytes>;
 
     /// Signs data via [EIP-712](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md).
     #[method(name = "eth_signTypedData")]
-    async fn sign_typed_data(&self, address: Address, data: serde_json::Value) -> Result<Bytes>;
+    async fn sign_typed_data(&self, address: Address, data: serde_json::Value) -> Result<RPCBytes>;
 
     /// Returns the account and storage values of the specified account including the Merkle-proof.
     /// This call can be used to verify that the data you are pulling from is not tampered with.
@@ -302,7 +298,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn block_by_hash(&self, _hash: H256, _full: bool) -> Result<Option<RichBlock>> {
-        let block_id = BlockId::Hash(_hash);
+        let block_id = BlockId::Hash(_hash.into());
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
         let block = self
             .kakarot_client
@@ -313,7 +309,7 @@ impl EthApiServer for KakarotEthRpc {
 
     async fn block_by_number(
         &self,
-        _number: BlockNumber,
+        _number: BlockNumberOrTag,
         _full: bool,
     ) -> Result<Option<RichBlock>> {
         let block_id = BlockId::Number(_number);
@@ -333,7 +329,7 @@ impl EthApiServer for KakarotEthRpc {
         Ok(transaction_count)
     }
 
-    async fn block_transaction_count_by_number(&self, _number: BlockNumber) -> Result<U64> {
+    async fn block_transaction_count_by_number(&self, _number: BlockNumberOrTag) -> Result<U64> {
         let transaction_count = self
             .kakarot_client
             .block_transaction_count_by_number(_number)
@@ -345,7 +341,7 @@ impl EthApiServer for KakarotEthRpc {
         todo!()
     }
 
-    async fn block_uncles_count_by_number(&self, _number: BlockNumber) -> Result<U256> {
+    async fn block_uncles_count_by_number(&self, _number: BlockNumberOrTag) -> Result<U256> {
         todo!()
     }
 
@@ -359,7 +355,7 @@ impl EthApiServer for KakarotEthRpc {
 
     async fn uncle_by_block_number_and_index(
         &self,
-        _number: BlockNumber,
+        _number: BlockNumberOrTag,
         _index: Index,
     ) -> Result<Option<RichBlock>> {
         todo!()
@@ -376,7 +372,7 @@ impl EthApiServer for KakarotEthRpc {
         _hash: H256,
         _index: Index,
     ) -> Result<Option<EtherTransaction>> {
-        let block_id = BlockId::Hash(_hash);
+        let block_id = BlockId::Hash(_hash.into());
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
         let tx = self
             .kakarot_client
@@ -387,7 +383,7 @@ impl EthApiServer for KakarotEthRpc {
 
     async fn transaction_by_block_number_and_index(
         &self,
-        _number: BlockNumber,
+        _number: BlockNumberOrTag,
         _index: Index,
     ) -> Result<Option<EtherTransaction>> {
         let block_id = BlockId::Number(_number);
@@ -406,7 +402,7 @@ impl EthApiServer for KakarotEthRpc {
 
     async fn balance(&self, _address: Address, _block_number: Option<BlockId>) -> Result<U256> {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(
-            _block_number.unwrap_or(BlockId::Number(BlockNumber::Latest)),
+            _block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)),
         )?;
 
         let balance = self
@@ -433,11 +429,7 @@ impl EthApiServer for KakarotEthRpc {
         Ok(U256::from(3))
     }
 
-    async fn get_code(
-        &self,
-        _address: Address,
-        _block_number: Option<BlockId>,
-    ) -> Result<PrimitiveBytes> {
+    async fn get_code(&self, _address: Address, _block_number: Option<BlockId>) -> Result<Bytes> {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(_block_number.unwrap())?;
 
         let code = self
@@ -447,11 +439,7 @@ impl EthApiServer for KakarotEthRpc {
         Ok(code)
     }
 
-    async fn call(
-        &self,
-        _request: CallRequest,
-        _block_number: Option<BlockId>,
-    ) -> Result<PrimitiveBytes> {
+    async fn call(&self, _request: CallRequest, _block_number: Option<BlockId>) -> Result<Bytes> {
         // unwrap option or return jsonrpc error
         let to = _request.to.ok_or_else(|| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
@@ -465,11 +453,11 @@ impl EthApiServer for KakarotEthRpc {
             )))
         })?;
 
-        let block_id = _block_number.unwrap_or(BlockId::Number(BlockNumber::Latest));
+        let block_id = _block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
         let result = self
             .kakarot_client
-            .call_view(to, PrimitiveBytes::from(calldata.0), starknet_block_id)
+            .call_view(to, Bytes::from(calldata.0), starknet_block_id)
             .await?;
 
         Ok(result)
@@ -499,7 +487,7 @@ impl EthApiServer for KakarotEthRpc {
     async fn fee_history(
         &self,
         _block_count: U256,
-        _newest_block: BlockNumber,
+        _newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
         // ⚠️ Experimental ⚠️
@@ -510,9 +498,9 @@ impl EthApiServer for KakarotEthRpc {
 
         let base_fee_per_gas: Vec<U256> = vec![U256::from(16); block_count_usize + 1];
         let newest_block = match _newest_block {
-            BlockNumber::Number(n) => n.as_u64(),
+            BlockNumberOrTag::Number(n) => n,
             // TODO: Add Genesis block number
-            BlockNumber::Earliest => 1_u64,
+            BlockNumberOrTag::Earliest => 1_u64,
             _ => self.kakarot_client.block_number().await?.as_u64(),
         };
 
@@ -565,7 +553,7 @@ impl EthApiServer for KakarotEthRpc {
         todo!()
     }
 
-    async fn send_raw_transaction(&self, _bytes: Bytes) -> Result<H256> {
+    async fn send_raw_transaction(&self, _bytes: RPCBytes) -> Result<H256> {
         let mut data = _bytes.as_ref();
 
         if data.is_empty() {
@@ -605,7 +593,7 @@ impl EthApiServer for KakarotEthRpc {
         // TODO: Provide signature
         let signature = vec![];
 
-        let calldata = raw_calldata(PrimitiveBytes::from(_bytes.0)).map_err(|_| {
+        let calldata = raw_calldata(Bytes::from(_bytes.0)).map_err(|_| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
                 "Failed to get calldata from raw transaction data. Cannot process a Kakarot call",
             )))
@@ -619,15 +607,15 @@ impl EthApiServer for KakarotEthRpc {
         Ok(starknet_transaction_hash)
     }
 
-    async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
+    async fn sign(&self, _address: Address, _message: RPCBytes) -> Result<RPCBytes> {
         todo!()
     }
 
-    async fn sign_transaction(&self, _transaction: CallRequest) -> Result<Bytes> {
+    async fn sign_transaction(&self, _transaction: CallRequest) -> Result<RPCBytes> {
         todo!()
     }
 
-    async fn sign_typed_data(&self, _address: Address, _data: Value) -> Result<Bytes> {
+    async fn sign_typed_data(&self, _address: Address, _data: Value) -> Result<RPCBytes> {
         todo!()
     }
 

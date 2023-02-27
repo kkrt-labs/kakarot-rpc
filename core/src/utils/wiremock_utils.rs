@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::helpers::ethers_block_id_to_starknet_block_id;
-use reth_primitives::rpc::{BlockId, H256};
+use reth_primitives::{BlockId, H256};
 use serde::{Deserialize, Serialize};
 use starknet::providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag};
 use wiremock::{
@@ -135,50 +135,11 @@ pub async fn setup_wiremock() -> String {
         .mount(&mock_server)
         .await;
 
-    // block_transaction_count hash
-    let block_id = BlockId::Hash(
-        H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
-            .unwrap(),
-    );
-    let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id).unwrap();
-    Mock::given(method("POST"))
-        .and(body_json(StarknetRpcBaseData::get_block_transaction_count(
-            [&starknet_block_id],
-        )))
-        .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_raw(
-                    include_str!("data/blocks/starknet_getBlockTransactionCount.json"),
-                    "application/json",
-                )
-                .append_header("vary", "Accept-Encoding")
-                .append_header("vary", "Origin"),
-        )
-        .mount(&mock_server)
-        .await;
-
-    // block_transaction_count latest
-    let latest_block = StarknetBlockId::Tag(BlockTag::Latest);
-    Mock::given(method("POST"))
-        .and(body_json(StarknetRpcBaseData::get_block_transaction_count(
-            [&latest_block],
-        )))
-        .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_raw(
-                    include_str!("data/blocks/starknet_getBlockTransactionCount.json"),
-                    "application/json",
-                )
-                .append_header("vary", "Accept-Encoding")
-                .append_header("vary", "Origin"),
-        )
-        .mount(&mock_server)
-        .await;
-
     // block_with_txs
     let block_id = BlockId::Hash(
         H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
-            .unwrap(),
+            .unwrap()
+            .into(),
     );
     let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id).unwrap();
     Mock::given(method("POST"))
@@ -200,7 +161,8 @@ pub async fn setup_wiremock() -> String {
     // block_with_tx_hashes
     let block_id_tx_hashes = BlockId::Hash(
         H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e")
-            .unwrap(),
+            .unwrap()
+            .into(),
     );
     let starknet_block_id_tx_hashes =
         ethers_block_id_to_starknet_block_id(block_id_tx_hashes).unwrap();
