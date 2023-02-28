@@ -396,7 +396,7 @@ pub async fn setup_wiremock() -> String {
         .await;
 
     // Get kakarot contract bytecode
-    // TODO: Use the latest mapping between starknet and EVM adresses
+    // TODO: Use the latest mapping between starknet and EVM addresses
 
     mock_server.uri()
 }

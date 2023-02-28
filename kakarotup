@@ -42,7 +42,7 @@ add_to_shell() {
 }
 
 # Install latest Kakarot RPC Release
-# pull releaes tarball by platform and architecture
+# pull releases tarball by platform and architecture
 install_kakarot_rpc() {
     PLATFORM="$(uname -s)"
     case $PLATFORM in
