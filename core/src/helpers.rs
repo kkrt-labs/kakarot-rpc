@@ -103,7 +103,7 @@ pub fn decode_execute_at_address_return(
             _ => (),
         }
         tmp_counter += 1;
-        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+        tmp_array_len -= FieldElement::from(1_u64);
     }
     // Parse stack_len
     let stack_len = call_result.get(tmp_counter).ok_or_else(|| {
@@ -133,7 +133,7 @@ pub fn decode_execute_at_address_return(
             _ => (),
         }
         tmp_counter += 1;
-        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+        tmp_array_len -= FieldElement::from(1_u64);
     }
     // Parse memory_len
     let memory_len = call_result.get(tmp_counter).ok_or_else(|| {
@@ -179,7 +179,7 @@ pub fn decode_execute_at_address_return(
             _ => (),
         }
         tmp_counter += 1;
-        tmp_array_len = tmp_array_len - FieldElement::from(1_u64);
+        tmp_array_len -= FieldElement::from(1_u64);
     }
     // Parse gas_used return value
     let gas_used = call_result.get(tmp_counter).ok_or_else(|| {

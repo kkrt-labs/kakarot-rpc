@@ -69,14 +69,11 @@ trait EthApi {
 
     /// Returns the number of transactions in a block from a block matching the given block hash.
     #[method(name = "eth_getBlockTransactionCountByHash")]
-    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<Option<U256>>;
+    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64>;
 
     /// Returns the number of transactions in a block matching the given block number.
     #[method(name = "eth_getBlockTransactionCountByNumber")]
-    async fn block_transaction_count_by_number(
-        &self,
-        number: BlockNumberOrTag,
-    ) -> Result<Option<U256>>;
+    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64>;
 
     /// Returns the number of uncles in a block from a block matching the given block hash.
     #[method(name = "eth_getUncleCountByBlockHash")]
@@ -324,26 +321,20 @@ impl EthApiServer for KakarotEthRpc {
         Ok(Some(block))
     }
 
-    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<Option<U256>> {
-        let count = self
+    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64> {
+        let transaction_count = self
             .kakarot_client
             .block_transaction_count_by_hash(hash)
             .await?;
-        Ok(count)
+        Ok(transaction_count)
     }
 
-    async fn block_transaction_count_by_number(
-        &self,
-        _number: BlockNumberOrTag,
-    ) -> Result<Option<U256>> {
+    async fn block_transaction_count_by_number(&self, _number: BlockNumberOrTag) -> Result<U64> {
         let transaction_count = self
             .kakarot_client
             .block_transaction_count_by_number(_number)
             .await?;
-        match transaction_count {
-            Some(transaction_count) => Ok(Some(transaction_count)),
-            None => Ok(None),
-        }
+        Ok(transaction_count)
     }
 
     async fn block_uncles_count_by_hash(&self, _hash: H256) -> Result<U256> {

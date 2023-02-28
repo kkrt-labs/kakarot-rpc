@@ -98,11 +98,8 @@ pub trait KakarotClient: Send + Sync {
     async fn block_transaction_count_by_number(
         &self,
         number: BlockNumberOrTag,
-    ) -> Result<Option<U256>, KakarotClientError>;
-    async fn block_transaction_count_by_hash(
-        &self,
-        hash: H256,
-    ) -> Result<Option<U256>, KakarotClientError>;
+    ) -> Result<U64, KakarotClientError>;
+    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, KakarotClientError>;
     async fn compute_starknet_address(
         &self,
         ethereum_address: Address,
@@ -151,6 +148,10 @@ pub trait KakarotClient: Send + Sync {
         blockhash_opt: Option<H256>,
         blocknum_opt: Option<U256>,
     ) -> Result<BlockTransactions, KakarotClientError>;
+    async fn get_transaction_count_by_block(
+        &self,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<U64, KakarotClientError>;
 }
 pub struct KakarotClientImpl {
     client: JsonRpcClient<HttpTransport>,
@@ -414,25 +415,16 @@ impl KakarotClient for KakarotClientImpl {
     ///
     /// # Returns
     ///
-    ///  * `transaction_count(U256)` - The number of transactions.
+    ///  * `transaction_count(U64)` - The number of transactions.
     ///
-    /// `Ok(Option<U256>)` if the operation was successful.
+    /// `Ok(U64)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
     async fn block_transaction_count_by_number(
         &self,
         number: BlockNumberOrTag,
-    ) -> Result<Option<U256>, KakarotClientError> {
+    ) -> Result<U64, KakarotClientError> {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(BlockId::Number(number))?;
-        let starknet_block = self
-            .client
-            .get_block_with_tx_hashes(&starknet_block_id)
-            .await?;
-        match starknet_block {
-            MaybePendingBlockWithTxHashes::Block(block) => {
-                Ok(Some(U256::from(block.transactions.len())))
-            }
-            MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
-        }
+        self.get_transaction_count_by_block(starknet_block_id).await
     }
 
     /// Get the number of transactions in a block given a block hash.
@@ -441,26 +433,45 @@ impl KakarotClient for KakarotClientImpl {
     /// * `hash(H256)` - The block hash.
     /// # Returns
     ///
-    ///  * `transaction_count(U256)` - The number of transactions.
+    ///  * `transaction_count(U64)` - The number of transactions.
     ///
-    /// `Ok(Option<U256>)` if the operation was successful.
+    /// `Ok(U64)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
-    async fn block_transaction_count_by_hash(
-        &self,
-        hash: H256,
-    ) -> Result<Option<U256>, KakarotClientError> {
+    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, KakarotClientError> {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(BlockId::Hash(hash.into()))?;
-        let starknet_block = self
-            .client
-            .get_block_with_tx_hashes(&starknet_block_id)
-            .await?;
-        match starknet_block {
-            MaybePendingBlockWithTxHashes::Block(block) => {
-                Ok(Some(U256::from(block.transactions.len())))
-            }
-            MaybePendingBlockWithTxHashes::PendingBlock(_) => Ok(None),
-        }
+        self.get_transaction_count_by_block(starknet_block_id).await
     }
+
+    async fn get_transaction_count_by_block(
+        &self,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<U64, KakarotClientError> {
+        let starknet_block = self.client.get_block_with_txs(&starknet_block_id).await?;
+
+        let block_transactions = match starknet_block {
+            MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
+                self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions, None, None)
+                    .await?
+            }
+            MaybePendingBlockWithTxs::Block(block_with_txs) => {
+                let blockhash_opt =
+                    Some(H256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
+                let blocknum_opt = Some(U256::from(block_with_txs.block_number));
+                self.filter_starknet_into_eth_txs(
+                    block_with_txs.transactions,
+                    blockhash_opt,
+                    blocknum_opt,
+                )
+                .await?
+            }
+        };
+        let len = match block_transactions {
+            BlockTransactions::Full(transactions) => transactions.len(),
+            _ => 0,
+        };
+        Ok(U64::from(len))
+    }
+
     async fn transaction_by_block_id_and_index(
         &self,
         block_id: StarknetBlockId,
