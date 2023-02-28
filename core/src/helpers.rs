@@ -311,7 +311,7 @@ pub fn raw_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Result<Vec<F
         execute_calldata.push(item); // calldata
     }
 
-    Ok(execute_calldata)
+    execute_calldata
 }
 
 #[cfg(test)]

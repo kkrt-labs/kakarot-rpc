@@ -22,12 +22,13 @@ pub mod selectors {
 pub mod gas {
     use reth_primitives::U128;
 
-    /// The base fee for a transaction in wei.
+    /// The base fee for a transaction in gwei.
     ///
     /// Since Starknet does not currently have a market for gas fees
-    pub const BASE_FEE_PER_GAS: u64 = 10;
+    /// TODO: Get Starknet "historical" Gas Price instead
+    pub const BASE_FEE_PER_GAS: u64 = 1;
 
-    /// The maximum priority fee for a transaction in wei.
+    /// The maximum priority fee for a transaction in gwei.
     ///
     /// This fee is the maximum amount a user is willing to pay to have their transaction
     /// included in a block quickly.
