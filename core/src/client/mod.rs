@@ -476,7 +476,7 @@ impl KakarotClient for KakarotClientImpl {
         };
         let len = match block_transactions {
             BlockTransactions::Full(transactions) => transactions.len(),
-            _ => 0,
+            BlockTransactions::Hashes(_) => 0,
         };
         Ok(U64::from(len))
     }
