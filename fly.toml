@@ -6,7 +6,7 @@ kill_timeout = 5
 processes = []
 
 [build]
-image = "eliastazartes/kakarot-rpc:latest"
+image = "ghcr.io/sayajin-labs/kakarot-rpc/node:latest"
 
 [env]
 RUST_LOG = "debug"
