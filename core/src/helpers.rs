@@ -87,7 +87,7 @@ pub const fn ethers_block_number_to_starknet_block_id(
 ///
 /// TODO: Will return `KakarotClientError`..
 pub fn decode_execute_at_address_return(
-    call_result: Vec<FieldElement>,
+    call_result: &[FieldElement],
 ) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
@@ -524,7 +524,7 @@ mod tests {
             )
             .unwrap(),
         ];
-        let result = decode_execute_at_address_return(call_result).unwrap();
+        let result = decode_execute_at_address_return(&call_result).unwrap();
         assert_eq!(result.len(), 8);
         assert_eq!(
             result[0],

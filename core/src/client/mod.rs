@@ -361,7 +361,7 @@ impl KakarotClient for KakarotClientImpl {
         // Declare Vec of Result
         // TODO: Change to decode based on ABI or use starknet-rs future feature to decode return
         // params
-        let segmented_result = decode_execute_at_address_return(call_result)?;
+        let segmented_result = decode_execute_at_address_return(&call_result)?;
 
         // Convert the result of the function call to a vector of bytes
         let return_data = segmented_result.get(6).ok_or_else(|| {
