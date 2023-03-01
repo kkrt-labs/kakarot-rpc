@@ -17,10 +17,7 @@ use starknet::{
     },
 };
 
-use crate::client::{
-    constants::{selectors::EXECUTE_AT_ADDRESS, KAKAROT_MAIN_CONTRACT_ADDRESS},
-    KakarotClientError,
-};
+use crate::client::{constants::selectors::EXECUTE_AT_ADDRESS, KakarotClientError};
 
 extern crate hex;
 
@@ -286,21 +283,16 @@ pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
 /// Author: <https://github.com/xJonathanLEI/starknet-rs/blob/447182a90839a3e4f096a01afe75ef474186d911/starknet-accounts/src/account/execution.rs#L166>
 /// Constructs the calldata for a raw Starknet invoke transaction call
 /// ## Arguments
+/// * `kakarot_address` - The Kakarot contract address
 /// * `bytes` - The calldata to be passed to the contract - RLP encoded raw EVM transaction
-///
 ///
 /// ## Returns
 /// * `Result<Vec<FieldElement>>` - The calldata for the raw Starknet invoke transaction call
-///
-/// # Errors
-///
-/// TODO: add error case message
-pub fn raw_calldata(bytes: &Bytes) -> Result<Vec<FieldElement>> {
-    let kakarot_address_felt = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
+pub fn raw_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Result<Vec<FieldElement>> {
     let calls: Vec<Call> = vec![Call {
-        to: kakarot_address_felt,
+        to: kakarot_address,
         selector: EXECUTE_AT_ADDRESS,
-        calldata: bytes_to_felt_vec(bytes),
+        calldata: bytes_to_felt_vec(&bytes),
     }];
     let mut concated_calldata: Vec<FieldElement> = vec![];
     let mut execute_calldata: Vec<FieldElement> = vec![calls.len().into()];
