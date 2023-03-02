@@ -44,8 +44,7 @@ use crate::helpers::{
 use std::collections::BTreeMap;
 
 use crate::client::constants::{
-    selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH,
-    KAKAROT_MAIN_CONTRACT_ADDRESS,
+    selectors::EXECUTE_AT_ADDRESS, ACCOUNT_CLASS_HASH, CHAIN_ID, KAKAROT_MAIN_CONTRACT_ADDRESS,
 };
 use async_trait::async_trait;
 use reth_rpc_types::Index;
@@ -1005,7 +1004,7 @@ impl KakarotClient for KakarotClientImpl {
             }
         }
 
-        let kakarot_class_hash = FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH)
+        let kakarot_class_hash = FieldElement::from_hex_be(ACCOUNT_CLASS_HASH)
             .map_err(|e| {
                 KakarotClientError::OtherError(anyhow::anyhow!(
                     "Kakarot Failed to convert Kakarot custom proxy contract class hash to FieldElement: {}",
