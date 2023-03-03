@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use eyre::Result;
+use futures::future::join_all;
 use jsonrpsee::types::error::CallError;
 use std::convert::From;
 
@@ -841,7 +842,6 @@ impl KakarotClient for KakarotClientImpl {
         address: Address,
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, KakarotClientError> {
-        let mut token_balances = Vec::new();
         let entrypoint = hash_to_field_element(keccak256("balanceOf(address)")).map_err(|e| {
             KakarotClientError::OtherError(anyhow::anyhow!(
                 "Failed to convert entrypoint to FieldElement: {}",
@@ -854,25 +854,28 @@ impl KakarotClient for KakarotClientImpl {
                 e
             ))
         })?;
-
-        for token_address in contract_addresses {
+        let handles = contract_addresses.into_iter().map(|token_address| {
             let calldata = vec![entrypoint, felt_address];
-            let call = self
-                .call_view(
-                    token_address,
-                    Bytes::from(vec_felt_to_bytes(calldata).0),
-                    StarknetBlockId::Tag(BlockTag::Latest),
-                )
-                .await;
 
-            let token_balance = match call {
+            self.call_view(
+                token_address,
+                Bytes::from(vec_felt_to_bytes(calldata).0),
+                StarknetBlockId::Tag(BlockTag::Latest),
+            )
+        });
+        let token_balances = join_all(handles)
+            .await
+            .into_iter()
+            .map(|token_address| match token_address {
                 Ok(call) => {
-                    let hex_balance = U256::from_str_radix(&call.to_string(), 16).map_err(|e| {
-                        KakarotClientError::OtherError(anyhow::anyhow!(
-                            "Failed to convert token balance to U256: {}",
-                            e
-                        ))
-                    })?;
+                    let hex_balance = U256::from_str_radix(&call.to_string(), 16)
+                        .map_err(|e| {
+                            KakarotClientError::OtherError(anyhow::anyhow!(
+                                "Failed to convert token balance to U256: {}",
+                                e
+                            ))
+                        })
+                        .unwrap();
                     TokenBalance {
                         contract_address: address,
                         token_balance: Some(hex_balance),
@@ -884,9 +887,8 @@ impl KakarotClient for KakarotClientImpl {
                     token_balance: None,
                     error: Some(format!("kakarot_getTokenBalances Error: {e}")),
                 },
-            };
-            token_balances.push(token_balance);
-        }
+            })
+            .collect();
 
         Ok(TokenBalances {
             address,
@@ -1310,15 +1312,16 @@ impl KakarotClient for KakarotClientImpl {
         blockhash_opt: Option<H256>,
         blocknum_opt: Option<U256>,
     ) -> Result<BlockTransactions, KakarotClientError> {
-        let mut transactions_vec = vec![];
-        for transaction in initial_transactions {
-            let tx_value = self
-                .starknet_tx_into_kakarot_tx(transaction, blockhash_opt, blocknum_opt)
-                .await;
-            if let Ok(val) = tx_value {
-                transactions_vec.push(val)
-            }
-        }
+        let handles = initial_transactions
+            .into_iter()
+            .map(|starknet_transaction| {
+                self.starknet_tx_into_kakarot_tx(starknet_transaction, blockhash_opt, blocknum_opt)
+            });
+        let transactions_vec = join_all(handles)
+            .await
+            .into_iter()
+            .filter_map(|transaction| transaction.ok())
+            .collect();
         Ok(BlockTransactions::Full(transactions_vec))
     }
 }
