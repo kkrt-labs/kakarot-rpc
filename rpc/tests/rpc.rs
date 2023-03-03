@@ -7,7 +7,7 @@ mod tests {
         assert_helpers::{assert_block, assert_block_header, assert_transaction},
         utils::setup_kakarot_eth_rpc,
     };
-    use kakarot_rpc::eth_rpc::EthApiServer;
+    use kakarot_rpc::eth_api::EthApiServer;
     use reth_primitives::{BlockNumberOrTag, H160, H256, U256, U64};
     use reth_rpc_types::Index;
     use serde_json::json;

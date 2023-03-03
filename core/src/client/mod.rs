@@ -5,7 +5,7 @@ use futures::future::join_all;
 use jsonrpsee::types::error::CallError;
 use std::convert::From;
 
-// TODO: all rpc types should me replaced when native reth Log is implemented
+// TODO: all reth_primitives::rpc types should me replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
     keccak256,
@@ -32,11 +32,10 @@ use starknet::{
             TransactionReceipt as StarknetTransactionReceipt,
             TransactionStatus as StarknetTransactionStatus,
         },
-        HttpTransport, JsonRpcClient, JsonRpcClientError,
+        HttpTransport, JsonRpcClient,
     },
 };
 
-use thiserror::Error;
 use url::Url;
 extern crate hex;
 
@@ -51,143 +50,20 @@ use std::collections::BTreeMap;
 use crate::client::constants::{selectors::EXECUTE_AT_ADDRESS, CHAIN_ID};
 use async_trait::async_trait;
 use reth_rpc_types::Index;
+pub mod client_api;
 pub mod constants;
 use constants::selectors::BYTECODE;
 pub mod types;
 use types::{TokenBalance, TokenBalances};
 
-use self::constants::{
-    gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS},
-    selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS},
-    STARKNET_NATIVE_TOKEN,
+use self::{
+    client_api::{KakarotClient, KakarotClientError},
+    constants::{
+        gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS},
+        selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS},
+        STARKNET_NATIVE_TOKEN,
+    },
 };
-
-#[derive(Debug, Error)]
-pub enum KakarotClientError {
-    #[error(transparent)]
-    RequestError(#[from] JsonRpcClientError<reqwest::Error>),
-    #[error(transparent)]
-    OtherError(#[from] anyhow::Error),
-}
-
-#[async_trait]
-pub trait KakarotClient: Send + Sync {
-    fn kakarot_address(&self) -> FieldElement;
-
-    fn proxy_account_class_hash(&self) -> FieldElement;
-
-    async fn block_number(&self) -> Result<U64, KakarotClientError>;
-
-    async fn get_eth_block_from_starknet_block(
-        &self,
-        block_id: StarknetBlockId,
-        hydrated_tx: bool,
-    ) -> Result<RichBlock, KakarotClientError>;
-
-    async fn get_code(
-        &self,
-        ethereum_address: Address,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<Bytes, KakarotClientError>;
-
-    async fn call_view(
-        &self,
-        ethereum_address: Address,
-        calldata: Bytes,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<Bytes, KakarotClientError>;
-
-    async fn transaction_by_block_id_and_index(
-        &self,
-        block_id: StarknetBlockId,
-        tx_index: Index,
-    ) -> Result<EtherTransaction, KakarotClientError>;
-
-    async fn syncing(&self) -> Result<SyncStatus, KakarotClientError>;
-
-    async fn block_transaction_count_by_number(
-        &self,
-        number: BlockNumberOrTag,
-    ) -> Result<U64, KakarotClientError>;
-
-    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, KakarotClientError>;
-
-    async fn compute_starknet_address(
-        &self,
-        ethereum_address: Address,
-        starknet_block_id: &StarknetBlockId,
-    ) -> Result<FieldElement, KakarotClientError>;
-
-    async fn submit_starknet_transaction(
-        &self,
-        request: BroadcastedInvokeTransactionV1,
-    ) -> Result<H256, KakarotClientError>;
-
-    async fn transaction_receipt(
-        &self,
-        hash: H256,
-    ) -> Result<Option<TransactionReceipt>, KakarotClientError>;
-
-    async fn get_evm_address(
-        &self,
-        starknet_address: &FieldElement,
-        starknet_block_id: &StarknetBlockId,
-    ) -> Result<Address, KakarotClientError>;
-
-    async fn balance(
-        &self,
-        ethereum_address: Address,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<U256, KakarotClientError>;
-
-    async fn token_balances(
-        &self,
-        address: Address,
-        contract_addresses: Vec<Address>,
-    ) -> Result<TokenBalances, KakarotClientError>;
-
-    async fn starknet_tx_into_kakarot_tx(
-        &self,
-        tx: StarknetTransaction,
-        block_hash: Option<H256>,
-        block_number: Option<U256>,
-    ) -> Result<EtherTransaction, KakarotClientError>;
-
-    async fn starknet_block_to_eth_block(
-        &self,
-        block: MaybePendingStarknetBlock,
-    ) -> Result<RichBlock, KakarotClientError>;
-
-    async fn filter_starknet_into_eth_txs(
-        &self,
-        initial_transactions: Vec<StarknetTransaction>,
-        blockhash_opt: Option<H256>,
-        blocknum_opt: Option<U256>,
-    ) -> Result<BlockTransactions, KakarotClientError>;
-
-    async fn send_transaction(&self, bytes: Bytes) -> Result<H256, KakarotClientError>;
-
-    fn base_fee_per_gas(&self) -> U256;
-
-    fn max_priority_fee_per_gas(&self) -> U128;
-
-    async fn fee_history(
-        &self,
-        _block_count: U256,
-        _newest_block: BlockNumberOrTag,
-        _reward_percentiles: Option<Vec<f64>>,
-    ) -> Result<FeeHistory, KakarotClientError>;
-
-    async fn estimate_gas(
-        &self,
-        call_request: CallRequest,
-        block_number: Option<BlockId>,
-    ) -> Result<U256, KakarotClientError>;
-    async fn get_transaction_count_by_block(
-        &self,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<U64, KakarotClientError>;
-}
 
 pub struct KakarotClientImpl {
     client: JsonRpcClient<HttpTransport>,
