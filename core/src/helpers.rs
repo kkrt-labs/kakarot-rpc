@@ -260,7 +260,14 @@ pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, KakarotClientEr
 }
 
 pub fn bytes_to_felt_vec(bytes: Bytes) -> Vec<FieldElement> {
-    bytes.to_vec().into_iter().map(FieldElement::from).collect()
+    let bytes_vec = bytes.to_vec();
+    let mut result = Vec::new();
+    for i in 0..bytes_vec.len() / 32 {
+        let mut buf = [0; 32];
+        buf.copy_from_slice(&bytes_vec[i * 32..(i + 1) * 32]);
+        result.push(FieldElement::from_bytes_be(&buf).unwrap());
+    }
+    result
 }
 
 /// Author: https://github.com/xJonathanLEI/starknet-rs/blob/447182a90839a3e4f096a01afe75ef474186d911/starknet-accounts/src/account/execution.rs#L166
@@ -322,6 +329,17 @@ mod tests {
                 FieldElement::from(10_u64)
             ]
         );
+    }
+
+    #[test]
+    fn test_bytes_to_felt_vec_and_vec_felt_to_bytes() {
+        let input = Bytes::from(vec![
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 1,
+        ]);
+        let expected_output = vec![FieldElement::from(1_u64)];
+        assert_eq!(bytes_to_felt_vec(input.clone()), expected_output);
+        assert_eq!(vec_felt_to_bytes(expected_output), input);
     }
 
     #[test]
