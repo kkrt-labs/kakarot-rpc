@@ -507,12 +507,15 @@ impl EthApiServer for KakarotEthRpc {
         let gas_used_ratio: Vec<f64> = vec![0.9; block_count_usize];
         let oldest_block: U256 = U256::from(newest_block) - _block_count;
 
-        let reward: Option<Vec<Vec<U256>>> = _reward_percentiles.map(|reward_percentiles| {
-            let num_percentiles = reward_percentiles.len();
-            let reward_vec =
-                vec![vec![U256::from(DEFAULT_REWARD); num_percentiles]; block_count_usize];
-            reward_vec
-        });
+        let reward: Option<Vec<Vec<U256>>> = match _reward_percentiles {
+            Some(reward_percentiles) => {
+                let num_percentiles = reward_percentiles.len();
+                let reward_vec =
+                    vec![vec![U256::from(DEFAULT_REWARD); num_percentiles]; block_count_usize];
+                Some(reward_vec)
+            }
+            None => None,
+        };
 
         Ok(FeeHistory {
             base_fee_per_gas,
