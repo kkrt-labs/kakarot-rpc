@@ -5,7 +5,7 @@ use futures::future::join_all;
 use jsonrpsee::types::error::CallError;
 use std::convert::From;
 
-// TODO: all reth_primitives::rpc types should me replaced when native reth Log is implemented
+// TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
     keccak256,
