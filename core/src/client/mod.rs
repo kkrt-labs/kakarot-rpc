@@ -172,6 +172,15 @@ impl From<KakarotClientError> for jsonrpsee::core::Error {
 }
 
 impl KakarotClientImpl {
+    /// Create a new `KakarotClient`.
+    ///
+    /// # Arguments
+    ///
+    /// * `starknet_rpc(&str)` - `StarkNet` RPC
+    ///
+    /// # Errors
+    ///
+    /// `Err(KakarotClientError)` if the operation failed.
     pub fn new(starknet_rpc: &str) -> Result<Self> {
         let url = Url::parse(starknet_rpc)?;
         let kakarot_main_contract = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
@@ -354,7 +363,7 @@ impl KakarotClient for KakarotClientImpl {
         // Declare Vec of Result
         // TODO: Change to decode based on ABI or use starknet-rs future feature to decode return
         // params
-        let segmented_result = decode_execute_at_address_return(call_result)?;
+        let segmented_result = decode_execute_at_address_return(&call_result)?;
 
         // Convert the result of the function call to a vector of bytes
         let return_data = segmented_result.get(6).ok_or_else(|| {
@@ -468,7 +477,7 @@ impl KakarotClient for KakarotClientImpl {
         };
         let len = match block_transactions {
             BlockTransactions::Full(transactions) => transactions.len(),
-            _ => 0,
+            BlockTransactions::Hashes(_) => 0,
         };
         Ok(U64::from(len))
     }
@@ -644,10 +653,10 @@ impl KakarotClient for KakarotClientImpl {
                     res_receipt.transaction_hash =
                         Some(H256::from(&transaction_hash.to_bytes_be()));
                     res_receipt.status_code = match status {
-                        StarknetTransactionStatus::Pending => Some(U64::from(0)),
-                        StarknetTransactionStatus::AcceptedOnL1 => Some(U64::from(1)),
-                        StarknetTransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
-                        StarknetTransactionStatus::Rejected => Some(U64::from(0)),
+                        StarknetTransactionStatus::Rejected
+                        | StarknetTransactionStatus::Pending => Some(U64::from(0)),
+                        StarknetTransactionStatus::AcceptedOnL1
+                        | StarknetTransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
                     };
                     res_receipt.block_hash = Some(H256::from(&block_hash.to_bytes_be()));
                     res_receipt.block_number = Some(U256::from(block_number));

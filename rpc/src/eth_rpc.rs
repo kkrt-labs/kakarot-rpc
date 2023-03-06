@@ -593,7 +593,7 @@ impl EthApiServer for KakarotEthRpc {
         // TODO: Provide signature
         let signature = vec![];
 
-        let calldata = raw_calldata(Bytes::from(_bytes.0)).map_err(|_| {
+        let calldata = raw_calldata(&Bytes::from(_bytes.0)).map_err(|_| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
                 "Failed to get calldata from raw transaction data. Cannot process a Kakarot call",
             )))
@@ -655,6 +655,7 @@ impl KakarotCustomApiServer for KakarotEthRpc {
 }
 
 impl KakarotEthRpc {
+    #[must_use]
     pub fn new(kakarot_client: Box<dyn KakarotClient>) -> Self {
         Self { kakarot_client }
     }
