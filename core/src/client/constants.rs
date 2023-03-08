@@ -1,7 +1,7 @@
 pub const CHAIN_ID: u64 = 1_263_227_476;
 
 pub const STARKNET_NATIVE_TOKEN: &str =
-    "0x79c02f6286965ab96a20362d70bafe4aad36a09a539dbfc79563623d0c96f3d";
+    "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7";
 
 pub mod selectors {
     use starknet::{core::types::FieldElement, macros::selector};
