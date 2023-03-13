@@ -824,7 +824,7 @@ impl KakarotClient for KakarotClientImpl {
             .await?;
 
         let request = FunctionCall {
-            // This FieldElement::from_dec_str cannot fail as the value is a constant
+            // This FieldElement::from_hex_be cannot fail as the value is a constant
             contract_address: FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(),
             entry_point_selector: BALANCE_OF,
             calldata: vec![starknet_address],
