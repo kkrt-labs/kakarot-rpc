@@ -5,7 +5,7 @@ use jsonrpsee::{
 
 use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::{
-    client::{constants::selectors::CHAIN_ID, KakarotClient},
+    client::{constants::CHAIN_ID, KakarotClient},
     helpers::{ethers_block_id_to_starknet_block_id, raw_calldata},
 };
 use reth_primitives::{
@@ -593,7 +593,8 @@ impl EthApiServer for KakarotEthRpc {
         // TODO: Provide signature
         let signature = vec![];
 
-        let calldata = raw_calldata(&Bytes::from(_bytes.0)).map_err(|_| {
+        let calldata = raw_calldata(self.kakarot_client.kakarot_address(), Bytes::from(_bytes.0))
+            .map_err(|_| {
             jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
                 "Failed to get calldata from raw transaction data. Cannot process a Kakarot call",
             )))

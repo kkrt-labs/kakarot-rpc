@@ -44,10 +44,7 @@ use crate::helpers::{
 };
 use std::collections::BTreeMap;
 
-use crate::client::constants::{
-    selectors::EXECUTE_AT_ADDRESS, CHAIN_ID, KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH,
-    KAKAROT_MAIN_CONTRACT_ADDRESS,
-};
+use crate::client::constants::{selectors::EXECUTE_AT_ADDRESS, CHAIN_ID};
 use async_trait::async_trait;
 use reth_rpc_types::Index;
 pub mod constants;
@@ -70,6 +67,9 @@ pub enum KakarotClientError {
 
 #[async_trait]
 pub trait KakarotClient: Send + Sync {
+    fn kakarot_address(&self) -> FieldElement;
+    fn proxy_account_class_hash(&self) -> FieldElement;
+
     async fn block_number(&self) -> Result<U64, KakarotClientError>;
 
     async fn get_eth_block_from_starknet_block(
@@ -154,9 +154,11 @@ pub trait KakarotClient: Send + Sync {
         starknet_block_id: StarknetBlockId,
     ) -> Result<U64, KakarotClientError>;
 }
+
 pub struct KakarotClientImpl {
     client: JsonRpcClient<HttpTransport>,
-    kakarot_main_contract: FieldElement,
+    kakarot_address: FieldElement,
+    proxy_account_class_hash: FieldElement,
 }
 
 impl From<KakarotClientError> for jsonrpsee::core::Error {
@@ -181,12 +183,16 @@ impl KakarotClientImpl {
     /// # Errors
     ///
     /// `Err(KakarotClientError)` if the operation failed.
-    pub fn new(starknet_rpc: &str) -> Result<Self> {
+    pub fn new(
+        starknet_rpc: &str,
+        kakarot_address: FieldElement,
+        proxy_account_class_hash: FieldElement,
+    ) -> Result<Self> {
         let url = Url::parse(starknet_rpc)?;
-        let kakarot_main_contract = FieldElement::from_hex_be(KAKAROT_MAIN_CONTRACT_ADDRESS)?;
         Ok(Self {
             client: JsonRpcClient::new(HttpTransport::new(url)),
-            kakarot_main_contract,
+            kakarot_address,
+            proxy_account_class_hash,
         })
     }
 
@@ -217,6 +223,13 @@ impl KakarotClientImpl {
 
 #[async_trait]
 impl KakarotClient for KakarotClientImpl {
+    fn kakarot_address(&self) -> FieldElement {
+        self.kakarot_address
+    }
+
+    fn proxy_account_class_hash(&self) -> FieldElement {
+        self.proxy_account_class_hash
+    }
     /// Get the number of transactions in a block given a block id.
     /// The number of transactions in a block.
     ///
@@ -292,7 +305,7 @@ impl KakarotClient for KakarotClientImpl {
         // Prepare the calldata for the get_starknet_contract_address function call
         let tx_calldata_vec = vec![ethereum_address_felt];
         let request = FunctionCall {
-            contract_address: self.kakarot_main_contract,
+            contract_address: self.kakarot_address,
             entry_point_selector: COMPUTE_STARKNET_ADDRESS,
             calldata: tx_calldata_vec,
         };
@@ -351,7 +364,7 @@ impl KakarotClient for KakarotClientImpl {
         call_parameters.append(&mut calldata_vec);
 
         let request = FunctionCall {
-            contract_address: self.kakarot_main_contract,
+            contract_address: self.kakarot_address,
             entry_point_selector: EXECUTE_AT_ADDRESS,
             calldata: call_parameters,
         };
@@ -558,7 +571,7 @@ impl KakarotClient for KakarotClientImpl {
         })?;
 
         let request = FunctionCall {
-            contract_address: self.kakarot_main_contract,
+            contract_address: self.kakarot_address,
             entry_point_selector: COMPUTE_STARKNET_ADDRESS,
             calldata: vec![ethereum_address_felt],
         };
@@ -811,8 +824,8 @@ impl KakarotClient for KakarotClientImpl {
             .await?;
 
         let request = FunctionCall {
-            // This FieldElement::from_dec_str cannot fail as the value is a constant
-            contract_address: FieldElement::from_dec_str(STARKNET_NATIVE_TOKEN).unwrap(),
+            // This FieldElement::from_hex_be cannot fail as the value is a constant
+            contract_address: FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(),
             entry_point_selector: BALANCE_OF,
             calldata: vec![starknet_address],
         };
@@ -1016,15 +1029,7 @@ impl KakarotClient for KakarotClientImpl {
             }
         }
 
-        let kakarot_class_hash = FieldElement::from_hex_be(KAKAROT_CONTRACT_ACCOUNT_CLASS_HASH)
-            .map_err(|e| {
-                KakarotClientError::OtherError(anyhow::anyhow!(
-                    "Kakarot Failed to convert Kakarot custom proxy contract class hash to FieldElement: {}",
-                    e
-                ))
-            })?;
-
-        if class_hash == kakarot_class_hash {
+        if class_hash == self.proxy_account_class_hash() {
             Ok(ether_tx)
         } else {
             Err(KakarotClientError::OtherError(anyhow::anyhow!(
@@ -1088,19 +1093,19 @@ impl KakarotClient for KakarotClientImpl {
                         );
 
                         let header = Header {
-                            // PendingblockWithTxHashes doesn't have a block hash
+                            // PendingBlockWithTxHashes doesn't have a block hash
                             hash: None,
                             parent_hash,
                             uncles_hash: parent_hash,
                             author: sequencer,
                             miner: sequencer,
-                            // PendingblockWithTxHashes doesn't have a state root
+                            // PendingBlockWithTxHashes doesn't have a state root
                             state_root: H256::zero(),
-                            // PendingblockWithTxHashes doesn't have a transactions root
+                            // PendingBlockWithTxHashes doesn't have a transactions root
                             transactions_root: H256::zero(),
-                            // PendingblockWithTxHashes doesn't have a receipts root
+                            // PendingBlockWithTxHashes doesn't have a receipts root
                             receipts_root: H256::zero(),
-                            // PendingblockWithTxHashes doesn't have a block number
+                            // PendingBlockWithTxHashes doesn't have a block number
                             number: None,
                             gas_used,
                             gas_limit,
