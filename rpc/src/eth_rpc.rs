@@ -5,13 +5,7 @@ use jsonrpsee::{
 
 use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::{
-    client::{
-        constants::{
-            gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS},
-            CHAIN_ID,
-        },
-        KakarotClient,
-    },
+    client::{constants::CHAIN_ID, KakarotClient},
     helpers::ethers_block_id_to_starknet_block_id,
 };
 use reth_primitives::{
@@ -482,7 +476,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn gas_price(&self) -> Result<U256> {
-        let gas_price = self.kakarot_client.base_fee_per_gas(None).await?;
+        let gas_price = self.kakarot_client.base_fee_per_gas();
         Ok(gas_price)
     }
 
@@ -501,7 +495,8 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn max_priority_fee_per_gas(&self) -> Result<U128> {
-        Ok(MAX_PRIORITY_FEE_PER_GAS)
+        let max_priority_fee = self.kakarot_client.max_priority_fee_per_gas();
+        Ok(max_priority_fee)
     }
 
     async fn is_mining(&self) -> Result<bool> {
