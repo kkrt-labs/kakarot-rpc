@@ -6,22 +6,18 @@ use jsonrpsee::{
 use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::{
     client::{constants::CHAIN_ID, KakarotClient},
-    helpers::{ethers_block_id_to_starknet_block_id, raw_calldata},
+    helpers::ethers_block_id_to_starknet_block_id,
 };
 use reth_primitives::{
-    rpc::{transaction::eip2930::AccessListWithGasUsed, Bytes as RPCBytes},
-    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, H256, H64, U256, U64,
+    rpc::transaction::eip2930::AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes,
+    H256, H64, U128, U256, U64,
 };
-use reth_rlp::Decodable;
+
 use reth_rpc_types::{
     CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
-use starknet::{
-    core::types::FieldElement,
-    providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag},
-};
 
 use kakarot_rpc_core::client::types::TokenBalances;
 
@@ -203,7 +199,7 @@ trait EthApi {
 
     /// Returns the current maxPriorityFeePerGas per gas in wei.
     #[method(name = "eth_maxPriorityFeePerGas")]
-    async fn max_priority_fee_per_gas(&self) -> Result<U256>;
+    async fn max_priority_fee_per_gas(&self) -> Result<U128>;
 
     /// Returns whether the client is actively mining new blocks.
     #[method(name = "eth_mining")]
@@ -233,21 +229,21 @@ trait EthApi {
 
     /// Sends signed transaction, returning its hash.
     #[method(name = "eth_sendRawTransaction")]
-    async fn send_raw_transaction(&self, bytes: RPCBytes) -> Result<H256>;
+    async fn send_raw_transaction(&self, bytes: Bytes) -> Result<H256>;
 
     /// Returns an Ethereum specific signature with: sign(keccak256("\x19Ethereum Signed Message:\n"
     /// + len(message) + message))).
     #[method(name = "eth_sign")]
-    async fn sign(&self, address: Address, message: RPCBytes) -> Result<RPCBytes>;
+    async fn sign(&self, address: Address, message: Bytes) -> Result<Bytes>;
 
     /// Signs a transaction that can be submitted to the network at a later time using with
     /// `eth_sendRawTransaction.`
     #[method(name = "eth_signTransaction")]
-    async fn sign_transaction(&self, transaction: CallRequest) -> Result<RPCBytes>;
+    async fn sign_transaction(&self, transaction: CallRequest) -> Result<Bytes>;
 
     /// Signs data via [EIP-712](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md).
     #[method(name = "eth_signTypedData")]
-    async fn sign_typed_data(&self, address: Address, data: serde_json::Value) -> Result<RPCBytes>;
+    async fn sign_typed_data(&self, address: Address, data: serde_json::Value) -> Result<Bytes>;
 
     /// Returns the account and storage values of the specified account including the Merkle-proof.
     /// This call can be used to verify that the data you are pulling from is not tampered with.
@@ -480,8 +476,8 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn gas_price(&self) -> Result<U256> {
-        //TODO: Fetch correct gas price from Starknet / AA
-        Ok(U256::from(100))
+        let gas_price = self.kakarot_client.base_fee_per_gas();
+        Ok(gas_price)
     }
 
     async fn fee_history(
@@ -490,43 +486,17 @@ impl EthApiServer for KakarotEthRpc {
         _newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
-        // ⚠️ Experimental ⚠️
-        // This is a temporary implementation of the fee history API based on the idea that priority
-        // fee is estimated from former blocks
-        const DEFAULT_REWARD: u64 = 10_u64;
-        let block_count_usize = usize::from_str_radix(&_block_count.to_string(), 16).unwrap_or(1);
+        let fee_history = self
+            .kakarot_client
+            .fee_history(_block_count, _newest_block, _reward_percentiles)
+            .await?;
 
-        let base_fee_per_gas: Vec<U256> = vec![U256::from(16); block_count_usize + 1];
-        let newest_block = match _newest_block {
-            BlockNumberOrTag::Number(n) => n,
-            // TODO: Add Genesis block number
-            BlockNumberOrTag::Earliest => 1_u64,
-            _ => self.kakarot_client.block_number().await?.as_u64(),
-        };
-
-        let gas_used_ratio: Vec<f64> = vec![0.9; block_count_usize];
-        let oldest_block: U256 = U256::from(newest_block) - _block_count;
-
-        let reward: Option<Vec<Vec<U256>>> = match _reward_percentiles {
-            Some(reward_percentiles) => {
-                let num_percentiles = reward_percentiles.len();
-                let reward_vec =
-                    vec![vec![U256::from(DEFAULT_REWARD); num_percentiles]; block_count_usize];
-                Some(reward_vec)
-            }
-            None => None,
-        };
-
-        Ok(FeeHistory {
-            base_fee_per_gas,
-            gas_used_ratio,
-            oldest_block,
-            reward,
-        })
+        Ok(fee_history)
     }
 
-    async fn max_priority_fee_per_gas(&self) -> Result<U256> {
-        Ok(U256::from(1))
+    async fn max_priority_fee_per_gas(&self) -> Result<U128> {
+        let max_priority_fee = self.kakarot_client.max_priority_fee_per_gas();
+        Ok(max_priority_fee)
     }
 
     async fn is_mining(&self) -> Result<bool> {
@@ -553,70 +523,20 @@ impl EthApiServer for KakarotEthRpc {
         todo!()
     }
 
-    async fn send_raw_transaction(&self, _bytes: RPCBytes) -> Result<H256> {
-        let mut data = _bytes.as_ref();
-
-        if data.is_empty() {
-            return Err(jsonrpsee::core::Error::Call(CallError::InvalidParams(
-                anyhow::anyhow!("Raw transaction data is empty. Cannot process a Kakarot call",),
-            )));
-        };
-
-        let transaction = TransactionSigned::decode(&mut data).map_err(|_| {
-            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
-                "Failed to decode raw transaction data. Cannot process a Kakarot call",
-            )))
-        })?;
-
-        let evm_address = transaction.recover_signer().ok_or_else(|| {
-            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
-                "Failed to recover signer from raw transaction data. Cannot process a Kakarot call",
-            )))
-        })?;
-
-        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
-
-        let starknet_address = self
-            .kakarot_client
-            .compute_starknet_address(evm_address, &starknet_block_id)
-            .await
-            .map_err(|_| {
-                jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
-                    "Failed to get starknet address from evm address. Cannot process a Kakarot call",
-                )))
-            })?;
-
-        // TODO: Get nonce from Starknet
-        let nonce = FieldElement::from(transaction.nonce());
-        // TODO: Get gas price from Starknet
-        let max_fee = FieldElement::from(1_000_000_000_000_000_000_u64);
-        // TODO: Provide signature
-        let signature = vec![];
-
-        let calldata = raw_calldata(self.kakarot_client.kakarot_address(), Bytes::from(_bytes.0))
-            .map_err(|_| {
-            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
-                "Failed to get calldata from raw transaction data. Cannot process a Kakarot call",
-            )))
-        })?;
-
-        let starknet_transaction_hash = self
-            .kakarot_client
-            .submit_starknet_transaction(max_fee, signature, nonce, starknet_address, calldata)
-            .await?;
-
-        Ok(starknet_transaction_hash)
+    async fn send_raw_transaction(&self, _bytes: Bytes) -> Result<H256> {
+        let transaction_hash = self.kakarot_client.send_transaction(_bytes).await?;
+        Ok(transaction_hash)
     }
 
-    async fn sign(&self, _address: Address, _message: RPCBytes) -> Result<RPCBytes> {
+    async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
         todo!()
     }
 
-    async fn sign_transaction(&self, _transaction: CallRequest) -> Result<RPCBytes> {
+    async fn sign_transaction(&self, _transaction: CallRequest) -> Result<Bytes> {
         todo!()
     }
 
-    async fn sign_typed_data(&self, _address: Address, _data: Value) -> Result<RPCBytes> {
+    async fn sign_typed_data(&self, _address: Address, _data: Value) -> Result<Bytes> {
         todo!()
     }
 

@@ -1,8 +1,8 @@
 use kakarot_rpc_core::{
-    client::constants::CHAIN_ID,
+    client::constants::{gas::BASE_FEE_PER_GAS, CHAIN_ID},
     helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address},
 };
-use reth_primitives::{Bloom, Bytes, H160, H256, H64, U256};
+use reth_primitives::{Bloom, Bytes, H160, H256, H64, U128, U256};
 use reth_rpc_types::{Block, BlockTransactions, Rich, Signature, Transaction};
 use serde::{Deserialize, Serialize};
 use starknet::{
@@ -43,7 +43,7 @@ pub fn assert_block(
     assert_eq!(block.total_difficulty, U256::ZERO);
     assert_eq!(block.uncles, vec![]);
     assert_eq!(block.size, Some(U256::from(1_000_000)));
-    assert_eq!(block.base_fee_per_gas, Some(U256::from(16)));
+    assert_eq!(block.base_fee_per_gas, Some(U256::from(BASE_FEE_PER_GAS)));
 
     let starknet_block_hash = FieldElement::from_str(starknet_data.block_hash.as_str()).unwrap();
 
@@ -150,7 +150,7 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
     assert_eq!(ether_tx.gas_price, None);
     assert_eq!(ether_tx.transaction_index, None);
     assert_eq!(ether_tx.max_fee_per_gas, None);
-    assert_eq!(ether_tx.max_priority_fee_per_gas, None);
+    assert_eq!(ether_tx.max_priority_fee_per_gas, Some(U128::ZERO));
 
     match starknet_tx {
         StarknetTransaction::Invoke(invoke_tx) => {

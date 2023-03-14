@@ -287,8 +287,8 @@ pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
 /// * `bytes` - The calldata to be passed to the contract - RLP encoded raw EVM transaction
 ///
 /// ## Returns
-/// * `Result<Vec<FieldElement>>` - The calldata for the raw Starknet invoke transaction call
-pub fn raw_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Result<Vec<FieldElement>> {
+/// * `Vec<FieldElement>` - The calldata for the raw Starknet invoke transaction call
+pub fn raw_starknet_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Vec<FieldElement> {
     let calls: Vec<Call> = vec![Call {
         to: kakarot_address,
         selector: EXECUTE_AT_ADDRESS,
@@ -311,7 +311,7 @@ pub fn raw_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Result<Vec<F
         execute_calldata.push(item); // calldata
     }
 
-    Ok(execute_calldata)
+    execute_calldata
 }
 
 #[cfg(test)]
