@@ -1,7 +1,7 @@
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
 use reth_primitives::{
     rpc::transaction::eip2930::AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes,
-    H256, H64, U256, U64,
+    H256, H64, U128, U256, U64,
 };
 use reth_rpc_types::{
     CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
@@ -182,7 +182,7 @@ pub trait EthApi {
 
     /// Returns the current maxPriorityFeePerGas per gas in wei.
     #[method(name = "eth_maxPriorityFeePerGas")]
-    async fn max_priority_fee_per_gas(&self) -> Result<U256>;
+    async fn max_priority_fee_per_gas(&self) -> Result<U128>;
 
     /// Returns whether the client is actively mining new blocks.
     #[method(name = "eth_mining")]

@@ -5,8 +5,8 @@ use jsonrpsee::{
 
 use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::{
-    client::{client_api::KakarotClient, constants::selectors::CHAIN_ID},
-    helpers::{ethers_block_id_to_starknet_block_id, raw_calldata},
+    client::{client_api::KakarotClient, constants::CHAIN_ID},
+    helpers::ethers_block_id_to_starknet_block_id,
 };
 use reth_primitives::{
     rpc::transaction::eip2930::AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes,

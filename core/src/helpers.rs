@@ -15,10 +15,7 @@ use starknet::{
     },
 };
 
-use crate::client::{
-    client_api::KakarotClientError,
-    constants::{selectors::EXECUTE_AT_ADDRESS, KAKAROT_MAIN_CONTRACT_ADDRESS},
-};
+use crate::client::{client_api::KakarotClientError, constants::selectors::EXECUTE_AT_ADDRESS};
 
 extern crate hex;
 
