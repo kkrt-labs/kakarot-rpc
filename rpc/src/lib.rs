@@ -2,10 +2,12 @@
 // //! It is an adapter layer to interact with Kakarot ZK-EVM.
 use std::net::{AddrParseError, SocketAddr};
 pub mod eth_rpc;
-use eth_rpc::{EthApiServer, KakarotEthRpc};
+use eth_api::EthApiServer;
+use eth_rpc::KakarotEthRpc;
+pub mod eth_api;
 use eyre::Result;
 use jsonrpsee::server::{ServerBuilder, ServerHandle};
-use kakarot_rpc_core::client::KakarotClient;
+use kakarot_rpc_core::client::client_api::KakarotClient;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

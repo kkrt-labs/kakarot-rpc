@@ -5,9 +5,7 @@ use reth_primitives::{
 use reth_rpc_types::TransactionReceipt;
 
 use reth_primitives::Address;
-// use reth_rpc_types::{
-//     Block, BlockTransactions, Header, Rich, Transaction as EtherTransaction,
-// };
+
 use starknet::{
     accounts::Call,
     core::types::FieldElement,
@@ -17,7 +15,7 @@ use starknet::{
     },
 };
 
-use crate::client::{constants::selectors::EXECUTE_AT_ADDRESS, KakarotClientError};
+use crate::client::{client_api::KakarotClientError, constants::selectors::EXECUTE_AT_ADDRESS};
 
 extern crate hex;
 
