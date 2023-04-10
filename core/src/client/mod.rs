@@ -1268,8 +1268,23 @@ impl KakarotClient for KakarotClientImpl {
 
         let nonce = FieldElement::from(transaction.nonce());
 
-        // TODO: Provide signature
-        let signature = vec![];
+        let tx_signature = transaction.signature();
+        let r = FieldElement::from_byte_slice_be(&tx_signature.r.to_be_bytes::<32>()).map_err(
+            |_| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot send_transaction: r signature parameter recovery failed",
+                ))
+            },
+        )?;
+        let s = FieldElement::from_byte_slice_be(&tx_signature.s.to_be_bytes::<32>()).map_err(
+            |_| {
+                KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot send_transaction: s signature parameter recovery failed",
+                ))
+            },
+        )?;
+        let v = FieldElement::from(tx_signature.v(Option::Some(CHAIN_ID)));
+        let signature = vec![r, s, v];
 
         let calldata = raw_starknet_calldata(self.kakarot_address, Bytes::from(bytes.0));
 
