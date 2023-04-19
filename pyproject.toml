@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "kakarot-rkakarot-rpc"
+version = "0.1.0"
+description = ""
+authors = [""]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.10"
+
+[tool.poetry.group.dev.dependencies]
+starknet-devnet = "0.5.0a2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

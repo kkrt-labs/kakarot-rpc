@@ -1,0 +1,12 @@
+{
+  "kakarot": {
+    "address": "0x39fc3ecc422644cdcc2b8d5f60451c67ab852b324f1aa266699a9c5cb4fdca6",
+    "tx": "0x7dc58d322ac402774eb29eb579282ffc59ecb4211b62472177856bbfedd62b0",
+    "artifact": "build/kakarot.json"
+  },
+  "blockhash_registry": {
+    "address": "0x29ab3f48032038c8eebdd8ed04578ba531e9fbfd57ddb71a1e5025144500f4a",
+    "tx": "0x29b5af9bd6e30cc936bde8935d8977d42369e306dbaaab879ae6c67f0ab980d",
+    "artifact": "build/blockhash_registry.json"
+  }
+}
