@@ -121,6 +121,12 @@ pub trait KakarotClient: Send + Sync {
         block: MaybePendingStarknetBlock,
     ) -> Result<RichBlock, KakarotClientError>;
 
+    async fn get_transaction_count(
+        &self,
+        ethereum_address: Address,
+        _block_number: Option<BlockId>,
+    ) -> Result<U256, KakarotClientError>;
+
     async fn filter_starknet_into_eth_txs(
         &self,
         initial_transactions: Vec<StarknetTransaction>,

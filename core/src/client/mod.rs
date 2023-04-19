@@ -703,6 +703,27 @@ impl KakarotClient for KakarotClientImpl {
         Ok(Address::from(evm_address_sliced))
     }
 
+    async fn get_transaction_count(
+        &self,
+        ethereum_address: Address,
+        _block_number: Option<BlockId>,
+    ) -> Result<U256, KakarotClientError> {
+        let starknet_block_id = match _block_number {
+            None => StarknetBlockId::Tag(BlockTag::Latest),
+            Some(block_id) => ethers_block_id_to_starknet_block_id(block_id)?,
+        };
+
+        let starknet_address = self
+            .compute_starknet_address(ethereum_address, &starknet_block_id)
+            .await?;
+        let nonce = self
+            .client
+            .get_nonce(&starknet_block_id, starknet_address)
+            .await?;
+        let nonce = felt_to_u256(nonce);
+        Ok(nonce)
+    }
+
     /// Get the balance in Starknet's native token of a specific EVM address.
     /// Reproduces the principle of Kakarot native coin by using Starknet's native ERC20 token
     /// (gas-utility token) ### Arguments

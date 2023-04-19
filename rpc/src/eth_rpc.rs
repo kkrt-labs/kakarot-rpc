@@ -88,6 +88,18 @@ impl EthApiServer for KakarotEthRpc {
         Ok(Some(block))
     }
 
+    async fn transaction_count(
+        &self,
+        _address: Address,
+        _block_number: Option<BlockId>,
+    ) -> Result<U256> {
+        let transaction_count = self
+            .kakarot_client
+            .get_transaction_count(_address, _block_number)
+            .await?;
+        Ok(transaction_count)
+    }
+
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64> {
         let transaction_count = self
             .kakarot_client
@@ -186,14 +198,6 @@ impl EthApiServer for KakarotEthRpc {
         _block_number: Option<BlockId>,
     ) -> Result<H256> {
         todo!()
-    }
-
-    async fn transaction_count(
-        &self,
-        _address: Address,
-        _block_number: Option<BlockId>,
-    ) -> Result<U256> {
-        Ok(U256::from(3))
     }
 
     async fn get_code(&self, _address: Address, _block_number: Option<BlockId>) -> Result<Bytes> {
