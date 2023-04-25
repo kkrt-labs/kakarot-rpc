@@ -9,7 +9,7 @@ poetry-install:
 
 # run devnet
 devnet: poetry-install 
-	 poetry run starknet-devnet --seed 0 --disable-rpc-request-validation --load-path deployments/devnet.pkl --timeout 300
+	 poetry run starknet-devnet --seed 0 --disable-rpc-request-validation --load-path deployments/devnet.pkl --timeout 5000
 
 # build
 build:
