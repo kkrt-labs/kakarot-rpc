@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "kakarot-rkakarot-rpc"
+name = "kakarot-rpc"
 version = "0.1.0"
 description = ""
 authors = [""]
