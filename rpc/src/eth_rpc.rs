@@ -90,12 +90,12 @@ impl EthApiServer for KakarotEthRpc {
 
     async fn transaction_count(
         &self,
-        _address: Address,
-        _block_number: Option<BlockId>,
+        address: Address,
+        block_number: Option<BlockId>,
     ) -> Result<U256> {
         let transaction_count = self
             .kakarot_client
-            .get_transaction_count(_address, _block_number)
+            .get_transaction_count(address, block_number)
             .await?;
         Ok(transaction_count)
     }
