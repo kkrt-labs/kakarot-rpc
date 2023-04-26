@@ -32,7 +32,7 @@
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-    - [kakarotup](#kakarotup)
+    - [Build from souce](#build-from-source)
     - [Environment variables](#environment-variables)
   - [Configuration](#configuration)
 - [Usage](#usage)
@@ -76,11 +76,12 @@ Here is a high level overview of the architecture of Kakarot RPC.
 
 TL;DR:
 
-- Run `make install` to install Kakarot RPC.
+- Run `make build` to build Kakarot RPC.
 - Test with `make test`.
 - Run Kakarot RPC in dev mode:
   - Run devnet: `make devnet` ( or feel free to run your own )
-  - Run RPC:  `make run`
+  - Run dev RPC:  `make run`
+  - Run production RPC `make run-release`
 
 ### Prerequisites
 
@@ -88,17 +89,17 @@ TL;DR:
 - [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
 - Make
 
-### Installation
+## Installation
 
-#### make install
+### build from source
 
-To install with `make install` ( this requires nightly rustup):
+To build the project from source do `make build` ( this requires nightly rustup):
 
 ```bash
-make install
+make build
 ```
 
-#### Environment variables
+### Environment variables
 
 Copy the `.env.example` file to a `.env` file and populate each variable 
 
@@ -110,12 +111,6 @@ Meanwhile you can just use unit tests to dev.
 
 ```bash
 make test
-```
-
-Build from source:
-
-```bash
-make build
 ```
 
 The binaries will be located in `target/release/`.
