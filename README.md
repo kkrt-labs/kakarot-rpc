@@ -76,27 +76,31 @@ Here is a high level overview of the architecture of Kakarot RPC.
 
 TL;DR:
 
-- Run `kakarotup` to install Kakarot RPC.
-- Test with `cargo test --all`.
-- Run Kakarot RPC in dev mode: `RUST_LOG=debug cargo run -p kakarot_rpc`
+- Run `make install` to install Kakarot RPC.
+- Test with `make test`.
+- Run Kakarot RPC in dev mode:
+  - Run devnet: `make devnet` ( or feel free to run your own )
+  - Run RPC:  `make run`
 
 ### Prerequisites
 
 - [Rust](https://www.rust-lang.org/tools/install)
+- [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
+- Make
 
 ### Installation
 
-#### kakarotup
+#### make install
 
-To install with `kakarotup` run (kakarotup requires nightly rustup):
+To install with `make install` ( this requires nightly rustup):
 
 ```bash
-curl -sL https://raw.githubusercontent.com/sayajin-labs/kakarot-rpc/main/kakarotup | sh
+make install
 ```
 
 #### Environment variables
 
-Copy the `.env.example` file to a `.env` file and populate each variable.
+Copy the `.env.example` file to a `.env` file and populate each variable 
 
 ```bash
 cp examples/.env.example .env
@@ -105,13 +109,13 @@ cp examples/.env.example .env
 Meanwhile you can just use unit tests to dev.
 
 ```bash
-cargo test --all
+make test
 ```
 
 Build from source:
 
 ```bash
-cargo build --all --release
+make build
 ```
 
 The binaries will be located in `target/release/`.
@@ -119,8 +123,32 @@ The binaries will be located in `target/release/`.
 Specify the environment variables and run the binary.
 
 ```bash
-source .env && cargo run -p kakarot_rpc
+make run-release
 ```
+
+### dev mode with [starknet-devnet](https://github.com/0xSpaceShard/starknet-devnet)
+
+TL;DR:
+
+run starknet-devnet
+```bash
+make devnet
+```       
+
+run 
+```
+make run
+```
+
+Some notes on `make devnet`:  
+  - you can run starknet-devnet, by running `make devnet` at the project root.
+
+  - this will run a devnet, **with contracts automatically deployed**, so you don't have to do them manually.
+
+  - `.env.example` has environment variables corresponding to deployments on this devnet, you can copy it as it to `.env`.
+
+  - feel free to run your own devnet if you are playing around with some custom changes to Kakarot.
+
 
 ### Configuration
 
@@ -132,11 +160,9 @@ Here is the list of all the available environment variables:
 | ---------------- | ------------- | ---------------- |
 | STARKNET_RPC_URL | No            | StarkNet RPC URL |
 
-## Usage
-
 ### API
 
-> **[TODO]**
+You can take a look at `rpc-call-examples` directory.
 
 ## Roadmap
 
