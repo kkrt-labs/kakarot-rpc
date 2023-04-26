@@ -706,9 +706,9 @@ impl KakarotClient for KakarotClientImpl {
     async fn get_transaction_count(
         &self,
         ethereum_address: Address,
-        _block_number: Option<BlockId>,
+        block_number: Option<BlockId>,
     ) -> Result<U256, KakarotClientError> {
-        let starknet_block_id = match _block_number {
+        let starknet_block_id = match block_number {
             None => StarknetBlockId::Tag(BlockTag::Latest),
             Some(block_id) => ethers_block_id_to_starknet_block_id(block_id)?,
         };

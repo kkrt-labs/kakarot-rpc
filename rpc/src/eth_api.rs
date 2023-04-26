@@ -119,8 +119,8 @@ pub trait EthApi {
     #[method(name = "eth_getTransactionCount")]
     async fn transaction_count(
         &self,
-        _address: Address,
-        _block_number: Option<BlockId>,
+        address: Address,
+        block_number: Option<BlockId>,
     ) -> Result<U256>;
 
     /// Returns code at a given address at given block number.
