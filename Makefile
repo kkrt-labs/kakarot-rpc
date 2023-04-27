@@ -8,7 +8,7 @@ devnet: poetry-install
 
 # build
 build:
-	cargo build -q --all --release
+	cargo build --all --release
 
 # run
 run: 
