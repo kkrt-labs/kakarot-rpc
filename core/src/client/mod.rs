@@ -242,6 +242,7 @@ impl KakarotClient for KakarotClientImpl {
         let bytes_result = Bytes::from(contract_bytecode_in_u8);
         Ok(bytes_result)
     }
+
     // Return the bytecode as a Result<Bytes>
     async fn call_view(
         &self,
