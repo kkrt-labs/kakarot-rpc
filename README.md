@@ -32,7 +32,7 @@
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-    - [Build from souce](#build-from-source)
+    - [Build from source](#build-from-source)
     - [Environment variables](#environment-variables)
   - [Configuration](#configuration)
 - [Usage](#usage)
