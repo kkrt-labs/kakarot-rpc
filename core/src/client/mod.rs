@@ -40,14 +40,14 @@ use url::Url;
 extern crate hex;
 
 use crate::helpers::{
-    create_default_transaction_receipt, decode_execute_at_address_return,
+    create_default_transaction_receipt, decode_eth_call_return,
     ethers_block_id_to_starknet_block_id, felt_option_to_u256, felt_to_u256, hash_to_field_element,
     raw_starknet_calldata, starknet_address_to_ethereum_address, vec_felt_to_bytes,
     FeltOrFeltArray, MaybePendingStarknetBlock,
 };
 use std::collections::BTreeMap;
 
-use crate::client::constants::{selectors::EXECUTE_AT_ADDRESS, CHAIN_ID};
+use crate::client::constants::{selectors::ETH_CALL, CHAIN_ID};
 use async_trait::async_trait;
 use reth_rpc_types::Index;
 pub mod client_api;
@@ -266,8 +266,9 @@ impl KakarotClient for KakarotClientImpl {
 
         let mut call_parameters = vec![
             ethereum_address_felt,
-            FieldElement::ZERO,
             FieldElement::MAX,
+            FieldElement::ZERO,
+            FieldElement::ZERO,
             calldata.len().into(),
         ];
 
@@ -275,7 +276,7 @@ impl KakarotClient for KakarotClientImpl {
 
         let request = FunctionCall {
             contract_address: self.kakarot_address,
-            entry_point_selector: EXECUTE_AT_ADDRESS,
+            entry_point_selector: ETH_CALL,
             calldata: call_parameters,
         };
 
@@ -286,10 +287,10 @@ impl KakarotClient for KakarotClientImpl {
         // Declare Vec of Result
         // TODO: Change to decode based on ABI or use starknet-rs future feature to decode return
         // params
-        let segmented_result = decode_execute_at_address_return(&call_result)?;
+        let segmented_result = decode_eth_call_return(&call_result)?;
 
         // Convert the result of the function call to a vector of bytes
-        let return_data = segmented_result.get(6).ok_or_else(|| {
+        let return_data = segmented_result.get(0).ok_or_else(|| {
             KakarotClientError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode last argument of Kakarot call",
             ))
@@ -297,8 +298,7 @@ impl KakarotClient for KakarotClientImpl {
         if let FeltOrFeltArray::FeltArray(felt_array) = return_data {
             let result: Vec<u8> = felt_array
                 .iter()
-                .map(std::string::ToString::to_string)
-                .filter_map(|s| s.parse().ok())
+                .filter_map(|f| u8::try_from(*f).ok())
                 .collect();
             let bytes_result = Bytes::from(result);
             return Ok(bytes_result);
