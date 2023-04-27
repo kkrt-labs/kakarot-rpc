@@ -93,7 +93,7 @@ TL;DR:
 
 ### build from source
 
-To build the project from source do `make build` ( this requires nightly rustup):
+To build the project from source do `make build` (this requires [nightly rustup](https://rust-lang.github.io/rustup/concepts/channels.html)):
 
 ```bash
 make build
