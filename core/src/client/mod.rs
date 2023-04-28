@@ -1269,28 +1269,12 @@ impl KakarotClient for KakarotClientImpl {
 
         let nonce = FieldElement::from(transaction.nonce());
 
-        let tx_signature = transaction.signature();
-        let r =
-            FieldElement::from_byte_slice_be(&tx_signature.r.to_be_bytes::<32>()).map_err(|e| {
-                KakarotClientError::OtherError(anyhow::anyhow!(
-                    "Kakarot send_transaction: r signature parameter recovery failed: {:?}",
-                    e
-                ))
-            })?;
-        let s =
-            FieldElement::from_byte_slice_be(&tx_signature.s.to_be_bytes::<32>()).map_err(|e| {
-                KakarotClientError::OtherError(anyhow::anyhow!(
-                    "Kakarot send_transaction: s signature parameter recovery failed: {:?}",
-                    e
-                ))
-            })?;
-        let v = FieldElement::from(tx_signature.v(Option::Some(CHAIN_ID)));
-        let signature = vec![r, s, v];
-
-        let calldata = raw_starknet_calldata(self.kakarot_address, Bytes::from(bytes.0));
+        let calldata = raw_starknet_calldata(self.kakarot_address, bytes);
 
         // Get estimated_fee from Starknet
-        let max_fee = FieldElement::from(1_000_000_000_u64);
+        let max_fee = FieldElement::from(100_000_000_000_000_000_u64);
+
+        let signature = vec![];
 
         let request = BroadcastedInvokeTransactionV1 {
             max_fee,
