@@ -1,3 +1,5 @@
+HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
+
 # install dependencies, automatically creates a virtual environment
 poetry-install:
 	poetry install
@@ -20,5 +22,8 @@ run-release:
 
 test:
 	cargo test --all
+
+test-examples:
+	hurl $(HURL_FILES)
 
 .PHONY: install run devnet test
