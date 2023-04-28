@@ -1,8 +1,3 @@
-#install kakarot
-
-install:
-	sh kakarotup
-
 # install dependencies, automatically creates a virtual environment
 poetry-install:
 	poetry install
