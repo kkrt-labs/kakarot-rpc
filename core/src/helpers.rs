@@ -15,7 +15,7 @@ use starknet::{
     },
 };
 
-use crate::client::{client_api::KakarotClientError, constants::selectors::EXECUTE_AT_ADDRESS};
+use crate::client::{client_api::KakarotClientError, constants::selectors::ETH_SEND_TRANSACTION};
 
 extern crate hex;
 
@@ -78,10 +78,43 @@ pub const fn ethers_block_number_to_starknet_block_id(
     }
 }
 
-/// # Errors
-///
-/// TODO: Will return `KakarotClientError`..
-pub fn decode_execute_at_address_return(
+/// Returns the decoded return value of the `eth_call` entrypoint of Kakarot
+pub fn decode_eth_call_return(
+    call_result: &[FieldElement],
+) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
+    // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
+    // fail is Kakarot API changes)
+    // Declare Vec of Result
+    let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
+    let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
+        KakarotClientError::OtherError(anyhow::anyhow!(
+            "Cannot parse and decode return arguments of Kakarot call",
+        ))
+    })?;
+    let mut tmp_counter = 1_usize;
+    segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
+    // Parse first array: stack_accesses
+    while tmp_array_len != FieldElement::ZERO {
+        let element = call_result.get(tmp_counter).ok_or_else(|| {
+            KakarotClientError::OtherError(anyhow::anyhow!(
+                "Cannot parse and decode return arguments of Kakarot call: return data array",
+            ))
+        })?;
+        match segmented_result.last_mut() {
+            Some(FeltOrFeltArray::FeltArray(felt_array)) => felt_array.push(*element),
+            Some(FeltOrFeltArray::Felt(_felt)) => (),
+            _ => (),
+        }
+        tmp_counter += 1;
+        tmp_array_len -= FieldElement::from(1_u64);
+    }
+
+    Ok(segmented_result)
+}
+
+/// Returns the decoded return value of the `eth_send_transaction` entrypoint
+/// of Kakarot
+pub fn decode_eth_send_transaction_return(
     call_result: &[FieldElement],
 ) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
@@ -289,7 +322,7 @@ pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
 pub fn raw_starknet_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Vec<FieldElement> {
     let calls: Vec<Call> = vec![Call {
         to: kakarot_address,
-        selector: EXECUTE_AT_ADDRESS,
+        selector: ETH_SEND_TRANSACTION,
         calldata: bytes_to_felt_vec(&bytes),
     }];
     let mut concated_calldata: Vec<FieldElement> = vec![];
@@ -339,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_execute_at_address() {
+    fn test_decode_eth_send_transaction_return() {
         let call_result = vec![
             FieldElement::from_hex_be(
                 "0000000000000000000000000000000000000000000000000000000000000002",
@@ -514,7 +547,7 @@ mod tests {
             )
             .unwrap(),
         ];
-        let result = decode_execute_at_address_return(&call_result).unwrap();
+        let result = decode_eth_send_transaction_return(&call_result).unwrap();
         assert_eq!(result.len(), 8);
         assert_eq!(
             result[0],

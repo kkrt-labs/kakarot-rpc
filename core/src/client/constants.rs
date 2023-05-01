@@ -10,7 +10,8 @@ pub mod selectors {
         selector!("get_starknet_contract_address");
     pub const BYTECODE: FieldElement = selector!("bytecode");
 
-    pub const EXECUTE_AT_ADDRESS: FieldElement = selector!("execute_at_address");
+    pub const ETH_CALL: FieldElement = selector!("eth_call");
+    pub const ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
     pub const COMPUTE_STARKNET_ADDRESS: FieldElement = selector!("compute_starknet_address");
 
     pub const GET_EVM_ADDRESS: FieldElement = selector!("get_evm_address");

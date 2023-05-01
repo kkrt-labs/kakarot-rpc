@@ -80,7 +80,7 @@ TL;DR:
 - Test with `make test`.
 - Run Kakarot RPC in dev mode:
   - Run devnet: `make devnet` ( or feel free to run your own )
-  - Run dev RPC:  `make run`
+  - Run dev RPC: `make run`
   - Run production RPC `make run-release`
 
 ### Prerequisites
@@ -91,9 +91,10 @@ TL;DR:
 
 ## Installation
 
-### build from source
+### Build from source
 
-To build the project from source do `make build` (this requires [nightly rustup](https://rust-lang.github.io/rustup/concepts/channels.html)):
+To build the project from source do `make build` (this requires
+[nightly rustup](https://rust-lang.github.io/rustup/concepts/channels.html)):
 
 ```bash
 make build
@@ -101,7 +102,7 @@ make build
 
 ### Environment variables
 
-Copy the `.env.example` file to a `.env` file and populate each variable 
+Copy the `.env.example` file to a `.env` file and populate each variable
 
 ```bash
 cp examples/.env.example .env
@@ -121,29 +122,33 @@ Specify the environment variables and run the binary.
 make run-release
 ```
 
-### dev mode with [starknet-devnet](https://github.com/0xSpaceShard/starknet-devnet)
-
-TL;DR:
+### Dev mode with [starknet-devnet](https://github.com/0xSpaceShard/starknet-devnet)
 
 run starknet-devnet
+
 ```bash
 make devnet
-```       
+```
 
-run 
+run
+
 ```
 make run
 ```
 
-Some notes on `make devnet`:  
-  - you can run starknet-devnet, by running `make devnet` at the project root.
+Some notes on `make devnet`:
 
-  - this will run a devnet, **with contracts automatically deployed**, so you don't have to do them manually.
+- you can run starknet-devnet, by running `make devnet` at the project root.
 
-  - `.env.example` has environment variables corresponding to deployments on this devnet, you can copy it as it to `.env`.
+- this will run a devnet, **with contracts automatically deployed**, so you
+  don't have to do them manually (see below for list of contracts and
+  addresses).
 
-  - feel free to run your own devnet if you are playing around with some custom changes to Kakarot.
+- `.env.example` has environment variables corresponding to deployments on this
+  devnet, you can copy it as it to `.env`.
 
+- feel free to run your own devnet if you are playing around with some custom
+  changes to Kakarot.
 
 ### Configuration
 
@@ -151,13 +156,44 @@ Kakarot RPC is configurable through environment variables.
 
 Here is the list of all the available environment variables:
 
-| Name             | Default value | Description      |
-| ---------------- | ------------- | ---------------- |
-| STARKNET_RPC_URL | No            | StarkNet RPC URL |
+| Name                     | Default value           | Description              |
+| ------------------------ | ----------------------- | ------------------------ |
+| TARGET_RPC_URL           | http://0.0.0.0:5050/rpc | Target Starknet RPC URL  |
+| RUST_LOG                 | Debug                   | Log level                |
+| KAKAROT_HTTP_RPC_ADDRESS | 0.0.0.0:3030            | Kakarot RPC URL          |
+| KAKAROT_ADDRESS          | see below               | Kakarot address          |
+| PROXY_ACCOUNT_CLASS_HASH | see below               | Proxy account class hash |
+
+### Devnet deployed/declared contracts
+
+Deployed:
+
+| Contract | Address                                                           |
+| -------- | ----------------------------------------------------------------- |
+| Kakarot  | 0x7a88f6f9d63ccaa5855babb32cbb0230b8588aaaa6bc4ce2d173fa528ce7567 |
+| EOA      | 0x54b288676b749DEF5Fc10Eb17244fe2C87375de1                        |
+| Counter  | 0x2e11Ed82f5eC165AB8Ce3cC094f025Fe7527F4D1                        |
+
+Declared:
+
+| Contract                 | Class hash                                                        |
+| ------------------------ | ----------------------------------------------------------------- |
+| Proxy account class hash | 0x3010a53967fa04842bcbcb6de8817101f047ef0d074b3eacbe714a3fc42a2eb |
+
+The Counter contract implementation can be found
+[here](https://github.com/sayajin-labs/kakarot/blob/main/tests/integration/solidity_contracts/PlainOpcodes/Counter.sol)
 
 ### API
 
-You can take a look at `rpc-call-examples` directory.
+You can take a look at `rpc-call-examples` directory. Please note the following:
+
+- `sendRawTransaction.hurl`: the raw transaction provided allows to call the
+  `inc()` function for the Counter contract. However, given that this
+  transaction is signed for the EOA's nonce at the current devnet state (0x2),
+  the call will only work once. If you want to keep incrementing (or
+  decrementing) the counter, you need to regenerate the payload for the call
+  with an updated nonce using the
+  [provided python script](https://github.com/sayajin-labs/kakarot/blob/main/scripts/utils/kakarot.py#L273).
 
 ## Roadmap
 
