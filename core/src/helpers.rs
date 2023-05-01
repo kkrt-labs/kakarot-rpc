@@ -117,7 +117,7 @@ pub fn decode_eth_call_return(
 /// # Errors
 ///
 /// TODO: Will return `KakarotClientError`..
-pub fn decode_execute_at_address_return(
+pub fn decode_eth_send_transaction_return(
     call_result: &[FieldElement],
 ) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
@@ -375,7 +375,7 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_execute_at_address() {
+    fn test_decode_eth_send_transaction_return() {
         let call_result = vec![
             FieldElement::from_hex_be(
                 "0000000000000000000000000000000000000000000000000000000000000002",
@@ -550,7 +550,7 @@ mod tests {
             )
             .unwrap(),
         ];
-        let result = decode_execute_at_address_return(&call_result).unwrap();
+        let result = decode_eth_send_transaction_return(&call_result).unwrap();
         assert_eq!(result.len(), 8);
         assert_eq!(
             result[0],
