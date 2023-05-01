@@ -1267,10 +1267,7 @@ impl KakarotClient for KakarotClientImpl {
             .compute_starknet_address(evm_address, &starknet_block_id)
             .await?;
 
-        let nonce = self
-            .client
-            .get_nonce(&StarknetBlockId::Tag(BlockTag::Latest), starknet_address)
-            .await?;
+        let nonce = FieldElement::from(transaction.nonce());
 
         let calldata = raw_starknet_calldata(self.kakarot_address, bytes);
 

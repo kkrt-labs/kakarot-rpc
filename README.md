@@ -185,7 +185,15 @@ The Counter contract implementation can be found
 
 ### API
 
-You can take a look at `rpc-call-examples` directory.
+You can take a look at `rpc-call-examples` directory. Please note the following:
+
+- `sendRawTransaction.hurl`: the raw transaction provided allows to call the
+  `inc()` function for the Counter contract. However, given that this
+  transaction is signed for the EOA's nonce at the current devnet state (0x2),
+  the call will only work once. If you want to keep incrementing (or
+  decrementing) the counter, you need to regenerate the payload for the call
+  with an updated nonce using the
+  [provided python script](https://github.com/sayajin-labs/kakarot/blob/main/scripts/utils/kakarot.py#L273).
 
 ## Roadmap
 

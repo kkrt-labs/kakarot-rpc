@@ -78,9 +78,7 @@ pub const fn ethers_block_number_to_starknet_block_id(
     }
 }
 
-/// # Errors
-///
-/// TODO: Will return `KakarotClientError`..
+/// Returns the decoded return value of the `eth_call` entrypoint of Kakarot
 pub fn decode_eth_call_return(
     call_result: &[FieldElement],
 ) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
@@ -114,9 +112,8 @@ pub fn decode_eth_call_return(
     Ok(segmented_result)
 }
 
-/// # Errors
-///
-/// TODO: Will return `KakarotClientError`..
+/// Returns the decoded return value of the `eth_send_transaction` entrypoint
+/// of Kakarot
 pub fn decode_eth_send_transaction_return(
     call_result: &[FieldElement],
 ) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
