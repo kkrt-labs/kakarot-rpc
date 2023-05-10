@@ -1,7 +1,9 @@
 use eyre::Result;
 use reth_primitives::{
-    rpc::Log, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, H160, H256, U128, U256,
+    rpc::Log, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned,
+    H160, H256, U128, U256,
 };
+use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
 
 use reth_primitives::Address;
@@ -230,6 +232,22 @@ pub fn decode_eth_send_transaction_return(
     Ok(segmented_result)
 }
 
+pub fn decode_signature_from_tx_calldata(
+    calldata: &[FieldElement],
+) -> Result<Signature, KakarotClientError> {
+    let calldata = calldata
+        .iter()
+        .filter_map(|x| u8::try_from(*x).ok())
+        .collect::<Vec<u8>>();
+    let decoded_tx = TransactionSigned::decode(&mut calldata.as_slice()).map_err(|e| {
+        KakarotClientError::OtherError(anyhow::anyhow!(
+            "Cannot rlp decode provided calldata into signed transaction: {}",
+            e
+        ))
+    })?;
+    Ok(decoded_tx.signature)
+}
+
 /// # Errors
 ///
 /// TODO: add error case message
@@ -348,6 +366,28 @@ pub fn raw_starknet_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Vec
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_decode_signature_from_tx_calldata() {
+        let calldata = hex::decode("02f872844b4b525482dead82dead82dead843b9aca00942e11ed82f5ec165ab8ce3cc094f025fe7527f4d18084371303c0c001a0bda8aa747569ad0131a05cc016791788736c5a20006fd7c41e12c2860182f5fea04112df0d3765963f54e935da1c43caad574195c393a3ab71643a1d2c3b2b88e5")
+            .unwrap()
+            .into_iter()
+            .filter_map(|x| FieldElement::from_byte_slice_be(&[x]).ok())
+            .collect::<Vec<_>>();
+        let signature = decode_signature_from_tx_calldata(&calldata).unwrap();
+        assert_eq!(
+            signature.r,
+            U256::from_str("0xbda8aa747569ad0131a05cc016791788736c5a20006fd7c41e12c2860182f5fe")
+                .unwrap()
+        );
+        assert_eq!(
+            signature.s,
+            U256::from_str("0x4112df0d3765963f54e935da1c43caad574195c393a3ab71643a1d2c3b2b88e5")
+                .unwrap()
+        );
+        assert!(signature.odd_y_parity);
+    }
 
     #[test]
     fn test_bytes_to_felt_vec() {
