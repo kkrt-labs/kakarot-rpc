@@ -40,8 +40,8 @@ use url::Url;
 extern crate hex;
 
 use crate::helpers::{
-    create_default_transaction_receipt, decode_eth_call_return,
-    ethers_block_id_to_starknet_block_id, felt_option_to_u256, felt_to_u256, hash_to_field_element,
+    create_default_transaction_receipt, decode_eth_call_return, decode_signature_from_tx_calldata,
+    ethers_block_id_to_starknet_block_id, felt_to_u256, hash_to_field_element,
     raw_starknet_calldata, starknet_address_to_ethereum_address, vec_felt_to_bytes,
     FeltOrFeltArray, MaybePendingStarknetBlock,
 };
@@ -850,10 +850,12 @@ impl KakarotClient for KakarotClientImpl {
                         // Define gas_price data
                         ether_tx.gas_price = None;
                         // Extracting the signature
+                        let signature = decode_signature_from_tx_calldata(&v0.calldata)?;
+                        let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
                         ether_tx.signature = Some(Signature {
-                            r: felt_option_to_u256(v0.signature.get(0))?,
-                            s: felt_option_to_u256(v0.signature.get(1))?,
-                            v: felt_option_to_u256(v0.signature.get(2))?,
+                            r: signature.r,
+                            s: signature.s,
+                            v: U256::from_limbs_slice(&[v]),
                         });
                         // Extracting the data (transform from calldata)
                         ether_tx.input = vec_felt_to_bytes(v0.calldata);
@@ -892,10 +894,12 @@ impl KakarotClient for KakarotClientImpl {
                         // Define gas_price data
                         ether_tx.gas_price = None;
                         // Extracting the signature
+                        let signature = decode_signature_from_tx_calldata(&v1.calldata)?;
+                        let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
                         ether_tx.signature = Some(Signature {
-                            r: felt_option_to_u256(v1.signature.get(0))?,
-                            s: felt_option_to_u256(v1.signature.get(1))?,
-                            v: felt_option_to_u256(v1.signature.get(2))?,
+                            r: signature.r,
+                            s: signature.s,
+                            v: U256::from_limbs_slice(&[v]),
                         });
                         // Extracting the data
                         ether_tx.input = vec_felt_to_bytes(v1.calldata);
