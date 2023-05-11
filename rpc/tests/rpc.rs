@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 mod assert_helpers;
 mod utils;
 
@@ -16,6 +17,140 @@ mod tests {
         providers::jsonrpc::models::Transaction as StarknetTransaction,
     };
     use std::str::FromStr;
+
+    fn get_test_tx() -> serde_json::Value {
+        json!({
+            "calldata":[
+                "0x2",
+                "0xf8",
+                "0x72",
+                "0x84",
+                "0x4b",
+                "0x4b",
+                "0x52",
+                "0x54",
+                "0x82",
+                "0xde",
+                "0xad",
+                "0x82",
+                "0xde",
+                "0xad",
+                "0x82",
+                "0xde",
+                "0xad",
+                "0x84",
+                "0x3b",
+                "0x9a",
+                "0xca",
+                "0x0",
+                "0x94",
+                "0x6f",
+                "0x0",
+                "0x9c",
+                "0x55",
+                "0x71",
+                "0x35",
+                "0xb9",
+                "0x9e",
+                "0x73",
+                "0xbb",
+                "0xd0",
+                "0x1f",
+                "0x45",
+                "0x69",
+                "0xd4",
+                "0x15",
+                "0xbc",
+                "0x6a",
+                "0x95",
+                "0x10",
+                "0x80",
+                "0x84",
+                "0x37",
+                "0x13",
+                "0x3",
+                "0xc0",
+                "0xc0",
+                "0x80",
+                "0xa0",
+                "0x32",
+                "0x50",
+                "0x6f",
+                "0x88",
+                "0x9d",
+                "0x51",
+                "0x44",
+                "0x7e",
+                "0x4c",
+                "0x52",
+                "0x3f",
+                "0x74",
+                "0x49",
+                "0x13",
+                "0xa3",
+                "0x58",
+                "0xfc",
+                "0xfe",
+                "0x45",
+                "0xa3",
+                "0xdb",
+                "0xf6",
+                "0x24",
+                "0xa9",
+                "0xe6",
+                "0x3b",
+                "0xd9",
+                "0xf3",
+                "0x12",
+                "0x80",
+                "0x15",
+                "0x28",
+                "0xa0",
+                "0x42",
+                "0x62",
+                "0x64",
+                "0x2c",
+                "0x44",
+                "0x4f",
+                "0xda",
+                "0x47",
+                "0xad",
+                "0x53",
+                "0xd6",
+                "0x54",
+                "0xc9",
+                "0x78",
+                "0x71",
+                "0xb0",
+                "0x81",
+                "0x65",
+                "0xb8",
+                "0xf0",
+                "0x88",
+                "0xa5",
+                "0xc8",
+                "0x64",
+                "0xc0",
+                "0x75",
+                "0x1f",
+                "0x52",
+                "0x76",
+                "0x74",
+                "0x5",
+                "0x14"
+             ],
+             "max_fee":"0x28551b4c2e91c",
+             "nonce":"0x04",
+             "sender_address":"0x028d1467576420c7799e7fae5f5da963c0fce52e5723c854eee34c10f157a2df",
+             "signature":[
+                "0x4834178732bce2d497b4cecdfbd7710e010f72f07a66b8388baf4ee213bc17b",
+                "0x6507bed64e0795c25d8d42eea2dadb5c7d41b6eddfb416256bd7de07bfd5892"
+             ],
+             "transaction_hash":"0x03ffcfea6eed902191033c88bded1e396a9aef4b88b32e6387eea30c83b84834",
+             "type":"INVOKE",
+             "version":"0x1"
+        })
+    }
 
     #[tokio::test]
     async fn test_block_number_is_ok() {
@@ -250,7 +385,7 @@ mod tests {
     async fn test_transaction_receipt_invoke_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
         let hash =
-            H256::from_str("0x032e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258")
+            H256::from_str("0x03ffcfea6eed902191033c88bded1e396a9aef4b88b32e6387eea30c83b84834")
                 .unwrap();
 
         let transaction_receipt = kakarot_rpc
@@ -263,7 +398,7 @@ mod tests {
             transaction_receipt.transaction_hash,
             Some(H256::from_slice(
                 &FieldElement::from_str(
-                    "0x32e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258"
+                    "0x03ffcfea6eed902191033c88bded1e396a9aef4b88b32e6387eea30c83b84834"
                 )
                 .unwrap()
                 .to_bytes_be()
@@ -274,7 +409,7 @@ mod tests {
             transaction_receipt.block_hash,
             Some(H256::from_slice(
                 &FieldElement::from_str(
-                    "0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e"
+                    "0x3a6aa138202f442b3d1f2d7702775a41ab78091578e2dfa4c93499ca380daa2"
                 )
                 .unwrap()
                 .to_bytes_be()
@@ -283,13 +418,13 @@ mod tests {
 
         assert_eq!(
             U256::from(transaction_receipt.block_number.unwrap()),
-            U256::from(19639)
+            U256::from(803428)
         );
         assert_eq!(transaction_receipt.status_code, Some(U64::from(1)));
 
         assert_eq!(
             transaction_receipt.from,
-            H160::from_str("0x9296be4959e56b5df2200dbfa30594504a7fed61").unwrap()
+            H160::from_str("0x54b288676b749def5fc10eb17244fe2c87375de1").unwrap()
         );
 
         // TODO
@@ -320,43 +455,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let starknet_tx = json!({
-            "calldata":[
-                "0x2",
-                "0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-                "0x219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c",
-                "0x0",
-                "0x3",
-                "0x41fd22b238fa21cfcf5dd45a8548974d8263b3a531a60388411c5e230f97023",
-                "0x3276861cf5e05d6daf8f352cabb47df623eb10c383ab742fcc7abea94d5c5cc",
-                "0x3",
-                "0x9",
-                "0xc",
-                "0x41fd22b238fa21cfcf5dd45a8548974d8263b3a531a60388411c5e230f97023",
-                "0x47d3079",
-                "0x0",
-                "0x47d3079",
-                "0x0",
-                "0xaeda7450a74d13",
-                "0x0",
-                "0x2",
-                "0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-                "0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21",
-                "0x63e78743"
-             ],
-             "max_fee":"0x28551b4c2e91c",
-             "nonce":"0x13",
-             "sender_address":"0xd90fd6aa27edd344c5cbe1fe999611416b268658e866a54265aaf50d9cf28d",
-             "signature":[
-                "0x7d82e8c230ee321acefb67eaccfc55b7c90bf66c9af3b6975405f221587b974",
-                "0x5949c38b6a6f570ea1fdc840f93f875d46fe75619982ac300084ea0d27c4b14"
-             ],
-             "transaction_hash":"0x7c5df940744056d337c3de6e8f4500db4b9bfc821eb534b891555e90c39c048",
-             "type":"INVOKE",
-             "version":"0x1"
-        });
-
+        let starknet_tx = get_test_tx();
         assert_transaction(
             transaction.clone(),
             serde_json::from_str::<StarknetTransaction>(&starknet_tx.to_string()).unwrap(),
@@ -365,14 +464,14 @@ mod tests {
         assert_eq!(
             transaction.block_hash,
             Some(H256::from(
-                felt!("0xa641151e9067e3919ca8d59191c473e2ecfb714578708c0cb0f99de000df05")
+                felt!("0x03a6aa138202f442b3d1f2d7702775a41ab78091578e2dfa4c93499ca380daa2")
                     .to_bytes_be()
             ))
         );
 
         assert_eq!(
             U256::from(transaction.block_number.unwrap()),
-            U256::from(20129)
+            U256::from(803428)
         );
     }
 
@@ -392,42 +491,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let starknet_tx = json!({
-            "calldata":[
-                "0x2",
-                "0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-                "0x219209e083275171774dab1df80982e9df2096516f06319c5c6d71ae0a8480c",
-                "0x0",
-                "0x3",
-                "0x41fd22b238fa21cfcf5dd45a8548974d8263b3a531a60388411c5e230f97023",
-                "0x3276861cf5e05d6daf8f352cabb47df623eb10c383ab742fcc7abea94d5c5cc",
-                "0x3",
-                "0x9",
-                "0xc",
-                "0x41fd22b238fa21cfcf5dd45a8548974d8263b3a531a60388411c5e230f97023",
-                "0x47d3079",
-                "0x0",
-                "0x47d3079",
-                "0x0",
-                "0xaeda7450a74d13",
-                "0x0",
-                "0x2",
-                "0x53c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8",
-                "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-                "0x13745d611a49179ab9b0fe943471f53ac9f0c8dc093db91c39ec5f67d20ab21",
-                "0x63e78743"
-             ],
-             "max_fee":"0x28551b4c2e91c",
-             "nonce":"0x13",
-             "sender_address":"0xd90fd6aa27edd344c5cbe1fe999611416b268658e866a54265aaf50d9cf28d",
-             "signature":[
-                "0x7d82e8c230ee321acefb67eaccfc55b7c90bf66c9af3b6975405f221587b974",
-                "0x5949c38b6a6f570ea1fdc840f93f875d46fe75619982ac300084ea0d27c4b14"
-             ],
-             "transaction_hash":"0x7c5df940744056d337c3de6e8f4500db4b9bfc821eb534b891555e90c39c048",
-             "type":"INVOKE",
-             "version":"0x1"
-        });
+        let starknet_tx = get_test_tx();
 
         assert_transaction(
             transaction.clone(),
@@ -437,13 +501,13 @@ mod tests {
         assert_eq!(
             transaction.block_hash,
             Some(H256::from(
-                felt!("0xa641151e9067e3919ca8d59191c473e2ecfb714578708c0cb0f99de000df05")
+                felt!("0x3a6aa138202f442b3d1f2d7702775a41ab78091578e2dfa4c93499ca380daa2")
                     .to_bytes_be()
             ))
         );
         assert_eq!(
             U256::from(transaction.block_number.unwrap()),
-            U256::from(20129)
+            U256::from(803428)
         );
     }
 }

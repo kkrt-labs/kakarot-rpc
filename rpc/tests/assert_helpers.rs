@@ -166,9 +166,18 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                         starknet_address_to_ethereum_address(&v0.contract_address)
                     );
                     let signature = Signature {
-                        v: felt_option_to_u256(Some(&v0.signature[2])).unwrap(),
-                        r: felt_option_to_u256(Some(&v0.signature[0])).unwrap(),
-                        s: felt_option_to_u256(Some(&v0.signature[1])).unwrap(),
+                        r: U256::from_str(
+                            "0x32506f889d51447e4c523f744913a358fcfe45a3dbf624a9e63bd9f312801528",
+                        )
+                        .unwrap(),
+                        s: U256::from_str(
+                            "0x4262642c444fda47ad53d654c97871b08165b8f088a5c864c0751f5276740514",
+                        )
+                        .unwrap(),
+                        v: U256::from_str(
+                            "0x000000000000000000000000000000000000000000000000000000009696a4cb",
+                        )
+                        .unwrap(),
                     };
                     assert_eq!(ether_tx.signature, Some(signature));
                 }
@@ -180,12 +189,21 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                     assert_eq!(ether_tx.nonce, felt_to_u256(v1.nonce));
                     assert_eq!(
                         ether_tx.from,
-                        H160::from_str("0x9296be4959e56b5df2200dbfa30594504a7fed61").unwrap()
+                        H160::from_str("0x54b288676b749def5fc10eb17244fe2c87375de1").unwrap()
                     );
                     let signature = Signature {
-                        v: U256::ZERO,
-                        r: felt_option_to_u256(Some(&v1.signature[0])).unwrap(),
-                        s: felt_option_to_u256(Some(&v1.signature[1])).unwrap(),
+                        r: U256::from_str(
+                            "0x32506f889d51447e4c523f744913a358fcfe45a3dbf624a9e63bd9f312801528",
+                        )
+                        .unwrap(),
+                        s: U256::from_str(
+                            "0x4262642c444fda47ad53d654c97871b08165b8f088a5c864c0751f5276740514",
+                        )
+                        .unwrap(),
+                        v: U256::from_str(
+                            "0x000000000000000000000000000000000000000000000000000000009696a4cb",
+                        )
+                        .unwrap(),
                     };
                     assert_eq!(ether_tx.signature, Some(signature));
                     // TODO: test ether_tx.input
