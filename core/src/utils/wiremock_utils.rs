@@ -163,7 +163,9 @@ pub async fn setup_wiremock() -> String {
 
 fn mock_block_number() -> Mock {
     Mock::given(method("POST"))
-        .and(body_json(StarknetRpcBaseData::block_number(())))
+        .and(body_json(StarknetRpcBaseData::block_number(
+            Vec::<u8>::new(),
+        )))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/blocks/starknet_blockNumber.json"),
             "application/json",
@@ -258,7 +260,7 @@ fn mock_transaction_by_block_hash_and_index_latest() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(
             StarknetRpcBaseData::transaction_by_block_id_and_index([
-                serde_json::to_value(&latest_block).unwrap(),
+                serde_json::to_value(latest_block).unwrap(),
                 serde_json::to_value(0).unwrap(),
             ]),
         ))
@@ -325,7 +327,7 @@ fn mock_get_code() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::call([
             serde_json::to_value(get_code_call_request).unwrap(),
-            serde_json::to_value(&latest_block).unwrap(),
+            serde_json::to_value(latest_block).unwrap(),
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/starknet_getCode.json"),
@@ -343,7 +345,7 @@ fn mock_get_evm_address() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::call([
             serde_json::to_value(get_evm_address_call_request).unwrap(),
-            serde_json::to_value(&latest_block).unwrap(),
+            serde_json::to_value(latest_block).unwrap(),
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/kakarot_getEvmAddress.json"),
@@ -355,7 +357,7 @@ fn mock_get_class_hash_at() -> Mock {
     let latest_block = StarknetBlockId::Tag(BlockTag::Latest);
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::class_hash_at([
-            serde_json::to_value(&latest_block).unwrap(),
+            serde_json::to_value(latest_block).unwrap(),
             serde_json::to_value(
                 "0x28d1467576420c7799e7fae5f5da963c0fce52e5723c854eee34c10f157a2df",
             )
