@@ -10,10 +10,9 @@ use reth_primitives::Address;
 
 use starknet::{
     accounts::Call,
-    core::types::{FieldElement, ValueOutOfRangeError},
-    providers::jsonrpc::models::{
-        BlockId as StarknetBlockId, BlockTag, MaybePendingBlockWithTxHashes,
-        MaybePendingBlockWithTxs,
+    core::types::{
+        BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes,
+        MaybePendingBlockWithTxs, ValueOutOfRangeError,
     },
 };
 

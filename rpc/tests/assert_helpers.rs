@@ -5,10 +5,7 @@ use kakarot_rpc_core::{
 use reth_primitives::{Bloom, Bytes, H160, H256, H64, U128, U256};
 use reth_rpc_types::{Block, BlockTransactions, Rich, Signature, Transaction};
 use serde::{Deserialize, Serialize};
-use starknet::{
-    core::types::FieldElement,
-    providers::jsonrpc::models::{InvokeTransaction, Transaction as StarknetTransaction},
-};
+use starknet::core::types::{FieldElement, InvokeTransaction, Transaction as StarknetTransaction};
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]

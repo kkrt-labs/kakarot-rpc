@@ -8,14 +8,11 @@ use reth_rpc_types::{
     Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::{
-    core::types::FieldElement,
-    providers::jsonrpc::{
-        models::{
-            BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1,
-            Transaction as StarknetTransaction,
-        },
-        JsonRpcClientError,
+    core::types::{
+        BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement,
+        Transaction as StarknetTransaction,
     },
+    providers::{jsonrpc::JsonRpcClientError, ProviderError},
 };
 
 use thiserror::Error;
@@ -29,7 +26,7 @@ use reth_rpc_types::Index;
 #[derive(Debug, Error)]
 pub enum KakarotClientError {
     #[error(transparent)]
-    RequestError(#[from] JsonRpcClientError<reqwest::Error>),
+    RequestError(#[from] ProviderError<JsonRpcClientError<reqwest::Error>>),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }

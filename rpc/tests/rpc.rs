@@ -13,8 +13,8 @@ mod tests {
     use reth_rpc_types::Index;
     use serde_json::json;
     use starknet::{
-        core::types::FieldElement, macros::felt,
-        providers::jsonrpc::models::Transaction as StarknetTransaction,
+        core::types::{FieldElement, Transaction as StarknetTransaction},
+        macros::felt,
     };
     use std::str::FromStr;
 

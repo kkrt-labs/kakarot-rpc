@@ -2,7 +2,7 @@ use crate::helpers::ethers_block_id_to_starknet_block_id;
 use reqwest::StatusCode;
 use reth_primitives::{BlockId, H256};
 use serde::{Deserialize, Serialize};
-use starknet::providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag};
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 use std::str::FromStr;
 use wiremock::{
     matchers::{body_json, method},
