@@ -193,15 +193,15 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                     );
                     let signature = Signature {
                         r: U256::from_str(
-                            "0x32506f889d51447e4c523f744913a358fcfe45a3dbf624a9e63bd9f312801528",
+                            "0x05e6a35e537e8d99c81bf2d4e7e8a410e7f6f3f8b1f07edc28bf226d3ac2cae12",
                         )
                         .unwrap(),
                         s: U256::from_str(
-                            "0x4262642c444fda47ad53d654c97871b08165b8f088a5c864c0751f5276740514",
+                            "0x01910d7b4784e7347a6c7dccf8b8051c06f091347eb4a4a2f6092f1541cb62de7",
                         )
                         .unwrap(),
                         v: U256::from_str(
-                            "0x000000000000000000000000000000000000000000000000000000009696a4cb",
+                            "0x000000000000000000000000000000000000000000000000000000009696a4cc",
                         )
                         .unwrap(),
                     };

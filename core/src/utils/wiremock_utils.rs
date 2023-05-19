@@ -287,7 +287,7 @@ fn mock_transaction_by_block_hash_and_index() -> Mock {
 fn mock_transaction_receipt_for_transaction_by_block_hash_and_index() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::transaction_receipt([
-            "0x3ffcfea6eed902191033c88bded1e396a9aef4b88b32e6387eea30c83b84834",
+            "0x3204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c",
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/transactions/starknet_getTransactionReceipt.json"),
@@ -309,7 +309,7 @@ fn mock_transaction_receipt_invoke() -> Mock {
 fn mock_transaction_by_hash() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::transaction_by_hash([
-            "0x3ffcfea6eed902191033c88bded1e396a9aef4b88b32e6387eea30c83b84834",
+            "0x3204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c",
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/transactions/starknet_getTransactionByHash_Invoke.json"),
@@ -338,7 +338,7 @@ fn mock_get_code() -> Mock {
 fn mock_get_evm_address() -> Mock {
     let latest_block = StarknetBlockId::Tag(BlockTag::Latest);
     let get_evm_address_call_request = serde_json::json!({
-        "contract_address": "0x28d1467576420c7799e7fae5f5da963c0fce52e5723c854eee34c10f157a2df",
+        "contract_address": "0x744ed080b42c8883a7e31cd11a14b7ae9ef27698b785486bb75cd116c8f1485",
         "entry_point_selector": "0x158359fe4236681f6236a2f303f9350495f73f078c9afd1ca0890fa4143c2ed",
         "calldata": [],
     });
@@ -359,7 +359,7 @@ fn mock_get_class_hash_at() -> Mock {
         .and(body_json(StarknetRpcBaseData::class_hash_at([
             serde_json::to_value(latest_block).unwrap(),
             serde_json::to_value(
-                "0x28d1467576420c7799e7fae5f5da963c0fce52e5723c854eee34c10f157a2df",
+                "0x744ed080b42c8883a7e31cd11a14b7ae9ef27698b785486bb75cd116c8f1485",
             )
             .unwrap(),
         ])))
