@@ -162,17 +162,21 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                         ether_tx.from,
                         starknet_address_to_ethereum_address(&v0.contract_address)
                     );
+                    // r and s values are extracted from the calldata of the first transaction
+                    // in the starknet_getBlockWithTxs.json file.
+                    // v value is calculated from the parity of the y coordinate of the signature,
+                    // to which we add 35 + 2 * CHAIN_ID (based on https://eips.ethereum.org/EIPS/eip-155).
                     let signature = Signature {
                         r: U256::from_str(
-                            "0x32506f889d51447e4c523f744913a358fcfe45a3dbf624a9e63bd9f312801528",
+                            "0x05e6a35e537e8d99c81bf2d4e7e8a410e7f6f3f8b1f07edc28bf226d3ac2cae12",
                         )
                         .unwrap(),
                         s: U256::from_str(
-                            "0x4262642c444fda47ad53d654c97871b08165b8f088a5c864c0751f5276740514",
+                            "0x01910d7b4784e7347a6c7dccf8b8051c06f091347eb4a4a2f6092f1541cb62de7",
                         )
                         .unwrap(),
                         v: U256::from_str(
-                            "0x000000000000000000000000000000000000000000000000000000009696a4cb",
+                            "0x000000000000000000000000000000000000000000000000000000009696a4cc",
                         )
                         .unwrap(),
                     };
@@ -188,6 +192,10 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                         ether_tx.from,
                         H160::from_str("0x54b288676b749def5fc10eb17244fe2c87375de1").unwrap()
                     );
+                    // r and s values are extracted from the calldata of the first transaction
+                    // in the starknet_getBlockWithTxs.json file.
+                    // v value is calculated from the parity of the y coordinate of the signature,
+                    // to which we add 35 + 2 * CHAIN_ID (based on https://eips.ethereum.org/EIPS/eip-155).
                     let signature = Signature {
                         r: U256::from_str(
                             "0x05e6a35e537e8d99c81bf2d4e7e8a410e7f6f3f8b1f07edc28bf226d3ac2cae12",
