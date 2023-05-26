@@ -2,7 +2,7 @@ use crate::helpers::ethers_block_id_to_starknet_block_id;
 use reqwest::StatusCode;
 use reth_primitives::{BlockId, H256};
 use serde::{Deserialize, Serialize};
-use starknet::providers::jsonrpc::models::{BlockId as StarknetBlockId, BlockTag};
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 use std::str::FromStr;
 use wiremock::{
     matchers::{body_json, method},
@@ -145,9 +145,7 @@ pub async fn setup_wiremock() -> String {
         .await;
 
     // * test_transaction_receipt_invoke_is_ok
-    mock_transaction_receipt_invoke_is_ok()
-        .mount(&mock_server)
-        .await;
+    mock_transaction_receipt_invoke().mount(&mock_server).await;
 
     mock_transaction_by_hash().mount(&mock_server).await;
 
@@ -165,7 +163,9 @@ pub async fn setup_wiremock() -> String {
 
 fn mock_block_number() -> Mock {
     Mock::given(method("POST"))
-        .and(body_json(StarknetRpcBaseData::block_number(())))
+        .and(body_json(StarknetRpcBaseData::block_number(
+            Vec::<u8>::new(),
+        )))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/blocks/starknet_blockNumber.json"),
             "application/json",
@@ -260,7 +260,7 @@ fn mock_transaction_by_block_hash_and_index_latest() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(
             StarknetRpcBaseData::transaction_by_block_id_and_index([
-                serde_json::to_value(&latest_block).unwrap(),
+                serde_json::to_value(latest_block).unwrap(),
                 serde_json::to_value(0).unwrap(),
             ]),
         ))
@@ -287,7 +287,7 @@ fn mock_transaction_by_block_hash_and_index() -> Mock {
 fn mock_transaction_receipt_for_transaction_by_block_hash_and_index() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::transaction_receipt([
-            "0x7c5df940744056d337c3de6e8f4500db4b9bfc821eb534b891555e90c39c048",
+            "0x3204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c",
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/transactions/starknet_getTransactionReceipt.json"),
@@ -295,10 +295,10 @@ fn mock_transaction_receipt_for_transaction_by_block_hash_and_index() -> Mock {
         ))
 }
 
-fn mock_transaction_receipt_invoke_is_ok() -> Mock {
+fn mock_transaction_receipt_invoke() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::transaction_receipt([
-            "0x32e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258",
+            "0x3ffcfea6eed902191033c88bded1e396a9aef4b88b32e6387eea30c83b84834",
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/transactions/starknet_getTransactionReceipt_Invoke.json"),
@@ -309,7 +309,7 @@ fn mock_transaction_receipt_invoke_is_ok() -> Mock {
 fn mock_transaction_by_hash() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::transaction_by_hash([
-            "0x32e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258",
+            "0x3204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c",
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/transactions/starknet_getTransactionByHash_Invoke.json"),
@@ -327,7 +327,7 @@ fn mock_get_code() -> Mock {
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::call([
             serde_json::to_value(get_code_call_request).unwrap(),
-            serde_json::to_value(&latest_block).unwrap(),
+            serde_json::to_value(latest_block).unwrap(),
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/starknet_getCode.json"),
@@ -338,14 +338,14 @@ fn mock_get_code() -> Mock {
 fn mock_get_evm_address() -> Mock {
     let latest_block = StarknetBlockId::Tag(BlockTag::Latest);
     let get_evm_address_call_request = serde_json::json!({
-        "contract_address": "0xd90fd6aa27edd344c5cbe1fe999611416b268658e866a54265aaf50d9cf28d",
+        "contract_address": "0x744ed080b42c8883a7e31cd11a14b7ae9ef27698b785486bb75cd116c8f1485",
         "entry_point_selector": "0x158359fe4236681f6236a2f303f9350495f73f078c9afd1ca0890fa4143c2ed",
         "calldata": [],
     });
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::call([
             serde_json::to_value(get_evm_address_call_request).unwrap(),
-            serde_json::to_value(&latest_block).unwrap(),
+            serde_json::to_value(latest_block).unwrap(),
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
             include_str!("data/kakarot_getEvmAddress.json"),
@@ -357,9 +357,9 @@ fn mock_get_class_hash_at() -> Mock {
     let latest_block = StarknetBlockId::Tag(BlockTag::Latest);
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::class_hash_at([
-            serde_json::to_value(&latest_block).unwrap(),
+            serde_json::to_value(latest_block).unwrap(),
             serde_json::to_value(
-                "0xd90fd6aa27edd344c5cbe1fe999611416b268658e866a54265aaf50d9cf28d",
+                "0x744ed080b42c8883a7e31cd11a14b7ae9ef27698b785486bb75cd116c8f1485",
             )
             .unwrap(),
         ])))

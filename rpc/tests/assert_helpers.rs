@@ -5,10 +5,7 @@ use kakarot_rpc_core::{
 use reth_primitives::{Bloom, Bytes, H160, H256, H64, U128, U256};
 use reth_rpc_types::{Block, BlockTransactions, Rich, Signature, Transaction};
 use serde::{Deserialize, Serialize};
-use starknet::{
-    core::types::FieldElement,
-    providers::jsonrpc::models::{InvokeTransaction, Transaction as StarknetTransaction},
-};
+use starknet::core::types::{FieldElement, InvokeTransaction, Transaction as StarknetTransaction};
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -165,10 +162,23 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                         ether_tx.from,
                         starknet_address_to_ethereum_address(&v0.contract_address)
                     );
+                    // r and s values are extracted from the calldata of the first transaction
+                    // in the starknet_getBlockWithTxs.json file.
+                    // v value is calculated from the parity of the y coordinate of the signature,
+                    // to which we add 35 + 2 * CHAIN_ID (based on https://eips.ethereum.org/EIPS/eip-155).
                     let signature = Signature {
-                        v: felt_option_to_u256(Some(&v0.signature[2])).unwrap(),
-                        r: felt_option_to_u256(Some(&v0.signature[0])).unwrap(),
-                        s: felt_option_to_u256(Some(&v0.signature[1])).unwrap(),
+                        r: U256::from_str(
+                            "0x05e6a35e537e8d99c81bf2d4e7e8a410e7f6f3f8b1f07edc28bf226d3ac2cae12",
+                        )
+                        .unwrap(),
+                        s: U256::from_str(
+                            "0x01910d7b4784e7347a6c7dccf8b8051c06f091347eb4a4a2f6092f1541cb62de7",
+                        )
+                        .unwrap(),
+                        v: U256::from_str(
+                            "0x000000000000000000000000000000000000000000000000000000009696a4cc",
+                        )
+                        .unwrap(),
                     };
                     assert_eq!(ether_tx.signature, Some(signature));
                 }
@@ -180,12 +190,25 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                     assert_eq!(ether_tx.nonce, felt_to_u256(v1.nonce));
                     assert_eq!(
                         ether_tx.from,
-                        H160::from_str("0x9296be4959e56b5df2200dbfa30594504a7fed61").unwrap()
+                        H160::from_str("0x54b288676b749def5fc10eb17244fe2c87375de1").unwrap()
                     );
+                    // r and s values are extracted from the calldata of the first transaction
+                    // in the starknet_getBlockWithTxs.json file.
+                    // v value is calculated from the parity of the y coordinate of the signature,
+                    // to which we add 35 + 2 * CHAIN_ID (based on https://eips.ethereum.org/EIPS/eip-155).
                     let signature = Signature {
-                        v: U256::ZERO,
-                        r: felt_option_to_u256(Some(&v1.signature[0])).unwrap(),
-                        s: felt_option_to_u256(Some(&v1.signature[1])).unwrap(),
+                        r: U256::from_str(
+                            "0x05e6a35e537e8d99c81bf2d4e7e8a410e7f6f3f8b1f07edc28bf226d3ac2cae12",
+                        )
+                        .unwrap(),
+                        s: U256::from_str(
+                            "0x01910d7b4784e7347a6c7dccf8b8051c06f091347eb4a4a2f6092f1541cb62de7",
+                        )
+                        .unwrap(),
+                        v: U256::from_str(
+                            "0x000000000000000000000000000000000000000000000000000000009696a4cc",
+                        )
+                        .unwrap(),
                     };
                     assert_eq!(ether_tx.signature, Some(signature));
                     // TODO: test ether_tx.input
