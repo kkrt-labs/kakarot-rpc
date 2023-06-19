@@ -12,7 +12,10 @@ use starknet::{
         BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement,
         Transaction as StarknetTransaction,
     },
-    providers::{jsonrpc::JsonRpcClientError, ProviderError},
+    providers::{
+        jsonrpc::{HttpTransport, JsonRpcClientError},
+        ProviderError,
+    },
 };
 
 use thiserror::Error;
@@ -34,6 +37,7 @@ pub enum KakarotClientError {
 pub trait KakarotClient: Send + Sync {
     fn kakarot_address(&self) -> FieldElement;
     fn proxy_account_class_hash(&self) -> FieldElement;
+    fn inner(&self) -> &starknet::providers::jsonrpc::JsonRpcClient<HttpTransport>;
 
     async fn block_number(&self) -> Result<U64, KakarotClientError>;
 

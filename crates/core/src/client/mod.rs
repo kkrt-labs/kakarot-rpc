@@ -65,8 +65,8 @@ use self::{
     },
 };
 
-pub struct KakarotClientImpl {
-    client: JsonRpcClient<HttpTransport>,
+pub struct KakarotClientImpl<StarknetClient> {
+    inner: StarknetClient,
     kakarot_address: FieldElement,
     proxy_account_class_hash: FieldElement,
 }
@@ -83,7 +83,7 @@ impl From<KakarotClientError> for jsonrpsee::core::Error {
     }
 }
 
-impl KakarotClientImpl {
+impl KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     /// Create a new `KakarotClient`.
     ///
     /// # Arguments
@@ -100,7 +100,7 @@ impl KakarotClientImpl {
     ) -> Result<Self> {
         let url = Url::parse(starknet_rpc)?;
         Ok(Self {
-            client: JsonRpcClient::new(HttpTransport::new(url)),
+            inner: JsonRpcClient::new(HttpTransport::new(url)),
             kakarot_address,
             proxy_account_class_hash,
         })
@@ -130,13 +130,17 @@ impl KakarotClientImpl {
 }
 
 #[async_trait]
-impl KakarotClient for KakarotClientImpl {
+impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     fn kakarot_address(&self) -> FieldElement {
         self.kakarot_address
     }
 
     fn proxy_account_class_hash(&self) -> FieldElement {
         self.proxy_account_class_hash
+    }
+
+    fn inner(&self) -> &JsonRpcClient<HttpTransport> {
+        &self.inner
     }
     /// Get the number of transactions in a block given a block id.
     /// The number of transactions in a block.
@@ -152,7 +156,7 @@ impl KakarotClient for KakarotClientImpl {
     /// `Ok(ContractClass)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
     async fn block_number(&self) -> Result<U64, KakarotClientError> {
-        let block_number = self.client.block_number().await?;
+        let block_number = self.inner.block_number().await?;
         Ok(U64::from(block_number))
     }
 
@@ -170,10 +174,10 @@ impl KakarotClient for KakarotClientImpl {
         hydrated_tx: bool,
     ) -> Result<RichBlock, KakarotClientError> {
         let starknet_block = if hydrated_tx {
-            MaybePendingStarknetBlock::BlockWithTxs(self.client.get_block_with_txs(block_id).await?)
+            MaybePendingStarknetBlock::BlockWithTxs(self.inner.get_block_with_txs(block_id).await?)
         } else {
             MaybePendingStarknetBlock::BlockWithTxHashes(
-                self.client.get_block_with_tx_hashes(block_id).await?,
+                self.inner.get_block_with_tx_hashes(block_id).await?,
             )
         };
         let block = self.starknet_block_to_eth_block(starknet_block).await?;
@@ -216,7 +220,7 @@ impl KakarotClient for KakarotClientImpl {
             calldata: tx_calldata_vec,
         };
         // Make the function call to get the Starknet contract address
-        let starknet_contract_address = self.client.call(request, starknet_block_id).await?;
+        let starknet_contract_address = self.inner.call(request, starknet_block_id).await?;
         // Concatenate the result of the function call
         let concatenated_result = starknet_contract_address
             .into_iter()
@@ -229,7 +233,7 @@ impl KakarotClient for KakarotClientImpl {
             calldata: vec![],
         };
         // Make the function call to get the contract bytecode
-        let contract_bytecode = self.client.call(request, starknet_block_id).await?;
+        let contract_bytecode = self.inner.call(request, starknet_block_id).await?;
         // Convert the result of the function call to a vector of bytes
         let contract_bytecode_in_u8: Vec<u8> = contract_bytecode
             .into_iter()
@@ -277,7 +281,7 @@ impl KakarotClient for KakarotClientImpl {
             calldata: call_parameters,
         };
 
-        let call_result: Vec<FieldElement> = self.client.call(request, starknet_block_id).await?;
+        let call_result: Vec<FieldElement> = self.inner.call(request, starknet_block_id).await?;
 
         // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
         // fail is Kakarot API changes)
@@ -311,7 +315,7 @@ impl KakarotClient for KakarotClientImpl {
     ///  `Ok(SyncStatus)` if the operation was successful.
     ///  `Err(KakarotClientError)` if the operation failed.
     async fn syncing(&self) -> Result<SyncStatus, KakarotClientError> {
-        let status = self.client.syncing().await?;
+        let status = self.inner.syncing().await?;
 
         match status {
             SyncStatusType::NotSyncing => Ok(SyncStatus::None),
@@ -376,7 +380,7 @@ impl KakarotClient for KakarotClientImpl {
         &self,
         starknet_block_id: StarknetBlockId,
     ) -> Result<U64, KakarotClientError> {
-        let starknet_block = self.client.get_block_with_txs(starknet_block_id).await?;
+        let starknet_block = self.inner.get_block_with_txs(starknet_block_id).await?;
 
         let block_transactions = match starknet_block {
             MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
@@ -411,7 +415,7 @@ impl KakarotClient for KakarotClientImpl {
         let index: u64 = usize::from(tx_index) as u64;
 
         let starknet_tx = self
-            .client
+            .inner
             .get_transaction_by_block_id_and_index(block_id, index)
             .await?;
 
@@ -428,7 +432,7 @@ impl KakarotClient for KakarotClientImpl {
             }
         };
 
-        let tx_receipt = self.client.get_transaction_receipt(tx_hash).await?;
+        let tx_receipt = self.inner.get_transaction_receipt(tx_hash).await?;
         let (blockhash_opt, blocknum_opt) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => (
                 Some(H256::from_slice(&(tr.block_hash).to_bytes_be())),
@@ -484,7 +488,7 @@ impl KakarotClient for KakarotClientImpl {
             calldata: vec![ethereum_address_felt],
         };
 
-        let starknet_contract_address = self.client.call(request, starknet_block_id).await?;
+        let starknet_contract_address = self.inner.call(request, starknet_block_id).await?;
 
         let result = starknet_contract_address.first().ok_or_else(|| {
             KakarotClientError::OtherError(anyhow::anyhow!(
@@ -500,7 +504,7 @@ impl KakarotClient for KakarotClientImpl {
         request: BroadcastedInvokeTransactionV1,
     ) -> Result<H256, KakarotClientError> {
         let transaction_result = self
-            .client
+            .inner
             .add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request))
             .await?;
 
@@ -529,7 +533,7 @@ impl KakarotClient for KakarotClientImpl {
 
         //TODO: Error when trying to transform 32 bytes hash to FieldElement
         let hash_felt = hash_to_field_element(H256::from(hash.0))?;
-        let starknet_tx_receipt = self.client.get_transaction_receipt(hash_felt).await?;
+        let starknet_tx_receipt = self.inner.get_transaction_receipt(hash_felt).await?;
 
         let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
 
@@ -632,7 +636,7 @@ impl KakarotClient for KakarotClientImpl {
             }
         };
 
-        let starknet_tx = self.client.get_transaction_by_hash(hash_felt).await?;
+        let starknet_tx = self.inner.get_transaction_by_hash(hash_felt).await?;
         match starknet_tx.clone() {
             StarknetTransaction::Invoke(invoke_tx) => {
                 match invoke_tx {
@@ -676,7 +680,7 @@ impl KakarotClient for KakarotClientImpl {
             calldata: vec![],
         };
 
-        let evm_address_felt = self.client.call(request, starknet_block_id).await?;
+        let evm_address_felt = self.inner.call(request, starknet_block_id).await?;
         let evm_address = evm_address_felt
             .first()
             .ok_or_else(|| {
@@ -724,7 +728,7 @@ impl KakarotClient for KakarotClientImpl {
             calldata: vec![starknet_address],
         };
 
-        let balance_felt = self.client.call(request, block_id).await?;
+        let balance_felt = self.inner.call(request, block_id).await?;
 
         let balance = balance_felt
             .first()
@@ -831,7 +835,7 @@ impl KakarotClient for KakarotClientImpl {
                         // corresponding fields in EtherTransaction
                         ether_tx.hash = H256::from_slice(&v0.transaction_hash.to_bytes_be());
                         class_hash = self
-                            .client
+                            .inner
                             .get_class_hash_at(
                                 StarknetBlockId::Tag(BlockTag::Latest),
                                 v0.contract_address,
@@ -873,7 +877,7 @@ impl KakarotClient for KakarotClientImpl {
 
                         ether_tx.hash = H256::from_slice(&v1.transaction_hash.to_bytes_be());
                         class_hash = self
-                            .client
+                            .inner
                             .get_class_hash_at(
                                 StarknetBlockId::Tag(BlockTag::Latest),
                                 v1.sender_address,
