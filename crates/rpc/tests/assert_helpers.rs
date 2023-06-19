@@ -1,7 +1,8 @@
-use kakarot_rpc_core::{
-    client::constants::{gas::BASE_FEE_PER_GAS, CHAIN_ID},
+use kakarot_rpc_core::client::{
+    constants::{gas::BASE_FEE_PER_GAS, CHAIN_ID},
     helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address},
 };
+
 use reth_primitives::{Bloom, Bytes, H160, H256, H64, U128, U256};
 use reth_rpc_types::{Block, BlockTransactions, Rich, Signature, Transaction};
 use serde::{Deserialize, Serialize};
