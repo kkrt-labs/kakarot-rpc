@@ -1,8 +1,10 @@
-use crate::client::helpers::ethers_block_id_to_starknet_block_id;
+use crate::client::{
+    client_api::KakarotClient, helpers::ethers_block_id_to_starknet_block_id, KakarotClientImpl,
+};
 use reqwest::StatusCode;
 use reth_primitives::{BlockId, H256};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
 use std::str::FromStr;
 use wiremock::{
     matchers::{body_json, method},
@@ -159,6 +161,24 @@ pub async fn setup_wiremock() -> String {
     // TODO: Use the latest mapping between starknet and EVM addresses
 
     mock_server.uri()
+}
+
+pub async fn setup_mock_client() -> Box<dyn KakarotClient> {
+    let starknet_rpc = setup_wiremock().await;
+    Box::new(
+        KakarotClientImpl::new(
+            &starknet_rpc,
+            FieldElement::from_hex_be(
+                "0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75",
+            )
+            .unwrap(),
+            FieldElement::from_hex_be(
+                "0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5",
+            )
+            .unwrap(),
+        )
+        .unwrap(),
+    )
 }
 
 fn mock_block_number() -> Mock {
