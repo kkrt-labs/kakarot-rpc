@@ -18,7 +18,7 @@ use starknet::{
 use thiserror::Error;
 extern crate hex;
 
-use crate::client::{helpers::MaybePendingStarknetBlock, types::TokenBalances};
+use crate::client::{helpers::MaybePendingStarknetBlock, models::TokenBalances};
 use async_trait::async_trait;
 use reth_rpc_types::Index;
 

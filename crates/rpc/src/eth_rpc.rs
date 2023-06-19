@@ -19,7 +19,7 @@ use reth_rpc_types::{
 use serde_json::Value;
 
 use crate::eth_api::EthApiServer;
-use kakarot_rpc_core::client::types::TokenBalances;
+use kakarot_rpc_core::client::models::TokenBalances;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 pub struct KakarotEthRpc {

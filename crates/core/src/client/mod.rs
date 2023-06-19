@@ -36,6 +36,7 @@ use starknet::{
 
 use url::Url;
 extern crate hex;
+pub mod convertible;
 pub mod helpers;
 
 use helpers::{
@@ -52,8 +53,8 @@ use reth_rpc_types::Index;
 pub mod client_api;
 pub mod constants;
 use constants::selectors::BYTECODE;
-pub mod types;
-use types::{TokenBalance, TokenBalances};
+pub mod models;
+use models::{TokenBalance, TokenBalances};
 
 use self::{
     client_api::{KakarotClient, KakarotClientError},
