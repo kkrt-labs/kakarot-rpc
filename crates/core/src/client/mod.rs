@@ -63,6 +63,8 @@ use self::{
         selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS},
         STARKNET_NATIVE_TOKEN,
     },
+    convertible::ConvertibleStarknetBlock,
+    models::{BlockWithTxHashes, BlockWithTxs},
 };
 
 pub struct KakarotClientImpl<StarknetClient> {
@@ -173,15 +175,17 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         block_id: StarknetBlockId,
         hydrated_tx: bool,
     ) -> Result<RichBlock, KakarotClientError> {
-        let starknet_block = if hydrated_tx {
-            MaybePendingStarknetBlock::BlockWithTxs(self.inner.get_block_with_txs(block_id).await?)
+        if hydrated_tx {
+            let block = self.inner.get_block_with_txs(block_id).await?;
+            let starknet_block = BlockWithTxs::new(block);
+            let block = starknet_block.to_eth_block(self).await?;
+            return Ok(block);
         } else {
-            MaybePendingStarknetBlock::BlockWithTxHashes(
-                self.inner.get_block_with_tx_hashes(block_id).await?,
-            )
+            let block = self.inner.get_block_with_tx_hashes(block_id).await?;
+            let starknet_block = BlockWithTxHashes::new(block);
+            let block = starknet_block.to_eth_block(self).await?;
+            return Ok(block);
         };
-        let block = self.starknet_block_to_eth_block(starknet_block).await?;
-        Ok(block)
     }
 
     /// Get the number of transactions in a block given a block id.

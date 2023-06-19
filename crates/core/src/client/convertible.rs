@@ -7,6 +7,6 @@ use super::client_api::{KakarotClient, KakarotClientError};
 pub trait ConvertibleStarknetBlock {
     async fn to_eth_block(
         &self,
-        client: Box<dyn KakarotClient>,
+        client: &dyn KakarotClient,
     ) -> Result<RichBlock, KakarotClientError>;
 }

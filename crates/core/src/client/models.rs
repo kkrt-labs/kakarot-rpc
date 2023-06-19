@@ -8,7 +8,7 @@ use starknet::core::types::{MaybePendingBlockWithTxHashes, MaybePendingBlockWith
 
 use super::{
     client_api::KakarotClientError, convertible::ConvertibleStarknetBlock,
-    helpers::starknet_address_to_ethereum_address,
+    helpers::starknet_address_to_ethereum_address, KakarotClient,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -24,15 +24,27 @@ pub struct TokenBalances {
     pub token_balances: Vec<TokenBalance>,
 }
 
-pub struct BlockWithTxHashes(pub MaybePendingBlockWithTxHashes);
+pub struct BlockWithTxHashes(MaybePendingBlockWithTxHashes);
 
-pub struct BlockWithTxs(pub MaybePendingBlockWithTxs);
+impl BlockWithTxHashes {
+    pub fn new(block: MaybePendingBlockWithTxHashes) -> Self {
+        Self(block)
+    }
+}
+
+pub struct BlockWithTxs(MaybePendingBlockWithTxs);
+
+impl BlockWithTxs {
+    pub fn new(block: MaybePendingBlockWithTxs) -> Self {
+        Self(block)
+    }
+}
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxHashes {
     async fn to_eth_block(
         &self,
-        client: Box<dyn super::client_api::KakarotClient>,
+        client: &dyn KakarotClient,
     ) -> Result<RichBlock, KakarotClientError> {
         //TODO: Fetch real data
         let gas_limit = U256::from(1_000_000);
@@ -51,7 +63,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
-        let extra_data = Bytes::default();
+        let extra_data = Bytes::from(b"0x00");
         //TODO: Fetch real data
         let total_difficulty: U256 = U256::ZERO;
         //TODO: Fetch real data
@@ -183,7 +195,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 impl ConvertibleStarknetBlock for BlockWithTxs {
     async fn to_eth_block(
         &self,
-        client: Box<dyn super::client_api::KakarotClient>,
+        client: &dyn KakarotClient,
     ) -> Result<RichBlock, KakarotClientError> {
         //TODO: Fetch real data
         let gas_limit = U256::from(1_000_000);
@@ -202,7 +214,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
-        let extra_data: Bytes = Bytes::default();
+        let extra_data: Bytes = Bytes::from(b"0x00");
         //TODO: Fetch real data
         let total_difficulty: U256 = U256::ZERO;
         //TODO: Fetch real data

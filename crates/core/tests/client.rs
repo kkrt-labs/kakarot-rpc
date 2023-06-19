@@ -2,8 +2,10 @@
 mod tests {
 
     use kakarot_rpc_core::{
-        client::{convertible::ConvertibleStarknetBlock, models::BlockWithTxs},
-        mock::wiremock_utils::setup_mock_client,
+        client::{
+            client_api::KakarotClient, convertible::ConvertibleStarknetBlock, models::BlockWithTxs,
+        },
+        mock::wiremock_utils::setup_mock_client_crate,
     };
     use reth_primitives::H256;
     use starknet::{
@@ -13,14 +15,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_starknet_block_to_eth_block() {
-        let client = setup_mock_client().await;
+        let client = setup_mock_client_crate().await;
         let starknet_client = client.inner();
         let starknet_block = starknet_client
             .get_block_with_txs(BlockId::Tag(BlockTag::Latest))
             .await
             .unwrap();
-        let eth_block = BlockWithTxs(starknet_block)
-            .to_eth_block(client)
+        let eth_block = BlockWithTxs::new(starknet_block)
+            .to_eth_block(&client)
             .await
             .unwrap();
 
