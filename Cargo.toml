@@ -1,5 +1,6 @@
 [workspace]
-members = ["rpc"]
+members = ["crates/rpc", "crates/core"]
+resolver = "2"
 
 [workspace.package]
 edition = "2021"
@@ -9,3 +10,10 @@ homepage = "https://github.com/sayajin-labs/kakarot-rpc"
 repository = "https://github.com/sayajin-labs/kakarot-rpc"
 readme = "./README.md"
 license = "MIT"
+
+[workspace.dependencies]
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "a6cbfa3" }
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "8094ab18dbb230f177babceeb3d72c7a4c424490" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "8094ab18dbb230f177babceeb3d72c7a4c424490" }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "8094ab18dbb230f177babceeb3d72c7a4c424490" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "8094ab18dbb230f177babceeb3d72c7a4c424490" }

@@ -38,8 +38,9 @@ use starknet::{
 
 use url::Url;
 extern crate hex;
+pub mod helpers;
 
-use crate::helpers::{
+use helpers::{
     create_default_transaction_receipt, decode_eth_call_return, decode_signature_from_tx_calldata,
     ethers_block_id_to_starknet_block_id, felt_to_u256, hash_to_field_element,
     raw_starknet_calldata, starknet_address_to_ethereum_address, vec_felt_to_bytes,
@@ -123,11 +124,9 @@ impl KakarotClientImpl {
         starknet_address: &FieldElement,
         starknet_block_id: &StarknetBlockId,
     ) -> Address {
-        let eth_address = self
-            .get_evm_address(starknet_address, starknet_block_id)
+        self.get_evm_address(starknet_address, starknet_block_id)
             .await
-            .unwrap_or_else(|_| starknet_address_to_ethereum_address(starknet_address));
-        eth_address
+            .unwrap_or_else(|_| starknet_address_to_ethereum_address(starknet_address))
     }
 }
 

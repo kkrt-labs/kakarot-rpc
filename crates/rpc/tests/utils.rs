@@ -1,5 +1,5 @@
 use kakarot_rpc::eth_rpc::KakarotEthRpc;
-use kakarot_rpc_core::{client::KakarotClientImpl, utils::wiremock_utils::setup_wiremock};
+use kakarot_rpc_core::{client::KakarotClientImpl, mock::wiremock_utils::setup_wiremock};
 use starknet::core::types::FieldElement;
 
 /// Run wiremock to fake starknet rpc and then run our own `kakarot_rpc_server`.
