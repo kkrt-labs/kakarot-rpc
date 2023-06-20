@@ -582,7 +582,24 @@ impl KakarotClient for KakarotClientImpl {
                         // they're returned as list where consecutive values are
                         // low, high, low, high, etc. of the Uint256 Cairo representation
                         // of the bytes32 topics. This recomputes the original topic
-                        let topics = vec![];
+                        let topics = (0..event.keys.len())
+                            .step_by(2)
+                            .map(|i| {
+                                let next_key =
+                                    *event.keys.get(i + 1).unwrap_or(&FieldElement::ZERO);
+
+                                // Can unwrap here as we know 2^128 is a valid FieldElement
+                                let two_pow_16: FieldElement = FieldElement::from_hex_be(
+                                    "0x100000000000000000000000000000000",
+                                )
+                                .unwrap();
+
+                                //TODO: May wrap around prime field - Investigate edge cases
+                                let felt_shifted_next_key = next_key * two_pow_16;
+                                event.keys[i] + felt_shifted_next_key
+                            })
+                            .map(|topic| H256::from(&topic.to_bytes_be()))
+                            .collect::<Vec<_>>();
 
                         let data = vec_felt_to_bytes(event.data);
 
