@@ -12,8 +12,8 @@ readme = "./README.md"
 license = "MIT"
 
 [workspace.dependencies]
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs" }
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git" }
-reth-rlp = { git = "https://github.com/paradigmxyz/reth.git" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git" }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "d8eb791" }
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5"  }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }

@@ -1,5 +1,5 @@
 use kakarot_rpc_core::client::{
-    constants::{gas::BASE_FEE_PER_GAS, CHAIN_ID},
+    constants::CHAIN_ID,
     helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address},
 };
 
