@@ -1,12 +1,10 @@
 use eyre::Result;
 use reth_primitives::{
-    rpc::Log, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned,
-    H160, H256, U128, U256,
+    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned,
+    H160, H256, U128, U256, U8,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
-
-use reth_primitives::Address;
 
 use starknet::{
     accounts::Call,
@@ -325,7 +323,7 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         gas_used: Some(U256::from(500_000)),
         contract_address: None,
         // TODO : default log value
-        logs: vec![Log::default()],
+        logs: vec![],
         // Bloom is a byte array of length 256
         logs_bloom: Bloom::default(),
         //TODO: Fetch real data
@@ -334,7 +332,7 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         //TODO: Fetch real data
         effective_gas_price: U128::from(1_000_000),
         //TODO: Fetch real data
-        transaction_type: U256::from(0),
+        transaction_type: U8::from(0),
     }
 }
 
