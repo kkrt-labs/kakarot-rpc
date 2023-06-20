@@ -7,19 +7,19 @@ use jsonrpsee::types::error::CallError;
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
-    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Bytes as RpcBytes, TransactionSigned, H160, H256, H64,
-    U128, U256, U64,
+    keccak256, Address, BlockId, BlockNumberOrTag, Bytes, Bytes as RpcBytes, TransactionSigned, H160, H256, U128, U256,
+    U64,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
-    Block, BlockTransactions, CallRequest, FeeHistory, Header, Log, Rich, RichBlock, Signature, SyncInfo, SyncStatus,
+    BlockTransactions, CallRequest, FeeHistory, Log, RichBlock, Signature, SyncInfo, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1,
     DeployAccountTransactionReceipt, DeployTransactionReceipt, FieldElement, FunctionCall, InvokeTransaction,
-    InvokeTransactionReceipt, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
-    SyncStatusType, Transaction as StarknetTransaction, TransactionReceipt as StarknetTransactionReceipt,
+    InvokeTransactionReceipt, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, SyncStatusType,
+    Transaction as StarknetTransaction, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
@@ -28,13 +28,11 @@ use url::Url;
 extern crate hex;
 pub mod helpers;
 
-use std::collections::BTreeMap;
-
 use async_trait::async_trait;
 use helpers::{
     create_default_transaction_receipt, decode_eth_call_return, decode_signature_from_tx_calldata,
     ethers_block_id_to_starknet_block_id, felt_to_u256, hash_to_field_element, raw_starknet_calldata,
-    starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray, MaybePendingStarknetBlock,
+    starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray,
 };
 use reth_rpc_types::Index;
 
@@ -820,244 +818,6 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
             Ok(ether_tx)
         } else {
             Err(KakarotClientError::OtherError(anyhow::anyhow!("Kakarot Filter: Tx is not part of Kakarot")))
-        }
-    }
-
-    async fn starknet_block_to_eth_block(
-        &self,
-        block: MaybePendingStarknetBlock,
-    ) -> Result<RichBlock, KakarotClientError> {
-        // Fixed fields in the Ethereum block as Starknet does not have these fields
-
-        // TODO: Fetch real data
-        let gas_limit = U256::from(1_000_000);
-
-        // TODO: Fetch real data
-        let gas_used = U256::from(500_000);
-
-        // TODO: Fetch real data
-        let difficulty = U256::ZERO;
-
-        // TODO: Fetch real data
-        let nonce: Option<H64> = Some(H64::zero());
-
-        // TODO: Fetch real data
-        let size: Option<U256> = Some(U256::from(1_000_000));
-
-        // Bloom is a byte array of length 256
-        let logs_bloom = Bloom::default();
-        let extra_data = Bytes::from(b"0x00");
-        // TODO: Fetch real data
-        let total_difficulty: U256 = U256::ZERO;
-        // TODO: Fetch real data
-        let base_fee_per_gas = self.base_fee_per_gas();
-        // TODO: Fetch real data
-        let mix_hash = H256::zero();
-
-        match block {
-            MaybePendingStarknetBlock::BlockWithTxHashes(maybe_pending_block) => {
-                match maybe_pending_block {
-                    MaybePendingBlockWithTxHashes::PendingBlock(pending_block_with_tx_hashes) => {
-                        let parent_hash = H256::from_slice(&pending_block_with_tx_hashes.parent_hash.to_bytes_be());
-                        let sequencer =
-                            starknet_address_to_ethereum_address(&pending_block_with_tx_hashes.sequencer_address);
-                        let timestamp = U256::from_be_bytes(pending_block_with_tx_hashes.timestamp.to_be_bytes());
-
-                        // TODO: Add filter to tx_hashes
-                        let transactions = BlockTransactions::Hashes(
-                            pending_block_with_tx_hashes
-                                .transactions
-                                .into_iter()
-                                .map(|tx| H256::from_slice(&tx.to_bytes_be()))
-                                .collect(),
-                        );
-
-                        let header = Header {
-                            // PendingBlockWithTxHashes doesn't have a block hash
-                            hash: None,
-                            parent_hash,
-                            uncles_hash: parent_hash,
-                            miner: sequencer,
-                            // PendingBlockWithTxHashes doesn't have a state root
-                            state_root: H256::zero(),
-                            // PendingBlockWithTxHashes doesn't have a transactions root
-                            transactions_root: H256::zero(),
-                            // PendingBlockWithTxHashes doesn't have a receipts root
-                            receipts_root: H256::zero(),
-                            // PendingBlockWithTxHashes doesn't have a block number
-                            number: None,
-                            gas_used,
-                            gas_limit,
-                            extra_data,
-                            logs_bloom,
-                            timestamp,
-                            difficulty,
-                            nonce,
-                            mix_hash,
-                            withdrawals_root: Some(H256::zero()),
-                            base_fee_per_gas: Some(base_fee_per_gas),
-                        };
-                        let block = Block {
-                            header,
-                            total_difficulty: Some(total_difficulty),
-                            uncles: vec![],
-                            transactions,
-                            size,
-                            withdrawals: Some(vec![]),
-                        };
-                        Ok(Rich::<Block> { inner: block, extra_info: BTreeMap::default() })
-                    }
-                    MaybePendingBlockWithTxHashes::Block(block_with_tx_hashes) => {
-                        let hash = H256::from_slice(&block_with_tx_hashes.block_hash.to_bytes_be());
-                        let parent_hash = H256::from_slice(&block_with_tx_hashes.parent_hash.to_bytes_be());
-
-                        let sequencer = starknet_address_to_ethereum_address(&block_with_tx_hashes.sequencer_address);
-
-                        let state_root = H256::zero();
-                        let number = U256::from(block_with_tx_hashes.block_number);
-                        let timestamp = U256::from(block_with_tx_hashes.timestamp);
-                        // TODO: Add filter to tx_hashes
-                        let transactions = BlockTransactions::Hashes(
-                            block_with_tx_hashes
-                                .transactions
-                                .into_iter()
-                                .map(|tx| H256::from_slice(&tx.to_bytes_be()))
-                                .collect(),
-                        );
-                        let header = Header {
-                            hash: Some(hash),
-                            parent_hash,
-                            uncles_hash: parent_hash,
-                            miner: sequencer,
-                            state_root,
-                            // BlockWithTxHashes doesn't have a transactions root
-                            transactions_root: H256::zero(),
-                            // BlockWithTxHashes doesn't have a receipts root
-                            receipts_root: H256::zero(),
-                            number: Some(number),
-                            gas_used,
-                            gas_limit,
-                            extra_data,
-                            logs_bloom,
-                            timestamp,
-                            difficulty,
-                            nonce,
-                            mix_hash,
-                            withdrawals_root: Some(H256::zero()),
-                            base_fee_per_gas: Some(base_fee_per_gas),
-                        };
-                        let block = Block {
-                            header,
-                            total_difficulty: Some(total_difficulty),
-                            uncles: vec![],
-                            transactions,
-                            size,
-                            withdrawals: Some(vec![]),
-                        };
-                        Ok(Rich::<Block> { inner: block, extra_info: BTreeMap::default() })
-                    }
-                }
-            }
-            MaybePendingStarknetBlock::BlockWithTxs(maybe_pending_block) => {
-                match maybe_pending_block {
-                    MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
-                        let parent_hash = H256::from_slice(&pending_block_with_txs.parent_hash.to_bytes_be());
-
-                        let sequencer = starknet_address_to_ethereum_address(&pending_block_with_txs.sequencer_address);
-
-                        let timestamp = U256::from_be_bytes(pending_block_with_txs.timestamp.to_be_bytes());
-
-                        let transactions =
-                            self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions, None, None).await?;
-                        let header = Header {
-                            // PendingBlockWithTxs doesn't have a block hash
-                            hash: None,
-                            parent_hash,
-                            uncles_hash: parent_hash,
-                            miner: sequencer,
-                            // PendingBlockWithTxs doesn't have a state root
-                            state_root: H256::zero(),
-                            // PendingBlockWithTxs doesn't have a transactions root
-                            transactions_root: H256::zero(),
-                            // PendingBlockWithTxs doesn't have a receipts root
-                            receipts_root: H256::zero(),
-                            // PendingBlockWithTxs doesn't have a block number
-                            number: None,
-                            gas_used,
-                            gas_limit,
-                            extra_data,
-                            logs_bloom,
-                            timestamp,
-                            difficulty,
-                            nonce,
-                            base_fee_per_gas: Some(base_fee_per_gas),
-                            mix_hash,
-                            withdrawals_root: Some(H256::zero()),
-                        };
-                        let block = Block {
-                            header,
-                            total_difficulty: Some(total_difficulty),
-                            uncles: vec![],
-                            transactions,
-                            size,
-                            withdrawals: Some(vec![]),
-                        };
-                        Ok(Rich::<Block> { inner: block, extra_info: BTreeMap::default() })
-                    }
-                    MaybePendingBlockWithTxs::Block(block_with_txs) => {
-                        let hash = H256::from_slice(&block_with_txs.block_hash.to_bytes_be());
-                        let parent_hash = H256::from_slice(&block_with_txs.parent_hash.to_bytes_be());
-
-                        let sequencer = starknet_address_to_ethereum_address(&block_with_txs.sequencer_address);
-
-                        let state_root = H256::zero();
-                        let transactions_root = H256::zero();
-                        let receipts_root = H256::zero();
-
-                        let number = U256::from(block_with_txs.block_number);
-                        let timestamp = U256::from(block_with_txs.timestamp);
-
-                        let blockhash_opt = Some(H256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
-                        let blocknum_opt = Some(U256::from(block_with_txs.block_number));
-
-                        let transactions = self
-                            .filter_starknet_into_eth_txs(block_with_txs.transactions, blockhash_opt, blocknum_opt)
-                            .await?;
-
-                        let header = Header {
-                            hash: Some(hash),
-                            parent_hash,
-                            uncles_hash: parent_hash,
-                            miner: sequencer,
-                            state_root,
-                            // BlockWithTxHashes doesn't have a transactions root
-                            transactions_root,
-                            // BlockWithTxHashes doesn't have a receipts root
-                            receipts_root,
-                            number: Some(number),
-                            gas_used,
-                            gas_limit,
-                            extra_data,
-                            logs_bloom,
-                            timestamp,
-                            difficulty,
-                            nonce,
-                            base_fee_per_gas: Some(base_fee_per_gas),
-                            mix_hash,
-                            withdrawals_root: Some(H256::zero()),
-                        };
-                        let block = Block {
-                            header,
-                            total_difficulty: Some(total_difficulty),
-                            uncles: vec![],
-                            transactions,
-                            size,
-                            withdrawals: Some(vec![]),
-                        };
-                        Ok(Rich::<Block> { inner: block, extra_info: BTreeMap::default() })
-                    }
-                }
-            }
         }
     }
 

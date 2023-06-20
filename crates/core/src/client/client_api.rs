@@ -17,7 +17,6 @@ extern crate hex;
 use async_trait::async_trait;
 use reth_rpc_types::Index;
 
-use super::helpers::MaybePendingStarknetBlock;
 use crate::models::TokenBalances;
 
 #[derive(Debug, Error)]
@@ -104,11 +103,6 @@ pub trait KakarotClient: Send + Sync {
         block_hash: Option<H256>,
         block_number: Option<U256>,
     ) -> Result<EtherTransaction, KakarotClientError>;
-
-    async fn starknet_block_to_eth_block(
-        &self,
-        block: MaybePendingStarknetBlock,
-    ) -> Result<RichBlock, KakarotClientError>;
 
     async fn filter_starknet_into_eth_txs(
         &self,
