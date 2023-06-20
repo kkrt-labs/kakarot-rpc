@@ -1,11 +1,10 @@
 use eyre::Result;
 use reth_primitives::{
-    BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256, U128, U256, U8,
+    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned,
+    H160, H256, U128, U256, U8,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
-
-use reth_primitives::{Address, BlockId as EthBlockId};
 
 use starknet::{
     accounts::Call,
