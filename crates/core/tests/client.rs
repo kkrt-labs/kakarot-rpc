@@ -2,9 +2,9 @@
 mod tests {
 
     use kakarot_rpc_core::client::client_api::KakarotClient;
-    use kakarot_rpc_core::client::convertible::ConvertibleStarknetBlock;
-    use kakarot_rpc_core::client::models::BlockWithTxs;
     use kakarot_rpc_core::mock::wiremock_utils::setup_mock_client_crate;
+    use kakarot_rpc_core::models::convertible::ConvertibleStarknetBlock;
+    use kakarot_rpc_core::models::BlockWithTxs;
     use reth_primitives::H256;
     use starknet::core::types::{BlockId, BlockTag, FieldElement};
     use starknet::providers::Provider;

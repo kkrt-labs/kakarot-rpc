@@ -1,15 +1,16 @@
+pub mod convertible;
+
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
+use convertible::ConvertibleStarknetBlock;
 use reth_primitives::{Address, Bloom, Bytes, H256, H64, U256};
 use reth_rpc_types::{Block, BlockTransactions, Header, Rich, RichBlock};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs};
 
-use super::client_api::KakarotClientError;
-use super::convertible::ConvertibleStarknetBlock;
-use super::helpers::starknet_address_to_ethereum_address;
-use super::KakarotClient;
+use crate::client::client_api::{KakarotClient, KakarotClientError};
+use crate::client::helpers::starknet_address_to_ethereum_address;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenBalance {

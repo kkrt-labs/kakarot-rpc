@@ -26,7 +26,6 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::providers::Provider;
 use url::Url;
 extern crate hex;
-pub mod convertible;
 pub mod helpers;
 
 use std::collections::BTreeMap;
@@ -44,15 +43,13 @@ use crate::client::constants::CHAIN_ID;
 pub mod client_api;
 pub mod constants;
 use constants::selectors::BYTECODE;
-pub mod models;
-use models::{TokenBalance, TokenBalances};
 
 use self::client_api::{KakarotClient, KakarotClientError};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
 use self::constants::STARKNET_NATIVE_TOKEN;
-use self::convertible::ConvertibleStarknetBlock;
-use self::models::{BlockWithTxHashes, BlockWithTxs};
+use crate::models::convertible::ConvertibleStarknetBlock;
+use crate::models::{BlockWithTxHashes, BlockWithTxs, TokenBalance, TokenBalances};
 
 pub struct KakarotClientImpl<StarknetClient> {
     inner: StarknetClient,

@@ -17,8 +17,8 @@ extern crate hex;
 use async_trait::async_trait;
 use reth_rpc_types::Index;
 
-use crate::client::helpers::MaybePendingStarknetBlock;
-use crate::client::models::TokenBalances;
+use super::helpers::MaybePendingStarknetBlock;
+use crate::models::TokenBalances;
 
 #[derive(Debug, Error)]
 pub enum KakarotClientError {

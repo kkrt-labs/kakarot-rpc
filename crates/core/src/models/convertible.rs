@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use reth_rpc_types::RichBlock;
 
-use super::client_api::{KakarotClient, KakarotClientError};
+use crate::client::client_api::{KakarotClient, KakarotClientError};
 
 #[async_trait]
 pub trait ConvertibleStarknetBlock {
