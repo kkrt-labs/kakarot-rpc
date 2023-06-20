@@ -6,10 +6,10 @@ use reth_rpc_types::{Block, BlockTransactions, Header, Rich, RichBlock};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs};
 
-use super::{
-    client_api::KakarotClientError, convertible::ConvertibleStarknetBlock,
-    helpers::starknet_address_to_ethereum_address, KakarotClient,
-};
+use super::client_api::KakarotClientError;
+use super::convertible::ConvertibleStarknetBlock;
+use super::helpers::starknet_address_to_ethereum_address;
+use super::KakarotClient;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenBalance {
@@ -42,46 +42,39 @@ impl BlockWithTxs {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxHashes {
-    async fn to_eth_block(
-        &self,
-        client: &dyn KakarotClient,
-    ) -> Result<RichBlock, KakarotClientError> {
-        //TODO: Fetch real data
+    async fn to_eth_block(&self, client: &dyn KakarotClient) -> Result<RichBlock, KakarotClientError> {
+        // TODO: Fetch real data
         let gas_limit = U256::from(1_000_000);
 
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let gas_used = U256::from(500_000);
 
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let difficulty = U256::ZERO;
 
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let nonce: Option<H64> = Some(H64::zero());
 
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let size: Option<U256> = Some(U256::from(1_000_000));
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
         let extra_data = Bytes::from(b"0x00");
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let total_difficulty: U256 = U256::ZERO;
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let mix_hash = H256::zero();
 
         match &self.0 {
             MaybePendingBlockWithTxHashes::PendingBlock(pending_block_with_tx_hashes) => {
-                let parent_hash =
-                    H256::from_slice(&pending_block_with_tx_hashes.parent_hash.to_bytes_be());
-                let sequencer = starknet_address_to_ethereum_address(
-                    &pending_block_with_tx_hashes.sequencer_address,
-                );
-                let timestamp =
-                    U256::from_be_bytes(pending_block_with_tx_hashes.timestamp.to_be_bytes());
+                let parent_hash = H256::from_slice(&pending_block_with_tx_hashes.parent_hash.to_bytes_be());
+                let sequencer = starknet_address_to_ethereum_address(&pending_block_with_tx_hashes.sequencer_address);
+                let timestamp = U256::from_be_bytes(pending_block_with_tx_hashes.timestamp.to_be_bytes());
 
-                //TODO: Add filter to tx_hashes
+                // TODO: Add filter to tx_hashes
                 let transactions = BlockTransactions::Hashes(
                     pending_block_with_tx_hashes
                         .transactions
@@ -126,22 +119,18 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
                     size,
                     withdrawals: Some(vec![]),
                 };
-                Ok(Rich::<Block> {
-                    inner: block,
-                    extra_info: BTreeMap::default(),
-                })
+                Ok(Rich::<Block> { inner: block, extra_info: BTreeMap::default() })
             }
             MaybePendingBlockWithTxHashes::Block(block_with_tx_hashes) => {
                 let hash = H256::from_slice(&block_with_tx_hashes.block_hash.to_bytes_be());
                 let parent_hash = H256::from_slice(&block_with_tx_hashes.parent_hash.to_bytes_be());
 
-                let sequencer =
-                    starknet_address_to_ethereum_address(&block_with_tx_hashes.sequencer_address);
+                let sequencer = starknet_address_to_ethereum_address(&block_with_tx_hashes.sequencer_address);
 
                 let state_root = H256::zero();
                 let number = U256::from(block_with_tx_hashes.block_number);
                 let timestamp = U256::from(block_with_tx_hashes.timestamp);
-                //TODO: Add filter to tx_hashes
+                // TODO: Add filter to tx_hashes
                 let transactions = BlockTransactions::Hashes(
                     block_with_tx_hashes
                         .transactions
@@ -182,10 +171,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
                     size,
                     withdrawals: Some(vec![]),
                 };
-                Ok(Rich::<Block> {
-                    inner: block,
-                    extra_info: BTreeMap::default(),
-                })
+                Ok(Rich::<Block> { inner: block, extra_info: BTreeMap::default() })
             }
         }
     }
@@ -193,50 +179,41 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxs {
-    async fn to_eth_block(
-        &self,
-        client: &dyn KakarotClient,
-    ) -> Result<RichBlock, KakarotClientError> {
-        //TODO: Fetch real data
+    async fn to_eth_block(&self, client: &dyn KakarotClient) -> Result<RichBlock, KakarotClientError> {
+        // TODO: Fetch real data
         let gas_limit = U256::from(1_000_000);
 
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let gas_used = U256::from(500_000);
 
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let difficulty = U256::ZERO;
 
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let nonce: Option<H64> = Some(H64::zero());
 
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let size: Option<U256> = Some(U256::from(1_000_000));
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
         let extra_data: Bytes = Bytes::from(b"0x00");
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let total_difficulty: U256 = U256::ZERO;
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         let mix_hash = H256::zero();
         match &self.0 {
             MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
-                let parent_hash =
-                    H256::from_slice(&pending_block_with_txs.parent_hash.to_bytes_be());
+                let parent_hash = H256::from_slice(&pending_block_with_txs.parent_hash.to_bytes_be());
 
-                let sequencer =
-                    starknet_address_to_ethereum_address(&pending_block_with_txs.sequencer_address);
+                let sequencer = starknet_address_to_ethereum_address(&pending_block_with_txs.sequencer_address);
 
                 let timestamp = U256::from_be_bytes(pending_block_with_txs.timestamp.to_be_bytes());
 
                 let transactions = client
-                    .filter_starknet_into_eth_txs(
-                        pending_block_with_txs.transactions.clone(),
-                        None,
-                        None,
-                    )
+                    .filter_starknet_into_eth_txs(pending_block_with_txs.transactions.clone(), None, None)
                     .await?;
                 let header = Header {
                     // PendingBlockWithTxs doesn't have a block hash
@@ -273,17 +250,13 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
                     size,
                     withdrawals: Some(vec![]),
                 };
-                Ok(Rich::<Block> {
-                    inner: block,
-                    extra_info: BTreeMap::default(),
-                })
+                Ok(Rich::<Block> { inner: block, extra_info: BTreeMap::default() })
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
                 let hash = H256::from_slice(&block_with_txs.block_hash.to_bytes_be());
                 let parent_hash = H256::from_slice(&block_with_txs.parent_hash.to_bytes_be());
 
-                let sequencer =
-                    starknet_address_to_ethereum_address(&block_with_txs.sequencer_address);
+                let sequencer = starknet_address_to_ethereum_address(&block_with_txs.sequencer_address);
 
                 let state_root = H256::zero();
                 let transactions_root = H256::zero();
@@ -292,16 +265,11 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
                 let number = U256::from(block_with_txs.block_number);
                 let timestamp = U256::from(block_with_txs.timestamp);
 
-                let blockhash_opt =
-                    Some(H256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
+                let blockhash_opt = Some(H256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
                 let blocknum_opt = Some(U256::from(block_with_txs.block_number));
 
                 let transactions = client
-                    .filter_starknet_into_eth_txs(
-                        block_with_txs.transactions.clone(),
-                        blockhash_opt,
-                        blocknum_opt,
-                    )
+                    .filter_starknet_into_eth_txs(block_with_txs.transactions.clone(), blockhash_opt, blocknum_opt)
                     .await?;
 
                 let header = Header {
@@ -336,10 +304,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
                     size,
                     withdrawals: Some(vec![]),
                 };
-                Ok(Rich::<Block> {
-                    inner: block,
-                    extra_info: BTreeMap::default(),
-                })
+                Ok(Rich::<Block> { inner: block, extra_info: BTreeMap::default() })
             }
         }
     }

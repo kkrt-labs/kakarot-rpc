@@ -3,19 +3,17 @@ mod utils;
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::setup_kakarot_eth_rpc;
+    use std::str::FromStr;
+
     use kakarot_rpc::eth_api::EthApiServer;
-    use kakarot_rpc_core::mock::assert_helpers::{
-        assert_block, assert_block_header, assert_transaction,
-    };
+    use kakarot_rpc_core::mock::assert_helpers::{assert_block, assert_block_header, assert_transaction};
     use reth_primitives::{BlockNumberOrTag, H160, H256, U256, U64};
     use reth_rpc_types::Index;
     use serde_json::json;
-    use starknet::{
-        core::types::{FieldElement, Transaction as StarknetTransaction},
-        macros::felt,
-    };
-    use std::str::FromStr;
+    use starknet::core::types::{FieldElement, Transaction as StarknetTransaction};
+    use starknet::macros::felt;
+
+    use crate::utils::setup_kakarot_eth_rpc;
 
     fn get_test_tx() -> serde_json::Value {
         json!({
@@ -753,16 +751,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_block_by_hash_hydrated_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let hash =
-            H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
-                .unwrap();
+        let hash = H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap();
 
         let hydrated = true;
-        let block = kakarot_rpc
-            .block_by_hash(hash, hydrated)
-            .await
-            .unwrap()
-            .unwrap();
+        let block = kakarot_rpc.block_by_hash(hash, hydrated).await.unwrap().unwrap();
 
         let starknet_res = json!({
             "block_hash": "0x449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9",
@@ -792,27 +784,16 @@ mod tests {
             ]
         });
 
-        assert_block(
-            &block,
-            starknet_res.to_string(),
-            starknet_txs.to_string(),
-            true,
-        );
+        assert_block(&block, starknet_res.to_string(), starknet_txs.to_string(), true);
         assert_block_header(&block, starknet_res.to_string(), true);
     }
 
     #[tokio::test]
     async fn test_get_block_by_hash_not_hydrated_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let hash =
-            H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e")
-                .unwrap();
+        let hash = H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e").unwrap();
         let hydrated = false;
-        let block = kakarot_rpc
-            .block_by_hash(hash, hydrated)
-            .await
-            .unwrap()
-            .unwrap();
+        let block = kakarot_rpc.block_by_hash(hash, hydrated).await.unwrap().unwrap();
 
         let starknet_res = json!({
             "block_hash": "0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e",
@@ -840,12 +821,7 @@ mod tests {
             ]
         });
 
-        assert_block(
-            &block,
-            starknet_res.to_string(),
-            starknet_txs.to_string(),
-            false,
-        );
+        assert_block(&block, starknet_res.to_string(), starknet_txs.to_string(), false);
         assert_block_header(&block, starknet_res.to_string(), false);
     }
 
@@ -855,11 +831,7 @@ mod tests {
         let block_number = BlockNumberOrTag::Latest;
         let hydrated = true;
 
-        let block = kakarot_rpc
-            .block_by_number(block_number, hydrated)
-            .await
-            .unwrap()
-            .unwrap();
+        let block = kakarot_rpc.block_by_number(block_number, hydrated).await.unwrap().unwrap();
 
         let starknet_res = json!({
             "block_hash": "0x449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9",
@@ -889,12 +861,7 @@ mod tests {
             ]
         });
 
-        assert_block(
-            &block,
-            starknet_res.to_string(),
-            starknet_txs.to_string(),
-            true,
-        );
+        assert_block(&block, starknet_res.to_string(), starknet_txs.to_string(), true);
         assert_block_header(&block, starknet_res.to_string(), true);
     }
 
@@ -904,11 +871,7 @@ mod tests {
         let block_number = BlockNumberOrTag::Latest;
         let hydrated = false;
 
-        let block = kakarot_rpc
-            .block_by_number(block_number, hydrated)
-            .await
-            .unwrap()
-            .unwrap();
+        let block = kakarot_rpc.block_by_number(block_number, hydrated).await.unwrap().unwrap();
 
         let starknet_res = json!({
             "block_hash": "0x197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e",
@@ -936,26 +899,16 @@ mod tests {
             ]
         });
 
-        assert_block(
-            &block,
-            starknet_res.to_string(),
-            starknet_txs.to_string(),
-            false,
-        );
+        assert_block(&block, starknet_res.to_string(), starknet_txs.to_string(), false);
         assert_block_header(&block, starknet_res.to_string(), false);
     }
 
     #[tokio::test]
     async fn test_block_transaction_count_by_hash_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let hash =
-            H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
-                .unwrap();
+        let hash = H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap();
 
-        let transaction_count = kakarot_rpc
-            .block_transaction_count_by_hash(hash)
-            .await
-            .unwrap();
+        let transaction_count = kakarot_rpc.block_transaction_count_by_hash(hash).await.unwrap();
         assert_eq!(transaction_count.as_u64(), 16);
     }
 
@@ -964,58 +917,39 @@ mod tests {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
         let block_number = BlockNumberOrTag::Latest;
 
-        let transaction_count = kakarot_rpc
-            .block_transaction_count_by_number(block_number)
-            .await
-            .unwrap();
+        let transaction_count = kakarot_rpc.block_transaction_count_by_number(block_number).await.unwrap();
         assert_eq!(transaction_count.as_u64(), 16);
     }
 
     #[tokio::test]
     async fn test_transaction_receipt_invoke_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let hash =
-            H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c")
-                .unwrap();
+        let hash = H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap();
 
-        let transaction_receipt = kakarot_rpc
-            .transaction_receipt(hash)
-            .await
-            .unwrap()
-            .unwrap();
+        let transaction_receipt = kakarot_rpc.transaction_receipt(hash).await.unwrap().unwrap();
 
         assert_eq!(
             transaction_receipt.transaction_hash,
             Some(H256::from_slice(
-                &FieldElement::from_str(
-                    "0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c"
-                )
-                .unwrap()
-                .to_bytes_be()
+                &FieldElement::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c")
+                    .unwrap()
+                    .to_bytes_be()
             ))
         );
 
         assert_eq!(
             transaction_receipt.block_hash,
             Some(H256::from_slice(
-                &FieldElement::from_str(
-                    "0x00000000000000000000000000000000000000000000000000000000000000d"
-                )
-                .unwrap()
-                .to_bytes_be()
+                &FieldElement::from_str("0x00000000000000000000000000000000000000000000000000000000000000d")
+                    .unwrap()
+                    .to_bytes_be()
             ))
         );
 
-        assert_eq!(
-            U256::from(transaction_receipt.block_number.unwrap()),
-            U256::from(13)
-        );
+        assert_eq!(U256::from(transaction_receipt.block_number.unwrap()), U256::from(13));
         assert_eq!(transaction_receipt.status_code, Some(U64::from(1)));
 
-        assert_eq!(
-            transaction_receipt.from,
-            H160::from_str("0x54b288676b749def5fc10eb17244fe2c87375de1").unwrap()
-        );
+        assert_eq!(transaction_receipt.from, H160::from_str("0x54b288676b749def5fc10eb17244fe2c87375de1").unwrap());
 
         // TODO
         // assert_eq!(transaction_receipt.logs, None);
@@ -1039,11 +973,8 @@ mod tests {
         // workaround as Index does not implement new()
         let index: Index = Index::default();
 
-        let transaction = kakarot_rpc
-            .transaction_by_block_number_and_index(block_number, index)
-            .await
-            .unwrap()
-            .unwrap();
+        let transaction =
+            kakarot_rpc.transaction_by_block_number_and_index(block_number, index).await.unwrap().unwrap();
 
         let starknet_tx = get_test_tx();
         assert_transaction(
@@ -1053,33 +984,21 @@ mod tests {
 
         assert_eq!(
             transaction.block_hash,
-            Some(H256::from(
-                felt!("0x000000000000000000000000000000000000000000000000000000000000000d")
-                    .to_bytes_be()
-            ))
+            Some(H256::from(felt!("0x000000000000000000000000000000000000000000000000000000000000000d").to_bytes_be()))
         );
 
-        assert_eq!(
-            U256::from(transaction.block_number.unwrap()),
-            U256::from(13)
-        );
+        assert_eq!(U256::from(transaction.block_number.unwrap()), U256::from(13));
     }
 
     #[tokio::test]
     async fn test_transaction_by_block_hash_and_index_is_ok() {
         let kakarot_rpc = setup_kakarot_eth_rpc().await;
-        let hash =
-            H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
-                .unwrap();
+        let hash = H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap();
 
         // workaround as Index does not implement new()
         let index: Index = Index::default();
 
-        let transaction = kakarot_rpc
-            .transaction_by_block_hash_and_index(hash, index)
-            .await
-            .unwrap()
-            .unwrap();
+        let transaction = kakarot_rpc.transaction_by_block_hash_and_index(hash, index).await.unwrap().unwrap();
 
         let starknet_tx = get_test_tx();
 
@@ -1090,14 +1009,8 @@ mod tests {
 
         assert_eq!(
             transaction.block_hash,
-            Some(H256::from(
-                felt!("0x000000000000000000000000000000000000000000000000000000000000000d")
-                    .to_bytes_be()
-            ))
+            Some(H256::from(felt!("0x000000000000000000000000000000000000000000000000000000000000000d").to_bytes_be()))
         );
-        assert_eq!(
-            U256::from(transaction.block_number.unwrap()),
-            U256::from(13)
-        );
+        assert_eq!(U256::from(transaction.block_number.unwrap()), U256::from(13));
     }
 }

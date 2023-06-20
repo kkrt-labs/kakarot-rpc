@@ -1,29 +1,24 @@
 use eyre::Result;
-
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U128, U256, U64};
 use reth_rpc_types::{
-    BlockTransactions, CallRequest, FeeHistory, RichBlock, SyncStatus,
-    Transaction as EtherTransaction, TransactionReceipt,
+    BlockTransactions, CallRequest, FeeHistory, RichBlock, SyncStatus, Transaction as EtherTransaction,
+    TransactionReceipt,
 };
-use starknet::{
-    core::types::{
-        BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement,
-        Transaction as StarknetTransaction,
-    },
-    providers::{
-        jsonrpc::{HttpTransport, JsonRpcClientError},
-        ProviderError,
-    },
+use starknet::core::types::{
+    BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement, Transaction as StarknetTransaction,
 };
-
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClientError};
+use starknet::providers::{JsonRpcClient, ProviderError};
 use thiserror::Error;
 extern crate hex;
 
-use crate::client::{helpers::MaybePendingStarknetBlock, models::TokenBalances};
 use async_trait::async_trait;
 use reth_rpc_types::Index;
+
+use crate::client::helpers::MaybePendingStarknetBlock;
+use crate::client::models::TokenBalances;
 
 #[derive(Debug, Error)]
 pub enum KakarotClientError {
@@ -37,7 +32,7 @@ pub enum KakarotClientError {
 pub trait KakarotClient: Send + Sync {
     fn kakarot_address(&self) -> FieldElement;
     fn proxy_account_class_hash(&self) -> FieldElement;
-    fn inner(&self) -> &starknet::providers::jsonrpc::JsonRpcClient<HttpTransport>;
+    fn inner(&self) -> &JsonRpcClient<HttpTransport>;
 
     async fn block_number(&self) -> Result<U64, KakarotClientError>;
 
@@ -68,10 +63,7 @@ pub trait KakarotClient: Send + Sync {
 
     async fn syncing(&self) -> Result<SyncStatus, KakarotClientError>;
 
-    async fn block_transaction_count_by_number(
-        &self,
-        number: BlockNumberOrTag,
-    ) -> Result<U64, KakarotClientError>;
+    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64, KakarotClientError>;
 
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, KakarotClientError>;
 
@@ -86,10 +78,7 @@ pub trait KakarotClient: Send + Sync {
         request: BroadcastedInvokeTransactionV1,
     ) -> Result<H256, KakarotClientError>;
 
-    async fn transaction_receipt(
-        &self,
-        hash: H256,
-    ) -> Result<Option<TransactionReceipt>, KakarotClientError>;
+    async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, KakarotClientError>;
 
     async fn get_evm_address(
         &self,
