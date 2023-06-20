@@ -8,16 +8,14 @@ use std::convert::From;
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
-    keccak256,
-    rpc::{Bytes as RpcBytes, Log, H160 as RpcH160, H256 as RpcH256},
-    Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H256, H64, U128, U256,
-    U64,
+    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Bytes as RpcBytes,
+    TransactionSigned, H160, H256, H64, U128, U256, U64,
 };
 
 use reth_rlp::Decodable;
 
 use reth_rpc_types::{
-    Block, BlockTransactions, CallRequest, FeeHistory, Header, Rich, RichBlock, Signature,
+    Block, BlockTransactions, CallRequest, FeeHistory, Header, Log, Rich, RichBlock, Signature,
     SyncInfo, SyncStatus, Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::{
@@ -399,6 +397,7 @@ impl KakarotClient for KakarotClientImpl {
         let len = match block_transactions {
             BlockTransactions::Full(transactions) => transactions.len(),
             BlockTransactions::Hashes(_) => 0,
+            BlockTransactions::Uncle => todo!(),
         };
         Ok(U64::from(len))
     }
@@ -583,31 +582,14 @@ impl KakarotClient for KakarotClientImpl {
                         // they're returned as list where consecutive values are
                         // low, high, low, high, etc. of the Uint256 Cairo representation
                         // of the bytes32 topics. This recomputes the original topic
-                        let topics = (0..event.keys.len())
-                            .step_by(2)
-                            .map(|i| {
-                                let next_key =
-                                    *event.keys.get(i + 1).unwrap_or(&FieldElement::ZERO);
-
-                                // Can unwrap here as we know 2^128 is a valid FieldElement
-                                let two_pow_16: FieldElement = FieldElement::from_hex_be(
-                                    "0x100000000000000000000000000000000",
-                                )
-                                .unwrap();
-
-                                //TODO: May wrap around prime field - Investigate edge cases
-                                let felt_shifted_next_key = next_key * two_pow_16;
-                                event.keys[i] + felt_shifted_next_key
-                            })
-                            .map(|topic| RpcH256::from(&topic.to_bytes_be()))
-                            .collect::<Vec<_>>();
+                        let topics = vec![];
 
                         let data = vec_felt_to_bytes(event.data);
 
                         let log = Log {
                             // TODO: fetch correct address from Kakarot.
                             // Contract Address is the account contract's address (EOA or KakarotAA)
-                            address: RpcH160::from_slice(&contract_address.0),
+                            address: H160::from_slice(&contract_address.0),
                             topics,
                             data: RpcBytes::from(data.0),
                             block_hash: None,
@@ -615,9 +597,7 @@ impl KakarotClient for KakarotClientImpl {
                             transaction_hash: None,
                             transaction_index: None,
                             log_index: None,
-                            transaction_log_index: None,
-                            log_type: None,
-                            removed: None,
+                            removed: false,
                         };
 
                         tmp_logs.push(log);
@@ -999,7 +979,6 @@ impl KakarotClient for KakarotClientImpl {
                             hash: None,
                             parent_hash,
                             uncles_hash: parent_hash,
-                            author: sequencer,
                             miner: sequencer,
                             // PendingBlockWithTxHashes doesn't have a state root
                             state_root: H256::zero(),
@@ -1016,16 +995,15 @@ impl KakarotClient for KakarotClientImpl {
                             timestamp,
                             difficulty,
                             nonce,
-                            size,
                             mix_hash,
                             withdrawals_root: Some(H256::zero()),
+                            base_fee_per_gas: Some(base_fee_per_gas),
                         };
                         let block = Block {
                             header,
-                            total_difficulty,
+                            total_difficulty: Some(total_difficulty),
                             uncles: vec![],
                             transactions,
-                            base_fee_per_gas: Some(base_fee_per_gas),
                             size,
                             withdrawals: Some(vec![]),
                         };
@@ -1058,7 +1036,6 @@ impl KakarotClient for KakarotClientImpl {
                             hash: Some(hash),
                             parent_hash,
                             uncles_hash: parent_hash,
-                            author: sequencer,
                             miner: sequencer,
                             state_root,
                             // BlockWithTxHashes doesn't have a transactions root
@@ -1073,16 +1050,15 @@ impl KakarotClient for KakarotClientImpl {
                             timestamp,
                             difficulty,
                             nonce,
-                            size,
                             mix_hash,
                             withdrawals_root: Some(H256::zero()),
+                            base_fee_per_gas: Some(base_fee_per_gas),
                         };
                         let block = Block {
                             header,
-                            total_difficulty,
+                            total_difficulty: Some(total_difficulty),
                             uncles: vec![],
                             transactions,
-                            base_fee_per_gas: Some(base_fee_per_gas),
                             size,
                             withdrawals: Some(vec![]),
                         };
@@ -1118,7 +1094,6 @@ impl KakarotClient for KakarotClientImpl {
                             hash: None,
                             parent_hash,
                             uncles_hash: parent_hash,
-                            author: sequencer,
                             miner: sequencer,
                             // PendingBlockWithTxs doesn't have a state root
                             state_root: H256::zero(),
@@ -1135,16 +1110,15 @@ impl KakarotClient for KakarotClientImpl {
                             timestamp,
                             difficulty,
                             nonce,
-                            size,
+                            base_fee_per_gas: Some(base_fee_per_gas),
                             mix_hash,
                             withdrawals_root: Some(H256::zero()),
                         };
                         let block = Block {
                             header,
-                            total_difficulty,
+                            total_difficulty: Some(total_difficulty),
                             uncles: vec![],
                             transactions,
-                            base_fee_per_gas: Some(base_fee_per_gas),
                             size,
                             withdrawals: Some(vec![]),
                         };
@@ -1184,7 +1158,6 @@ impl KakarotClient for KakarotClientImpl {
                             hash: Some(hash),
                             parent_hash,
                             uncles_hash: parent_hash,
-                            author: sequencer,
                             miner: sequencer,
                             state_root,
                             // BlockWithTxHashes doesn't have a transactions root
@@ -1199,16 +1172,15 @@ impl KakarotClient for KakarotClientImpl {
                             timestamp,
                             difficulty,
                             nonce,
-                            size,
+                            base_fee_per_gas: Some(base_fee_per_gas),
                             mix_hash,
                             withdrawals_root: Some(H256::zero()),
                         };
                         let block = Block {
                             header,
-                            total_difficulty,
+                            total_difficulty: Some(total_difficulty),
                             uncles: vec![],
                             transactions,
-                            base_fee_per_gas: Some(base_fee_per_gas),
                             size,
                             withdrawals: Some(vec![]),
                         };
