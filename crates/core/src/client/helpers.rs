@@ -1,5 +1,4 @@
 use eyre::Result;
-use reth_primitives::rpc::Log;
 use reth_primitives::{
     Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256, U128,
     U256, U8,

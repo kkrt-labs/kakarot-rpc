@@ -61,8 +61,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
         let extra_data = Bytes::from(b"0x00");
-        // TODO: Fetch real data
-        let total_difficulty: U256 = U256::ZERO;
+
         // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
         // TODO: Fetch real data
@@ -89,7 +88,6 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
                     hash: None,
                     parent_hash,
                     uncles_hash: parent_hash,
-                    author: sequencer,
                     miner: sequencer,
                     // PendingBlockWithTxHashes doesn't have a state root
                     state_root: H256::zero(),
@@ -106,16 +104,15 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
                     timestamp,
                     difficulty,
                     nonce,
-                    size,
+                    base_fee_per_gas: Some(base_fee_per_gas),
                     mix_hash,
                     withdrawals_root: Some(H256::zero()),
                 };
                 let block = Block {
                     header,
-                    total_difficulty,
+                    total_difficulty: None,
                     uncles: vec![],
                     transactions,
-                    base_fee_per_gas: Some(base_fee_per_gas),
                     size,
                     withdrawals: Some(vec![]),
                 };
@@ -143,7 +140,6 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
                     hash: Some(hash),
                     parent_hash,
                     uncles_hash: parent_hash,
-                    author: sequencer,
                     miner: sequencer,
                     state_root,
                     // BlockWithTxHashes doesn't have a transactions root
@@ -158,16 +154,15 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
                     timestamp,
                     difficulty,
                     nonce,
-                    size,
+                    base_fee_per_gas: Some(base_fee_per_gas),
                     mix_hash,
                     withdrawals_root: Some(H256::zero()),
                 };
                 let block = Block {
                     header,
-                    total_difficulty,
+                    total_difficulty: None,
                     uncles: vec![],
                     transactions,
-                    base_fee_per_gas: Some(base_fee_per_gas),
                     size,
                     withdrawals: Some(vec![]),
                 };
@@ -198,8 +193,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
         let extra_data: Bytes = Bytes::from(b"0x00");
-        // TODO: Fetch real data
-        let total_difficulty: U256 = U256::ZERO;
+
         // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
         // TODO: Fetch real data
@@ -220,7 +214,6 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
                     hash: None,
                     parent_hash,
                     uncles_hash: parent_hash,
-                    author: sequencer,
                     miner: sequencer,
                     // PendingBlockWithTxs doesn't have a state root
                     state_root: H256::zero(),
@@ -237,16 +230,15 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
                     timestamp,
                     difficulty,
                     nonce,
-                    size,
+                    base_fee_per_gas: Some(base_fee_per_gas),
                     mix_hash,
                     withdrawals_root: Some(H256::zero()),
                 };
                 let block = Block {
                     header,
-                    total_difficulty,
+                    total_difficulty: None,
                     uncles: vec![],
                     transactions,
-                    base_fee_per_gas: Some(base_fee_per_gas),
                     size,
                     withdrawals: Some(vec![]),
                 };
@@ -276,7 +268,6 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
                     hash: Some(hash),
                     parent_hash,
                     uncles_hash: parent_hash,
-                    author: sequencer,
                     miner: sequencer,
                     state_root,
                     // BlockWithTxHashes doesn't have a transactions root
@@ -291,16 +282,15 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
                     timestamp,
                     difficulty,
                     nonce,
-                    size,
                     mix_hash,
+                    base_fee_per_gas: Some(base_fee_per_gas),
                     withdrawals_root: Some(H256::zero()),
                 };
                 let block = Block {
                     header,
-                    total_difficulty,
+                    total_difficulty: None,
                     uncles: vec![],
                     transactions,
-                    base_fee_per_gas: Some(base_fee_per_gas),
                     size,
                     withdrawals: Some(vec![]),
                 };

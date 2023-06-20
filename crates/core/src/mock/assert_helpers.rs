@@ -33,10 +33,9 @@ struct BlockTransactionHashesObj {
 pub fn assert_block(block: &Rich<Block>, starknet_res: String, starknet_txs: String, hydrated: bool) {
     let starknet_data = serde_json::from_str::<StarknetBlockTest>(&starknet_res).unwrap();
 
-    assert_eq!(block.total_difficulty, U256::ZERO);
+    assert_eq!(block.total_difficulty, None);
     assert_eq!(block.uncles, vec![]);
     assert_eq!(block.size, Some(U256::from(1_000_000)));
-    assert_eq!(block.base_fee_per_gas, Some(U256::from(BASE_FEE_PER_GAS)));
 
     let starknet_block_hash = FieldElement::from_str(starknet_data.block_hash.as_str()).unwrap();
 
@@ -79,7 +78,6 @@ pub fn assert_block_header(block: &Rich<Block>, starknet_res: String, hydrated: 
 
     let starknet_sequencer = FieldElement::from_str(starknet_data.sequencer_address.as_str()).unwrap();
     let sequencer = H160::from_slice(&starknet_sequencer.to_bytes_be()[12..32]);
-    assert_eq!(block.header.author, sequencer);
     assert_eq!(block.header.miner, sequencer);
 
     let starknet_new_root = FieldElement::from_str(starknet_data.new_root.as_str()).unwrap();
@@ -108,7 +106,7 @@ pub fn assert_block_header(block: &Rich<Block>, starknet_res: String, hydrated: 
     assert_eq!(block.header.gas_used, U256::from(500_000));
     assert_eq!(block.header.gas_limit, U256::from(1_000_000));
     assert_eq!(block.header.difficulty, U256::ZERO);
-    assert_eq!(block.header.size, Some(U256::from(1_000_000)));
+    assert_eq!(block.header.base_fee_per_gas, Some(U256::from(BASE_FEE_PER_GAS)));
     assert_eq!(block.header.mix_hash, H256::zero());
     assert_eq!(block.header.nonce, Some(H64::zero()));
 }
