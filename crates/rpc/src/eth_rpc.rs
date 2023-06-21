@@ -1,17 +1,12 @@
-use jsonrpsee::{
-    core::{async_trait, RpcResult as Result},
-    proc_macros::rpc,
-};
-
+use jsonrpsee::core::{async_trait, RpcResult as Result};
+use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::CallError;
-use kakarot_rpc_core::client::{
-    client_api::KakarotClient, constants::CHAIN_ID, helpers::ethers_block_id_to_starknet_block_id,
-};
-use reth_primitives::{
-    rpc::transaction::eip2930::AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes,
-    H256, H64, U128, U256, U64,
-};
-
+use kakarot_rpc_core::client::client_api::KakarotClient;
+use kakarot_rpc_core::client::constants::CHAIN_ID;
+use kakarot_rpc_core::client::helpers::ethers_block_id_to_starknet_block_id;
+use kakarot_rpc_core::models::TokenBalances;
+use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
     CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
@@ -19,7 +14,6 @@ use reth_rpc_types::{
 use serde_json::Value;
 
 use crate::eth_api::EthApiServer;
-use kakarot_rpc_core::client::types::TokenBalances;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 pub struct KakarotEthRpc {
@@ -66,40 +60,24 @@ impl EthApiServer for KakarotEthRpc {
     async fn block_by_hash(&self, _hash: H256, _full: bool) -> Result<Option<RichBlock>> {
         let block_id = BlockId::Hash(_hash.into());
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
-        let block = self
-            .kakarot_client
-            .get_eth_block_from_starknet_block(starknet_block_id, _full)
-            .await?;
+        let block = self.kakarot_client.get_eth_block_from_starknet_block(starknet_block_id, _full).await?;
         Ok(Some(block))
     }
 
-    async fn block_by_number(
-        &self,
-        _number: BlockNumberOrTag,
-        _full: bool,
-    ) -> Result<Option<RichBlock>> {
+    async fn block_by_number(&self, _number: BlockNumberOrTag, _full: bool) -> Result<Option<RichBlock>> {
         let block_id = BlockId::Number(_number);
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
-        let block = self
-            .kakarot_client
-            .get_eth_block_from_starknet_block(starknet_block_id, _full)
-            .await?;
+        let block = self.kakarot_client.get_eth_block_from_starknet_block(starknet_block_id, _full).await?;
         Ok(Some(block))
     }
 
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64> {
-        let transaction_count = self
-            .kakarot_client
-            .block_transaction_count_by_hash(hash)
-            .await?;
+        let transaction_count = self.kakarot_client.block_transaction_count_by_hash(hash).await?;
         Ok(transaction_count)
     }
 
     async fn block_transaction_count_by_number(&self, _number: BlockNumberOrTag) -> Result<U64> {
-        let transaction_count = self
-            .kakarot_client
-            .block_transaction_count_by_number(_number)
-            .await?;
+        let transaction_count = self.kakarot_client.block_transaction_count_by_number(_number).await?;
         Ok(transaction_count)
     }
 
@@ -111,11 +89,7 @@ impl EthApiServer for KakarotEthRpc {
         todo!()
     }
 
-    async fn uncle_by_block_hash_and_index(
-        &self,
-        _hash: H256,
-        _index: Index,
-    ) -> Result<Option<RichBlock>> {
+    async fn uncle_by_block_hash_and_index(&self, _hash: H256, _index: Index) -> Result<Option<RichBlock>> {
         todo!()
     }
 
@@ -140,10 +114,7 @@ impl EthApiServer for KakarotEthRpc {
     ) -> Result<Option<EtherTransaction>> {
         let block_id = BlockId::Hash(_hash.into());
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
-        let tx = self
-            .kakarot_client
-            .transaction_by_block_id_and_index(starknet_block_id, _index)
-            .await?;
+        let tx = self.kakarot_client.transaction_by_block_id_and_index(starknet_block_id, _index).await?;
         Ok(Some(tx))
     }
 
@@ -154,10 +125,7 @@ impl EthApiServer for KakarotEthRpc {
     ) -> Result<Option<EtherTransaction>> {
         let block_id = BlockId::Number(_number);
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
-        let tx = self
-            .kakarot_client
-            .transaction_by_block_id_and_index(starknet_block_id, _index)
-            .await?;
+        let tx = self.kakarot_client.transaction_by_block_id_and_index(starknet_block_id, _index).await?;
         Ok(Some(tx))
     }
 
@@ -167,41 +135,25 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn balance(&self, _address: Address, _block_number: Option<BlockId>) -> Result<U256> {
-        let starknet_block_id = ethers_block_id_to_starknet_block_id(
-            _block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)),
-        )?;
+        let starknet_block_id =
+            ethers_block_id_to_starknet_block_id(_block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)))?;
 
-        let balance = self
-            .kakarot_client
-            .balance(_address, starknet_block_id)
-            .await?;
+        let balance = self.kakarot_client.balance(_address, starknet_block_id).await?;
         Ok(balance)
     }
 
-    async fn storage_at(
-        &self,
-        _address: Address,
-        _index: U256,
-        _block_number: Option<BlockId>,
-    ) -> Result<H256> {
+    async fn storage_at(&self, _address: Address, _index: U256, _block_number: Option<BlockId>) -> Result<H256> {
         todo!()
     }
 
-    async fn transaction_count(
-        &self,
-        _address: Address,
-        _block_number: Option<BlockId>,
-    ) -> Result<U256> {
+    async fn transaction_count(&self, _address: Address, _block_number: Option<BlockId>) -> Result<U256> {
         Ok(U256::from(3))
     }
 
     async fn get_code(&self, _address: Address, _block_number: Option<BlockId>) -> Result<Bytes> {
         let starknet_block_id = ethers_block_id_to_starknet_block_id(_block_number.unwrap())?;
 
-        let code = self
-            .kakarot_client
-            .get_code(_address, starknet_block_id)
-            .await?;
+        let code = self.kakarot_client.get_code(_address, starknet_block_id).await?;
         Ok(code)
     }
 
@@ -221,10 +173,7 @@ impl EthApiServer for KakarotEthRpc {
 
         let block_id = _block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id)?;
-        let result = self
-            .kakarot_client
-            .call_view(to, Bytes::from(calldata.0), starknet_block_id)
-            .await?;
+        let result = self.kakarot_client.call_view(to, Bytes::from(calldata.0), starknet_block_id).await?;
 
         Ok(result)
     }
@@ -237,11 +186,7 @@ impl EthApiServer for KakarotEthRpc {
         todo!()
     }
 
-    async fn estimate_gas(
-        &self,
-        _request: CallRequest,
-        _block_number: Option<BlockId>,
-    ) -> Result<U256> {
+    async fn estimate_gas(&self, _request: CallRequest, _block_number: Option<BlockId>) -> Result<U256> {
         Ok(U256::from(1_000_000_000_u64))
     }
 
@@ -256,10 +201,7 @@ impl EthApiServer for KakarotEthRpc {
         _newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
-        let fee_history = self
-            .kakarot_client
-            .fee_history(_block_count, _newest_block, _reward_percentiles)
-            .await?;
+        let fee_history = self.kakarot_client.fee_history(_block_count, _newest_block, _reward_percentiles).await?;
 
         Ok(fee_history)
     }
@@ -323,24 +265,13 @@ impl EthApiServer for KakarotEthRpc {
 #[rpc(server, client)]
 trait KakarotCustomApi {
     #[method(name = "kakarot_getTokenBalances")]
-    async fn token_balances(
-        &self,
-        address: Address,
-        contract_addresses: Vec<Address>,
-    ) -> Result<TokenBalances>;
+    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> Result<TokenBalances>;
 }
 
 #[async_trait]
 impl KakarotCustomApiServer for KakarotEthRpc {
-    async fn token_balances(
-        &self,
-        address: Address,
-        contract_addresses: Vec<Address>,
-    ) -> Result<TokenBalances> {
-        let token_balances = self
-            .kakarot_client
-            .token_balances(address, contract_addresses)
-            .await?;
+    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> Result<TokenBalances> {
+        let token_balances = self.kakarot_client.token_balances(address, contract_addresses).await?;
         Ok(token_balances)
     }
 }

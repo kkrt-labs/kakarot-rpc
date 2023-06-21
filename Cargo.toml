@@ -4,10 +4,18 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-authors = ["Abdelhamid Bakhta <@abdelhamidbakhta>"]
+authors = [
+    "Abdelhamid Bakhta <@abdelhamidbakhta>",
+    "Elias Tazartes <@eikix>",
+    "Clement Walter <@clementwalter>",
+    "Gregory Edison <@greged93>",
+    "Johann Bestowrous <@jobez>",
+    "Harsh Bajpai <@bajpai244>",
+    "Danilo Kim <@danilowhk>",
+]
 description = "RPC node for the Kakarot zk EVM"
-homepage = "https://github.com/sayajin-labs/kakarot-rpc"
-repository = "https://github.com/sayajin-labs/kakarot-rpc"
+homepage = "https://github.com/kkrt-labs"
+repository = "https://github.com/kkrt-labs/kakarot-rpc"
 readme = "./README.md"
 license = "MIT"
 
@@ -15,5 +23,7 @@ license = "MIT"
 starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "d8eb791" }
 reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
-reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5"  }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
+async-trait = "0.1.58"
+jsonrpsee = { version = "0.16.2", features = ["full"] }

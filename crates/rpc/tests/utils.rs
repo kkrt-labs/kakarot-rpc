@@ -1,5 +1,6 @@
 use kakarot_rpc::eth_rpc::KakarotEthRpc;
-use kakarot_rpc_core::{client::KakarotClientImpl, mock::wiremock_utils::setup_wiremock};
+use kakarot_rpc_core::client::KakarotClientImpl;
+use kakarot_rpc_core::mock::wiremock_utils::setup_wiremock;
 use starknet::core::types::FieldElement;
 
 /// Run wiremock to fake starknet rpc and then run our own `kakarot_rpc_server`.
@@ -32,14 +33,8 @@ pub async fn setup_kakarot_eth_rpc() -> KakarotEthRpc {
 
     let kakarot_client = KakarotClientImpl::new(
         &starknet_rpc,
-        FieldElement::from_hex_be(
-            "0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75",
-        )
-        .unwrap(),
-        FieldElement::from_hex_be(
-            "0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5",
-        )
-        .unwrap(),
+        FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap(),
+        FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap(),
     )
     .unwrap();
 

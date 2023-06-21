@@ -1,20 +1,18 @@
 use eyre::Result;
 use reth_primitives::{
-    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned,
-    H160, H256, U128, U256, U8,
+    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256, U128,
+    U256, U8,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
-
-use starknet::{
-    accounts::Call,
-    core::types::{
-        BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes,
-        MaybePendingBlockWithTxs, ValueOutOfRangeError,
-    },
+use starknet::accounts::Call;
+use starknet::core::types::{
+    BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    ValueOutOfRangeError,
 };
 
-use crate::client::{client_api::KakarotClientError, constants::selectors::ETH_SEND_TRANSACTION};
+use crate::client::client_api::KakarotClientError;
+use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
 
 extern crate hex;
 
@@ -68,9 +66,7 @@ impl TryFrom<Vec<FieldElement>> for Calls {
 ///
 /// Will return `KakarotClientError` If an error occurs when converting a `Starknet` block hash to a
 /// `FieldElement`
-pub fn ethers_block_id_to_starknet_block_id(
-    block: EthBlockId,
-) -> Result<StarknetBlockId, KakarotClientError> {
+pub fn ethers_block_id_to_starknet_block_id(block: EthBlockId) -> Result<StarknetBlockId, KakarotClientError> {
     match block {
         EthBlockId::Hash(hash) => {
             let hash_felt = FieldElement::from_bytes_be(&hash.block_hash).map_err(|e| {
@@ -102,17 +98,13 @@ pub const fn ethers_block_number_to_starknet_block_id(
 }
 
 /// Returns the decoded return value of the `eth_call` entrypoint of Kakarot
-pub fn decode_eth_call_return(
-    call_result: &[FieldElement],
-) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
+pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
     // Declare Vec of Result
     let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
     let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
-            "Cannot parse and decode return arguments of Kakarot call",
-        ))
+        KakarotClientError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
     })?;
     let mut tmp_counter = 1_usize;
     segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
@@ -145,9 +137,7 @@ pub fn decode_eth_send_transaction_return(
     // Declare Vec of Result
     let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
     let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
-            "Cannot parse and decode return arguments of Kakarot call",
-        ))
+        KakarotClientError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
     })?;
     let mut tmp_counter = 1_usize;
     segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
@@ -253,12 +243,9 @@ pub fn decode_eth_send_transaction_return(
     Ok(segmented_result)
 }
 
-pub fn decode_signature_from_tx_calldata(
-    calldata: &[FieldElement],
-) -> Result<Signature, KakarotClientError> {
-    let calls = Calls::try_from(calldata.to_vec()).map_err(|e| {
-        KakarotClientError::OtherError(anyhow::anyhow!("Cannot convert calldata to Calls: {}", e))
-    })?;
+pub fn decode_signature_from_tx_calldata(calldata: &[FieldElement]) -> Result<Signature, KakarotClientError> {
+    let calls = Calls::try_from(calldata.to_vec())
+        .map_err(|e| KakarotClientError::OtherError(anyhow::anyhow!("Cannot convert calldata to Calls: {}", e)))?;
     let calldata = calls.0[0] // for now we decode signature only from the first call
         .calldata
         .iter()
@@ -318,7 +305,7 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         block_number: None,
         from: H160::from(0),
         to: None,
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         cumulative_gas_used: U256::from(1_000_000),
         gas_used: Some(U256::from(500_000)),
         contract_address: None,
@@ -326,12 +313,12 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         logs: vec![],
         // Bloom is a byte array of length 256
         logs_bloom: Bloom::default(),
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         state_root: None,
         status_code: None,
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         effective_gas_price: U128::from(1_000_000),
-        //TODO: Fetch real data
+        // TODO: Fetch real data
         transaction_type: U8::from(0),
     }
 }
@@ -342,10 +329,7 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
 pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, KakarotClientError> {
     let hash_hex = hex::encode(hash);
     let hash_felt = FieldElement::from_hex_be(&hash_hex).map_err(|e| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
-            "Failed to convert Starknet block hash to FieldElement: {}",
-            e
-        ))
+        KakarotClientError::OtherError(anyhow::anyhow!("Failed to convert Starknet block hash to FieldElement: {}", e))
     })?;
     Ok(hash_felt)
 }
@@ -363,11 +347,8 @@ pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
 /// ## Returns
 /// * `Vec<FieldElement>` - The calldata for the raw Starknet invoke transaction call
 pub fn raw_starknet_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Vec<FieldElement> {
-    let calls: Vec<Call> = vec![Call {
-        to: kakarot_address,
-        selector: ETH_SEND_TRANSACTION,
-        calldata: bytes_to_felt_vec(&bytes),
-    }];
+    let calls: Vec<Call> =
+        vec![Call { to: kakarot_address, selector: ETH_SEND_TRANSACTION, calldata: bytes_to_felt_vec(&bytes) }];
     let mut concated_calldata: Vec<FieldElement> = vec![];
     let mut execute_calldata: Vec<FieldElement> = vec![calls.len().into()];
     for call in &calls {
@@ -390,13 +371,12 @@ pub fn raw_starknet_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Vec
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::str::FromStr;
 
+    use super::*;
+
     fn to_vec_field_element(vec: Vec<&str>) -> Vec<FieldElement> {
-        vec.into_iter()
-            .filter_map(|f| FieldElement::from_hex_be(f).ok())
-            .collect()
+        vec.into_iter().filter_map(|f| FieldElement::from_hex_be(f).ok()).collect()
     }
 
     #[test]
@@ -441,8 +421,7 @@ mod tests {
         let calls = Calls::try_from(calldata).unwrap();
         assert_eq!(calls.0.len(), 3);
         let calldata = to_vec_field_element(vec![
-            "0x000", "0x001", "0x002", "0x003", "0x004", "0x005", "0x006", "0x007", "0x008",
-            "0x009",
+            "0x000", "0x001", "0x002", "0x003", "0x004", "0x005", "0x006", "0x007", "0x008", "0x009",
         ]);
         assert_eq!(calls.0[0].calldata, calldata);
         let calldata = to_vec_field_element(vec!["0x00a", "0x00b", "0x00c", "0x00d", "0x00e"]);
@@ -578,20 +557,15 @@ mod tests {
             "0x052",
             "0x061",
         ];
-        let calldata = calldata
-            .into_iter()
-            .filter_map(|f| FieldElement::from_hex_be(f).ok())
-            .collect::<Vec<_>>();
+        let calldata = calldata.into_iter().filter_map(|f| FieldElement::from_hex_be(f).ok()).collect::<Vec<_>>();
         let signature = decode_signature_from_tx_calldata(&calldata).unwrap();
         assert_eq!(
             signature.r,
-            U256::from_str("0x889be67d59bc1a43dd803955f7917ddcb7d748ed3e9b00cdb159f294651976b8")
-                .unwrap()
+            U256::from_str("0x889be67d59bc1a43dd803955f7917ddcb7d748ed3e9b00cdb159f294651976b8").unwrap()
         );
         assert_eq!(
             signature.s,
-            U256::from_str("0x03801702a606ffbfd60364ff897f7ca511411d6660f936dd51eb90a7d30735261")
-                .unwrap()
+            U256::from_str("0x03801702a606ffbfd60364ff897f7ca511411d6660f936dd51eb90a7d30735261").unwrap()
         );
         assert!(signature.odd_y_parity);
     }
@@ -621,210 +595,73 @@ mod tests {
     #[test]
     fn test_decode_eth_send_transaction_return() {
         let call_result = vec![
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000002",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000001",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000002",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000009",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000001",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000006661abd",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000007",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0x000000000000000000000000abde1007e67126e0755af0ff0173f919738f8373",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0x062897a9e931ba1ae4721548bd963e3fe67126e0755af0ff0173f919738f8373",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000020",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000000000002",
-            )
-            .unwrap(),
-            FieldElement::from_hex_be(
-                "00000000000000000000000000000000000000000000000000000000000fffff",
-            )
-            .unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000002").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000001").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000002").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000009").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000001").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000006661abd").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000007").unwrap(),
+            FieldElement::from_hex_be("0x000000000000000000000000abde1007e67126e0755af0ff0173f919738f8373").unwrap(),
+            FieldElement::from_hex_be("0x062897a9e931ba1ae4721548bd963e3fe67126e0755af0ff0173f919738f8373").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000020").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000000").unwrap(),
+            FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000002").unwrap(),
+            FieldElement::from_hex_be("00000000000000000000000000000000000000000000000000000000000fffff").unwrap(),
         ];
         let result = decode_eth_send_transaction_return(&call_result).unwrap();
         assert_eq!(result.len(), 8);
-        assert_eq!(
-            result[0],
-            FeltOrFeltArray::FeltArray(vec![FieldElement::from(1_u64), FieldElement::from(2_u64)])
-        );
+        assert_eq!(result[0], FeltOrFeltArray::FeltArray(vec![FieldElement::from(1_u64), FieldElement::from(2_u64)]));
         assert_eq!(result[1], FeltOrFeltArray::Felt(FieldElement::from(9_u64)));
         assert_eq!(
             result[2],
-            FeltOrFeltArray::FeltArray(vec![FieldElement::from_hex_be(
-                "0000000000000000000000000000000000000000000000000000000006661abd",
-            )
-            .unwrap()])
+            FeltOrFeltArray::FeltArray(vec![
+                FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000006661abd",).unwrap()
+            ])
         );
         assert_eq!(result[3], FeltOrFeltArray::Felt(FieldElement::from(7_u64)));
         assert_eq!(
             result[4],
             FeltOrFeltArray::Felt(
-                FieldElement::from_hex_be(
-                    "0x000000000000000000000000abde1007e67126e0755af0ff0173f919738f8373",
-                )
-                .unwrap(),
+                FieldElement::from_hex_be("0x000000000000000000000000abde1007e67126e0755af0ff0173f919738f8373",)
+                    .unwrap(),
             )
         );
         assert_eq!(
             result[5],
             FeltOrFeltArray::Felt(
-                FieldElement::from_hex_be(
-                    "0x062897a9e931ba1ae4721548bd963e3fe67126e0755af0ff0173f919738f8373",
-                )
-                .unwrap(),
+                FieldElement::from_hex_be("0x062897a9e931ba1ae4721548bd963e3fe67126e0755af0ff0173f919738f8373",)
+                    .unwrap(),
             )
         );
         let mut return_data_vec = Vec::new();
@@ -838,9 +675,6 @@ mod tests {
         } else {
             panic!("Expected FeltArray of length 32");
         }
-        assert_eq!(
-            result[7],
-            FeltOrFeltArray::Felt(FieldElement::from(0x0000_000f_ffff_u64))
-        )
+        assert_eq!(result[7], FeltOrFeltArray::Felt(FieldElement::from(0x0000_000f_ffff_u64)))
     }
 }
