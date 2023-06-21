@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use reth_primitives::{Bloom, Bytes, H160, H256, H64, U128, U256};
+use reth_primitives::{Bloom, Bytes, H160, H256, U128, U256};
 use reth_rpc_types::{Block, BlockTransactions, Rich, Signature, Transaction};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{FieldElement, InvokeTransaction, Transaction as StarknetTransaction};
 
 use crate::client::constants::gas::BASE_FEE_PER_GAS;
-use crate::client::constants::CHAIN_ID;
+use crate::client::constants::{CHAIN_ID, DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY};
 use crate::client::helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -33,9 +33,9 @@ struct BlockTransactionHashesObj {
 pub fn assert_block(block: &Rich<Block>, starknet_res: String, starknet_txs: String, hydrated: bool) {
     let starknet_data = serde_json::from_str::<StarknetBlockTest>(&starknet_res).unwrap();
 
-    assert_eq!(block.total_difficulty, None);
+    assert_eq!(block.total_difficulty, *TOTAL_DIFFICULTY);
     assert_eq!(block.uncles, vec![]);
-    assert_eq!(block.size, Some(U256::from(1_000_000)));
+    assert_eq!(block.size, *SIZE);
 
     let starknet_block_hash = FieldElement::from_str(starknet_data.block_hash.as_str()).unwrap();
 
@@ -103,12 +103,12 @@ pub fn assert_block_header(block: &Rich<Block>, starknet_res: String, hydrated: 
     assert_eq!(block.header.extra_data, Bytes::from(b"0x00"));
     assert_eq!(block.header.logs_bloom, Bloom::default());
 
-    assert_eq!(block.header.gas_used, U256::from(500_000));
-    assert_eq!(block.header.gas_limit, U256::from(1_000_000));
-    assert_eq!(block.header.difficulty, U256::ZERO);
+    assert_eq!(block.header.gas_used, *GAS_USED);
+    assert_eq!(block.header.gas_limit, *GAS_LIMIT);
+    assert_eq!(block.header.difficulty, *DIFFICULTY);
     assert_eq!(block.header.base_fee_per_gas, Some(U256::from(BASE_FEE_PER_GAS)));
-    assert_eq!(block.header.mix_hash, H256::zero());
-    assert_eq!(block.header.nonce, Some(H64::zero()));
+    assert_eq!(block.header.mix_hash, *MIX_HASH);
+    assert_eq!(block.header.nonce, *NONCE);
 }
 
 pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransaction) {

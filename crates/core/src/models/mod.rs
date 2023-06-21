@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use starknet::core::types::{FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, Transaction};
 
 use crate::client::client_api::{KakarotClient, KakarotClientError};
+use crate::client::constants::{DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY};
 use crate::client::helpers::starknet_address_to_ethereum_address;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -101,19 +102,19 @@ impl BlockWithTxs {
 impl ConvertibleStarknetBlock for BlockWithTxHashes {
     async fn to_eth_block(&self, client: &dyn KakarotClient) -> Result<RichBlock, KakarotClientError> {
         // TODO: Fetch real data
-        let gas_limit = U256::from(1_000_000);
+        let gas_limit = *GAS_LIMIT;
 
         // TODO: Fetch real data
-        let gas_used = U256::from(500_000);
+        let gas_used = *GAS_USED;
 
         // TODO: Fetch real data
-        let difficulty = U256::ZERO;
+        let difficulty = *DIFFICULTY;
 
         // TODO: Fetch real data
         let nonce: Option<H64> = Some(H64::zero());
 
         // TODO: Fetch real data
-        let size: Option<U256> = Some(U256::from(1_000_000));
+        let size: Option<U256> = *SIZE;
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
@@ -122,7 +123,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
         // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
         // TODO: Fetch real data
-        let mix_hash = H256::zero();
+        let mix_hash = *MIX_HASH;
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
         let sequencer = starknet_address_to_ethereum_address(&self.sequencer_address());
@@ -161,8 +162,14 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
             mix_hash,
             withdrawals_root: Some(H256::zero()),
         };
-        let block =
-            Block { header, total_difficulty: None, uncles: vec![], transactions, size, withdrawals: Some(vec![]) };
+        let block = Block {
+            header,
+            total_difficulty: *TOTAL_DIFFICULTY,
+            uncles: vec![],
+            transactions,
+            size,
+            withdrawals: Some(vec![]),
+        };
         Ok(block.into())
     }
 }
@@ -171,19 +178,19 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 impl ConvertibleStarknetBlock for BlockWithTxs {
     async fn to_eth_block(&self, client: &dyn KakarotClient) -> Result<RichBlock, KakarotClientError> {
         // TODO: Fetch real data
-        let gas_limit = U256::from(1_000_000);
+        let gas_limit = *GAS_LIMIT;
 
         // TODO: Fetch real data
-        let gas_used = U256::from(500_000);
+        let gas_used = *GAS_USED;
 
         // TODO: Fetch real data
-        let difficulty = U256::ZERO;
+        let difficulty = *DIFFICULTY;
 
         // TODO: Fetch real data
-        let nonce: Option<H64> = Some(H64::zero());
+        let nonce: Option<H64> = *NONCE;
 
         // TODO: Fetch real data
-        let size: Option<U256> = Some(U256::from(1_000_000));
+        let size: Option<U256> = *SIZE;
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
@@ -192,7 +199,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
         // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
         // TODO: Fetch real data
-        let mix_hash = H256::zero();
+        let mix_hash = *MIX_HASH;
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
 
@@ -229,8 +236,14 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
             mix_hash,
             withdrawals_root: Some(H256::zero()),
         };
-        let block =
-            Block { header, total_difficulty: None, uncles: vec![], transactions, size, withdrawals: Some(vec![]) };
+        let block = Block {
+            header,
+            total_difficulty: *TOTAL_DIFFICULTY,
+            uncles: vec![],
+            transactions,
+            size,
+            withdrawals: Some(vec![]),
+        };
         Ok(block.into())
     }
 }

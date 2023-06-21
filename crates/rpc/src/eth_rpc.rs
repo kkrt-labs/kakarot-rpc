@@ -2,7 +2,7 @@ use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::CallError;
 use kakarot_rpc_core::client::client_api::KakarotClient;
-use kakarot_rpc_core::client::constants::CHAIN_ID;
+use kakarot_rpc_core::client::constants::{CHAIN_ID, ESTIMATE_GAS};
 use kakarot_rpc_core::client::helpers::ethers_block_id_to_starknet_block_id;
 use kakarot_rpc_core::models::TokenBalances;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
@@ -187,7 +187,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn estimate_gas(&self, _request: CallRequest, _block_number: Option<BlockId>) -> Result<U256> {
-        Ok(U256::from(1_000_000_000_u64))
+        Ok(*ESTIMATE_GAS)
     }
 
     async fn gas_price(&self) -> Result<U256> {

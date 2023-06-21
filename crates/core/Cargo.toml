@@ -29,3 +29,4 @@ serde = { version = "1.0" }
 futures = "0.3.26"
 
 wiremock = "0.5.17"
+lazy_static = "1.4.0"
