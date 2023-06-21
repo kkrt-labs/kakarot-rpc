@@ -200,17 +200,11 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         };
         // Make the function call to get the Starknet contract address
         let starknet_contract_address = self.inner.call(request, starknet_block_id).await?;
-        
-        if starknet_contract_address.len() != 1 {
-            return Err(KakarotClientError::OtherError(anyhow::anyhow!(
-                "Kakarot get_code: starknet_contract_address length is not 1"
-            )));
-        };
 
         // shadow the variable to FielElement from a Vec<FieldElement>, for use in subsequent code
         let starknet_contract_address = match starknet_contract_address.get(0) {
-            Some(x) => *x,
-            None => {
+            Some(x) if starknet_contract_address.len() == 1 => *x,
+            _ => {
                 return Err(KakarotClientError::OtherError(anyhow::anyhow!(
                     "Kakarot get_code: starknet_contract_address is empty"
                 )));
