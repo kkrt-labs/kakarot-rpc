@@ -35,7 +35,7 @@
     - [Build from source](#build-from-source)
     - [Environment variables](#environment-variables)
   - [Configuration](#configuration)
-- [Usage](#usage)
+- [Installation](#installation)
   - [API](#api)
 - [Roadmap](#roadmap)
 - [Support](#support)
