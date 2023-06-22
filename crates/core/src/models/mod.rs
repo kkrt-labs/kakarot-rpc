@@ -1,11 +1,16 @@
 pub mod convertible;
 
+use std::iter::once;
+
 use async_trait::async_trait;
-use convertible::ConvertibleStarknetBlock;
+use convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent};
+use num_bigint::BigUint;
 use reth_primitives::{Address, Bloom, Bytes, H256, H64, U256};
-use reth_rpc_types::{Block, BlockTransactions, Header, RichBlock};
+use reth_rpc_types::{Block, BlockTransactions, Header, Log, RichBlock};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, Transaction};
+use starknet::core::types::{
+    Event, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, Transaction,
+};
 
 use crate::client::client_api::{KakarotClient, KakarotClientError};
 use crate::client::helpers::starknet_address_to_ethereum_address;
@@ -232,5 +237,62 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
         let block =
             Block { header, total_difficulty: None, uncles: vec![], transactions, size, withdrawals: Some(vec![]) };
         Ok(block.into())
+    }
+}
+
+pub struct StarknetEvent(Event);
+
+impl StarknetEvent {
+    pub fn new(sn_event: Event) -> Self {
+        Self(sn_event)
+    }
+}
+
+#[async_trait]
+impl ConvertibleStarknetEvent for StarknetEvent {
+    async fn to_eth_log(&self, _client: &dyn KakarotClient) -> Result<Log, KakarotClientError> {
+        // let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
+        // let address = client.get_evm_address(&self.0.from_address, &starknet_block_id).await.unwrap();
+        // Convert the StarkNet address to a byte array
+        let sn_bytes = self.0.from_address.clone().to_bytes_be();
+        // Take the last 20 bytes of the StarkNet address to create the Ethereum address
+        let address = Address::from_slice(&sn_bytes[12..32]);
+        let topics: Vec<H256> = self.0.keys
+        // Splits the keys into chunks of 2 elements each.
+            .chunks(2)
+            .map(|chunk| {
+                // Converts the first element of the chunk to bytes and then to a BigUint.
+                // BigUint gives us arbitrary precision, to avoid prime field wrap arounds
+                let low = BigUint::from_bytes_be(&chunk[0].to_bytes_be());
+                // If there is a second element in the chunk, it's converted to bytes and then to a BigUint. 
+                // Otherwise, a BigUint is created from 0u128.
+                let high = chunk.get(1).map_or(BigUint::from(0u128), |h| BigUint::from_bytes_be(&h.to_bytes_be()));
+                // Calculates the result as `low + 2^128 * high`
+                let result = low + (BigUint::from(2u128).pow(128u32) * high);
+                // Converts the result to bytes.
+                let bytes = result.to_bytes_be();
+                // If the length of bytes is less than 32, prepends it with zeros to make it 32 bytes long.
+                let bytes = once(0u8).cycle().take(32 - bytes.len()).chain(bytes.into_iter()).collect::<Vec<_>>();
+                // Converts the bytes to H256 (32-byte hash).
+                H256::from_slice(&bytes)
+            })
+            .collect(); // Collects all H256 hashes into a vector.
+
+        let data: Bytes = self.0.data.iter()
+            .flat_map(|felt| felt.to_bytes_be())
+            .collect::<Vec<u8>>() // Collect into Vec<u8> first
+            .into(); // Then convert into Bytes
+
+        Ok(Log {
+            address,
+            topics,
+            data,
+            transaction_hash: Option::None,
+            block_hash: Option::None,
+            block_number: Option::None,
+            log_index: Option::None,
+            transaction_index: Option::None,
+            removed: false,
+        })
     }
 }
