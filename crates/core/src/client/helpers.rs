@@ -1,6 +1,7 @@
 use eyre::Result;
 use reth_primitives::{
-    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256, U256,
+    Address, Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256,
+    U256,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
@@ -9,12 +10,19 @@ use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     ValueOutOfRangeError,
 };
+use thiserror::Error;
 
 use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
 use crate::client::client_api::KakarotClientError;
 use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
 
 extern crate hex;
+
+#[derive(Debug, Error)]
+pub enum DataDecodingError {
+    #[error("failed to decode signature {0}")]
+    SignatureDecodingError(String),
+}
 
 #[derive(Debug)]
 struct InvalidFieldElementError;
@@ -243,20 +251,16 @@ pub fn decode_eth_send_transaction_return(
     Ok(segmented_result)
 }
 
-pub fn decode_signature_from_tx_calldata(calldata: &[FieldElement]) -> Result<Signature, KakarotClientError> {
-    let calls = Calls::try_from(calldata.to_vec())
-        .map_err(|e| KakarotClientError::OtherError(anyhow::anyhow!("Cannot convert calldata to Calls: {}", e)))?;
+pub fn decode_signature_from_tx_calldata(calldata: &[FieldElement]) -> Result<Signature, DataDecodingError> {
+    let calls =
+        Calls::try_from(calldata.to_vec()).map_err(|e| DataDecodingError::SignatureDecodingError(e.to_string()))?;
     let calldata = calls.0[0] // for now we decode signature only from the first call
         .calldata
         .iter()
         .filter_map(|x| u8::try_from(*x).ok())
         .collect::<Vec<u8>>();
-    let decoded_tx = TransactionSigned::decode(&mut calldata.as_slice()).map_err(|e| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
-            "Cannot rlp decode provided calldata into signed transaction: {}",
-            e
-        ))
-    })?;
+    let decoded_tx = TransactionSigned::decode(&mut calldata.as_slice())
+        .map_err(|e| DataDecodingError::SignatureDecodingError(e.to_string()))?;
     Ok(decoded_tx.signature)
 }
 
