@@ -1,7 +1,6 @@
 use eyre::Result;
 use reth_primitives::{
-    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256, U128,
-    U256, U8,
+    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256, U256,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
@@ -11,6 +10,7 @@ use starknet::core::types::{
     ValueOutOfRangeError,
 };
 
+use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
 use crate::client::client_api::KakarotClientError;
 use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
 
@@ -306,8 +306,8 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         from: H160::from(0),
         to: None,
         // TODO: Fetch real data
-        cumulative_gas_used: U256::from(1_000_000),
-        gas_used: Some(U256::from(500_000)),
+        cumulative_gas_used: *CUMULATIVE_GAS_USED,
+        gas_used: Some(*GAS_USED),
         contract_address: None,
         // TODO : default log value
         logs: vec![],
@@ -317,9 +317,9 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         state_root: None,
         status_code: None,
         // TODO: Fetch real data
-        effective_gas_price: U128::from(1_000_000),
+        effective_gas_price: *EFFECTIVE_GAS_PRICE,
         // TODO: Fetch real data
-        transaction_type: U8::from(0),
+        transaction_type: *TRANSACTION_TYPE,
     }
 }
 

@@ -45,7 +45,7 @@ use constants::selectors::BYTECODE;
 use self::client_api::{KakarotClient, KakarotClientError};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
-use self::constants::STARKNET_NATIVE_TOKEN;
+use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use crate::models::convertible::ConvertibleStarknetBlock;
 use crate::models::{BlockWithTxHashes, BlockWithTxs, TokenBalance, TokenBalances};
 
@@ -862,7 +862,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let calldata = raw_starknet_calldata(self.kakarot_address, bytes);
 
         // Get estimated_fee from Starknet
-        let max_fee = FieldElement::from(100_000_000_000_000_000_u64);
+        let max_fee = *MAX_FEE;
 
         let signature = vec![];
 
