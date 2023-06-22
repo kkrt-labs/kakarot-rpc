@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
 
+    use std::str::FromStr;
+
     use kakarot_rpc_core::client::client_api::KakarotClient;
     use kakarot_rpc_core::mock::wiremock_utils::setup_mock_client_crate;
     use kakarot_rpc_core::models::convertible::ConvertibleStarknetBlock;
@@ -26,5 +28,16 @@ mod tests {
                     .to_bytes_be()
             ))
         )
+    }
+
+    #[tokio::test]
+    async fn test_starknet_transaction_by_hash() {
+        let client = setup_mock_client_crate().await;
+        let starknet_tx = client
+            .transaction_by_hash(
+                H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap(),
+            )
+            .await;
+        assert!(starknet_tx.is_ok());
     }
 }

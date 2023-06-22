@@ -35,6 +35,8 @@ pub trait KakarotClient: Send + Sync {
 
     async fn block_number(&self) -> Result<U64, KakarotClientError>;
 
+    async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, KakarotClientError>;
+
     async fn get_eth_block_from_starknet_block(
         &self,
         block_id: StarknetBlockId,

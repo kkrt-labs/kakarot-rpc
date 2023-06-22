@@ -102,8 +102,7 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn transaction_by_hash(&self, _hash: H256) -> Result<Option<EtherTransaction>> {
-        let ether_tx = EtherTransaction::default();
-
+        let ether_tx = self.kakarot_client.transaction_by_hash(_hash).await?;
         Ok(Some(ether_tx))
     }
 
