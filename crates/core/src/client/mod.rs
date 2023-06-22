@@ -22,11 +22,13 @@ use starknet::core::types::{
     Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient, JsonRpcClient};
 use starknet::providers::Provider;
 use url::Url;
 extern crate hex;
 pub mod helpers;
+
+use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 use helpers::{
@@ -40,6 +42,9 @@ use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetTr
 pub mod client_api;
 pub mod constants;
 use constants::selectors::BYTECODE;
+pub mod models;
+use convertibles::ConvertibleStarknetTransaction;
+use models::{BlockWithTxHashes, BlockWithTxs, TokenBalance, TokenBalances};
 
 use self::client_api::{KakarotClient, KakarotClientError};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
@@ -157,15 +162,13 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         block_id: StarknetBlockId,
         hydrated_tx: bool,
     ) -> Result<RichBlock, KakarotClientError> {
-        if hydrated_tx {
-            let block = self.inner.get_block_with_txs(block_id).await?;
-            let starknet_block = BlockWithTxs::new(block);
-            starknet_block.to_eth_block(self).await
+        let starknet_block = if hydrated_tx {
+            MaybePendingStarknetBlock::BlockWithTxs(self.inner.get_block_with_txs(block_id).await?)
         } else {
-            let block = self.inner.get_block_with_tx_hashes(block_id).await?;
-            let starknet_block = BlockWithTxHashes::new(block);
-            starknet_block.to_eth_block(self).await
-        }
+            MaybePendingStarknetBlock::BlockWithTxHashes(self.inner.get_block_with_tx_hashes(block_id).await?)
+        };
+        let block = self.starknet_block_to_eth_block(starknet_block).await?;
+        Ok(block)
     }
 
     /// Get the number of transactions in a block given a block id.
