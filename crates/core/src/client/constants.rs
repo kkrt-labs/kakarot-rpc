@@ -20,7 +20,6 @@ pub mod selectors {
     pub const GET_EVM_ADDRESS: FieldElement = selector!("get_evm_address");
 
     pub const BALANCE_OF: FieldElement = selector!("balanceOf");
-    pub const GET_NONCE: FieldElement = selector!("get_nonce");
 }
 
 /// This module contains constants related to EVM gas fees.
