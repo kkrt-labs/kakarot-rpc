@@ -2,7 +2,7 @@
 name = "kakarot-rpc"
 version = "0.1.0"
 description = ""
-authors = [""]
+authors = []
 readme = "README.md"
 
 [tool.poetry.dependencies]
