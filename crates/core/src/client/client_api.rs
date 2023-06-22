@@ -8,7 +8,7 @@ use reth_rpc_types::{
 };
 use starknet::core::types::{BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClientError};
-use starknet::providers::{JsonRpcClient, ProviderError};
+use starknet::providers::JsonRpcClient;
 use thiserror::Error;
 extern crate hex;
 
