@@ -10,6 +10,7 @@ mod tests {
     use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
+    use starknet::core::utils::get_selector_from_name;
     use starknet::providers::Provider;
 
     #[tokio::test]
@@ -32,7 +33,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_starknet_event_to_eth_log() {
+    async fn test_starknet_event_to_eth_log_success() {
         let client = setup_mock_client_crate().await;
         // given
         let data =
@@ -133,5 +134,31 @@ mod tests {
         };
 
         assert_eq!(expected_eth_log4, resultant_eth_log4);
+    }
+
+    #[tokio::test]
+    async fn test_starknet_event_to_eth_log_failure_high_value_doesnt_exist() {
+        let client = setup_mock_client_crate().await;
+
+        let key_selector = get_selector_from_name("bbq_time").unwrap();
+        // given
+        let event = Event {
+            from_address: FieldElement::from_hex_be("0xdeadbeef").unwrap(),
+            // This keys vector only has one element for a pair, causing the high value to be missing.
+            keys: vec![key_selector],
+            data: vec![],
+        };
+
+        let sn_event = StarknetEvent::new(event);
+
+        // when
+        let resultant_eth_log = sn_event.to_eth_log(&client).await;
+
+        // then
+        // Expecting an error because the high value doesn't exist.
+        match resultant_eth_log {
+            Ok(_) => panic!("Expected an error due to missing high value, but got a result."),
+            Err(err) => assert_eq!(err.to_string(), "Not an convertible event: High value doesn't exist"),
+        }
     }
 }

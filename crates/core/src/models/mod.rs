@@ -1,6 +1,6 @@
 pub mod convertible;
 
-use std::iter::once;
+use core::iter::once;
 
 use async_trait::async_trait;
 use convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent};
@@ -252,36 +252,49 @@ impl StarknetEvent {
 impl ConvertibleStarknetEvent for StarknetEvent {
     async fn to_eth_log(&self, _client: &dyn KakarotClient) -> Result<Log, KakarotClientError> {
         // let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
-        // let address = client.get_evm_address(&self.0.from_address, &starknet_block_id).await.unwrap();
+        // let address = match client.get_evm_address(&self.0.from_address, &starknet_block_id).await {
+        //     Ok(address) => address,
+        //     Err(_) => {
+        //         return Err(KakarotClientError::OtherError(anyhow::anyhow!(
+        //             "Starknet event address has no EVM mapping",
+        //         )));
+        //     }
+        // };
+
         // Convert the StarkNet address to a byte array
         let sn_bytes = self.0.from_address.clone().to_bytes_be();
         // Take the last 20 bytes of the StarkNet address to create the Ethereum address
         let address = Address::from_slice(&sn_bytes[12..32]);
-        let topics: Vec<H256> = self.0.keys
-        // Splits the keys into chunks of 2 elements each.
+
+        let topics: Result<Vec<H256>, KakarotClientError> = self
+            .0
+            .keys
             .chunks(2)
             .map(|chunk| {
-                // Converts the first element of the chunk to bytes and then to a BigUint.
-                // BigUint gives us arbitrary precision, to avoid prime field wrap arounds
                 let low = BigUint::from_bytes_be(&chunk[0].to_bytes_be());
-                // If there is a second element in the chunk, it's converted to bytes and then to a BigUint. 
-                // Otherwise, a BigUint is created from 0u128.
-                let high = chunk.get(1).map_or(BigUint::from(0u128), |h| BigUint::from_bytes_be(&h.to_bytes_be()));
-                // Calculates the result as `low + 2^128 * high`
+                let high = match chunk.get(1) {
+                    Some(h) => BigUint::from_bytes_be(&h.to_bytes_be()),
+                    None => {
+                        return Err(KakarotClientError::OtherError(anyhow::anyhow!(
+                            "Not an convertible event: High value doesn't exist",
+                        )));
+                    }
+                };
                 let result = low + (BigUint::from(2u128).pow(128u32) * high);
                 // Converts the result to bytes.
                 let bytes = result.to_bytes_be();
                 // If the length of bytes is less than 32, prepends it with zeros to make it 32 bytes long.
                 let bytes = once(0u8).cycle().take(32 - bytes.len()).chain(bytes.into_iter()).collect::<Vec<_>>();
-                // Converts the bytes to H256 (32-byte hash).
-                H256::from_slice(&bytes)
+                Ok(H256::from_slice(&bytes))
             })
-            .collect(); // Collects all H256 hashes into a vector.
+            .collect();
 
-        let data: Bytes = self.0.data.iter()
-            .flat_map(|felt| felt.to_bytes_be())
-            .collect::<Vec<u8>>() // Collect into Vec<u8> first
-            .into(); // Then convert into Bytes
+        let topics = match topics {
+            Ok(topics) => topics,
+            Err(err) => return Err(err),
+        };
+
+        let data: Bytes = self.0.data.iter().flat_map(|felt| felt.to_bytes_be()).collect::<Vec<u8>>().into();
 
         Ok(Log {
             address,
