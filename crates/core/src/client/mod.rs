@@ -8,49 +8,47 @@ use jsonrpsee::types::error::CallError;
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
-    keccak256, Address, BlockId, BlockNumberOrTag, Bytes, Bytes as RpcBytes, TransactionSigned, H160, H256, U128, U256,
-    U64,
+    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Bytes as RpcBytes, TransactionSigned, H160, H256,
+    U128, U256, U64, U8,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
-    Block, BlockTransactions, CallRequest, FeeHistory, Header, Log, Rich, RichBlock, Signature, SyncInfo, SyncStatus,
-    Transaction as EtherTransaction, TransactionReceipt,
+    BlockTransactions, CallRequest, FeeHistory, Log, RichBlock, SyncInfo, SyncStatus, Transaction as EtherTransaction,
+    TransactionReceipt,
 };
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, FieldElement,
-    FunctionCall, InvokeTransactionReceipt, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, SyncStatusType, Transaction as TransactionType,
-    TransactionReceipt as StarknetTransactionReceipt, TransactionStatus as StarknetTransactionStatus,
+    FunctionCall, InvokeTransactionReceipt, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, SyncStatusType,
+    Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
+    TransactionStatus as StarknetTransactionStatus,
 };
-use starknet::providers::jsonrpc::{HttpTransport, HttpTransport, JsonRpcClient, JsonRpcClient};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::providers::Provider;
 use url::Url;
 extern crate hex;
 pub mod helpers;
 
-use std::collections::BTreeMap;
-
 use async_trait::async_trait;
 use helpers::{
     decode_eth_call_return, ethers_block_id_to_starknet_block_id, hash_to_field_element, raw_starknet_calldata,
-    starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray, MaybePendingStarknetBlock,
+    starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray,
 };
 use reth_rpc_types::Index;
 
 use crate::client::constants::selectors::ETH_CALL;
-use crate::client::constants::CHAIN_ID;
+use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetTransaction};
 pub mod client_api;
 pub mod constants;
 use constants::selectors::BYTECODE;
-pub mod models;
-use convertibles::ConvertibleStarknetTransaction;
-use models::{BlockWithTxHashes, BlockWithTxs, TokenBalance, TokenBalances};
 
 use self::client_api::{KakarotClient, KakarotClientError};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
-use self::models::{option_to_result, StarknetTransaction, StarknetTransactions};
+use crate::models::{
+    option_to_result, BlockWithTxHashes, BlockWithTxs, StarknetTransaction, StarknetTransactions, TokenBalance,
+    TokenBalances,
+};
 mod convertibles;
 
 pub struct KakarotClientImpl<StarknetClient> {
@@ -160,13 +158,15 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         block_id: StarknetBlockId,
         hydrated_tx: bool,
     ) -> Result<RichBlock, KakarotClientError> {
-        let starknet_block = if hydrated_tx {
-            MaybePendingStarknetBlock::BlockWithTxs(self.inner.get_block_with_txs(block_id).await?)
+        if hydrated_tx {
+            let block = self.inner.get_block_with_txs(block_id).await?;
+            let starknet_block = BlockWithTxs::new(block);
+            starknet_block.to_eth_block(self).await
         } else {
-            MaybePendingStarknetBlock::BlockWithTxHashes(self.inner.get_block_with_tx_hashes(block_id).await?)
-        };
-        let block = self.starknet_block_to_eth_block(starknet_block).await?;
-        Ok(block)
+            let block = self.inner.get_block_with_tx_hashes(block_id).await?;
+            let starknet_block = BlockWithTxHashes::new(block);
+            starknet_block.to_eth_block(self).await
+        }
     }
 
     /// Get the number of transactions in a block given a block id.
@@ -570,7 +570,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                         logs_bloom: Bloom::default(), // TODO: Fetch real data
                         status_code,
                         effective_gas_price: U128::from(1_000_000), // TODO: Fetch real data
-                        transaction_type: U256::from(0),            // TODO: Fetch real data
+                        transaction_type: U8::from(0),              // TODO: Fetch real data
                     }
                 }
                 // L1Handler, Declare, Deploy and DeployAccount transactions unsupported for now in

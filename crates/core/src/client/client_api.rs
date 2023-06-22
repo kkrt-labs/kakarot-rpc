@@ -8,7 +8,7 @@ use reth_rpc_types::{
 };
 use starknet::core::types::{BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClientError};
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, ProviderError};
 use thiserror::Error;
 extern crate hex;
 
@@ -16,7 +16,7 @@ use async_trait::async_trait;
 use reth_rpc_types::Index;
 
 use super::helpers::DataDecodingError;
-use crate::client::models::{ConversionError, StarknetTransactions, TokenBalances};
+use crate::models::{ConversionError, StarknetTransactions, TokenBalances};
 
 #[derive(Debug, Error)]
 pub enum KakarotClientError {

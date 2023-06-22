@@ -1,7 +1,6 @@
 use eyre::Result;
 use reth_primitives::{
-    Address, Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256,
-    U256,
+    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256, U256,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
