@@ -6,10 +6,10 @@ description = { workspace = true }
 homepage = { workspace = true }
 
 [dependencies]
-kakarot_rpc_core = { path = "../core" }
-eyre = "0.6.8"
-log = "0.4.17"
 env_logger = "0.10.0"
+eyre = "0.6.8"
+kakarot_rpc_core = { path = "../core" }
+log = "0.4.17"
 url = "2.3.1"
 
 # rpc
@@ -20,23 +20,29 @@ async-trait = { workspace = true }
 tokio = { version = "1.21.2", features = ["macros"] }
 
 # misc
-serde = { version = "1.0.147", features = ["derive"] }
-serde_json = "1.0"
-thiserror = "1.0.38"
+anyhow = "1.0.68"
+dotenv = "0.15.0"
 hex = "0.4"
+mockall = "0.11.3"
+reqwest = "0.11.13"
+reth-primitives = { workspace = true }
+reth-rlp = { workspace = true }
 reth-rpc-api = { workspace = true }
 reth-rpc-types = { workspace = true }
-reth-rlp = { workspace = true }
-reth-primitives = { workspace = true }
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = "1.0"
+serde_with = "2.2.0"
+starknet = { workspace = true }
+thiserror = "1.0.38"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
-starknet = { workspace = true }
-reqwest = "0.11.13"
-dotenv = "0.15.0"
-mockall = "0.11.3"
-anyhow = "1.0.68"
 
 [dev-dependencies.cargo-husky]
 version = "1.5.0"
 default-features = false
-features = ["precommit-hook", "run-for-all", "run-cargo-clippy", "run-cargo-fmt"]
+features = [
+  "precommit-hook",
+  "run-for-all",
+  "run-cargo-clippy",
+  "run-cargo-fmt",
+]
