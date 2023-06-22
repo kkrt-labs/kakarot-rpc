@@ -200,12 +200,23 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         };
         // Make the function call to get the Starknet contract address
         let starknet_contract_address = self.inner.call(request, starknet_block_id).await?;
-        // Concatenate the result of the function call
-        let concatenated_result = starknet_contract_address.into_iter().fold(FieldElement::ZERO, |acc, x| acc + x);
+
+        // shadow the variable to FielElement from a Vec<FieldElement>, for use in subsequent code
+        let starknet_contract_address = match starknet_contract_address.get(0) {
+            Some(x) if starknet_contract_address.len() == 1 => *x,
+            _ => {
+                return Err(KakarotClientError::OtherError(anyhow::anyhow!(
+                    "Kakarot get_code: starknet_contract_address is empty"
+                )));
+            }
+        };
 
         // Prepare the calldata for the bytecode function call
-        let request =
-            FunctionCall { contract_address: concatenated_result, entry_point_selector: BYTECODE, calldata: vec![] };
+        let request = FunctionCall {
+            contract_address: starknet_contract_address,
+            entry_point_selector: BYTECODE,
+            calldata: vec![],
+        };
         // Make the function call to get the contract bytecode
         let contract_bytecode = self.inner.call(request, starknet_block_id).await?;
         // Convert the result of the function call to a vector of bytes
