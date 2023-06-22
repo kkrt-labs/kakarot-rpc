@@ -266,7 +266,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
         // Take the last 20 bytes of the StarkNet address to create the Ethereum address
         let address = Address::from_slice(&sn_bytes[12..32]);
 
-        let topics: Result<Vec<H256>, KakarotClientError> = self
+        let topics: Vec<H256> = self
             .0
             .keys
             .chunks(2)
@@ -275,9 +275,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
                 let high = match chunk.get(1) {
                     Some(h) => BigUint::from_bytes_be(&h.to_bytes_be()),
                     None => {
-                        return Err(KakarotClientError::OtherError(anyhow::anyhow!(
-                            "Not an convertible event: High value doesn't exist",
-                        )));
+                        return Err(anyhow::anyhow!("Not an convertible event: High value doesn't exist",));
                     }
                 };
                 let result = low + (BigUint::from(2u128).pow(128u32) * high);
@@ -287,14 +285,12 @@ impl ConvertibleStarknetEvent for StarknetEvent {
                 let bytes = once(0u8).cycle().take(32 - bytes.len()).chain(bytes.into_iter()).collect::<Vec<_>>();
                 Ok(H256::from_slice(&bytes))
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
 
-        let topics = match topics {
-            Ok(topics) => topics,
-            Err(err) => return Err(err),
-        };
-
-        let data: Bytes = self.0.data.iter().flat_map(|felt| felt.to_bytes_be()).collect::<Vec<u8>>().into();
+        let data: Bytes = self.0.data.iter()
+            .flat_map(|felt| felt.to_bytes_be())
+            .collect::<Vec<u8>>() // Collect into Vec<u8> first
+            .into(); // Then convert into Bytes
 
         Ok(Log {
             address,
