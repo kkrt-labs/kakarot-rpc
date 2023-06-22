@@ -1,12 +1,7 @@
 <!--- Please provide a general summary of your changes in the title above -->
-
 <!-- Give an estimate of the time you spent on this PR in terms of work days. Did you spend 0.5 days on this PR or rather 2 days?  -->
 
 Time spent on this PR:
-
-<!-- Which issue is this PR related to? -->
-
-Closes #NUMBER_OF_ISSUE
 
 # Pull Request type
 
@@ -27,7 +22,7 @@ Please check the type of change your PR introduces:
 
 <!-- Please describe the current behavior that you are modifying, or link to a relevant issue. -->
 
-Issue Number: N/A
+Resolves: #<Issue number>
 
 # What is the new behavior?
 
