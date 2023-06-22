@@ -85,6 +85,12 @@ pub trait KakarotClient: Send + Sync {
         starknet_block_id: &StarknetBlockId,
     ) -> Result<Address, KakarotClientError>;
 
+    async fn nonce(
+        &self,
+        ethereum_address: Address,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<U256, KakarotClientError>;
+
     async fn balance(
         &self,
         ethereum_address: Address,

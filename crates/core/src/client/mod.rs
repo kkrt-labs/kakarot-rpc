@@ -44,7 +44,7 @@ use constants::selectors::BYTECODE;
 
 use self::client_api::{KakarotClient, KakarotClientError};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
-use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
+use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS, GET_NONCE};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use crate::models::convertible::ConvertibleStarknetBlock;
 use crate::models::{BlockWithTxHashes, BlockWithTxs, TokenBalance, TokenBalances};
@@ -629,6 +629,38 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let evm_address_sliced = &tmp_slice;
 
         Ok(Address::from(evm_address_sliced))
+    }
+
+    /// Get the nonce for a given ethereum address
+    /// Convert Ethereum address to Starknet address
+    /// Return the nonce, by calling `get_nonce` on the account contract
+    /// * `ethereum_address` - The EVM address to get the nonce of
+    /// * `block_id` - The block to get the nonce at
+    ///
+    /// ### Returns
+    /// * `Result<U256, KakarotClientError>` - The nonce of the EVM address
+    async fn nonce(&self, ethereum_address: Address, block_id: StarknetBlockId) -> Result<U256, KakarotClientError> {
+        let starknet_address = self.compute_starknet_address(ethereum_address, &block_id).await?;
+
+        let request = FunctionCall {
+            // This FieldElement::from_hex_be cannot fail as the value is a constant
+            contract_address: starknet_address,
+            entry_point_selector: GET_NONCE,
+            calldata: vec![],
+        };
+
+        let nonce_felt = self.inner.call(request, block_id).await?;
+
+        let nonce = nonce_felt
+            .first()
+            .ok_or_else(|| {
+                KakarotClientError::OtherError(anyhow::anyhow!("Kakarot Core: Failed to get account nonce"))
+            })?
+            .to_bytes_be();
+
+        let nonce = U256::from_be_bytes(nonce);
+
+        Ok(nonce)
     }
 
     /// Get the balance in Starknet's native token of a specific EVM address.
