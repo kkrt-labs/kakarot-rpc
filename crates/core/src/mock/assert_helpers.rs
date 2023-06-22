@@ -120,7 +120,11 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
     assert_eq!(ether_tx.value, U256::from(100));
     assert_eq!(ether_tx.gas, U256::from(100));
     assert_eq!(ether_tx.gas_price, None);
-    assert_eq!(ether_tx.transaction_index, None);
+    let index = match ether_tx.transaction_index {
+        Some(_) => Some(U256::from(0)),
+        _ => None,
+    };
+    assert_eq!(ether_tx.transaction_index, index);
     assert_eq!(ether_tx.max_fee_per_gas, None);
     assert_eq!(ether_tx.max_priority_fee_per_gas, Some(U128::ZERO));
 
