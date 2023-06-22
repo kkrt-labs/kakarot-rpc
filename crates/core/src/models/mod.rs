@@ -323,13 +323,15 @@ impl From<StarknetTransaction> for Transaction {
 
 macro_rules! get_invoke_transaction_field {
     (($field_v0:ident, $field_v1:ident), $type:ty) => {
-        pub fn $field_v1(&self) -> Option<$type> {
+        pub fn $field_v1(&self) -> Result<$type, ConversionError> {
             match &self.0 {
                 Transaction::Invoke(tx) => match tx {
-                    InvokeTransaction::V0(tx) => Some(tx.$field_v0.clone().into()),
-                    InvokeTransaction::V1(tx) => Some(tx.$field_v1.clone().into()),
+                    InvokeTransaction::V0(tx) => Ok(tx.$field_v0.clone().into()),
+                    InvokeTransaction::V1(tx) => Ok(tx.$field_v1.clone().into()),
                 },
-                _ => None,
+                _ => Err(ConversionError::TransactionConvertionError(
+                    constants::error_messages::INVALID_TRANSACTION_TYPE.to_string(),
+                )),
             }
         }
     };
@@ -352,8 +354,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         transaction_index: Option<U256>,
     ) -> Result<EthTransaction, KakarotClientError> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
-        let sender_address: FieldElement =
-            option_to_result(self.sender_address(), constants::error_messages::INVALID_TRANSACTION_TYPE)?.into();
+        let sender_address: FieldElement = self.sender_address()?.into();
 
         let class_hash = client.inner().get_class_hash_at(starknet_block_latest, sender_address).await?;
 
@@ -361,10 +362,9 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             return Err(KakarotClientError::OtherError(anyhow::anyhow!("Kakarot Filter: Tx is not part of Kakarot")));
         }
 
-        let hash: H256 =
-            option_to_result(self.transaction_hash(), constants::error_messages::INVALID_TRANSACTION_TYPE)?.into();
+        let hash: H256 = self.transaction_hash()?.into();
 
-        let nonce: U256 = option_to_result(self.nonce(), constants::error_messages::INVALID_TRANSACTION_TYPE)?.into();
+        let nonce: U256 = self.nonce()?.into();
 
         let from = client.get_evm_address(&sender_address, &starknet_block_latest).await?;
 
@@ -399,8 +399,4 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             transaction_type: None, // TODO fetch the transaction type
         })
     }
-}
-
-pub fn option_to_result<T>(option: Option<T>, message: &str) -> Result<T, ConversionError> {
-    option.ok_or_else(|| ConversionError::TransactionConvertionError(message.to_string()))
 }

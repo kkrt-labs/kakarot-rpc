@@ -46,8 +46,7 @@ use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use crate::models::{
-    option_to_result, BlockWithTxHashes, BlockWithTxs, StarknetTransaction, StarknetTransactions, TokenBalance,
-    TokenBalances,
+    BlockWithTxHashes, BlockWithTxs, StarknetTransaction, StarknetTransactions, TokenBalance, TokenBalances,
 };
 mod convertibles;
 
@@ -385,11 +384,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let starknet_tx: StarknetTransaction =
             self.inner.get_transaction_by_block_id_and_index(block_id, index).await?.into();
 
-        let tx_hash: FieldElement = option_to_result(
-            starknet_tx.transaction_hash(),
-            "L1Handler, Declare, Deploy and DeployAccount transactions unsupported",
-        )?
-        .into();
+        let tx_hash: FieldElement = starknet_tx.transaction_hash()?.into();
 
         let tx_receipt = self.inner.get_transaction_receipt(tx_hash).await?;
         let (blockhash, blocknum) = match tx_receipt {
@@ -485,11 +480,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                     let starknet_tx: StarknetTransaction =
                         self.inner.get_transaction_by_hash(transaction_hash).await?.into();
 
-                    let starknet_sender_address: FieldElement = option_to_result(
-                        starknet_tx.sender_address(),
-                        constants::error_messages::INVALID_TRANSACTION_TYPE,
-                    )?
-                    .into();
+                    let starknet_sender_address: FieldElement = starknet_tx.sender_address()?.into();
                     let contract_address =
                         Some(self.safe_get_evm_address(&starknet_sender_address, &starknet_block_id).await);
 
