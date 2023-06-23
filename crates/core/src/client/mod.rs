@@ -40,11 +40,11 @@ use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_A
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use self::errors::EthApiError;
 use crate::client::constants::selectors::ETH_CALL;
+use crate::models::balance::{TokenBalance, TokenBalances};
+use crate::models::block::{BlockWithTxHashes, BlockWithTxs};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetTransaction};
-use crate::models::{
-    BlockWithTxHashes, BlockWithTxs, Felt252Wrapper, StarknetTransaction, StarknetTransactions, TokenBalance,
-    TokenBalances,
-};
+use crate::models::felt::Felt252Wrapper;
+use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 
 pub struct KakarotClientImpl<StarknetClient> {
     inner: StarknetClient,

@@ -12,7 +12,8 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
 use super::errors::EthApiError;
-use crate::models::{StarknetTransactions, TokenBalances};
+use crate::models::balance::TokenBalances;
+use crate::models::transaction::StarknetTransactions;
 
 #[async_trait]
 pub trait KakarotClient: Send + Sync {
