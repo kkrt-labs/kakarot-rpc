@@ -46,7 +46,8 @@ use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use crate::models::{
-    BlockWithTxHashes, BlockWithTxs, StarknetTransaction, StarknetTransactions, TokenBalance, TokenBalances,
+    BlockWithTxHashes, BlockWithTxs, Felt252Wrapper, StarknetTransaction, StarknetTransactions, TokenBalance,
+    TokenBalances,
 };
 
 pub struct KakarotClientImpl<StarknetClient> {
@@ -620,10 +621,9 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     async fn nonce(&self, ethereum_address: Address, block_id: StarknetBlockId) -> Result<U256, KakarotClientError> {
         let starknet_address = self.compute_starknet_address(ethereum_address, &block_id).await?;
 
-        let nonce = self.inner.get_nonce(block_id, starknet_address).await?;
-        let nonce = U256::from_be_bytes(nonce.to_bytes_be());
+        let nonce: Felt252Wrapper = self.inner.get_nonce(block_id, starknet_address).await?.into();
 
-        Ok(nonce)
+        Ok(nonce.into())
     }
 
     /// Get the balance in Starknet's native token of a specific EVM address.
