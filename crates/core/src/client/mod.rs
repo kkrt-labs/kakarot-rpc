@@ -642,8 +642,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     async fn nonce(&self, ethereum_address: Address, block_id: StarknetBlockId) -> Result<U256, KakarotClientError> {
         let starknet_address = self.compute_starknet_address(ethereum_address, &block_id).await?;
 
-        let nonce_felt = self.inner.get_nonce(block_id, starknet_address).await?;
-        let nonce = U256::from_be_bytes(nonce_felt.to_bytes_be());
+        let nonce = self.inner.get_nonce(block_id, starknet_address).await?;
+        let nonce = U256::from_be_bytes(nonce.to_bytes_be());
 
         Ok(nonce)
     }
