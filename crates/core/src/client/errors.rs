@@ -11,8 +11,6 @@ use crate::models::ConversionError;
 /// List of JSON-RPC error codes from reth
 #[derive(Debug, Copy, PartialEq, Eq, Clone)]
 pub enum EthRpcErrorCode {
-    /// Failed to send transaction, See also <https://github.com/MetaMask/eth-rpc-errors/blob/main/src/error-constants.ts>
-    TransactionRejected = -32003,
     /// Custom geth error code, <https://github.com/vapory-legacy/wiki/blob/master/JSON-RPC-Error-Codes-Improvement-Proposal.md>
     ExecutionError = 3,
     /// <https://eips.ethereum.org/EIPS/eip-1898>
@@ -21,6 +19,8 @@ pub enum EthRpcErrorCode {
     /// > If the block is not found, the callee SHOULD raise a JSON-RPC error (the recommended
     /// > error code is -32001: Resource not found).
     ResourceNotFound = -32001,
+    /// Failed to send transaction, See also <https://github.com/MetaMask/eth-rpc-errors/blob/main/src/error-constants.ts>
+    TransactionRejected = -32003,
 }
 
 /// Error that can accure when interacting with the Kakarot ETH API.
