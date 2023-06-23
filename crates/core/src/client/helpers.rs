@@ -67,10 +67,10 @@ impl TryFrom<Vec<FieldElement>> for Calls {
     }
 }
 
+/// Converts a `Eth` block id to a `Starknet` block id.
 /// # Errors
 ///
-/// Will return `EthApiError` If an error occurs when converting a `Starknet` block hash to a
-/// `FieldElement`
+/// Will return `EthApiError` if an error occurs.
 pub fn ethers_block_id_to_starknet_block_id(block: EthBlockId) -> Result<StarknetBlockId, EthApiError> {
     match block {
         EthBlockId::Hash(hash) => {
@@ -79,21 +79,19 @@ pub fn ethers_block_id_to_starknet_block_id(block: EthBlockId) -> Result<Starkne
             })?;
             Ok(StarknetBlockId::Hash(hash_felt))
         }
-        EthBlockId::Number(number) => ethers_block_number_to_starknet_block_id(number),
+        EthBlockId::Number(number) => Ok(ethers_block_number_to_starknet_block_id(number)),
     }
 }
 
-/// # Errors
-///
-/// TODO: Will return `EthApiError`..
-pub const fn ethers_block_number_to_starknet_block_id(block: BlockNumberOrTag) -> Result<StarknetBlockId, EthApiError> {
+/// Converts a `Eth` block number to a `Starknet` block id.
+pub const fn ethers_block_number_to_starknet_block_id(block: BlockNumberOrTag) -> StarknetBlockId {
     match block {
         BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
-            Ok(StarknetBlockId::Tag(BlockTag::Latest))
+            StarknetBlockId::Tag(BlockTag::Latest)
         }
-        BlockNumberOrTag::Earliest => Ok(StarknetBlockId::Number(0)),
-        BlockNumberOrTag::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
-        BlockNumberOrTag::Number(num) => Ok(StarknetBlockId::Number(num)),
+        BlockNumberOrTag::Earliest => StarknetBlockId::Number(0),
+        BlockNumberOrTag::Pending => StarknetBlockId::Tag(BlockTag::Pending),
+        BlockNumberOrTag::Number(num) => StarknetBlockId::Number(num),
     }
 }
 
