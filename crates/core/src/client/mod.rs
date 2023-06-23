@@ -435,7 +435,14 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     async fn transaction_by_hash(&self, _hash: H256) -> Result<EtherTransaction, KakarotClientError> {
         let hash_felt = hash_to_field_element(_hash)?;
         let transaction: StarknetTransaction = self.inner.get_transaction_by_hash(hash_felt).await?.into();
-        let eth_transaction = transaction.to_eth_transaction(self, None, None, None).await?;
+        let tx_receipt = self.inner.get_transaction_receipt(hash_felt).await?;
+        let (blockhash, blocknum) = match tx_receipt {
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
+                (Some(H256::from_slice(&(tr.block_hash).to_bytes_be())), Some(U256::from(tr.block_number)))
+            }
+            _ => (None, None), // skip all transactions other than Invoke, covers the pending case
+        };
+        let eth_transaction = transaction.to_eth_transaction(self, blockhash, blocknum, None).await?;
         Ok(eth_transaction)
     }
 
