@@ -1,8 +1,9 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
-use jsonrpsee::types::error::CallError;
+use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, METHOD_NOT_FOUND_CODE};
 use kakarot_rpc_core::client::client_api::KakarotClient;
 use kakarot_rpc_core::client::constants::{CHAIN_ID, ESTIMATE_GAS};
+use kakarot_rpc_core::client::errors::rpc_err;
 use kakarot_rpc_core::client::helpers::ethers_block_id_to_starknet_block_id;
 use kakarot_rpc_core::models::TokenBalances;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
@@ -165,15 +166,11 @@ impl EthApiServer for KakarotEthRpc {
     async fn call(&self, request: CallRequest, block_number: Option<BlockId>) -> Result<Bytes> {
         // unwrap option or return jsonrpc error
         let to = request.to.ok_or_else(|| {
-            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
-                "CallRequest `to` field is None. Cannot process a Kakarot call",
-            )))
+            rpc_err(INTERNAL_ERROR_CODE, "CallRequest `to` field is None. Cannot process a Kakarot call")
         })?;
 
         let calldata = request.data.ok_or_else(|| {
-            jsonrpsee::core::Error::Call(CallError::InvalidParams(anyhow::anyhow!(
-                "CallRequest `data` field is None. Cannot process a Kakarot call",
-            )))
+            rpc_err(INTERNAL_ERROR_CODE, "CallRequest `data` field is None. Cannot process a Kakarot call")
         })?;
 
         let block_id = block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
@@ -217,15 +214,15 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn is_mining(&self) -> Result<bool> {
-        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_mining. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
+        Err(rpc_err(METHOD_NOT_FOUND_CODE, "Unsupported method: eth_mining. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn hashrate(&self) -> Result<U256> {
-        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_hashrate. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
+        Err(rpc_err(METHOD_NOT_FOUND_CODE, "Unsupported method: eth_hashrate. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn get_work(&self) -> Result<Work> {
-        Err(jsonrpsee::core::Error::Custom("Unsupported method: eth_getWork. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
+        Err(rpc_err(METHOD_NOT_FOUND_CODE, "Unsupported method: eth_getWork. See available methods at https://github.com/sayajin-labs/kakarot-rpc/blob/main/docs/rpc_api_status.md".to_string()))
     }
 
     async fn submit_hashrate(&self, _hashrate: U256, _id: H256) -> Result<bool> {
@@ -270,7 +267,11 @@ impl EthApiServer for KakarotEthRpc {
 #[rpc(server, client)]
 trait KakarotCustomApi {
     #[method(name = "kakarot_getTokenBalances")]
-    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> Result<TokenBalances>;
+    async fn token_balances(
+        &self,
+        address: Address,
+        contract_addresses: Vec<Address>,
+    ) -> jsonrpsee::core::RpcResult<TokenBalances>;
 }
 
 #[async_trait]

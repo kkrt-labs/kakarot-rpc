@@ -30,7 +30,7 @@ use starknet::core::types::{
     Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient, JsonRpcClient};
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::providers::Provider;
 use url::Url;
 

@@ -1,6 +1,4 @@
-use jsonrpsee::types::error::{
-    CallError, INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, SERVER_IS_BUSY_CODE, UNKNOWN_ERROR_CODE,
-};
+use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, SERVER_IS_BUSY_CODE, UNKNOWN_ERROR_CODE};
 use jsonrpsee::types::ErrorObject;
 use starknet::core::types::StarknetError;
 use starknet::providers::jsonrpc::JsonRpcClientError;
@@ -82,11 +80,11 @@ impl From<EthApiError> for ErrorObject<'static> {
 
 impl From<EthApiError> for jsonrpsee::core::Error {
     fn from(err: EthApiError) -> Self {
-        jsonrpsee::core::Error::Call(CallError::Custom(err.into()))
+        jsonrpsee::core::Error::Call(err.into())
     }
 }
 
 /// Constructs a JSON-RPC error object, consisting of `code` and `message`.
-pub(crate) fn rpc_err(code: i32, msg: impl Into<String>) -> jsonrpsee::types::error::ErrorObject<'static> {
+pub fn rpc_err(code: i32, msg: impl Into<String>) -> jsonrpsee::types::error::ErrorObject<'static> {
     jsonrpsee::types::error::ErrorObject::owned(code, msg.into(), None::<()>)
 }
