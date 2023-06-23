@@ -356,7 +356,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 
-        let class_hash = client.inner().get_class_hash_at(starknet_block_latest, sender_address).await?;
+        let class_hash = client.starknet_client().get_class_hash_at(starknet_block_latest, sender_address).await?;
 
         if class_hash != client.proxy_account_class_hash() {
             return Err(KakarotClientError::OtherError(anyhow::anyhow!("Kakarot Filter: Tx is not part of Kakarot")));

@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use eyre::{eyre, Result};
 use kakarot_rpc::run_server;
-use kakarot_rpc_core::client::KakarotClientImpl;
+use kakarot_rpc_core::client::KakarotClientWrapper;
 use starknet::core::types::FieldElement;
 
 #[tokio::main]
@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
         eyre!("PROXY_ACCOUNT_CLASS_HASH should be provided as a hex string, got {proxy_account_class_hash}")
     })?;
 
-    let kakarot_client = KakarotClientImpl::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)?;
+    let kakarot_client = KakarotClientWrapper::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)?;
 
     let (server_addr, server_handle) = run_server(Box::new(kakarot_client)).await?;
     let url = format!("http://{server_addr}");

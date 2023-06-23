@@ -34,7 +34,7 @@ pub enum KakarotClientError {
 pub trait KakarotClient: Send + Sync {
     fn kakarot_address(&self) -> FieldElement;
     fn proxy_account_class_hash(&self) -> FieldElement;
-    fn inner(&self) -> &JsonRpcClient<HttpTransport>;
+    fn starknet_client(&self) -> &JsonRpcClient<HttpTransport>;
 
     async fn block_number(&self) -> Result<U64, KakarotClientError>;
 
