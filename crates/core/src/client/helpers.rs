@@ -12,10 +12,8 @@ use starknet::core::types::{
 use thiserror::Error;
 
 use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
-use crate::client::client_api::KakarotClientError;
 use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
-
-extern crate hex;
+use crate::client::errors::EthApiError;
 
 #[derive(Debug, Error)]
 pub enum DataDecodingError {
@@ -69,56 +67,49 @@ impl TryFrom<Vec<FieldElement>> for Calls {
     }
 }
 
+/// Converts a `Eth` block id to a `Starknet` block id.
 /// # Errors
 ///
-/// Will return `KakarotClientError` If an error occurs when converting a `Starknet` block hash to a
-/// `FieldElement`
-pub fn ethers_block_id_to_starknet_block_id(block: EthBlockId) -> Result<StarknetBlockId, KakarotClientError> {
+/// Will return `EthApiError` if an error occurs.
+pub fn ethers_block_id_to_starknet_block_id(block: EthBlockId) -> Result<StarknetBlockId, EthApiError> {
     match block {
         EthBlockId::Hash(hash) => {
             let hash_felt = FieldElement::from_bytes_be(&hash.block_hash).map_err(|e| {
-                KakarotClientError::OtherError(anyhow::anyhow!(
-                    "Failed to convert Starknet block hash to FieldElement: {}",
-                    e
-                ))
+                EthApiError::OtherError(anyhow::anyhow!("Failed to convert Starknet block hash to FieldElement: {}", e))
             })?;
             Ok(StarknetBlockId::Hash(hash_felt))
         }
-        EthBlockId::Number(number) => ethers_block_number_to_starknet_block_id(number),
+        EthBlockId::Number(number) => Ok(ethers_block_number_to_starknet_block_id(number)),
     }
 }
 
-/// # Errors
-///
-/// TODO: Will return `KakarotClientError`..
-pub const fn ethers_block_number_to_starknet_block_id(
-    block: BlockNumberOrTag,
-) -> Result<StarknetBlockId, KakarotClientError> {
+/// Converts a `Eth` block number to a `Starknet` block id.
+pub const fn ethers_block_number_to_starknet_block_id(block: BlockNumberOrTag) -> StarknetBlockId {
     match block {
         BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
-            Ok(StarknetBlockId::Tag(BlockTag::Latest))
+            StarknetBlockId::Tag(BlockTag::Latest)
         }
-        BlockNumberOrTag::Earliest => Ok(StarknetBlockId::Number(0)),
-        BlockNumberOrTag::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
-        BlockNumberOrTag::Number(num) => Ok(StarknetBlockId::Number(num)),
+        BlockNumberOrTag::Earliest => StarknetBlockId::Number(0),
+        BlockNumberOrTag::Pending => StarknetBlockId::Tag(BlockTag::Pending),
+        BlockNumberOrTag::Number(num) => StarknetBlockId::Number(num),
     }
 }
 
 /// Returns the decoded return value of the `eth_call` entrypoint of Kakarot
-pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
+pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FeltOrFeltArray>, EthApiError> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
     // Declare Vec of Result
     let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
     let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
+        EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
     })?;
     let mut tmp_counter = 1_usize;
     segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
     // Parse first array: stack_accesses
     while tmp_array_len != FieldElement::ZERO {
         let element = call_result.get(tmp_counter).ok_or_else(|| {
-            KakarotClientError::OtherError(anyhow::anyhow!(
+            EthApiError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode return arguments of Kakarot call: return data array",
             ))
         })?;
@@ -136,22 +127,20 @@ pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FeltOr
 
 /// Returns the decoded return value of the `eth_send_transaction` entrypoint
 /// of Kakarot
-pub fn decode_eth_send_transaction_return(
-    call_result: &[FieldElement],
-) -> Result<Vec<FeltOrFeltArray>, KakarotClientError> {
+pub fn decode_eth_send_transaction_return(call_result: &[FieldElement]) -> Result<Vec<FeltOrFeltArray>, EthApiError> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
     // Declare Vec of Result
     let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
     let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
+        EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
     })?;
     let mut tmp_counter = 1_usize;
     segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
     // Parse first array: stack_accesses
     while tmp_array_len != FieldElement::ZERO {
         let element = call_result.get(tmp_counter).ok_or_else(|| {
-            KakarotClientError::OtherError(anyhow::anyhow!(
+            EthApiError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode return arguments of Kakarot call: stack accesses array",
             ))
         })?;
@@ -165,15 +154,13 @@ pub fn decode_eth_send_transaction_return(
     }
     // Parse stack_len
     let stack_len = call_result.get(tmp_counter).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
-            "Cannot parse and decode return arguments of Kakarot call: stack_len"
-        ))
+        EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call: stack_len"))
     })?;
     segmented_result.push(FeltOrFeltArray::Felt(*stack_len));
     tmp_counter += 1;
     // Parse second array: memory_accesses
     tmp_array_len = *(call_result.get(tmp_counter).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
+        EthApiError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: memory_accesses_len",
         ))
     })?);
@@ -181,7 +168,7 @@ pub fn decode_eth_send_transaction_return(
     tmp_counter += 1;
     while tmp_array_len != FieldElement::ZERO {
         let element = call_result.get(tmp_counter).ok_or_else(|| {
-            KakarotClientError::OtherError(anyhow::anyhow!(
+            EthApiError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode return arguments of Kakarot call: memory accesses array",
             ))
         })?;
@@ -195,15 +182,13 @@ pub fn decode_eth_send_transaction_return(
     }
     // Parse memory_len
     let memory_len = call_result.get(tmp_counter).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
-            "Cannot parse and decode return arguments of Kakarot call: memory len"
-        ))
+        EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call: memory len"))
     })?;
     segmented_result.push(FeltOrFeltArray::Felt(*memory_len));
     tmp_counter += 1;
     // Parse EVM address
     let evm_address = call_result.get(tmp_counter).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
+        EthApiError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: evm address"
         ))
     })?;
@@ -211,7 +196,7 @@ pub fn decode_eth_send_transaction_return(
     tmp_counter += 1;
     // Parse Starknet Address
     let starknet_address = call_result.get(tmp_counter).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
+        EthApiError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: starknet address"
         ))
     })?;
@@ -219,7 +204,7 @@ pub fn decode_eth_send_transaction_return(
     tmp_counter += 1;
     // Parse last array: return_data
     tmp_array_len = *(call_result.get(tmp_counter).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
+        EthApiError::OtherError(anyhow::anyhow!(
             "Cannot parse and decode return arguments of Kakarot call: return_data_len",
         ))
     })?);
@@ -227,7 +212,7 @@ pub fn decode_eth_send_transaction_return(
     tmp_counter += 1;
     while tmp_array_len != FieldElement::ZERO {
         let element = call_result.get(tmp_counter).ok_or_else(|| {
-            KakarotClientError::OtherError(anyhow::anyhow!(
+            EthApiError::OtherError(anyhow::anyhow!(
                 "Cannot parse and decode return arguments of Kakarot call: return data array",
             ))
         })?;
@@ -241,9 +226,7 @@ pub fn decode_eth_send_transaction_return(
     }
     // Parse gas_used return value
     let gas_used = call_result.get(tmp_counter).ok_or_else(|| {
-        KakarotClientError::OtherError(anyhow::anyhow!(
-            "Cannot parse and decode return arguments of Kakarot call: gas used"
-        ))
+        EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call: gas used"))
     })?;
     segmented_result.push(FeltOrFeltArray::Felt(*gas_used));
 
@@ -266,7 +249,7 @@ pub fn decode_signature_from_tx_calldata(calldata: &[FieldElement]) -> Result<Si
 /// # Errors
 ///
 /// TODO: add error case message
-pub fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, KakarotClientError> {
+pub fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, EthApiError> {
     element.map_or_else(
         || Ok(U256::from(0)),
         |x| {
@@ -329,10 +312,10 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
 /// # Errors
 ///
 /// TODO: add error case message
-pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, KakarotClientError> {
+pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, EthApiError> {
     let hash_hex = hex::encode(hash);
     let hash_felt = FieldElement::from_hex_be(&hash_hex).map_err(|e| {
-        KakarotClientError::OtherError(anyhow::anyhow!("Failed to convert Starknet block hash to FieldElement: {}", e))
+        EthApiError::OtherError(anyhow::anyhow!("Failed to convert Starknet block hash to FieldElement: {}", e))
     })?;
     Ok(hash_felt)
 }
