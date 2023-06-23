@@ -3,15 +3,10 @@ use eyre::{eyre, Result};
 use kakarot_rpc::run_server;
 use kakarot_rpc_core::client::KakarotClientImpl;
 use starknet::core::types::FieldElement;
-use tracing_subscriber::util::SubscriberInitExt;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
-
-    let filter = tracing_subscriber::EnvFilter::try_from_default_env()?
-        .add_directive("jsonrpsee[method_call{name = \"eth_chainId\"}]=trace".parse()?);
-    tracing_subscriber::FmtSubscriber::builder().with_env_filter(filter).finish().try_init()?;
 
     let starknet_rpc = std::env::var("STARKNET_RPC_URL")
         .map_err(|_| eyre!("Missing mandatory environment variable: STARKNET_RPC_URL"))?;
@@ -27,9 +22,9 @@ async fn main() -> Result<()> {
         eyre!("PROXY_ACCOUNT_CLASS_HASH should be provided as a hex string, got {proxy_account_class_hash}")
     })?;
 
-    let starknet_lightclient = KakarotClientImpl::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)?;
+    let kakarot_client = KakarotClientImpl::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)?;
 
-    let (server_addr, server_handle) = run_server(Box::new(starknet_lightclient)).await?;
+    let (server_addr, server_handle) = run_server(Box::new(kakarot_client)).await?;
     let url = format!("http://{server_addr}");
 
     println!("RPC Server running on {url}...");

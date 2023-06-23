@@ -160,5 +160,16 @@ mod tests {
             Ok(_) => panic!("Expected an error due to missing high value, but got a result."),
             Err(err) => assert_eq!(err.to_string(), "Not an convertible event: High value doesn't exist"),
         }
+  }
+  
+    #[tokio::test]  
+    async fn test_starknet_transaction_by_hash() {
+        let client = setup_mock_client_crate().await;
+        let starknet_tx = client
+            .transaction_by_hash(
+                H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap(),
+            )
+            .await;
+        assert!(starknet_tx.is_ok());
     }
 }
