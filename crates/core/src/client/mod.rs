@@ -1,25 +1,25 @@
-use std::convert::From;
+use std::fmt::Display;
 use std::str::FromStr;
 
+use anyhow::Error;
 use eyre::Result;
 use futures::future::join_all;
 use jsonrpsee::types::error::CallError;
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
-    keccak256, Address, BlockId, BlockNumberOrTag, Bytes, Bytes as RpcBytes, TransactionSigned, H160, H256, U128, U256,
-    U64,
+    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Bytes as RpcBytes, TransactionSigned, H160, H256,
+    U128, U256, U64, U8,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
-    BlockTransactions, CallRequest, FeeHistory, Log, RichBlock, Signature, SyncInfo, SyncStatus,
-    Transaction as EtherTransaction, TransactionReceipt,
+    BlockTransactions, CallRequest, FeeHistory, Log, RichBlock, SyncInfo, SyncStatus, Transaction as EtherTransaction,
+    TransactionReceipt,
 };
 use starknet::core::types::{
-    BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1,
-    DeployAccountTransactionReceipt, DeployTransactionReceipt, FieldElement, FunctionCall, InvokeTransaction,
-    InvokeTransactionReceipt, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, SyncStatusType,
-    Transaction as StarknetTransaction, TransactionReceipt as StarknetTransactionReceipt,
+    BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, FieldElement,
+    FunctionCall, InvokeTransactionReceipt, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, SyncStatusType,
+    Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
@@ -30,14 +30,13 @@ pub mod helpers;
 
 use async_trait::async_trait;
 use helpers::{
-    create_default_transaction_receipt, decode_eth_call_return, decode_signature_from_tx_calldata,
-    ethers_block_id_to_starknet_block_id, felt_to_u256, hash_to_field_element, raw_starknet_calldata,
+    decode_eth_call_return, ethers_block_id_to_starknet_block_id, hash_to_field_element, raw_starknet_calldata,
     starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray,
 };
 use reth_rpc_types::Index;
 
 use crate::client::constants::selectors::ETH_CALL;
-use crate::client::constants::CHAIN_ID;
+use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetTransaction};
 pub mod client_api;
 pub mod constants;
 use constants::selectors::BYTECODE;
@@ -46,8 +45,10 @@ use self::client_api::{KakarotClient, KakarotClientError};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
-use crate::models::convertible::ConvertibleStarknetBlock;
-use crate::models::{BlockWithTxHashes, BlockWithTxs, TokenBalance, TokenBalances};
+use crate::models::{
+    BlockWithTxHashes, BlockWithTxs, Felt252Wrapper, StarknetTransaction, StarknetTransactions, TokenBalance,
+    TokenBalances,
+};
 
 pub struct KakarotClientImpl<StarknetClient> {
     inner: StarknetClient,
@@ -57,10 +58,13 @@ pub struct KakarotClientImpl<StarknetClient> {
 
 impl From<KakarotClientError> for jsonrpsee::core::Error {
     fn from(err: KakarotClientError) -> Self {
+        fn wrap_anyhow(err: &dyn Display) -> Error {
+            anyhow::anyhow!("Kakarot Core: Light Client Request Error: {}", err)
+        }
         match err {
-            KakarotClientError::RequestError(e) => {
-                Self::Call(CallError::Failed(anyhow::anyhow!("Kakarot Core: Light Client Request Error: {}", e)))
-            }
+            KakarotClientError::RequestError(e) => Self::Call(CallError::Failed(wrap_anyhow(&e))),
+            KakarotClientError::ConversionError(e) => Self::Call(CallError::Failed(wrap_anyhow(&e))),
+            KakarotClientError::DataDecodingError(e) => Self::Call(CallError::Failed(wrap_anyhow(&e))),
             KakarotClientError::OtherError(e) => Self::Call(CallError::Failed(e)),
         }
     }
@@ -121,6 +125,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     fn inner(&self) -> &JsonRpcClient<HttpTransport> {
         &self.inner
     }
+
     /// Get the number of transactions in a block given a block id.
     /// The number of transactions in a block.
     ///
@@ -352,12 +357,13 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
 
         let block_transactions = match starknet_block {
             MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
-                self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions, None, None).await?
+                self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions.into(), None, None).await?
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
                 let blockhash_opt = Some(H256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
                 let blocknum_opt = Some(U256::from(block_with_txs.block_number));
-                self.filter_starknet_into_eth_txs(block_with_txs.transactions, blockhash_opt, blocknum_opt).await?
+                self.filter_starknet_into_eth_txs(block_with_txs.transactions.into(), blockhash_opt, blocknum_opt)
+                    .await?
             }
         };
         let len = match block_transactions {
@@ -375,40 +381,20 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     ) -> Result<EtherTransaction, KakarotClientError> {
         let index: u64 = usize::from(tx_index) as u64;
 
-        let starknet_tx = self.inner.get_transaction_by_block_id_and_index(block_id, index).await?;
+        let starknet_tx: StarknetTransaction =
+            self.inner.get_transaction_by_block_id_and_index(block_id, index).await?.into();
 
-        let tx_hash = match &starknet_tx {
-            StarknetTransaction::Invoke(InvokeTransaction::V0(tx)) => tx.transaction_hash,
-            StarknetTransaction::Invoke(InvokeTransaction::V1(tx)) => tx.transaction_hash,
-            StarknetTransaction::L1Handler(_)
-            | StarknetTransaction::Declare(_)
-            | StarknetTransaction::Deploy(_)
-            | StarknetTransaction::DeployAccount(_) => {
-                return Err(KakarotClientError::OtherError(anyhow::anyhow!(
-                    "Kakarot get_transaction_by_block_id_and_index: L1Handler, Declare, Deploy and DeployAccount \
-                     transactions unsupported"
-                )));
-            }
-        };
+        let tx_hash: FieldElement = starknet_tx.transaction_hash()?.into();
 
         let tx_receipt = self.inner.get_transaction_receipt(tx_hash).await?;
-        let (blockhash_opt, blocknum_opt) = match tx_receipt {
+        let (blockhash, blocknum) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
                 (Some(H256::from_slice(&(tr.block_hash).to_bytes_be())), Some(U256::from(tr.block_number)))
             }
-            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::L1Handler(_)) => (None, None),
-            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Declare(tr)) => {
-                (Some(H256::from_slice(&(tr.block_hash).to_bytes_be())), Some(U256::from(tr.block_number)))
-            }
-            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Deploy(tr)) => {
-                (Some(H256::from_slice(&(tr.block_hash).to_bytes_be())), Some(U256::from(tr.block_number)))
-            }
-            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::DeployAccount(tr)) => {
-                (Some(H256::from_slice(&(tr.block_hash).to_bytes_be())), Some(U256::from(tr.block_number)))
-            }
-            MaybePendingTransactionReceipt::PendingReceipt(_) => (None, None),
+            _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
-        let eth_tx = self.starknet_tx_into_kakarot_tx(starknet_tx, blockhash_opt, blocknum_opt).await?;
+
+        let eth_tx = starknet_tx.to_eth_transaction(self, blockhash, blocknum, Some(U256::from(index))).await?;
         Ok(eth_tx)
     }
 
@@ -448,8 +434,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
 
     async fn transaction_by_hash(&self, _hash: H256) -> Result<EtherTransaction, KakarotClientError> {
         let hash_felt = hash_to_field_element(_hash)?;
-        let transaction = self.inner.get_transaction_by_hash(hash_felt).await?;
-        let eth_transaction = self.starknet_tx_into_kakarot_tx(transaction, None, None).await?;
+        let transaction: StarknetTransaction = self.inner.get_transaction_by_hash(hash_felt).await?.into();
+        let eth_transaction = transaction.to_eth_transaction(self, None, None, None).await?;
         Ok(eth_transaction)
     }
 
@@ -466,7 +452,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     ///
     /// # Arguments
     ///
-    /// * `hash(H256)` - The block hash.
+    /// * `hash(H256)` - The transaction hash.
     ///
     /// # Returns
     ///
@@ -475,15 +461,13 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     /// `Ok(Option<TransactionReceipt>)` if the operation was successful.
     /// `Err(KakarotClientError)` if the operation failed.
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, KakarotClientError> {
-        let mut res_receipt = create_default_transaction_receipt();
-
         // TODO: Error when trying to transform 32 bytes hash to FieldElement
-        let hash_felt = hash_to_field_element(H256::from(hash.0))?;
-        let starknet_tx_receipt = self.inner.get_transaction_receipt(hash_felt).await?;
+        let transaction_hash = hash_to_field_element(H256::from(hash.0))?;
+        let starknet_tx_receipt = self.inner.get_transaction_receipt(transaction_hash).await?;
 
         let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
 
-        match starknet_tx_receipt {
+        let res_receipt = match starknet_tx_receipt {
             MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
                 StarknetTransactionReceipt::Invoke(InvokeTransactionReceipt {
                     transaction_hash,
@@ -492,35 +476,32 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                     block_number,
                     events,
                     ..
-                })
-                | StarknetTransactionReceipt::Deploy(DeployTransactionReceipt {
-                    transaction_hash,
-                    status,
-                    block_hash,
-                    block_number,
-                    events,
-                    ..
-                })
-                | StarknetTransactionReceipt::DeployAccount(DeployAccountTransactionReceipt {
-                    transaction_hash,
-                    status,
-                    block_hash,
-                    block_number,
-                    events,
-                    ..
                 }) => {
-                    res_receipt.transaction_hash = Some(H256::from(&transaction_hash.to_bytes_be()));
-                    res_receipt.status_code = match status {
+                    let starknet_tx: StarknetTransaction =
+                        self.inner.get_transaction_by_hash(transaction_hash).await?.into();
+
+                    let starknet_sender_address: FieldElement = starknet_tx.sender_address()?.into();
+                    let contract_address =
+                        Some(self.safe_get_evm_address(&starknet_sender_address, &starknet_block_id).await);
+
+                    let transaction_hash = Some(H256::from(&transaction_hash.to_bytes_be()));
+
+                    let block_hash = Some(H256::from(&block_hash.to_bytes_be()));
+                    let block_number = Some(U256::from(block_number));
+
+                    let eth_tx = starknet_tx.to_eth_transaction(self, None, None, None).await?;
+                    let from = eth_tx.from;
+                    let to = eth_tx.to;
+
+                    let status_code = match status {
                         StarknetTransactionStatus::Rejected | StarknetTransactionStatus::Pending => Some(U64::from(0)),
                         StarknetTransactionStatus::AcceptedOnL1 | StarknetTransactionStatus::AcceptedOnL2 => {
                             Some(U64::from(1))
                         }
                     };
-                    res_receipt.block_hash = Some(H256::from(&block_hash.to_bytes_be()));
-                    res_receipt.block_number = Some(U256::from(block_number));
 
                     // Handle events -- Will error if the event is not a Kakarot event
-                    let mut tmp_logs = Vec::new();
+                    let mut logs = Vec::new();
 
                     // Cannot use `map` because of the `await` call.
                     for event in events {
@@ -562,41 +543,32 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                             removed: false,
                         };
 
-                        tmp_logs.push(log);
+                        logs.push(log);
                     }
 
-                    res_receipt.logs = tmp_logs;
+                    TransactionReceipt {
+                        transaction_hash,
+                        transaction_index: None,
+                        block_hash,
+                        block_number,
+                        from,
+                        to,
+                        cumulative_gas_used: U256::from(1_000_000), // TODO: Fetch real data
+                        gas_used: Some(U256::from(500_000)),
+                        contract_address,
+                        logs,
+                        state_root: None,             // TODO: Fetch real data
+                        logs_bloom: Bloom::default(), // TODO: Fetch real data
+                        status_code,
+                        effective_gas_price: U128::from(1_000_000), // TODO: Fetch real data
+                        transaction_type: U8::from(0),              // TODO: Fetch real data
+                    }
                 }
-                // L1Handler and Declare transactions not supported for now in Kakarot
-                StarknetTransactionReceipt::L1Handler(_) | StarknetTransactionReceipt::Declare(_) => return Ok(None),
+                // L1Handler, Declare, Deploy and DeployAccount transactions unsupported for now in
+                // Kakarot
+                _ => return Ok(None),
             },
             MaybePendingTransactionReceipt::PendingReceipt(_) => {
-                return Ok(None);
-            }
-        };
-
-        let starknet_tx = self.inner.get_transaction_by_hash(hash_felt).await?;
-        match starknet_tx.clone() {
-            StarknetTransaction::Invoke(invoke_tx) => {
-                match invoke_tx {
-                    InvokeTransaction::V0(v0) => {
-                        let eth_address = self.safe_get_evm_address(&v0.contract_address, &starknet_block_id).await;
-                        res_receipt.contract_address = Some(eth_address);
-                    }
-                    InvokeTransaction::V1(_) => {}
-                };
-            }
-            StarknetTransaction::DeployAccount(_) | StarknetTransaction::Deploy(_) => {}
-            _ => return Ok(None),
-        };
-
-        let eth_tx = self.starknet_tx_into_kakarot_tx(starknet_tx, None, None).await;
-        match eth_tx {
-            Ok(tx) => {
-                res_receipt.from = tx.from;
-                res_receipt.to = tx.to;
-            }
-            _ => {
                 return Ok(None);
             }
         };
@@ -649,10 +621,9 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     async fn nonce(&self, ethereum_address: Address, block_id: StarknetBlockId) -> Result<U256, KakarotClientError> {
         let starknet_address = self.compute_starknet_address(ethereum_address, &block_id).await?;
 
-        let nonce = self.inner.get_nonce(block_id, starknet_address).await?;
-        let nonce = U256::from_be_bytes(nonce.to_bytes_be());
+        let nonce: Felt252Wrapper = self.inner.get_nonce(block_id, starknet_address).await?.into();
 
-        Ok(nonce)
+        Ok(nonce.into())
     }
 
     /// Get the balance in Starknet's native token of a specific EVM address.
@@ -747,123 +718,15 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         Ok(TokenBalances { address, token_balances })
     }
 
-    async fn starknet_tx_into_kakarot_tx(
-        &self,
-        tx: StarknetTransaction,
-        block_hash: Option<H256>,
-        block_number: Option<U256>,
-    ) -> Result<EtherTransaction, KakarotClientError> {
-        let mut ether_tx = EtherTransaction::default();
-        let class_hash;
-        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
-        let max_priority_fee_per_gas = Some(self.max_priority_fee_per_gas());
-
-        match tx {
-            StarknetTransaction::Invoke(invoke_tx) => {
-                match invoke_tx {
-                    InvokeTransaction::V0(v0) => {
-                        // Extract relevant fields from InvokeTransactionV0 and convert them to the
-                        // corresponding fields in EtherTransaction
-                        ether_tx.hash = H256::from_slice(&v0.transaction_hash.to_bytes_be());
-                        class_hash = self
-                            .inner
-                            .get_class_hash_at(StarknetBlockId::Tag(BlockTag::Latest), v0.contract_address)
-                            .await?;
-
-                        ether_tx.nonce = felt_to_u256(v0.nonce);
-                        ether_tx.from = self.get_evm_address(&v0.contract_address, &starknet_block_id).await?;
-                        // Define gas_price data
-                        ether_tx.gas_price = None;
-                        // Extracting the signature
-                        let signature = decode_signature_from_tx_calldata(&v0.calldata)?;
-                        let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
-                        ether_tx.signature =
-                            Some(Signature { r: signature.r, s: signature.s, v: U256::from_limbs_slice(&[v]) });
-                        // Extracting the data (transform from calldata)
-                        ether_tx.input = vec_felt_to_bytes(v0.calldata);
-                        // TODO:  Fetch transaction To
-                        ether_tx.to = None;
-                        // TODO:  Fetch value
-                        ether_tx.value = U256::from(100);
-                        // TODO: Fetch Gas
-                        ether_tx.gas = U256::from(100);
-                        // Extracting the chain_id
-                        ether_tx.chain_id = Some(CHAIN_ID.into());
-                        ether_tx.block_hash = block_hash;
-                        ether_tx.block_number = block_number;
-                        ether_tx.max_priority_fee_per_gas = max_priority_fee_per_gas;
-                    }
-
-                    InvokeTransaction::V1(v1) => {
-                        // Extract relevant fields from InvokeTransactionV0 and convert them to the
-                        // corresponding fields in EtherTransaction
-
-                        ether_tx.hash = H256::from_slice(&v1.transaction_hash.to_bytes_be());
-                        class_hash = self
-                            .inner
-                            .get_class_hash_at(StarknetBlockId::Tag(BlockTag::Latest), v1.sender_address)
-                            .await?;
-
-                        ether_tx.nonce = felt_to_u256(v1.nonce);
-
-                        ether_tx.from = self.get_evm_address(&v1.sender_address, &starknet_block_id).await?;
-
-                        // Define gas_price data
-                        ether_tx.gas_price = None;
-                        // Extracting the signature
-                        let signature = decode_signature_from_tx_calldata(&v1.calldata)?;
-                        let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
-                        ether_tx.signature =
-                            Some(Signature { r: signature.r, s: signature.s, v: U256::from_limbs_slice(&[v]) });
-                        // Extracting the data
-                        ether_tx.input = vec_felt_to_bytes(v1.calldata);
-                        ether_tx.to = None;
-                        // Extracting the to address
-                        // TODO: Get Data from Calldata
-                        ether_tx.to = None;
-                        // Extracting the value
-                        ether_tx.value = U256::from(100);
-                        // TODO:: Get Gas from Estimate
-                        ether_tx.gas = U256::from(100);
-                        // Extracting the chain_id
-                        ether_tx.chain_id = Some(CHAIN_ID.into());
-                        // Extracting the access_list
-                        ether_tx.access_list = None;
-                        // Extracting the transaction_type
-                        ether_tx.transaction_type = None;
-                        ether_tx.block_hash = block_hash;
-                        ether_tx.block_number = block_number;
-                        ether_tx.max_priority_fee_per_gas = max_priority_fee_per_gas;
-                    }
-                }
-            }
-            // Repeat the process for each variant of StarknetTransaction
-            StarknetTransaction::L1Handler(_)
-            | StarknetTransaction::Declare(_)
-            | StarknetTransaction::Deploy(_)
-            | StarknetTransaction::DeployAccount(_) => {
-                return Err(KakarotClientError::OtherError(anyhow::anyhow!(
-                    "Kakarot starknet_tx_into_eth_tx: L1Handler, Declare, Deploy and DeployAccount transactions \
-                     unsupported"
-                )));
-            }
-        }
-
-        if class_hash == self.proxy_account_class_hash() {
-            Ok(ether_tx)
-        } else {
-            Err(KakarotClientError::OtherError(anyhow::anyhow!("Kakarot Filter: Tx is not part of Kakarot")))
-        }
-    }
-
     async fn filter_starknet_into_eth_txs(
         &self,
-        initial_transactions: Vec<StarknetTransaction>,
-        blockhash_opt: Option<H256>,
-        blocknum_opt: Option<U256>,
+        initial_transactions: StarknetTransactions,
+        block_hash: Option<H256>,
+        block_number: Option<U256>,
     ) -> Result<BlockTransactions, KakarotClientError> {
-        let handles = initial_transactions.into_iter().map(|starknet_transaction| {
-            self.starknet_tx_into_kakarot_tx(starknet_transaction, blockhash_opt, blocknum_opt)
+        let handles = Into::<Vec<TransactionType>>::into(initial_transactions).into_iter().map(|tx| async move {
+            let tx = Into::<StarknetTransaction>::into(tx);
+            tx.to_eth_transaction(self, block_hash, block_number, None).await
         });
         let transactions_vec = join_all(handles).await.into_iter().filter_map(|transaction| transaction.ok()).collect();
         Ok(BlockTransactions::Full(transactions_vec))

@@ -43,6 +43,12 @@ pub mod gas {
     pub const MAX_PRIORITY_FEE_PER_GAS: U128 = U128::ZERO;
 }
 
+/// This module contains error messages related to Kakarot.
+pub mod error_messages {
+    /// Error message when a transaction is not part of Kakarot.
+    pub const INVALID_TRANSACTION_TYPE: &str = "L1Handler, Declare, Deploy and DeployAccount transactions unsupported";
+}
+
 // This module contains constants which are being used in place of real data that should be fetched
 // in production.
 lazy_static! {

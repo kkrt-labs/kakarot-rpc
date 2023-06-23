@@ -6,9 +6,7 @@ use reth_rpc_types::{
     BlockTransactions, CallRequest, FeeHistory, RichBlock, SyncStatus, Transaction as EtherTransaction,
     TransactionReceipt,
 };
-use starknet::core::types::{
-    BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement, Transaction as StarknetTransaction,
-};
+use starknet::core::types::{BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement};
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClientError};
 use starknet::providers::{JsonRpcClient, ProviderError};
 use thiserror::Error;
@@ -17,12 +15,17 @@ extern crate hex;
 use async_trait::async_trait;
 use reth_rpc_types::Index;
 
-use crate::models::TokenBalances;
+use super::helpers::DataDecodingError;
+use crate::models::{ConversionError, StarknetTransactions, TokenBalances};
 
 #[derive(Debug, Error)]
 pub enum KakarotClientError {
     #[error(transparent)]
     RequestError(#[from] ProviderError<JsonRpcClientError<reqwest::Error>>),
+    #[error(transparent)]
+    ConversionError(#[from] ConversionError),
+    #[error(transparent)]
+    DataDecodingError(#[from] DataDecodingError),
     #[error(transparent)]
     OtherError(#[from] anyhow::Error),
 }
@@ -105,16 +108,9 @@ pub trait KakarotClient: Send + Sync {
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, KakarotClientError>;
 
-    async fn starknet_tx_into_kakarot_tx(
-        &self,
-        tx: StarknetTransaction,
-        block_hash: Option<H256>,
-        block_number: Option<U256>,
-    ) -> Result<EtherTransaction, KakarotClientError>;
-
     async fn filter_starknet_into_eth_txs(
         &self,
-        initial_transactions: Vec<StarknetTransaction>,
+        initial_transactions: StarknetTransactions,
         blockhash_opt: Option<H256>,
         blocknum_opt: Option<U256>,
     ) -> Result<BlockTransactions, KakarotClientError>;
