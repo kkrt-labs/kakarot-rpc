@@ -9,12 +9,11 @@ use reth_primitives::{Address, Bloom, Bytes, H256, H64, U256};
 use reth_rpc_types::{Block, BlockTransactions, Header, Log, RichBlock, Signature, Transaction as EthTransaction};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{
-    Event, BlockId as StarknetBlockId, BlockTag, FieldElement, InvokeTransaction, MaybePendingBlockWithTxHashes,
+    BlockId as StarknetBlockId, BlockTag, Event, FieldElement, InvokeTransaction, MaybePendingBlockWithTxHashes,
     MaybePendingBlockWithTxs, Transaction,
 };
 use starknet::providers::Provider;
 use thiserror::Error;
-
 
 use crate::client::client_api::{KakarotClient, KakarotClientError};
 use crate::client::constants::{
@@ -291,6 +290,13 @@ impl From<Felt252Wrapper> for H256 {
     }
 }
 
+impl From<Felt252Wrapper> for Address {
+    fn from(felt: Felt252Wrapper) -> Self {
+        let felt: FieldElement = felt.into();
+        Address::from_slice(&felt.to_bytes_be()[12..])
+    }
+}
+
 impl From<Felt252Wrapper> for U256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
@@ -416,32 +422,32 @@ impl StarknetEvent {
 
 #[async_trait]
 impl ConvertibleStarknetEvent for StarknetEvent {
-    async fn to_eth_log(&self, _client: &dyn KakarotClient) -> Result<Log, KakarotClientError> {
-        // let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
-        // let address = match client.get_evm_address(&self.0.from_address, &starknet_block_id).await {
-        //     Ok(address) => address,
-        //     Err(_) => {
-        //         return Err(KakarotClientError::OtherError(anyhow::anyhow!(
-        //             "Starknet event address has no EVM mapping",
-        //         )));
-        //     }
-        // };
+    async fn to_eth_log(&self, client: &dyn KakarotClient) -> Result<Log, KakarotClientError> {
+        // If event `from_address` does not equal kakarot address, return early
+        if self.0.from_address != client.kakarot_address() {
+            return Err(KakarotClientError::OtherError(anyhow::anyhow!(
+                "Kakarot Filter: Event is not part of Kakarot"
+            )));
+        }
 
-        // Convert the StarkNet address to a byte array
-        let sn_bytes = self.0.from_address.clone().to_bytes_be();
-        // Take the last 20 bytes of the StarkNet address to create the Ethereum address
-        let address = Address::from_slice(&sn_bytes[12..32]);
+        // Derive the evm address from the last item in the `event.keys` vector and remove it
+        let (last_key_as_addr, keys_without_address) = self.0.keys.split_last().ok_or_else(|| {
+            KakarotClientError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not part of Kakarot"))
+        })?;
 
-        let topics: Vec<H256> = self
-            .0
-            .keys
+        let address: Address = {
+            let felt_wrapper: Felt252Wrapper = (*last_key_as_addr).into();
+            felt_wrapper.into()
+        };
+
+        let topics: Vec<H256> = keys_without_address
             .chunks(2)
             .map(|chunk| {
                 let low = BigUint::from_bytes_be(&chunk[0].to_bytes_be());
                 let high = match chunk.get(1) {
                     Some(h) => BigUint::from_bytes_be(&h.to_bytes_be()),
                     None => {
-                        return Err(anyhow::anyhow!("Not an convertible event: High value doesn't exist",));
+                        return Err(anyhow::anyhow!("Not a convertible event: High value doesn't exist",));
                     }
                 };
                 let result = low + (BigUint::from(2u128).pow(128u32) * high);
@@ -468,6 +474,6 @@ impl ConvertibleStarknetEvent for StarknetEvent {
             log_index: Option::None,
             transaction_index: Option::None,
             removed: false,
-       })
+        })
     }
 }

@@ -42,8 +42,13 @@ mod tests {
             data.iter().map(|&x| FieldElement::from_dec_str(&x.to_string()).unwrap()).collect();
         let bytes_data: Bytes = felt_data.iter().flat_map(|felt| felt.to_bytes_be()).collect::<Vec<u8>>().into();
         // see https://github.com/kkrt-labs/kakarot/blob/2133aaf58d5c8ae493c579570e43c9e011774309/tests/integration/solidity_contracts/PlainOpcodes/test_plain_opcodes.py#L120 this test generates the starknet event and ethereum log expected pair
+
+        // FROM is hardcoded to the current hardcoded value of kakarot_contract
         let event3 = Event {
-            from_address: FieldElement::from_hex_be("0x2B61c43A85bD35987C5311215e8288b823A6873E").unwrap(),
+            from_address: FieldElement::from_hex_be(
+                "0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75",
+            )
+            .unwrap(),
             keys: vec![
                 FieldElement::from_dec_str("169107000779806480224941431033275202659").unwrap(),
                 FieldElement::from_dec_str("119094765373898665007727700504125002894").unwrap(),
@@ -51,6 +56,7 @@ mod tests {
                 FieldElement::ZERO,
                 FieldElement::from_dec_str("11").unwrap(),
                 FieldElement::ZERO,
+                FieldElement::from_dec_str("247666869351872231004050922759157890085502224190").unwrap(),
             ],
             data: felt_data,
         };
@@ -87,8 +93,12 @@ mod tests {
 
         // see https://github.com/kkrt-labs/kakarot/blob/2133aaf58d5c8ae493c579570e43c9e011774309/tests/integration/solidity_contracts/PlainOpcodes/test_plain_opcodes.py#L124 this test generates the starknet event and ethereum log expected pair
         // given
+        // FROM is hardcoded to the current hardcoded value of kakarot_contract
         let event4 = Event {
-            from_address: FieldElement::from_hex_be("0x2B61c43A85bD35987C5311215e8288b823A6873E").unwrap(),
+            from_address: FieldElement::from_hex_be(
+                "0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75",
+            )
+            .unwrap(),
             keys: vec![
                 FieldElement::from_dec_str("253936425291629012954210100230398563497").unwrap(),
                 FieldElement::from_dec_str("171504579546982282416100792885946140532").unwrap(),
@@ -98,6 +108,7 @@ mod tests {
                 FieldElement::ZERO,
                 FieldElement::from_dec_str("10").unwrap(),
                 FieldElement::ZERO,
+                FieldElement::from_dec_str("247666869351872231004050922759157890085502224190").unwrap(),
             ],
             data: vec![],
         };
@@ -160,9 +171,9 @@ mod tests {
             Ok(_) => panic!("Expected an error due to missing high value, but got a result."),
             Err(err) => assert_eq!(err.to_string(), "Not an convertible event: High value doesn't exist"),
         }
-  }
-  
-    #[tokio::test]  
+    }
+
+    #[tokio::test]
     async fn test_starknet_transaction_by_hash() {
         let client = setup_mock_client_crate().await;
         let starknet_tx = client

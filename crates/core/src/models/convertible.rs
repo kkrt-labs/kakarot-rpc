@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use reth_primitives::{H256, U256};
 use reth_rpc_types::{Log, RichBlock, Transaction as EthTransaction};
+
 use crate::client::client_api::{KakarotClient, KakarotClientError};
 
 #[async_trait]
