@@ -36,7 +36,7 @@ pub struct TokenBalances {
 #[derive(Debug, Error)]
 pub enum ConversionError {
     #[error("transaction conversion error: {0}")]
-    TransactionConvertionError(String),
+    TransactionConversionError(String),
     #[error(transparent)]
     DataDecodingError(#[from] DataDecodingError),
 }
@@ -329,7 +329,7 @@ macro_rules! get_invoke_transaction_field {
                     InvokeTransaction::V0(tx) => Ok(tx.$field_v0.clone().into()),
                     InvokeTransaction::V1(tx) => Ok(tx.$field_v1.clone().into()),
                 },
-                _ => Err(ConversionError::TransactionConvertionError(
+                _ => Err(ConversionError::TransactionConversionError(
                     constants::error_messages::INVALID_TRANSACTION_TYPE.to_string(),
                 )),
             }
