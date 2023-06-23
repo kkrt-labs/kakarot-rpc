@@ -11,7 +11,15 @@ pub trait ConvertibleStarknetBlock {
 
 #[async_trait]
 pub trait ConvertibleStarknetEvent {
-    async fn to_eth_log(&self, client: &dyn KakarotClient) -> Result<Log, KakarotClientError>;
+    async fn to_eth_log(
+        &self,
+        client: &dyn KakarotClient,
+        block_hash: Option<H256>,
+        block_number: Option<U256>,
+        transaction_hash: Option<H256>,
+        log_index: Option<U256>,
+        transaction_index: Option<U256>,
+    ) -> Result<Log, KakarotClientError>;
 }
 
 #[async_trait]

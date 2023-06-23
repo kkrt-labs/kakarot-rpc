@@ -422,7 +422,15 @@ impl StarknetEvent {
 
 #[async_trait]
 impl ConvertibleStarknetEvent for StarknetEvent {
-    async fn to_eth_log(&self, client: &dyn KakarotClient) -> Result<Log, KakarotClientError> {
+    async fn to_eth_log(
+        &self,
+        client: &dyn KakarotClient,
+        block_hash: Option<H256>,
+        block_number: Option<U256>,
+        transaction_hash: Option<H256>,
+        log_index: Option<U256>,
+        transaction_index: Option<U256>,
+    ) -> Result<Log, KakarotClientError> {
         // If event `from_address` does not equal kakarot address, return early
         if self.0.from_address != client.kakarot_address() {
             return Err(KakarotClientError::OtherError(anyhow::anyhow!(
@@ -468,11 +476,11 @@ impl ConvertibleStarknetEvent for StarknetEvent {
             address,
             topics,
             data,
-            transaction_hash: Option::None,
-            block_hash: Option::None,
-            block_number: Option::None,
-            log_index: Option::None,
-            transaction_index: Option::None,
+            block_hash,
+            block_number,
+            transaction_hash,
+            log_index,
+            transaction_index,
             removed: false,
         })
     }

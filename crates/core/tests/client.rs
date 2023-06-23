@@ -64,7 +64,10 @@ mod tests {
         let sn_event3 = StarknetEvent::new(event3);
 
         // when
-        let resultant_eth_log3 = sn_event3.to_eth_log(&client).await.unwrap();
+        let resultant_eth_log3 = sn_event3
+            .to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None)
+            .await
+            .unwrap();
 
         // then
         let expected_eth_log3 = Log {
@@ -116,7 +119,10 @@ mod tests {
         let sn_event4 = StarknetEvent::new(event4);
 
         // when
-        let resultant_eth_log4 = sn_event4.to_eth_log(&client).await.unwrap();
+        let resultant_eth_log4 = sn_event4
+            .to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None)
+            .await
+            .unwrap();
 
         // then
         let expected_eth_log4 = Log {
@@ -148,14 +154,14 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_starknet_event_to_eth_log_failure_high_value_doesnt_exist() {
+    async fn test_starknet_event_to_eth_log_failure_from_address_not_kkrt_address() {
         let client = setup_mock_client_crate().await;
 
         let key_selector = get_selector_from_name("bbq_time").unwrap();
         // given
         let event = Event {
+            // from address is not kkrt address
             from_address: FieldElement::from_hex_be("0xdeadbeef").unwrap(),
-            // This keys vector only has one element for a pair, causing the high value to be missing.
             keys: vec![key_selector],
             data: vec![],
         };
@@ -163,13 +169,14 @@ mod tests {
         let sn_event = StarknetEvent::new(event);
 
         // when
-        let resultant_eth_log = sn_event.to_eth_log(&client).await;
+        let resultant_eth_log =
+            sn_event.to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None).await;
 
         // then
         // Expecting an error because the high value doesn't exist.
         match resultant_eth_log {
             Ok(_) => panic!("Expected an error due to missing high value, but got a result."),
-            Err(err) => assert_eq!(err.to_string(), "Not an convertible event: High value doesn't exist"),
+            Err(err) => assert_eq!(err.to_string(), "Kakarot Filter: Event is not part of Kakarot"),
         }
     }
 
