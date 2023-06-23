@@ -48,7 +48,6 @@ use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use crate::models::{
     BlockWithTxHashes, BlockWithTxs, StarknetTransaction, StarknetTransactions, TokenBalance, TokenBalances,
 };
-mod convertibles;
 
 pub struct KakarotClientImpl<StarknetClient> {
     inner: StarknetClient,
