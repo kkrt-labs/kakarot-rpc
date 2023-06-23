@@ -633,7 +633,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
 
     /// Get the nonce for a given ethereum address
     /// Convert Ethereum address to Starknet address
-    /// Return the nonce, by calling `get_nonce` on the account contract
+    /// Return the nonce, by calling `get_nonce` for the addresss via starknet rpc
     /// * `ethereum_address` - The EVM address to get the nonce of
     /// * `block_id` - The block to get the nonce at
     ///
