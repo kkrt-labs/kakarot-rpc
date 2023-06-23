@@ -14,11 +14,11 @@ build:
 
 # run
 run: 
-	source .env && RUST_LOG=debug cargo run -p kakarot_rpc
+	source .env && RUST_LOG=debug cargo run -p kakarot-rpc
 
 #run-release
 run-release:
-	source .env && cargo run --release -p kakarot_rpc
+	source .env && cargo run --release -p kakarot-rpc
 
 test:
 	cargo test --all
