@@ -446,6 +446,13 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         Ok(*result)
     }
 
+    async fn transaction_by_hash(&self, _hash: H256) -> Result<EtherTransaction, KakarotClientError> {
+        let hash_felt = hash_to_field_element(_hash)?;
+        let transaction = self.inner.get_transaction_by_hash(hash_felt).await?;
+        let eth_transaction = self.starknet_tx_into_kakarot_tx(transaction, None, None).await?;
+        Ok(eth_transaction)
+    }
+
     async fn submit_starknet_transaction(
         &self,
         request: BroadcastedInvokeTransactionV1,
