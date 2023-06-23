@@ -20,7 +20,7 @@ pub trait ConvertibleStarknetEvent {
         transaction_hash: Option<H256>,
         log_index: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<Log, KakarotClientError>;
+    ) -> Result<Log, EthApiError>;
 }
 
 #[async_trait]
