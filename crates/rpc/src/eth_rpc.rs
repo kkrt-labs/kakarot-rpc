@@ -12,6 +12,7 @@ use reth_rpc_types::{
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
 use crate::eth_api::EthApiServer;
 
@@ -147,7 +148,16 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn transaction_count(&self, _address: Address, _block_number: Option<BlockId>) -> Result<U256> {
-        Ok(U256::from(3))
+        let starknet_block_id = _block_number.map(ethers_block_id_to_starknet_block_id);
+        let starknet_block_id = match starknet_block_id {
+            Some(Ok(b)) => b,
+            Some(Err(e)) => return Err(e.into()),
+            None => StarknetBlockId::Tag(BlockTag::Latest),
+        };
+
+        let transaction_count = self.kakarot_client.nonce(_address, starknet_block_id).await?;
+
+        Ok(transaction_count)
     }
 
     async fn get_code(&self, _address: Address, _block_number: Option<BlockId>) -> Result<Bytes> {
