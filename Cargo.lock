@@ -1740,6 +1740,7 @@ dependencies = [
  "jsonrpsee",
  "lazy_static",
  "log",
+ "num-bigint",
  "reqwest",
  "reth-primitives",
  "reth-rlp",

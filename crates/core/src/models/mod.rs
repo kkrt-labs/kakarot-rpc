@@ -1,6 +1,7 @@
 pub mod balance;
 pub mod block;
 pub mod convertible;
+pub mod event;
 pub mod felt;
 pub mod transaction;
 
