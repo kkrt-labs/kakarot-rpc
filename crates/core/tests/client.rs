@@ -170,7 +170,8 @@ mod tests {
             sn_event.to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None).await;
 
         // then
-        // Expecting an error because the high value doesn't exist.
+        // Expecting an error because the `from_address` of the starknet event is not the expected deployed
+        // `kakarot_address'.
         match resultant_eth_log {
             Ok(_) => panic!("Expected an error due to missing high value, but got a result."),
             Err(err) => assert_eq!(err.to_string(), "Kakarot Filter: Event is not part of Kakarot"),
