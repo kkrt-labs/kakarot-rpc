@@ -44,11 +44,11 @@ mod tests {
         // see https://github.com/kkrt-labs/kakarot/blob/2133aaf58d5c8ae493c579570e43c9e011774309/tests/integration/solidity_contracts/PlainOpcodes/test_plain_opcodes.py#L120 this test generates the starknet event and ethereum log expected pair
 
         // FROM is hardcoded to the current hardcoded value of kakarot_contract
+        let kakarot_address =
+            FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
+
         let event3 = Event {
-            from_address: FieldElement::from_hex_be(
-                "0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75",
-            )
-            .unwrap(),
+            from_address: kakarot_address,
             keys: vec![
                 FieldElement::from_dec_str("169107000779806480224941431033275202659").unwrap(),
                 FieldElement::from_dec_str("119094765373898665007727700504125002894").unwrap(),
@@ -96,12 +96,8 @@ mod tests {
 
         // see https://github.com/kkrt-labs/kakarot/blob/2133aaf58d5c8ae493c579570e43c9e011774309/tests/integration/solidity_contracts/PlainOpcodes/test_plain_opcodes.py#L124 this test generates the starknet event and ethereum log expected pair
         // given
-        // FROM is hardcoded to the current hardcoded value of kakarot_contract
         let event4 = Event {
-            from_address: FieldElement::from_hex_be(
-                "0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75",
-            )
-            .unwrap(),
+            from_address: kakarot_address,
             keys: vec![
                 FieldElement::from_dec_str("253936425291629012954210100230398563497").unwrap(),
                 FieldElement::from_dec_str("171504579546982282416100792885946140532").unwrap(),

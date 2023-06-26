@@ -438,17 +438,16 @@ impl ConvertibleStarknetEvent for StarknetEvent {
         }
 
         // Derive the evm address from the last item in the `event.keys` vector and remove it
-        let (last_key_as_addr, keys_without_address) =
-            self.0.keys.split_last().ok_or_else(|| {
-                EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not part of Kakarot"))
-            })?;
+        let (evm_contract_address, keys) = self.0.keys.split_last().ok_or_else(|| {
+            EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not an Kakarot evm event"))
+        })?;
 
         let address: Address = {
-            let felt_wrapper: Felt252Wrapper = (*last_key_as_addr).into();
+            let felt_wrapper: Felt252Wrapper = (*evm_contract_address).into();
             felt_wrapper.into()
         };
 
-        let topics: Vec<H256> = keys_without_address
+        let topics: Vec<H256> = keys
             .chunks(2)
             .map(|chunk| {
                 let low = BigUint::from_bytes_be(&chunk[0].to_bytes_be());
