@@ -390,11 +390,13 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         Ok(*result)
     }
 
-    async fn transaction_by_hash(&self, _hash: H256) -> Result<EtherTransaction, EthApiError> {
-        let hash_felt: Felt252Wrapper = hash.try_into()?;
+    async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError> {
+        let hash: Felt252Wrapper = hash.try_into()?;
+
         let transaction: StarknetTransaction =
             self.inner.get_transaction_by_hash::<FieldElement>(hash.into()).await?.into();
-        let tx_receipt = self.inner.get_transaction_receipt(hash_felt).await?;
+        let hash: FieldElement = hash.into();
+        let tx_receipt = self.inner.get_transaction_receipt(hash).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
                 let block_hash: Felt252Wrapper = tr.block_hash.into();
