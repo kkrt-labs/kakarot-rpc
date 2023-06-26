@@ -26,4 +26,4 @@ reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710
 reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 async-trait = "0.1.58"
-jsonrpsee = { version = "0.16.2", features = ["full"] }
+jsonrpsee = { version = "0.18.2", features = ["full"] }

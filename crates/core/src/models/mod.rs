@@ -1,4 +1,5 @@
 pub mod convertible;
+
 use async_trait::async_trait;
 use convertible::ConvertibleStarknetBlock;
 use reth_primitives::{Address, Bloom, Bytes, H256, H64, U256};
@@ -11,7 +12,8 @@ use starknet::core::types::{
 use starknet::providers::Provider;
 use thiserror::Error;
 
-use crate::client::client_api::{KakarotClient, KakarotClientError};
+use super::client::errors::EthApiError;
+use crate::client::client_api::KakarotClient;
 use crate::client::constants::{
     self, CHAIN_ID, DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY,
 };
@@ -117,7 +119,7 @@ impl BlockWithTxs {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxHashes {
-    async fn to_eth_block(&self, client: &dyn KakarotClient) -> Result<RichBlock, KakarotClientError> {
+    async fn to_eth_block(&self, client: &dyn KakarotClient) -> Result<RichBlock, EthApiError> {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -193,7 +195,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxs {
-    async fn to_eth_block(&self, client: &dyn KakarotClient) -> Result<RichBlock, KakarotClientError> {
+    async fn to_eth_block(&self, client: &dyn KakarotClient) -> Result<RichBlock, EthApiError> {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -352,14 +354,14 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<EthTransaction, KakarotClientError> {
+    ) -> Result<EthTransaction, EthApiError> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 
         let class_hash = client.inner().get_class_hash_at(starknet_block_latest, sender_address).await?;
 
         if class_hash != client.proxy_account_class_hash() {
-            return Err(KakarotClientError::OtherError(anyhow::anyhow!("Kakarot Filter: Tx is not part of Kakarot")));
+            return Err(EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Tx is not part of Kakarot")));
         }
 
         let hash: H256 = self.transaction_hash()?.into();
