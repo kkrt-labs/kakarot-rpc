@@ -75,3 +75,10 @@ impl TryFrom<U256> for Felt252Wrapper {
         Ok(Self(felt))
     }
 }
+
+impl From<Felt252Wrapper> for H160 {
+    fn from(felt: Felt252Wrapper) -> Self {
+        let felt: FieldElement = felt.into();
+        H160::from_slice(&felt.to_bytes_be()[12..])
+    }
+}
