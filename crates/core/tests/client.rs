@@ -5,8 +5,9 @@ mod tests {
 
     use kakarot_rpc_core::client::client_api::KakarotClient;
     use kakarot_rpc_core::mock::wiremock_utils::setup_mock_client_crate;
+    use kakarot_rpc_core::models::block::BlockWithTxs;
     use kakarot_rpc_core::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent};
-    use kakarot_rpc_core::models::{BlockWithTxs, StarknetEvent};
+    use kakarot_rpc_core::models::event::StarknetEvent;
     use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
