@@ -15,7 +15,7 @@ impl From<Felt252WrapperError> for EthApiError {
         EthApiError::ConversionError(err.into())
     }
 }
-
+#[derive(Clone)]
 pub struct Felt252Wrapper(FieldElement);
 
 impl From<FieldElement> for Felt252Wrapper {
