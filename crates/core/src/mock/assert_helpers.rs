@@ -133,7 +133,7 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
             match invoke_tx {
                 InvokeTransaction::V0(v0) => {
                     assert_eq!(ether_tx.hash, H256::from_slice(&v0.transaction_hash.to_bytes_be()));
-                    assert_eq!(ether_tx.nonce, felt_to_u256(v0.nonce));
+                    assert_eq!(ether_tx.nonce, felt_to_u256(&v0.nonce));
                     assert_eq!(ether_tx.from, starknet_address_to_ethereum_address(&v0.contract_address));
                     // r and s values are extracted from the calldata of the first transaction
                     // in the starknet_getBlockWithTxs.json file.
@@ -151,7 +151,7 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                 }
                 InvokeTransaction::V1(v1) => {
                     assert_eq!(ether_tx.hash, H256::from_slice(&v1.transaction_hash.to_bytes_be()));
-                    assert_eq!(ether_tx.nonce, felt_to_u256(v1.nonce));
+                    assert_eq!(ether_tx.nonce, felt_to_u256(&v1.nonce));
                     assert_eq!(ether_tx.from, H160::from_str("0x54b288676b749def5fc10eb17244fe2c87375de1").unwrap());
                     // r and s values are extracted from the calldata of the first transaction
                     // in the starknet_getBlockWithTxs.json file.
@@ -176,7 +176,7 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
         }
         StarknetTransaction::DeployAccount(deploy_account_tx) => {
             assert_eq!(ether_tx.hash, H256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be()));
-            assert_eq!(ether_tx.nonce, felt_to_u256(deploy_account_tx.nonce));
+            assert_eq!(ether_tx.nonce, felt_to_u256(&deploy_account_tx.nonce));
             let signature = Signature {
                 v: felt_option_to_u256(Some(&deploy_account_tx.signature[2])).unwrap(),
                 r: felt_option_to_u256(Some(&deploy_account_tx.signature[0])).unwrap(),

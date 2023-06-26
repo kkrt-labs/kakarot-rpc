@@ -5,7 +5,7 @@ use kakarot_rpc_core::client::client_api::KakarotClient;
 use kakarot_rpc_core::client::constants::{CHAIN_ID, ESTIMATE_GAS};
 use kakarot_rpc_core::client::errors::rpc_err;
 use kakarot_rpc_core::client::helpers::ethers_block_id_to_starknet_block_id;
-use kakarot_rpc_core::models::TokenBalances;
+use kakarot_rpc_core::models::balance::TokenBalances;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
