@@ -10,7 +10,7 @@ use constants::selectors::BYTECODE;
 use eyre::Result;
 use futures::future::join_all;
 use helpers::{
-    decode_eth_call_return, ethers_block_id_to_starknet_block_id, hash_to_field_element, raw_starknet_calldata,
+    decode_eth_call_return, ethers_block_id_to_starknet_block_id, raw_starknet_calldata,
     starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray,
 };
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
@@ -40,11 +40,11 @@ use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_A
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use self::errors::EthApiError;
 use crate::client::constants::selectors::ETH_CALL;
+use crate::models::balance::{TokenBalance, TokenBalances};
+use crate::models::block::{BlockWithTxHashes, BlockWithTxs};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetTransaction};
-use crate::models::{
-    BlockWithTxHashes, BlockWithTxs, Felt252Wrapper, StarknetTransaction, StarknetTransactions, TokenBalance,
-    TokenBalances,
-};
+use crate::models::felt::Felt252Wrapper;
+use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 
 pub struct KakarotClientImpl<StarknetClient> {
     inner: StarknetClient,
@@ -123,7 +123,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     /// `Err(EthApiError)` if the operation failed.
     async fn block_number(&self) -> Result<U64, EthApiError> {
         let block_number = self.inner.block_number().await?;
-        Ok(U64::from(block_number))
+        Ok(block_number.into())
     }
 
     /// Get the block given a block id.
@@ -168,18 +168,12 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         ethereum_address: Address,
         starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, EthApiError> {
-        // Convert the Ethereum address to a hex-encoded string
-        let address_hex = hex::encode(ethereum_address);
         // Convert the hex-encoded string to a FieldElement
-        let ethereum_address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
-            EthApiError::OtherError(anyhow::anyhow!(
-                "Kakarot Core: Failed to convert Ethereum address to FieldElement: {}",
-                e
-            ))
-        })?;
+        let ethereum_address: Felt252Wrapper = ethereum_address.into();
+        let ethereum_address = ethereum_address.into();
 
         // Prepare the calldata for the get_starknet_contract_address function call
-        let tx_calldata_vec = vec![ethereum_address_felt];
+        let tx_calldata_vec = vec![ethereum_address];
         let request = FunctionCall {
             contract_address: self.kakarot_address,
             entry_point_selector: COMPUTE_STARKNET_ADDRESS,
@@ -219,24 +213,13 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         calldata: Bytes,
         starknet_block_id: StarknetBlockId,
     ) -> Result<Bytes, EthApiError> {
-        let address_hex = hex::encode(ethereum_address);
-
-        let ethereum_address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
-            EthApiError::OtherError(anyhow::anyhow!(
-                "Kakarot Core: Failed to convert Ethereum address to FieldElement: {}",
-                e
-            ))
-        })?;
+        let ethereum_address: Felt252Wrapper = ethereum_address.into();
+        let ethereum_address = ethereum_address.into();
 
         let mut calldata_vec = calldata.clone().into_iter().map(FieldElement::from).collect::<Vec<FieldElement>>();
 
-        let mut call_parameters = vec![
-            ethereum_address_felt,
-            FieldElement::MAX,
-            FieldElement::ZERO,
-            FieldElement::ZERO,
-            calldata.len().into(),
-        ];
+        let mut call_parameters =
+            vec![ethereum_address, FieldElement::MAX, FieldElement::ZERO, FieldElement::ZERO, calldata.len().into()];
 
         call_parameters.append(&mut calldata_vec);
 
@@ -256,7 +239,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let segmented_result = decode_eth_call_return(&call_result)?;
 
         // Convert the result of the function call to a vector of bytes
-        let return_data = segmented_result.get(0).ok_or_else(|| {
+        let return_data = segmented_result.first().ok_or_else(|| {
             EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode last argument of Kakarot call",))
         })?;
         if let FeltOrFeltArray::FeltArray(felt_array) = return_data {
@@ -339,10 +322,11 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                 self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions.into(), None, None).await?
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
-                let blockhash_opt = Some(H256::from_slice(&(block_with_txs.block_hash).to_bytes_be()));
-                let blocknum_opt = Some(U256::from(block_with_txs.block_number));
-                self.filter_starknet_into_eth_txs(block_with_txs.transactions.into(), blockhash_opt, blocknum_opt)
-                    .await?
+                let block_hash: Felt252Wrapper = block_with_txs.block_hash.into();
+                let block_hash = Some(block_hash.into());
+                let block_number: Felt252Wrapper = block_with_txs.block_number.into();
+                let block_number = Some(block_number.into());
+                self.filter_starknet_into_eth_txs(block_with_txs.transactions.into(), block_hash, block_number).await?
             }
         };
         let len = match block_transactions {
@@ -388,19 +372,13 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         ethereum_address: Address,
         starknet_block_id: &StarknetBlockId,
     ) -> Result<FieldElement, EthApiError> {
-        let address_hex = hex::encode(ethereum_address);
-
-        let ethereum_address_felt = FieldElement::from_hex_be(&address_hex).map_err(|e| {
-            EthApiError::OtherError(anyhow::anyhow!(
-                "Kakarot Core: Failed to convert Ethereum address to FieldElement: {}",
-                e
-            ))
-        })?;
+        let ethereum_address: Felt252Wrapper = ethereum_address.into();
+        let ethereum_address = ethereum_address.into();
 
         let request = FunctionCall {
             contract_address: self.kakarot_address,
             entry_point_selector: COMPUTE_STARKNET_ADDRESS,
-            calldata: vec![ethereum_address_felt],
+            calldata: vec![ethereum_address],
         };
 
         let starknet_contract_address = self.inner.call(request, starknet_block_id).await?;
@@ -413,8 +391,9 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     }
 
     async fn transaction_by_hash(&self, _hash: H256) -> Result<EtherTransaction, EthApiError> {
-        let hash_felt = hash_to_field_element(_hash)?;
-        let transaction: StarknetTransaction = self.inner.get_transaction_by_hash(hash_felt).await?.into();
+        let hash_felt: Felt252Wrapper = hash.try_into()?;
+        let transaction: StarknetTransaction =
+            self.inner.get_transaction_by_hash::<FieldElement>(hash.into()).await?.into();
         let tx_receipt = self.inner.get_transaction_receipt(hash_felt).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
@@ -447,8 +426,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     /// `Err(EthApiError)` if the operation failed.
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError> {
         // TODO: Error when trying to transform 32 bytes hash to FieldElement
-        let transaction_hash = hash_to_field_element(H256::from(hash.0))?;
-        let starknet_tx_receipt = self.inner.get_transaction_receipt(transaction_hash).await?;
+        let transaction_hash: Felt252Wrapper = hash.try_into()?;
+        let starknet_tx_receipt = self.inner.get_transaction_receipt::<FieldElement>(transaction_hash.into()).await?;
 
         let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
 
@@ -469,10 +448,14 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                     let contract_address =
                         Some(self.safe_get_evm_address(&starknet_sender_address, &starknet_block_id).await);
 
-                    let transaction_hash = Some(H256::from(&transaction_hash.to_bytes_be()));
+                    let transaction_hash: Felt252Wrapper = transaction_hash.into();
+                    let transaction_hash: Option<H256> = Some(transaction_hash.into());
 
-                    let block_hash = Some(H256::from(&block_hash.to_bytes_be()));
-                    let block_number = Some(U256::from(block_number));
+                    let block_hash: Felt252Wrapper = block_hash.into();
+                    let block_hash: Option<H256> = Some(block_hash.into());
+
+                    let block_number: Felt252Wrapper = block_number.into();
+                    let block_number: Option<U256> = Some(block_number.into());
 
                     let eth_tx = starknet_tx.to_eth_transaction(self, None, None, None).await?;
                     let from = eth_tx.from;
@@ -661,9 +644,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         address: Address,
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, EthApiError> {
-        let entrypoint = hash_to_field_element(keccak256("balanceOf(address)")).map_err(|e| {
-            EthApiError::OtherError(anyhow::anyhow!("Failed to convert entrypoint to FieldElement: {}", e))
-        })?;
+        let entrypoint: Felt252Wrapper = keccak256("balanceOf(address)").try_into()?;
+        let entrypoint: FieldElement = entrypoint.into();
         let felt_address = FieldElement::from_str(&address.to_string()).map_err(|e| {
             EthApiError::OtherError(anyhow::anyhow!("Failed to convert address to FieldElement: {}", e))
         })?;

@@ -1,6 +1,6 @@
 use eyre::Result;
 use reth_primitives::{
-    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, H256, U256,
+    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, U256,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
@@ -14,6 +14,7 @@ use thiserror::Error;
 use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
 use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
 use crate::client::errors::EthApiError;
+use crate::models::felt::Felt252Wrapper;
 
 #[derive(Debug, Error)]
 pub enum DataDecodingError {
@@ -74,10 +75,8 @@ impl TryFrom<Vec<FieldElement>> for Calls {
 pub fn ethers_block_id_to_starknet_block_id(block: EthBlockId) -> Result<StarknetBlockId, EthApiError> {
     match block {
         EthBlockId::Hash(hash) => {
-            let hash_felt = FieldElement::from_bytes_be(&hash.block_hash).map_err(|e| {
-                EthApiError::OtherError(anyhow::anyhow!("Failed to convert Starknet block hash to FieldElement: {}", e))
-            })?;
-            Ok(StarknetBlockId::Hash(hash_felt))
+            let hash: Felt252Wrapper = hash.block_hash.try_into()?;
+            Ok(StarknetBlockId::Hash(hash.into()))
         }
         EthBlockId::Number(number) => Ok(ethers_block_number_to_starknet_block_id(number)),
     }
@@ -101,7 +100,7 @@ pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FeltOr
     // fail is Kakarot API changes)
     // Declare Vec of Result
     let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
-    let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
+    let mut tmp_array_len: FieldElement = *call_result.first().ok_or_else(|| {
         EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
     })?;
     let mut tmp_counter = 1_usize;
@@ -132,7 +131,7 @@ pub fn decode_eth_send_transaction_return(call_result: &[FieldElement]) -> Resul
     // fail is Kakarot API changes)
     // Declare Vec of Result
     let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
-    let mut tmp_array_len: FieldElement = *call_result.get(0).ok_or_else(|| {
+    let mut tmp_array_len: FieldElement = *call_result.first().ok_or_else(|| {
         EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
     })?;
     let mut tmp_counter = 1_usize;
@@ -250,17 +249,11 @@ pub fn decode_signature_from_tx_calldata(calldata: &[FieldElement]) -> Result<Si
 ///
 /// TODO: add error case message
 pub fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, EthApiError> {
-    element.map_or_else(
-        || Ok(U256::from(0)),
-        |x| {
-            let inner = x.to_bytes_be();
-            Ok(U256::from_be_bytes(inner))
-        },
-    )
+    element.map_or_else(|| Ok(U256::from(0)), |x| Ok(felt_to_u256(x)))
 }
 
 #[must_use]
-pub fn felt_to_u256(element: FieldElement) -> U256 {
+pub fn felt_to_u256(element: &FieldElement) -> U256 {
     let inner = element.to_bytes_be();
     U256::from_be_bytes(inner)
 }
@@ -307,17 +300,6 @@ pub fn create_default_transaction_receipt() -> TransactionReceipt {
         // TODO: Fetch real data
         transaction_type: *TRANSACTION_TYPE,
     }
-}
-
-/// # Errors
-///
-/// TODO: add error case message
-pub fn hash_to_field_element(hash: H256) -> Result<FieldElement, EthApiError> {
-    let hash_hex = hex::encode(hash);
-    let hash_felt = FieldElement::from_hex_be(&hash_hex).map_err(|e| {
-        EthApiError::OtherError(anyhow::anyhow!("Failed to convert Starknet block hash to FieldElement: {}", e))
-    })?;
-    Ok(hash_felt)
 }
 
 pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
