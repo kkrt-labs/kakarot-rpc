@@ -23,6 +23,16 @@ pub enum EthRpcErrorCode {
     TransactionRejected = -32003,
 }
 
+// Error that can accure when preparing configuration.
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("Missing mandatory environment variable: {0}")]
+    EnvironmentVariableMissing(String),
+    /// {0} is details of what is wrong with the variable setting.
+    #[error("{0}")]
+    EnvironmentVariableSetWrong(String),
+}
+
 /// Error that can accure when interacting with the Kakarot ETH API.
 #[derive(Debug, Error)]
 pub enum EthApiError {

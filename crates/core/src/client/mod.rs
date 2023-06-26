@@ -1,4 +1,5 @@
 pub mod client_api;
+pub mod config;
 pub mod constants;
 pub mod errors;
 pub mod helpers;
@@ -35,6 +36,7 @@ use starknet::providers::Provider;
 use url::Url;
 
 use self::client_api::KakarotProvider;
+use self::config::StarknetConfig;
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
@@ -65,12 +67,9 @@ impl KakarotClient<JsonRpcClient<HttpTransport>> {
     /// # Errors
     ///
     /// `Err(EthApiError)` if the operation failed.
-    pub fn new(
-        starknet_rpc: &str,
-        kakarot_address: FieldElement,
-        proxy_account_class_hash: FieldElement,
-    ) -> Result<Self> {
-        let url = Url::parse(starknet_rpc)?;
+    pub fn new(starknet_cfg: StarknetConfig) -> Result<Self> {
+        let StarknetConfig { starknet_rpc, kakarot_address, proxy_account_class_hash } = starknet_cfg;
+        let url = Url::parse(&starknet_rpc)?;
         Ok(Self {
             starknet_provider: JsonRpcClient::new(HttpTransport::new(url)),
             kakarot_address,

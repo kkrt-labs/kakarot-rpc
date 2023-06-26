@@ -1682,6 +1682,7 @@ dependencies = [
  "hex",
  "jsonrpsee",
  "kakarot_rpc_core",
+ "lazy_static",
  "log",
  "reqwest",
  "reth-primitives",
