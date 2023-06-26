@@ -366,14 +366,17 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let tx_hash: FieldElement = starknet_tx.transaction_hash()?.into();
 
         let tx_receipt = self.inner.get_transaction_receipt(tx_hash).await?;
-        let (blockhash, blocknum) = match tx_receipt {
+        let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                (Some(H256::from_slice(&(tr.block_hash).to_bytes_be())), Some(U256::from(tr.block_number)))
+                let block_has_felt252: Felt252Wrapper = tr.block_hash.into();
+                let block_hash: H256 = block_has_felt252.into();
+                let block_num = U256::from(tr.block_number);
+                (Some(block_hash), Some(block_num))
             }
             _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
 
-        let eth_tx = starknet_tx.to_eth_transaction(self, blockhash, blocknum, Some(U256::from(index))).await?;
+        let eth_tx = starknet_tx.to_eth_transaction(self, block_hash, block_num, Some(U256::from(index))).await?;
         Ok(eth_tx)
     }
 
@@ -415,13 +418,16 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let hash_felt = hash_to_field_element(_hash)?;
         let transaction: StarknetTransaction = self.inner.get_transaction_by_hash(hash_felt).await?.into();
         let tx_receipt = self.inner.get_transaction_receipt(hash_felt).await?;
-        let (blockhash, blocknum) = match tx_receipt {
+        let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                (Some(H256::from_slice(&(tr.block_hash).to_bytes_be())), Some(U256::from(tr.block_number)))
+                let block_has_felt252: Felt252Wrapper = tr.block_hash.into();
+                let block_hash: H256 = block_has_felt252.into();
+                let block_num = U256::from(tr.block_number);
+                (Some(block_hash), Some(block_num))
             }
             _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
-        let eth_transaction = transaction.to_eth_transaction(self, blockhash, blocknum, None).await?;
+        let eth_transaction = transaction.to_eth_transaction(self, block_hash, block_num, None).await?;
         Ok(eth_transaction)
     }
 
