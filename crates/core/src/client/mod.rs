@@ -394,7 +394,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let hash: Felt252Wrapper = hash.try_into()?;
 
         let transaction: StarknetTransaction =
-            self.inner.get_transaction_by_hash::<FieldElement>(hash.into()).await?.into();
+            self.inner.get_transaction_by_hash::<FieldElement>(hash.clone().into()).await?.into();
         let hash: FieldElement = hash.into();
         let tx_receipt = self.inner.get_transaction_receipt(hash).await?;
         let (block_hash, block_num) = match tx_receipt {
