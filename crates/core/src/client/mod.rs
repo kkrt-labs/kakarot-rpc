@@ -368,10 +368,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let tx_receipt = self.inner.get_transaction_receipt(tx_hash).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                let block_has_felt252: Felt252Wrapper = tr.block_hash.into();
-                let block_hash: H256 = block_has_felt252.into();
-                let block_num = U256::from(tr.block_number);
-                (Some(block_hash), Some(block_num))
+                let block_hash: Felt252Wrapper = tr.block_hash.into();
+                (Some(block_hash.into()), Some(U256::from(tr.block_number)))
             }
             _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
@@ -420,10 +418,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let tx_receipt = self.inner.get_transaction_receipt(hash_felt).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                let block_has_felt252: Felt252Wrapper = tr.block_hash.into();
-                let block_hash: H256 = block_has_felt252.into();
-                let block_num = U256::from(tr.block_number);
-                (Some(block_hash), Some(block_num))
+                let block_hash: Felt252Wrapper = tr.block_hash.into();
+                (Some(block_hash.into()), Some(U256::from(tr.block_number)))
             }
             _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
