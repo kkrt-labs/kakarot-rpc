@@ -3,7 +3,7 @@ mod tests {
 
     use std::str::FromStr;
 
-    use kakarot_rpc_core::client::client_api::KakarotClient;
+    use kakarot_rpc_core::client::client_api::KakarotProvider;
     use kakarot_rpc_core::mock::wiremock_utils::setup_mock_client_crate;
     use kakarot_rpc_core::models::block::BlockWithTxs;
     use kakarot_rpc_core::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent};
@@ -17,7 +17,7 @@ mod tests {
     #[tokio::test]
     async fn test_starknet_block_to_eth_block() {
         let client = setup_mock_client_crate().await;
-        let starknet_client = client.inner();
+        let starknet_client = client.starknet_provider();
         let starknet_block = starknet_client.get_block_with_txs(BlockId::Tag(BlockTag::Latest)).await.unwrap();
         let eth_block = BlockWithTxs::new(starknet_block).to_eth_block(&client).await.unwrap();
 
