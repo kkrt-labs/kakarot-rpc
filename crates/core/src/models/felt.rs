@@ -1,3 +1,4 @@
+use reth_primitives::rpc::U256 as RpcU256;
 use reth_primitives::{H160, H256, U256};
 use starknet::core::types::{FieldElement, FromByteArrayError};
 use thiserror::Error;
@@ -15,6 +16,7 @@ impl From<Felt252WrapperError> for EthApiError {
         EthApiError::ConversionError(err.into())
     }
 }
+
 #[derive(Clone)]
 pub struct Felt252Wrapper(FieldElement);
 
@@ -44,10 +46,10 @@ impl From<H160> for Felt252Wrapper {
     }
 }
 
-impl From<Felt252Wrapper> for H256 {
+impl From<Felt252Wrapper> for H160 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
-        H256::from_slice(&felt.to_bytes_be())
+        H160::from_slice(&felt.to_bytes_be()[12..])
     }
 }
 
@@ -60,10 +62,10 @@ impl TryFrom<H256> for Felt252Wrapper {
     }
 }
 
-impl From<Felt252Wrapper> for U256 {
+impl From<Felt252Wrapper> for H256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
-        U256::from_be_bytes(felt.to_bytes_be())
+        H256::from_slice(&felt.to_bytes_be())
     }
 }
 
@@ -76,9 +78,16 @@ impl TryFrom<U256> for Felt252Wrapper {
     }
 }
 
-impl From<Felt252Wrapper> for H160 {
+impl From<Felt252Wrapper> for U256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
-        H160::from_slice(&felt.to_bytes_be()[12..])
+        U256::from_be_bytes(felt.to_bytes_be())
+    }
+}
+
+impl From<Felt252Wrapper> for RpcU256 {
+    fn from(felt: Felt252Wrapper) -> Self {
+        let felt: FieldElement = felt.into();
+        RpcU256::from_big_endian(&felt.to_bytes_be())
     }
 }
