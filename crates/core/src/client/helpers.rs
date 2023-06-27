@@ -1,6 +1,6 @@
 use eyre::Result;
 use reth_primitives::{
-    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160, U256,
+    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
@@ -245,19 +245,6 @@ pub fn decode_signature_from_tx_calldata(calldata: &[FieldElement]) -> Result<Si
     Ok(decoded_tx.signature)
 }
 
-/// # Errors
-///
-/// TODO: add error case message
-pub fn felt_option_to_u256(element: Option<&FieldElement>) -> Result<U256, EthApiError> {
-    element.map_or_else(|| Ok(U256::from(0)), |x| Ok(felt_to_u256(x)))
-}
-
-#[must_use]
-pub fn felt_to_u256(element: &FieldElement) -> U256 {
-    let inner = element.to_bytes_be();
-    U256::from_be_bytes(inner)
-}
-
 #[must_use]
 pub fn vec_felt_to_bytes(felt_vec: Vec<FieldElement>) -> Bytes {
     let felt_vec_in_u8: Vec<u8> = felt_vec.into_iter().flat_map(|x| x.to_bytes_be()).collect();
@@ -340,6 +327,8 @@ pub fn raw_starknet_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Vec
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
+
+    use reth_primitives::U256;
 
     use super::*;
 

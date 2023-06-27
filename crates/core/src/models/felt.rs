@@ -15,6 +15,7 @@ impl From<Felt252WrapperError> for EthApiError {
         EthApiError::ConversionError(err.into())
     }
 }
+
 #[derive(Clone)]
 pub struct Felt252Wrapper(FieldElement);
 
@@ -44,10 +45,10 @@ impl From<H160> for Felt252Wrapper {
     }
 }
 
-impl From<Felt252Wrapper> for H256 {
+impl From<Felt252Wrapper> for H160 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
-        H256::from_slice(&felt.to_bytes_be())
+        H160::from_slice(&felt.to_bytes_be()[12..])
     }
 }
 
@@ -60,10 +61,10 @@ impl TryFrom<H256> for Felt252Wrapper {
     }
 }
 
-impl From<Felt252Wrapper> for U256 {
+impl From<Felt252Wrapper> for H256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
-        U256::from_be_bytes(felt.to_bytes_be())
+        H256::from_slice(&felt.to_bytes_be())
     }
 }
 
@@ -76,9 +77,9 @@ impl TryFrom<U256> for Felt252Wrapper {
     }
 }
 
-impl From<Felt252Wrapper> for H160 {
+impl From<Felt252Wrapper> for U256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
-        H160::from_slice(&felt.to_bytes_be()[12..])
+        U256::from_be_bytes(felt.to_bytes_be())
     }
 }
