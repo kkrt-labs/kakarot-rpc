@@ -480,7 +480,9 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                             contract_address = Some(Address::from(evm_address_sliced));
                         } else {
                             // If there are no events, return an error
-                            println!("Kakarot Core: Failed to get EVM address from Kakarot");
+                            return Err(EthApiError::OtherError(anyhow::anyhow!(
+                                "Kakarot Core: Failed to get EVM address from Kakarot"
+                            )));
                         }
                     }
 
