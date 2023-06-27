@@ -9,7 +9,7 @@ use super::ConversionError;
 use crate::client::client_api::KakarotClient;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
-use crate::client::helpers::{decode_signature_from_tx_calldata, vec_felt_to_bytes};
+use crate::client::helpers::{decode_signature_and_to_address_from_tx_calldata, vec_felt_to_bytes};
 use crate::models::convertible::ConvertibleStarknetTransaction;
 
 pub struct StarknetTransaction(Transaction);
@@ -94,7 +94,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
         // TODO: wrap to abstract the following lines?
         // Extracting the signature
-        let signature = decode_signature_from_tx_calldata(&calldata)?;
+        let (signature, to) = decode_signature_and_to_address_from_tx_calldata(&calldata)?;
         let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
         let signature = Some(Signature { r: signature.r, s: signature.s, v: U256::from_limbs_slice(&[v]) });
 
@@ -105,7 +105,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             block_number,
             transaction_index,
             from,
-            to: None,               // TODO fetch the to
+            to,                     // TODO fetch the to
             value: U256::from(100), // TODO fetch the value
             gas_price: None,        // TODO fetch the gas price
             gas: U256::from(100),   // TODO fetch the gas amount

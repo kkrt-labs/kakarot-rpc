@@ -446,10 +446,6 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                     let starknet_tx: StarknetTransaction =
                         self.inner.get_transaction_by_hash(transaction_hash).await?.into();
 
-                    let starknet_sender_address: FieldElement = starknet_tx.sender_address()?.into();
-                    let contract_address =
-                        Some(self.safe_get_evm_address(&starknet_sender_address, &starknet_block_id).await);
-
                     let transaction_hash: Felt252Wrapper = transaction_hash.into();
                     let transaction_hash: Option<H256> = Some(transaction_hash.into());
 
@@ -462,6 +458,31 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                     let eth_tx = starknet_tx.to_eth_transaction(self, None, None, None).await?;
                     let from = eth_tx.from;
                     let to = eth_tx.to;
+                    let mut contract_address = to;
+
+                    // If Address is none, contract address from events
+                    if to.is_none() {
+                        // Check if there is any event and if the first event has any data
+                        if let Some(first_event_data) = events.get(0).and_then(|event| event.data.get(0)) {
+                            let evm_address_felt = *first_event_data;
+                            let evm_address = evm_address_felt.to_bytes_be();
+
+                            // Workaround as .get(12..32) does not dynamically size the slice
+                            let slice: &[u8] = evm_address.get(12..32).ok_or_else(|| {
+                                EthApiError::OtherError(anyhow::anyhow!(
+                                    "Kakarot Core: Failed to cast EVM address from 32 bytes to 20 bytes EVM format"
+                                ))
+                            })?;
+                            let mut tmp_slice = [0u8; 20];
+                            tmp_slice.copy_from_slice(slice);
+                            let evm_address_sliced = &tmp_slice;
+
+                            contract_address = Some(Address::from(evm_address_sliced));
+                        } else {
+                            // If there are no events, return an error
+                            println!("Kakarot Core: Failed to get EVM address from Kakarot");
+                        }
+                    }
 
                     let status_code = match status {
                         StarknetTransactionStatus::Rejected | StarknetTransactionStatus::Pending => Some(U64::from(0)),

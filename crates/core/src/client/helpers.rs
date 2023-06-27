@@ -232,17 +232,25 @@ pub fn decode_eth_send_transaction_return(call_result: &[FieldElement]) -> Resul
     Ok(segmented_result)
 }
 
-pub fn decode_signature_from_tx_calldata(calldata: &[FieldElement]) -> Result<Signature, DataDecodingError> {
+pub fn decode_signature_and_to_address_from_tx_calldata(
+    calldata: &[FieldElement],
+) -> Result<(Signature, Option<Address>), DataDecodingError> {
     let calls =
         Calls::try_from(calldata.to_vec()).map_err(|e| DataDecodingError::SignatureDecodingError(e.to_string()))?;
+
     let calldata = calls.0[0] // for now we decode signature only from the first call
         .calldata
         .iter()
         .filter_map(|x| u8::try_from(*x).ok())
         .collect::<Vec<u8>>();
+
     let decoded_tx = TransactionSigned::decode(&mut calldata.as_slice())
         .map_err(|e| DataDecodingError::SignatureDecodingError(e.to_string()))?;
-    Ok(decoded_tx.signature)
+
+    // We create a mutable Option variable for the address, as initially, we don't know if it exists
+    let extracted_address = decoded_tx.transaction.to();
+
+    Ok((decoded_tx.signature, extracted_address))
 }
 
 /// # Errors
@@ -399,7 +407,7 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_signature_from_tx_calldata() {
+    fn test_decode_signature_and_to_address_from_tx_calldata() {
         let calldata = vec![
             "0x01",
             "0x06eac8dd0d230c4b37f46bf4c20fb2dc21cd55f87791e2a76beae8059bd8e5e6",
@@ -526,7 +534,7 @@ mod tests {
             "0x061",
         ];
         let calldata = calldata.into_iter().filter_map(|f| FieldElement::from_hex_be(f).ok()).collect::<Vec<_>>();
-        let signature = decode_signature_from_tx_calldata(&calldata).unwrap();
+        let (signature, to) = decode_signature_and_to_address_from_tx_calldata(&calldata).unwrap();
         assert_eq!(
             signature.r,
             U256::from_str("0x889be67d59bc1a43dd803955f7917ddcb7d748ed3e9b00cdb159f294651976b8").unwrap()
@@ -536,6 +544,7 @@ mod tests {
             U256::from_str("0x03801702a606ffbfd60364ff897f7ca511411d6660f936dd51eb90a7d30735261").unwrap()
         );
         assert!(signature.odd_y_parity);
+        assert_eq!(to, Some(Address::from_str("0x2e11ed82f5ec165ab8ce3cc094f025fe7527f4d1").unwrap()));
     }
 
     #[test]
