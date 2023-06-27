@@ -23,7 +23,6 @@ tokio = { version = "1.21.2", features = ["macros"] }
 anyhow = "1.0.68"
 dotenv = "0.15.0"
 hex = "0.4"
-mockall = "0.11.3"
 reqwest = "0.11.13"
 reth-primitives = { workspace = true }
 reth-rlp = { workspace = true }

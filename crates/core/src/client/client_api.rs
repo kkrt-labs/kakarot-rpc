@@ -16,10 +16,10 @@ use crate::models::balance::TokenBalances;
 use crate::models::transaction::StarknetTransactions;
 
 #[async_trait]
-pub trait KakarotClient: Send + Sync {
+pub trait KakarotProvider: Send + Sync {
     fn kakarot_address(&self) -> FieldElement;
     fn proxy_account_class_hash(&self) -> FieldElement;
-    fn inner(&self) -> &JsonRpcClient<HttpTransport>;
+    fn starknet_provider(&self) -> &JsonRpcClient<HttpTransport>;
 
     async fn block_number(&self) -> Result<U64, EthApiError>;
 
