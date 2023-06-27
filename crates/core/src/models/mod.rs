@@ -4,6 +4,8 @@ pub mod convertible;
 pub mod event;
 pub mod felt;
 pub mod signature;
+#[cfg(test)]
+pub mod tests;
 pub mod transaction;
 
 use thiserror::Error;

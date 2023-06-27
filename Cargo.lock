@@ -1750,6 +1750,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "starknet",
+ "starknet-crypto",
  "thiserror",
  "tokio",
  "url",
