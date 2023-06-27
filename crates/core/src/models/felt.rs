@@ -1,4 +1,3 @@
-use reth_primitives::rpc::U256 as RpcU256;
 use reth_primitives::{H160, H256, U256};
 use starknet::core::types::{FieldElement, FromByteArrayError};
 use thiserror::Error;
@@ -82,12 +81,5 @@ impl From<Felt252Wrapper> for U256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
         U256::from_be_bytes(felt.to_bytes_be())
-    }
-}
-
-impl From<Felt252Wrapper> for RpcU256 {
-    fn from(felt: Felt252Wrapper) -> Self {
-        let felt: FieldElement = felt.into();
-        RpcU256::from_big_endian(&felt.to_bytes_be())
     }
 }
