@@ -20,11 +20,25 @@ readme = "./README.md"
 license = "MIT"
 
 [workspace.dependencies]
-starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "d8eb791" }
-starknet-crypto = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "d8eb791" }
+starknet = "0.3.0"
+starknet-crypto = "0.5.1"
 reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 async-trait = "0.1.58"
 jsonrpsee = { version = "0.18.2", features = ["full"] }
+
+
+# In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
+# Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
+# see https://github.com/dojoengine/dojo/issues/563
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "a319f1c" }
+[patch.crates-io]
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", branch = "main" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", branch = "main" }
+starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", branch = "dev/cairo_2_abi" }
+starknet-crypto = { git = "https://github.com/xJonathanLEI/starknet-rs", branch = "dev/cairo_2_abi" }
+
+[patch."https://github.com/starkware-libs/blockifier"]
+blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "main" }
