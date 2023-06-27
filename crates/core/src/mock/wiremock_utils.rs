@@ -10,6 +10,7 @@ use wiremock::matchers::{body_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::client::client_api::KakarotProvider;
+use crate::client::config::StarknetConfig;
 use crate::client::helpers::ethers_block_id_to_starknet_block_id;
 use crate::client::KakarotClient;
 
@@ -119,14 +120,11 @@ pub async fn setup_wiremock() -> String {
 
 pub async fn setup_mock_client() -> Box<dyn KakarotProvider> {
     let starknet_rpc = setup_wiremock().await;
-    Box::new(
-        KakarotClient::new(
-            &starknet_rpc,
-            FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap(),
-            FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap(),
-        )
-        .unwrap(),
-    )
+    let kakarot_address =
+        FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
+    let proxy_account_class_hash =
+        FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
+    Box::new(KakarotClient::new(StarknetConfig::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)).unwrap())
 }
 
 pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>>
@@ -134,13 +132,12 @@ where
     KakarotClient<JsonRpcClient<HttpTransport>>: KakarotProvider,
 {
     let starknet_rpc = setup_wiremock().await;
+    let kakarot_address =
+        FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
+    let proxy_account_class_hash =
+        FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
 
-    KakarotClient::new(
-        &starknet_rpc,
-        FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap(),
-        FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap(),
-    )
-    .unwrap()
+    KakarotClient::new(StarknetConfig::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)).unwrap()
 }
 
 fn mock_block_number() -> Mock {
