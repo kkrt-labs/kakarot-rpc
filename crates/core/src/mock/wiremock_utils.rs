@@ -146,7 +146,7 @@ where
 fn mock_block_number() -> Mock {
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_number(Vec::<u8>::new()))).respond_with(
         response_template_with_status(StatusCode::OK)
-            .set_body_raw(include_str!("data/blocks/starknet_blockNumber.json"), "application/json"),
+            .set_body_raw(include_str!("fixtures/blocks/starknet_blockNumber.json"), "application/json"),
     )
 }
 
@@ -157,7 +157,7 @@ fn mock_block_with_txs() -> Mock {
     let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id).unwrap();
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_with_txs([&starknet_block_id]))).respond_with(
         response_template_with_status(StatusCode::OK)
-            .set_body_raw(include_str!("data/blocks/starknet_getBlockWithTxs.json"), "application/json"),
+            .set_body_raw(include_str!("fixtures/blocks/starknet_getBlockWithTxs.json"), "application/json"),
     )
 }
 
@@ -170,7 +170,7 @@ fn mock_block_with_txs_hashes() -> Mock {
         .and(body_json(StarknetRpcBaseData::block_with_tx_hashes([&starknet_block_id_tx_hashes])))
         .respond_with(
             response_template_with_status(StatusCode::OK)
-                .set_body_raw(include_str!("data/blocks/starknet_getBlockWithTxHashes.json"), "application/json"),
+                .set_body_raw(include_str!("fixtures/blocks/starknet_getBlockWithTxHashes.json"), "application/json"),
         )
 }
 
@@ -178,7 +178,7 @@ fn mock_block_with_txs_latest() -> Mock {
     let latest_block = StarknetBlockId::Tag(BlockTag::Latest);
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_with_txs([&latest_block]))).respond_with(
         response_template_with_status(StatusCode::OK)
-            .set_body_raw(include_str!("data/blocks/starknet_getBlockWithTxs.json"), "application/json"),
+            .set_body_raw(include_str!("fixtures/blocks/starknet_getBlockWithTxs.json"), "application/json"),
     )
 }
 
@@ -186,7 +186,7 @@ fn mock_block_with_txs_hashes_latest() -> Mock {
     let latest_block = StarknetBlockId::Tag(BlockTag::Latest);
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_with_tx_hashes([&latest_block]))).respond_with(
         response_template_with_status(StatusCode::OK)
-            .set_body_raw(include_str!("data/blocks/starknet_getBlockWithTxHashes.json"), "application/json"),
+            .set_body_raw(include_str!("fixtures/blocks/starknet_getBlockWithTxHashes.json"), "application/json"),
     )
 }
 
@@ -194,7 +194,7 @@ fn mock_block_with_txs_pending() -> Mock {
     let pending_block = StarknetBlockId::Tag(BlockTag::Pending);
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_with_txs([&pending_block]))).respond_with(
         response_template_with_status(StatusCode::OK)
-            .set_body_raw(include_str!("data/blocks/starknet_getBlockWithTxs.json"), "application/json"),
+            .set_body_raw(include_str!("fixtures/blocks/starknet_getBlockWithTxs.json"), "application/json"),
     )
 }
 
@@ -204,7 +204,7 @@ fn mock_block_with_txs_hash_pending() -> Mock {
         .and(body_json(StarknetRpcBaseData::block_with_tx_hashes([&pending_block])))
         .respond_with(
             response_template_with_status(StatusCode::OK)
-                .set_body_raw(include_str!("data/blocks/starknet_getBlockWithTxHashes.json"), "application/json"),
+                .set_body_raw(include_str!("fixtures/blocks/starknet_getBlockWithTxHashes.json"), "application/json"),
         )
 }
 
@@ -216,7 +216,7 @@ fn mock_transaction_by_block_hash_and_index_latest() -> Mock {
             serde_json::to_value(0).unwrap(),
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
-            include_str!("data/transactions/starknet_getTransactionByBlockIdAndIndex.json"),
+            include_str!("fixtures/transactions/starknet_getTransactionByBlockIdAndIndex.json"),
             "application/json",
         ))
 }
@@ -231,7 +231,7 @@ fn mock_transaction_by_block_hash_and_index() -> Mock {
             serde_json::to_value(0).unwrap(),
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
-            include_str!("data/transactions/starknet_getTransactionByBlockIdAndIndex.json"),
+            include_str!("fixtures/transactions/starknet_getTransactionByBlockIdAndIndex.json"),
             "application/json",
         ))
 }
@@ -241,12 +241,10 @@ fn mock_transaction_receipt_for_transaction_by_block_hash_and_index() -> Mock {
         .and(body_json(StarknetRpcBaseData::transaction_receipt([
             "0x3204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c",
         ])))
-        .respond_with(
-            response_template_with_status(StatusCode::OK).set_body_raw(
-                include_str!("data/transactions/starknet_getTransactionReceipt.json"),
-                "application/json",
-            ),
-        )
+        .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
+            include_str!("fixtures/transactions/starknet_getTransactionReceipt.json"),
+            "application/json",
+        ))
 }
 
 fn mock_transaction_receipt_invoke() -> Mock {
@@ -255,7 +253,7 @@ fn mock_transaction_receipt_invoke() -> Mock {
             "0x3ffcfea6eed902191033c88bded1e396a9aef4b88b32e6387eea30c83b84834",
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
-            include_str!("data/transactions/starknet_getTransactionReceipt_Invoke.json"),
+            include_str!("fixtures/transactions/starknet_getTransactionReceipt_Invoke.json"),
             "application/json",
         ))
 }
@@ -266,7 +264,7 @@ fn mock_transaction_by_hash() -> Mock {
             "0x3204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c",
         ])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
-            include_str!("data/transactions/starknet_getTransactionByHash_Invoke.json"),
+            include_str!("fixtures/transactions/starknet_getTransactionByHash_Invoke.json"),
             "application/json",
         ))
 }
@@ -285,7 +283,7 @@ fn mock_get_code() -> Mock {
         ])))
         .respond_with(
             response_template_with_status(StatusCode::OK)
-                .set_body_raw(include_str!("data/starknet_getCode.json"), "application/json"),
+                .set_body_raw(include_str!("fixtures/starknet_getCode.json"), "application/json"),
         )
 }
 
@@ -303,7 +301,7 @@ fn mock_get_evm_address() -> Mock {
         ])))
         .respond_with(
             response_template_with_status(StatusCode::OK)
-                .set_body_raw(include_str!("data/kakarot_getEvmAddress.json"), "application/json"),
+                .set_body_raw(include_str!("fixtures/kakarot_getEvmAddress.json"), "application/json"),
         )
 }
 
@@ -316,7 +314,7 @@ fn mock_get_class_hash_at() -> Mock {
         ])))
         .respond_with(
             response_template_with_status(StatusCode::OK)
-                .set_body_raw(include_str!("data/transactions/starknet_getClassHashAt.json"), "application/json"),
+                .set_body_raw(include_str!("fixtures/transactions/starknet_getClassHashAt.json"), "application/json"),
         )
 }
 
