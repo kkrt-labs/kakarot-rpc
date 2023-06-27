@@ -19,6 +19,7 @@ reth-rlp = { workspace = true }
 reth-rpc-api = { workspace = true }
 reth-rpc-types = { workspace = true }
 starknet = { workspace = true }
+dojo-test-utils = { workspace = true }
 thiserror = "1.0.38"
 url = "2.3.1"
 
