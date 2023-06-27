@@ -25,9 +25,9 @@ pub enum RpcError {
 /// Will return `Err` if an error occurs when running the `ServerBuilder` start fails.
 pub async fn run_server(
     starknet_client: Box<dyn KakarotProvider>,
-    rpc_cfg: RPCConfig,
+    rpc_config: RPCConfig,
 ) -> Result<(SocketAddr, ServerHandle), RpcError> {
-    let RPCConfig { socket_addr } = rpc_cfg;
+    let RPCConfig { socket_addr } = rpc_config;
 
     let server = ServerBuilder::default().build(socket_addr.parse::<SocketAddr>()?).await?;
 

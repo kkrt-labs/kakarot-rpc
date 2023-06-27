@@ -15,11 +15,11 @@ async fn main() -> Result<()> {
         .add_directive("jsonrpsee[method_call{name = \"eth_chainId\"}]=trace".parse()?);
     tracing_subscriber::FmtSubscriber::builder().with_env_filter(filter).finish().try_init()?;
 
-    let starknet_cfg = StarknetConfig::from_env()?;
-    let rpc_cfg = RPCConfig::from_env()?;
-    let kakarot_client = KakarotClient::new(starknet_cfg)?;
+    let starknet_config = StarknetConfig::from_env()?;
+    let rpc_config = RPCConfig::from_env()?;
+    let kakarot_client = KakarotClient::new(starknet_config)?;
 
-    let (server_addr, server_handle) = run_server(Box::new(kakarot_client), rpc_cfg).await?;
+    let (server_addr, server_handle) = run_server(Box::new(kakarot_client), rpc_config).await?;
     let url = format!("http://{server_addr}");
 
     println!("RPC Server running on {url}...");

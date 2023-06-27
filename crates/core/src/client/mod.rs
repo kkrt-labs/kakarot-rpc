@@ -67,8 +67,8 @@ impl KakarotClient<JsonRpcClient<HttpTransport>> {
     /// # Errors
     ///
     /// `Err(EthApiError)` if the operation failed.
-    pub fn new(starknet_cfg: StarknetConfig) -> Result<Self> {
-        let StarknetConfig { starknet_rpc, kakarot_address, proxy_account_class_hash } = starknet_cfg;
+    pub fn new(starknet_config: StarknetConfig) -> Result<Self> {
+        let StarknetConfig { starknet_rpc, kakarot_address, proxy_account_class_hash } = starknet_config;
         let url = Url::parse(&starknet_rpc)?;
         Ok(Self {
             starknet_provider: JsonRpcClient::new(HttpTransport::new(url)),
