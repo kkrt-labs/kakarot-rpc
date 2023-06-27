@@ -119,6 +119,16 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 }
 
 impl StarknetTransaction {
+    /// Checks if the transaction is a Kakarot transaction.
+    ///
+    /// ## Arguments
+    ///
+    /// * `client` - The Kakarot client.
+    ///
+    /// ## Returns
+    ///
+    /// `Ok(bool)` if the operation was successful.
+    /// `Err(EthApiError)` if the operation failed.
     async fn is_kakarot_tx(&self, client: &dyn KakarotClient) -> Result<bool, EthApiError> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
