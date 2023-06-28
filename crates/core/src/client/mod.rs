@@ -17,7 +17,7 @@ use helpers::{
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
-    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H160, H256, U128, U256, U64, U8,
+    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H256, U128, U256, U64, U8,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
@@ -417,7 +417,7 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
                             )))?;
 
                             let evm_address = Felt252Wrapper::from(*evm_address);
-                            Some(H160::from(evm_address))
+                            Some(evm_address.try_into()?)
                         }
                     };
 

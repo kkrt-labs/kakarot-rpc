@@ -42,7 +42,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
 
         let address: Address = {
             let felt_wrapper: Felt252Wrapper = (*evm_contract_address).into();
-            felt_wrapper.into()
+            felt_wrapper.try_into()?
         };
 
         let topics: Vec<H256> = keys
