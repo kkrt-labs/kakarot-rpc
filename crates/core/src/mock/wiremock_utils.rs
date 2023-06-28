@@ -9,7 +9,7 @@ use starknet::providers::JsonRpcClient;
 use wiremock::matchers::{body_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use crate::client::client_api::KakarotProvider;
+use crate::client::client_api::KakarotEthApi;
 use crate::client::config::StarknetConfig;
 use crate::client::helpers::ethers_block_id_to_starknet_block_id;
 use crate::client::KakarotClient;
@@ -118,7 +118,7 @@ pub async fn setup_wiremock() -> String {
     mock_server.uri()
 }
 
-pub async fn setup_mock_client() -> Box<dyn KakarotProvider> {
+pub async fn setup_mock_client() -> Box<dyn KakarotEthApi> {
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
@@ -129,7 +129,7 @@ pub async fn setup_mock_client() -> Box<dyn KakarotProvider> {
 
 pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>>
 where
-    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotProvider,
+    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotEthApi,
 {
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =

@@ -7,7 +7,7 @@ use reth_rpc_types::Log;
 use starknet::core::types::Event;
 
 use super::felt::Felt252Wrapper;
-use crate::client::client_api::KakarotProvider;
+use crate::client::client_api::KakarotStarknetUtils;
 use crate::client::errors::EthApiError;
 use crate::models::convertible::ConvertibleStarknetEvent;
 
@@ -23,7 +23,7 @@ impl StarknetEvent {
 impl ConvertibleStarknetEvent for StarknetEvent {
     async fn to_eth_log(
         &self,
-        client: &dyn KakarotProvider,
+        client: &dyn KakarotStarknetUtils,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_hash: Option<H256>,

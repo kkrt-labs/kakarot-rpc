@@ -6,7 +6,7 @@ use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
 use super::ConversionError;
-use crate::client::client_api::KakarotProvider;
+use crate::client::client_api::KakarotEthApi;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
 use crate::client::helpers::{decode_signature_and_to_address_from_tx_calldata, vec_felt_to_bytes};
@@ -67,7 +67,7 @@ impl From<StarknetTransactions> for Vec<Transaction> {
 impl ConvertibleStarknetTransaction for StarknetTransaction {
     async fn to_eth_transaction(
         &self,
-        client: &dyn KakarotProvider,
+        client: &dyn KakarotEthApi,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,
@@ -129,7 +129,7 @@ impl StarknetTransaction {
     ///
     /// `Ok(bool)` if the operation was successful.
     /// `Err(EthApiError)` if the operation failed.
-    async fn is_kakarot_tx(&self, client: &dyn KakarotProvider) -> Result<bool, EthApiError> {
+    async fn is_kakarot_tx(&self, client: &dyn KakarotEthApi) -> Result<bool, EthApiError> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 
