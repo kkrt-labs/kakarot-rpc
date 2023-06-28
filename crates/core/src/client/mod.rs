@@ -17,7 +17,7 @@ use helpers::{
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
-    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H256, U128, U256, U64, U8,
+    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H160, H256, U128, U256, U64, U8,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
@@ -375,8 +375,6 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
         let starknet_tx_receipt =
             self.starknet_provider.get_transaction_receipt::<FieldElement>(transaction_hash.into()).await?;
 
-        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
-
         let res_receipt = match starknet_tx_receipt {
             MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
                 StarknetTransactionReceipt::Invoke(InvokeTransactionReceipt {
@@ -436,10 +434,11 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
                     // Cannot use `map` because of the `await` call.
                     for event in events {
                         let event = StarknetEvent::new(event);
-                        let log =
-                            event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None).await?;
+                        let log = event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None).await;
 
-                        logs.push(log);
+                        if let Ok(log) = log {
+                            logs.push(log);
+                        }
                     }
 
                     TransactionReceipt {
