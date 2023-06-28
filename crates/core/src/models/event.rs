@@ -37,7 +37,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
 
         // Derive the evm address from the last item in the `event.keys` vector and remove it
         let (evm_contract_address, keys) = self.0.keys.split_last().ok_or_else(|| {
-            EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not an Kakarot evm event"))
+            EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not a Kakarot evm event"))
         })?;
 
         let address: Address = {
