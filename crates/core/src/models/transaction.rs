@@ -6,7 +6,7 @@ use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
 use super::ConversionError;
-use crate::client::client_api::KakarotClient;
+use crate::client::client_api::KakarotProvider;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
 use crate::client::helpers::{decode_signature_and_to_address_from_tx_calldata, vec_felt_to_bytes};
@@ -67,19 +67,17 @@ impl From<StarknetTransactions> for Vec<Transaction> {
 impl ConvertibleStarknetTransaction for StarknetTransaction {
     async fn to_eth_transaction(
         &self,
-        client: &dyn KakarotClient,
+        client: &dyn KakarotProvider,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,
     ) -> Result<EthTransaction, EthApiError> {
-        let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
-        let sender_address: FieldElement = self.sender_address()?.into();
-
-        let class_hash = client.inner().get_class_hash_at(starknet_block_latest, sender_address).await?;
-
-        if class_hash != client.proxy_account_class_hash() {
+        if !self.is_kakarot_tx(client).await? {
             return Err(EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Tx is not part of Kakarot")));
         }
+
+        let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
+        let sender_address: FieldElement = self.sender_address()?.into();
 
         let hash: H256 = self.transaction_hash()?.into();
 
@@ -117,5 +115,26 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             access_list: None,      // TODO fetch the access list
             transaction_type: None, // TODO fetch the transaction type
         })
+    }
+}
+
+impl StarknetTransaction {
+    /// Checks if the transaction is a Kakarot transaction.
+    ///
+    /// ## Arguments
+    ///
+    /// * `client` - The Kakarot client.
+    ///
+    /// ## Returns
+    ///
+    /// `Ok(bool)` if the operation was successful.
+    /// `Err(EthApiError)` if the operation failed.
+    async fn is_kakarot_tx(&self, client: &dyn KakarotProvider) -> Result<bool, EthApiError> {
+        let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
+        let sender_address: FieldElement = self.sender_address()?.into();
+
+        let class_hash = client.starknet_provider().get_class_hash_at(starknet_block_latest, sender_address).await?;
+
+        Ok(class_hash == client.proxy_account_class_hash())
     }
 }

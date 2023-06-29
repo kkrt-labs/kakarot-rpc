@@ -1,0 +1,9 @@
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "starknet_getClassAt",
+  "params": {
+    "block_id": "latest",
+    "contract_address": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef123456"
+  }
+}

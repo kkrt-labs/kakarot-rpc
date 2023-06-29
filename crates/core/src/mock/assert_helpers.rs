@@ -7,7 +7,9 @@ use starknet::core::types::{FieldElement, InvokeTransaction, Transaction as Star
 
 use crate::client::constants::gas::BASE_FEE_PER_GAS;
 use crate::client::constants::{CHAIN_ID, DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY};
-use crate::client::helpers::{felt_option_to_u256, felt_to_u256, starknet_address_to_ethereum_address};
+use crate::client::helpers::starknet_address_to_ethereum_address;
+use crate::models::felt::Felt252Wrapper;
+use crate::models::signature::StarknetSignature;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct StarknetBlockTest {
@@ -133,7 +135,8 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
             match invoke_tx {
                 InvokeTransaction::V0(v0) => {
                     assert_eq!(ether_tx.hash, H256::from_slice(&v0.transaction_hash.to_bytes_be()));
-                    assert_eq!(ether_tx.nonce, felt_to_u256(&v0.nonce));
+                    let tx_nonce: Felt252Wrapper = v0.nonce.into();
+                    assert_eq!(ether_tx.nonce, tx_nonce.into());
                     assert_eq!(ether_tx.from, starknet_address_to_ethereum_address(&v0.contract_address));
                     // r and s values are extracted from the calldata of the first transaction
                     // in the starknet_getBlockWithTxs.json file.
@@ -151,7 +154,8 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                 }
                 InvokeTransaction::V1(v1) => {
                     assert_eq!(ether_tx.hash, H256::from_slice(&v1.transaction_hash.to_bytes_be()));
-                    assert_eq!(ether_tx.nonce, felt_to_u256(&v1.nonce));
+                    let tx_nonce: Felt252Wrapper = v1.nonce.into();
+                    assert_eq!(ether_tx.nonce, tx_nonce.into());
                     assert_eq!(ether_tx.from, H160::from_str("0x54b288676b749def5fc10eb17244fe2c87375de1").unwrap());
                     // r and s values are extracted from the calldata of the first transaction
                     // in the starknet_getBlockWithTxs.json file.
@@ -176,12 +180,10 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
         }
         StarknetTransaction::DeployAccount(deploy_account_tx) => {
             assert_eq!(ether_tx.hash, H256::from_slice(&deploy_account_tx.transaction_hash.to_bytes_be()));
-            assert_eq!(ether_tx.nonce, felt_to_u256(&deploy_account_tx.nonce));
-            let signature = Signature {
-                v: felt_option_to_u256(Some(&deploy_account_tx.signature[2])).unwrap(),
-                r: felt_option_to_u256(Some(&deploy_account_tx.signature[0])).unwrap(),
-                s: felt_option_to_u256(Some(&deploy_account_tx.signature[1])).unwrap(),
-            };
+            let tx_nonce: Felt252Wrapper = deploy_account_tx.nonce.into();
+            assert_eq!(ether_tx.nonce, tx_nonce.into());
+            let signature: StarknetSignature = deploy_account_tx.signature.into();
+            let signature: Signature = signature.try_into().unwrap();
             assert_eq!(ether_tx.signature, Some(signature));
             // TODO: from
         }

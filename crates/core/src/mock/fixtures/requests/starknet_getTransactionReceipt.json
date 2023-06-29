@@ -1,0 +1,8 @@
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "starknet_getTransactionReceipt",
+  "params": {
+    "transaction_hash": "0x123"
+  }
+}

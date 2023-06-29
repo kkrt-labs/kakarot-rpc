@@ -2,12 +2,14 @@
 // //! It is an adapter layer to interact with Kakarot ZK-EVM.
 use std::net::{AddrParseError, SocketAddr};
 pub mod eth_rpc;
+use config::RPCConfig;
 use eth_api::EthApiServer;
 use eth_rpc::KakarotEthRpc;
+pub mod config;
 pub mod eth_api;
 use eyre::Result;
 use jsonrpsee::server::{ServerBuilder, ServerHandle};
-use kakarot_rpc_core::client::client_api::KakarotClient;
+use kakarot_rpc_core::client::client_api::KakarotProvider;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -21,8 +23,11 @@ pub enum RpcError {
 /// # Errors
 ///
 /// Will return `Err` if an error occurs when running the `ServerBuilder` start fails.
-pub async fn run_server(starknet_client: Box<dyn KakarotClient>) -> Result<(SocketAddr, ServerHandle), RpcError> {
-    let socket_addr = std::env::var("KAKAROT_HTTP_RPC_ADDRESS").unwrap_or_else(|_| "0.0.0.0:3030".to_owned());
+pub async fn run_server(
+    starknet_client: Box<dyn KakarotProvider>,
+    rpc_config: RPCConfig,
+) -> Result<(SocketAddr, ServerHandle), RpcError> {
+    let RPCConfig { socket_addr } = rpc_config;
 
     let server = ServerBuilder::default().build(socket_addr.parse::<SocketAddr>()?).await?;
 

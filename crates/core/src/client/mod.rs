@@ -1,4 +1,5 @@
 pub mod client_api;
+pub mod config;
 pub mod constants;
 pub mod errors;
 pub mod helpers;
@@ -34,7 +35,8 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::providers::Provider;
 use url::Url;
 
-use self::client_api::KakarotClient;
+use self::client_api::KakarotProvider;
+use self::config::StarknetConfig;
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
@@ -46,13 +48,16 @@ use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetTr
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 
-pub struct KakarotClientImpl<StarknetClient> {
-    inner: StarknetClient,
+pub struct KakarotClient<StarknetClient>
+where
+    StarknetClient: Provider,
+{
+    starknet_provider: StarknetClient,
     kakarot_address: FieldElement,
     proxy_account_class_hash: FieldElement,
 }
 
-impl KakarotClientImpl<JsonRpcClient<HttpTransport>> {
+impl KakarotClient<JsonRpcClient<HttpTransport>> {
     /// Create a new `KakarotClient`.
     ///
     /// # Arguments
@@ -62,13 +67,14 @@ impl KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     /// # Errors
     ///
     /// `Err(EthApiError)` if the operation failed.
-    pub fn new(
-        starknet_rpc: &str,
-        kakarot_address: FieldElement,
-        proxy_account_class_hash: FieldElement,
-    ) -> Result<Self> {
-        let url = Url::parse(starknet_rpc)?;
-        Ok(Self { inner: JsonRpcClient::new(HttpTransport::new(url)), kakarot_address, proxy_account_class_hash })
+    pub fn new(starknet_config: StarknetConfig) -> Result<Self> {
+        let StarknetConfig { starknet_rpc, kakarot_address, proxy_account_class_hash } = starknet_config;
+        let url = Url::parse(&starknet_rpc)?;
+        Ok(Self {
+            starknet_provider: JsonRpcClient::new(HttpTransport::new(url)),
+            kakarot_address,
+            proxy_account_class_hash,
+        })
     }
 
     /// Get the Ethereum address of a Starknet Kakarot smart-contract by calling `get_evm_address`
@@ -95,7 +101,7 @@ impl KakarotClientImpl<JsonRpcClient<HttpTransport>> {
 }
 
 #[async_trait]
-impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
+impl KakarotProvider for KakarotClient<JsonRpcClient<HttpTransport>> {
     fn kakarot_address(&self) -> FieldElement {
         self.kakarot_address
     }
@@ -104,8 +110,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         self.proxy_account_class_hash
     }
 
-    fn inner(&self) -> &JsonRpcClient<HttpTransport> {
-        &self.inner
+    fn starknet_provider(&self) -> &JsonRpcClient<HttpTransport> {
+        &self.starknet_provider
     }
 
     /// Get the number of transactions in a block given a block id.
@@ -122,7 +128,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     /// `Ok(ContractClass)` if the operation was successful.
     /// `Err(EthApiError)` if the operation failed.
     async fn block_number(&self) -> Result<U64, EthApiError> {
-        let block_number = self.inner.block_number().await?;
+        let block_number = self.starknet_provider.block_number().await?;
         Ok(block_number.into())
     }
 
@@ -140,11 +146,11 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         hydrated_tx: bool,
     ) -> Result<RichBlock, EthApiError> {
         if hydrated_tx {
-            let block = self.inner.get_block_with_txs(block_id).await?;
+            let block = self.starknet_provider.get_block_with_txs(block_id).await?;
             let starknet_block = BlockWithTxs::new(block);
             starknet_block.to_eth_block(self).await
         } else {
-            let block = self.inner.get_block_with_tx_hashes(block_id).await?;
+            let block = self.starknet_provider.get_block_with_tx_hashes(block_id).await?;
             let starknet_block = BlockWithTxHashes::new(block);
             starknet_block.to_eth_block(self).await
         }
@@ -180,7 +186,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
             calldata: tx_calldata_vec,
         };
         // Make the function call to get the Starknet contract address
-        let starknet_contract_address = self.inner.call(request, starknet_block_id).await?;
+        let starknet_contract_address = self.starknet_provider.call(request, starknet_block_id).await?;
 
         // shadow the variable to FielElement from a Vec<FieldElement>, for use in subsequent code
         let starknet_contract_address = match starknet_contract_address.get(0) {
@@ -199,7 +205,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
             calldata: vec![],
         };
         // Make the function call to get the contract bytecode
-        let contract_bytecode = self.inner.call(request, starknet_block_id).await?;
+        let contract_bytecode = self.starknet_provider.call(request, starknet_block_id).await?;
         // Convert the result of the function call to a vector of bytes
         let contract_bytecode_in_u8: Vec<u8> = contract_bytecode.into_iter().flat_map(|x| x.to_bytes_be()).collect();
         let bytes_result = Bytes::from(contract_bytecode_in_u8);
@@ -229,7 +235,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
             calldata: call_parameters,
         };
 
-        let call_result: Vec<FieldElement> = self.inner.call(request, starknet_block_id).await?;
+        let call_result: Vec<FieldElement> = self.starknet_provider.call(request, starknet_block_id).await?;
 
         // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
         // fail is Kakarot API changes)
@@ -256,7 +262,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     ///  `Ok(SyncStatus)` if the operation was successful.
     ///  `Err(EthApiError)` if the operation failed.
     async fn syncing(&self) -> Result<SyncStatus, EthApiError> {
-        let status = self.inner.syncing().await?;
+        let status = self.starknet_provider.syncing().await?;
 
         match status {
             SyncStatusType::NotSyncing => Ok(SyncStatus::None),
@@ -315,7 +321,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     }
 
     async fn get_transaction_count_by_block(&self, starknet_block_id: StarknetBlockId) -> Result<U64, EthApiError> {
-        let starknet_block = self.inner.get_block_with_txs(starknet_block_id).await?;
+        let starknet_block = self.starknet_provider.get_block_with_txs(starknet_block_id).await?;
 
         let block_transactions = match starknet_block {
             MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
@@ -345,11 +351,11 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let index: u64 = usize::from(tx_index) as u64;
 
         let starknet_tx: StarknetTransaction =
-            self.inner.get_transaction_by_block_id_and_index(block_id, index).await?.into();
+            self.starknet_provider.get_transaction_by_block_id_and_index(block_id, index).await?.into();
 
         let tx_hash: FieldElement = starknet_tx.transaction_hash()?.into();
 
-        let tx_receipt = self.inner.get_transaction_receipt(tx_hash).await?;
+        let tx_receipt = self.starknet_provider.get_transaction_receipt(tx_hash).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
                 let block_hash: Felt252Wrapper = tr.block_hash.into();
@@ -381,7 +387,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
             calldata: vec![ethereum_address],
         };
 
-        let starknet_contract_address = self.inner.call(request, starknet_block_id).await?;
+        let starknet_contract_address = self.starknet_provider.call(request, starknet_block_id).await?;
 
         let result = starknet_contract_address.first().ok_or_else(|| {
             EthApiError::OtherError(anyhow::anyhow!("Kakarot Core: Failed to get Starknet address from Kakarot"))
@@ -394,9 +400,9 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
         let hash: Felt252Wrapper = hash.try_into()?;
 
         let transaction: StarknetTransaction =
-            self.inner.get_transaction_by_hash::<FieldElement>(hash.clone().into()).await?.into();
+            self.starknet_provider.get_transaction_by_hash::<FieldElement>(hash.clone().into()).await?.into();
         let hash: FieldElement = hash.into();
-        let tx_receipt = self.inner.get_transaction_receipt(hash).await?;
+        let tx_receipt = self.starknet_provider.get_transaction_receipt(hash).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
                 let block_hash: Felt252Wrapper = tr.block_hash.into();
@@ -409,7 +415,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     }
 
     async fn submit_starknet_transaction(&self, request: BroadcastedInvokeTransactionV1) -> Result<H256, EthApiError> {
-        let transaction_result = self.inner.add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request)).await?;
+        let transaction_result =
+            self.starknet_provider.add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request)).await?;
 
         Ok(H256::from(transaction_result.transaction_hash.to_bytes_be()))
     }
@@ -429,7 +436,8 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError> {
         // TODO: Error when trying to transform 32 bytes hash to FieldElement
         let transaction_hash: Felt252Wrapper = hash.try_into()?;
-        let starknet_tx_receipt = self.inner.get_transaction_receipt::<FieldElement>(transaction_hash.into()).await?;
+        let starknet_tx_receipt =
+            self.starknet_provider.get_transaction_receipt::<FieldElement>(transaction_hash.into()).await?;
 
         let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
 
@@ -444,7 +452,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
                     ..
                 }) => {
                     let starknet_tx: StarknetTransaction =
-                        self.inner.get_transaction_by_hash(transaction_hash).await?.into();
+                        self.starknet_provider.get_transaction_by_hash(transaction_hash).await?.into();
 
                     let transaction_hash: Felt252Wrapper = transaction_hash.into();
                     let transaction_hash: Option<H256> = Some(transaction_hash.into());
@@ -580,7 +588,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
             calldata: vec![],
         };
 
-        let evm_address_felt = self.inner.call(request, starknet_block_id).await?;
+        let evm_address_felt = self.starknet_provider.call(request, starknet_block_id).await?;
         let evm_address = evm_address_felt
             .first()
             .ok_or_else(|| {
@@ -614,7 +622,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
     async fn nonce(&self, ethereum_address: Address, block_id: StarknetBlockId) -> Result<U256, EthApiError> {
         let starknet_address = self.compute_starknet_address(ethereum_address, &block_id).await?;
 
-        let nonce: Felt252Wrapper = self.inner.get_nonce(block_id, starknet_address).await?.into();
+        let nonce: Felt252Wrapper = self.starknet_provider.get_nonce(block_id, starknet_address).await?.into();
 
         Ok(nonce.into())
     }
@@ -637,7 +645,7 @@ impl KakarotClient for KakarotClientImpl<JsonRpcClient<HttpTransport>> {
             calldata: vec![starknet_address],
         };
 
-        let balance_felt = self.inner.call(request, block_id).await?;
+        let balance_felt = self.starknet_provider.call(request, block_id).await?;
 
         let balance = balance_felt
             .first()

@@ -1,0 +1,12 @@
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "starknet_getStorageAt",
+  "params": {
+    "contract_address": "0xabde1",
+    "key": "0x123",
+    "block_id": {
+      "block_hash": "0x456"
+    }
+  }
+}
