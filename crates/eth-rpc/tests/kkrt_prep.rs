@@ -38,10 +38,8 @@ async fn deploy_kkrt_eth_contract(
     // turns into the data field of a tx_payload
     // that gets signed and executed in the starknet eoa 'execute'/invoke
     // can first experiment with doing a call for `get_nonce`
-    let secret =
-        FieldElement::from_hex_be("0x024b7c9e8f15432309db022c54d3279d9b421275533e090aa03cbf4211670823").unwrap();
 
-    let signing_key = SigningKey::from_secret_scalar(secret);
+    let signing_key = SigningKey::from_secret_scalar(FieldElement::from_byte_slice_be(eoa_secret.as_slice()).unwrap());
 
     let eoa_starknet_account = SingleOwnerAccount::new(
         JsonRpcClient::new(HttpTransport::new(sequencer_url)),
@@ -55,7 +53,7 @@ async fn deploy_kkrt_eth_contract(
     let nonce = 0;
     let gas = 1000;
 
-    let (_abi, contract_bytes) = get_contract(&contract_name);
+    let (_abi, contract_bytes) = get_contract(contract_name);
     let contract_bytes_reth: reth_primitives::Bytes = contract_bytes.into(); // convert Vec<u8> to reth_primitives::Bytes
 
     let transaction = Transaction::Eip1559(TxEip1559 {
@@ -105,7 +103,7 @@ async fn deploy_kkrt_eth_contract(
 
     let deployment_of_counter_evm_contract_result_receipt = eoa_starknet_account
         .provider()
-        .get_transaction_receipt(&deployment_of_counter_evm_contract_result.transaction_hash)
+        .get_transaction_receipt(deployment_of_counter_evm_contract_result.transaction_hash)
         .await
         .unwrap();
 
@@ -128,18 +126,18 @@ async fn deploy_kkrt_eth_contract(
 
 async fn deploy_starknet_contract(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
-    class_hash: FieldElement,
+    class_hash: &FieldElement,
     constructor_calldata: Vec<FieldElement>,
 ) -> Result<FieldElement, Box<dyn std::error::Error>> {
-    let factory = ContractFactory::new(class_hash, account);
+    let factory = ContractFactory::new(*class_hash, account);
 
     let result = factory.deploy(constructor_calldata.clone(), FieldElement::ZERO, false).send().await.unwrap();
 
     let contract_address =
-        get_contract_address(FieldElement::ZERO, class_hash, &constructor_calldata.clone(), FieldElement::ZERO);
+        get_contract_address(FieldElement::ZERO, *class_hash, &constructor_calldata.clone(), FieldElement::ZERO);
 
     // TODO: add a check here
-    let _receipt = account.provider().get_transaction_receipt(&result.transaction_hash).await.unwrap();
+    let _receipt = account.provider().get_transaction_receipt(result.transaction_hash).await.unwrap();
 
     Ok(contract_address)
 }
@@ -207,9 +205,9 @@ async fn deploy_and_fund_eoa(
 
     // TODO: add check here
     let _deployment_of_eoa_account_result_receipt =
-        account.provider().get_transaction_receipt(&deployment_of_eoa_account_result.transaction_hash).await.unwrap();
+        account.provider().get_transaction_receipt(deployment_of_eoa_account_result.transaction_hash).await.unwrap();
 
-    let eoa_account_starknet_address = eoa_account_starknet_address_result.unwrap().clone().first().unwrap().clone();
+    let eoa_account_starknet_address = *eoa_account_starknet_address_result.unwrap().first().unwrap();
 
     let amount_high = FieldElement::from_dec_str("0").unwrap();
     let transfer_calldata = vec![eoa_account_starknet_address, amount, amount_high];
@@ -226,7 +224,7 @@ async fn deploy_and_fund_eoa(
         .unwrap();
 
     // TODO: add checks like the python deploy script has
-    let _transfer_receipt = account.provider().get_transaction_receipt(&transfer_res.transaction_hash).await.unwrap();
+    let _transfer_receipt = account.provider().get_transaction_receipt(transfer_res.transaction_hash).await.unwrap();
 
     let call_get_balance_of_starknet_address_of_eoa = FunctionCall {
         contract_address: fee_token_address,
@@ -260,29 +258,25 @@ async fn deploy_kkrt_contracts(
     let kkrt_constructor_calldata = vec![
         account.address(),
         fee_token_address,
-        class_hash.get("contract_account").unwrap().clone(),
-        class_hash.get("externally_owned_account").unwrap().clone(),
-        class_hash.get("proxy").unwrap().clone(),
+        *class_hash.get("contract_account").unwrap(),
+        *class_hash.get("externally_owned_account").unwrap(),
+        *class_hash.get("proxy").unwrap(),
     ];
 
-    let kkrt_res =
-        deploy_starknet_contract(&account, class_hash.get("kakarot").unwrap().clone(), kkrt_constructor_calldata);
+    let kkrt_res = deploy_starknet_contract(account, class_hash.get("kakarot").unwrap(), kkrt_constructor_calldata);
 
     deployments.insert("kakarot".to_string(), kkrt_res.await.unwrap());
 
-    let kkrt_address = deployments.get("kakarot").unwrap().clone();
+    let kkrt_address = *deployments.get("kakarot").unwrap();
 
     let blockhash_registry_calldata = vec![kkrt_address];
 
-    let blockhash_registry_res = deploy_starknet_contract(
-        &account,
-        class_hash.get("blockhash_registry").unwrap().clone(),
-        blockhash_registry_calldata,
-    );
+    let blockhash_registry_res =
+        deploy_starknet_contract(account, class_hash.get("blockhash_registry").unwrap(), blockhash_registry_calldata);
 
     deployments.insert("blockhash_registry".to_string(), blockhash_registry_res.await.unwrap());
 
-    let blockhash_registry_addr = deployments.get("blockhash_registry").unwrap().clone();
+    let blockhash_registry_addr = *deployments.get("blockhash_registry").unwrap();
 
     let call_set_blockhash_registry = vec![Call {
         to: kkrt_address,
@@ -300,6 +294,7 @@ async fn deploy_kkrt_contracts(
 pub async fn init_kkrt_state(
     sequencer: &TestSequencer,
     kkrt_eoa_address: &str,
+    kkrt_eoa_private: H256,
     funding_amount: FieldElement,
     eth_contract: &str,
 ) -> (FieldElement, FieldElement, FieldElement, Vec<FieldElement>) {
@@ -312,9 +307,8 @@ pub async fn init_kkrt_state(
     let kkrt_address = deployments.get("kakarot").unwrap();
     let sn_eoa_address =
         deploy_and_fund_eoa(&account, *kkrt_address, funding_amount, kkrt_eoa_addr, fee_token_address).await;
-    let eoa_secret =
-        H256::from_slice(&hex::decode("024b7c9e8f15432309db022c54d3279d9b421275533e090aa03cbf4211670823").unwrap());
+    // TODO: make better parameterization/env reading
 
-    let deploy_event = deploy_kkrt_eth_contract(sequencer.url(), sn_eoa_address, eoa_secret, eth_contract).await;
+    let deploy_event = deploy_kkrt_eth_contract(sequencer.url(), sn_eoa_address, kkrt_eoa_private, eth_contract).await;
     (*kkrt_address, *class_hash.get("proxy").unwrap(), sn_eoa_address, deploy_event.unwrap())
 }

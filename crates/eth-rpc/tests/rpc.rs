@@ -750,11 +750,21 @@ mod tests {
     #[ignore]
     async fn use_test_sequencer_test() {
         let sn_test_sequencer = TestSequencer::start().await;
-        let kkrt_eoa_address = "0x132d200e5ceedf1a4634eee081cfeb077d92e4fd";
+        // insert your eoa address/private key here
+        // TODO: pull from env
+        let kkrt_eoa_address = "0xdeadbeef";
+        let kkrt_eoa_private = H256::from_slice(&hex::decode("deadbeef").unwrap());
+
         let expected_funded_amount = FieldElement::from_dec_str("1337").unwrap();
 
-        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, _deployed_addresses) =
-            init_kkrt_state(&sn_test_sequencer, kkrt_eoa_address, expected_funded_amount, "Counter.json").await;
+        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, _deployed_addresses) = init_kkrt_state(
+            &sn_test_sequencer,
+            kkrt_eoa_address,
+            kkrt_eoa_private,
+            expected_funded_amount,
+            "Counter.json",
+        )
+        .await;
 
         let kakarot_client = KakarotClient::new(StarknetConfig::new(
             sn_test_sequencer.url().as_ref(),
@@ -767,7 +777,7 @@ mod tests {
 
         let deployed_balance = kkrt_eth_rpc
             .balance(
-                Address::from_slice(&hex::decode(&kkrt_eoa_address.trim_start_matches("0x")).unwrap()),
+                Address::from_slice(&hex::decode(kkrt_eoa_address.trim_start_matches("0x")).unwrap()),
                 Option::None,
             )
             .await;
