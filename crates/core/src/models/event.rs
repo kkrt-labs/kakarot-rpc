@@ -7,7 +7,7 @@ use reth_rpc_types::Log;
 use starknet::core::types::Event;
 
 use super::felt::Felt252Wrapper;
-use crate::client::client_api::KakarotStarknetUtils;
+use crate::client::client_api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
 use crate::models::convertible::ConvertibleStarknetEvent;
 
@@ -23,7 +23,7 @@ impl StarknetEvent {
 impl ConvertibleStarknetEvent for StarknetEvent {
     async fn to_eth_log(
         &self,
-        client: &dyn KakarotStarknetUtils,
+        client: &dyn KakarotStarknetApi,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_hash: Option<H256>,
@@ -37,7 +37,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
 
         // Derive the evm address from the last item in the `event.keys` vector and remove it
         let (evm_contract_address, keys) = self.0.keys.split_last().ok_or_else(|| {
-            EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not an Kakarot evm event"))
+            EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not a Kakarot evm event"))
         })?;
 
         let address: Address = {

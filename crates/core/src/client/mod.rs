@@ -17,12 +17,11 @@ use helpers::{
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{
-    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Bytes as RpcBytes, TransactionSigned, H160, H256,
-    U128, U256, U64, U8,
+    keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H160, H256, U128, U256, U64, U8,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
-    BlockTransactions, CallRequest, FeeHistory, Index, Log, RichBlock, SyncInfo, SyncStatus,
+    BlockTransactions, CallRequest, FeeHistory, Index, RichBlock, SyncInfo, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::core::types::{
@@ -35,7 +34,7 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient};
 use starknet::providers::Provider;
 use url::Url;
 
-use self::client_api::{KakarotEthApi, KakarotStarknetUtils};
+use self::client_api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::StarknetConfig;
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
@@ -44,7 +43,8 @@ use self::errors::EthApiError;
 use crate::client::constants::selectors::ETH_CALL;
 use crate::models::balance::{TokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs};
-use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetTransaction};
+use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
+use crate::models::event::StarknetEvent;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 
@@ -375,8 +375,6 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
         let starknet_tx_receipt =
             self.starknet_provider.get_transaction_receipt::<FieldElement>(transaction_hash.into()).await?;
 
-        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
-
         let res_receipt = match starknet_tx_receipt {
             MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
                 StarknetTransactionReceipt::Invoke(InvokeTransactionReceipt {
@@ -435,45 +433,12 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
 
                     // Cannot use `map` because of the `await` call.
                     for event in events {
-                        let contract_address = self.safe_get_evm_address(&event.from_address, &starknet_block_id).await;
-
-                        // event "keys" in cairo are event "topics" in solidity
-                        // they're returned as list where consecutive values are
-                        // low, high, low, high, etc. of the Uint256 Cairo representation
-                        // of the bytes32 topics. This recomputes the original topic
-                        let topics = (0..event.keys.len())
-                            .step_by(2)
-                            .map(|i| {
-                                let next_key = *event.keys.get(i + 1).unwrap_or(&FieldElement::ZERO);
-
-                                // Can unwrap here as we know 2^128 is a valid FieldElement
-                                let two_pow_16: FieldElement =
-                                    FieldElement::from_hex_be("0x100000000000000000000000000000000").unwrap();
-
-                                // TODO: May wrap around prime field - Investigate edge cases
-                                let felt_shifted_next_key = next_key * two_pow_16;
-                                event.keys[i] + felt_shifted_next_key
-                            })
-                            .map(|topic| H256::from(&topic.to_bytes_be()))
-                            .collect::<Vec<_>>();
-
-                        let data = vec_felt_to_bytes(event.data);
-
-                        let log = Log {
-                            // TODO: fetch correct address from Kakarot.
-                            // Contract Address is the account contract's address (EOA or KakarotAA)
-                            address: H160::from_slice(&contract_address.0),
-                            topics,
-                            data: RpcBytes::from(data.0),
-                            block_hash: None,
-                            block_number: None,
-                            transaction_hash: None,
-                            transaction_index: None,
-                            log_index: None,
-                            removed: false,
+                        let event = StarknetEvent::new(event);
+                        if let Ok(log) =
+                            event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None).await
+                        {
+                            logs.push(log);
                         };
-
-                        logs.push(log);
                     }
 
                     TransactionReceipt {
@@ -695,7 +660,7 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
 }
 
 #[async_trait]
-impl KakarotStarknetUtils for KakarotClient<JsonRpcClient<HttpTransport>> {
+impl KakarotStarknetApi for KakarotClient<JsonRpcClient<HttpTransport>> {
     fn kakarot_address(&self) -> FieldElement {
         self.kakarot_address
     }
