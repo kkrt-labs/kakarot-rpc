@@ -247,10 +247,7 @@ pub fn decode_signature_and_to_address_from_tx_calldata(
     let decoded_tx = TransactionSigned::decode(&mut calldata.as_slice())
         .map_err(|e| DataDecodingError::SignatureDecodingError(e.to_string()))?;
 
-    // We create a mutable Option variable for the address, as initially, we don't know if it exists
-    let extracted_address = decoded_tx.transaction.to();
-
-    Ok((decoded_tx.signature, extracted_address))
+    Ok((decoded_tx.signature, decoded_tx.transaction.to()))
 }
 
 #[must_use]
