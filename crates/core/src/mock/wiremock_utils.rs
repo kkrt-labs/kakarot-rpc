@@ -4,7 +4,7 @@ use reqwest::StatusCode;
 use reth_primitives::{BlockId, H256};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
-use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
 use starknet::providers::JsonRpcClient;
 use wiremock::matchers::{body_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -118,7 +118,11 @@ pub async fn setup_wiremock() -> String {
     mock_server.uri()
 }
 
-pub async fn setup_mock_client() -> Box<dyn KakarotEthApi> {
+pub async fn setup_mock_client<T>() -> Box<dyn KakarotEthApi<T>>
+where
+    T: JsonRpcTransport + Send + Sync,
+    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotEthApi<T>,
+{
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
@@ -127,9 +131,10 @@ pub async fn setup_mock_client() -> Box<dyn KakarotEthApi> {
     Box::new(KakarotClient::new(StarknetConfig::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)).unwrap())
 }
 
-pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>>
+pub async fn setup_mock_client_crate<T>() -> KakarotClient<JsonRpcClient<HttpTransport>>
 where
-    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotEthApi,
+    T: JsonRpcTransport + Send + Sync,
+    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotEthApi<T>,
 {
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =
@@ -151,7 +156,7 @@ fn mock_block_with_txs() -> Mock {
     let block_id = BlockId::Hash(
         H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap().into(),
     );
-    let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id).unwrap();
+    let starknet_block_id = ethers_block_id_to_starknet_block_id::<HttpTransport>(block_id).unwrap();
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_with_txs([&starknet_block_id]))).respond_with(
         response_template_with_status(StatusCode::OK)
             .set_body_raw(include_str!("fixtures/responses/blocks/starknet_getBlockWithTxs.json"), "application/json"),
@@ -162,7 +167,8 @@ fn mock_block_with_txs_hashes() -> Mock {
     let block_id_tx_hashes = BlockId::Hash(
         H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e").unwrap().into(),
     );
-    let starknet_block_id_tx_hashes = ethers_block_id_to_starknet_block_id(block_id_tx_hashes).unwrap();
+    let starknet_block_id_tx_hashes =
+        ethers_block_id_to_starknet_block_id::<HttpTransport>(block_id_tx_hashes).unwrap();
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::block_with_tx_hashes([&starknet_block_id_tx_hashes])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
