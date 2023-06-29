@@ -434,11 +434,11 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
                     // Cannot use `map` because of the `await` call.
                     for event in events {
                         let event = StarknetEvent::new(event);
-                        let log = event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None).await;
-
-                        if let Ok(log) = log {
+                        if let Ok(log) =
+                            event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None).await
+                        {
                             logs.push(log);
-                        }
+                        };
                     }
 
                     TransactionReceipt {
