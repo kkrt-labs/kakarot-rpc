@@ -11,6 +11,7 @@ use crate::client::client_api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
 use crate::models::convertible::ConvertibleStarknetEvent;
 
+#[derive(Debug, Clone)]
 pub struct StarknetEvent(Event);
 
 impl StarknetEvent {
@@ -19,10 +20,16 @@ impl StarknetEvent {
     }
 }
 
+impl From<Event> for StarknetEvent {
+    fn from(event: Event) -> Self {
+        Self::new(event)
+    }
+}
+
 #[async_trait]
 impl ConvertibleStarknetEvent for StarknetEvent {
     async fn to_eth_log(
-        &self,
+        self,
         client: &dyn KakarotStarknetApi,
         block_hash: Option<H256>,
         block_number: Option<U256>,

@@ -13,7 +13,7 @@ pub trait ConvertibleStarknetBlock {
 #[async_trait]
 pub trait ConvertibleStarknetEvent {
     async fn to_eth_log(
-        &self,
+        self,
         client: &dyn KakarotStarknetApi,
         block_hash: Option<H256>,
         block_number: Option<U256>,

@@ -428,18 +428,14 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
                         }
                     };
 
-                    // Handle events -- Will error if the event is not a Kakarot event
-                    let mut logs = Vec::new();
-
-                    // Cannot use `map` because of the `await` call.
-                    for event in events {
-                        let event = StarknetEvent::new(event);
-                        if let Ok(log) =
-                            event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None).await
-                        {
-                            logs.push(log);
-                        };
-                    }
+                    let logs =
+                        join_all(events.into_iter().map(StarknetEvent::new).map(|event| {
+                            event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None)
+                        }))
+                        .await
+                        .into_iter()
+                        .filter_map(Result::ok)
+                        .collect();
 
                     TransactionReceipt {
                         transaction_hash,
