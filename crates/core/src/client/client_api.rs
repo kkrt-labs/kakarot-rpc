@@ -8,7 +8,7 @@ use reth_rpc_types::{
     TransactionReceipt,
 };
 use starknet::core::types::{BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement};
-use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::jsonrpc::JsonRpcTransport;
 use starknet::providers::JsonRpcClient;
 
 use super::errors::EthApiError;
@@ -16,54 +16,67 @@ use crate::models::balance::TokenBalances;
 use crate::models::transaction::StarknetTransactions;
 
 #[async_trait]
-pub trait KakarotEthApi: KakarotStarknetApi {
+pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi {
     async fn block_number(&self) -> Result<U64, EthApiError>;
 
-    async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError>;
+    async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError<T::Error>>;
 
     async fn get_code(
         &self,
         ethereum_address: Address,
         starknet_block_id: StarknetBlockId,
-    ) -> Result<Bytes, EthApiError>;
+    ) -> Result<Bytes, EthApiError<T::Error>>;
 
     async fn call_view(
         &self,
         ethereum_address: Address,
         calldata: Bytes,
         starknet_block_id: StarknetBlockId,
-    ) -> Result<Bytes, EthApiError>;
+    ) -> Result<Bytes, EthApiError<T::Error>>;
 
     async fn transaction_by_block_id_and_index(
         &self,
         block_id: StarknetBlockId,
         tx_index: Index,
-    ) -> Result<EtherTransaction, EthApiError>;
+    ) -> Result<EtherTransaction, EthApiError<T::Error>>;
 
-    async fn syncing(&self) -> Result<SyncStatus, EthApiError>;
+    async fn syncing(&self) -> Result<SyncStatus, EthApiError<T::Error>>;
 
-    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64, EthApiError>;
+    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64, EthApiError<T::Error>>;
 
-    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError>;
+    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError<T::Error>>;
 
-    async fn submit_starknet_transaction(&self, request: BroadcastedInvokeTransactionV1) -> Result<H256, EthApiError>;
+    async fn submit_starknet_transaction(
+        &self,
+        request: BroadcastedInvokeTransactionV1,
+    ) -> Result<H256, EthApiError<T::Error>>;
 
-    async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError>;
+    async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError<T::Error>>;
 
-    async fn nonce(&self, ethereum_address: Address, starknet_block_id: StarknetBlockId) -> Result<U256, EthApiError>;
+    async fn nonce(
+        &self,
+        ethereum_address: Address,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<U256, EthApiError<T::Error>>;
 
-    async fn balance(&self, ethereum_address: Address, starknet_block_id: StarknetBlockId)
-    -> Result<U256, EthApiError>;
+    async fn balance(
+        &self,
+        ethereum_address: Address,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<U256, EthApiError<T::Error>>;
 
     async fn token_balances(
         &self,
         address: Address,
         contract_addresses: Vec<Address>,
-    ) -> Result<TokenBalances, EthApiError>;
+    ) -> Result<TokenBalances, EthApiError<T::Error>>;
 
-    async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError>;
+    async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<T::Error>>;
 
-    async fn get_transaction_count_by_block(&self, starknet_block_id: StarknetBlockId) -> Result<U64, EthApiError>;
+    async fn get_transaction_count_by_block(
+        &self,
+        starknet_block_id: StarknetBlockId,
+    ) -> Result<U64, EthApiError<T::Error>>;
 
     fn base_fee_per_gas(&self) -> U256;
 
@@ -74,10 +87,13 @@ pub trait KakarotEthApi: KakarotStarknetApi {
         _block_count: U256,
         _newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
-    ) -> Result<FeeHistory, EthApiError>;
+    ) -> Result<FeeHistory, EthApiError<T::Error>>;
 
-    async fn estimate_gas(&self, call_request: CallRequest, block_number: Option<BlockId>)
-    -> Result<U256, EthApiError>;
+    async fn estimate_gas(
+        &self,
+        call_request: CallRequest,
+        block_number: Option<BlockId>,
+    ) -> Result<U256, EthApiError<T::Error>>;
 }
 
 #[async_trait]
