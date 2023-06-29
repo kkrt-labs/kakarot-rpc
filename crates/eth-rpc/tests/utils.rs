@@ -1,8 +1,11 @@
 use kakarot_rpc::eth_rpc::KakarotEthRpc;
+use kakarot_rpc_core::client::client_api::KakarotProvider;
 use kakarot_rpc_core::client::config::StarknetConfig;
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::mock::wiremock_utils::setup_wiremock;
 use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
+use starknet::providers::JsonRpcClient;
 
 /// Run wiremock to fake starknet rpc and then run our own `kakarot_rpc_server`.
 ///
@@ -29,7 +32,10 @@ use starknet::core::types::FieldElement;
 ///        let _has_stop = server_handle.stop().unwrap();
 ///   }
 /// ```
-pub async fn setup_kakarot_eth_rpc() -> KakarotEthRpc {
+pub async fn setup_kakarot_eth_rpc<T: JsonRpcTransport + Send + Sync>() -> KakarotEthRpc<T>
+where
+    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotProvider<T>,
+{
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();

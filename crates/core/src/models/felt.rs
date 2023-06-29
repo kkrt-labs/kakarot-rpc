@@ -1,25 +1,7 @@
-use reth_primitives::{Address, H256, U256};
-use starknet::core::types::{FieldElement, FromByteArrayError};
-use thiserror::Error;
+use reth_primitives::{H160, H256, U256};
+use starknet::core::types::FieldElement;
 
-use crate::client::errors::EthApiError;
-
-#[derive(Debug, Error)]
-pub enum Felt252WrapperError {
-    #[error(transparent)]
-    FromByteArrayError(#[from] FromByteArrayError),
-    #[error(
-        "Failed to convert Felt252Wrapper to Ethereum address: the value exceeds the maximum size of an Ethereum \
-         address"
-    )]
-    ToEthereumAddressError,
-}
-
-impl From<Felt252WrapperError> for EthApiError {
-    fn from(err: Felt252WrapperError) -> Self {
-        EthApiError::ConversionError(err.into())
-    }
-}
+use super::ConversionError;
 
 #[derive(Clone)]
 pub struct Felt252Wrapper(FieldElement);
@@ -51,7 +33,7 @@ impl From<Address> for Felt252Wrapper {
 }
 
 impl TryFrom<Felt252Wrapper> for Address {
-    type Error = Felt252WrapperError;
+    type Error = ConversionError;
 
     fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
         let felt: FieldElement = felt.into();
@@ -59,7 +41,7 @@ impl TryFrom<Felt252Wrapper> for Address {
 
         // Check if the first 12 bytes are all zeros.
         if bytes[0..12].iter().any(|&x| x != 0) {
-            return Err(Felt252WrapperError::ToEthereumAddressError);
+            return Err(ConversionError::ToEthereumAddressError);
         }
 
         Ok(Address::from_slice(&bytes[12..]))
@@ -67,7 +49,7 @@ impl TryFrom<Felt252Wrapper> for Address {
 }
 
 impl TryFrom<H256> for Felt252Wrapper {
-    type Error = Felt252WrapperError;
+    type Error = ConversionError;
 
     fn try_from(h256: H256) -> Result<Self, Self::Error> {
         let felt = FieldElement::from_bytes_be(&h256)?;
@@ -83,7 +65,7 @@ impl From<Felt252Wrapper> for H256 {
 }
 
 impl TryFrom<U256> for Felt252Wrapper {
-    type Error = Felt252WrapperError;
+    type Error = ConversionError;
 
     fn try_from(u256: U256) -> Result<Self, Self::Error> {
         let felt = FieldElement::from_bytes_be(&u256.to_be_bytes())?;

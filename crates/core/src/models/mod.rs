@@ -21,4 +21,9 @@ pub enum ConversionError {
     Felt252WrapperConversionError(#[from] Felt252WrapperError),
     #[error(transparent)]
     DataDecodingError(#[from] DataDecodingError),
+    #[error(
+        "Failed to convert Felt252Wrapper to Ethereum address: the value exceeds the maximum size of an Ethereum \
+         address"
+    )]
+    ToEthereumAddressError,
 }

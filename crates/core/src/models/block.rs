@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use reth_primitives::{Bloom, Bytes, H256, H64, U256};
 use reth_rpc_types::{Block, BlockTransactions, Header, RichBlock};
 use starknet::core::types::{FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, Transaction};
+use starknet::providers::jsonrpc::JsonRpcTransport;
 
 use super::convertible::ConvertibleStarknetBlock;
 use crate::client::client_api::KakarotEthApi;
@@ -85,7 +86,10 @@ impl BlockWithTxs {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxHashes {
-    async fn to_eth_block(&self, client: &dyn KakarotEthApi) -> Result<RichBlock, EthApiError> {
+    async fn to_eth_block<T: JsonRpcTransport>(
+        &self,
+        client: &dyn KakarotEthApi<T>,
+    ) -> Result<RichBlock, EthApiError<T::Error>> {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -161,7 +165,10 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxs {
-    async fn to_eth_block(&self, client: &dyn KakarotEthApi) -> Result<RichBlock, EthApiError> {
+    async fn to_eth_block<T: JsonRpcTransport>(
+        &self,
+        client: &dyn KakarotEthApi<T>,
+    ) -> Result<RichBlock, EthApiError<T::Error>> {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
