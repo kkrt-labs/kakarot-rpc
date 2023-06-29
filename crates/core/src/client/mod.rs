@@ -38,7 +38,7 @@ use url::Url;
 use self::client_api::KakarotProvider;
 use self::config::StarknetConfig;
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
-use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
+use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use self::errors::EthApiError;
 use crate::client::constants::selectors::ETH_CALL;
@@ -454,10 +454,6 @@ impl KakarotProvider for KakarotClient<JsonRpcClient<HttpTransport>> {
                     let starknet_tx: StarknetTransaction =
                         self.starknet_provider.get_transaction_by_hash(transaction_hash).await?.into();
 
-                    let starknet_sender_address: FieldElement = starknet_tx.sender_address()?.into();
-                    let contract_address =
-                        Some(self.safe_get_evm_address(&starknet_sender_address, &starknet_block_id).await);
-
                     let transaction_hash: Felt252Wrapper = transaction_hash.into();
                     let transaction_hash: Option<H256> = Some(transaction_hash.into());
 
@@ -470,6 +466,26 @@ impl KakarotProvider for KakarotClient<JsonRpcClient<HttpTransport>> {
                     let eth_tx = starknet_tx.to_eth_transaction(self, None, None, None).await?;
                     let from = eth_tx.from;
                     let to = eth_tx.to;
+                    let contract_address = match to {
+                        // If to is Some, means contract_address should be None as it is a normal transaction
+                        Some(_) => None,
+                        // If to is None, is a contract creation transaction so contract_address should be Some
+                        None => {
+                            let event = events
+                                .iter()
+                                .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED))
+                                .ok_or(EthApiError::OtherError(anyhow::anyhow!(
+                                    "Kakarot Core: No contract deployment event found in Kakarot transaction receipt"
+                                )))?;
+
+                            let evm_address = event.data.first().ok_or(EthApiError::OtherError(anyhow::anyhow!(
+                                "Kakarot Core: Failed to get EVM address from Kakarot event"
+                            )))?;
+
+                            let evm_address = Felt252Wrapper::from(*evm_address);
+                            Some(H160::from(evm_address))
+                        }
+                    };
 
                     let status_code = match status {
                         StarknetTransactionStatus::Rejected | StarknetTransactionStatus::Pending => Some(U64::from(0)),
