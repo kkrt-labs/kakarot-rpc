@@ -7,6 +7,7 @@ fn get_env_var(name: &str) -> Result<String, ConfigError> {
     std::env::var(name).map_err(|_| ConfigError::EnvironmentVariableMissing(name.into()))
 }
 
+#[derive(Default)]
 pub struct StarknetConfig {
     pub starknet_rpc: String,
     pub kakarot_address: FieldElement,
