@@ -1,18 +1,24 @@
 #![recursion_limit = "1024"]
+mod kkrt_prep;
 mod utils;
 
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
+    use dojo_test_utils::sequencer::TestSequencer;
     use kakarot_rpc::eth_api::EthApiServer;
+    use kakarot_rpc::eth_rpc::KakarotEthRpc;
+    use kakarot_rpc_core::client::config::StarknetConfig;
+    use kakarot_rpc_core::client::KakarotClient;
     use kakarot_rpc_core::mock::assert_helpers::{assert_block, assert_block_header, assert_transaction};
-    use reth_primitives::{BlockNumberOrTag, H160, H256, U256, U64};
+    use reth_primitives::{Address, BlockNumberOrTag, H160, H256, U256, U64};
     use reth_rpc_types::Index;
     use serde_json::json;
     use starknet::core::types::{FieldElement, Transaction as StarknetTransaction};
     use starknet::macros::felt;
 
+    use crate::kkrt_prep::init_kkrt_state;
     use crate::utils::setup_kakarot_eth_rpc;
 
     fn get_test_tx() -> serde_json::Value {
@@ -738,6 +744,38 @@ mod tests {
         "type": "INVOKE",
         "version": "0x1"
         })
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn use_test_sequencer_test() {
+        let sn_test_sequencer = TestSequencer::start().await;
+        let kkrt_eoa_address = "0x132d200e5ceedf1a4634eee081cfeb077d92e4fd";
+        let expected_funded_amount = FieldElement::from_dec_str("1337").unwrap();
+
+        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, _deployed_addresses) =
+            init_kkrt_state(&sn_test_sequencer, kkrt_eoa_address, expected_funded_amount, "Counter.json").await;
+
+        let kakarot_client = KakarotClient::new(StarknetConfig::new(
+            sn_test_sequencer.url().as_ref(),
+            kkrt_address,
+            proxy_account_class_hash,
+        ))
+        .unwrap();
+
+        let kkrt_eth_rpc = KakarotEthRpc::new(Box::new(kakarot_client));
+
+        let deployed_balance = kkrt_eth_rpc
+            .balance(
+                Address::from_slice(&hex::decode(&kkrt_eoa_address.trim_start_matches("0x")).unwrap()),
+                Option::None,
+            )
+            .await;
+
+        // TODO: clean up how to compare this
+        let deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
+
+        assert_eq!(deployed_balance, expected_funded_amount);
     }
 
     #[tokio::test]
