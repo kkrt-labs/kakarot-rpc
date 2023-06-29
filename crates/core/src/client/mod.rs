@@ -467,24 +467,23 @@ impl KakarotProvider for KakarotClient<JsonRpcClient<HttpTransport>> {
                     let from = eth_tx.from;
                     let to = eth_tx.to;
                     let contract_address = match to {
-                        Some(address) => Some(address),
+                        // If to is Some, means contract_address should be None as it is a normal transaction
+                        Some(_) => None,
+                        // If to is None, is a contract creation transaction so contract_address should be Some
                         None => {
                             let event = events
-                                .clone()
-                                .into_iter()
-                                .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED));
-                            match event {
-                                Some(event) => {
-                                    let evm_address: Felt252Wrapper = event.data[0].into();
-                                    Some(H160::from(evm_address))
-                                }
-                                None => {
-                                    // If there are no events, return an error
-                                    return Err(EthApiError::OtherError(anyhow::anyhow!(
-                                        "Kakarot Core: Failed to get EVM address from Kakarot"
-                                    )));
-                                }
-                            }
+                                .iter()
+                                .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED))
+                                .ok_or(EthApiError::OtherError(anyhow::anyhow!(
+                                    "Kakarot Core: No contract deployment event found in Kakarot transaction receipt"
+                                )))?;
+
+                            let evm_address = event.data.first().ok_or(EthApiError::OtherError(anyhow::anyhow!(
+                                "Kakarot Core: Failed to get EVM address from Kakarot event"
+                            )))?;
+
+                            let evm_address = Felt252Wrapper::from(*evm_address);
+                            Some(H160::from(evm_address))
                         }
                     };
 
