@@ -469,7 +469,10 @@ impl KakarotProvider for KakarotClient<JsonRpcClient<HttpTransport>> {
                     let contract_address = match to {
                         Some(address) => Some(address),
                         None => {
-                            let event = events.clone().into_iter().find(|event| event.keys[0] == EVM_CONTRACT_DEPLOYED);
+                            let event = events
+                                .clone()
+                                .into_iter()
+                                .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED));
                             match event {
                                 Some(event) => {
                                     let evm_address: Felt252Wrapper = event.data[0].into();
