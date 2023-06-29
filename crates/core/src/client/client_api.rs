@@ -16,20 +16,10 @@ use crate::models::balance::TokenBalances;
 use crate::models::transaction::StarknetTransactions;
 
 #[async_trait]
-pub trait KakarotProvider: Send + Sync {
-    fn kakarot_address(&self) -> FieldElement;
-    fn proxy_account_class_hash(&self) -> FieldElement;
-    fn starknet_provider(&self) -> &JsonRpcClient<HttpTransport>;
-
+pub trait KakarotEthApi: KakarotStarknetUtils {
     async fn block_number(&self) -> Result<U64, EthApiError>;
 
     async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError>;
-
-    async fn get_eth_block_from_starknet_block(
-        &self,
-        block_id: StarknetBlockId,
-        hydrated_tx: bool,
-    ) -> Result<RichBlock, EthApiError>;
 
     async fn get_code(
         &self,
@@ -56,21 +46,9 @@ pub trait KakarotProvider: Send + Sync {
 
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError>;
 
-    async fn compute_starknet_address(
-        &self,
-        ethereum_address: Address,
-        starknet_block_id: &StarknetBlockId,
-    ) -> Result<FieldElement, EthApiError>;
-
     async fn submit_starknet_transaction(&self, request: BroadcastedInvokeTransactionV1) -> Result<H256, EthApiError>;
 
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError>;
-
-    async fn get_evm_address(
-        &self,
-        starknet_address: &FieldElement,
-        starknet_block_id: &StarknetBlockId,
-    ) -> Result<Address, EthApiError>;
 
     async fn nonce(&self, ethereum_address: Address, starknet_block_id: StarknetBlockId) -> Result<U256, EthApiError>;
 
@@ -82,13 +60,6 @@ pub trait KakarotProvider: Send + Sync {
         address: Address,
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, EthApiError>;
-
-    async fn filter_starknet_into_eth_txs(
-        &self,
-        initial_transactions: StarknetTransactions,
-        blockhash_opt: Option<H256>,
-        blocknum_opt: Option<U256>,
-    ) -> Result<BlockTransactions, EthApiError>;
 
     async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError>;
 
@@ -107,4 +78,34 @@ pub trait KakarotProvider: Send + Sync {
 
     async fn estimate_gas(&self, call_request: CallRequest, block_number: Option<BlockId>)
     -> Result<U256, EthApiError>;
+}
+
+#[async_trait]
+pub trait KakarotStarknetUtils: Send + Sync {
+    fn kakarot_address(&self) -> FieldElement;
+    fn proxy_account_class_hash(&self) -> FieldElement;
+    fn starknet_provider(&self) -> &JsonRpcClient<HttpTransport>;
+    async fn compute_starknet_address(
+        &self,
+        ethereum_address: Address,
+        starknet_block_id: &StarknetBlockId,
+    ) -> Result<FieldElement, EthApiError>;
+    async fn get_evm_address(
+        &self,
+        starknet_address: &FieldElement,
+        starknet_block_id: &StarknetBlockId,
+    ) -> Result<Address, EthApiError>;
+
+    async fn filter_starknet_into_eth_txs(
+        &self,
+        initial_transactions: StarknetTransactions,
+        blockhash_opt: Option<H256>,
+        blocknum_opt: Option<U256>,
+    ) -> Result<BlockTransactions, EthApiError>;
+
+    async fn get_eth_block_from_starknet_block(
+        &self,
+        block_id: StarknetBlockId,
+        hydrated_tx: bool,
+    ) -> Result<RichBlock, EthApiError>;
 }

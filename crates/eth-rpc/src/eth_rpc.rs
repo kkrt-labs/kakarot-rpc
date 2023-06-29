@@ -1,7 +1,7 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, METHOD_NOT_FOUND_CODE};
-use kakarot_rpc_core::client::client_api::KakarotProvider;
+use kakarot_rpc_core::client::client_api::KakarotEthApi;
 use kakarot_rpc_core::client::constants::{CHAIN_ID, ESTIMATE_GAS};
 use kakarot_rpc_core::client::errors::rpc_err;
 use kakarot_rpc_core::client::helpers::ethers_block_id_to_starknet_block_id;
@@ -19,7 +19,7 @@ use crate::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 pub struct KakarotEthRpc {
-    pub kakarot_client: Box<dyn KakarotProvider>,
+    pub kakarot_client: Box<dyn KakarotEthApi>,
 }
 
 #[async_trait]
@@ -284,7 +284,7 @@ impl KakarotCustomApiServer for KakarotEthRpc {
 
 impl KakarotEthRpc {
     #[must_use]
-    pub fn new(kakarot_client: Box<dyn KakarotProvider>) -> Self {
+    pub fn new(kakarot_client: Box<dyn KakarotEthApi>) -> Self {
         Self { kakarot_client }
     }
 }
