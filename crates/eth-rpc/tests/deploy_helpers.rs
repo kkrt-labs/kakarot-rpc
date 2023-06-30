@@ -91,29 +91,26 @@ pub fn create_raw_tx(selector: [u8; 4], eoa_secret: H256, to: Address, args: Vec
     raw_tx.to_vec().into()
 }
 
-async fn deploy_kkrt_eth_contract(
+async fn deploy_evm_contract(
     sequencer_url: Url,
-    deployed_eao_starknet_account: FieldElement,
+    eoa_account_starknet_address: FieldElement,
     eoa_secret: H256,
     contract_name: &str,
 ) -> Option<Vec<FieldElement>> {
-    // need contract artifact
-    // turns into the data field of a tx_payload
-    // that gets signed and executed in the starknet eoa 'execute'/invoke
-    // can first experiment with doing a call for `get_nonce`
-
-    let signing_key = SigningKey::from_secret_scalar(FieldElement::from_byte_slice_be(eoa_secret.as_slice()).unwrap());
+    // This a made up signing key so we can reuse starknet-rs abstractions
+    // to see the flow of how kakarot-rpc handles eth payloads -> starknet txns
+    // see ./crates/core/src/client.rs::send_transaction
+    let signing_key = SigningKey::from_secret_scalar(FieldElement::ZERO);
 
     let eoa_starknet_account = SingleOwnerAccount::new(
         JsonRpcClient::new(HttpTransport::new(sequencer_url)),
         LocalWallet::from_signing_key(signing_key),
-        deployed_eao_starknet_account,
+        eoa_account_starknet_address,
         chain_id::TESTNET,
     );
 
     // TODO: dehardcode
     let chain_id = 1263227476;
-    let nonce = 0;
     let gas = 1000;
 
     let (_abi, contract_bytes) = get_contract(contract_name);
@@ -121,7 +118,7 @@ async fn deploy_kkrt_eth_contract(
 
     let transaction = Transaction::Eip1559(TxEip1559 {
         chain_id,
-        nonce,
+        nonce: 0,
         max_priority_fee_per_gas: Default::default(), // U256 used for large numbers
 
         max_fee_per_gas: Default::default(), // U256 used for large numbers
@@ -153,13 +150,9 @@ async fn deploy_kkrt_eth_contract(
         })
         .collect();
 
-    let not_used_eoa_account_fields = FieldElement::from_hex_be("0xDEAD").unwrap();
+    let unused_eoa_field = FieldElement::from_hex_be("0xDEAD").unwrap();
     let deployment_of_counter_evm_contract_result = eoa_starknet_account
-        .execute(vec![Call {
-            calldata: field_elements,
-            to: not_used_eoa_account_fields,
-            selector: not_used_eoa_account_fields,
-        }])
+        .execute(vec![Call { calldata: field_elements, to: unused_eoa_field, selector: unused_eoa_field }])
         .send()
         .await
         .unwrap();
@@ -205,12 +198,12 @@ async fn deploy_starknet_contract(
     Ok(contract_address)
 }
 
-async fn declare_kkrt_contracts(
+async fn declare_kakarot_contracts(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) -> HashMap<String, FieldElement> {
     let paths = fs::read_dir("tests/compiled_kkrt").expect("Could not read directory");
 
-    let kkrt_compiled_contracts: Vec<_> = paths
+    let kakarot_compiled_contract_paths: Vec<_> = paths
         .filter_map(|entry| {
             let entry = entry.ok()?;
             let path = entry.path();
@@ -222,7 +215,7 @@ async fn declare_kkrt_contracts(
         .collect();
 
     let mut class_hash: HashMap<String, FieldElement> = HashMap::new();
-    for path in kkrt_compiled_contracts {
+    for path in kakarot_compiled_contract_paths {
         let file = fs::File::open(&path).unwrap();
         let legacy_contract: LegacyContractClass = serde_json::from_reader(file).unwrap();
         let contract_class = Arc::new(legacy_contract);
@@ -311,7 +304,7 @@ async fn deploy_and_fund_eoa(
     eoa_account_starknet_address
 }
 
-async fn deploy_kkrt_contracts(
+async fn deploy_kakarot_contracts(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     class_hash: &HashMap<String, FieldElement>,
     fee_token_address: FieldElement,
@@ -357,21 +350,22 @@ async fn deploy_kkrt_contracts(
 pub async fn init_kkrt_state(
     sequencer: &TestSequencer,
     kkrt_eoa_address: &str,
-    kkrt_eoa_private: H256,
+    eoa_ethereum_private_key: H256,
     funding_amount: FieldElement,
     eth_contract: &str,
 ) -> (FieldElement, FieldElement, FieldElement, Vec<FieldElement>) {
     let account = sequencer.account();
-    let class_hash = declare_kkrt_contracts(&account).await;
+    let class_hash = declare_kakarot_contracts(&account).await;
     let kkrt_eoa_addr = FieldElement::from_hex_be(kkrt_eoa_address).unwrap();
     let fee_token_address =
         FieldElement::from_hex_be("0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7").unwrap();
-    let deployments = deploy_kkrt_contracts(&account, &class_hash, fee_token_address).await;
+    let deployments = deploy_kakarot_contracts(&account, &class_hash, fee_token_address).await;
     let kkrt_address = deployments.get("kakarot").unwrap();
     let sn_eoa_address =
         deploy_and_fund_eoa(&account, *kkrt_address, funding_amount, kkrt_eoa_addr, fee_token_address).await;
     // TODO: make better parameterization/env reading
 
-    let deploy_event = deploy_kkrt_eth_contract(sequencer.url(), sn_eoa_address, kkrt_eoa_private, eth_contract).await;
+    let deploy_event =
+        deploy_evm_contract(sequencer.url(), sn_eoa_address, eoa_ethereum_private_key, eth_contract).await;
     (*kkrt_address, *class_hash.get("proxy").unwrap(), sn_eoa_address, deploy_event.unwrap())
 }

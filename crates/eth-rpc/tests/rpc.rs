@@ -1,5 +1,5 @@
 #![recursion_limit = "1024"]
-mod kkrt_prep;
+mod deploy_helpers;
 mod utils;
 
 #[cfg(test)]
@@ -19,7 +19,7 @@ mod tests {
     use starknet::core::types::{FieldElement, Transaction as StarknetTransaction};
     use starknet::macros::felt;
 
-    use crate::kkrt_prep::{create_call_request, create_raw_tx, init_kkrt_state};
+    use crate::deploy_helpers::{create_call_request, create_raw_tx, init_kkrt_state};
     use crate::utils::setup_kakarot_eth_rpc;
 
     #[tokio::test]
