@@ -5,7 +5,10 @@ use std::sync::Arc;
 use bytes::BytesMut;
 use dojo_test_utils::sequencer::TestSequencer;
 use ethers::abi::{Abi, Bytes as EthersBytes, JsonAbi};
-use reth_primitives::{sign_message, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256};
+use reth_primitives::{
+    sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
+};
+use reth_rpc_types::CallRequest;
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::chain_id;
@@ -26,6 +29,66 @@ pub fn get_contract(filename: &str) -> (Abi, EthersBytes) {
     let obj: JsonAbi = serde_json::from_str(&contents).unwrap();
     let JsonAbi::Object(obj) = obj else { panic!() };
     (serde_json::from_str(&serde_json::to_string(&obj.abi).unwrap()).unwrap(), obj.bytecode.unwrap().to_vec())
+}
+
+pub fn create_call_request(to: Address, selector: [u8; 4]) -> CallRequest {
+    CallRequest {
+        from: Option::None,
+        to: Some(to),
+        gas_price: Option::None,
+        max_fee_per_gas: Option::None,
+        max_priority_fee_per_gas: Option::None,
+        gas: Option::None,
+        value: Option::None,
+        data: Some(selector.into()),
+        nonce: Option::None,
+        chain_id: Option::None,
+        access_list: Option::None,
+        transaction_type: Option::None,
+    }
+}
+
+pub fn create_raw_tx(selector: [u8; 4], eoa_secret: H256, to: Address, args: Vec<U256>, nonce: u64) -> Bytes {
+    // Start with the function selector
+    // Append each argument
+    let mut data: Vec<u8> = selector.to_vec();
+
+    for arg in args {
+        // Ethereum uses big-endian encoding
+        let arg_bytes: [u8; 32] = arg.to_be_bytes();
+        data.extend_from_slice(&arg_bytes);
+    }
+
+    // TODO: dehardcode
+    let chain_id = 1263227476;
+    let gas = 10;
+    // Create a transaction object
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id,
+        nonce,
+        max_priority_fee_per_gas: Default::default(), // U256 used for large numbers
+
+        max_fee_per_gas: Default::default(), // U256 used for large numbers
+
+        gas_limit: gas, // this may need to be converted to u64
+
+        to: TransactionKind::Call(to),
+
+        value: 0u128, // U256 used for large numbers
+
+        input: data.into(),
+
+        access_list: Default::default(), // empty access list
+    });
+
+    let signature = sign_message(eoa_secret, transaction.signature_hash()).unwrap();
+
+    let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
+    let mut raw_tx = BytesMut::new(); // Create a new empty buffer
+
+    signed_transaction.encode_enveloped(&mut raw_tx); // Encode the transaction into the buffer
+
+    raw_tx.to_vec().into()
 }
 
 async fn deploy_kkrt_eth_contract(
@@ -79,7 +142,6 @@ async fn deploy_kkrt_eth_contract(
     let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
     let mut buffer = BytesMut::new(); // Create a new empty buffer
 
-    let not_used_eoa_account_fields = FieldElement::from_hex_be("0xDEAD").unwrap();
     signed_transaction.encode_enveloped(&mut buffer); // Encode the transaction into the buffer
     let bytes_vec = buffer.to_vec(); // Get Vec<u8> from Bytes
 
@@ -91,6 +153,7 @@ async fn deploy_kkrt_eth_contract(
         })
         .collect();
 
+    let not_used_eoa_account_fields = FieldElement::from_hex_be("0xDEAD").unwrap();
     let deployment_of_counter_evm_contract_result = eoa_starknet_account
         .execute(vec![Call {
             calldata: field_elements,

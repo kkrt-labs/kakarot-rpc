@@ -12,14 +12,81 @@ mod tests {
     use kakarot_rpc_core::client::config::StarknetConfig;
     use kakarot_rpc_core::client::KakarotClient;
     use kakarot_rpc_core::mock::assert_helpers::{assert_block, assert_block_header, assert_transaction};
+    use reth_primitives::hex_literal::hex;
     use reth_primitives::{Address, BlockNumberOrTag, H160, H256, U256, U64};
     use reth_rpc_types::Index;
     use serde_json::json;
     use starknet::core::types::{FieldElement, Transaction as StarknetTransaction};
     use starknet::macros::felt;
 
-    use crate::kkrt_prep::init_kkrt_state;
+    use crate::kkrt_prep::{create_call_request, create_raw_tx, init_kkrt_state};
     use crate::utils::setup_kakarot_eth_rpc;
+
+    #[tokio::test]
+    async fn use_test_sequencer_test() {
+        let sn_test_sequencer = TestSequencer::start().await;
+        // TODO: lift from env
+        let kkrt_eoa_address = "0x132d200e5ceedf1a4634eee081cfeb077d92e4fd";
+        let kkrt_eoa_private =
+            H256::from_slice(&hex::decode("024b7c9e8f15432309db022c54d3279d9b421275533e090aa03cbf4211670823").unwrap());
+
+        let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
+
+        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, deployed_addresses) = init_kkrt_state(
+            &sn_test_sequencer,
+            kkrt_eoa_address,
+            kkrt_eoa_private,
+            expected_funded_amount,
+            "Counter.json",
+        )
+        .await;
+
+        let kakarot_client = KakarotClient::new(StarknetConfig::new(
+            sn_test_sequencer.url().as_ref(),
+            kkrt_address,
+            proxy_account_class_hash,
+        ))
+        .unwrap();
+
+        let kkrt_eth_rpc = KakarotEthRpc::new(Box::new(kakarot_client));
+
+        let deployed_balance = kkrt_eth_rpc
+            .balance(
+                Address::from_slice(&hex::decode(kkrt_eoa_address.trim_start_matches("0x")).unwrap()),
+                Option::None,
+            )
+            .await;
+
+        // TODO: clean up how to compare this
+        let deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
+
+        assert_eq!(deployed_balance, expected_funded_amount);
+
+        let counter_eth_addr = {
+            // TODO  use try_into here when merged
+            let address = &deployed_addresses.first().unwrap().to_bytes_be()[12..];
+            Address::from_slice(address)
+        };
+
+        // asserts there is code at this address
+        // let code_res = kkrt_eth_rpc.get_code(counter_eth_addr, Option::None).await;
+
+        let inc_selector = hex!("371303c0");
+        let inc_tx = create_raw_tx(inc_selector, kkrt_eoa_private, counter_eth_addr, vec![], 1u64);
+        let inc_res = kkrt_eth_rpc.send_raw_transaction(inc_tx).await.unwrap();
+        kkrt_eth_rpc.transaction_receipt(inc_res).await.expect("increment receipt failed");
+
+        let counter_selector = hex!("06661abd");
+        let counter_call_request = create_call_request(counter_eth_addr, counter_selector);
+        let counter_val = kkrt_eth_rpc.call(counter_call_request, Option::None).await;
+
+        if let Ok(bytes) = counter_val {
+            let num = *bytes.last().expect("Empty byte array");
+            assert_eq!(num, 1);
+        } else {
+            panic!("Expected Ok, got {:?}", counter_val);
+        }
+    }
 
     fn get_test_tx() -> serde_json::Value {
         json!({
@@ -744,48 +811,6 @@ mod tests {
         "type": "INVOKE",
         "version": "0x1"
         })
-    }
-
-    #[tokio::test]
-    #[ignore]
-    async fn use_test_sequencer_test() {
-        let sn_test_sequencer = TestSequencer::start().await;
-        // insert your eoa address/private key here
-        // TODO: pull from env
-        let kkrt_eoa_address = "0xdeadbeef";
-        let kkrt_eoa_private = H256::from_slice(&hex::decode("deadbeef").unwrap());
-
-        let expected_funded_amount = FieldElement::from_dec_str("1337").unwrap();
-
-        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, _deployed_addresses) = init_kkrt_state(
-            &sn_test_sequencer,
-            kkrt_eoa_address,
-            kkrt_eoa_private,
-            expected_funded_amount,
-            "Counter.json",
-        )
-        .await;
-
-        let kakarot_client = KakarotClient::new(StarknetConfig::new(
-            sn_test_sequencer.url().as_ref(),
-            kkrt_address,
-            proxy_account_class_hash,
-        ))
-        .unwrap();
-
-        let kkrt_eth_rpc = KakarotEthRpc::new(Box::new(kakarot_client));
-
-        let deployed_balance = kkrt_eth_rpc
-            .balance(
-                Address::from_slice(&hex::decode(kkrt_eoa_address.trim_start_matches("0x")).unwrap()),
-                Option::None,
-            )
-            .await;
-
-        // TODO: clean up how to compare this
-        let deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
-
-        assert_eq!(deployed_balance, expected_funded_amount);
     }
 
     #[tokio::test]
