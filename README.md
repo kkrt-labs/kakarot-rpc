@@ -86,7 +86,7 @@ TL;DR:
 ### Prerequisites
 
 - [Rust](https://www.rust-lang.org/tools/install)
-- [Poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
+- [Docker](https://docs.docker.com/engine/install)
 - Make
 
 ## Installation
@@ -122,9 +122,9 @@ Specify the environment variables and run the binary.
 make run-release
 ```
 
-### Dev mode with [starknet-devnet](https://github.com/0xSpaceShard/starknet-devnet)
+### Dev mode with [katana](https://github.com/dojoengine/dojo/tree/main/crates/katana)
 
-run starknet-devnet
+run devnet
 
 ```bash
 make devnet
@@ -138,14 +138,15 @@ make run
 
 Some notes on `make devnet`:
 
-- you can run starknet-devnet, by running `make devnet` at the project root.
+- you can run a devnet, by running `make devnet` at the project root.
 
-- this will run a devnet, **with contracts automatically deployed**, so you
+- this will run a devnet by running katana, **with contracts automatically deployed**, so you
   don't have to do them manually (see below for list of contracts and
   addresses).
 
-- `.env.example` has environment variables corresponding to deployments on this
-  devnet, you can copy it as it to `.env`.
+- it will use the values from `.env.example` file for deployment by default, but you can ovveride any variable that you want by passing it to docker { changing `.env.example` won't work as it was copied during build phase of the image }, you can see the `devnet` target in the `Makefile` of the project, and see how we are overriding STARKNET_NETWORK environment variable, in similar fashion, you can override any other environment variable.
+
+- the deployments and declarations for the devnet will be written to the `deployments/katana` folder inside your project root after a succesful run of the `make devnet` command.
 
 - feel free to run your own devnet if you are playing around with some custom
   changes to Kakarot.
