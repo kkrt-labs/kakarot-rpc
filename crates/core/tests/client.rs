@@ -4,10 +4,13 @@ mod tests {
     use std::str::FromStr;
 
     use kakarot_rpc_core::client::client_api::{KakarotEthApi, KakarotStarknetApi};
+    use kakarot_rpc_core::client::errors::EthApiError;
     use kakarot_rpc_core::mock::wiremock_utils::setup_mock_client_crate;
     use kakarot_rpc_core::models::block::BlockWithTxs;
     use kakarot_rpc_core::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent};
     use kakarot_rpc_core::models::event::StarknetEvent;
+    use kakarot_rpc_core::models::felt::Felt252WrapperError;
+    use kakarot_rpc_core::models::ConversionError;
     use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
@@ -173,8 +176,57 @@ mod tests {
         // Expecting an error because the `from_address` of the starknet event is not the expected deployed
         // `kakarot_address'.
         match resultant_eth_log {
-            Ok(_) => panic!("Expected an error due to missing high value, but got a result."),
-            Err(err) => assert_eq!(err.to_string(), "Kakarot Filter: Event is not part of Kakarot"),
+            Ok(_) => panic!("Expected an error due to wrong `from_address`, but got a result."),
+            Err(EthApiError::OtherError(err)) => {
+                assert_eq!(err.to_string(), "Kakarot Filter: Event is not part of Kakarot")
+            }
+            Err(_) => panic!("Expected a Kakarot Filter error, but got a different error."),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_starknet_event_to_eth_log_failure_from_expected_evm_address_not_convertible() {
+        let client = setup_mock_client_crate().await;
+
+        let kakarot_address =
+            FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
+
+        // the felt that is supposed to represent an ethereum address is larger than a H160
+        let large_field_element =
+            FieldElement::from_dec_str("1606938044258990275541962092341162602522202993782792835301376").unwrap();
+
+        // given
+        let event = Event {
+            from_address: kakarot_address,
+            keys: vec![
+                FieldElement::from_dec_str("253936425291629012954210100230398563497").unwrap(),
+                FieldElement::from_dec_str("171504579546982282416100792885946140532").unwrap(),
+                FieldElement::from_dec_str("10").unwrap(),
+                FieldElement::ZERO,
+                FieldElement::from_dec_str("11").unwrap(),
+                FieldElement::ZERO,
+                FieldElement::from_dec_str("10").unwrap(),
+                FieldElement::ZERO,
+                large_field_element, // Use the large FieldElement here.
+            ],
+            data: vec![],
+        };
+
+        let sn_event = StarknetEvent::new(event);
+
+        // when
+        let resultant_eth_log =
+            sn_event.to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None).await;
+
+        // then
+        match resultant_eth_log {
+            Ok(_) => panic!("Expected an error due to wrong `from_address`, but got a result."),
+            Err(EthApiError::ConversionError(ConversionError::Felt252WrapperConversionError(
+                Felt252WrapperError::ToEthereumAddressError,
+            ))) => {
+                // Test passes if we match this far.
+            }
+            Err(_) => panic!("Expected a FeltWrapperError, but got a different error."),
         }
     }
 

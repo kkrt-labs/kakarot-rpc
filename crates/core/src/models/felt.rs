@@ -1,4 +1,4 @@
-use reth_primitives::{H160, H256, U256};
+use reth_primitives::{Address, H256, U256};
 use starknet::core::types::{FieldElement, FromByteArrayError};
 use thiserror::Error;
 
@@ -8,6 +8,11 @@ use crate::client::errors::EthApiError;
 pub enum Felt252WrapperError {
     #[error(transparent)]
     FromByteArrayError(#[from] FromByteArrayError),
+    #[error(
+        "Failed to convert Felt252Wrapper to Ethereum address: the value exceeds the maximum size of an Ethereum \
+         address"
+    )]
+    ToEthereumAddressError,
 }
 
 impl From<Felt252WrapperError> for EthApiError {
@@ -38,17 +43,26 @@ impl From<u64> for Felt252Wrapper {
     }
 }
 
-impl From<H160> for Felt252Wrapper {
-    fn from(h160: H160) -> Self {
-        let felt = FieldElement::from_byte_slice_be(&h160.0).unwrap(); // safe unwrap since H160 is 20 bytes
+impl From<Address> for Felt252Wrapper {
+    fn from(address: Address) -> Self {
+        let felt = FieldElement::from_byte_slice_be(&address.0).unwrap(); // safe unwrap since H160 is 20 bytes
         Self(felt)
     }
 }
 
-impl From<Felt252Wrapper> for H160 {
-    fn from(felt: Felt252Wrapper) -> Self {
+impl TryFrom<Felt252Wrapper> for Address {
+    type Error = Felt252WrapperError;
+
+    fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
         let felt: FieldElement = felt.into();
-        H160::from_slice(&felt.to_bytes_be()[12..])
+        let bytes = felt.to_bytes_be();
+
+        // Check if the first 12 bytes are all zeros.
+        if bytes[0..12].iter().any(|&x| x != 0) {
+            return Err(Felt252WrapperError::ToEthereumAddressError);
+        }
+
+        Ok(Address::from_slice(&bytes[12..]))
     }
 }
 
