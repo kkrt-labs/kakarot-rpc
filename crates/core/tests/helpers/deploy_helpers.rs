@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use bytes::BytesMut;
@@ -295,14 +296,34 @@ async fn deploy_kakarot_contracts(
     deployments
 }
 
-pub async fn init_kkrt_state<T: Tokenize>(
-    sequencer: &TestSequencer,
+pub struct DeployedKakarot {
+    starknet_sequencer: Rc<TestSequencer>,
+    eoa_private_key: H256,
+    pub kakarot: FieldElement,
+    pub kakarot_proxy: FieldElement,
+    pub eoa_starknet_address: FieldElement,
+}
+
+impl DeployedKakarot {
+    pub async fn deploy_evm_contract<T: Tokenize>(&self, eth_contract: &str, constructor_args: T) -> Vec<FieldElement> {
+        deploy_evm_contract(
+            self.starknet_sequencer.url(),
+            self.eoa_starknet_address,
+            self.eoa_private_key,
+            eth_contract,
+            constructor_args,
+        )
+        .await
+        .expect("Evm contract deployment failed.")
+    }
+}
+
+pub async fn deploy_kakarot(
+    sequencer: Rc<TestSequencer>,
     kkrt_eoa_address: &str,
-    eoa_ethereum_private_key: H256,
+    eoa_private_key: H256,
     funding_amount: FieldElement,
-    eth_contract: &str,
-    constructor_args: T,
-) -> (FieldElement, FieldElement, FieldElement, Vec<FieldElement>) {
+) -> DeployedKakarot {
     let account = sequencer.account();
     let class_hash = declare_kakarot_contracts(&account).await;
     let kkrt_eoa_addr = FieldElement::from_hex_be(kkrt_eoa_address).unwrap();
@@ -312,8 +333,11 @@ pub async fn init_kkrt_state<T: Tokenize>(
     let sn_eoa_address =
         deploy_and_fund_eoa(&account, *kkrt_address, funding_amount, kkrt_eoa_addr, fee_token_address).await;
 
-    let deploy_event =
-        deploy_evm_contract(sequencer.url(), sn_eoa_address, eoa_ethereum_private_key, eth_contract, constructor_args)
-            .await;
-    (*kkrt_address, *class_hash.get("proxy").unwrap(), sn_eoa_address, deploy_event.unwrap())
+    DeployedKakarot {
+        starknet_sequencer: sequencer,
+        eoa_private_key,
+        kakarot: *kkrt_address,
+        kakarot_proxy: *class_hash.get("proxy").unwrap(),
+        eoa_starknet_address: sn_eoa_address,
+    }
 }
