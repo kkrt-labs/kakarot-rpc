@@ -198,8 +198,11 @@ async fn declare_kakarot_contracts(
         let filename =
             path.file_stem().expect("File has no stem").to_str().expect("Cannot convert filename to string").to_owned();
 
-        let res =
-            account.declare_legacy(contract_class).send().await.expect(&format!("failed to declare {}", filename));
+        let res = account
+            .declare_legacy(contract_class)
+            .send()
+            .await
+            .unwrap_or_else(|_| panic!("failed to declare {}", filename));
 
         class_hash.insert(filename, res.class_hash);
     }
