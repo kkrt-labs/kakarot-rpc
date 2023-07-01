@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
 
     let starknet_config = StarknetConfig::from_env()?;
     let rpc_config = RPCConfig::from_env()?;
-    let kakarot_client = KakarotClient::new(starknet_config)?;
+    let kakarot_client = KakarotClient::new_with_http_transport(starknet_config)?;
 
     let (server_addr, server_handle) = run_server(Box::new(kakarot_client), rpc_config).await?;
     let url = format!("http://{server_addr}");

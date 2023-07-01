@@ -42,8 +42,12 @@ where
     let proxy_account_class_hash =
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
 
-    let kakarot_client =
-        KakarotClient::new(StarknetConfig::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)).unwrap();
+    let kakarot_client = KakarotClient::new_with_http_transport(StarknetConfig::new(
+        &starknet_rpc,
+        kakarot_address,
+        proxy_account_class_hash,
+    ))
+    .unwrap();
 
     KakarotEthRpc::new(Box::new(kakarot_client))
 }
