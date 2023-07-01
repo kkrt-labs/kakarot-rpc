@@ -1,3 +1,5 @@
+use std::fs;
+
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use serde_json::Value;
 use starknet::providers::jsonrpc::JsonRpcMethod;
@@ -25,30 +27,29 @@ impl StarknetRpcFixtureBuilder {
     }
 
     pub fn load_jsons(mut self) -> Self {
-        match self.fixture.method {
-            JsonRpcMethod::GetNonce => {
-                self.request = serde_json::from_str(include_str!("fixtures/requests/starknet_getNonce.json")).unwrap();
-                self.response =
-                    serde_json::from_str(include_str!("fixtures/responses/starknet_getNonce.json")).unwrap();
-            }
-            JsonRpcMethod::Call => {
-                self.request = serde_json::from_str(include_str!("fixtures/requests/starknet_call.json")).unwrap();
-                self.response = serde_json::from_str(include_str!("fixtures/responses/starknet_call.json")).unwrap();
-            }
-            _ => unimplemented!(),
-        };
+        let clean_quotations = |s: &str| s.replace('\"', "");
+        let request_path = format!(
+            "src/mock/fixtures/requests/{}.json",
+            clean_quotations(&serde_json::to_string(&self.fixture.method).unwrap())
+        );
+        let response_path = format!(
+            "src/mock/fixtures/responses/{}.json",
+            clean_quotations(&serde_json::to_string(&self.fixture.method).unwrap())
+        );
+
+        self.request = fs::read_to_string(request_path).unwrap().parse::<Value>().unwrap();
+        self.response = fs::read_to_string(response_path).unwrap().parse::<Value>().unwrap();
+
         self
     }
 
     pub fn with_params(mut self) -> Self {
-        dbg!(&self.request["params"].clone());
         self.fixture.params = self.request["params"].clone();
         self
     }
 
     pub fn with_response(mut self) -> Self {
-        dbg!(&self.response["result"].clone());
-        self.fixture.response = self.response["result"].clone();
+        self.fixture.response = self.response.clone();
         self
     }
 
@@ -76,7 +77,7 @@ pub fn mock_starknet_provider(fixtures: Option<Vec<StarknetRpcFixture>>) -> Json
 
 #[cfg(test)]
 mod tests {
-    use reth_primitives::Address;
+    use reth_primitives::{Address, U256, U64};
     use starknet::core::types::{BlockId, BlockTag};
     use starknet_crypto::FieldElement;
 
@@ -84,6 +85,28 @@ mod tests {
     use crate::client::client_api::KakarotProvider;
     use crate::client::config::StarknetConfig;
     use crate::client::KakarotClient;
+
+    #[tokio::test]
+    async fn test_mock_provider_block_number() {
+        // Given
+        let fixtures = fixtures(vec![JsonRpcMethod::BlockNumber]);
+        let provider = mock_starknet_provider(Some(fixtures));
+
+        let config = StarknetConfig {
+            kakarot_address: FieldElement::from_hex_be(
+                "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+            )
+            .unwrap(),
+            ..Default::default()
+        };
+        let client = KakarotClient::new_with_provider(config, provider).unwrap();
+
+        // When
+        let block_number = client.block_number().await.unwrap();
+
+        // Then
+        assert_eq!(U64::from(19640), block_number);
+    }
 
     #[tokio::test]
     async fn test_mock_provider_nonce() {
@@ -102,6 +125,9 @@ mod tests {
 
         // When
         let eth_address = Address::from_low_u64_be(0xabde1);
-        let _nonce = client.nonce(eth_address, BlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let nonce = client.nonce(eth_address, BlockId::Tag(BlockTag::Latest)).await.unwrap();
+
+        // Then
+        assert_eq!(U256::from(1), nonce);
     }
 }

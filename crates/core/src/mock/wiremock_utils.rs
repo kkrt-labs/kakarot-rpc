@@ -128,7 +128,14 @@ where
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
     let proxy_account_class_hash =
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
-    Box::new(KakarotClient::new(StarknetConfig::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)).unwrap())
+    Box::new(
+        KakarotClient::new_with_http_transport(StarknetConfig::new(
+            &starknet_rpc,
+            kakarot_address,
+            proxy_account_class_hash,
+        ))
+        .unwrap(),
+    )
 }
 
 pub async fn setup_mock_client_crate<T>() -> KakarotClient<JsonRpcClient<HttpTransport>>
@@ -142,13 +149,18 @@ where
     let proxy_account_class_hash =
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
 
-    KakarotClient::new(StarknetConfig::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)).unwrap()
+    KakarotClient::new_with_http_transport(StarknetConfig::new(
+        &starknet_rpc,
+        kakarot_address,
+        proxy_account_class_hash,
+    ))
+    .unwrap()
 }
 
 fn mock_block_number() -> Mock {
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_number(Vec::<u8>::new()))).respond_with(
         response_template_with_status(StatusCode::OK)
-            .set_body_raw(include_str!("fixtures/responses/blocks/starknet_blockNumber.json"), "application/json"),
+            .set_body_raw(include_str!("fixtures/responses/starknet_blockNumber.json"), "application/json"),
     )
 }
 
