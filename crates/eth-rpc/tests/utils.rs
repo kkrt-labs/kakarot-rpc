@@ -1,5 +1,5 @@
 use kakarot_rpc::eth_rpc::KakarotEthRpc;
-use kakarot_rpc_core::client::client_api::KakarotProvider;
+use kakarot_rpc_core::client::client_api::KakarotEthApi;
 use kakarot_rpc_core::client::config::StarknetConfig;
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::mock::wiremock_utils::setup_wiremock;
@@ -34,7 +34,7 @@ use starknet::providers::JsonRpcClient;
 /// ```
 pub async fn setup_kakarot_eth_rpc<T: JsonRpcTransport + Send + Sync>() -> KakarotEthRpc<T>
 where
-    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotProvider<T>,
+    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotEthApi<T>,
 {
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =

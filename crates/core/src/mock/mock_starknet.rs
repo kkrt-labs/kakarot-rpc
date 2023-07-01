@@ -82,7 +82,7 @@ mod tests {
     use starknet_crypto::FieldElement;
 
     use super::*;
-    use crate::client::client_api::KakarotProvider;
+    use crate::client::client_api::KakarotEthApi;
     use crate::client::config::StarknetConfig;
     use crate::client::KakarotClient;
 

@@ -9,7 +9,6 @@ mod tests {
     use kakarot_rpc_core::models::block::BlockWithTxs;
     use kakarot_rpc_core::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent};
     use kakarot_rpc_core::models::event::StarknetEvent;
-    use kakarot_rpc_core::models::felt::Felt252WrapperError;
     use kakarot_rpc_core::models::ConversionError;
     use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
@@ -219,12 +218,10 @@ mod tests {
         // then
         match resultant_eth_log {
             Ok(_) => panic!("Expected an error due to wrong `from_address`, but got a result."),
-            Err(EthApiError::ConversionError(ConversionError::Felt252WrapperConversionError(
-                Felt252WrapperError::ToEthereumAddressError,
-            ))) => {
+            Err(EthApiError::ConversionError(ConversionError::ToEthereumAddressError)) => {
                 // Test passes if we match this far.
             }
-            Err(_) => panic!("Expected a FeltWrapperError, but got a different error."),
+            Err(_) => panic!("Expected a ToEthereumAddressError, but got a different error."),
         }
     }
 

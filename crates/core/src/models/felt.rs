@@ -1,4 +1,4 @@
-use reth_primitives::{H160, H256, U256};
+use reth_primitives::{Address, H256, U256};
 use starknet::core::types::FieldElement;
 
 use super::ConversionError;

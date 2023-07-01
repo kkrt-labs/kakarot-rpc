@@ -692,7 +692,7 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
 }
 
 #[async_trait]
-impl<T: JsonRpcTransport> KakarotStarknetApi<T> for KakarotClient<JsonRpcClient<T>> {
+impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<JsonRpcClient<T>> {
     fn kakarot_address(&self) -> FieldElement {
         self.kakarot_address
     }
@@ -701,7 +701,7 @@ impl<T: JsonRpcTransport> KakarotStarknetApi<T> for KakarotClient<JsonRpcClient<
         self.proxy_account_class_hash
     }
 
-    fn starknet_provider(&self) -> &JsonRpcClient<HttpTransport> {
+    fn starknet_provider(&self) -> &JsonRpcClient<T> {
         &self.starknet_provider
     }
 
