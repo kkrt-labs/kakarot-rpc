@@ -33,3 +33,9 @@ tokio = { version = "1.21.2", features = ["macros"] }
 
 wiremock = "0.5.17"
 lazy_static = "1.4.0"
+
+[dev-dependencies]
+bytes = "1"  
+dojo-test-utils = { workspace = true }
+ethers = "2.0"
+starknet-crypto = { workspace = true }

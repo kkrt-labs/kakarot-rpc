@@ -1,20 +1,87 @@
+mod helpers;
+
 #[cfg(test)]
 mod tests {
 
     use std::str::FromStr;
 
-    use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
+    use dojo_test_utils::sequencer::TestSequencer;
+    use kakarot_rpc_core::client::client_api::{KakarotEthApi, KakarotStarknetApi};
+    use kakarot_rpc_core::client::config::StarknetConfig;
     use kakarot_rpc_core::client::errors::EthApiError;
+    use kakarot_rpc_core::client::KakarotClient;
     use kakarot_rpc_core::mock::wiremock_utils::setup_mock_client_crate;
     use kakarot_rpc_core::models::block::BlockWithTxs;
     use kakarot_rpc_core::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent};
     use kakarot_rpc_core::models::event::StarknetEvent;
+    use kakarot_rpc_core::models::felt::{Felt252Wrapper, Felt252WrapperError};
     use kakarot_rpc_core::models::ConversionError;
+    use reth_primitives::hex_literal::hex;
     use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
     use starknet::core::utils::get_selector_from_name;
     use starknet::providers::Provider;
+
+    use crate::helpers::constants::{EVM_ADDRESS, EVM_PRIVATE_KEY};
+    use crate::helpers::deploy_helpers::{create_raw_tx, init_kkrt_state};
+    #[tokio::test]
+    async fn use_test_sequencer_test() {
+        let sn_test_sequencer = TestSequencer::start().await;
+
+        let kkrt_eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
+
+        let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
+
+        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, deployed_addresses) =
+            init_kkrt_state(&sn_test_sequencer, EVM_ADDRESS, kkrt_eoa_private, expected_funded_amount, "Counter.json")
+                .await;
+
+        let kakarot_client = KakarotClient::new(StarknetConfig::new(
+            sn_test_sequencer.url().as_ref(),
+            kkrt_address,
+            proxy_account_class_hash,
+        ))
+        .unwrap();
+
+        let deployed_balance = kakarot_client
+            .balance(
+                Address::from_slice(&hex::decode(EVM_ADDRESS.trim_start_matches("0x")).unwrap()),
+                BlockId::Tag(BlockTag::Latest),
+            )
+            .await;
+
+        // TODO: clean up how to compare this
+        let deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
+
+        assert_eq!(deployed_balance, expected_funded_amount);
+
+        let Ok(counter_eth_addr) = ({
+            let address : Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            address.try_into()
+        }) else {
+            panic!("returned deploy address from kakarot failed to convert to address")
+        };
+
+        // asserts there is code at this address
+        // let code_res = kkrt_eth_rpc.get_code(counter_eth_addr, Option::None).await;
+
+        let inc_selector = hex!("371303c0");
+        let inc_tx = create_raw_tx(inc_selector, kkrt_eoa_private, counter_eth_addr, vec![], 1u64);
+        let inc_res = kakarot_client.send_transaction(inc_tx).await.unwrap();
+        kakarot_client.transaction_receipt(inc_res).await.expect("increment receipt failed");
+
+        let counter_selector = hex!("06661abd");
+        let counter_val =
+            kakarot_client.call_view(counter_eth_addr, counter_selector.into(), BlockId::Tag(BlockTag::Latest)).await;
+
+        if let Ok(bytes) = counter_val {
+            let num = *bytes.last().expect("Empty byte array");
+            assert_eq!(num, 1);
+        } else {
+            panic!("Expected Ok, got {:?}", counter_val);
+        }
+    }
 
     #[tokio::test]
     async fn test_starknet_block_to_eth_block() {
