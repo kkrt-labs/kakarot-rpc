@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use bytes::BytesMut;
 use dojo_test_utils::sequencer::TestSequencer;
-use ethers::abi::{Abi, Bytes as EthersBytes, JsonAbi};
+use ethers::abi::{Abi, JsonAbi, Tokenize};
 use kakarot_rpc_core::client::constants::CHAIN_ID;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
@@ -25,12 +25,30 @@ use url::Url;
 
 use super::constants::{COMPILED_KAKAROT_PATH, COMPILED_SOLIDITY_PATH, FEE_TOKEN_ADDRESS};
 
-pub fn get_contract(filename: &str) -> (Abi, EthersBytes) {
+pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
     let path = format!("{COMPILED_SOLIDITY_PATH}/{filename}");
     let contents = fs::read_to_string(path).unwrap();
     let obj: JsonAbi = serde_json::from_str(&contents).unwrap();
     let JsonAbi::Object(obj) = obj else { panic!() };
-    (serde_json::from_str(&serde_json::to_string(&obj.abi).unwrap()).unwrap(), obj.bytecode.unwrap().to_vec())
+    (serde_json::from_str(&serde_json::to_string(&obj.abi).unwrap()).unwrap(), obj.bytecode.unwrap())
+}
+
+// extracted/simplified logic from ethers https://github.com/gakonst/ethers-rs/blob/master/ethers-contract/src/factory.rs#L385
+// otherwise we would have to mock an eth client in order to access the logic
+pub fn encode_contract<T: Tokenize>(
+    abi: &Abi,
+    bytecode: &ethers::types::Bytes,
+    constructor_args: T,
+) -> ethers::types::Bytes {
+    let params = constructor_args.into_tokens();
+    match (abi.constructor(), params.is_empty()) {
+        (None, false) => panic!("No constructor in ABI."),
+        (None, true) => bytecode.clone(),
+        (Some(constructor), _) => {
+            let res = constructor.encode_input(bytecode.to_vec(), &params);
+            res.unwrap().into()
+        }
+    }
 }
 
 // the ethereum transaction you know and love,
@@ -72,11 +90,12 @@ pub fn create_raw_tx(selector: [u8; 4], eoa_secret: H256, to: Address, args: Vec
     raw_tx.to_vec().into()
 }
 
-async fn deploy_evm_contract(
+async fn deploy_evm_contract<T: Tokenize>(
     sequencer_url: Url,
     eoa_account_starknet_address: FieldElement,
     eoa_secret: H256,
     contract_name: &str,
+    constructor_args: T,
 ) -> Option<Vec<FieldElement>> {
     // This a made up signing key so we can reuse starknet-rs abstractions
     // to see the flow of how kakarot-rpc handles eth payloads -> starknet txns
@@ -90,9 +109,10 @@ async fn deploy_evm_contract(
         chain_id::TESTNET,
     );
 
-    let (_abi, contract_bytes) = get_contract(contract_name);
-    let contract_bytes: reth_primitives::Bytes = contract_bytes.into();
-    let transaction = to_kakarot_transaction(0, TransactionKind::Create, contract_bytes);
+    let (abi, contract_bytes) = get_contract(contract_name);
+    let contract_bytes = encode_contract(&abi, &contract_bytes, constructor_args);
+
+    let transaction = to_kakarot_transaction(0, TransactionKind::Create, contract_bytes.to_vec().into());
     let signature = sign_message(eoa_secret, transaction.signature_hash()).unwrap();
     let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
@@ -272,12 +292,13 @@ async fn deploy_kakarot_contracts(
     deployments
 }
 
-pub async fn init_kkrt_state(
+pub async fn init_kkrt_state<T: Tokenize>(
     sequencer: &TestSequencer,
     kkrt_eoa_address: &str,
     eoa_ethereum_private_key: H256,
     funding_amount: FieldElement,
     eth_contract: &str,
+    constructor_args: T,
 ) -> (FieldElement, FieldElement, FieldElement, Vec<FieldElement>) {
     let account = sequencer.account();
     let class_hash = declare_kakarot_contracts(&account).await;
@@ -289,6 +310,7 @@ pub async fn init_kkrt_state(
         deploy_and_fund_eoa(&account, *kkrt_address, funding_amount, kkrt_eoa_addr, fee_token_address).await;
 
     let deploy_event =
-        deploy_evm_contract(sequencer.url(), sn_eoa_address, eoa_ethereum_private_key, eth_contract).await;
+        deploy_evm_contract(sequencer.url(), sn_eoa_address, eoa_ethereum_private_key, eth_contract, constructor_args)
+            .await;
     (*kkrt_address, *class_hash.get("proxy").unwrap(), sn_eoa_address, deploy_event.unwrap())
 }

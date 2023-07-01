@@ -6,6 +6,7 @@ mod tests {
     use std::str::FromStr;
 
     use dojo_test_utils::sequencer::TestSequencer;
+    use ethers::types::Address as EthersAddress;
     use kakarot_rpc_core::client::client_api::{KakarotEthApi, KakarotStarknetApi};
     use kakarot_rpc_core::client::config::StarknetConfig;
     use kakarot_rpc_core::client::errors::EthApiError;
@@ -25,17 +26,63 @@ mod tests {
 
     use crate::helpers::constants::{EVM_ADDRESS, EVM_PRIVATE_KEY};
     use crate::helpers::deploy_helpers::{create_raw_tx, init_kkrt_state};
+
     #[tokio::test]
-    async fn use_test_sequencer_test() {
+    async fn test_plain_opcodes() {
+        // initial setup of plainOpcodes to test we can deploy contracts w/ constructor arguments
+        let sn_test_sequencer = TestSequencer::start().await;
+
+        let kkrt_eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
+
+        let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
+        let address = "0x0000000000000000000000000000000000000000".parse::<EthersAddress>().unwrap();
+
+        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, deployed_addresses) = init_kkrt_state(
+            &sn_test_sequencer,
+            EVM_ADDRESS,
+            kkrt_eoa_private,
+            expected_funded_amount,
+            "PlainOpcodes.json",
+            // more than one argument to a constructor needs to be conveyed as a tuple
+            address,
+        )
+        .await;
+
+        let kakarot_client = KakarotClient::new(StarknetConfig::new(
+            sn_test_sequencer.url().as_ref(),
+            kkrt_address,
+            proxy_account_class_hash,
+        ))
+        .unwrap();
+
+        let Ok(opcode_eth_addr) = ({
+            let address : Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            address.try_into()
+        }) else {
+            panic!("returned deploy address from kakarot failed to convert to address")
+        };
+
+        kakarot_client.get_code(opcode_eth_addr, BlockId::Tag(BlockTag::Latest)).await.expect("contract not deployed");
+    }
+
+    #[tokio::test]
+    async fn test_counter() {
         let sn_test_sequencer = TestSequencer::start().await;
 
         let kkrt_eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
 
         let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
 
-        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, deployed_addresses) =
-            init_kkrt_state(&sn_test_sequencer, EVM_ADDRESS, kkrt_eoa_private, expected_funded_amount, "Counter.json")
-                .await;
+        let (kkrt_address, proxy_account_class_hash, _sn_eoa_address, deployed_addresses) = init_kkrt_state(
+            &sn_test_sequencer,
+            EVM_ADDRESS,
+            kkrt_eoa_private,
+            expected_funded_amount,
+            "Counter.json",
+            // no constructor arguments for counter
+            (),
+        )
+        .await;
 
         let kakarot_client = KakarotClient::new(StarknetConfig::new(
             sn_test_sequencer.url().as_ref(),
@@ -63,8 +110,7 @@ mod tests {
             panic!("returned deploy address from kakarot failed to convert to address")
         };
 
-        // asserts there is code at this address
-        // let code_res = kkrt_eth_rpc.get_code(counter_eth_addr, Option::None).await;
+        kakarot_client.get_code(counter_eth_addr, BlockId::Tag(BlockTag::Latest)).await.expect("contract not deployed");
 
         let inc_selector = hex!("371303c0");
         let inc_tx = create_raw_tx(inc_selector, kkrt_eoa_private, counter_eth_addr, vec![], 1u64);
