@@ -18,7 +18,6 @@ mod tests {
     use kakarot_rpc_core::models::event::StarknetEvent;
     use kakarot_rpc_core::models::felt::{Felt252Wrapper, Felt252WrapperError};
     use kakarot_rpc_core::models::ConversionError;
-    use reth_primitives::hex_literal::hex;
     use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
@@ -42,7 +41,7 @@ mod tests {
             deploy_kakarot(Rc::clone(&starknet_test_sequencer), EVM_ADDRESS, eoa_private, expected_funded_amount).await;
 
         let address = "0x0000000000000000000000000000000000000000".parse::<EthersAddress>().unwrap();
-        let deployed_addresses = deployed_kakarot
+        let (_plain_opcodes_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 "PlainOpcodes.json",
                 // more than one argument to a constructor needs to be conveyed as a tuple
@@ -68,7 +67,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_counter() {
         let starknet_test_sequencer = Rc::new(TestSequencer::start().await);
 
@@ -79,7 +77,7 @@ mod tests {
         let deployed_kakarot =
             deploy_kakarot(Rc::clone(&starknet_test_sequencer), EVM_ADDRESS, eoa_private, expected_funded_amount).await;
 
-        let deployed_addresses = deployed_kakarot
+        let (counter_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 "Counter.json",
                 // no constructor is conveyed as a tuple
@@ -101,7 +99,6 @@ mod tests {
             )
             .await;
 
-        // TODO: clean up how to compare this
         let deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
 
         assert_eq!(deployed_balance, expected_funded_amount);
@@ -115,14 +112,14 @@ mod tests {
 
         kakarot_client.get_code(counter_eth_addr, BlockId::Tag(BlockTag::Latest)).await.expect("contract not deployed");
 
-        let inc_selector = hex!("371303c0");
+        let inc_selector = counter_abi.function("inc").unwrap().short_signature();
         let inc_tx = create_raw_tx(inc_selector, eoa_private, counter_eth_addr, vec![], 1u64);
         let inc_res = kakarot_client.send_transaction(inc_tx).await.unwrap();
         kakarot_client.transaction_receipt(inc_res).await.expect("increment receipt failed");
 
-        let counter_selector = hex!("06661abd");
+        let count_selector = counter_abi.function("count").unwrap().short_signature();
         let counter_val =
-            kakarot_client.call_view(counter_eth_addr, counter_selector.into(), BlockId::Tag(BlockTag::Latest)).await;
+            kakarot_client.call_view(counter_eth_addr, count_selector.into(), BlockId::Tag(BlockTag::Latest)).await;
 
         if let Ok(bytes) = counter_val {
             let num = *bytes.last().expect("Empty byte array");

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use bytes::BytesMut;
 use dojo_test_utils::sequencer::TestSequencer;
 use dotenv::dotenv;
-use ethers::abi::{Abi, JsonAbi, Tokenize};
+use ethers::abi::{Abi, Tokenize};
 use kakarot_rpc_core::client::constants::CHAIN_ID;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
@@ -36,13 +36,24 @@ macro_rules! root_project_path {
     }};
 }
 
-// test helper sourced from https://github.com/gakonst/ethers-rs/blob/master/ethers-contract/tests/it/common.rs#L23
 pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
     let compiled_solidity_path = root_project_path!(std::env::var("COMPILED_SOLIDITY_PATH").unwrap()).join(filename);
+
+    // Read the content of the file
     let contents = fs::read_to_string(compiled_solidity_path).unwrap();
-    let obj: JsonAbi = serde_json::from_str(&contents).unwrap();
-    let JsonAbi::Object(obj) = obj else { panic!() };
-    (serde_json::from_str(&serde_json::to_string(&obj.abi).unwrap()).unwrap(), obj.bytecode.unwrap())
+
+    // Parse the entire JSON content into a Value
+    let json: serde_json::Value = serde_json::from_str(&contents).unwrap();
+
+    // Extract the `abi` field and parse it into the Abi type
+    let abi: Abi = serde_json::from_value(json["abi"].clone()).unwrap();
+
+    // Extract the `bytecode` field
+    let bytecode_str = json["bytecode"]["object"].as_str().unwrap();
+    let bytecode_vec = hex::decode(bytecode_str.trim_start_matches("0x")).unwrap();
+    let bytecode = ethers::types::Bytes::from(bytecode_vec);
+
+    (abi, bytecode)
 }
 
 // extracted/simplified logic from ethers https://github.com/gakonst/ethers-rs/blob/master/ethers-contract/src/factory.rs#L385
@@ -102,13 +113,21 @@ pub fn create_raw_tx(selector: [u8; 4], eoa_secret: H256, to: Address, args: Vec
     raw_tx.to_vec().into()
 }
 
+fn into_receipt(maybe_receipt: MaybePendingTransactionReceipt) -> Option<InvokeTransactionReceipt> {
+    if let MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) = maybe_receipt {
+        Some(receipt)
+    } else {
+        None
+    }
+}
+
 async fn deploy_evm_contract<T: Tokenize>(
     sequencer_url: Url,
     eoa_account_starknet_address: FieldElement,
     eoa_secret: H256,
     contract_name: &str,
     constructor_args: T,
-) -> Option<Vec<FieldElement>> {
+) -> Option<(Abi, Vec<FieldElement>)> {
     // This a made up signing key so we can reuse starknet-rs abstractions
     // to see the flow of how kakarot-rpc handles eth payloads -> starknet txns
     // see ./crates/core/src/client.rs::send_transaction
@@ -147,27 +166,18 @@ async fn deploy_evm_contract<T: Tokenize>(
         .await
         .unwrap();
 
-    let deployment_of_counter_evm_contract_result_receipt = eoa_starknet_account
+    let maybe_receipt = eoa_starknet_account
         .provider()
         .get_transaction_receipt(deployment_of_counter_evm_contract_result.transaction_hash)
         .await
         .unwrap();
 
-    if let MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(InvokeTransactionReceipt {
-        events,
-        ..
-    })) = deployment_of_counter_evm_contract_result_receipt
-    {
-        events.iter().find_map(|event| {
-            if event.keys.contains(&get_selector_from_name("evm_contract_deployed").unwrap()) {
-                Some(event.data.clone())
-            } else {
-                None
-            }
-        })
-    } else {
-        None
-    }
+    into_receipt(maybe_receipt).and_then(|InvokeTransactionReceipt { events, .. }| {
+        events
+            .iter()
+            .find(|event| event.keys.contains(&get_selector_from_name("evm_contract_deployed").unwrap()))
+            .map(|event| (abi, event.data.clone()))
+    })
 }
 
 async fn deploy_starknet_contract(
@@ -318,7 +328,11 @@ pub struct DeployedKakarot {
 }
 
 impl DeployedKakarot {
-    pub async fn deploy_evm_contract<T: Tokenize>(&self, eth_contract: &str, constructor_args: T) -> Vec<FieldElement> {
+    pub async fn deploy_evm_contract<T: Tokenize>(
+        &self,
+        eth_contract: &str,
+        constructor_args: T,
+    ) -> (Abi, Vec<FieldElement>) {
         deploy_evm_contract(
             self.starknet_sequencer.url(),
             self.eoa_starknet_address,
