@@ -21,7 +21,7 @@ tokio = { version = "1.21.2", features = ["macros"] }
 
 # misc
 anyhow = "1.0.68"
-dotenv = "0.15.0"
+dotenv = { workspace = true }
 hex = "0.4"
 reqwest = "0.11.13"
 reth-primitives = { workspace = true }
