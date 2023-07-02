@@ -3,7 +3,6 @@ mod helpers;
 #[cfg(test)]
 mod tests {
 
-    use std::rc::Rc;
     use std::str::FromStr;
 
     use dojo_test_utils::sequencer::TestSequencer;
@@ -25,29 +24,31 @@ mod tests {
     use starknet::providers::Provider;
 
     use crate::helpers::constants::{EVM_ADDRESS, EVM_PRIVATE_KEY};
-    use crate::helpers::deploy_helpers::{create_raw_tx, deploy_kakarot};
+    use crate::helpers::deploy_helpers::{create_raw_ethereum_tx, deploy_kakarot_system};
 
     #[tokio::test]
     #[ignore]
     async fn test_plain_opcodes() {
         // initial setup of plainOpcodes to test we can deploy contracts w/ constructor arguments
-        let starknet_test_sequencer = Rc::new(TestSequencer::start().await);
+        let starknet_test_sequencer = TestSequencer::start().await;
 
         let eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
 
         let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
 
         let deployed_kakarot =
-            deploy_kakarot(Rc::clone(&starknet_test_sequencer), EVM_ADDRESS, eoa_private, expected_funded_amount).await;
+            deploy_kakarot_system(&starknet_test_sequencer, EVM_ADDRESS, eoa_private, expected_funded_amount).await;
 
         let address = "0x0000000000000000000000000000000000000000".parse::<EthersAddress>().unwrap();
         let (_plain_opcodes_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
+                starknet_test_sequencer.url(),
                 "PlainOpcodes.json",
                 // more than one argument to a constructor needs to be conveyed as a tuple
                 address,
             )
-            .await;
+            .await
+            .unwrap();
 
         let kakarot_client = KakarotClient::new(StarknetConfig::new(
             starknet_test_sequencer.url().as_ref(),
@@ -68,22 +69,24 @@ mod tests {
 
     #[tokio::test]
     async fn test_counter() {
-        let starknet_test_sequencer = Rc::new(TestSequencer::start().await);
+        let starknet_test_sequencer = TestSequencer::start().await;
 
         let eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
 
         let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
 
         let deployed_kakarot =
-            deploy_kakarot(Rc::clone(&starknet_test_sequencer), EVM_ADDRESS, eoa_private, expected_funded_amount).await;
+            deploy_kakarot_system(&starknet_test_sequencer, EVM_ADDRESS, eoa_private, expected_funded_amount).await;
 
         let (counter_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
+                starknet_test_sequencer.url(),
                 "Counter.json",
                 // no constructor is conveyed as a tuple
                 (),
             )
-            .await;
+            .await
+            .unwrap();
 
         let kakarot_client = KakarotClient::new(StarknetConfig::new(
             starknet_test_sequencer.url().as_ref(),
@@ -113,7 +116,7 @@ mod tests {
         kakarot_client.get_code(counter_eth_addr, BlockId::Tag(BlockTag::Latest)).await.expect("contract not deployed");
 
         let inc_selector = counter_abi.function("inc").unwrap().short_signature();
-        let inc_tx = create_raw_tx(inc_selector, eoa_private, counter_eth_addr, vec![], 1u64);
+        let inc_tx = create_raw_ethereum_tx(inc_selector, eoa_private, counter_eth_addr, vec![], 1u64);
         let inc_res = kakarot_client.send_transaction(inc_tx).await.unwrap();
         kakarot_client.transaction_receipt(inc_res).await.expect("increment receipt failed");
 
