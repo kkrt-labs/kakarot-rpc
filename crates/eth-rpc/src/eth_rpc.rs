@@ -157,7 +157,8 @@ impl EthApiServer for KakarotEthRpc {
     }
 
     async fn get_code(&self, address: Address, block_number: Option<BlockId>) -> Result<Bytes> {
-        let starknet_block_id = ethers_block_id_to_starknet_block_id(block_number.unwrap())?;
+        let starknet_block_id =
+            ethers_block_id_to_starknet_block_id(block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)))?;
 
         let code = self.kakarot_client.get_code(address, starknet_block_id).await?;
         Ok(code)
@@ -237,8 +238,8 @@ impl EthApiServer for KakarotEthRpc {
         todo!()
     }
 
-    async fn send_raw_transaction(&self, _bytes: Bytes) -> Result<H256> {
-        let transaction_hash = self.kakarot_client.send_transaction(_bytes).await?;
+    async fn send_raw_transaction(&self, bytes: Bytes) -> Result<H256> {
+        let transaction_hash = self.kakarot_client.send_transaction(bytes).await?;
         Ok(transaction_hash)
     }
 
