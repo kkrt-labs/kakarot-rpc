@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use bytes::BytesMut;
 use dojo_test_utils::sequencer::TestSequencer;
+use dotenv::dotenv;
 use ethers::abi::{Abi, JsonAbi, Tokenize};
 use kakarot_rpc_core::client::constants::CHAIN_ID;
 use reth_primitives::{
@@ -24,11 +25,21 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
-use super::constants::{COMPILED_KAKAROT_PATH, COMPILED_SOLIDITY_PATH, FEE_TOKEN_ADDRESS};
+use super::constants::FEE_TOKEN_ADDRESS;
 
+macro_rules! root_project_path {
+    ($relative_path:expr) => {{
+        let crate_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let project_root = crate_root.parent().unwrap().parent().unwrap();
+        let full_path = project_root.join($relative_path);
+        full_path
+    }};
+}
+
+// test helper sourced from https://github.com/gakonst/ethers-rs/blob/master/ethers-contract/tests/it/common.rs#L23
 pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
-    let path = format!("{COMPILED_SOLIDITY_PATH}/{filename}");
-    let contents = fs::read_to_string(path).unwrap();
+    let compiled_solidity_path = root_project_path!(std::env::var("COMPILED_SOLIDITY_PATH").unwrap()).join(filename);
+    let contents = fs::read_to_string(compiled_solidity_path).unwrap();
     let obj: JsonAbi = serde_json::from_str(&contents).unwrap();
     let JsonAbi::Object(obj) = obj else { panic!() };
     (serde_json::from_str(&serde_json::to_string(&obj.abi).unwrap()).unwrap(), obj.bytecode.unwrap())
@@ -177,7 +188,9 @@ async fn deploy_starknet_contract(
 async fn declare_kakarot_contracts(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) -> HashMap<String, FieldElement> {
-    let paths = fs::read_dir(COMPILED_KAKAROT_PATH).expect("Could not read directory");
+    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").unwrap());
+
+    let paths = fs::read_dir(compiled_kakarot_path).expect("Could not read directory");
 
     let kakarot_compiled_contract_paths: Vec<_> = paths
         .filter_map(|entry| {
@@ -324,6 +337,7 @@ pub async fn deploy_kakarot(
     eoa_private_key: H256,
     funding_amount: FieldElement,
 ) -> DeployedKakarot {
+    dotenv().ok();
     let account = sequencer.account();
     let class_hash = declare_kakarot_contracts(&account).await;
     let kkrt_eoa_addr = FieldElement::from_hex_be(kkrt_eoa_address).unwrap();

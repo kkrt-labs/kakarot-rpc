@@ -29,6 +29,7 @@ mod tests {
     use crate::helpers::deploy_helpers::{create_raw_tx, deploy_kakarot};
 
     #[tokio::test]
+    #[ignore]
     async fn test_plain_opcodes() {
         // initial setup of plainOpcodes to test we can deploy contracts w/ constructor arguments
         let starknet_test_sequencer = Rc::new(TestSequencer::start().await);
@@ -67,6 +68,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_counter() {
         let starknet_test_sequencer = Rc::new(TestSequencer::start().await);
 

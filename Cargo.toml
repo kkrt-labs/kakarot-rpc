@@ -29,6 +29,7 @@ reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb71
 async-trait = "0.1.58"
 jsonrpsee = { version = "0.18.2", features = ["full"] }
 lazy_static = "1.4.0"
+dotenv = "0.15.0"  
 
 
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml

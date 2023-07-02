@@ -1,6 +1,3 @@
-pub const COMPILED_KAKAROT_PATH: &str = "tests/compiled_kakarot";
-pub const COMPILED_SOLIDITY_PATH: &str = "tests/compiled_solidity";
-
 pub const EVM_ADDRESS: &str = "0x132d200e5ceedf1a4634eee081cfeb077d92e4fd";
 pub const EVM_PRIVATE_KEY: &str = "024b7c9e8f15432309db022c54d3279d9b421275533e090aa03cbf4211670823";
 
