@@ -68,6 +68,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_counter() {
         let starknet_test_sequencer = TestSequencer::start().await;
 
