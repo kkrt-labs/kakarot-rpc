@@ -29,7 +29,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_constructable() {
-        // initial setup of plainOpcodes to test we can deploy contracts w/ constructor arguments
+        // initial setup of Constructable to test we can deploy contracts w/ constructor arguments
         let starknet_test_sequencer = TestSequencer::start().await;
 
         let eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
