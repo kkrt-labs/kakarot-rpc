@@ -6,7 +6,7 @@ mod tests {
     use std::str::FromStr;
 
     use dojo_test_utils::sequencer::TestSequencer;
-    use ethers::types::Address as EthersAddress;
+    use ethers::types::{Address as EthersAddress, U256 as EthersU256};
     use kakarot_rpc_core::client::client_api::{KakarotEthApi, KakarotStarknetApi};
     use kakarot_rpc_core::client::config::StarknetConfig;
     use kakarot_rpc_core::client::errors::EthApiError;
@@ -28,7 +28,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore]
-    async fn test_plain_opcodes() {
+    async fn test_constructable() {
         // initial setup of plainOpcodes to test we can deploy contracts w/ constructor arguments
         let starknet_test_sequencer = TestSequencer::start().await;
 
@@ -43,9 +43,9 @@ mod tests {
         let (_plain_opcodes_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 starknet_test_sequencer.url(),
-                "PlainOpcodes.json",
+                "Constructable",
                 // more than one argument to a constructor needs to be conveyed as a tuple
-                address,
+                (EthersU256::from(100), address),
             )
             .await
             .unwrap();
@@ -82,7 +82,7 @@ mod tests {
         let (counter_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 starknet_test_sequencer.url(),
-                "Counter.json",
+                "Counter",
                 // no constructor is conveyed as a tuple
                 (),
             )

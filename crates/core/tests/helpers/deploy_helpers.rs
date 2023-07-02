@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
+use std::fs::File;
+use std::io::Read;
 use std::sync::Arc;
 
 use bytes::BytesMut;
@@ -10,6 +12,7 @@ use kakarot_rpc_core::client::constants::CHAIN_ID;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
 };
+use serde::Deserialize;
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::chain_id;
@@ -22,6 +25,7 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
+use toml;
 use url::Url;
 
 use super::constants::FEE_TOKEN_ADDRESS;
@@ -39,11 +43,44 @@ macro_rules! root_project_path {
     }};
 }
 
+#[derive(Debug, Deserialize)]
+struct Profile {
+    default: DefaultProfile,
+}
+
+#[derive(Debug, Deserialize)]
+struct DefaultProfile {
+    out: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct FoundryConfig {
+    profile: Profile,
+}
+
+fn get_foundry_default_out(file_path: &std::path::Path) -> Result<String, Box<dyn std::error::Error>> {
+    let mut file = File::open(file_path)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    let config: FoundryConfig = toml::from_str(&contents)?;
+
+    // Since 'out' is a field in 'Default' struct, we can access it directly
+    Ok(config.profile.default.out)
+}
+
+// This assumes you are adding a solidity file in kakarot-rpc/solidity_contracts
+// and ran `forge build --names --force`
 pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
-    let compiled_solidity_path = root_project_path!(std::env::var("COMPILED_SOLIDITY_PATH").unwrap()).join(filename);
+    let dot_sol = format!("{filename}.sol");
+    let dot_json = format!("{filename}.json");
+    let foundry_toml_path = root_project_path!("foundry.toml");
+    let foundry_default_out = get_foundry_default_out(&foundry_toml_path).unwrap();
+    let compiled_solidity_path = std::path::Path::new(&foundry_default_out).join(dot_sol).join(dot_json);
+    let compiled_solidity_path_from_root = root_project_path!(&compiled_solidity_path);
 
     // Read the content of the file
-    let contents = fs::read_to_string(compiled_solidity_path).unwrap();
+    let contents = fs::read_to_string(compiled_solidity_path_from_root).expect("{filename} isn't compiled.");
 
     // Parse the entire JSON content into a Value
     let json: serde_json::Value = serde_json::from_str(&contents).unwrap();
@@ -231,6 +268,8 @@ async fn declare_kakarot_contracts(
         })
         .collect();
 
+    assert!(!kakarot_compiled_contract_paths.is_empty(), "{} is empty.", compiled_kakarot_path.display());
+
     let mut class_hash: HashMap<String, FieldElement> = HashMap::new();
     for path in kakarot_compiled_contract_paths {
         let file = fs::File::open(&path).unwrap_or_else(|_| panic!("Failed to open file: {}", path.display()));
@@ -417,6 +456,7 @@ pub async fn deploy_kakarot_system(
     funding_amount: FieldElement,
 ) -> DeployedKakarot {
     dotenv().ok();
+
     let starknet_account = sequencer.account();
     let class_hash = declare_kakarot_contracts(&starknet_account).await;
     let kkrt_eoa_addr = FieldElement::from_hex_be(kakarot_eoa_address).unwrap();

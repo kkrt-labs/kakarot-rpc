@@ -40,3 +40,4 @@ dojo-test-utils = { workspace = true }
 dotenv = { workspace = true }  
 ethers = "2.0"
 starknet-crypto = { workspace = true }
+toml = "0.7.5"

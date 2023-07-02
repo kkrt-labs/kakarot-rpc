@@ -4546,6 +4546,7 @@ dependencies = [
  "starknet-crypto 0.5.1",
  "thiserror",
  "tokio",
+ "toml 0.7.5",
  "url",
  "wiremock",
 ]
