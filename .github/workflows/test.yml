@@ -52,7 +52,7 @@ jobs:
     name: test
     runs-on: ubuntu-latest-16-cores
     steps:
-    # rust setup
+      # rust setup
       - uses: actions/checkout@v2
       - name: Setup rust env
         uses: actions-rs/toolchain@v1
@@ -74,7 +74,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.local
-            key: poetry-${{ runner.os }}
+          key: poetry-${{ runner.os }}
       - name: pull kakarot submodule
         run:
           make setup
