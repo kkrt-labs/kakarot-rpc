@@ -94,7 +94,7 @@ jobs:
       - run: cd kakarot && poetry config installer.modern-installation false
       - name: Generate code coverage
         run:
-          make test-coverage
+          ./scripts/make_with_env.sh test-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
