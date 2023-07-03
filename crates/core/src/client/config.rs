@@ -1,5 +1,8 @@
 use eyre::Result;
 use starknet::core::types::FieldElement;
+use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
+use starknet::providers::JsonRpcClient;
+use url::Url;
 
 use super::errors::ConfigError;
 
@@ -15,12 +18,12 @@ pub struct StarknetConfig {
 }
 
 impl StarknetConfig {
-    pub fn new(starknet_rpc: &str, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
-        StarknetConfig { starknet_rpc: String::from(starknet_rpc), kakarot_address, proxy_account_class_hash }
+    pub fn new(starknet_rpc: String, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
+        StarknetConfig { starknet_rpc, kakarot_address, proxy_account_class_hash }
     }
 
     pub fn from_env() -> Result<Self, ConfigError> {
-        let starknet_rpc_url = get_env_var("STARKNET_RPC_URL")?;
+        let starknet_rpc = get_env_var("STARKNET_RPC_URL")?;
 
         let kakarot_address = get_env_var("KAKAROT_ADDRESS")?;
         let kakarot_address = FieldElement::from_hex_be(&kakarot_address).map_err(|_| {
@@ -36,6 +39,28 @@ impl StarknetConfig {
             ))
         })?;
 
-        Ok(StarknetConfig::new(&starknet_rpc_url, kakarot_address, proxy_account_class_hash))
+        Ok(StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash))
+    }
+}
+
+/// A builder for a `JsonRpcClient`.
+pub struct JsonRpcClientBuilder<T: JsonRpcTransport>(JsonRpcClient<T>);
+
+impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
+    pub fn new(transport: T) -> Self {
+        JsonRpcClientBuilder(JsonRpcClient::new(transport))
+    }
+
+    pub fn build(self) -> JsonRpcClient<T> {
+        self.0
+    }
+}
+
+/// A builder for a `JsonRpcClient` with a `HttpTransport`.
+impl JsonRpcClientBuilder<HttpTransport> {
+    pub fn with_http(config: &StarknetConfig) -> Result<Self> {
+        let url = Url::parse(&config.starknet_rpc)?;
+        let transport = HttpTransport::new(url);
+        Ok(JsonRpcClientBuilder::new(transport))
     }
 }
