@@ -9,7 +9,8 @@ pub mod config;
 pub mod eth_api;
 use eyre::Result;
 use jsonrpsee::server::{ServerBuilder, ServerHandle};
-use kakarot_rpc_core::client::client_api::KakarotEthApi;
+use kakarot_rpc_core::client::api::KakarotEthApi;
+use starknet::providers::jsonrpc::JsonRpcTransport;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -23,8 +24,8 @@ pub enum RpcError {
 /// # Errors
 ///
 /// Will return `Err` if an error occurs when running the `ServerBuilder` start fails.
-pub async fn run_server(
-    kakarot_client: Box<dyn KakarotEthApi>,
+pub async fn run_server<T: JsonRpcTransport + 'static>(
+    kakarot_client: Box<dyn KakarotEthApi<T>>,
     rpc_config: RPCConfig,
 ) -> Result<(SocketAddr, ServerHandle), RpcError> {
     let RPCConfig { socket_addr } = rpc_config;

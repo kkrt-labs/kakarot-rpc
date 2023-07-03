@@ -35,10 +35,10 @@ pub enum ConfigError {
 
 /// Error that can accure when interacting with the Kakarot ETH API.
 #[derive(Debug, Error)]
-pub enum EthApiError {
+pub enum EthApiError<T: std::error::Error> {
     /// Request to the Starknet provider failed.
     #[error(transparent)]
-    RequestError(#[from] ProviderError<JsonRpcClientError<reqwest::Error>>),
+    RequestError(#[from] ProviderError<JsonRpcClientError<T>>),
     /// Conversion between Starknet types and ETH failed.
     #[error(transparent)]
     ConversionError(#[from] ConversionError),
@@ -50,8 +50,8 @@ pub enum EthApiError {
     OtherError(#[from] anyhow::Error),
 }
 
-impl From<EthApiError> for ErrorObject<'static> {
-    fn from(error: EthApiError) -> Self {
+impl<T: std::error::Error> From<EthApiError<T>> for ErrorObject<'static> {
+    fn from(error: EthApiError<T>) -> Self {
         match error {
             EthApiError::RequestError(err_provider) => match err_provider {
                 ProviderError::StarknetError(err) => match err {
@@ -88,8 +88,8 @@ impl From<EthApiError> for ErrorObject<'static> {
     }
 }
 
-impl From<EthApiError> for jsonrpsee::core::Error {
-    fn from(err: EthApiError) -> Self {
+impl<T: std::error::Error> From<EthApiError<T>> for jsonrpsee::core::Error {
+    fn from(err: EthApiError<T>) -> Self {
         jsonrpsee::core::Error::Call(err.into())
     }
 }

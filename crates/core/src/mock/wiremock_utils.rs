@@ -9,8 +9,8 @@ use starknet::providers::JsonRpcClient;
 use wiremock::matchers::{body_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use crate::client::client_api::KakarotEthApi;
-use crate::client::config::StarknetConfig;
+use crate::client::api::KakarotEthApi;
+use crate::client::config::{JsonRpcClientBuilder, StarknetConfig};
 use crate::client::helpers::ethers_block_id_to_starknet_block_id;
 use crate::client::KakarotClient;
 
@@ -118,32 +118,35 @@ pub async fn setup_wiremock() -> String {
     mock_server.uri()
 }
 
-pub async fn setup_mock_client() -> Box<dyn KakarotEthApi> {
+pub async fn setup_mock_client() -> Box<dyn KakarotEthApi<HttpTransport>> {
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
     let proxy_account_class_hash =
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
-    Box::new(KakarotClient::new(StarknetConfig::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)).unwrap())
+
+    let config = StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash);
+    let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
+    Box::new(KakarotClient::new(config, provider).unwrap())
 }
 
-pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>>
-where
-    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotEthApi,
-{
+pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>> {
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
     let proxy_account_class_hash =
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
 
-    KakarotClient::new(StarknetConfig::new(&starknet_rpc, kakarot_address, proxy_account_class_hash)).unwrap()
+    let config = StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash);
+    let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
+
+    KakarotClient::new(config, provider).unwrap()
 }
 
 fn mock_block_number() -> Mock {
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_number(Vec::<u8>::new()))).respond_with(
         response_template_with_status(StatusCode::OK)
-            .set_body_raw(include_str!("fixtures/responses/blocks/starknet_blockNumber.json"), "application/json"),
+            .set_body_raw(include_str!("fixtures/responses/starknet_blockNumber.json"), "application/json"),
     )
 }
 
@@ -151,7 +154,7 @@ fn mock_block_with_txs() -> Mock {
     let block_id = BlockId::Hash(
         H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap().into(),
     );
-    let starknet_block_id = ethers_block_id_to_starknet_block_id(block_id).unwrap();
+    let starknet_block_id = ethers_block_id_to_starknet_block_id::<HttpTransport>(block_id).unwrap();
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_with_txs([&starknet_block_id]))).respond_with(
         response_template_with_status(StatusCode::OK)
             .set_body_raw(include_str!("fixtures/responses/blocks/starknet_getBlockWithTxs.json"), "application/json"),
@@ -162,7 +165,8 @@ fn mock_block_with_txs_hashes() -> Mock {
     let block_id_tx_hashes = BlockId::Hash(
         H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e").unwrap().into(),
     );
-    let starknet_block_id_tx_hashes = ethers_block_id_to_starknet_block_id(block_id_tx_hashes).unwrap();
+    let starknet_block_id_tx_hashes =
+        ethers_block_id_to_starknet_block_id::<HttpTransport>(block_id_tx_hashes).unwrap();
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::block_with_tx_hashes([&starknet_block_id_tx_hashes])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(

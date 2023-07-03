@@ -4,9 +4,10 @@ use num_bigint::BigUint;
 use reth_primitives::{Address, Bytes, H256, U256};
 use reth_rpc_types::Log;
 use starknet::core::types::Event;
+use starknet::providers::jsonrpc::JsonRpcTransport;
 
 use super::felt::Felt252Wrapper;
-use crate::client::client_api::KakarotStarknetApi;
+use crate::client::api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
 use crate::models::convertible::ConvertibleStarknetEvent;
 
@@ -26,15 +27,15 @@ impl From<Event> for StarknetEvent {
 }
 
 impl ConvertibleStarknetEvent for StarknetEvent {
-    fn to_eth_log(
+    fn to_eth_log<T: JsonRpcTransport>(
         self,
-        client: &dyn KakarotStarknetApi,
+        client: &dyn KakarotStarknetApi<T>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_hash: Option<H256>,
         log_index: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<Log, EthApiError> {
+    ) -> Result<Log, EthApiError<T::Error>> {
         // If event `from_address` does not equal kakarot address, return early
         if self.0.from_address != client.kakarot_address() {
             return Err(EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not part of Kakarot")));

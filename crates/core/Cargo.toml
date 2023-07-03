@@ -19,6 +19,7 @@ reth-rlp = { workspace = true }
 reth-rpc-api = { workspace = true }
 reth-rpc-types = { workspace = true }
 starknet = { workspace = true }
+starknet-crypto = { workspace = true }
 dojo-test-utils = { workspace = true }
 thiserror = "1.0.38"
 url = "2.3.1"
@@ -26,12 +27,9 @@ url = "2.3.1"
 num-bigint = "0.4.3"
 futures = "0.3.26"
 serde = { version = "1.0" }
-serde_json = "1.0"
+serde_json = { version = "1.0", features = ["preserve_order"]}
 serde_with = "2.2.0"
 tokio = { version = "1.21.2", features = ["macros"] }
 
 wiremock = "0.5.17"
 lazy_static = "1.4.0"
-
-[dev-dependencies]
-starknet-crypto = { workspace = true }

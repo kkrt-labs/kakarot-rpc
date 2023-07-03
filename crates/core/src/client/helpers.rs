@@ -9,6 +9,7 @@ use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     ValueOutOfRangeError,
 };
+use starknet::providers::jsonrpc::JsonRpcTransport;
 use thiserror::Error;
 
 use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
@@ -72,7 +73,9 @@ impl TryFrom<Vec<FieldElement>> for Calls {
 /// # Errors
 ///
 /// Will return `EthApiError` if an error occurs.
-pub fn ethers_block_id_to_starknet_block_id(block: EthBlockId) -> Result<StarknetBlockId, EthApiError> {
+pub fn ethers_block_id_to_starknet_block_id<T: JsonRpcTransport>(
+    block: EthBlockId,
+) -> Result<StarknetBlockId, EthApiError<T::Error>> {
     match block {
         EthBlockId::Hash(hash) => {
             let hash: Felt252Wrapper = hash.block_hash.try_into()?;
@@ -95,7 +98,9 @@ pub const fn ethers_block_number_to_starknet_block_id(block: BlockNumberOrTag) -
 }
 
 /// Returns the decoded return value of the `eth_call` entrypoint of Kakarot
-pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FeltOrFeltArray>, EthApiError> {
+pub fn decode_eth_call_return<T: std::error::Error>(
+    call_result: &[FieldElement],
+) -> Result<Vec<FeltOrFeltArray>, EthApiError<T>> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
     // Declare Vec of Result
@@ -126,7 +131,9 @@ pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FeltOr
 
 /// Returns the decoded return value of the `eth_send_transaction` entrypoint
 /// of Kakarot
-pub fn decode_eth_send_transaction_return(call_result: &[FieldElement]) -> Result<Vec<FeltOrFeltArray>, EthApiError> {
+pub fn decode_eth_send_transaction_return<T: JsonRpcTransport>(
+    call_result: &[FieldElement],
+) -> Result<Vec<FeltOrFeltArray>, EthApiError<T::Error>> {
     // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
     // Declare Vec of Result
@@ -334,6 +341,7 @@ mod tests {
     use std::str::FromStr;
 
     use reth_primitives::U256;
+    use starknet::providers::jsonrpc::HttpTransport;
 
     use super::*;
 
@@ -602,7 +610,7 @@ mod tests {
             FieldElement::from_hex_be("0000000000000000000000000000000000000000000000000000000000000002").unwrap(),
             FieldElement::from_hex_be("00000000000000000000000000000000000000000000000000000000000fffff").unwrap(),
         ];
-        let result = decode_eth_send_transaction_return(&call_result).unwrap();
+        let result = decode_eth_send_transaction_return::<HttpTransport>(&call_result).unwrap();
         assert_eq!(result.len(), 8);
         assert_eq!(result[0], FeltOrFeltArray::FeltArray(vec![FieldElement::from(1_u64), FieldElement::from(2_u64)]));
         assert_eq!(result[1], FeltOrFeltArray::Felt(FieldElement::from(9_u64)));
