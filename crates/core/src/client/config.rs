@@ -69,6 +69,20 @@ impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
 
 impl JsonRpcClientBuilder<HttpTransport> {
     /// Returns a new `JsonRpcClientBuilder` with a `HttpTransport`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, StarknetConfig};
+    /// use starknet::core::types::FieldElement;
+    /// use starknet::providers::jsonrpc::HttpTransport;
+    /// use starknet::providers::JsonRpcClient;
+    ///
+    /// let url = String::from("http://0.0.0.0:1234/rpc");
+    /// let config = StarknetConfig::new(url, FieldElement::default(), FieldElement::default());
+    /// let provider: JsonRpcClient<HttpTransport> =
+    ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
+    /// ```
     pub fn with_http(config: &StarknetConfig) -> Result<Self> {
         let url = Url::parse(&config.url)?;
         let transport = HttpTransport::new(url);
