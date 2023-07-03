@@ -11,17 +11,22 @@ fn get_env_var(name: &str) -> Result<String, ConfigError> {
 }
 
 #[derive(Default)]
+/// Configuration for the Starknet RPC client.
 pub struct StarknetConfig {
-    pub starknet_rpc: String,
+    /// Rpc url.
+    pub url: String,
+    /// Kakarot contract address.
     pub kakarot_address: FieldElement,
+    /// Proxy account class hash.
     pub proxy_account_class_hash: FieldElement,
 }
 
 impl StarknetConfig {
-    pub fn new(starknet_rpc: String, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
-        StarknetConfig { starknet_rpc, kakarot_address, proxy_account_class_hash }
+    pub fn new(url: String, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
+        StarknetConfig { url, kakarot_address, proxy_account_class_hash }
     }
 
+    /// Create a new `StarknetConfig` from environment variables.
     pub fn from_env() -> Result<Self, ConfigError> {
         let starknet_rpc = get_env_var("STARKNET_RPC_URL")?;
 
@@ -47,20 +52,26 @@ impl StarknetConfig {
 pub struct JsonRpcClientBuilder<T: JsonRpcTransport>(JsonRpcClient<T>);
 
 impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
+    /// Create a new `JsonRpcClientBuilder`.
+    ///
+    /// # Arguments
+    ///
+    /// * `transport` - The transport to use.
     pub fn new(transport: T) -> Self {
-        JsonRpcClientBuilder(JsonRpcClient::new(transport))
+        Self(JsonRpcClient::new(transport))
     }
 
+    /// Build the `JsonRpcClient`.
     pub fn build(self) -> JsonRpcClient<T> {
         self.0
     }
 }
 
-/// A builder for a `JsonRpcClient` with a `HttpTransport`.
 impl JsonRpcClientBuilder<HttpTransport> {
+    /// Returns a new `JsonRpcClientBuilder` with a `HttpTransport`.
     pub fn with_http(config: &StarknetConfig) -> Result<Self> {
-        let url = Url::parse(&config.starknet_rpc)?;
+        let url = Url::parse(&config.url)?;
         let transport = HttpTransport::new(url);
-        Ok(JsonRpcClientBuilder::new(transport))
+        Ok(Self::new(transport))
     }
 }

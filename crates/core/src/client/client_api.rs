@@ -84,8 +84,8 @@ pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi<T> {
 
     async fn fee_history(
         &self,
-        _block_count: U256,
-        _newest_block: BlockNumberOrTag,
+        block_count: U256,
+        newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory, EthApiError<T::Error>>;
 

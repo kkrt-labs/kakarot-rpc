@@ -31,12 +31,6 @@ impl<T: JsonRpcTransport + 'static> EthApiServer for KakarotEthRpc<T> {
     }
 
     /// Get the protocol version of the Kakarot Starknet RPC.
-    ///
-    /// # Returns
-    /// * `protocol_version(u64)` - The protocol version.
-    ///
-    /// `Ok(protocol_version)` if the operation was successful.
-    /// `Err(EthApiError)` if the operation failed.
     fn protocol_version(&self) -> Result<U64> {
         let protocol_version = 1_u64;
         Ok(protocol_version.into())
