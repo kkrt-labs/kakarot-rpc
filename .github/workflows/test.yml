@@ -75,9 +75,6 @@ jobs:
         with:
           path: ~/.local
           key: poetry-${{ runner.os }}
-      - name: pull kakarot submodule
-        run:
-          make setup
       - name: Install Poetry
         if: steps.cached-poetry.outputs.cache-hit != 'true'
         uses: snok/install-poetry@v1
@@ -85,13 +82,16 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
-      - run: cd kakarot && poetry config installer.modern-installation false
+      - name: pull kakarot submodule and setup
+        run:
+          make setup
       - name: Load cached venv
         id: cached-poetry-dependencies
         uses: actions/cache@v3
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}  
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - run: cd kakarot && poetry config installer.modern-installation false
       - name: Generate code coverage
         run:
           make test-coverage
