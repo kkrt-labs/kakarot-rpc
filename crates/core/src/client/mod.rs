@@ -3,6 +3,8 @@ pub mod config;
 pub mod constants;
 pub mod errors;
 pub mod helpers;
+#[cfg(test)]
+pub mod tests;
 
 use std::str::FromStr;
 
