@@ -8,7 +8,9 @@ use bytes::BytesMut;
 use dojo_test_utils::sequencer::TestSequencer;
 use dotenv::dotenv;
 use ethers::abi::{Abi, Tokenize};
-use kakarot_rpc_core::client::constants::CHAIN_ID;
+use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
+use kakarot_rpc_core::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
+use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
 };
@@ -28,36 +30,83 @@ use starknet::signers::{LocalWallet, SigningKey};
 use toml;
 use url::Url;
 
-use super::constants::FEE_TOKEN_ADDRESS;
-
+/// Macro to generate an absolute path from a given relative path with respect to the project root.
+///
+/// This macro takes in a string literal representing a relative path, and returns the absolute path
+/// relative to the root of the project. The project root is determined based on the
+/// `CARGO_MANIFEST_DIR` environment variable, which is set by Cargo to the location of the
+/// `Cargo.toml` of the crate being compiled.
+///
+/// This macro assumes that the code will always be run in a context where `CARGO_MANIFEST_DIR` is
+/// two levels below the project root (e.g., `<project-root>/crates/core`). This assumption allows
+/// the macro to be flexible with file paths to locate artifacts in a way that can be accessed by
+/// multiple crates, if necessary.
+///
+/// # Example
+///
+/// ```
+/// let foundry_toml_path = root_project_path!("foundry.toml");
+/// assert!(foundry_toml_path.exists());
+/// ```
+///
+/// # Panics
+///
+/// This macro will panic if it's unable to determine the project root by moving two levels up from
+/// `CARGO_MANIFEST_DIR`. Again, the two parents are tied to the structure of
+/// <project-root>/crates/core.
+///
+/// # Usage
+///
+/// This macro is typically used to generate paths to various artifacts or resources during testing
+/// or script execution.
 macro_rules! root_project_path {
     ($relative_path:expr) => {{
         let crate_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-        // this is assuming this code will always be ran in the context where the CARGO_MANIFEST_DIR
-        // <system>/kakarot-rpc/crates/core
-        // this is done so we can have more flexibility in filepaths the artifacts are located
-        // so multiple crates can access them, if necessary
+
         let project_root = crate_root.parent().unwrap().parent().unwrap();
         let full_path = project_root.join($relative_path);
         full_path
     }};
 }
 
-#[derive(Debug, Deserialize)]
-struct Profile {
-    default: DefaultProfile,
-}
-
+/// Represents the `default` section under `profile` in the Foundry configuration.
+///
+/// This struct contains the `out` field, which corresponds to the `out` key under the `default`
+/// section in the Foundry TOML configuration file. The `out` key specifies the default output
+/// directory for the build artifacts.
 #[derive(Debug, Deserialize)]
 struct DefaultProfile {
     out: String,
 }
 
+/// Represents the `profile` section in the Foundry configuration.
+///
+/// This struct contains the `default` field, which corresponds to the `default` section under
+/// `profile` in the Foundry TOML configuration file.
+#[derive(Debug, Deserialize)]
+struct Profile {
+    default: DefaultProfile,
+}
+
+/// Represents the top level structure of the Foundry configuration.
+///
+/// This struct corresponds directly to the structure of a Foundry TOML configuration file.
+/// It only contains the `profile` field, which is further structured into a `DefaultProfile`.
 #[derive(Debug, Deserialize)]
 struct FoundryConfig {
     profile: Profile,
 }
 
+/// Extracts the default output directory from a Foundry TOML configuration file.
+///
+/// This function opens and reads the specified TOML file, parses it into the `FoundryConfig`
+/// struct, and then extracts the default output directory from it.
+///
+/// # Errors
+///
+/// This function will return an error if the file cannot be opened, read, or correctly parsed,
+/// or if the required `out` key is missing from the `default` section under `profile` in the TOML
+/// file.
 fn get_foundry_default_out(file_path: &std::path::Path) -> Result<String, Box<dyn std::error::Error>> {
     let mut file = File::open(file_path)?;
     let mut contents = String::new();
@@ -69,8 +118,15 @@ fn get_foundry_default_out(file_path: &std::path::Path) -> Result<String, Box<dy
     Ok(config.profile.default.out)
 }
 
-// This assumes you are adding a solidity file in kakarot-rpc/solidity_contracts
-// and ran `forge build --names --force`
+/// Loads and parses a compiled Solidity contract.
+///
+/// This function assumes that a Solidity source file has been added to the `solidity_contracts`
+/// directory in the `kakarot-rpc` project root, and has been compiled with the `forge build`
+/// command. It loads the resulting JSON artifact, parses its contents, and extracts the
+/// contract's ABI and bytecode.
+///
+/// This example assumes that a `MyContract.sol` file exists in the `solidity_contracts` directory,
+/// and that the `MyContract.json` artifact file has been generated by the `forge build` command.
 pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
     let dot_sol = format!("{filename}.sol");
     let dot_json = format!("{filename}.json");
@@ -96,8 +152,34 @@ pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
     (abi, bytecode)
 }
 
-// extracted/simplified logic from ethers https://github.com/gakonst/ethers-rs/blob/master/ethers-contract/src/factory.rs#L385
-// otherwise we would have to mock an eth client in order to access the logic
+/// Encodes a contract's bytecode and constructor arguments into deployable bytecode.
+///
+/// This function is based on logic extracted and simplified from the `ethers-rs` crate (see
+/// https://github.com/gakonst/ethers-rs/blob/master/ethers-contract/src/factory.rs#L385). This has
+/// been done to avoid the need to mock an Ethereum client just to access this functionality.
+///
+/// # Panics
+///
+/// This function will panic if the contract's ABI does not define a constructor but constructor
+/// arguments are provided, or if an error occurs while encoding the constructor's input.
+///
+/// # Type parameters
+///
+/// `T` - A type which can be tokenized into constructor arguments.
+///
+/// # Example
+///
+/// ```no_run
+/// # use kakarot_rpc_core::get_contract;
+/// # use kakarot_rpc_core::encode_contract;
+/// # use ethers::types::Abi;
+/// let (abi, bytecode) = get_contract("MyContract");
+/// let constructor_args = ("First argument", 42);
+/// let deploy_bytecode = encode_contract(&abi, &bytecode, constructor_args);
+/// ```
+///
+/// This example assumes that the `MyContract` contract takes a string and an integer in its
+/// constructor.
 pub fn encode_contract<T: Tokenize>(
     abi: &Abi,
     bytecode: &ethers::types::Bytes,
@@ -116,8 +198,24 @@ pub fn encode_contract<T: Tokenize>(
     }
 }
 
-// Constructs an ethereum transaction with the correct Kakarot chain ID, and default values
-// for everything but nonce, to, and bytes
+/// Constructs a Kakarot transaction based on given parameters.
+///
+/// This function creates an EIP-1559 transaction with certain fields set according to the function
+/// parameters and the others set to their default values.
+///
+/// # Example
+///
+/// ```
+/// # use kakarot_rpc_core::to_kakarot_transaction;
+/// # use ethers::types::{TransactionKind, Bytes};
+/// let nonce = 0;
+/// let to =
+///     TransactionKind::Contract("0x000102030405060708090a0b0c0d0e0f10111213".parse().unwrap());
+/// let input = Bytes::from("Some input data");
+/// let transaction = to_kakarot_transaction(nonce, to, input);
+/// ```
+///
+/// This example constructs a transaction for a contract with a specific address and input data.
 pub fn to_kakarot_transaction(nonce: u64, to: TransactionKind, input: Bytes) -> Transaction {
     Transaction::Eip1559(TxEip1559 {
         chain_id: CHAIN_ID,
@@ -132,7 +230,17 @@ pub fn to_kakarot_transaction(nonce: u64, to: TransactionKind, input: Bytes) -> 
     })
 }
 
-pub fn create_raw_ethereum_tx(selector: [u8; 4], eoa_secret: H256, to: Address, args: Vec<U256>, nonce: u64) -> Bytes {
+/// Constructs and signs a raw Ethereum transaction based on given parameters.
+///
+/// This function creates a transaction which calls a contract function with provided arguments.
+/// The transaction is signed using the provided EOA secret.
+pub fn create_raw_ethereum_tx(
+    selector: [u8; 4],
+    eoa_secret_key: H256,
+    to: Address,
+    args: Vec<U256>,
+    nonce: u64,
+) -> Bytes {
     // Start with the function selector
     // Append each argument
     let mut data: Vec<u8> = selector.to_vec();
@@ -146,7 +254,7 @@ pub fn create_raw_ethereum_tx(selector: [u8; 4], eoa_secret: H256, to: Address, 
     // Create a transaction object
     let transaction = to_kakarot_transaction(nonce, TransactionKind::Call(to), data.into());
     let signature =
-        sign_message(eoa_secret, transaction.signature_hash()).expect("Signing of ethereum transaction failed.");
+        sign_message(eoa_secret_key, transaction.signature_hash()).expect("Signing of ethereum transaction failed.");
 
     let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
     let mut raw_tx = BytesMut::new(); // Create a new empty buffer
@@ -165,23 +273,13 @@ fn into_receipt(maybe_receipt: MaybePendingTransactionReceipt) -> Option<InvokeT
     }
 }
 
-/// Deploys an EVM contract and returns its ABI and list of field elements.
-///
-/// # Parameters
-///
-/// * `url`: The URL of the starknet test sequencer.
-/// * `eoa_account_starknet_address`: The starknet address that underpins the kakarot eoa account.
-/// * `eoa_secret`: The secret key of the eoa that signs the ethereum transaction
-/// * `constructor_args`: The arguments to pass to the contract's constructor.
-///
-/// # Returns
-///
-/// * `Result`: An option containing either the ABI and list of field elements, or none if the
-///   deployment.
+/// Deploys an EVM contract and returns its ABI and list of two field elements
+/// the first being the FieldElement that represents the ethereum address of the deployed contract.
+/// the second being the Field Element that's the underpinning starknet contract address
 async fn deploy_evm_contract<T: Tokenize>(
     sequencer_url: Url,
     eoa_account_starknet_address: FieldElement,
-    eoa_secret: H256,
+    eoa_secret_key: H256,
     contract_name: &str,
     constructor_args: T,
 ) -> Option<(Abi, Vec<FieldElement>)> {
@@ -201,7 +299,7 @@ async fn deploy_evm_contract<T: Tokenize>(
     let contract_bytes = encode_contract(&abi, &contract_bytes, constructor_args);
     let transaction =
         to_kakarot_transaction(Default::default(), TransactionKind::Create, contract_bytes.to_vec().into());
-    let signature = sign_message(eoa_secret, transaction.signature_hash()).unwrap();
+    let signature = sign_message(eoa_secret_key, transaction.signature_hash()).unwrap();
     let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     let mut buffer = BytesMut::new(); // Create a new empty buffer
@@ -237,6 +335,12 @@ async fn deploy_evm_contract<T: Tokenize>(
     })
 }
 
+/// Asynchronously deploys a Starknet contract to the network using the provided account and
+/// contract parameters.
+///
+/// This function uses a `ContractFactory` to prepare a deployment of a Starknet contract, and sends
+/// the deployment transaction to the network. It then computes and returns the address at which the
+/// contract will be deployed.
 async fn deploy_starknet_contract(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     class_hash: &FieldElement,
@@ -252,6 +356,26 @@ async fn deploy_starknet_contract(
     Ok(contract_address)
 }
 
+/// Asynchronously declares a set of Kakarot contracts on the network using the provided account.
+///
+/// This function reads compiled Kakarot contract files from a directory specified by the
+/// `COMPILED_KAKAROT_PATH` environment variable. Each file is deserialized into a
+/// `LegacyContractClass` object and declared on the network via the provided account.
+///
+/// After successfully declaring each contract, the function stores the class hash of the contract
+/// into a HashMap with the contract name as the key.
+///
+/// # Panics
+///
+/// This function will panic if:
+/// * The `COMPILED_KAKAROT_PATH` environment variable is not set.
+/// * The directory specified by `COMPILED_KAKAROT_PATH` cannot be read.
+/// * The directory specified by `COMPILED_KAKAROT_PATH` is empty.
+/// * A contract file cannot be opened or deserialized.
+/// * The contract declaration fails on the network.
+///
+/// This example declares all Kakarot contracts in the directory specified by
+/// `COMPILED_KAKAROT_PATH`, and prints the name and class hash of each contract.
 async fn declare_kakarot_contracts(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) -> HashMap<String, FieldElement> {
@@ -346,6 +470,11 @@ async fn fund_eoa(
         .expect("Funding test eth account failed.");
 }
 
+/// Asynchronously deploys an Externally Owned Account (EOA) to the network and funds it.
+///
+/// This function first computes the StarkNet address of the EOA to be deployed using the provided
+/// account, contract address, and EOA account address. Then, it deploys the EOA to the network and
+/// funds it with the specified amount of fee token.
 async fn deploy_and_fund_eoa(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     contract_address: FieldElement,
@@ -422,16 +551,39 @@ async fn deploy_kakarot_contracts(
     deployments
 }
 
+/// Structure representing a deployed Kakarot system, containing key details of the system.
+///
+/// This includes the private key of the Externally Owned Account (EOA), the StarkNet addresses
+/// of the kakarot and kakarot_proxy contracts, and the StarkNet address of the EOA.
 pub struct DeployedKakarot {
-    eoa_private_key: H256,
+    pub eoa_private_key: H256,
+    pub eoa_eth_address: Address,
     pub kakarot: FieldElement,
     pub kakarot_proxy: FieldElement,
     pub eoa_starknet_address: FieldElement,
 }
 
 impl DeployedKakarot {
-    // More delicate error handling here to enable explicit checking that certain conditions correctly
-    // *fail* to deploy a contract
+    /// Asynchronously deploys an EVM contract.
+    ///
+    /// This function deploys an EVM contract to the StarkNet network by calling the
+    /// `deploy_evm_contract` function. It also wraps around the result to provide error
+    /// handling capabilities. It returns an error when the deployment fails.
+    ///
+    /// # Arguments
+    ///
+    /// * `starknet_sequencer_url` - A `Url` indicating the URL of the StarkNet sequencer.
+    ///
+    /// * `eth_contract` - A string representing the name of the Ethereum contract to deploy.
+    ///
+    /// * `constructor_args` - A generic argument that implements the `Tokenize` trait, representing
+    ///   the constructor arguments.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` that holds the `Abi` of the contract and a vector of `FieldElement` representing
+    /// the contract deployment, or an error of type `Box<dyn std::error::Error>` when the
+    /// deployment fails.
     pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
         starknet_sequencer_url: Url,
@@ -450,27 +602,40 @@ impl DeployedKakarot {
     }
 }
 
+/// Asynchronously deploys a Kakarot system to the StarkNet network and returns the
+/// `DeployedKakarot` object.
+///
+/// This function deploys a Kakarot system to the network, which includes declaring Kakarot
+/// contracts, deploying Kakarot contracts, and deploying and funding an EOA.
 pub async fn deploy_kakarot_system(
-    sequencer: &TestSequencer,
-    kakarot_eoa_address: &str,
-    eoa_private_key: H256,
+    starknet_sequencer: &TestSequencer,
+    eoa_wallet: EthersLocalWallet,
     funding_amount: FieldElement,
 ) -> DeployedKakarot {
     dotenv().ok();
 
-    let starknet_account = sequencer.account();
+    let starknet_account = starknet_sequencer.account();
     let class_hash = declare_kakarot_contracts(&starknet_account).await;
-    let kkrt_eoa_addr = FieldElement::from_hex_be(kakarot_eoa_address).unwrap();
-    let fee_token_address = FieldElement::from_hex_be(FEE_TOKEN_ADDRESS).unwrap();
+    let eoa_eth_address: Address = eoa_wallet.address().into();
+    let eoa_sn_address = {
+        let address: Felt252Wrapper = eoa_eth_address.into();
+        address.try_into().unwrap()
+    };
+    let eoa_private_key = {
+        let signing_key_bytes = eoa_wallet.signer().to_bytes(); // Convert to bytes
+        H256::from_slice(&signing_key_bytes) // Convert to H256
+    };
+    let fee_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
     let deployments = deploy_kakarot_contracts(&starknet_account, &class_hash, fee_token_address).await;
     let kkrt_address = deployments.get("kakarot").unwrap();
-    let sn_eoa_address =
-        deploy_and_fund_eoa(&starknet_account, *kkrt_address, funding_amount, kkrt_eoa_addr, fee_token_address).await;
+    let deployed_eoa_sn_address =
+        deploy_and_fund_eoa(&starknet_account, *kkrt_address, funding_amount, eoa_sn_address, fee_token_address).await;
 
     DeployedKakarot {
         eoa_private_key,
+        eoa_eth_address,
         kakarot: *kkrt_address,
         kakarot_proxy: *class_hash.get("proxy").unwrap(),
-        eoa_starknet_address: sn_eoa_address,
+        eoa_starknet_address: deployed_eoa_sn_address,
     }
 }

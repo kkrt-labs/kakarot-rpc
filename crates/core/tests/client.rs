@@ -7,7 +7,7 @@ mod tests {
 
     use dojo_test_utils::sequencer::TestSequencer;
     use ethers::types::{Address as EthersAddress, U256 as EthersU256};
-    use kakarot_rpc_core::client::client_api::{KakarotEthApi, KakarotStarknetApi};
+    use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
     use kakarot_rpc_core::client::config::StarknetConfig;
     use kakarot_rpc_core::client::errors::EthApiError;
     use kakarot_rpc_core::client::KakarotClient;
@@ -15,29 +15,27 @@ mod tests {
     use kakarot_rpc_core::models::block::BlockWithTxs;
     use kakarot_rpc_core::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent};
     use kakarot_rpc_core::models::event::StarknetEvent;
-    use kakarot_rpc_core::models::felt::{Felt252Wrapper, Felt252WrapperError};
+    use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::models::ConversionError;
     use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
     use starknet::core::utils::get_selector_from_name;
-    use starknet::providers::Provider;
+    use starknet::providers::jsonrpc::HttpTransport;
+    use starknet::providers::{JsonRpcClient, Provider};
 
-    use crate::helpers::constants::{EVM_ADDRESS, EVM_PRIVATE_KEY};
+    use crate::helpers::constants::EOA_WALLET;
     use crate::helpers::deploy_helpers::{create_raw_ethereum_tx, deploy_kakarot_system};
 
     #[tokio::test]
-    #[ignore]
     async fn test_constructable() {
         // initial setup of Constructable to test we can deploy contracts w/ constructor arguments
         let starknet_test_sequencer = TestSequencer::start().await;
 
-        let eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
-
         let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
 
         let deployed_kakarot =
-            deploy_kakarot_system(&starknet_test_sequencer, EVM_ADDRESS, eoa_private, expected_funded_amount).await;
+            deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
 
         let address = "0x0000000000000000000000000000000000000000".parse::<EthersAddress>().unwrap();
         let (_constructable_abi, deployed_addresses) = deployed_kakarot
@@ -50,35 +48,35 @@ mod tests {
             .await
             .unwrap();
 
-        let kakarot_client = KakarotClient::new(StarknetConfig::new(
-            starknet_test_sequencer.url().as_ref(),
-            deployed_kakarot.kakarot,
-            deployed_kakarot.kakarot_proxy,
-        ))
+        let kakarot_client = KakarotClient::new(
+            StarknetConfig::new(
+                starknet_test_sequencer.url().as_ref().to_string(),
+                deployed_kakarot.kakarot,
+                deployed_kakarot.kakarot_proxy,
+            ),
+            JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
+        )
         .unwrap();
 
-        let Ok(opcode_eth_addr) = ({
-            let address : Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
-            address.try_into()
-        }) else {
-            panic!("returned deploy address from kakarot failed to convert to address")
+        let constructable_eth_address = {
+            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            address.try_into().unwrap()
         };
 
-        kakarot_client.get_code(opcode_eth_addr, BlockId::Tag(BlockTag::Latest)).await.expect("contract not deployed");
+        kakarot_client
+            .get_code(constructable_eth_address, BlockId::Tag(BlockTag::Latest))
+            .await
+            .expect("contract not deployed");
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_counter() {
         let starknet_test_sequencer = TestSequencer::start().await;
-
-        let eoa_public = Address::from_slice(&hex::decode(EVM_ADDRESS.trim_start_matches("0x")).unwrap());
-        let eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
 
         let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
 
         let deployed_kakarot =
-            deploy_kakarot_system(&starknet_test_sequencer, EVM_ADDRESS, eoa_private, expected_funded_amount).await;
+            deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
 
         let (counter_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
@@ -90,39 +88,50 @@ mod tests {
             .await
             .unwrap();
 
-        let kakarot_client = KakarotClient::new(StarknetConfig::new(
-            starknet_test_sequencer.url().as_ref(),
-            deployed_kakarot.kakarot,
-            deployed_kakarot.kakarot_proxy,
-        ))
+        let kakarot_client = KakarotClient::new(
+            StarknetConfig::new(
+                starknet_test_sequencer.url().as_ref().to_string(),
+                deployed_kakarot.kakarot,
+                deployed_kakarot.kakarot_proxy,
+            ),
+            JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
+        )
         .unwrap();
 
-        let deployed_balance = kakarot_client.balance(eoa_public, BlockId::Tag(BlockTag::Latest)).await;
+        let deployed_balance =
+            kakarot_client.balance(deployed_kakarot.eoa_eth_address, BlockId::Tag(BlockTag::Latest)).await;
 
         let deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
 
         assert_eq!(deployed_balance, expected_funded_amount);
 
-        let Ok(counter_eth_addr) = ({
-            let address : Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
-            address.try_into()
-        }) else {
-            panic!("returned deploy address from kakarot failed to convert to address")
+        let counter_eth_address = {
+            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            address.try_into().unwrap()
         };
 
-        kakarot_client.get_code(counter_eth_addr, BlockId::Tag(BlockTag::Latest)).await.expect("contract not deployed");
+        kakarot_client
+            .get_code(counter_eth_address, BlockId::Tag(BlockTag::Latest))
+            .await
+            .expect("contract not deployed");
 
         let inc_selector = counter_abi.function("inc").unwrap().short_signature();
 
-        let nonce = kakarot_client.nonce(eoa_public, BlockId::Tag(BlockTag::Latest)).await.unwrap();
-        let inc_tx =
-            create_raw_ethereum_tx(inc_selector, eoa_private, counter_eth_addr, vec![], nonce.try_into().unwrap());
+        let nonce =
+            kakarot_client.nonce(deployed_kakarot.eoa_eth_address, BlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let inc_tx = create_raw_ethereum_tx(
+            inc_selector,
+            deployed_kakarot.eoa_private_key,
+            counter_eth_address,
+            vec![],
+            nonce.try_into().unwrap(),
+        );
         let inc_res = kakarot_client.send_transaction(inc_tx).await.unwrap();
         kakarot_client.transaction_receipt(inc_res).await.expect("increment receipt failed");
 
         let count_selector = counter_abi.function("count").unwrap().short_signature();
         let counter_val =
-            kakarot_client.call_view(counter_eth_addr, count_selector.into(), BlockId::Tag(BlockTag::Latest)).await;
+            kakarot_client.call_view(counter_eth_address, count_selector.into(), BlockId::Tag(BlockTag::Latest)).await;
 
         if let Ok(bytes) = counter_val {
             let num = *bytes.last().expect("Empty byte array");
