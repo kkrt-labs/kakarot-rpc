@@ -1,6 +1,5 @@
 use core::iter::once;
 
-use async_trait::async_trait;
 use num_bigint::BigUint;
 use reth_primitives::{Address, Bytes, H256, U256};
 use reth_rpc_types::Log;
@@ -26,9 +25,8 @@ impl From<Event> for StarknetEvent {
     }
 }
 
-#[async_trait]
 impl ConvertibleStarknetEvent for StarknetEvent {
-    async fn to_eth_log(
+    fn to_eth_log(
         self,
         client: &dyn KakarotStarknetApi,
         block_hash: Option<H256>,

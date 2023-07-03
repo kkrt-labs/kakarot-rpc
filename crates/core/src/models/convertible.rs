@@ -10,9 +10,8 @@ pub trait ConvertibleStarknetBlock {
     async fn to_eth_block(&self, client: &dyn KakarotEthApi) -> Result<RichBlock, EthApiError>;
 }
 
-#[async_trait]
 pub trait ConvertibleStarknetEvent {
-    async fn to_eth_log(
+    fn to_eth_log(
         self,
         client: &dyn KakarotStarknetApi,
         block_hash: Option<H256>,

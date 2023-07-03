@@ -428,13 +428,12 @@ impl KakarotEthApi for KakarotClient<JsonRpcClient<HttpTransport>> {
                         }
                     };
 
-                    let logs =
-                        join_all(events.into_iter().map(StarknetEvent::new).map(|event| {
-                            event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None)
-                        }))
-                        .await
+                    let logs = events
                         .into_iter()
-                        .filter_map(Result::ok)
+                        .map(StarknetEvent::new)
+                        .filter_map(|event| {
+                            event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None).ok()
+                        })
                         .collect();
 
                     TransactionReceipt {

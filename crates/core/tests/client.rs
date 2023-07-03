@@ -70,7 +70,6 @@ mod tests {
         // when
         let resultant_eth_log3 = sn_event3
             .to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None)
-            .await
             .unwrap();
 
         // then
@@ -121,7 +120,6 @@ mod tests {
         // when
         let resultant_eth_log4 = sn_event4
             .to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None)
-            .await
             .unwrap();
 
         // then
@@ -170,7 +168,7 @@ mod tests {
 
         // when
         let resultant_eth_log =
-            sn_event.to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None).await;
+            sn_event.to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None);
 
         // then
         // Expecting an error because the `from_address` of the starknet event is not the expected deployed
@@ -216,7 +214,7 @@ mod tests {
 
         // when
         let resultant_eth_log =
-            sn_event.to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None).await;
+            sn_event.to_eth_log(&client, Option::None, Option::None, Option::None, Option::None, Option::None);
 
         // then
         match resultant_eth_log {
