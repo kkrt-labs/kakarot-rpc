@@ -5,7 +5,7 @@ use starknet::core::types::{FieldElement, MaybePendingBlockWithTxHashes, MaybePe
 use starknet::providers::jsonrpc::JsonRpcTransport;
 
 use super::convertible::ConvertibleStarknetBlock;
-use crate::client::client_api::KakarotEthApi;
+use crate::client::api::KakarotEthApi;
 use crate::client::constants::{DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY};
 use crate::client::errors::EthApiError;
 use crate::client::helpers::starknet_address_to_ethereum_address;

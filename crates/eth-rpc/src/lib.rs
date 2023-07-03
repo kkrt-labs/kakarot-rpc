@@ -9,7 +9,7 @@ pub mod config;
 pub mod eth_api;
 use eyre::Result;
 use jsonrpsee::server::{ServerBuilder, ServerHandle};
-use kakarot_rpc_core::client::client_api::KakarotEthApi;
+use kakarot_rpc_core::client::api::KakarotEthApi;
 use starknet::providers::jsonrpc::JsonRpcTransport;
 use thiserror::Error;
 

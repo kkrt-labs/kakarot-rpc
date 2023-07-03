@@ -3,7 +3,7 @@ use reth_primitives::{H256, U256};
 use reth_rpc_types::{Log, RichBlock, Transaction as EthTransaction};
 use starknet::providers::jsonrpc::JsonRpcTransport;
 
-use crate::client::client_api::{KakarotEthApi, KakarotStarknetApi};
+use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
 use crate::client::errors::EthApiError;
 
 #[async_trait]

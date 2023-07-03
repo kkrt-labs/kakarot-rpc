@@ -7,7 +7,7 @@ use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
 use super::ConversionError;
-use crate::client::client_api::KakarotEthApi;
+use crate::client::api::KakarotEthApi;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
 use crate::client::helpers::{decode_signature_and_to_address_from_tx_calldata, vec_felt_to_bytes};

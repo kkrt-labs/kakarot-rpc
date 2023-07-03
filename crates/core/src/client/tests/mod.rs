@@ -4,7 +4,7 @@ use starknet::core::types::{BlockId, BlockTag};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::JsonRpcClient;
 
-use crate::client::client_api::KakarotEthApi;
+use crate::client::api::KakarotEthApi;
 use crate::client::config::StarknetConfig;
 use crate::client::KakarotClient;
 use crate::mock::constants::{ABDEL_ADDRESS, KAKAROT_ADDRESS};

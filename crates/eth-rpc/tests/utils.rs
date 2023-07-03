@@ -1,5 +1,5 @@
 use kakarot_rpc::eth_rpc::KakarotEthRpc;
-use kakarot_rpc_core::client::client_api::KakarotEthApi;
+use kakarot_rpc_core::client::api::KakarotEthApi;
 use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::mock::wiremock_utils::setup_wiremock;

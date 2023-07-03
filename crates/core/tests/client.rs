@@ -3,7 +3,7 @@ mod tests {
 
     use std::str::FromStr;
 
-    use kakarot_rpc_core::client::client_api::{KakarotEthApi, KakarotStarknetApi};
+    use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
     use kakarot_rpc_core::client::errors::EthApiError;
     use kakarot_rpc_core::mock::wiremock_utils::setup_mock_client_crate;
     use kakarot_rpc_core::models::block::BlockWithTxs;

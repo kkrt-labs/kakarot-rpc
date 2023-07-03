@@ -7,7 +7,7 @@ use starknet::core::types::Event;
 use starknet::providers::jsonrpc::JsonRpcTransport;
 
 use super::felt::Felt252Wrapper;
-use crate::client::client_api::KakarotStarknetApi;
+use crate::client::api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
 use crate::models::convertible::ConvertibleStarknetEvent;
 

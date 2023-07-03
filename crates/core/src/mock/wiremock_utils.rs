@@ -9,7 +9,7 @@ use starknet::providers::JsonRpcClient;
 use wiremock::matchers::{body_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use crate::client::client_api::KakarotEthApi;
+use crate::client::api::KakarotEthApi;
 use crate::client::config::{JsonRpcClientBuilder, StarknetConfig};
 use crate::client::helpers::ethers_block_id_to_starknet_block_id;
 use crate::client::KakarotClient;

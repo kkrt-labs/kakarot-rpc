@@ -1,4 +1,4 @@
-pub mod client_api;
+pub mod api;
 pub mod config;
 pub mod constants;
 pub mod errors;
@@ -35,7 +35,7 @@ use starknet::core::types::{
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
 
-use self::client_api::{KakarotEthApi, KakarotStarknetApi};
+use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::StarknetConfig;
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
