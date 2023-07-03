@@ -5,7 +5,7 @@ KAKAROT_BUILD_SENTINEL = kakarot_build_done
 include .env
 export
 
-# Define the wildcard pattern for your directory
+# TODO: Would want to use this to ensure the build command only runs the first time
 KAKAROT_BUILD_FILES = $(wildcard $(COMPILED_KAKAROT_PATH)/*)
 HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 

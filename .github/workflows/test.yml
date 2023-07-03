@@ -65,7 +65,7 @@ jobs:
         uses: taiki-e/install-action@cargo-llvm-cov
       - name: Generate code coverage
         run:
-          make test
+          ./scripts/make_with_env.sh test
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
