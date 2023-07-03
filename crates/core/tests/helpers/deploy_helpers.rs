@@ -169,14 +169,15 @@ fn into_receipt(maybe_receipt: MaybePendingTransactionReceipt) -> Option<InvokeT
 ///
 /// # Parameters
 ///
-/// * `url`: The URL of the Ethereum node.
-/// * `eth_contract`: The Ethereum contract to deploy.
+/// * `url`: The URL of the starknet test sequencer.
+/// * `eoa_account_starknet_address`: The starknet address that underpins the kakarot eoa account.
+/// * `eoa_secret`: The secret key of the eoa that signs the ethereum transaction
 /// * `constructor_args`: The arguments to pass to the contract's constructor.
 ///
 /// # Returns
 ///
-/// * `Result`: A result containing either the ABI and list of field elements, or an error if the
-///   deployment failed.
+/// * `Result`: An option containing either the ABI and list of field elements, or none if the
+///   deployment.
 async fn deploy_evm_contract<T: Tokenize>(
     sequencer_url: Url,
     eoa_account_starknet_address: FieldElement,
@@ -198,8 +199,8 @@ async fn deploy_evm_contract<T: Tokenize>(
 
     let (abi, contract_bytes) = get_contract(contract_name);
     let contract_bytes = encode_contract(&abi, &contract_bytes, constructor_args);
-
-    let transaction = to_kakarot_transaction(0, TransactionKind::Create, contract_bytes.to_vec().into());
+    let transaction =
+        to_kakarot_transaction(Default::default(), TransactionKind::Create, contract_bytes.to_vec().into());
     let signature = sign_message(eoa_secret, transaction.signature_hash()).unwrap();
     let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
 

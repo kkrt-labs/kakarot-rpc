@@ -40,7 +40,7 @@ mod tests {
             deploy_kakarot_system(&starknet_test_sequencer, EVM_ADDRESS, eoa_private, expected_funded_amount).await;
 
         let address = "0x0000000000000000000000000000000000000000".parse::<EthersAddress>().unwrap();
-        let (_plain_opcodes_abi, deployed_addresses) = deployed_kakarot
+        let (_constructable_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 starknet_test_sequencer.url(),
                 "Constructable",
@@ -72,6 +72,7 @@ mod tests {
     async fn test_counter() {
         let starknet_test_sequencer = TestSequencer::start().await;
 
+        let eoa_public = Address::from_slice(&hex::decode(EVM_ADDRESS.trim_start_matches("0x")).unwrap());
         let eoa_private = H256::from_slice(&hex::decode(EVM_PRIVATE_KEY).unwrap());
 
         let expected_funded_amount = FieldElement::from_dec_str("100000000000000000").unwrap();
@@ -96,12 +97,7 @@ mod tests {
         ))
         .unwrap();
 
-        let deployed_balance = kakarot_client
-            .balance(
-                Address::from_slice(&hex::decode(EVM_ADDRESS.trim_start_matches("0x")).unwrap()),
-                BlockId::Tag(BlockTag::Latest),
-            )
-            .await;
+        let deployed_balance = kakarot_client.balance(eoa_public, BlockId::Tag(BlockTag::Latest)).await;
 
         let deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
 
@@ -117,7 +113,10 @@ mod tests {
         kakarot_client.get_code(counter_eth_addr, BlockId::Tag(BlockTag::Latest)).await.expect("contract not deployed");
 
         let inc_selector = counter_abi.function("inc").unwrap().short_signature();
-        let inc_tx = create_raw_ethereum_tx(inc_selector, eoa_private, counter_eth_addr, vec![], 1u64);
+
+        let nonce = kakarot_client.nonce(eoa_public, BlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let inc_tx =
+            create_raw_ethereum_tx(inc_selector, eoa_private, counter_eth_addr, vec![], nonce.try_into().unwrap());
         let inc_res = kakarot_client.send_transaction(inc_tx).await.unwrap();
         kakarot_client.transaction_receipt(inc_res).await.expect("increment receipt failed");
 
