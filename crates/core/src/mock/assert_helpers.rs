@@ -7,7 +7,6 @@ use starknet::core::types::{FieldElement, InvokeTransaction, Transaction as Star
 
 use crate::client::constants::gas::BASE_FEE_PER_GAS;
 use crate::client::constants::{CHAIN_ID, DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY};
-use crate::client::helpers::starknet_address_to_ethereum_address;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::signature::StarknetSignature;
 
@@ -137,7 +136,10 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                     assert_eq!(ether_tx.hash, H256::from_slice(&v0.transaction_hash.to_bytes_be()));
                     let tx_nonce: Felt252Wrapper = v0.nonce.into();
                     assert_eq!(ether_tx.nonce, tx_nonce.into());
-                    assert_eq!(ether_tx.from, starknet_address_to_ethereum_address(&v0.contract_address));
+                    // TODO: `ether_tx.from` is an Ethereum address, `contract_address` represents a Starknet address
+                    // that is able to interact with Kakarot, we'd need to use get_evm_address() to
+                    // convert it. These assert helpers may need to be refactored entirely.
+                    assert_eq!(ether_tx.from, Felt252Wrapper::from(v0.contract_address).try_into().unwrap());
                     // r and s values are extracted from the calldata of the first transaction
                     // in the starknet_getBlockWithTxs.json file.
                     // v value is calculated from the parity of the y coordinate of the signature,
