@@ -52,6 +52,11 @@ jobs:
     name: test
     runs-on: ubuntu-latest-16-cores
     steps:
+      # foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
       # rust setup
       - uses: actions/checkout@v2
       - name: Setup rust env

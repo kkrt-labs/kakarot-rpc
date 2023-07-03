@@ -7,6 +7,9 @@ setup: .gitmodules
 kakarot-build: setup 
 	cd kakarot && make build
 
+build-sol:
+	forge build --names --force
+
 # install dependencies, automatically creates a virtual environment
 poetry-install: 
 	poetry install
@@ -27,10 +30,10 @@ run:
 run-release:
 	source .env && cargo run --release -p kakarot-rpc
 
-test:
+test: kakarot-build build-sol
 	cargo test --all
 
-test-coverage: kakarot-build
+test-coverage: kakarot-build build-sol
 	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:
