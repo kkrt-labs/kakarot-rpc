@@ -4,7 +4,7 @@ use reqwest::StatusCode;
 use reth_primitives::{BlockId, H256};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
+use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use wiremock::matchers::{body_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
@@ -118,11 +118,7 @@ pub async fn setup_wiremock() -> String {
     mock_server.uri()
 }
 
-pub async fn setup_mock_client<T>() -> Box<dyn KakarotEthApi<T>>
-where
-    T: JsonRpcTransport + Send + Sync,
-    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotEthApi<T>,
-{
+pub async fn setup_mock_client() -> Box<dyn KakarotEthApi<HttpTransport>> {
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
@@ -138,11 +134,7 @@ where
     )
 }
 
-pub async fn setup_mock_client_crate<T>() -> KakarotClient<JsonRpcClient<HttpTransport>>
-where
-    T: JsonRpcTransport + Send + Sync,
-    KakarotClient<JsonRpcClient<HttpTransport>>: KakarotEthApi<T>,
-{
+pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>> {
     let starknet_rpc = setup_wiremock().await;
     let kakarot_address =
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
