@@ -1,6 +1,6 @@
 use kakarot_rpc::eth_rpc::KakarotEthRpc;
 use kakarot_rpc_core::client::client_api::KakarotEthApi;
-use kakarot_rpc_core::client::config::StarknetConfig;
+use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::mock::wiremock_utils::setup_wiremock;
 use starknet::core::types::FieldElement;
@@ -42,12 +42,10 @@ where
     let proxy_account_class_hash =
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
 
-    let kakarot_client = KakarotClient::new_with_http_transport(StarknetConfig::new(
-        &starknet_rpc,
-        kakarot_address,
-        proxy_account_class_hash,
-    ))
-    .unwrap();
+    let config = StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash);
+    let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
+
+    let kakarot_client = KakarotClient::new(config, provider).unwrap();
 
     KakarotEthRpc::new(Box::new(kakarot_client))
 }

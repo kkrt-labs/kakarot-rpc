@@ -32,9 +32,8 @@ use starknet::core::types::{
     Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcClient, JsonRpcTransport};
+use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
 use starknet::providers::Provider;
-use url::Url;
 
 use self::client_api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::StarknetConfig;
@@ -70,8 +69,9 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotClient<JsonRpcClient<T>> {
     /// # Errors
     ///
     /// `Err(EthApiError<T>)` if the operation failed.
-    pub fn new_with_provider(starknet_config: StarknetConfig, provider: JsonRpcClient<T>) -> Result<Self> {
+    pub fn new(starknet_config: StarknetConfig, provider: JsonRpcClient<T>) -> Result<Self> {
         let StarknetConfig { kakarot_address, proxy_account_class_hash, .. } = starknet_config;
+
         Ok(Self { starknet_provider: provider, kakarot_address, proxy_account_class_hash })
     }
 
@@ -95,27 +95,6 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotClient<JsonRpcClient<T>> {
         self.get_evm_address(starknet_address, starknet_block_id)
             .await
             .unwrap_or_else(|_| starknet_address_to_ethereum_address(starknet_address))
-    }
-}
-
-impl KakarotClient<JsonRpcClient<HttpTransport>> {
-    /// Create a new `KakarotClient` with HttpTransport.
-    ///
-    /// # Arguments
-    ///
-    /// * `starknet_config(StarknetConfig)` - `StarkNet` configuration.
-    ///
-    /// # Errors
-    ///
-    /// `Err(EthApiError<T>)` if the operation failed.
-    pub fn new_with_http_transport(starknet_config: StarknetConfig) -> Result<Self> {
-        let StarknetConfig { starknet_rpc, kakarot_address, proxy_account_class_hash } = starknet_config;
-        let url = Url::parse(&starknet_rpc)?;
-        Ok(Self {
-            starknet_provider: JsonRpcClient::new(HttpTransport::new(url)),
-            kakarot_address,
-            proxy_account_class_hash,
-        })
     }
 }
 

@@ -10,7 +10,7 @@ use wiremock::matchers::{body_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::client::client_api::KakarotEthApi;
-use crate::client::config::StarknetConfig;
+use crate::client::config::{JsonRpcClientBuilder, StarknetConfig};
 use crate::client::helpers::ethers_block_id_to_starknet_block_id;
 use crate::client::KakarotClient;
 
@@ -124,14 +124,10 @@ pub async fn setup_mock_client() -> Box<dyn KakarotEthApi<HttpTransport>> {
         FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
     let proxy_account_class_hash =
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
-    Box::new(
-        KakarotClient::new_with_http_transport(StarknetConfig::new(
-            &starknet_rpc,
-            kakarot_address,
-            proxy_account_class_hash,
-        ))
-        .unwrap(),
-    )
+
+    let config = StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash);
+    let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
+    Box::new(KakarotClient::new(config, provider).unwrap())
 }
 
 pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>> {
@@ -141,12 +137,10 @@ pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransp
     let proxy_account_class_hash =
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
 
-    KakarotClient::new_with_http_transport(StarknetConfig::new(
-        &starknet_rpc,
-        kakarot_address,
-        proxy_account_class_hash,
-    ))
-    .unwrap()
+    let config = StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash);
+    let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
+
+    KakarotClient::new(config, provider).unwrap()
 }
 
 fn mock_block_number() -> Mock {

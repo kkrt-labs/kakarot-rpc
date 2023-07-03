@@ -2,7 +2,7 @@ use dotenv::dotenv;
 use eyre::Result;
 use kakarot_rpc::config::RPCConfig;
 use kakarot_rpc::run_server;
-use kakarot_rpc_core::client::config::StarknetConfig;
+use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -17,7 +17,9 @@ async fn main() -> Result<()> {
 
     let starknet_config = StarknetConfig::from_env()?;
     let rpc_config = RPCConfig::from_env()?;
-    let kakarot_client = KakarotClient::new_with_http_transport(starknet_config)?;
+
+    let provider = JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build();
+    let kakarot_client = KakarotClient::new(starknet_config, provider)?;
 
     let (server_addr, server_handle) = run_server(Box::new(kakarot_client), rpc_config).await?;
     let url = format!("http://{server_addr}");
