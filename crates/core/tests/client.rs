@@ -130,15 +130,13 @@ mod tests {
         kakarot_client.transaction_receipt(inc_res).await.expect("increment receipt failed");
 
         let count_selector = counter_abi.function("count").unwrap().short_signature();
-        let counter_val =
-            kakarot_client.call_view(counter_eth_address, count_selector.into(), BlockId::Tag(BlockTag::Latest)).await;
+        let counter_bytes = kakarot_client
+            .call_view(counter_eth_address, count_selector.into(), BlockId::Tag(BlockTag::Latest))
+            .await
+            .unwrap();
 
-        if let Ok(bytes) = counter_val {
-            let num = *bytes.last().expect("Empty byte array");
-            assert_eq!(num, 1);
-        } else {
-            panic!("Expected Ok, got {:?}", counter_val);
-        }
+        let num = *counter_bytes.last().expect("Empty byte array");
+        assert_eq!(num, 1);
     }
 
     #[tokio::test]
