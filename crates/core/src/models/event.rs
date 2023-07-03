@@ -1,6 +1,5 @@
 use core::iter::once;
 
-use async_trait::async_trait;
 use num_bigint::BigUint;
 use reth_primitives::{Address, Bytes, H256, U256};
 use reth_rpc_types::Log;
@@ -11,6 +10,7 @@ use crate::client::client_api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
 use crate::models::convertible::ConvertibleStarknetEvent;
 
+#[derive(Debug, Clone)]
 pub struct StarknetEvent(Event);
 
 impl StarknetEvent {
@@ -19,10 +19,15 @@ impl StarknetEvent {
     }
 }
 
-#[async_trait]
+impl From<Event> for StarknetEvent {
+    fn from(event: Event) -> Self {
+        Self::new(event)
+    }
+}
+
 impl ConvertibleStarknetEvent for StarknetEvent {
-    async fn to_eth_log(
-        &self,
+    fn to_eth_log(
+        self,
         client: &dyn KakarotStarknetApi,
         block_hash: Option<H256>,
         block_number: Option<U256>,
