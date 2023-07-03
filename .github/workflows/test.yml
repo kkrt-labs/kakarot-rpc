@@ -94,7 +94,7 @@ jobs:
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}  
       - name: Generate code coverage
         run:
-          ./scripts/make_with_env.sh test
+          make test-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

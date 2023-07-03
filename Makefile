@@ -1,9 +1,3 @@
-# Read from the .env file
-include .env
-export
-
-# TODO: Would want to use this to ensure the build command only runs the first time
-KAKAROT_BUILD_FILES = $(wildcard $(COMPILED_KAKAROT_PATH)/*)
 HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
 setup: .gitmodules
@@ -23,7 +17,7 @@ devnet: poetry-install
 
 # build
 build:
-	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+	cargo build --all --release
 
 # run
 run: 
@@ -33,8 +27,11 @@ run:
 run-release:
 	source .env && cargo run --release -p kakarot-rpc
 
-test: kakarot-build
+test:
 	cargo test --all
+
+test-coverage: kakarot-build
+	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:
 	hurl $(HURL_FILES)
