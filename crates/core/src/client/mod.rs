@@ -271,17 +271,6 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         Ok(eth_transaction)
     }
 
-    /// Submits a Kakarot transaction to the Starknet provider.
-    async fn submit_starknet_transaction(
-        &self,
-        request: BroadcastedInvokeTransactionV1,
-    ) -> Result<H256, EthApiError<T::Error>> {
-        let transaction_result =
-            self.starknet_provider.add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request)).await?;
-
-        Ok(H256::from(transaction_result.transaction_hash.to_bytes_be()))
-    }
-
     /// Returns the receipt of a transaction by transaction hash.
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError<T::Error>> {
         // TODO: Error when trying to transform 32 bytes hash to FieldElement
@@ -592,6 +581,17 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
         let evm_address: [u8; 20] = slice.try_into().unwrap(); // safe unwrap as slice is of size 20
 
         Ok(Address::from(evm_address))
+    }
+
+    /// Submits a Kakarot transaction to the Starknet provider.
+    async fn submit_starknet_transaction(
+        &self,
+        request: BroadcastedInvokeTransactionV1,
+    ) -> Result<H256, EthApiError<T::Error>> {
+        let transaction_result =
+            self.starknet_provider.add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request)).await?;
+
+        Ok(H256::from(transaction_result.transaction_hash.to_bytes_be()))
     }
 
     /// Returns the EVM address associated with a given Starknet address for a given block id

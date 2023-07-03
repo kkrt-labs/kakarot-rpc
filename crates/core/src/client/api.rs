@@ -44,11 +44,6 @@ pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi<T> {
 
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError<T::Error>>;
 
-    async fn submit_starknet_transaction(
-        &self,
-        request: BroadcastedInvokeTransactionV1,
-    ) -> Result<H256, EthApiError<T::Error>>;
-
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError<T::Error>>;
 
     async fn nonce(
@@ -101,6 +96,11 @@ pub trait KakarotStarknetApi<T: JsonRpcTransport>: Send + Sync {
     fn proxy_account_class_hash(&self) -> FieldElement;
 
     fn starknet_provider(&self) -> &JsonRpcClient<T>;
+
+    async fn submit_starknet_transaction(
+        &self,
+        request: BroadcastedInvokeTransactionV1,
+    ) -> Result<H256, EthApiError<T::Error>>;
 
     async fn compute_starknet_address(
         &self,
