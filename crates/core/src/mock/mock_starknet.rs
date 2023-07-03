@@ -77,14 +77,32 @@ pub fn mock_starknet_provider(fixtures: Option<Vec<StarknetRpcFixture>>) -> Json
 
 #[cfg(test)]
 mod tests {
-    use reth_primitives::{Address, U256, U64};
+    use reth_primitives::{U256, U64};
     use starknet::core::types::{BlockId, BlockTag};
-    use starknet_crypto::FieldElement;
 
     use super::*;
     use crate::client::client_api::KakarotEthApi;
     use crate::client::config::StarknetConfig;
     use crate::client::KakarotClient;
+    use crate::mock::constants::{ABDEL_ADDRESS, KAKAROT_ADDRESS};
+
+    #[test]
+    fn test_rpc_fixture_builder() {
+        // Given
+        let method = JsonRpcMethod::GetNonce;
+        let fixture = StarknetRpcFixtureBuilder::new(method).load_jsons().with_params().with_response().build();
+
+        // When
+        let expected_params = serde_json::json!(["latest", "0xabde1"]);
+        let expected_response = serde_json::json!({
+          "id": 1,
+          "result": "0x1"
+        });
+
+        // Then
+        assert_eq!(expected_params, fixture.params);
+        assert_eq!(expected_response, fixture.response);
+    }
 
     #[tokio::test]
     async fn test_mock_provider_block_number() {
@@ -92,13 +110,7 @@ mod tests {
         let fixtures = fixtures(vec![JsonRpcMethod::BlockNumber]);
         let provider = mock_starknet_provider(Some(fixtures));
 
-        let config = StarknetConfig {
-            kakarot_address: FieldElement::from_hex_be(
-                "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-            )
-            .unwrap(),
-            ..Default::default()
-        };
+        let config = StarknetConfig { kakarot_address: *KAKAROT_ADDRESS, ..Default::default() };
         let client = KakarotClient::new_with_provider(config, provider).unwrap();
 
         // When
@@ -114,18 +126,11 @@ mod tests {
         let fixtures = fixtures(vec![JsonRpcMethod::GetNonce, JsonRpcMethod::Call]);
         let provider = mock_starknet_provider(Some(fixtures));
 
-        let config = StarknetConfig {
-            kakarot_address: FieldElement::from_hex_be(
-                "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-            )
-            .unwrap(),
-            ..Default::default()
-        };
+        let config = StarknetConfig { kakarot_address: *KAKAROT_ADDRESS, ..Default::default() };
         let client = KakarotClient::new_with_provider(config, provider).unwrap();
 
         // When
-        let eth_address = Address::from_low_u64_be(0xabde1);
-        let nonce = client.nonce(eth_address, BlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let nonce = client.nonce(*ABDEL_ADDRESS, BlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Then
         assert_eq!(U256::from(1), nonce);
