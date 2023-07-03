@@ -1,7 +1,5 @@
 use async_trait::async_trait;
 use eyre::Result;
-// TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
-// https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U128, U256, U64};
 use reth_rpc_types::{
     BlockTransactions, CallRequest, FeeHistory, Index, RichBlock, SyncStatus, Transaction as EtherTransaction,

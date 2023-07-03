@@ -1,7 +1,10 @@
 use async_trait::async_trait;
-use reth_primitives::{Bloom, Bytes, H256, H64, U256};
+use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, Bloom, Bytes, H256, H64, U256};
 use reth_rpc_types::{Block, BlockTransactions, Header, RichBlock};
-use starknet::core::types::{FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, Transaction};
+use starknet::core::types::{
+    BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    Transaction,
+};
 use starknet::providers::jsonrpc::JsonRpcTransport;
 
 use super::convertible::ConvertibleStarknetBlock;
@@ -9,6 +12,37 @@ use super::felt::Felt252Wrapper;
 use crate::client::api::KakarotEthApi;
 use crate::client::constants::{DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY};
 use crate::client::errors::EthApiError;
+
+pub struct EthBlockId(EthereumBlockId);
+
+impl EthBlockId {
+    pub fn new(block_id: EthereumBlockId) -> Self {
+        Self(block_id)
+    }
+
+    pub fn to_starknet_block_id<T: JsonRpcTransport>(&self) -> Result<StarknetBlockId, EthApiError<T::Error>> {
+        match self.0 {
+            EthereumBlockId::Hash(hash) => {
+                let hash: Felt252Wrapper = hash.block_hash.try_into()?;
+                Ok(StarknetBlockId::Hash(hash.into()))
+            }
+            EthereumBlockId::Number(block_number_or_tag) => match block_number_or_tag {
+                BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
+                    Ok(StarknetBlockId::Tag(BlockTag::Latest))
+                }
+                BlockNumberOrTag::Earliest => Ok(StarknetBlockId::Number(0)),
+                BlockNumberOrTag::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
+                BlockNumberOrTag::Number(number) => Ok(StarknetBlockId::Number(number)),
+            },
+        }
+    }
+}
+
+impl From<EthBlockId> for EthereumBlockId {
+    fn from(eth_block_id: EthBlockId) -> Self {
+        eth_block_id.0
+    }
+}
 
 /// Implement getters for fields that are present in Starknet Blocks, both in pending and validated
 /// state. For example, `parent_hash` is present in both `PendingBlock` and `Block`.

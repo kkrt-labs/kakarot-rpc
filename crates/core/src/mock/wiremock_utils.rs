@@ -11,8 +11,8 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 
 use crate::client::api::KakarotEthApi;
 use crate::client::config::{JsonRpcClientBuilder, StarknetConfig};
-use crate::client::helpers::ethers_block_id_to_starknet_block_id;
 use crate::client::KakarotClient;
+use crate::models::block::EthBlockId;
 
 #[derive(Serialize, Debug)]
 pub struct StarknetRpcBaseData<'a, StarknetParams> {
@@ -154,7 +154,7 @@ fn mock_block_with_txs() -> Mock {
     let block_id = BlockId::Hash(
         H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap().into(),
     );
-    let starknet_block_id = ethers_block_id_to_starknet_block_id::<HttpTransport>(block_id).unwrap();
+    let starknet_block_id = EthBlockId::new(block_id).to_starknet_block_id::<HttpTransport>().unwrap();
     Mock::given(method("POST")).and(body_json(StarknetRpcBaseData::block_with_txs([&starknet_block_id]))).respond_with(
         response_template_with_status(StatusCode::OK)
             .set_body_raw(include_str!("fixtures/responses/blocks/starknet_getBlockWithTxs.json"), "application/json"),
@@ -166,7 +166,7 @@ fn mock_block_with_txs_hashes() -> Mock {
         H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e").unwrap().into(),
     );
     let starknet_block_id_tx_hashes =
-        ethers_block_id_to_starknet_block_id::<HttpTransport>(block_id_tx_hashes).unwrap();
+        EthBlockId::new(block_id_tx_hashes).to_starknet_block_id::<HttpTransport>().unwrap();
     Mock::given(method("POST"))
         .and(body_json(StarknetRpcBaseData::block_with_tx_hashes([&starknet_block_id_tx_hashes])))
         .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(

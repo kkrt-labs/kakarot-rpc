@@ -1,13 +1,10 @@
 use eyre::Result;
-use reth_primitives::{
-    Address, BlockId as EthBlockId, BlockNumberOrTag, Bloom, Bytes, Signature, TransactionSigned, H160,
-};
+use reth_primitives::{Address, Bloom, Bytes, Signature, TransactionSigned, H160};
 use reth_rlp::Decodable;
 use reth_rpc_types::TransactionReceipt;
 use starknet::accounts::Call;
 use starknet::core::types::{
-    BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    ValueOutOfRangeError,
+    FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, ValueOutOfRangeError,
 };
 use starknet::providers::jsonrpc::JsonRpcTransport;
 use thiserror::Error;
@@ -15,7 +12,6 @@ use thiserror::Error;
 use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
 use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
 use crate::client::errors::EthApiError;
-use crate::models::felt::Felt252Wrapper;
 
 #[derive(Debug, Error)]
 pub enum DataDecodingError {
@@ -66,34 +62,6 @@ impl TryFrom<Vec<FieldElement>> for Calls {
             calls.push(call);
         }
         Ok(Calls(calls))
-    }
-}
-
-/// Converts a `Eth` block id to a `Starknet` block id.
-/// # Errors
-///
-/// Will return `EthApiError` if an error occurs.
-pub fn ethers_block_id_to_starknet_block_id<T: JsonRpcTransport>(
-    block: EthBlockId,
-) -> Result<StarknetBlockId, EthApiError<T::Error>> {
-    match block {
-        EthBlockId::Hash(hash) => {
-            let hash: Felt252Wrapper = hash.block_hash.try_into()?;
-            Ok(StarknetBlockId::Hash(hash.into()))
-        }
-        EthBlockId::Number(number) => Ok(ethers_block_number_to_starknet_block_id(number)),
-    }
-}
-
-/// Converts a `Eth` block number to a `Starknet` block id.
-pub const fn ethers_block_number_to_starknet_block_id(block: BlockNumberOrTag) -> StarknetBlockId {
-    match block {
-        BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
-            StarknetBlockId::Tag(BlockTag::Latest)
-        }
-        BlockNumberOrTag::Earliest => StarknetBlockId::Number(0),
-        BlockNumberOrTag::Pending => StarknetBlockId::Tag(BlockTag::Pending),
-        BlockNumberOrTag::Number(num) => StarknetBlockId::Number(num),
     }
 }
 
