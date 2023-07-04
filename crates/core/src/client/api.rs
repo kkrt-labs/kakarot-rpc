@@ -115,7 +115,7 @@ pub trait KakarotStarknetApi<T: JsonRpcTransport>: Send + Sync {
         initial_transactions: StarknetTransactions,
         blockhash_opt: Option<H256>,
         blocknum_opt: Option<U256>,
-    ) -> Result<BlockTransactions, EthApiError<T::Error>>;
+    ) -> BlockTransactions;
 
     async fn get_eth_block_from_starknet_block(
         &self,

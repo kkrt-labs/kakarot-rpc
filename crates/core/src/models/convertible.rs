@@ -8,10 +8,7 @@ use crate::client::errors::EthApiError;
 
 #[async_trait]
 pub trait ConvertibleStarknetBlock {
-    async fn to_eth_block<T: JsonRpcTransport + Send + Sync>(
-        &self,
-        client: &dyn KakarotEthApi<T>,
-    ) -> Result<RichBlock, EthApiError<T::Error>>;
+    async fn to_eth_block<T: JsonRpcTransport + Send + Sync>(&self, client: &dyn KakarotEthApi<T>) -> RichBlock;
 }
 
 pub trait ConvertibleStarknetEvent {
