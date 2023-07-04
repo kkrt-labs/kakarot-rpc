@@ -599,6 +599,12 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
                 expected: 1,
                 actual: 0,
             })?
+            .to_bytes_be();
+
+        // Workaround as .get(12..32) does not dynamically size the slice
+        let slice: &[u8] = evm_address
+            .get(12..32)
+            .ok_or_else(|| ConversionError::Other("error converting from [u8; 32] to &[u8]".into()))?;
 
         let evm_address: [u8; 20] = slice.try_into().unwrap(); // safe unwrap as slice is of size 20
 
