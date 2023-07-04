@@ -75,7 +75,9 @@ pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
     let compiled_solidity_path_from_root = root_project_path!(&compiled_solidity_path);
 
     // Read the content of the file
-    let contents = fs::read_to_string(compiled_solidity_path_from_root).expect("{filename} isn't compiled.");
+    let contents = fs::read_to_string(compiled_solidity_path_from_root).unwrap_or_else(|_| {
+        panic!("Could not read file: {}. please run `make setup` to ensure solidity files are compiled", filename)
+    });
 
     // Parse the entire JSON content into a Value
     let json: serde_json::Value = serde_json::from_str(&contents).unwrap();
@@ -141,20 +143,6 @@ pub fn encode_contract<T: Tokenize>(
 ///
 /// This function creates an EIP-1559 transaction with certain fields set according to the function
 /// parameters and the others set to their default values.
-///
-/// # Example
-///
-/// ```
-/// # use kakarot_rpc_core::to_kakarot_transaction;
-/// # use ethers::types::{TransactionKind, Bytes};
-/// let nonce = 0;
-/// let to =
-///     TransactionKind::Contract("0x000102030405060708090a0b0c0d0e0f10111213".parse().unwrap());
-/// let input = Bytes::from("Some input data");
-/// let transaction = to_kakarot_transaction(nonce, to, input);
-/// ```
-///
-/// This example constructs a transaction for a contract with a specific address and input data.
 pub fn to_kakarot_transaction(nonce: u64, to: TransactionKind, input: Bytes) -> Transaction {
     Transaction::Eip1559(TxEip1559 {
         chain_id: CHAIN_ID,
@@ -203,7 +191,7 @@ pub fn create_raw_ethereum_tx(
     raw_tx.to_vec().into()
 }
 
-// Allows us to destructure the starknet katana receipt types in a more concise way
+/// Allows us to destructure the starknet katana receipt types in a more concise way
 fn into_receipt(maybe_receipt: MaybePendingTransactionReceipt) -> Option<InvokeTransactionReceipt> {
     if let MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) = maybe_receipt {
         Some(receipt)
@@ -253,7 +241,7 @@ async fn deploy_evm_contract<T: Tokenize>(
         })
         .collect();
 
-    let unused_eoa_field = FieldElement::from_hex_be("0xDEAD").unwrap();
+    let unused_eoa_field = FieldElement::ZERO;
     let deployment_of_counter_evm_contract_result = eoa_starknet_account
         .execute(vec![Call { calldata: field_elements, to: unused_eoa_field, selector: unused_eoa_field }])
         .send()
@@ -318,9 +306,10 @@ async fn deploy_starknet_contract(
 async fn declare_kakarot_contracts(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) -> HashMap<String, FieldElement> {
-    let compiled_kakarot_path = root_project_path!(
-        std::env::var("COMPILED_KAKAROT_PATH").expect("Expected a COMPILED_KAKAROT_PATH environment variable")
-    );
+    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
+        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
+         `./scripts/make_with_env.sh test`"
+    ));
 
     let paths = fs::read_dir(&compiled_kakarot_path)
         .unwrap_or_else(|_| panic!("Could not read directory: {}", compiled_kakarot_path.display()));
@@ -332,7 +321,11 @@ async fn declare_kakarot_contracts(
         })
         .collect();
 
-    assert!(!kakarot_compiled_contract_paths.is_empty(), "{} is empty.", compiled_kakarot_path.display());
+    assert!(
+        !kakarot_compiled_contract_paths.is_empty(),
+        "{} is empty, please run `make setup` to ensure that Kakarot evm is built.",
+        compiled_kakarot_path.display()
+    );
 
     let mut class_hash: HashMap<String, FieldElement> = HashMap::new();
     for path in kakarot_compiled_contract_paths {
