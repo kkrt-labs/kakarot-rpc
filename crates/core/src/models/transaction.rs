@@ -74,7 +74,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         transaction_index: Option<U256>,
     ) -> Result<EthTransaction, EthApiError<T::Error>> {
         if !self.is_kakarot_tx(client).await? {
-            return Err(EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Tx is not part of Kakarot")));
+            return Err(EthApiError::KakarotDataFilteringError("Transaction".into()));
         }
 
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
