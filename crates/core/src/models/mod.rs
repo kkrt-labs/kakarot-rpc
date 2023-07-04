@@ -11,12 +11,13 @@ pub mod transaction;
 use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
 
-use crate::client::helpers::DataDecodingError;
-
 #[derive(Debug, Error)]
+/// Conversion error
 pub enum ConversionError {
+    /// Ethereum to Starknet transaction conversion error
     #[error("transaction conversion error: {0}")]
     TransactionConversionError(String),
+    /// Felt252Wrapper conversion error
     #[error(transparent)]
     Felt252WrapperConversionError(#[from] FromByteArrayError),
     #[error(transparent)]
@@ -26,4 +27,7 @@ pub enum ConversionError {
          address"
     )]
     ToEthereumAddressError,
+    /// Other conversion error
+    #[error("failed to convert from {src} to {dest}")]
+    Other { src: String, dest: String },
 }
