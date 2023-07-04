@@ -49,11 +49,8 @@ use crate::models::event::StarknetEvent;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 
-pub struct KakarotClient<StarknetProvider>
-where
-    StarknetProvider: Provider,
-{
-    starknet_provider: StarknetProvider,
+pub struct KakarotClient<T: Provider> {
+    starknet_provider: T,
     kakarot_address: FieldElement,
     proxy_account_class_hash: FieldElement,
 }
