@@ -12,12 +12,7 @@ use async_trait::async_trait;
 use constants::selectors::BYTECODE;
 use eyre::Result;
 use futures::future::join_all;
-use helpers::{
-    decode_eth_call_return, ethers_block_id_to_starknet_block_id, raw_starknet_calldata, vec_felt_to_bytes,
-    FeltOrFeltArray,
-};
-// TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
-// https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
+use helpers::{decode_eth_call_return, raw_starknet_calldata, vec_felt_to_bytes, FeltOrFeltArray};
 use reth_primitives::{
     keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H256, U128, U256, U64, U8,
 };
