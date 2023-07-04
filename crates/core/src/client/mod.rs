@@ -447,7 +447,7 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
             .map(|token_address| match token_address {
                 Ok(call) => {
                     let balance = U256::try_from_be_slice(call.as_ref())
-                        .ok_or(ConversionError::Other { src: "Bytes".into(), dest: "U256".into() })
+                        .ok_or(ConversionError::Other("error converting from Bytes to U256".into()))
                         .unwrap();
                     TokenBalance { contract_address: address, token_balance: Some(balance), error: None }
                 }
@@ -580,7 +580,7 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
         // Workaround as .get(12..32) does not dynamically size the slice
         let slice: &[u8] = evm_address
             .get(12..32)
-            .ok_or_else(|| ConversionError::Other { src: "[u8;32]".into(), dest: "&[u8]".into() })?;
+            .ok_or_else(|| ConversionError::Other("error converting from [u8; 32] to &[u8]".into()))?;
 
         let evm_address: [u8; 20] = slice.try_into().unwrap(); // safe unwrap as slice is of size 20
 

@@ -25,11 +25,11 @@ pub enum ConversionError {
     #[error(transparent)]
     DataDecodingError(#[from] DataDecodingError),
     #[error(
-        "Failed to convert Felt252Wrapper to Ethereum address: the value exceeds the maximum size of an Ethereum \
+        "failed to convert Felt252Wrapper to Ethereum address: the value exceeds the maximum size of an Ethereum \
          address"
     )]
     ToEthereumAddressError,
     /// Other conversion error
-    #[error("failed to convert from {src} to {dest}")]
-    Other { src: String, dest: String },
+    #[error("failed to convert value: {0}")]
+    Other(String),
 }
