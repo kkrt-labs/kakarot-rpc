@@ -12,12 +12,7 @@ use async_trait::async_trait;
 use constants::selectors::BYTECODE;
 use eyre::Result;
 use futures::future::join_all;
-use helpers::{
-    decode_eth_call_return, ethers_block_id_to_starknet_block_id, raw_starknet_calldata, vec_felt_to_bytes,
-    FeltOrFeltArray,
-};
-// TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
-// https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
+use helpers::{decode_eth_call_return, raw_starknet_calldata, vec_felt_to_bytes, FeltOrFeltArray};
 use reth_primitives::{
     keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H256, U128, U256, U64, U8,
 };
@@ -43,7 +38,7 @@ use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use self::errors::EthApiError;
 use crate::client::constants::selectors::ETH_CALL;
 use crate::models::balance::{TokenBalance, TokenBalances};
-use crate::models::block::{BlockWithTxHashes, BlockWithTxs};
+use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
 use crate::models::event::StarknetEvent;
 use crate::models::felt::Felt252Wrapper;
@@ -203,13 +198,13 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
 
     /// Get the number of transactions in a block given a block number.
     async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64, EthApiError<T::Error>> {
-        let starknet_block_id = ethers_block_id_to_starknet_block_id::<T>(BlockId::Number(number))?;
+        let starknet_block_id = EthBlockId::new(BlockId::Number(number)).to_starknet_block_id::<T>()?;
         self.get_transaction_count_by_block(starknet_block_id).await
     }
 
     /// Get the number of transactions in a block given a block hash.
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError<T::Error>> {
-        let starknet_block_id = ethers_block_id_to_starknet_block_id::<T>(BlockId::Hash(hash.into()))?;
+        let starknet_block_id = EthBlockId::new(BlockId::Hash(hash.into())).to_starknet_block_id::<T>()?;
         self.get_transaction_count_by_block(starknet_block_id).await
     }
 
