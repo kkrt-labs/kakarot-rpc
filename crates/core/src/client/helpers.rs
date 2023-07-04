@@ -1,6 +1,6 @@
 use eyre::Result;
 use reth_primitives::{Address, Bloom, Bytes, Signature, TransactionSigned, H160};
-use reth_rlp::Decodable;
+use reth_rlp::{Decodable, DecodeError};
 use reth_rpc_types::TransactionReceipt;
 use starknet::accounts::Call;
 use starknet::core::types::{
@@ -16,6 +16,10 @@ use crate::client::errors::EthApiError;
 pub enum DataDecodingError {
     #[error("failed to decode signature {0}")]
     SignatureDecodingError(String),
+    #[error("failed to decode transaction")]
+    TransactionDecodingError(#[from] DecodeError),
+    #[error("invalid call return length: failed on {0}")]
+    InvalidReturnArrayLength(String),
 }
 
 #[derive(Debug)]
@@ -72,18 +76,16 @@ pub fn decode_eth_call_return<T: std::error::Error>(
     // fail is Kakarot API changes)
     // Declare Vec of Result
     let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
-    let mut tmp_array_len: FieldElement = *call_result.first().ok_or_else(|| {
-        EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
-    })?;
+    let mut tmp_array_len: FieldElement = *call_result
+        .first()
+        .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength("stack accesses length".into()))?;
     let mut tmp_counter = 1_usize;
     segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
     // Parse first array: stack_accesses
     while tmp_array_len != FieldElement::ZERO {
-        let element = call_result.get(tmp_counter).ok_or_else(|| {
-            EthApiError::OtherError(anyhow::anyhow!(
-                "Cannot parse and decode return arguments of Kakarot call: return data array",
-            ))
-        })?;
+        let element = call_result
+            .get(tmp_counter)
+            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength("stack accesses".into()))?;
         match segmented_result.last_mut() {
             Some(FeltOrFeltArray::FeltArray(felt_array)) => felt_array.push(*element),
             Some(FeltOrFeltArray::Felt(_felt)) => (),
