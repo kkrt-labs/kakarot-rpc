@@ -6,7 +6,7 @@ mod tests {
     use std::str::FromStr;
 
     use dojo_test_utils::sequencer::TestSequencer;
-    use ethers::types::{Address as EthersAddress, U256 as EthersU256};
+    use ethers::types::U256 as EthersU256;
     use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
     use kakarot_rpc_core::client::config::StarknetConfig;
     use kakarot_rpc_core::client::errors::EthApiError;
@@ -24,7 +24,7 @@ mod tests {
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::{JsonRpcClient, Provider};
 
-    use crate::helpers::constants::EOA_WALLET;
+    use crate::helpers::constants::{EOA_WALLET, ETH_ZERO_ADDRESS};
     use crate::helpers::deploy_helpers::{create_raw_ethereum_tx, deploy_kakarot_system};
 
     #[tokio::test]
@@ -37,13 +37,12 @@ mod tests {
         let deployed_kakarot =
             deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
 
-        let address = "0x0000000000000000000000000000000000000000".parse::<EthersAddress>().unwrap();
         let (_constructable_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 starknet_test_sequencer.url(),
                 "Constructable",
                 // more than one argument to a constructor needs to be conveyed as a tuple
-                (EthersU256::from(100), address),
+                (EthersU256::from(100), *ETH_ZERO_ADDRESS),
             )
             .await
             .unwrap();

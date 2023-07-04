@@ -39,5 +39,6 @@ bytes = "1"
 dojo-test-utils = { workspace = true }
 dotenv = { workspace = true }  
 ethers = "2.0"
+foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }  
 starknet-crypto = { workspace = true }
 toml = "0.7.5"

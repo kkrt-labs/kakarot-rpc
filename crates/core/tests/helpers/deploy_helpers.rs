@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 use std::fs;
-use std::fs::File;
-use std::io::Read;
 use std::sync::Arc;
 
 use bytes::BytesMut;
@@ -9,12 +7,12 @@ use dojo_test_utils::sequencer::TestSequencer;
 use dotenv::dotenv;
 use ethers::abi::{Abi, Tokenize};
 use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
+use foundry_config::utils::{find_project_root_path, load_config};
 use kakarot_rpc_core::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
 };
-use serde::Deserialize;
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::chain_id;
@@ -27,95 +25,39 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
-use toml;
 use url::Url;
 
-/// Macro to generate an absolute path from a given relative path with respect to the project root.
+/// Macro to find the root path of the project.
 ///
-/// This macro takes in a string literal representing a relative path, and returns the absolute path
-/// relative to the root of the project. The project root is determined based on the
-/// `CARGO_MANIFEST_DIR` environment variable, which is set by Cargo to the location of the
-/// `Cargo.toml` of the crate being compiled.
+/// This macro utilizes the `find_project_root_path` function from the `utils` module.
+/// This function works by identifying the root directory of the current git repository.
+/// It starts at the current working directory and traverses up the directory tree until it finds a
+/// directory containing a `.git` folder. If no such directory is found, it uses the current
+/// directory as the root.
 ///
-/// This macro assumes that the code will always be run in a context where `CARGO_MANIFEST_DIR` is
-/// two levels below the project root (e.g., `<project-root>/crates/core`). This assumption allows
-/// the macro to be flexible with file paths to locate artifacts in a way that can be accessed by
-/// multiple crates, if necessary.
+/// After determining the project root, the macro creates a new path by joining the given relative
+/// path with the found project root path.
 ///
-/// # Example
+/// The relative path must be specified as a string literal argument to the macro.
+///
+/// # Examples
 ///
 /// ```
-/// let foundry_toml_path = root_project_path!("foundry.toml");
-/// assert!(foundry_toml_path.exists());
+/// let full_path = root_project_path!("src/main.rs");
+/// println!("Full path to main.rs: {:?}", full_path);
 /// ```
 ///
 /// # Panics
 ///
-/// This macro will panic if it's unable to determine the project root by moving two levels up from
-/// `CARGO_MANIFEST_DIR`. Again, the two parents are tied to the structure of
-/// <project-root>/crates/core.
-///
-/// # Usage
-///
-/// This macro is typically used to generate paths to various artifacts or resources during testing
-/// or script execution.
+/// This macro will panic if it fails to find the root path of the project or if the root path
+/// cannot be represented as a UTF-8 string.
 macro_rules! root_project_path {
     ($relative_path:expr) => {{
-        let crate_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-
-        let project_root = crate_root.parent().unwrap().parent().unwrap();
-        let full_path = project_root.join($relative_path);
+        let project_root_buf = find_project_root_path().unwrap();
+        let project_root = project_root_buf.to_str().unwrap();
+        let full_path = std::path::Path::new(project_root).join($relative_path);
         full_path
     }};
-}
-
-/// Represents the `default` section under `profile` in the Foundry configuration.
-///
-/// This struct contains the `out` field, which corresponds to the `out` key under the `default`
-/// section in the Foundry TOML configuration file. The `out` key specifies the default output
-/// directory for the build artifacts.
-#[derive(Debug, Deserialize)]
-struct DefaultProfile {
-    out: String,
-}
-
-/// Represents the `profile` section in the Foundry configuration.
-///
-/// This struct contains the `default` field, which corresponds to the `default` section under
-/// `profile` in the Foundry TOML configuration file.
-#[derive(Debug, Deserialize)]
-struct Profile {
-    default: DefaultProfile,
-}
-
-/// Represents the top level structure of the Foundry configuration.
-///
-/// This struct corresponds directly to the structure of a Foundry TOML configuration file.
-/// It only contains the `profile` field, which is further structured into a `DefaultProfile`.
-#[derive(Debug, Deserialize)]
-struct FoundryConfig {
-    profile: Profile,
-}
-
-/// Extracts the default output directory from a Foundry TOML configuration file.
-///
-/// This function opens and reads the specified TOML file, parses it into the `FoundryConfig`
-/// struct, and then extracts the default output directory from it.
-///
-/// # Errors
-///
-/// This function will return an error if the file cannot be opened, read, or correctly parsed,
-/// or if the required `out` key is missing from the `default` section under `profile` in the TOML
-/// file.
-fn get_foundry_default_out(file_path: &std::path::Path) -> Result<String, Box<dyn std::error::Error>> {
-    let mut file = File::open(file_path)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-
-    let config: FoundryConfig = toml::from_str(&contents)?;
-
-    // Since 'out' is a field in 'Default' struct, we can access it directly
-    Ok(config.profile.default.out)
 }
 
 /// Loads and parses a compiled Solidity contract.
@@ -124,14 +66,11 @@ fn get_foundry_default_out(file_path: &std::path::Path) -> Result<String, Box<dy
 /// directory in the `kakarot-rpc` project root, and has been compiled with the `forge build`
 /// command. It loads the resulting JSON artifact, parses its contents, and extracts the
 /// contract's ABI and bytecode.
-///
-/// This example assumes that a `MyContract.sol` file exists in the `solidity_contracts` directory,
-/// and that the `MyContract.json` artifact file has been generated by the `forge build` command.
 pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
     let dot_sol = format!("{filename}.sol");
     let dot_json = format!("{filename}.json");
-    let foundry_toml_path = root_project_path!("foundry.toml");
-    let foundry_default_out = get_foundry_default_out(&foundry_toml_path).unwrap();
+
+    let foundry_default_out = load_config().out;
     let compiled_solidity_path = std::path::Path::new(&foundry_default_out).join(dot_sol).join(dot_json);
     let compiled_solidity_path_from_root = root_project_path!(&compiled_solidity_path);
 
@@ -553,8 +492,8 @@ async fn deploy_kakarot_contracts(
 
 /// Structure representing a deployed Kakarot system, containing key details of the system.
 ///
-/// This includes the private key of the Externally Owned Account (EOA), the StarkNet addresses
-/// of the kakarot and kakarot_proxy contracts, and the StarkNet address of the EOA.
+/// This includes the private key and address of the Externally Owned Account (EOA), the StarkNet
+/// addresses of the kakarot and kakarot_proxy contracts, and the StarkNet address of the EOA.
 pub struct DeployedKakarot {
     pub eoa_private_key: H256,
     pub eoa_eth_address: Address,
