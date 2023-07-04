@@ -5,10 +5,10 @@ use starknet::core::types::{FieldElement, MaybePendingBlockWithTxHashes, MaybePe
 use starknet::providers::jsonrpc::JsonRpcTransport;
 
 use super::convertible::ConvertibleStarknetBlock;
+use super::felt::Felt252Wrapper;
 use crate::client::api::KakarotEthApi;
 use crate::client::constants::{DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY};
 use crate::client::errors::EthApiError;
-use crate::client::helpers::starknet_address_to_ethereum_address;
 
 /// Implement getters for fields that are present in Starknet Blocks, both in pending and validated
 /// state. For example, `parent_hash` is present in both `PendingBlock` and `Block`.
@@ -115,7 +115,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
         let mix_hash = *MIX_HASH;
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
-        let sequencer = starknet_address_to_ethereum_address(&self.sequencer_address());
+        let sequencer = Felt252Wrapper::from(self.sequencer_address()).troncate_to_ethereum_address();
         let timestamp = U256::from(self.timestamp());
 
         let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
@@ -195,7 +195,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
 
-        let sequencer = starknet_address_to_ethereum_address(&self.sequencer_address());
+        let sequencer = Felt252Wrapper::from(self.sequencer_address()).troncate_to_ethereum_address();
 
         let timestamp = U256::from(self.timestamp());
 

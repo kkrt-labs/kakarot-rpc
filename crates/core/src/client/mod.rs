@@ -13,8 +13,8 @@ use constants::selectors::BYTECODE;
 use eyre::Result;
 use futures::future::join_all;
 use helpers::{
-    decode_eth_call_return, ethers_block_id_to_starknet_block_id, raw_starknet_calldata,
-    starknet_address_to_ethereum_address, vec_felt_to_bytes, FeltOrFeltArray,
+    decode_eth_call_return, ethers_block_id_to_starknet_block_id, raw_starknet_calldata, vec_felt_to_bytes,
+    FeltOrFeltArray,
 };
 // TODO: all reth_primitives::rpc types should be replaced when native reth Log is implemented
 // https://github.com/paradigmxyz/reth/issues/1396#issuecomment-1440890689
@@ -73,28 +73,6 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotClient<JsonRpcClient<T>> {
         let StarknetConfig { kakarot_address, proxy_account_class_hash, .. } = starknet_config;
 
         Ok(Self { starknet_provider: provider, kakarot_address, proxy_account_class_hash })
-    }
-
-    /// Get the Ethereum address of a Starknet Kakarot smart-contract by calling `get_evm_address`
-    /// on it. If the contract's `get_evm_address` errors, returns the Starknet address sliced
-    /// to 20 bytes to conform with EVM addresses formats.
-    ///
-    /// ## Arguments
-    ///
-    /// * `starknet_address` - The Starknet address of the contract.
-    /// * `starknet_block_id` - The block id to query the contract at.
-    ///
-    /// ## Returns
-    ///
-    /// * `eth_address` - The Ethereum address of the contract.
-    pub async fn safe_get_evm_address(
-        &self,
-        starknet_address: &FieldElement,
-        starknet_block_id: &StarknetBlockId,
-    ) -> Address {
-        self.get_evm_address(starknet_address, starknet_block_id)
-            .await
-            .unwrap_or_else(|_| starknet_address_to_ethereum_address(starknet_address))
     }
 }
 
