@@ -17,7 +17,7 @@ mod tests {
     use kakarot_rpc_core::models::event::StarknetEvent;
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::models::ConversionError;
-    use reth_primitives::{Address, Bytes, H256, U256};
+    use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
     use starknet::core::utils::get_selector_from_name;
@@ -100,7 +100,7 @@ mod tests {
         let deployed_balance =
             kakarot_client.balance(deployed_kakarot.eoa_eth_address, BlockId::Tag(BlockTag::Latest)).await;
 
-        let deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
+        let _deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
 
         // this assert is failing, need to debug why
         // assert_eq!(deployed_balance, expected_funded_amount);
@@ -128,7 +128,7 @@ mod tests {
         );
         let inc_res = kakarot_client.send_transaction(inc_tx).await.unwrap();
 
-        let receipt = kakarot_client.transaction_receipt(inc_res).await;
+        kakarot_client.transaction_receipt(inc_res).await.expect("increment transaction failed");
 
         let count_selector = counter_abi.function("count").unwrap().short_signature();
         let counter_bytes = kakarot_client
