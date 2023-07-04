@@ -35,7 +35,7 @@ run-release:
 test:
 	cargo test --all
 
-test-coverage: kakarot-build build-sol
+test-coverage:
 	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:
