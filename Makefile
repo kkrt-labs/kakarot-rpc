@@ -12,13 +12,9 @@ build-sol:
 
 setup: pull-kakarot build-kakarot build-sol
 
-# install dependencies, automatically creates a virtual environment
-poetry-install: 
-	poetry install
-
 # run devnet
-devnet: poetry-install 
-	poetry run starknet-devnet --seed 0 --disable-rpc-request-validation --load-path deployments/devnet.pkl --timeout 5000
+devnet: 
+	docker run --rm -it -p 5050:5050 -v $(PWD)/deployments:/app/kakarot/deployments -e STARKNET_NETWORK=katana ghcr.io/kkrt-labs/kakarot/katana:latest
 
 # build
 build:

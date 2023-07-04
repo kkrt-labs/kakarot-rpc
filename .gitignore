@@ -13,5 +13,13 @@
 
 /target
 
+# deployments dir, devnet dumps deployment related data here
+/deployments/*
+!/deployments/.gitkeep
+
+# ignore directories created by `make build-sol`
+/cache/
+/solidity_contracts/build
+
 .env
 vscode
