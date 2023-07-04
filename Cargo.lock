@@ -12,6 +12,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "addr2line"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4fa78e18c64fce05e902adecd7a5eed15a5e0a3439f7b0e169f0252214865e3"
+dependencies = [
+ "gimli",
+]
+
+[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2365,7 +2374,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "syn 2.0.22",
+ "syn 2.0.23",
  "toml 0.7.5",
  "walkdir",
 ]
@@ -2383,7 +2392,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
- "syn 2.0.22",
+ "syn 2.0.23",
 ]
 
 [[package]]
@@ -2409,7 +2418,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum 0.24.1",
- "syn 2.0.22",
+ "syn 2.0.23",
  "tempfile",
  "thiserror",
  "tiny-keccak",
@@ -2745,7 +2754,7 @@ dependencies = [
 [[package]]
 name = "foundry-config"
 version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#42fb69461386d58d6f656019aca665c3aed682ae"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#bf56869aaf61e58be1dd4058159268c4529d73f6"
 dependencies = [
  "Inflector",
  "dirs-next",
@@ -4204,7 +4213,7 @@ version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eae7b9aee968036d54dce06cebaefd919e4472e753296daccd6d344e3e2df0c2"
 dependencies = [
- "hermit-abi 0.3.1",
+ "hermit-abi 0.3.2",
  "libc",
  "windows-sys 0.48.0",
 ]
@@ -5495,7 +5504,7 @@ dependencies = [
  "proc-macro2",
  "proc-macro2-diagnostics",
  "quote",
- "syn 2.0.22",
+ "syn 2.0.23",
 ]
 
 [[package]]
@@ -5705,7 +5714,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9825a04601d60621feed79c4e6b56d65db77cdca55cef43b46b0de1096d1c282"
 dependencies = [
  "proc-macro2",
- "syn 2.0.22",
+ "syn 2.0.23",
 ]
 
 [[package]]
@@ -5773,7 +5782,7 @@ checksum = "606c4ba35817e2922a308af55ad51bab3645b59eae5c570d4a6cf07e36bd493b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.22",
+ "syn 2.0.23",
  "version_check",
  "yansi",
 ]
@@ -6967,7 +6976,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a94494913728908efa7a25a2dd2e4f037e714897985c24273c40596638ed909"
 dependencies = [
- "itertools",
+ "itertools 0.10.5",
  "lalrpop",
  "lalrpop-util",
  "phf",
@@ -7275,7 +7284,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "rustversion",
- "syn 2.0.22",
+ "syn 2.0.23",
 ]
 
 [[package]]
