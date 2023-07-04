@@ -13,6 +13,7 @@ use crate::client::api::KakarotEthApi;
 use crate::client::constants::{
     DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY,
 };
+use crate::client::errors::EthApiError;
 
 pub struct EthBlockId(EthereumBlockId);
 
