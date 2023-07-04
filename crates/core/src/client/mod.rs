@@ -49,11 +49,8 @@ use crate::models::event::StarknetEvent;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 
-pub struct KakarotClient<StarknetClient>
-where
-    StarknetClient: Provider,
-{
-    starknet_provider: StarknetClient,
+pub struct KakarotClient<T: Provider> {
+    starknet_provider: T,
     kakarot_address: FieldElement,
     proxy_account_class_hash: FieldElement,
 }
@@ -69,10 +66,10 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotClient<JsonRpcClient<T>> {
     /// # Errors
     ///
     /// `Err(EthApiError<T>)` if the operation failed.
-    pub fn new(starknet_config: StarknetConfig, provider: JsonRpcClient<T>) -> Result<Self> {
+    pub fn new(starknet_config: StarknetConfig, starknet_provider: JsonRpcClient<T>) -> Result<Self> {
         let StarknetConfig { kakarot_address, proxy_account_class_hash, .. } = starknet_config;
 
-        Ok(Self { starknet_provider: provider, kakarot_address, proxy_account_class_hash })
+        Ok(Self { starknet_provider, kakarot_address, proxy_account_class_hash })
     }
 }
 
@@ -272,10 +269,9 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
     /// Returns the transaction for a given transaction hash.
     async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError<T::Error>> {
         let hash: Felt252Wrapper = hash.try_into()?;
-
-        let transaction: StarknetTransaction =
-            self.starknet_provider.get_transaction_by_hash::<FieldElement>(hash.clone().into()).await?.into();
         let hash: FieldElement = hash.into();
+
+        let transaction: StarknetTransaction = self.starknet_provider.get_transaction_by_hash(hash).await?.into();
         let tx_receipt = self.starknet_provider.get_transaction_receipt(hash).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {

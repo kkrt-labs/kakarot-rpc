@@ -23,6 +23,13 @@ pub struct KakarotEthRpc<T: JsonRpcTransport> {
     pub kakarot_client: Box<dyn KakarotEthApi<T>>,
 }
 
+impl<T: JsonRpcTransport> KakarotEthRpc<T> {
+    #[must_use]
+    pub fn new(kakarot_client: Box<dyn KakarotEthApi<T>>) -> Self {
+        Self { kakarot_client }
+    }
+}
+
 #[async_trait]
 impl<T: JsonRpcTransport + 'static> EthApiServer for KakarotEthRpc<T> {
     async fn block_number(&self) -> Result<U64> {
@@ -50,7 +57,6 @@ impl<T: JsonRpcTransport + 'static> EthApiServer for KakarotEthRpc<T> {
     }
 
     async fn chain_id(&self) -> Result<Option<U64>> {
-        // CHAIN_ID = KKRT (0x4b4b5254) in ASCII
         Ok(Some(CHAIN_ID.into()))
     }
 
@@ -277,12 +283,5 @@ impl<T: JsonRpcTransport + 'static> KakarotCustomApiServer for KakarotEthRpc<T> 
     async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> Result<TokenBalances> {
         let token_balances = self.kakarot_client.token_balances(address, contract_addresses).await?;
         Ok(token_balances)
-    }
-}
-
-impl<T: JsonRpcTransport> KakarotEthRpc<T> {
-    #[must_use]
-    pub fn new(kakarot_client: Box<dyn KakarotEthApi<T>>) -> Self {
-        Self { kakarot_client }
     }
 }
