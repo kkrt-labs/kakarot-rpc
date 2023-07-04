@@ -10,7 +10,9 @@ use starknet::providers::jsonrpc::JsonRpcTransport;
 use super::convertible::ConvertibleStarknetBlock;
 use super::felt::Felt252Wrapper;
 use crate::client::api::KakarotEthApi;
-use crate::client::constants::{DIFFICULTY, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY};
+use crate::client::constants::{
+    DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY,
+};
 use crate::client::errors::EthApiError;
 
 pub struct EthBlockId(EthereumBlockId);
@@ -30,7 +32,7 @@ impl EthBlockId {
                 BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
                     Ok(StarknetBlockId::Tag(BlockTag::Latest))
                 }
-                BlockNumberOrTag::Earliest => Ok(StarknetBlockId::Number(0)),
+                BlockNumberOrTag::Earliest => Ok(StarknetBlockId::Number(EARLIEST_BLOCK_NUMBER)),
                 BlockNumberOrTag::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
                 BlockNumberOrTag::Number(number) => Ok(StarknetBlockId::Number(number)),
             },
