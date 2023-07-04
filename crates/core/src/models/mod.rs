@@ -11,6 +11,8 @@ pub mod transaction;
 use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
 
+use crate::client::helpers::DataDecodingError;
+
 #[derive(Debug, Error)]
 /// Conversion error
 pub enum ConversionError {
