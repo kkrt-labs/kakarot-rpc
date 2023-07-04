@@ -100,7 +100,12 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         let starknet_contract_address = match starknet_contract_address.first() {
             Some(x) if starknet_contract_address.len() == 1 => *x,
             _ => {
-                return Err(DataDecodingError::InvalidReturnArrayLength("starknet_contract_address".into()).into());
+                return Err(DataDecodingError::InvalidReturnArrayLength {
+                    entrypoint: "compute_starknet_address".into(),
+                    expected: 1,
+                    actual: 0,
+                }
+                .into());
             }
         };
 
@@ -152,9 +157,11 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         let segmented_result = decode_eth_call_return(&call_result)?;
 
         // Convert the result of the function call to a vector of bytes
-        let return_data = segmented_result
-            .first()
-            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength("return data".into()))?;
+        let return_data = segmented_result.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "eth_call".into(),
+            expected: 1,
+            actual: 0,
+        })?;
 
         match return_data {
             FeltOrFeltArray::FeltArray(arr) => {
@@ -162,7 +169,12 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
                 let bytes_result = Bytes::from(result);
                 Ok(bytes_result)
             }
-            _ => Err(DataDecodingError::InvalidReturnArrayLength("return data".into()).into()),
+            _ => Err(DataDecodingError::InvalidReturnArrayLength {
+                entrypoint: "eth_call".into(),
+                expected: 1,
+                actual: 0,
+            }
+            .into()),
         }
     }
 
@@ -331,10 +343,12 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
                                     "Kakarot Core: No contract deployment event found in Kakarot transaction receipt"
                                 )))?;
 
-                            let evm_address = event
-                                .data
-                                .first()
-                                .ok_or(DataDecodingError::InvalidReturnArrayLength("evm address".into()))?;
+                            let evm_address =
+                                event.data.first().ok_or(DataDecodingError::InvalidReturnArrayLength {
+                                    entrypoint: "deployment".into(),
+                                    expected: 1,
+                                    actual: 0,
+                                })?;
 
                             let evm_address = Felt252Wrapper::from(*evm_address);
                             Some(evm_address.try_into()?)
@@ -412,8 +426,14 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
 
         let balance = self.starknet_provider.call(request, block_id).await?;
 
-        let balance =
-            balance.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength("balance".into()))?.to_bytes_be();
+        let balance = balance
+            .first()
+            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+                entrypoint: "balance".into(),
+                expected: 1,
+                actual: 0,
+            })?
+            .to_bytes_be();
 
         let balance = U256::from_be_bytes(balance);
 
@@ -574,7 +594,11 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
         let evm_address = self.starknet_provider.call(request, starknet_block_id).await?;
         let evm_address = evm_address
             .first()
-            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength("evm address".into()))?
+            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+                entrypoint: "get_evm_address".into(),
+                expected: 1,
+                actual: 0,
+            })?
             .to_bytes_be();
 
         // Workaround as .get(12..32) does not dynamically size the slice
@@ -605,9 +629,11 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
 
         let starknet_contract_address = self.starknet_provider.call(request, starknet_block_id).await?;
 
-        let result = starknet_contract_address
-            .first()
-            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength("starknet contract address".into()))?;
+        let result = starknet_contract_address.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "compute_starknet_address".into(),
+            expected: 1,
+            actual: 0,
+        })?;
 
         Ok(*result)
     }

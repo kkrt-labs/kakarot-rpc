@@ -19,8 +19,8 @@ pub enum DataDecodingError {
     SignatureDecodingError(String),
     #[error("failed to decode transaction")]
     TransactionDecodingError(#[from] DecodeError),
-    #[error("invalid call return length: failed on {0}")]
-    InvalidReturnArrayLength(String),
+    #[error("{entrypoint} returned invalid array length, expected {expected}, got {actual}")]
+    InvalidReturnArrayLength { entrypoint: String, expected: usize, actual: usize },
 }
 
 #[derive(Debug)]
@@ -79,8 +79,11 @@ pub fn decode_eth_call_return<T: std::error::Error>(
 
     let mut return_data: Vec<FeltOrFeltArray> = vec![FeltOrFeltArray::FeltArray(vec![])];
 
-    let return_data_len =
-        *call_result.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength("call result length".into()))?;
+    let return_data_len = *call_result.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+        entrypoint: "eth_call or eth_send_transaction".into(),
+        expected: 1,
+        actual: 0,
+    })?;
 
     let mut return_data_len: u64 =
         return_data_len.try_into().map_err(|e: ValueOutOfRangeError| ConversionError::Other(e.to_string()))?;
@@ -88,16 +91,18 @@ pub fn decode_eth_call_return<T: std::error::Error>(
 
     // Parse call result array
     while return_data_len != 0 {
-        let element = call_result
-            .get(counter)
-            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength("call result".into()))?;
+        let element = call_result.get(counter).ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "eth_call or eth_send_transaction".into(),
+            expected: return_data_len as usize,
+            actual: counter + 1,
+        })?;
         match return_data.last_mut() {
             Some(FeltOrFeltArray::FeltArray(felt_array)) => felt_array.push(*element),
             Some(FeltOrFeltArray::Felt(_felt)) => (),
             _ => (),
         }
         counter += 1;
-        return_data_len -= 0;
+        return_data_len -= 1;
     }
 
     Ok(return_data)
