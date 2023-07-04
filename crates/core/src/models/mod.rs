@@ -14,16 +14,22 @@ use thiserror::Error;
 use crate::client::helpers::DataDecodingError;
 
 #[derive(Debug, Error)]
+/// Conversion error
 pub enum ConversionError {
+    /// Ethereum to Starknet transaction conversion error
     #[error("transaction conversion error: {0}")]
     TransactionConversionError(String),
+    /// Felt252Wrapper conversion error
     #[error(transparent)]
     Felt252WrapperConversionError(#[from] FromByteArrayError),
     #[error(transparent)]
     DataDecodingError(#[from] DataDecodingError),
     #[error(
-        "Failed to convert Felt252Wrapper to Ethereum address: the value exceeds the maximum size of an Ethereum \
+        "failed to convert Felt252Wrapper to Ethereum address: the value exceeds the maximum size of an Ethereum \
          address"
     )]
     ToEthereumAddressError,
+    /// Other conversion error
+    #[error("failed to convert value: {0}")]
+    Other(String),
 }

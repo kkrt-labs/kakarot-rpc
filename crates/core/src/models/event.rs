@@ -38,13 +38,12 @@ impl ConvertibleStarknetEvent for StarknetEvent {
     ) -> Result<Log, EthApiError<T::Error>> {
         // If event `from_address` does not equal kakarot address, return early
         if self.0.from_address != client.kakarot_address() {
-            return Err(EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not part of Kakarot")));
+            return Err(EthApiError::KakarotDataFilteringError("Event".into()));
         }
 
         // Derive the evm address from the last item in the `event.keys` vector and remove it
-        let (evm_contract_address, keys) = self.0.keys.split_last().ok_or_else(|| {
-            EthApiError::OtherError(anyhow::anyhow!("Kakarot Filter: Event is not a Kakarot evm event"))
-        })?;
+        let (evm_contract_address, keys) =
+            self.0.keys.split_last().ok_or_else(|| EthApiError::KakarotDataFilteringError("Event".into()))?;
 
         let address: Address = {
             let felt_wrapper: Felt252Wrapper = (*evm_contract_address).into();

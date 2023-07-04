@@ -1,6 +1,6 @@
 use eyre::Result;
 use reth_primitives::{Address, Bloom, Bytes, Signature, TransactionSigned, H160};
-use reth_rlp::Decodable;
+use reth_rlp::{Decodable, DecodeError};
 use reth_rpc_types::TransactionReceipt;
 use starknet::accounts::Call;
 use starknet::core::types::{
@@ -11,11 +11,16 @@ use thiserror::Error;
 use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
 use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
 use crate::client::errors::EthApiError;
+use crate::models::ConversionError;
 
 #[derive(Debug, Error)]
 pub enum DataDecodingError {
     #[error("failed to decode signature {0}")]
     SignatureDecodingError(String),
+    #[error("failed to decode transaction")]
+    TransactionDecodingError(#[from] DecodeError),
+    #[error("{entrypoint} returned invalid array length, expected {expected}, got {actual}")]
+    InvalidReturnArrayLength { entrypoint: String, expected: usize, actual: usize },
 }
 
 #[derive(Debug)]
@@ -64,36 +69,43 @@ impl TryFrom<Vec<FieldElement>> for Calls {
     }
 }
 
-/// Returns the decoded return value of the `eth_call` entrypoint of Kakarot
+/// Returns the decoded return value of the `eth_call` and `eth_send_transaction` entrypoint of
+/// Kakarot
 pub fn decode_eth_call_return<T: std::error::Error>(
     call_result: &[FieldElement],
 ) -> Result<Vec<FeltOrFeltArray>, EthApiError<T>> {
-    // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
+    // Parse and decode Kakarot's return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
-    // Declare Vec of Result
-    let mut segmented_result: Vec<FeltOrFeltArray> = Vec::new();
-    let mut tmp_array_len: FieldElement = *call_result.first().ok_or_else(|| {
-        EthApiError::OtherError(anyhow::anyhow!("Cannot parse and decode return arguments of Kakarot call",))
+
+    let mut return_data: Vec<FeltOrFeltArray> = vec![FeltOrFeltArray::FeltArray(vec![])];
+
+    let return_data_len = *call_result.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+        entrypoint: "eth_call or eth_send_transaction".into(),
+        expected: 1,
+        actual: 0,
     })?;
-    let mut tmp_counter = 1_usize;
-    segmented_result.push(FeltOrFeltArray::FeltArray(Vec::new()));
-    // Parse first array: stack_accesses
-    while tmp_array_len != FieldElement::ZERO {
-        let element = call_result.get(tmp_counter).ok_or_else(|| {
-            EthApiError::OtherError(anyhow::anyhow!(
-                "Cannot parse and decode return arguments of Kakarot call: return data array",
-            ))
+
+    let mut return_data_len: u64 =
+        return_data_len.try_into().map_err(|e: ValueOutOfRangeError| ConversionError::Other(e.to_string()))?;
+    let mut counter = 1_usize;
+
+    // Parse call result array
+    while return_data_len != 0 {
+        let element = call_result.get(counter).ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "eth_call or eth_send_transaction".into(),
+            expected: return_data_len as usize,
+            actual: counter + 1,
         })?;
-        match segmented_result.last_mut() {
+        match return_data.last_mut() {
             Some(FeltOrFeltArray::FeltArray(felt_array)) => felt_array.push(*element),
             Some(FeltOrFeltArray::Felt(_felt)) => (),
             _ => (),
         }
-        tmp_counter += 1;
-        tmp_array_len -= FieldElement::from(1_u64);
+        counter += 1;
+        return_data_len -= 1;
     }
 
-    Ok(segmented_result)
+    Ok(return_data)
 }
 
 pub fn decode_signature_and_to_address_from_tx_calldata(

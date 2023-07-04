@@ -6,8 +6,6 @@ pub mod helpers;
 #[cfg(test)]
 pub mod tests;
 
-use std::str::FromStr;
-
 use async_trait::async_trait;
 use constants::selectors::BYTECODE;
 use eyre::Result;
@@ -36,6 +34,7 @@ use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, COMPUTE_STARKNET_ADDRESS, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
 use self::errors::EthApiError;
+use self::helpers::DataDecodingError;
 use crate::client::constants::selectors::ETH_CALL;
 use crate::models::balance::{TokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
@@ -43,6 +42,7 @@ use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEv
 use crate::models::event::StarknetEvent;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
+use crate::models::ConversionError;
 
 pub struct KakarotClient<T: Provider> {
     starknet_provider: T,
@@ -97,12 +97,15 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         let starknet_contract_address = self.starknet_provider.call(request, starknet_block_id).await?;
 
         // shadow the variable to FielElement from a Vec<FieldElement>, for use in subsequent code
-        let starknet_contract_address = match starknet_contract_address.get(0) {
+        let starknet_contract_address = match starknet_contract_address.first() {
             Some(x) if starknet_contract_address.len() == 1 => *x,
             _ => {
-                return Err(EthApiError::<T::Error>::OtherError(anyhow::anyhow!(
-                    "Kakarot get_code: starknet_contract_address is empty"
-                )));
+                return Err(DataDecodingError::InvalidReturnArrayLength {
+                    entrypoint: "compute_starknet_address".into(),
+                    expected: 1,
+                    actual: 0,
+                }
+                .into());
             }
         };
 
@@ -154,19 +157,25 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         let segmented_result = decode_eth_call_return(&call_result)?;
 
         // Convert the result of the function call to a vector of bytes
-        let return_data = segmented_result.first().ok_or_else(|| {
-            EthApiError::<T::Error>::OtherError(anyhow::anyhow!(
-                "Cannot parse and decode last argument of Kakarot call",
-            ))
+        let return_data = segmented_result.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "eth_call".into(),
+            expected: 1,
+            actual: 0,
         })?;
-        if let FeltOrFeltArray::FeltArray(felt_array) = return_data {
-            let result: Vec<u8> = felt_array.iter().filter_map(|f| u8::try_from(*f).ok()).collect();
-            let bytes_result = Bytes::from(result);
-            return Ok(bytes_result);
+
+        match return_data {
+            FeltOrFeltArray::FeltArray(arr) => {
+                let result: Vec<u8> = arr.iter().filter_map(|f| u8::try_from(*f).ok()).collect();
+                let bytes_result = Bytes::from(result);
+                Ok(bytes_result)
+            }
+            _ => Err(DataDecodingError::InvalidReturnArrayLength {
+                entrypoint: "eth_call".into(),
+                expected: 1,
+                actual: 0,
+            }
+            .into()),
         }
-        Err(EthApiError::<T::Error>::OtherError(anyhow::anyhow!(
-            "Cannot parse and decode the return data of Kakarot call"
-        )))
     }
 
     /// Get the syncing status of the light client
@@ -217,14 +226,14 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
 
         let block_transactions = match starknet_block {
             MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
-                self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions.into(), None, None).await?
+                self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions.into(), None, None).await
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
                 let block_hash: Felt252Wrapper = block_with_txs.block_hash.into();
                 let block_hash = Some(block_hash.into());
                 let block_number: Felt252Wrapper = block_with_txs.block_number.into();
                 let block_number = Some(block_number.into());
-                self.filter_starknet_into_eth_txs(block_with_txs.transactions.into(), block_hash, block_number).await?
+                self.filter_starknet_into_eth_txs(block_with_txs.transactions.into(), block_hash, block_number).await
             }
         };
         let len = match block_transactions {
@@ -330,13 +339,16 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
                             let event = events
                                 .iter()
                                 .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED))
-                                .ok_or(EthApiError::OtherError(anyhow::anyhow!(
+                                .ok_or(EthApiError::Other(anyhow::anyhow!(
                                     "Kakarot Core: No contract deployment event found in Kakarot transaction receipt"
                                 )))?;
 
-                            let evm_address = event.data.first().ok_or(EthApiError::OtherError(anyhow::anyhow!(
-                                "Kakarot Core: Failed to get EVM address from Kakarot event"
-                            )))?;
+                            let evm_address =
+                                event.data.first().ok_or(DataDecodingError::InvalidReturnArrayLength {
+                                    entrypoint: "deployment".into(),
+                                    expected: 1,
+                                    actual: 0,
+                                })?;
 
                             let evm_address = Felt252Wrapper::from(*evm_address);
                             Some(evm_address.try_into()?)
@@ -412,12 +424,14 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
             calldata: vec![starknet_address],
         };
 
-        let balance_felt = self.starknet_provider.call(request, block_id).await?;
+        let balance = self.starknet_provider.call(request, block_id).await?;
 
-        let balance = balance_felt
+        let balance = balance
             .first()
-            .ok_or_else(|| {
-                EthApiError::<T::Error>::OtherError(anyhow::anyhow!("Kakarot Core: Failed to get native token balance"))
+            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+                entrypoint: "balance".into(),
+                expected: 1,
+                actual: 0,
             })?
             .to_bytes_be();
 
@@ -434,11 +448,12 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
     ) -> Result<TokenBalances, EthApiError<T::Error>> {
         let entrypoint: Felt252Wrapper = keccak256("balanceOf(address)").try_into()?;
         let entrypoint: FieldElement = entrypoint.into();
-        let felt_address = FieldElement::from_str(&address.to_string()).map_err(|e| {
-            EthApiError::<T::Error>::OtherError(anyhow::anyhow!("Failed to convert address to FieldElement: {}", e))
-        })?;
+
+        let addr: Felt252Wrapper = address.into();
+        let addr: FieldElement = addr.into();
+
         let handles = contract_addresses.into_iter().map(|token_address| {
-            let calldata = vec![entrypoint, felt_address];
+            let calldata = vec![entrypoint, addr];
 
             self.call_view(
                 token_address,
@@ -451,15 +466,10 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
             .into_iter()
             .map(|token_address| match token_address {
                 Ok(call) => {
-                    let hex_balance = U256::from_str_radix(&call.to_string(), 16)
-                        .map_err(|e| {
-                            EthApiError::<T::Error>::OtherError(anyhow::anyhow!(
-                                "Failed to convert token balance to U256: {}",
-                                e
-                            ))
-                        })
+                    let balance = U256::try_from_be_slice(call.as_ref())
+                        .ok_or(ConversionError::Other("error converting from Bytes to U256".into()))
                         .unwrap();
-                    TokenBalance { contract_address: address, token_balance: Some(hex_balance), error: None }
+                    TokenBalance { contract_address: address, token_balance: Some(balance), error: None }
                 }
                 Err(e) => TokenBalance {
                     contract_address: address,
@@ -476,20 +486,10 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
     async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<T::Error>> {
         let mut data = bytes.as_ref();
 
-        if data.is_empty() {
-            return Err(EthApiError::<T::Error>::OtherError(anyhow::anyhow!(
-                "Kakarot send_transaction: Transaction bytes are empty"
-            )));
-        };
-
-        let transaction = TransactionSigned::decode(&mut data).map_err(|_| {
-            EthApiError::<T::Error>::OtherError(anyhow::anyhow!(
-                "Kakarot send_transaction: transaction bytes failed to be decoded"
-            ))
-        })?;
+        let transaction = TransactionSigned::decode(&mut data).map_err(DataDecodingError::TransactionDecodingError)?;
 
         let evm_address = transaction.recover_signer().ok_or_else(|| {
-            EthApiError::<T::Error>::OtherError(anyhow::anyhow!("Kakarot send_transaction: signature ecrecover failed"))
+            EthApiError::Other(anyhow::anyhow!("Kakarot send_transaction: signature ecrecover failed"))
         })?;
 
         let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
@@ -591,27 +591,24 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
             calldata: vec![],
         };
 
-        let evm_address_felt = self.starknet_provider.call(request, starknet_block_id).await?;
-        let evm_address = evm_address_felt
+        let evm_address = self.starknet_provider.call(request, starknet_block_id).await?;
+        let evm_address = evm_address
             .first()
-            .ok_or_else(|| {
-                EthApiError::OtherError(anyhow::anyhow!(
-                    "Kakarot Core: Failed to get EVM address from smart contract on Kakarot"
-                ))
+            .ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+                entrypoint: "get_evm_address".into(),
+                expected: 1,
+                actual: 0,
             })?
             .to_bytes_be();
 
         // Workaround as .get(12..32) does not dynamically size the slice
-        let slice: &[u8] = evm_address.get(12..32).ok_or_else(|| {
-            EthApiError::OtherError(anyhow::anyhow!(
-                "Kakarot Core: Failed to cast EVM address from 32 bytes to 20 bytes EVM format"
-            ))
-        })?;
-        let mut tmp_slice = [0u8; 20];
-        tmp_slice.copy_from_slice(slice);
-        let evm_address_sliced = &tmp_slice;
+        let slice: &[u8] = evm_address
+            .get(12..32)
+            .ok_or_else(|| ConversionError::Other("error converting from [u8; 32] to &[u8]".into()))?;
 
-        Ok(Address::from(evm_address_sliced))
+        let evm_address: [u8; 20] = slice.try_into().unwrap(); // safe unwrap as slice is of size 20
+
+        Ok(Address::from(evm_address))
     }
 
     /// Returns the EVM address associated with a given Starknet address for a given block id
@@ -632,8 +629,10 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
 
         let starknet_contract_address = self.starknet_provider.call(request, starknet_block_id).await?;
 
-        let result = starknet_contract_address.first().ok_or_else(|| {
-            EthApiError::OtherError(anyhow::anyhow!("Kakarot Core: Failed to get Starknet address from Kakarot"))
+        let result = starknet_contract_address.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "compute_starknet_address".into(),
+            expected: 1,
+            actual: 0,
         })?;
 
         Ok(*result)
@@ -646,13 +645,13 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
         initial_transactions: StarknetTransactions,
         block_hash: Option<H256>,
         block_number: Option<U256>,
-    ) -> Result<BlockTransactions, EthApiError<T::Error>> {
+    ) -> BlockTransactions {
         let handles = Into::<Vec<TransactionType>>::into(initial_transactions).into_iter().map(|tx| async move {
             let tx = Into::<StarknetTransaction>::into(tx);
             tx.to_eth_transaction(self, block_hash, block_number, None).await
         });
         let transactions_vec = join_all(handles).await.into_iter().filter_map(|transaction| transaction.ok()).collect();
-        Ok(BlockTransactions::Full(transactions_vec))
+        BlockTransactions::Full(transactions_vec)
     }
 
     /// Get the Kakarot eth block provided a Starknet block id.
@@ -664,11 +663,11 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
         if hydrated_tx {
             let block = self.starknet_provider.get_block_with_txs(block_id).await?;
             let starknet_block = BlockWithTxs::new(block);
-            starknet_block.to_eth_block(self).await
+            Ok(starknet_block.to_eth_block(self).await)
         } else {
             let block = self.starknet_provider.get_block_with_tx_hashes(block_id).await?;
             let starknet_block = BlockWithTxHashes::new(block);
-            starknet_block.to_eth_block(self).await
+            Ok(starknet_block.to_eth_block(self).await)
         }
     }
 }

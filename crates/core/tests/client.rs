@@ -145,7 +145,7 @@ mod tests {
         let client = setup_mock_client_crate().await;
         let starknet_client = client.starknet_provider();
         let starknet_block = starknet_client.get_block_with_txs(BlockId::Tag(BlockTag::Latest)).await.unwrap();
-        let eth_block = BlockWithTxs::new(starknet_block).to_eth_block(&client).await.unwrap();
+        let eth_block = BlockWithTxs::new(starknet_block).to_eth_block(&client).await;
 
         // TODO: Add more assertions & refactor into assert helpers
         // assert helpers should allow import of fixture file
@@ -298,8 +298,8 @@ mod tests {
         // `kakarot_address'.
         match resultant_eth_log {
             Ok(_) => panic!("Expected an error due to wrong `from_address`, but got a result."),
-            Err(EthApiError::OtherError(err)) => {
-                assert_eq!(err.to_string(), "Kakarot Filter: Event is not part of Kakarot")
+            Err(EthApiError::KakarotDataFilteringError(err)) => {
+                assert_eq!(err, "Event")
             }
             Err(_) => panic!("Expected a Kakarot Filter error, but got a different error."),
         }

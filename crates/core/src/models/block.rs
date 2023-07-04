@@ -122,10 +122,7 @@ impl BlockWithTxs {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxHashes {
-    async fn to_eth_block<T: JsonRpcTransport>(
-        &self,
-        client: &dyn KakarotEthApi<T>,
-    ) -> Result<RichBlock, EthApiError<T::Error>> {
+    async fn to_eth_block<T: JsonRpcTransport>(&self, client: &dyn KakarotEthApi<T>) -> RichBlock {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -195,16 +192,13 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
             size,
             withdrawals: Some(vec![]),
         };
-        Ok(block.into())
+        block.into()
     }
 }
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxs {
-    async fn to_eth_block<T: JsonRpcTransport>(
-        &self,
-        client: &dyn KakarotEthApi<T>,
-    ) -> Result<RichBlock, EthApiError<T::Error>> {
+    async fn to_eth_block<T: JsonRpcTransport>(&self, client: &dyn KakarotEthApi<T>) -> RichBlock {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -238,7 +232,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
         let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
         let number = self.block_number().map(U256::from);
 
-        let transactions = client.filter_starknet_into_eth_txs(self.transactions().into(), hash, number).await?;
+        let transactions = client.filter_starknet_into_eth_txs(self.transactions().into(), hash, number).await;
         let header = Header {
             // PendingBlockWithTxs doesn't have a block hash
             hash,
@@ -272,6 +266,6 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
             size,
             withdrawals: Some(vec![]),
         };
-        Ok(block.into())
+        block.into()
     }
 }

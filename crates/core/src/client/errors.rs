@@ -45,9 +45,12 @@ pub enum EthApiError<T: std::error::Error> {
     /// Data decoding into ETH types failed.
     #[error(transparent)]
     DataDecodingError(#[from] DataDecodingError),
+    /// Data not part of Kakarot.
+    #[error("{0} not from Kakarot")]
+    KakarotDataFilteringError(String),
     /// Other error.
     #[error(transparent)]
-    OtherError(#[from] anyhow::Error),
+    Other(#[from] anyhow::Error),
 }
 
 impl<T: std::error::Error> From<EthApiError<T>> for ErrorObject<'static> {
@@ -83,7 +86,8 @@ impl<T: std::error::Error> From<EthApiError<T>> for ErrorObject<'static> {
             },
             EthApiError::ConversionError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
             EthApiError::DataDecodingError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
-            EthApiError::OtherError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
+            EthApiError::KakarotDataFilteringError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
+            EthApiError::Other(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
         }
     }
 }
