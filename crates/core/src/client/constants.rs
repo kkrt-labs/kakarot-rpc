@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 use reth_primitives::{H256, H64, U128, U256, U8};
 use starknet::core::types::FieldElement;
 
+// CHAIN_ID = KKRT (0x4b4b5254) in ASCII
 pub const CHAIN_ID: u64 = 1_263_227_476;
 
 pub const STARKNET_NATIVE_TOKEN: &str = "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7";
