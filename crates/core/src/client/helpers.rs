@@ -6,7 +6,6 @@ use starknet::accounts::Call;
 use starknet::core::types::{
     FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, ValueOutOfRangeError,
 };
-use starknet::providers::jsonrpc::JsonRpcTransport;
 use thiserror::Error;
 
 use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
