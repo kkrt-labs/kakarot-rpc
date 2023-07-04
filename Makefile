@@ -1,7 +1,19 @@
 HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
+pull-kakarot: .gitmodules 
+	git submodule update --init --recursive
+	cd kakarot && make setup
+
+build-kakarot: setup 
+	cd kakarot && make build
+
+build-sol:
+	forge build --names --force
+
+setup: pull-kakarot build-kakarot build-sol
+
 # install dependencies, automatically creates a virtual environment
-poetry-install:
+poetry-install: 
 	poetry install
 
 # run devnet
@@ -22,6 +34,9 @@ run-release:
 
 test:
 	cargo test --all
+
+test-coverage:
+	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:
 	hurl $(HURL_FILES)

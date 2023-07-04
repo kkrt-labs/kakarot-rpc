@@ -1,0 +1,5 @@
+[profile.default]
+src = 'solidity_contracts'
+test = 'solidity_contracts'
+out = 'solidity_contracts/build'
+libs = ['lib']

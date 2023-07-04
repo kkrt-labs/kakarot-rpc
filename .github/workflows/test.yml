@@ -52,6 +52,12 @@ jobs:
     name: test
     runs-on: ubuntu-latest-16-cores
     steps:
+      # foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      # rust setup
       - uses: actions/checkout@v2
       - name: Setup rust env
         uses: actions-rs/toolchain@v1
@@ -63,10 +69,37 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Setup coverage env
         uses: taiki-e/install-action@cargo-llvm-cov
+      # Python setup
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+      - name: Install Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: pull kakarot submodule and setup
+        run:
+          make setup
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - run: cd kakarot && poetry config installer.modern-installation false
       - name: Generate code coverage
         run:
-          cargo llvm-cov --all-features --workspace --lcov --output-path
-          lcov.info
+          ./scripts/make_with_env.sh test-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
