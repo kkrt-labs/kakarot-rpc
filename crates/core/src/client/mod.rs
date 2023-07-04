@@ -449,11 +449,11 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         let entrypoint: Felt252Wrapper = keccak256("balanceOf(address)").try_into()?;
         let entrypoint: FieldElement = entrypoint.into();
 
-        let add: Felt252Wrapper = address.into();
-        let add: FieldElement = add.into();
+        let addr: Felt252Wrapper = address.into();
+        let addr: FieldElement = addr.into();
 
         let handles = contract_addresses.into_iter().map(|token_address| {
-            let calldata = vec![entrypoint, add];
+            let calldata = vec![entrypoint, addr];
 
             self.call_view(
                 token_address,
