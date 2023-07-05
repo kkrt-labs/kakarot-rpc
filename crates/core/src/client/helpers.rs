@@ -256,10 +256,7 @@ mod tests {
         let ret = decode_eth_call_return::<DecodeError>(&call_return).unwrap();
 
         // Then
-        let expected_ret = vec!["0x0", "0x1", "0x2", "0x3", "0x4", "0x5", "0x6", "0x7", "0x8", "0x9"]
-            .into_iter()
-            .filter_map(|f| FieldElement::from_hex_be(f).ok())
-            .collect::<Vec<_>>();
+        let expected_ret = call_return[1..].to_vec();
         assert_eq!(10, ret.len());
         assert_eq!(expected_ret, ret);
     }

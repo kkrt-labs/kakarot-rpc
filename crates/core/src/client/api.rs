@@ -97,13 +97,17 @@ pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi<T> {
 #[async_trait]
 pub trait KakarotStarknetApi<T: JsonRpcTransport>: Send + Sync {
     fn kakarot_address(&self) -> FieldElement;
+
     fn proxy_account_class_hash(&self) -> FieldElement;
+
     fn starknet_provider(&self) -> &JsonRpcClient<T>;
+
     async fn compute_starknet_address(
         &self,
         ethereum_address: Address,
         starknet_block_id: &StarknetBlockId,
     ) -> Result<FieldElement, EthApiError<T::Error>>;
+
     async fn get_evm_address(
         &self,
         starknet_address: &FieldElement,
