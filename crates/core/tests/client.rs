@@ -1,5 +1,3 @@
-mod helpers;
-
 #[cfg(test)]
 mod tests {
 
@@ -17,15 +15,14 @@ mod tests {
     use kakarot_rpc_core::models::event::StarknetEvent;
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::models::ConversionError;
+    use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
+    use kakarot_rpc_core::test_utils::deploy_helpers::{create_raw_ethereum_tx, deploy_kakarot_system};
     use reth_primitives::{Address, Bytes, H256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
     use starknet::core::utils::get_selector_from_name;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::{JsonRpcClient, Provider};
-
-    use crate::helpers::constants::EOA_WALLET;
-    use crate::helpers::deploy_helpers::{create_raw_ethereum_tx, deploy_kakarot_system};
 
     #[tokio::test]
     async fn test_constructable() {
