@@ -39,12 +39,6 @@ pub enum MaybePendingStarknetBlock {
     BlockWithTxs(MaybePendingBlockWithTxs),
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum FeltOrFeltArray {
-    Felt(FieldElement),
-    FeltArray(Vec<FieldElement>),
-}
-
 struct Calls(Vec<Call>);
 
 /// TryFrom implementation for account contract calls
@@ -73,39 +67,34 @@ impl TryFrom<Vec<FieldElement>> for Calls {
 /// Kakarot
 pub fn decode_eth_call_return<T: std::error::Error>(
     call_result: &[FieldElement],
-) -> Result<Vec<FeltOrFeltArray>, EthApiError<T>> {
+) -> Result<Vec<FieldElement>, EthApiError<T>> {
     // Parse and decode Kakarot's return data (temporary solution and not scalable - will
     // fail is Kakarot API changes)
-
-    let mut return_data: Vec<FeltOrFeltArray> = vec![FeltOrFeltArray::FeltArray(vec![])];
 
     let return_data_len = *call_result.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
         entrypoint: "eth_call or eth_send_transaction".into(),
         expected: 1,
         actual: 0,
     })?;
-
-    let mut return_data_len: u64 =
+    let return_data_len: u64 =
         return_data_len.try_into().map_err(|e: ValueOutOfRangeError| ConversionError::Other(e.to_string()))?;
-    let mut counter = 1_usize;
 
-    // Parse call result array
-    while return_data_len != 0 {
-        let element = call_result.get(counter).ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+    let return_data = call_result.get(1..).ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+        entrypoint: "eth_call or eth_send_transaction".into(),
+        expected: 2,
+        actual: 1,
+    })?;
+
+    if return_data.len() != return_data_len as usize {
+        return Err(DataDecodingError::InvalidReturnArrayLength {
             entrypoint: "eth_call or eth_send_transaction".into(),
             expected: return_data_len as usize,
-            actual: counter + 1,
-        })?;
-        match return_data.last_mut() {
-            Some(FeltOrFeltArray::FeltArray(felt_array)) => felt_array.push(*element),
-            Some(FeltOrFeltArray::Felt(_felt)) => (),
-            _ => (),
+            actual: return_data.len(),
         }
-        counter += 1;
-        return_data_len -= 1;
+        .into());
     }
 
-    Ok(return_data)
+    Ok(return_data.to_vec())
 }
 
 pub fn decode_signature_and_to_address_from_tx_calldata(
@@ -255,6 +244,21 @@ mod tests {
         assert_eq!(calls.0[1].calldata, calldata);
         let calldata = to_vec_field_element(vec!["0x00f", "0x010", "0x011", "0x012", "0x013"]);
         assert_eq!(calls.0[2].calldata, calldata);
+    }
+
+    #[test]
+    fn test_decode_eth_call_return() {
+        // Given
+        let call_return = vec!["0x0a", "0x0", "0x1", "0x2", "0x3", "0x4", "0x5", "0x6", "0x7", "0x8", "0x9"];
+        let call_return = call_return.into_iter().filter_map(|f| FieldElement::from_hex_be(f).ok()).collect::<Vec<_>>();
+
+        // When
+        let ret = decode_eth_call_return::<DecodeError>(&call_return).unwrap();
+
+        // Then
+        let expected_ret = call_return[1..].to_vec();
+        assert_eq!(10, ret.len());
+        assert_eq!(expected_ret, ret);
     }
 
     #[test]

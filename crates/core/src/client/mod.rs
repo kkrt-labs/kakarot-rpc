@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use constants::selectors::BYTECODE;
 use eyre::Result;
 use futures::future::join_all;
-use helpers::{decode_eth_call_return, raw_starknet_calldata, vec_felt_to_bytes, FeltOrFeltArray};
+use helpers::{decode_eth_call_return, raw_starknet_calldata, vec_felt_to_bytes};
 use reth_primitives::{
     keccak256, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, TransactionSigned, H256, U128, U256, U64, U8,
 };
@@ -154,28 +154,11 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         // Declare Vec of Result
         // TODO: Change to decode based on ABI or use starknet-rs future feature to decode return
         // params
-        let segmented_result = decode_eth_call_return(&call_result)?;
+        let return_data = decode_eth_call_return(&call_result)?;
 
-        // Convert the result of the function call to a vector of bytes
-        let return_data = segmented_result.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
-            entrypoint: "eth_call".into(),
-            expected: 1,
-            actual: 0,
-        })?;
-
-        match return_data {
-            FeltOrFeltArray::FeltArray(arr) => {
-                let result: Vec<u8> = arr.iter().filter_map(|f| u8::try_from(*f).ok()).collect();
-                let bytes_result = Bytes::from(result);
-                Ok(bytes_result)
-            }
-            _ => Err(DataDecodingError::InvalidReturnArrayLength {
-                entrypoint: "eth_call".into(),
-                expected: 1,
-                actual: 0,
-            }
-            .into()),
-        }
+        let result: Vec<u8> = return_data.iter().filter_map(|f| u8::try_from(*f).ok()).collect();
+        let bytes_result = Bytes::from(result);
+        Ok(bytes_result)
     }
 
     /// Get the syncing status of the light client
