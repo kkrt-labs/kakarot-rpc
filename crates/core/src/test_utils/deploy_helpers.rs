@@ -8,8 +8,6 @@ use dotenv::dotenv;
 use ethers::abi::{Abi, Tokenize};
 use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
 use foundry_config::utils::{find_project_root_path, load_config};
-use kakarot_rpc_core::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
-use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
 };
@@ -27,6 +25,9 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
+use crate::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
+use crate::models::felt::Felt252Wrapper;
+
 /// Macro to find the root path of the project.
 ///
 /// This macro utilizes the `find_project_root_path` function from the `utils` module.
@@ -42,7 +43,7 @@ use url::Url;
 ///
 /// # Examples
 ///
-/// ```
+/// ```ignore
 /// let full_path = root_project_path!("src/main.rs");
 /// println!("Full path to main.rs: {:?}", full_path);
 /// ```
@@ -111,11 +112,11 @@ pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
 /// # Example
 ///
 /// ```no_run
-/// # use kakarot_rpc_core::get_contract;
-/// # use kakarot_rpc_core::encode_contract;
-/// # use ethers::types::Abi;
+/// # use kakarot_rpc_core::test_utils::deploy_helpers::get_contract;
+/// # use kakarot_rpc_core::test_utils::deploy_helpers::encode_contract;
+/// # use ethers::abi::Abi;
 /// let (abi, bytecode) = get_contract("MyContract");
-/// let constructor_args = ("First argument", 42);
+/// let constructor_args = (1, 42);
 /// let deploy_bytecode = encode_contract(&abi, &bytecode, constructor_args);
 /// ```
 ///
