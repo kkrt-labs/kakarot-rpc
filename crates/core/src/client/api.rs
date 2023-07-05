@@ -22,19 +22,19 @@ pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi<T> {
     async fn get_code(
         &self,
         ethereum_address: Address,
-        starknet_block_id: StarknetBlockId,
+        starknet_block_id: BlockId,
     ) -> Result<Bytes, EthApiError<T::Error>>;
 
     async fn call_view(
         &self,
         ethereum_address: Address,
         calldata: Bytes,
-        starknet_block_id: StarknetBlockId,
+        starknet_block_id: BlockId,
     ) -> Result<Bytes, EthApiError<T::Error>>;
 
     async fn transaction_by_block_id_and_index(
         &self,
-        block_id: StarknetBlockId,
+        block_id: BlockId,
         tx_index: Index,
     ) -> Result<EtherTransaction, EthApiError<T::Error>>;
 
@@ -44,24 +44,11 @@ pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi<T> {
 
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError<T::Error>>;
 
-    async fn submit_starknet_transaction(
-        &self,
-        request: BroadcastedInvokeTransactionV1,
-    ) -> Result<H256, EthApiError<T::Error>>;
-
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError<T::Error>>;
 
-    async fn nonce(
-        &self,
-        ethereum_address: Address,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<U256, EthApiError<T::Error>>;
+    async fn nonce(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<T::Error>>;
 
-    async fn balance(
-        &self,
-        ethereum_address: Address,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<U256, EthApiError<T::Error>>;
+    async fn balance(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<T::Error>>;
 
     async fn token_balances(
         &self,
@@ -71,10 +58,7 @@ pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi<T> {
 
     async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<T::Error>>;
 
-    async fn get_transaction_count_by_block(
-        &self,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<U64, EthApiError<T::Error>>;
+    async fn get_transaction_count_by_block(&self, starknet_block_id: BlockId) -> Result<U64, EthApiError<T::Error>>;
 
     fn base_fee_per_gas(&self) -> U256;
 
@@ -101,6 +85,11 @@ pub trait KakarotStarknetApi<T: JsonRpcTransport>: Send + Sync {
     fn proxy_account_class_hash(&self) -> FieldElement;
 
     fn starknet_provider(&self) -> &JsonRpcClient<T>;
+
+    async fn submit_starknet_transaction(
+        &self,
+        request: BroadcastedInvokeTransactionV1,
+    ) -> Result<H256, EthApiError<T::Error>>;
 
     async fn compute_starknet_address(
         &self,

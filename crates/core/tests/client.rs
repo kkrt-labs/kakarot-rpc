@@ -17,9 +17,9 @@ mod tests {
     use kakarot_rpc_core::models::ConversionError;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
     use kakarot_rpc_core::test_utils::deploy_helpers::{create_raw_ethereum_tx, deploy_kakarot_system};
-    use reth_primitives::{Address, Bytes, H256};
+    use reth_primitives::{Address, BlockId, Bytes, H256};
     use reth_rpc_types::Log;
-    use starknet::core::types::{BlockId, BlockTag, Event, FieldElement};
+    use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, Event, FieldElement};
     use starknet::core::utils::get_selector_from_name;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::{JsonRpcClient, Provider};
@@ -60,7 +60,7 @@ mod tests {
         };
 
         kakarot_client
-            .get_code(constructable_eth_address, BlockId::Tag(BlockTag::Latest))
+            .get_code(constructable_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
             .await
             .expect("contract not deployed");
     }
@@ -94,8 +94,9 @@ mod tests {
         )
         .unwrap();
 
-        let deployed_balance =
-            kakarot_client.balance(deployed_kakarot.eoa_eth_address, BlockId::Tag(BlockTag::Latest)).await;
+        let deployed_balance = kakarot_client
+            .balance(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await;
 
         let _deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
 
@@ -108,14 +109,16 @@ mod tests {
         };
 
         kakarot_client
-            .get_code(counter_eth_address, BlockId::Tag(BlockTag::Latest))
+            .get_code(counter_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
             .await
             .expect("contract not deployed");
 
         let inc_selector = counter_abi.function("inc").unwrap().short_signature();
 
-        let nonce =
-            kakarot_client.nonce(deployed_kakarot.eoa_eth_address, BlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let nonce = kakarot_client
+            .nonce(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .unwrap();
         let inc_tx = create_raw_ethereum_tx(
             inc_selector,
             deployed_kakarot.eoa_private_key,
@@ -129,7 +132,11 @@ mod tests {
 
         let count_selector = counter_abi.function("count").unwrap().short_signature();
         let counter_bytes = kakarot_client
-            .call_view(counter_eth_address, count_selector.into(), BlockId::Tag(BlockTag::Latest))
+            .call_view(
+                counter_eth_address,
+                count_selector.into(),
+                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
+            )
             .await
             .unwrap();
 
@@ -141,7 +148,7 @@ mod tests {
     async fn test_starknet_block_to_eth_block() {
         let client = setup_mock_client_crate().await;
         let starknet_client = client.starknet_provider();
-        let starknet_block = starknet_client.get_block_with_txs(BlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let starknet_block = starknet_client.get_block_with_txs(StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
         let eth_block = BlockWithTxs::new(starknet_block).to_eth_block(&client).await;
 
         // TODO: Add more assertions & refactor into assert helpers

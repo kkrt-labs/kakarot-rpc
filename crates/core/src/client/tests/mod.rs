@@ -1,6 +1,5 @@
 use dojo_test_utils::rpc::MockJsonRpcTransport;
-use reth_primitives::{U256, U64};
-use starknet::core::types::{BlockId, BlockTag};
+use reth_primitives::{BlockId, BlockNumberOrTag, U256, U64};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::JsonRpcClient;
 
@@ -37,7 +36,7 @@ async fn test_nonce() {
     let client = init_client(Some(fixtures));
 
     // When
-    let nonce = client.nonce(*ABDEL_ADDRESS, BlockId::Tag(BlockTag::Latest)).await.unwrap();
+    let nonce = client.nonce(*ABDEL_ADDRESS, BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
 
     // Then
     assert_eq!(U256::from(1), nonce);

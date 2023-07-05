@@ -77,11 +77,9 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
     }
 
     /// Returns the bytecode of a contract given its address and a block id.
-    async fn get_code(
-        &self,
-        ethereum_address: Address,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<Bytes, EthApiError<T::Error>> {
+    async fn get_code(&self, ethereum_address: Address, block_id: BlockId) -> Result<Bytes, EthApiError<T::Error>> {
+        let starknet_block_id = EthBlockId::new(block_id).to_starknet_block_id::<T>()?;
+
         // Convert the hex-encoded string to a FieldElement
         let ethereum_address: Felt252Wrapper = ethereum_address.into();
         let ethereum_address = ethereum_address.into();
@@ -129,8 +127,10 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         &self,
         ethereum_address: Address,
         calldata: Bytes,
-        starknet_block_id: StarknetBlockId,
+        block_id: BlockId,
     ) -> Result<Bytes, EthApiError<T::Error>> {
+        let starknet_block_id = EthBlockId::new(block_id).to_starknet_block_id::<T>()?;
+
         let ethereum_address: Felt252Wrapper = ethereum_address.into();
         let ethereum_address = ethereum_address.into();
 
@@ -190,21 +190,19 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
 
     /// Get the number of transactions in a block given a block number.
     async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64, EthApiError<T::Error>> {
-        let starknet_block_id = EthBlockId::new(BlockId::Number(number)).to_starknet_block_id::<T>()?;
-        self.get_transaction_count_by_block(starknet_block_id).await
+        let block_id = BlockId::Number(number);
+        self.get_transaction_count_by_block(block_id).await
     }
 
     /// Get the number of transactions in a block given a block hash.
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError<T::Error>> {
-        let starknet_block_id = EthBlockId::new(BlockId::Hash(hash.into())).to_starknet_block_id::<T>()?;
-        self.get_transaction_count_by_block(starknet_block_id).await
+        let block_id = BlockId::Hash(hash.into());
+        self.get_transaction_count_by_block(block_id).await
     }
 
     /// Returns the number of transactions in a block given a block id.
-    async fn get_transaction_count_by_block(
-        &self,
-        starknet_block_id: StarknetBlockId,
-    ) -> Result<U64, EthApiError<T::Error>> {
+    async fn get_transaction_count_by_block(&self, block_id: BlockId) -> Result<U64, EthApiError<T::Error>> {
+        let starknet_block_id = EthBlockId::new(block_id).to_starknet_block_id::<T>()?;
         let starknet_block = self.starknet_provider.get_block_with_txs(starknet_block_id).await?;
 
         let block_transactions = match starknet_block {
@@ -230,13 +228,14 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
     /// Returns the transaction for a given block id and transaction index.
     async fn transaction_by_block_id_and_index(
         &self,
-        block_id: StarknetBlockId,
+        block_id: BlockId,
         tx_index: Index,
     ) -> Result<EtherTransaction, EthApiError<T::Error>> {
         let index: u64 = usize::from(tx_index) as u64;
+        let starknet_block_id = EthBlockId::new(block_id).to_starknet_block_id::<T>()?;
 
         let starknet_tx: StarknetTransaction =
-            self.starknet_provider.get_transaction_by_block_id_and_index(block_id, index).await?.into();
+            self.starknet_provider.get_transaction_by_block_id_and_index(starknet_block_id, index).await?.into();
 
         let tx_hash: FieldElement = starknet_tx.transaction_hash()?.into();
 
@@ -269,17 +268,6 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         };
         let eth_transaction = transaction.to_eth_transaction(self, block_hash, block_num, None).await?;
         Ok(eth_transaction)
-    }
-
-    /// Submits a Kakarot transaction to the Starknet provider.
-    async fn submit_starknet_transaction(
-        &self,
-        request: BroadcastedInvokeTransactionV1,
-    ) -> Result<H256, EthApiError<T::Error>> {
-        let transaction_result =
-            self.starknet_provider.add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request)).await?;
-
-        Ok(H256::from(transaction_result.transaction_hash.to_bytes_be()))
     }
 
     /// Returns the receipt of a transaction by transaction hash.
@@ -384,21 +372,19 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
     }
 
     /// Returns the nonce for a given ethereum address
-    async fn nonce(&self, ethereum_address: Address, block_id: StarknetBlockId) -> Result<U256, EthApiError<T::Error>> {
-        let starknet_address = self.compute_starknet_address(ethereum_address, &block_id).await?;
+    async fn nonce(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<T::Error>> {
+        let starknet_block_id = EthBlockId::new(block_id).to_starknet_block_id::<T>()?;
+        let starknet_address = self.compute_starknet_address(ethereum_address, &starknet_block_id).await?;
 
-        let nonce: Felt252Wrapper = self.starknet_provider.get_nonce(block_id, starknet_address).await?.into();
+        let nonce: Felt252Wrapper = self.starknet_provider.get_nonce(starknet_block_id, starknet_address).await?.into();
 
         Ok(nonce.into())
     }
 
     /// Returns the balance in Starknet's native token of a specific EVM address.
-    async fn balance(
-        &self,
-        ethereum_address: Address,
-        block_id: StarknetBlockId,
-    ) -> Result<U256, EthApiError<T::Error>> {
-        let starknet_address = self.compute_starknet_address(ethereum_address, &block_id).await?;
+    async fn balance(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<T::Error>> {
+        let starknet_block_id = EthBlockId::new(block_id).to_starknet_block_id::<T>()?;
+        let starknet_address = self.compute_starknet_address(ethereum_address, &starknet_block_id).await?;
 
         let request = FunctionCall {
             // This FieldElement::from_hex_be cannot fail as the value is a constant
@@ -407,7 +393,7 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
             calldata: vec![starknet_address],
         };
 
-        let balance = self.starknet_provider.call(request, block_id).await?;
+        let balance = self.starknet_provider.call(request, starknet_block_id).await?;
 
         let balance = balance
             .first()
@@ -441,7 +427,7 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
             self.call_view(
                 token_address,
                 Bytes::from(vec_felt_to_bytes(calldata).0),
-                StarknetBlockId::Tag(BlockTag::Latest),
+                BlockId::from(BlockNumberOrTag::Latest),
             )
         });
         let token_balances = join_all(handles)
@@ -592,6 +578,17 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotStarknetApi<T> for KakarotClient<
         let evm_address: [u8; 20] = slice.try_into().unwrap(); // safe unwrap as slice is of size 20
 
         Ok(Address::from(evm_address))
+    }
+
+    /// Submits a Kakarot transaction to the Starknet provider.
+    async fn submit_starknet_transaction(
+        &self,
+        request: BroadcastedInvokeTransactionV1,
+    ) -> Result<H256, EthApiError<T::Error>> {
+        let transaction_result =
+            self.starknet_provider.add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request)).await?;
+
+        Ok(H256::from(transaction_result.transaction_hash.to_bytes_be()))
     }
 
     /// Returns the EVM address associated with a given Starknet address for a given block id

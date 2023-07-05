@@ -13,7 +13,6 @@ use reth_rpc_types::{
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
-use starknet::core::types::BlockId as StarknetBlockId;
 use starknet::providers::jsonrpc::JsonRpcTransport;
 
 use crate::eth_api::EthApiServer;
@@ -110,9 +109,8 @@ impl<T: JsonRpcTransport + 'static> EthApiServer for KakarotEthRpc<T> {
     }
 
     async fn transaction_by_block_hash_and_index(&self, hash: H256, index: Index) -> Result<Option<EtherTransaction>> {
-        let block_id = EthBlockId::new(BlockId::Hash(hash.into()));
-        let starknet_block_id = block_id.to_starknet_block_id::<T>()?;
-        let tx = self.kakarot_client.transaction_by_block_id_and_index(starknet_block_id, index).await?;
+        let block_id = BlockId::Hash(hash.into());
+        let tx = self.kakarot_client.transaction_by_block_id_and_index(block_id, index).await?;
         Ok(Some(tx))
     }
 
@@ -121,9 +119,8 @@ impl<T: JsonRpcTransport + 'static> EthApiServer for KakarotEthRpc<T> {
         number: BlockNumberOrTag,
         index: Index,
     ) -> Result<Option<EtherTransaction>> {
-        let block_id = EthBlockId::new(BlockId::Number(number));
-        let starknet_block_id = block_id.to_starknet_block_id::<T>()?;
-        let tx = self.kakarot_client.transaction_by_block_id_and_index(starknet_block_id, index).await?;
+        let block_id = BlockId::Number(number);
+        let tx = self.kakarot_client.transaction_by_block_id_and_index(block_id, index).await?;
         Ok(Some(tx))
     }
 
@@ -133,9 +130,8 @@ impl<T: JsonRpcTransport + 'static> EthApiServer for KakarotEthRpc<T> {
     }
 
     async fn balance(&self, address: Address, block_number: Option<BlockId>) -> Result<U256> {
-        let block_id = EthBlockId::new(block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id = block_id.to_starknet_block_id::<T>()?;
-        let balance = self.kakarot_client.balance(address, starknet_block_id).await?;
+        let block_id = block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+        let balance = self.kakarot_client.balance(address, block_id).await?;
         Ok(balance)
     }
 
@@ -144,18 +140,16 @@ impl<T: JsonRpcTransport + 'static> EthApiServer for KakarotEthRpc<T> {
     }
 
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
-        let block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id = block_id.to_starknet_block_id::<T>()?;
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
 
-        let transaction_count = self.kakarot_client.nonce(address, starknet_block_id).await?;
+        let transaction_count = self.kakarot_client.nonce(address, block_id).await?;
 
         Ok(transaction_count)
     }
 
     async fn get_code(&self, address: Address, block_number: Option<BlockId>) -> Result<Bytes> {
-        let block_id = EthBlockId::new(block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id = block_id.to_starknet_block_id::<T>()?;
-        let code = self.kakarot_client.get_code(address, starknet_block_id).await?;
+        let block_id = block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+        let code = self.kakarot_client.get_code(address, block_id).await?;
         Ok(code)
     }
 
@@ -169,9 +163,8 @@ impl<T: JsonRpcTransport + 'static> EthApiServer for KakarotEthRpc<T> {
             rpc_err(INTERNAL_ERROR_CODE, "CallRequest `data` field is None. Cannot process a Kakarot call")
         })?;
 
-        let block_id = EthBlockId::new(block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id: StarknetBlockId = block_id.to_starknet_block_id::<T>()?;
-        let result = self.kakarot_client.call_view(to, Bytes::from(calldata.0), starknet_block_id).await?;
+        let block_id = block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+        let result = self.kakarot_client.call_view(to, Bytes::from(calldata.0), block_id).await?;
 
         Ok(result)
     }
