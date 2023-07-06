@@ -10,7 +10,7 @@ use super::ConversionError;
 use crate::client::api::KakarotEthApi;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
-use crate::client::helpers::{decode_signature_and_to_address_from_tx_calldata, vec_felt_to_bytes};
+use crate::models::call::Calls;
 use crate::models::convertible::ConvertibleStarknetTransaction;
 
 pub struct StarknetTransaction(Transaction);
@@ -88,12 +88,11 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
         let max_priority_fee_per_gas = Some(client.max_priority_fee_per_gas());
 
-        let calldata = self.calldata().unwrap_or_default();
-        let input = vec_felt_to_bytes(calldata.clone());
+        let calls: Calls = self.calldata()?.try_into()?;
+        let input = calls.get_eth_transaction_input()?;
+        let signature = calls.get_eth_transaction_signature()?;
+        let to = calls.get_eth_transaction_to()?;
 
-        // TODO: wrap to abstract the following lines?
-        // Extracting the signature
-        let (signature, to) = decode_signature_and_to_address_from_tx_calldata(&calldata)?;
         let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
         let signature = Some(Signature { r: signature.r, s: signature.s, v: U256::from_limbs_slice(&[v]) });
 
@@ -121,15 +120,6 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
 impl StarknetTransaction {
     /// Checks if the transaction is a Kakarot transaction.
-    ///
-    /// ## Arguments
-    ///
-    /// * `client` - The Kakarot client.
-    ///
-    /// ## Returns
-    ///
-    /// `Ok(bool)` if the operation was successful.
-    /// `Err(EthApiError)` if the operation failed.
     async fn is_kakarot_tx<T: JsonRpcTransport + Send + Sync>(
         &self,
         client: &dyn KakarotEthApi<T>,
@@ -140,5 +130,51 @@ impl StarknetTransaction {
         let class_hash = client.starknet_provider().get_class_hash_at(starknet_block_latest, sender_address).await?;
 
         Ok(class_hash == client.proxy_account_class_hash())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use starknet::providers::jsonrpc::JsonRpcMethod;
+
+    use super::*;
+    use crate::client::tests::init_client;
+    use crate::mock::mock_starknet::{fixtures, KakarotJsonRpcMethod};
+    use crate::wrap_kakarot;
+
+    #[tokio::test]
+    async fn test_is_kakarot_tx() {
+        // Given
+        let starknet_transaction: Transaction =
+            serde_json::from_str(include_str!("tests_data/starknet/transaction.json")).unwrap();
+        let starknet_transaction: StarknetTransaction = starknet_transaction.into();
+
+        let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::GetClassHashAt)]);
+        let client = init_client(Some(fixtures));
+
+        // When
+        let is_kakarot_tx = starknet_transaction.is_kakarot_tx(&client).await.unwrap();
+
+        // Then
+        assert!(is_kakarot_tx);
+    }
+
+    #[tokio::test]
+    async fn test_to_eth_transaction() {
+        // Given
+        let starknet_transaction: Transaction =
+            serde_json::from_str(include_str!("tests_data/starknet/transaction.json")).unwrap();
+        let starknet_transaction: StarknetTransaction = starknet_transaction.into();
+
+        let fixtures =
+            fixtures(vec![wrap_kakarot!(JsonRpcMethod::GetClassHashAt), KakarotJsonRpcMethod::GetEvmAddress]);
+        let client = init_client(Some(fixtures));
+
+        // When
+        let eth_transaction = starknet_transaction.to_eth_transaction(&client, None, None, None).await.unwrap();
+
+        // Then
+        let expected: EthTransaction = serde_json::from_str(include_str!("tests_data/eth/transaction.json")).unwrap();
+        assert_eq!(expected, eth_transaction);
     }
 }
