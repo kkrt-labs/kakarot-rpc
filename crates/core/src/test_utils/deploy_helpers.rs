@@ -225,8 +225,9 @@ async fn deploy_evm_contract<T: Tokenize>(
 
     let (abi, contract_bytes) = get_contract(contract_name);
     let contract_bytes = encode_contract(&abi, &contract_bytes, constructor_args);
+    let nonce = eoa_starknet_account.get_nonce().await.unwrap();
     let transaction =
-        to_kakarot_transaction(Default::default(), TransactionKind::Create, contract_bytes.to_vec().into());
+        to_kakarot_transaction(nonce.try_into().unwrap(), TransactionKind::Create, contract_bytes.to_vec().into());
     let signature = sign_message(eoa_secret_key, transaction.signature_hash()).unwrap();
     let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
