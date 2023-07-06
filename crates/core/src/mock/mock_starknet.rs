@@ -18,7 +18,6 @@ pub struct StarknetRpcFixture {
 
 #[derive(Debug, Deserialize)]
 pub enum KakarotJsonRpcMethod {
-    GetStarknetContractAddress,
     ComputeStarknetAddress,
     GetEvmAddress,
     Other(JsonRpcMethod),
@@ -39,9 +38,6 @@ impl Serialize for KakarotJsonRpcMethod {
         S: Serializer,
     {
         match self {
-            KakarotJsonRpcMethod::GetStarknetContractAddress => {
-                serializer.serialize_str("kakarot_getStarknetContractAddress")
-            }
             KakarotJsonRpcMethod::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
             KakarotJsonRpcMethod::GetEvmAddress => serializer.serialize_str("kakarot_getEvmAddress"),
             KakarotJsonRpcMethod::Other(method) => method.serialize(serializer),
