@@ -117,7 +117,6 @@ impl StarknetRpcFixtureBuilder {
     pub fn build(self) -> StarknetRpcFixture {
         let mut fixture = self.fixture;
         fixture.method = self.method.into();
-        dbg!(&fixture.response, &fixture.params, &fixture.method);
         fixture
     }
 }
@@ -159,8 +158,6 @@ mod tests {
         // Given
         let method = wrap_kakarot!(JsonRpcMethod::GetNonce);
         let fixture = StarknetRpcFixtureBuilder::new(method).load_jsons().with_params().with_response().build();
-
-        dbg!(&fixture.method, &fixture.params, &fixture.response);
 
         // When
         let expected_params = serde_json::json!(["latest", "0xabde1"]);

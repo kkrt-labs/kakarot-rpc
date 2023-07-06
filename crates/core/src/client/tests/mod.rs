@@ -1,5 +1,6 @@
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use reth_primitives::{BlockId, BlockNumberOrTag, U256, U64};
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::JsonRpcClient;
 
@@ -43,7 +44,7 @@ async fn test_nonce() {
     let client = init_client(Some(fixtures));
 
     // When
-    let nonce = client.nonce(*ABDEL_ETHEREUM_ADDRESS, BlockId::Tag(BlockTag::Latest)).await.unwrap();
+    let nonce = client.nonce(*ABDEL_ETHEREUM_ADDRESS, BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
 
     // Then
     assert_eq!(U256::from(1), nonce);
@@ -56,7 +57,8 @@ async fn test_get_evm_address() {
     let client = init_client(Some(fixtures));
 
     // When
-    let evm_address = client.get_evm_address(&ABDEL_STARKNET_ADDRESS, &BlockId::Tag(BlockTag::Latest)).await.unwrap();
+    let evm_address =
+        client.get_evm_address(&ABDEL_STARKNET_ADDRESS, &StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
     // Then
     assert_eq!(*ABDEL_ETHEREUM_ADDRESS, evm_address);
