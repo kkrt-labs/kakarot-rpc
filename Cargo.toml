@@ -41,4 +41,4 @@ cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddb
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", branch = "main" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f5b684d" }
