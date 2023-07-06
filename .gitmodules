@@ -1,5 +1,5 @@
 [submodule "kakarot"]
-	path = kakarot
+	path = lib/kakarot
 	url = https://github.com/kkrt-labs/kakarot.git
 [submodule "lib/forge-std"]
 	path = lib/forge-std

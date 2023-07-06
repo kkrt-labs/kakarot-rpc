@@ -1,5 +1,3 @@
 [profile.default]
-src = 'kakarot/tests/integration/solidity_contracts'
-test = 'kakarot/tests/integration/solidity_contracts'
-out = 'kakarot/tests/integration/solidity_contracts/build'
+out = 'lib/kakarot/tests/integration/solidity_contracts/build'
 libs = ['lib']

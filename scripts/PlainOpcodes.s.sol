@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Script.sol";
-import "kakarot/tests/integration/solidity_contracts/PlainOpcodes/Counter.sol";
-import "kakarot/tests/integration/solidity_contracts/PlainOpcodes/PlainOpcodes.sol";
+import "kakarot/PlainOpcodes/Counter.sol";
+import "kakarot/PlainOpcodes/PlainOpcodes.sol";
 
 contract EvmsheetScript is Script {
     Counter public counter;
