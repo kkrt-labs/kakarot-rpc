@@ -89,9 +89,10 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         let max_priority_fee_per_gas = Some(client.max_priority_fee_per_gas());
 
         let calls: Calls = self.calldata()?.try_into()?;
-        let input = calls.get_eth_transaction_input()?;
-        let signature = calls.get_eth_transaction_signature()?;
-        let to = calls.get_eth_transaction_to()?;
+        let tx = calls.get_eth_transaction()?;
+        let input = tx.input().to_owned();
+        let signature = tx.signature;
+        let to = tx.to();
 
         let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
         let signature = Some(Signature { r: signature.r, s: signature.s, v: U256::from_limbs_slice(&[v]) });

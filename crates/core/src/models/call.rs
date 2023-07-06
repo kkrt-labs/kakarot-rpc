@@ -1,4 +1,6 @@
-use reth_primitives::{Address, Bytes, Signature, TransactionSigned};
+use std::slice::SliceIndex;
+
+use reth_primitives::TransactionSigned;
 use reth_rlp::Decodable;
 use starknet::accounts::Call;
 use starknet_crypto::FieldElement;
@@ -67,23 +69,15 @@ impl Calls {
         self.len() == 0
     }
 
-    pub fn get(&self, index: usize) -> Option<Call> {
-        self.0.get(index).cloned()
+    pub fn get<I>(&self, index: I) -> Option<&I::Output>
+    where
+        I: SliceIndex<[Call]>,
+    {
+        self.0.get(index)
     }
 
-    pub fn get_eth_transaction_input(&self) -> Result<Bytes, DataDecodingError> {
-        let tx: TransactionSigned = self.try_into()?;
-        return Ok(tx.input().to_owned());
-    }
-
-    pub fn get_eth_transaction_to(&self) -> Result<Option<Address>, DataDecodingError> {
-        let tx: TransactionSigned = self.try_into()?;
-        Ok(tx.to())
-    }
-
-    pub fn get_eth_transaction_signature(&self) -> Result<Signature, DataDecodingError> {
-        let tx: TransactionSigned = self.try_into()?;
-        Ok(tx.signature)
+    pub fn get_eth_transaction(&self) -> Result<TransactionSigned, DataDecodingError> {
+        self.try_into()
     }
 }
 
@@ -91,12 +85,52 @@ impl Calls {
 mod tests {
     use std::str::FromStr;
 
-    use reth_primitives::U256;
+    use reth_primitives::{Address, U256};
 
     use super::*;
 
     fn to_vec_field_element(vec: Vec<&str>) -> Vec<FieldElement> {
         vec.into_iter().filter_map(|f| FieldElement::from_hex_be(f).ok()).collect()
+    }
+
+    fn get_simple_test_calldata() -> Vec<FieldElement> {
+        let calldata = vec![
+            "0x03",
+            "0x06eac8dd0d230c4b37f46bf4c20fb2dc21cd55f87791e2a76beae8059bd8e5e6",
+            "0x07099f594eb65e00576e1b940a8a735f80bf7604ac401c48627045c4cc286f0",
+            "0x00",
+            "0x00a",
+            "0x06eac8dd0d230c4b37f46bf4c20fb2dc21cd55f87791e2a76beae8059bd8e5e6",
+            "0x07099f594eb65e00576e1b940a8a735f80bf7604ac401c48627045c4cc286f0",
+            "0x00a",
+            "0x005",
+            "0x06eac8dd0d230c4b37f46bf4c20fb2dc21cd55f87791e2a76beae8059bd8e5e6",
+            "0x07099f594eb65e00576e1b940a8a735f80bf7604ac401c48627045c4cc286f0",
+            "0x00f",
+            "0x005",
+            "0x014",
+            "0x000",
+            "0x001",
+            "0x002",
+            "0x003",
+            "0x004",
+            "0x005",
+            "0x006",
+            "0x007",
+            "0x008",
+            "0x009",
+            "0x00a",
+            "0x00b",
+            "0x00c",
+            "0x00d",
+            "0x00e",
+            "0x00f",
+            "0x010",
+            "0x011",
+            "0x012",
+            "0x013",
+        ];
+        to_vec_field_element(calldata)
     }
 
     fn get_test_calldata() -> Vec<FieldElement> {
@@ -229,45 +263,26 @@ mod tests {
     }
 
     #[test]
+    fn test_slice_calls() {
+        // Given
+        let calls: Calls = get_simple_test_calldata().try_into().unwrap();
+
+        // When
+        let slice = calls.get(1..3).unwrap();
+
+        // Then
+        assert_eq!(slice.len(), 2);
+    }
+
+    #[test]
     fn test_try_from_calls() {
-        let calldata = vec![
-            "0x03",
-            "0x06eac8dd0d230c4b37f46bf4c20fb2dc21cd55f87791e2a76beae8059bd8e5e6",
-            "0x07099f594eb65e00576e1b940a8a735f80bf7604ac401c48627045c4cc286f0",
-            "0x00",
-            "0x00a",
-            "0x06eac8dd0d230c4b37f46bf4c20fb2dc21cd55f87791e2a76beae8059bd8e5e6",
-            "0x07099f594eb65e00576e1b940a8a735f80bf7604ac401c48627045c4cc286f0",
-            "0x00a",
-            "0x005",
-            "0x06eac8dd0d230c4b37f46bf4c20fb2dc21cd55f87791e2a76beae8059bd8e5e6",
-            "0x07099f594eb65e00576e1b940a8a735f80bf7604ac401c48627045c4cc286f0",
-            "0x00f",
-            "0x005",
-            "0x014",
-            "0x000",
-            "0x001",
-            "0x002",
-            "0x003",
-            "0x004",
-            "0x005",
-            "0x006",
-            "0x007",
-            "0x008",
-            "0x009",
-            "0x00a",
-            "0x00b",
-            "0x00c",
-            "0x00d",
-            "0x00e",
-            "0x00f",
-            "0x010",
-            "0x011",
-            "0x012",
-            "0x013",
-        ];
-        let calldata = to_vec_field_element(calldata);
+        // Given
+        let calldata = get_simple_test_calldata();
+
+        // When
         let calls = Calls::try_from(calldata).unwrap();
+
+        // Then
         assert_eq!(calls.len(), 3);
         let calldata = to_vec_field_element(vec![
             "0x000", "0x001", "0x002", "0x003", "0x004", "0x005", "0x006", "0x007", "0x008", "0x009",
@@ -281,8 +296,13 @@ mod tests {
 
     #[test]
     fn test_calls_get_signature() {
+        // Given
         let calls: Calls = get_test_calldata().try_into().unwrap();
-        let signature = calls.get_eth_transaction_signature().unwrap();
+
+        // When
+        let signature = calls.get_eth_transaction().unwrap().signature;
+
+        // Then
         assert_eq!(
             signature.r,
             U256::from_str("0x889be67d59bc1a43dd803955f7917ddcb7d748ed3e9b00cdb159f294651976b8").unwrap()
@@ -296,8 +316,13 @@ mod tests {
 
     #[test]
     fn test_calls_get_to() {
+        // Given
         let calls: Calls = get_test_calldata().try_into().unwrap();
-        let to = calls.get_eth_transaction_to().unwrap();
+
+        // When
+        let to = calls.get_eth_transaction().unwrap().to();
+
+        // Then
         assert_eq!(to, Some(Address::from_str("0x2e11ed82f5ec165ab8ce3cc094f025fe7527f4d1").unwrap()));
     }
 }
