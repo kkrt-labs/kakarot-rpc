@@ -2,8 +2,5 @@
   "id": 1,
   "jsonrpc": "2.0",
   "method": "starknet_getClassHashAt",
-  "params": {
-    "block_id": "latest",
-    "contract_address": "0xabde1"
-  }
+  "params": ["latest", "0xabde1"]
 }
