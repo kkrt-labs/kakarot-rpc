@@ -84,7 +84,7 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
         let ethereum_address: Felt252Wrapper = ethereum_address.into();
         let ethereum_address = ethereum_address.into();
 
-        // Prepare the calldata for the get_starknet_contract_address function call
+        // Prepare the calldata for the compute_starknet_address function call
         let tx_calldata_vec = vec![ethereum_address];
         let request = FunctionCall {
             contract_address: self.kakarot_address,
