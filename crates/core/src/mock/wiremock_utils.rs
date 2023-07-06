@@ -315,10 +315,10 @@ fn mock_get_class_hash_at() -> Mock {
             serde_json::to_value(latest_block).unwrap(),
             serde_json::to_value("0x744ed080b42c8883a7e31cd11a14b7ae9ef27698b785486bb75cd116c8f1485").unwrap(),
         ])))
-        .respond_with(response_template_with_status(StatusCode::OK).set_body_raw(
-            include_str!("fixtures/responses/transactions/starknet_getClassHashAt.json"),
-            "application/json",
-        ))
+        .respond_with(
+            response_template_with_status(StatusCode::OK)
+                .set_body_raw(include_str!("fixtures/responses/starknet_getClassHashAt.json"), "application/json"),
+        )
 }
 
 fn response_template_with_status(status_code: StatusCode) -> ResponseTemplate {
