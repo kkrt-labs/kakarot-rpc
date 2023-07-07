@@ -5,15 +5,15 @@ use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     Transaction,
 };
-use starknet::providers::jsonrpc::JsonRpcTransport;
+use starknet::providers::Provider;
 
 use super::convertible::ConvertibleStarknetBlock;
 use super::felt::Felt252Wrapper;
+use super::ConversionError;
 use crate::client::api::KakarotEthApi;
 use crate::client::constants::{
     DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY,
 };
-use crate::client::errors::EthApiError;
 
 pub struct EthBlockId(EthereumBlockId);
 
@@ -21,9 +21,12 @@ impl EthBlockId {
     pub fn new(block_id: EthereumBlockId) -> Self {
         Self(block_id)
     }
+}
 
-    pub fn to_starknet_block_id<T: JsonRpcTransport>(&self) -> Result<StarknetBlockId, EthApiError<T::Error>> {
-        match self.0 {
+impl TryFrom<EthBlockId> for StarknetBlockId {
+    type Error = ConversionError;
+    fn try_from(eth_block_id: EthBlockId) -> Result<Self, ConversionError> {
+        match eth_block_id.0 {
             EthereumBlockId::Hash(hash) => {
                 let hash: Felt252Wrapper = hash.block_hash.try_into()?;
                 Ok(StarknetBlockId::Hash(hash.into()))
@@ -122,7 +125,7 @@ impl BlockWithTxs {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxHashes {
-    async fn to_eth_block<T: JsonRpcTransport>(&self, client: &dyn KakarotEthApi<T>) -> RichBlock {
+    async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &dyn KakarotEthApi<P>) -> RichBlock {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -198,7 +201,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxs {
-    async fn to_eth_block<T: JsonRpcTransport>(&self, client: &dyn KakarotEthApi<T>) -> RichBlock {
+    async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &dyn KakarotEthApi<P>) -> RichBlock {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 

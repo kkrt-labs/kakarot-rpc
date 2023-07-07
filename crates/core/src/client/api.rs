@@ -6,59 +6,58 @@ use reth_rpc_types::{
     TransactionReceipt,
 };
 use starknet::core::types::{BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement};
-use starknet::providers::jsonrpc::JsonRpcTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::Provider;
 
 use super::errors::EthApiError;
 use crate::models::balance::TokenBalances;
 use crate::models::transaction::StarknetTransactions;
 
 #[async_trait]
-pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi<T> {
-    async fn block_number(&self) -> Result<U64, EthApiError<T::Error>>;
+pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send + Sync {
+    async fn block_number(&self) -> Result<U64, EthApiError<P::Error>>;
 
-    async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError<T::Error>>;
+    async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError<P::Error>>;
 
     async fn get_code(
         &self,
         ethereum_address: Address,
         starknet_block_id: BlockId,
-    ) -> Result<Bytes, EthApiError<T::Error>>;
+    ) -> Result<Bytes, EthApiError<P::Error>>;
 
     async fn call_view(
         &self,
         ethereum_address: Address,
         calldata: Bytes,
         starknet_block_id: BlockId,
-    ) -> Result<Bytes, EthApiError<T::Error>>;
+    ) -> Result<Bytes, EthApiError<P::Error>>;
 
     async fn transaction_by_block_id_and_index(
         &self,
         block_id: BlockId,
         tx_index: Index,
-    ) -> Result<EtherTransaction, EthApiError<T::Error>>;
+    ) -> Result<EtherTransaction, EthApiError<P::Error>>;
 
-    async fn syncing(&self) -> Result<SyncStatus, EthApiError<T::Error>>;
+    async fn syncing(&self) -> Result<SyncStatus, EthApiError<P::Error>>;
 
-    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64, EthApiError<T::Error>>;
+    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64, EthApiError<P::Error>>;
 
-    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError<T::Error>>;
+    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64, EthApiError<P::Error>>;
 
-    async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError<T::Error>>;
+    async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError<P::Error>>;
 
-    async fn nonce(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<T::Error>>;
+    async fn nonce(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<P::Error>>;
 
-    async fn balance(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<T::Error>>;
+    async fn balance(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<P::Error>>;
 
     async fn token_balances(
         &self,
         address: Address,
         contract_addresses: Vec<Address>,
-    ) -> Result<TokenBalances, EthApiError<T::Error>>;
+    ) -> Result<TokenBalances, EthApiError<P::Error>>;
 
-    async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<T::Error>>;
+    async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<P::Error>>;
 
-    async fn get_transaction_count_by_block(&self, starknet_block_id: BlockId) -> Result<U64, EthApiError<T::Error>>;
+    async fn get_transaction_count_by_block(&self, starknet_block_id: BlockId) -> Result<U64, EthApiError<P::Error>>;
 
     fn base_fee_per_gas(&self) -> U256;
 
@@ -69,39 +68,39 @@ pub trait KakarotEthApi<T: JsonRpcTransport>: KakarotStarknetApi<T> {
         block_count: U256,
         newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
-    ) -> Result<FeeHistory, EthApiError<T::Error>>;
+    ) -> Result<FeeHistory, EthApiError<P::Error>>;
 
     async fn estimate_gas(
         &self,
         call_request: CallRequest,
         block_number: Option<BlockId>,
-    ) -> Result<U256, EthApiError<T::Error>>;
+    ) -> Result<U256, EthApiError<P::Error>>;
 }
 
 #[async_trait]
-pub trait KakarotStarknetApi<T: JsonRpcTransport>: Send + Sync {
+pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
     fn kakarot_address(&self) -> FieldElement;
 
     fn proxy_account_class_hash(&self) -> FieldElement;
 
-    fn starknet_provider(&self) -> &JsonRpcClient<T>;
+    fn starknet_provider(&self) -> &P;
 
     async fn submit_starknet_transaction(
         &self,
         request: BroadcastedInvokeTransactionV1,
-    ) -> Result<H256, EthApiError<T::Error>>;
+    ) -> Result<H256, EthApiError<P::Error>>;
 
     async fn compute_starknet_address(
         &self,
         ethereum_address: Address,
         starknet_block_id: &StarknetBlockId,
-    ) -> Result<FieldElement, EthApiError<T::Error>>;
+    ) -> Result<FieldElement, EthApiError<P::Error>>;
 
     async fn get_evm_address(
         &self,
         starknet_address: &FieldElement,
         starknet_block_id: &StarknetBlockId,
-    ) -> Result<Address, EthApiError<T::Error>>;
+    ) -> Result<Address, EthApiError<P::Error>>;
 
     async fn filter_starknet_into_eth_txs(
         &self,
@@ -114,5 +113,5 @@ pub trait KakarotStarknetApi<T: JsonRpcTransport>: Send + Sync {
         &self,
         block_id: StarknetBlockId,
         hydrated_tx: bool,
-    ) -> Result<RichBlock, EthApiError<T::Error>>;
+    ) -> Result<RichBlock, EthApiError<P::Error>>;
 }

@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use reth_primitives::{TransactionSigned, H256, U256};
 use reth_rpc_types::{Signature, Transaction as EthTransaction};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement, InvokeTransaction, Transaction};
-use starknet::providers::jsonrpc::JsonRpcTransport;
 use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
@@ -66,13 +65,13 @@ impl From<StarknetTransactions> for Vec<Transaction> {
 
 #[async_trait]
 impl ConvertibleStarknetTransaction for StarknetTransaction {
-    async fn to_eth_transaction<T: JsonRpcTransport + Send + Sync>(
+    async fn to_eth_transaction<P: Provider + Send + Sync>(
         &self,
-        client: &dyn KakarotEthApi<T>,
+        client: &dyn KakarotEthApi<P>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<EthTransaction, EthApiError<T::Error>> {
+    ) -> Result<EthTransaction, EthApiError<P::Error>> {
         if !self.is_kakarot_tx(client).await? {
             return Err(EthApiError::KakarotDataFilteringError("Transaction".into()));
         }
@@ -121,10 +120,10 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
 impl StarknetTransaction {
     /// Checks if the transaction is a Kakarot transaction.
-    async fn is_kakarot_tx<T: JsonRpcTransport + Send + Sync>(
+    async fn is_kakarot_tx<P: Provider + Send + Sync>(
         &self,
-        client: &dyn KakarotEthApi<T>,
-    ) -> Result<bool, EthApiError<T::Error>> {
+        client: &dyn KakarotEthApi<P>,
+    ) -> Result<bool, EthApiError<P::Error>> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 

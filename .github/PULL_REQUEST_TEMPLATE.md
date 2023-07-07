@@ -1,7 +1,8 @@
 <!--- Please provide a general summary of your changes in the title above -->
-<!-- Give an estimate of the time you spent on this PR in terms of work days. Did you spend 0.5 days on this PR or rather 2 days?  -->
 
 Time spent on this PR:
+
+Resolves: #<Issue number>
 
 # Pull Request type
 
@@ -16,29 +17,12 @@ Please check the type of change your PR introduces:
 - [ ] Build-related changes
 - [ ] Documentation content changes
 - [ ] Testing
-- [ ] Other (please describe):
-
-# What is the current behavior?
-
-<!-- Please describe the current behavior that you are modifying, or link to a relevant issue. -->
-
-Resolves: #<Issue number>
 
 # What is the new behavior?
 
 <!-- Please describe the behavior or changes that are being added by this PR. -->
 
--
--
--
-
 # Does this introduce a breaking change?
 
 - [ ] Yes
 - [ ] No
-
-<!-- If this does introduce a breaking change, please describe the impact and migration path for existing applications below. -->
-
-# Other information
-
-<!-- Any other information that is important to this PR, such as screenshots of how the component looks before and after the change. -->
