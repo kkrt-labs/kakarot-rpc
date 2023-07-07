@@ -143,7 +143,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
-        let extra_data = Bytes::from(&[0]);
+        let extra_data = Bytes::default();
 
         // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
@@ -219,7 +219,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
-        let extra_data = Bytes::from(&[0]);
+        let extra_data: Bytes = Bytes::default();
 
         // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();

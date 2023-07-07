@@ -101,7 +101,7 @@ pub fn assert_block_header(block: &Rich<Block>, starknet_res: String, hydrated: 
         assert_eq!(block.header.receipts_root, H256::zero());
     };
 
-    assert_eq!(block.header.extra_data, Bytes::from(&[0]));
+    assert_eq!(block.header.extra_data, Bytes::default());
     assert_eq!(block.header.logs_bloom, Bloom::default());
 
     assert_eq!(block.header.gas_used, *GAS_USED);
