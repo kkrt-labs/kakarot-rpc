@@ -99,10 +99,12 @@ mod tests {
 
     use super::*;
 
+    // 2**160 - 1
     const MAX_ADDRESS: &str = "ffffffffffffffffffffffffffffffffffffffff";
+    // 2**160
     const OVERFLOW_ADDRESS: &str = "010000000000000000000000000000000000000000";
 
-    const MAX_FELT: &str = "0800000000000011000000000000000000000000000000000000000000000000";
+    // 2**251 + 17 * 2**192 + 1
     const OVERFLOW_FELT: &str = "0800000000000011000000000000000000000000000000000000000000000001";
 
     #[test]
@@ -119,60 +121,48 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "ToEthereumAddressError")]
     fn test_address_try_from_felt_should_fail() {
         // Given
         let address: Felt252Wrapper = FieldElement::from_hex_be(OVERFLOW_ADDRESS).unwrap().into();
 
         // When
-        let address = Address::try_from(address).err().unwrap();
-
-        // Then
-        match address {
-            ConversionError::ToEthereumAddressError => {}
-            _ => panic!("Expected ConversionError::ToEthereumAddressError"),
-        }
+        Address::try_from(address).unwrap();
     }
 
     #[test]
     fn test_felt_try_from_h256_should_pass() {
         // Given
-        let hash = H256::from_str(MAX_FELT).unwrap();
+        let hash = H256::from_slice(&FieldElement::MAX.to_bytes_be());
 
         // When
         let hash = Felt252Wrapper::try_from(hash).unwrap();
 
         // Then
-        let expected_hash = FieldElement::from_hex_be(MAX_FELT).unwrap();
+        let expected_hash = FieldElement::MAX;
         assert_eq!(expected_hash, hash.0);
     }
 
     #[test]
+    #[should_panic(expected = "Felt252WrapperConversionError")]
     fn test_felt_try_from_h256_should_fail() {
         // Given
         let hash = H256::from_str(OVERFLOW_FELT).unwrap();
 
         // When
-        let hash = Felt252Wrapper::try_from(hash).err().unwrap();
-
-        // Then
-        match hash {
-            ConversionError::Felt252WrapperConversionError(err) => {
-                assert_eq!("number out of range", err.to_string());
-            }
-            _ => panic!("Expected ConversionError::ToEthereumAddressError"),
-        }
+        Felt252Wrapper::try_from(hash).unwrap();
     }
 
     #[test]
     fn test_felt_try_from_u256_should_pass() {
         // Given
-        let hash = U256::from_str_radix(MAX_FELT, 16).unwrap();
+        let hash = U256::try_from_be_slice(&FieldElement::MAX.to_bytes_be()).unwrap();
 
         // When
         let hash = Felt252Wrapper::try_from(hash).unwrap();
 
         // Then
-        let expected_hash = FieldElement::from_hex_be(MAX_FELT).unwrap();
+        let expected_hash = FieldElement::MAX;
         assert_eq!(expected_hash, hash.0);
     }
 

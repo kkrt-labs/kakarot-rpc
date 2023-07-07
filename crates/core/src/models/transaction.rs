@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use reth_primitives::{H256, U256};
+use reth_primitives::{TransactionSigned, H256, U256};
 use reth_rpc_types::{Signature, Transaction as EthTransaction};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement, InvokeTransaction, Transaction};
 use starknet::providers::jsonrpc::JsonRpcTransport;
@@ -89,7 +89,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         let max_priority_fee_per_gas = Some(client.max_priority_fee_per_gas());
 
         let calls: Calls = self.calldata()?.try_into()?;
-        let tx = calls.get_eth_transaction()?;
+        let tx: TransactionSigned = (&calls).try_into()?;
         let input = tx.input().to_owned();
         let signature = tx.signature;
         let to = tx.to();
@@ -147,7 +147,7 @@ mod tests {
     async fn test_is_kakarot_tx() {
         // Given
         let starknet_transaction: Transaction =
-            serde_json::from_str(include_str!("tests_data/starknet/transaction.json")).unwrap();
+            serde_json::from_str(include_str!("test_data/conversion/starknet/transaction.json")).unwrap();
         let starknet_transaction: StarknetTransaction = starknet_transaction.into();
 
         let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::GetClassHashAt)]);
@@ -164,7 +164,7 @@ mod tests {
     async fn test_to_eth_transaction() {
         // Given
         let starknet_transaction: Transaction =
-            serde_json::from_str(include_str!("tests_data/starknet/transaction.json")).unwrap();
+            serde_json::from_str(include_str!("test_data/conversion/starknet/transaction.json")).unwrap();
         let starknet_transaction: StarknetTransaction = starknet_transaction.into();
 
         let fixtures =
@@ -175,7 +175,8 @@ mod tests {
         let eth_transaction = starknet_transaction.to_eth_transaction(&client, None, None, None).await.unwrap();
 
         // Then
-        let expected: EthTransaction = serde_json::from_str(include_str!("tests_data/eth/transaction.json")).unwrap();
+        let expected: EthTransaction =
+            serde_json::from_str(include_str!("test_data/conversion/eth/transaction.json")).unwrap();
         assert_eq!(expected, eth_transaction);
     }
 }
