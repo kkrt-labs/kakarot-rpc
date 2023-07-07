@@ -1,7 +1,6 @@
 use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, SERVER_IS_BUSY_CODE, UNKNOWN_ERROR_CODE};
 use jsonrpsee::types::ErrorObject;
 use starknet::core::types::StarknetError;
-use starknet::providers::jsonrpc::JsonRpcClientError;
 use starknet::providers::ProviderError;
 use thiserror::Error;
 
@@ -35,10 +34,10 @@ pub enum ConfigError {
 
 /// Error that can accure when interacting with the Kakarot ETH API.
 #[derive(Debug, Error)]
-pub enum EthApiError<T: std::error::Error> {
+pub enum EthApiError<E: std::error::Error> {
     /// Request to the Starknet provider failed.
     #[error(transparent)]
-    RequestError(#[from] ProviderError<JsonRpcClientError<T>>),
+    RequestError(#[from] ProviderError<E>),
     /// Conversion between Starknet types and ETH failed.
     #[error(transparent)]
     ConversionError(#[from] ConversionError),
@@ -53,8 +52,8 @@ pub enum EthApiError<T: std::error::Error> {
     Other(#[from] anyhow::Error),
 }
 
-impl<T: std::error::Error> From<EthApiError<T>> for ErrorObject<'static> {
-    fn from(error: EthApiError<T>) -> Self {
+impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
+    fn from(error: EthApiError<E>) -> Self {
         match error {
             EthApiError::RequestError(err_provider) => match err_provider {
                 ProviderError::StarknetError(err) => match err {
@@ -92,9 +91,18 @@ impl<T: std::error::Error> From<EthApiError<T>> for ErrorObject<'static> {
     }
 }
 
-impl<T: std::error::Error> From<EthApiError<T>> for jsonrpsee::core::Error {
-    fn from(err: EthApiError<T>) -> Self {
+impl<E: std::error::Error> From<EthApiError<E>> for jsonrpsee::core::Error {
+    fn from(err: EthApiError<E>) -> Self {
         jsonrpsee::core::Error::Call(err.into())
+    }
+}
+
+/// Converting directly from `ConversionError` to `jsonrpsee::core::Error` in case conversions are
+/// done in eth-rpc crate.
+/// TODO: Remove this when conversions are done in core crate only.
+impl From<ConversionError> for ErrorObject<'static> {
+    fn from(error: ConversionError) -> Self {
+        rpc_err(INTERNAL_ERROR_CODE, error.to_string())
     }
 }
 
