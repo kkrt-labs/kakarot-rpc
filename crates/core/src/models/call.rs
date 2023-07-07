@@ -32,12 +32,8 @@ impl TryFrom<Vec<FieldElement>> for Calls {
         // eventually the calldata of the first call is at offset =  1 (for call_len) + 4 * call_len + 1
         // (for calldata_len)
         let calls_len = u32::try_from(value[0])
-            .map_err(|e| ConversionError::ValueOutOfRange(format!("{}: call array length > u32::MAX", e.to_string())))?
+            .map_err(|e| ConversionError::ValueOutOfRange(format!("{}: call array length > u32::MAX", e)))?
             as usize;
-
-        if calls_len > 1 {
-            return Err(ConversionError::ValueOutOfRange("call array length > 1 is not supported".to_string()));
-        }
 
         let mut offset = calls_len * 4 + 2;
 
@@ -61,6 +57,12 @@ impl TryFrom<&Calls> for TransactionSigned {
     type Error = DataDecodingError;
 
     fn try_from(value: &Calls) -> std::result::Result<Self, Self::Error> {
+        if value.len() > 1 {
+            return Err(DataDecodingError::SignatureDecodingError(
+                "call array length > 1 is not supported".to_string(),
+            ));
+        }
+
         let call = value.0[0] // for now we decode signature only from the first call
             .calldata
             .iter()
@@ -103,33 +105,25 @@ mod tests {
     }
 
     #[test]
-    fn test_try_from_calls_should_pass() {
+    fn test_try_from_calls() {
         // Given
-        let raw: Vec<FieldElement> = serde_json::from_str(include_str!("test_data/call/raw_simple_call.json")).unwrap();
+        let raw: Vec<FieldElement> = serde_json::from_str(include_str!("test_data/call/raw_call.json")).unwrap();
 
         // When
         let calls: Calls = raw.try_into().unwrap();
 
         // Then
-        let call: SerdeCall = serde_json::from_str(include_str!("test_data/call/simple_call.json")).unwrap();
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls.get(0).unwrap().calldata, call.calldata);
+        let expected: Vec<SerdeCall> = serde_json::from_str(include_str!("test_data/call/call.json")).unwrap();
+        assert_eq!(3, calls.len());
+        assert_eq!(expected[0].calldata, calls.get(0).unwrap().calldata);
+        assert_eq!(expected[1].calldata, calls.get(1).unwrap().calldata);
+        assert_eq!(expected[2].calldata, calls.get(2).unwrap().calldata);
     }
 
     #[test]
-    #[should_panic(expected = "call array length > 1 is not supported")]
-    fn test_try_from_calls_should_fail() {
+    fn test_calls_get_signature_should_pass() {
         // Given
-        let calldata = vec![FieldElement::from(2_u8)];
-
-        // When
-        Calls::try_from(calldata).unwrap();
-    }
-
-    #[test]
-    fn test_calls_get_signature() {
-        // Given
-        let raw: Vec<FieldElement> = serde_json::from_str(include_str!("test_data/call/raw_call.json")).unwrap();
+        let raw: Vec<FieldElement> = serde_json::from_str(include_str!("test_data/call/kakarot_call.json")).unwrap();
         let calls: Calls = raw.try_into().unwrap();
 
         // When
@@ -148,9 +142,20 @@ mod tests {
     }
 
     #[test]
-    fn test_calls_get_to() {
+    #[should_panic(expected = "SignatureDecodingError(\"call array length > 1 is not supported\")")]
+    fn test_calls_get_signature_should_fail() {
         // Given
         let raw: Vec<FieldElement> = serde_json::from_str(include_str!("test_data/call/raw_call.json")).unwrap();
+        let calls: Calls = raw.try_into().unwrap();
+
+        // When
+        TryInto::<TransactionSigned>::try_into(&calls).unwrap();
+    }
+
+    #[test]
+    fn test_calls_get_to() {
+        // Given
+        let raw: Vec<FieldElement> = serde_json::from_str(include_str!("test_data/call/kakarot_call.json")).unwrap();
         let calls: Calls = raw.try_into().unwrap();
 
         // When
