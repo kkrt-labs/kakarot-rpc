@@ -2,15 +2,12 @@ HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
 pull-kakarot: .gitmodules 
 	git submodule update --init --recursive
-	cd kakarot && make setup
+	cd lib/kakarot && make setup
 
 build-kakarot: setup 
-	cd kakarot && make build
+	cd lib/kakarot && make build && make build-sol
 
-build-sol:
-	forge build --names --force
-
-setup: pull-kakarot build-kakarot build-sol
+setup: pull-kakarot build-kakarot
 
 # run devnet
 devnet: 
