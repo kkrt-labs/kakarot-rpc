@@ -3,7 +3,7 @@ use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, METHOD_NOT_FOUND_CODE};
 use kakarot_rpc_core::client::api::KakarotEthApi;
 use kakarot_rpc_core::client::constants::{CHAIN_ID, ESTIMATE_GAS};
-use kakarot_rpc_core::client::errors::rpc_err;
+use kakarot_rpc_core::client::errors::{rpc_err, EthApiError};
 use kakarot_rpc_core::models::balance::TokenBalances;
 use kakarot_rpc_core::models::block::EthBlockId;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
@@ -62,14 +62,14 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
 
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {
         let block_id = EthBlockId::new(BlockId::Hash(hash.into()));
-        let starknet_block_id: StarknetBlockId = block_id.try_into()?;
+        let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::<P::Error>::from)?;
         let block = self.kakarot_client.get_eth_block_from_starknet_block(starknet_block_id, full).await?;
         Ok(Some(block))
     }
 
     async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
         let block_id = EthBlockId::new(BlockId::Number(number));
-        let starknet_block_id: StarknetBlockId = block_id.try_into()?;
+        let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::<P::Error>::from)?;
         let block = self.kakarot_client.get_eth_block_from_starknet_block(starknet_block_id, full).await?;
         Ok(Some(block))
     }

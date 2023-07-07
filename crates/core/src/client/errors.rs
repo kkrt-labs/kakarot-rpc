@@ -97,15 +97,6 @@ impl<E: std::error::Error> From<EthApiError<E>> for jsonrpsee::core::Error {
     }
 }
 
-/// Converting directly from `ConversionError` to `jsonrpsee::core::Error` in case conversions are
-/// done in eth-rpc crate.
-/// TODO: Remove this when conversions are done in core crate only.
-impl From<ConversionError> for ErrorObject<'static> {
-    fn from(error: ConversionError) -> Self {
-        rpc_err(INTERNAL_ERROR_CODE, error.to_string())
-    }
-}
-
 /// Constructs a JSON-RPC error object, consisting of `code` and `message`.
 pub fn rpc_err(code: i32, msg: impl Into<String>) -> jsonrpsee::types::error::ErrorObject<'static> {
     jsonrpsee::types::error::ErrorObject::owned(code, msg.into(), None::<()>)
