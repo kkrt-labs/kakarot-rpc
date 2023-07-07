@@ -21,12 +21,12 @@ use reth_rpc_types::{
 };
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, FieldElement,
-    FunctionCall, InvokeTransactionReceipt, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, SyncStatusType,
-    Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
+    FunctionCall, InvokeTransactionReceipt, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, StarknetError,
+    SyncStatusType, Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::jsonrpc::{JsonRpcClient, JsonRpcTransport};
-use starknet::providers::Provider;
+use starknet::providers::{Provider, ProviderError};
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::StarknetConfig;
@@ -372,13 +372,23 @@ impl<T: JsonRpcTransport + Send + Sync> KakarotEthApi<T> for KakarotClient<JsonR
     }
 
     /// Returns the nonce for a given ethereum address
+    /// if ethereum -> stark mapping doesn't exist in the starknet provider, we translate
+    /// ContractNotFound errors into zeros
     async fn nonce(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<T::Error>> {
         let starknet_block_id = EthBlockId::new(block_id).to_starknet_block_id::<T>()?;
         let starknet_address = self.compute_starknet_address(ethereum_address, &starknet_block_id).await?;
 
-        let nonce: Felt252Wrapper = self.starknet_provider.get_nonce(starknet_block_id, starknet_address).await?.into();
-
-        Ok(nonce.into())
+        self.starknet_provider
+            .get_nonce(starknet_block_id, starknet_address)
+            .await
+            .map(|nonce| {
+                let nonce: Felt252Wrapper = nonce.into();
+                nonce.into()
+            })
+            .or_else(|err| match err {
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(U256::from(0)),
+                _ => Err(EthApiError::from(err)),
+            })
     }
 
     /// Returns the balance in Starknet's native token of a specific EVM address.

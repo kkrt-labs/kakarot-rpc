@@ -5,7 +5,7 @@ import "forge-std/Script.sol";
 import "kakarot/PlainOpcodes/Counter.sol";
 import "kakarot/PlainOpcodes/PlainOpcodes.sol";
 
-contract EvmsheetScript is Script {
+contract PlainOpcodesScript is Script {
     Counter public counter;
     PlainOpcodes public plainOpcodes;
 
