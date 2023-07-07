@@ -17,12 +17,79 @@ mod tests {
     use kakarot_rpc_core::models::ConversionError;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
     use kakarot_rpc_core::test_utils::deploy_helpers::{create_raw_ethereum_tx, deploy_kakarot_system};
-    use reth_primitives::{Address, BlockId, Bytes, H256};
+    use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, Event, FieldElement};
     use starknet::core::utils::get_selector_from_name;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::{JsonRpcClient, Provider};
+
+    #[tokio::test]
+    async fn test_rpc_should_not_raise_when_eoa_not_deployed() {
+        let starknet_test_sequencer = TestSequencer::start().await;
+
+        let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
+
+        let deployed_kakarot =
+            deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
+
+        let kakarot_client = KakarotClient::new(
+            StarknetConfig::new(
+                starknet_test_sequencer.url().as_ref().to_string(),
+                deployed_kakarot.kakarot,
+                deployed_kakarot.kakarot_proxy,
+            ),
+            JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
+        )
+        .unwrap();
+
+        // Zero address shouldn't throw 'ContractNotFound', but return zero
+        assert_eq!(
+            U256::from(0),
+            kakarot_client.nonce(Address::zero(), BlockId::from(BlockNumberOrTag::Latest)).await.unwrap()
+        );
+    }
+
+    #[tokio::test]
+    async fn test_constructable() {
+        // initial setup of Constructable to test we can deploy contracts w/ constructor arguments
+        let starknet_test_sequencer = TestSequencer::start().await;
+
+        let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
+
+        let deployed_kakarot =
+            deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
+
+        let (_constructable_abi, deployed_addresses) = deployed_kakarot
+            .deploy_evm_contract(
+                starknet_test_sequencer.url(),
+                "Constructable",
+                // more than one argument to a constructor needs to be conveyed as a tuple
+                (EthersU256::from(100), EthersAddress::zero()),
+            )
+            .await
+            .unwrap();
+
+        let kakarot_client = KakarotClient::new(
+            StarknetConfig::new(
+                starknet_test_sequencer.url().as_ref().to_string(),
+                deployed_kakarot.kakarot,
+                deployed_kakarot.kakarot_proxy,
+            ),
+            JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
+        )
+        .unwrap();
+
+        let constructable_eth_address = {
+            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            address.try_into().unwrap()
+        };
+
+        kakarot_client
+            .get_code(constructable_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .expect("contract not deployed");
+    }
 
     #[tokio::test]
     async fn test_counter() {
