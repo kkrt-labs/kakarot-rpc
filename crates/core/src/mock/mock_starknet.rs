@@ -20,6 +20,7 @@ pub struct StarknetRpcFixture {
 pub enum KakarotJsonRpcMethod {
     ComputeStarknetAddress,
     GetEvmAddress,
+    GetClassHashAt(String, String),
     Other(JsonRpcMethod),
 }
 
@@ -27,7 +28,8 @@ impl From<KakarotJsonRpcMethod> for JsonRpcMethod {
     fn from(value: KakarotJsonRpcMethod) -> Self {
         match value {
             KakarotJsonRpcMethod::Other(method) => method,
-            _ => JsonRpcMethod::Call,
+            KakarotJsonRpcMethod::ComputeStarknetAddress | KakarotJsonRpcMethod::GetEvmAddress => JsonRpcMethod::Call,
+            KakarotJsonRpcMethod::GetClassHashAt(_, _) => JsonRpcMethod::GetClassHashAt,
         }
     }
 }
@@ -40,6 +42,7 @@ impl Serialize for KakarotJsonRpcMethod {
         match self {
             KakarotJsonRpcMethod::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
             KakarotJsonRpcMethod::GetEvmAddress => serializer.serialize_str("kakarot_getEvmAddress"),
+            KakarotJsonRpcMethod::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
             KakarotJsonRpcMethod::Other(method) => method.serialize(serializer),
         }
     }
@@ -100,12 +103,20 @@ impl StarknetRpcFixtureBuilder {
     /// Sets the params of the fixture.
     pub fn with_params(mut self) -> Self {
         self.fixture.params = self.request["params"].clone();
+        // Add the address to the params if call to get_class_hash_at.
+        if let KakarotJsonRpcMethod::GetClassHashAt(address, _) = &self.method {
+            self.fixture.params = serde_json::json!(["latest", address]);
+        }
         self
     }
 
     /// Sets the response of the fixture.
     pub fn with_response(mut self) -> Self {
         self.fixture.response = self.response.clone();
+        // Add the class hash to the response if call to get_class_hash_at.
+        if let KakarotJsonRpcMethod::GetClassHashAt(_, class_hash) = &self.method {
+            self.fixture.response["result"] = serde_json::json!(class_hash);
+        }
         self
     }
 
