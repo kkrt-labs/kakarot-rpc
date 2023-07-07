@@ -167,19 +167,12 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Felt252WrapperConversionError")]
     fn test_felt_try_from_u256_should_fail() {
         // Given
         let hash = U256::from_str_radix(OVERFLOW_FELT, 16).unwrap();
 
         // When
-        let hash = Felt252Wrapper::try_from(hash).err().unwrap();
-
-        // Then
-        match hash {
-            ConversionError::Felt252WrapperConversionError(err) => {
-                assert_eq!("number out of range", err.to_string());
-            }
-            _ => panic!("Expected ConversionError::ToEthereumAddressError"),
-        }
+        Felt252Wrapper::try_from(hash).unwrap();
     }
 }
