@@ -1,5 +1,6 @@
 pub mod balance;
 pub mod block;
+pub mod call;
 pub mod convertible;
 pub mod event;
 pub mod felt;
@@ -22,13 +23,18 @@ pub enum ConversionError {
     /// Felt252Wrapper conversion error
     #[error(transparent)]
     Felt252WrapperConversionError(#[from] FromByteArrayError),
+    /// Data decoding error
     #[error(transparent)]
     DataDecodingError(#[from] DataDecodingError),
+    /// Felt252Wrapper to Ethereum address conversion error
     #[error(
         "failed to convert Felt252Wrapper to Ethereum address: the value exceeds the maximum size of an Ethereum \
          address"
     )]
     ToEthereumAddressError,
+    /// Value out of range error
+    #[error("value out of range: {0}")]
+    ValueOutOfRange(String),
     /// Other conversion error
     #[error("failed to convert value: {0}")]
     Other(String),

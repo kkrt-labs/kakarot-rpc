@@ -13,7 +13,6 @@ pub mod selectors {
     use starknet::core::types::FieldElement;
     use starknet::macros::selector;
 
-    pub const GET_STARKNET_CONTRACT_ADDRESS: FieldElement = selector!("get_starknet_contract_address");
     pub const BYTECODE: FieldElement = selector!("bytecode");
 
     pub const ETH_CALL: FieldElement = selector!("eth_call");

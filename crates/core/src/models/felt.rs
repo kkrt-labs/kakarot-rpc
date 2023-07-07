@@ -90,3 +90,89 @@ impl From<Felt252Wrapper> for U256 {
         U256::from_be_bytes(felt.to_bytes_be())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use hex::FromHex;
+
+    use super::*;
+
+    // 2**160 - 1
+    const MAX_ADDRESS: &str = "ffffffffffffffffffffffffffffffffffffffff";
+    // 2**160
+    const OVERFLOW_ADDRESS: &str = "010000000000000000000000000000000000000000";
+
+    // 2**251 + 17 * 2**192 + 1
+    const OVERFLOW_FELT: &str = "0800000000000011000000000000000000000000000000000000000000000001";
+
+    #[test]
+    fn test_address_try_from_felt_should_pass() {
+        // Given
+        let address: Felt252Wrapper = FieldElement::from_hex_be(MAX_ADDRESS).unwrap().into();
+
+        // When
+        let address = Address::try_from(address).unwrap();
+
+        // Then
+        let expected_address = <[u8; 20]>::from_hex(MAX_ADDRESS).unwrap();
+        assert_eq!(expected_address, address.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "ToEthereumAddressError")]
+    fn test_address_try_from_felt_should_fail() {
+        // Given
+        let address: Felt252Wrapper = FieldElement::from_hex_be(OVERFLOW_ADDRESS).unwrap().into();
+
+        // When
+        Address::try_from(address).unwrap();
+    }
+
+    #[test]
+    fn test_felt_try_from_h256_should_pass() {
+        // Given
+        let hash = H256::from_slice(&FieldElement::MAX.to_bytes_be());
+
+        // When
+        let hash = Felt252Wrapper::try_from(hash).unwrap();
+
+        // Then
+        let expected_hash = FieldElement::MAX;
+        assert_eq!(expected_hash, hash.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Felt252WrapperConversionError")]
+    fn test_felt_try_from_h256_should_fail() {
+        // Given
+        let hash = H256::from_str(OVERFLOW_FELT).unwrap();
+
+        // When
+        Felt252Wrapper::try_from(hash).unwrap();
+    }
+
+    #[test]
+    fn test_felt_try_from_u256_should_pass() {
+        // Given
+        let hash = U256::try_from_be_slice(&FieldElement::MAX.to_bytes_be()).unwrap();
+
+        // When
+        let hash = Felt252Wrapper::try_from(hash).unwrap();
+
+        // Then
+        let expected_hash = FieldElement::MAX;
+        assert_eq!(expected_hash, hash.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Felt252WrapperConversionError")]
+    fn test_felt_try_from_u256_should_fail() {
+        // Given
+        let hash = U256::from_str_radix(OVERFLOW_FELT, 16).unwrap();
+
+        // When
+        Felt252Wrapper::try_from(hash).unwrap();
+    }
+}
