@@ -44,8 +44,8 @@ use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 use crate::models::ConversionError;
 
-pub struct KakarotClient<StarknetProvider: Provider> {
-    starknet_provider: StarknetProvider,
+pub struct KakarotClient<P: Provider> {
+    starknet_provider: P,
     kakarot_address: FieldElement,
     proxy_account_class_hash: FieldElement,
 }
