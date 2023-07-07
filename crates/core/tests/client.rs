@@ -40,8 +40,7 @@ mod tests {
                 deployed_kakarot.kakarot_proxy,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
-        )
-        .unwrap();
+        );
 
         // Zero address shouldn't throw 'ContractNotFound', but return zero
         assert_eq!(
