@@ -25,7 +25,7 @@ use starknet::core::types::{
     SyncStatusType, Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
-use starknet::providers::Provider;
+use starknet::providers::{Provider, ProviderError};
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::StarknetConfig;
