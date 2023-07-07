@@ -278,7 +278,7 @@ mod tests {
     use crate::mock::constants::{
         ABDEL_STARKNET_ADDRESS_HEX, OTHER_ADDRESS_HEX, OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX, PROXY_ACCOUNT_CLASS_HASH_HEX,
     };
-    use crate::mock::mock_starknet::{fixtures, KakarotJsonRpcMethod};
+    use crate::mock::mock_starknet::{fixtures, AvailableFixtures};
 
     #[tokio::test]
     async fn test_to_eth_block_block_with_tx_hashes() {
@@ -307,12 +307,9 @@ mod tests {
         let starknet_block_with_txs = BlockWithTxs::new(starknet_block_with_txs);
 
         let fixtures = fixtures(vec![
-            KakarotJsonRpcMethod::GetClassHashAt(
-                ABDEL_STARKNET_ADDRESS_HEX.into(),
-                PROXY_ACCOUNT_CLASS_HASH_HEX.into(),
-            ),
-            KakarotJsonRpcMethod::GetClassHashAt(OTHER_ADDRESS_HEX.into(), OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
-            KakarotJsonRpcMethod::GetEvmAddress,
+            AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
+            AvailableFixtures::GetClassHashAt(OTHER_ADDRESS_HEX.into(), OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
+            AvailableFixtures::GetEvmAddress,
         ]);
         let client = init_client(Some(fixtures));
 

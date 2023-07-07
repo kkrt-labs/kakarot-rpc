@@ -140,7 +140,7 @@ mod tests {
     use super::*;
     use crate::client::tests::init_client;
     use crate::mock::constants::{ABDEL_STARKNET_ADDRESS_HEX, PROXY_ACCOUNT_CLASS_HASH_HEX};
-    use crate::mock::mock_starknet::{fixtures, KakarotJsonRpcMethod};
+    use crate::mock::mock_starknet::{fixtures, AvailableFixtures};
 
     #[tokio::test]
     async fn test_is_kakarot_tx() {
@@ -149,7 +149,7 @@ mod tests {
             serde_json::from_str(include_str!("test_data/conversion/starknet/transaction.json")).unwrap();
         let starknet_transaction: StarknetTransaction = starknet_transaction.into();
 
-        let fixtures = fixtures(vec![KakarotJsonRpcMethod::GetClassHashAt(
+        let fixtures = fixtures(vec![AvailableFixtures::GetClassHashAt(
             ABDEL_STARKNET_ADDRESS_HEX.into(),
             PROXY_ACCOUNT_CLASS_HASH_HEX.into(),
         )]);
@@ -170,11 +170,8 @@ mod tests {
         let starknet_transaction: StarknetTransaction = starknet_transaction.into();
 
         let fixtures = fixtures(vec![
-            KakarotJsonRpcMethod::GetClassHashAt(
-                ABDEL_STARKNET_ADDRESS_HEX.into(),
-                PROXY_ACCOUNT_CLASS_HASH_HEX.into(),
-            ),
-            KakarotJsonRpcMethod::GetEvmAddress,
+            AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
+            AvailableFixtures::GetEvmAddress,
         ]);
         let client = init_client(Some(fixtures));
 

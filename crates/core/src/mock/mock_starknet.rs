@@ -17,33 +17,33 @@ pub struct StarknetRpcFixture {
 }
 
 #[derive(Debug, Deserialize)]
-pub enum KakarotJsonRpcMethod {
+pub enum AvailableFixtures {
     ComputeStarknetAddress,
     GetEvmAddress,
     GetClassHashAt(String, String),
     Other(JsonRpcMethod),
 }
 
-impl From<KakarotJsonRpcMethod> for JsonRpcMethod {
-    fn from(value: KakarotJsonRpcMethod) -> Self {
+impl From<AvailableFixtures> for JsonRpcMethod {
+    fn from(value: AvailableFixtures) -> Self {
         match value {
-            KakarotJsonRpcMethod::Other(method) => method,
-            KakarotJsonRpcMethod::ComputeStarknetAddress | KakarotJsonRpcMethod::GetEvmAddress => JsonRpcMethod::Call,
-            KakarotJsonRpcMethod::GetClassHashAt(_, _) => JsonRpcMethod::GetClassHashAt,
+            AvailableFixtures::Other(method) => method,
+            AvailableFixtures::ComputeStarknetAddress | AvailableFixtures::GetEvmAddress => JsonRpcMethod::Call,
+            AvailableFixtures::GetClassHashAt(_, _) => JsonRpcMethod::GetClassHashAt,
         }
     }
 }
 
-impl Serialize for KakarotJsonRpcMethod {
+impl Serialize for AvailableFixtures {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         match self {
-            KakarotJsonRpcMethod::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
-            KakarotJsonRpcMethod::GetEvmAddress => serializer.serialize_str("kakarot_getEvmAddress"),
-            KakarotJsonRpcMethod::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
-            KakarotJsonRpcMethod::Other(method) => method.serialize(serializer),
+            AvailableFixtures::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
+            AvailableFixtures::GetEvmAddress => serializer.serialize_str("kakarot_getEvmAddress"),
+            AvailableFixtures::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
+            AvailableFixtures::Other(method) => method.serialize(serializer),
         }
     }
 }
@@ -51,14 +51,14 @@ impl Serialize for KakarotJsonRpcMethod {
 #[macro_export]
 macro_rules! wrap_kakarot {
     ($id:expr) => {
-        KakarotJsonRpcMethod::Other($id)
+        AvailableFixtures::Other($id)
     };
 }
 
 /// A builder for a `StarknetRpcFixture`.
 pub struct StarknetRpcFixtureBuilder {
     /// The Kakarot Json RPC method.
-    method: KakarotJsonRpcMethod,
+    method: AvailableFixtures,
     /// The fixture to build.
     fixture: StarknetRpcFixture,
     /// The request loaded.
@@ -69,7 +69,7 @@ pub struct StarknetRpcFixtureBuilder {
 
 impl StarknetRpcFixtureBuilder {
     /// Returns a new `StarknetRpcFixtureBuilder`.
-    pub fn new(method: KakarotJsonRpcMethod) -> Self {
+    pub fn new(method: AvailableFixtures) -> Self {
         Self {
             method,
             fixture: StarknetRpcFixture {
@@ -104,7 +104,7 @@ impl StarknetRpcFixtureBuilder {
     pub fn with_params(mut self) -> Self {
         self.fixture.params = self.request["params"].clone();
         // Add the address to the params if call to get_class_hash_at.
-        if let KakarotJsonRpcMethod::GetClassHashAt(address, _) = &self.method {
+        if let AvailableFixtures::GetClassHashAt(address, _) = &self.method {
             self.fixture.params = serde_json::json!(["latest", address]);
         }
         self
@@ -114,7 +114,7 @@ impl StarknetRpcFixtureBuilder {
     pub fn with_response(mut self) -> Self {
         self.fixture.response = self.response.clone();
         // Add the class hash to the response if call to get_class_hash_at.
-        if let KakarotJsonRpcMethod::GetClassHashAt(_, class_hash) = &self.method {
+        if let AvailableFixtures::GetClassHashAt(_, class_hash) = &self.method {
             self.fixture.response["result"] = serde_json::json!(class_hash);
         }
         self
@@ -134,7 +134,7 @@ impl StarknetRpcFixtureBuilder {
 /// # Arguments
 ///
 /// * `methods` - The json rpc methods to create fixtures for.
-pub fn fixtures(methods: Vec<KakarotJsonRpcMethod>) -> Vec<StarknetRpcFixture> {
+pub fn fixtures(methods: Vec<AvailableFixtures>) -> Vec<StarknetRpcFixture> {
     methods
         .into_iter()
         .map(|method| StarknetRpcFixtureBuilder::new(method).load_jsons().with_params().with_response().build())
