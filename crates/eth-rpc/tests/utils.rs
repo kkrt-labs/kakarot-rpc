@@ -45,7 +45,7 @@ where
     let config = StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash);
     let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
 
-    let kakarot_client = KakarotClient::new(config, provider).unwrap();
+    let kakarot_client = KakarotClient::new(config, provider);
 
     KakarotEthRpc::new(Box::new(kakarot_client))
 }

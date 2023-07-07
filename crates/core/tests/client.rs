@@ -50,8 +50,7 @@ mod tests {
                 deployed_kakarot.kakarot_proxy,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
-        )
-        .unwrap();
+        );
 
         let deployed_balance = kakarot_client
             .balance(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
@@ -149,8 +148,7 @@ mod tests {
                 deployed_kakarot.kakarot_proxy,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
-        )
-        .unwrap();
+        );
 
         kakarot_client
             .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))

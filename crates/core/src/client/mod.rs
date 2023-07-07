@@ -44,27 +44,17 @@ use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 use crate::models::ConversionError;
 
-pub struct KakarotClient<T: Provider> {
-    starknet_provider: T,
+pub struct KakarotClient<StarknetProvider: Provider> {
+    starknet_provider: StarknetProvider,
     kakarot_address: FieldElement,
     proxy_account_class_hash: FieldElement,
 }
 
 impl<T: JsonRpcTransport + Send + Sync> KakarotClient<JsonRpcClient<T>> {
-    /// Create a new `KakarotClient`.
-    ///
-    /// # Arguments
-    ///
-    /// * `starknet_config(StarknetConfig)` - `StarkNet` configuration.
-    /// * `provider(T)` - `StarkNet` provider.
-    ///
-    /// # Errors
-    ///
-    /// `Err(EthApiError<T>)` if the operation failed.
-    pub fn new(starknet_config: StarknetConfig, starknet_provider: JsonRpcClient<T>) -> Result<Self> {
+    pub fn new(starknet_config: StarknetConfig, starknet_provider: JsonRpcClient<T>) -> Self {
         let StarknetConfig { kakarot_address, proxy_account_class_hash, .. } = starknet_config;
 
-        Ok(Self { starknet_provider, kakarot_address, proxy_account_class_hash })
+        Self { starknet_provider, kakarot_address, proxy_account_class_hash }
     }
 }
 

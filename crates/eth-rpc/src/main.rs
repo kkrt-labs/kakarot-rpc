@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
     let rpc_config = RPCConfig::from_env()?;
 
     let provider = JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build();
-    let kakarot_client = KakarotClient::new(starknet_config, provider)?;
+    let kakarot_client = KakarotClient::new(starknet_config, provider);
 
     let (server_addr, server_handle) = run_server(Box::new(kakarot_client), rpc_config).await?;
     let url = format!("http://{server_addr}");

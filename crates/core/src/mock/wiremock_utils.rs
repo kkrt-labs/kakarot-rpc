@@ -127,7 +127,7 @@ pub async fn setup_mock_client() -> Box<dyn KakarotEthApi<HttpTransport>> {
 
     let config = StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash);
     let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
-    Box::new(KakarotClient::new(config, provider).unwrap())
+    Box::new(KakarotClient::new(config, provider))
 }
 
 pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>> {
@@ -140,7 +140,7 @@ pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransp
     let config = StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash);
     let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
 
-    KakarotClient::new(config, provider).unwrap()
+    KakarotClient::new(config, provider)
 }
 
 fn mock_block_number() -> Mock {

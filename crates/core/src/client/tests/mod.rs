@@ -13,7 +13,7 @@ fn init_client(fixtures: Option<Vec<StarknetRpcFixture>>) -> KakarotClient<JsonR
     let config = StarknetConfig { kakarot_address: *KAKAROT_ADDRESS, ..Default::default() };
     let provider = mock_starknet_provider(fixtures);
 
-    KakarotClient::new(config, provider).unwrap()
+    KakarotClient::new(config, provider)
 }
 
 #[tokio::test]
