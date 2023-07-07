@@ -143,7 +143,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
-        let extra_data = Bytes::from(b"0x00");
+        let extra_data = Bytes::from(&[0]);
 
         // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
@@ -219,7 +219,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 
         // Bloom is a byte array of length 256
         let logs_bloom = Bloom::default();
-        let extra_data: Bytes = Bytes::from(b"0x00");
+        let extra_data = Bytes::from(&[0]);
 
         // TODO: Fetch real data
         let base_fee_per_gas = client.base_fee_per_gas();
@@ -270,5 +270,58 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
             withdrawals: Some(vec![]),
         };
         block.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::client::tests::init_client;
+    use crate::mock::constants::{
+        ABDEL_STARKNET_ADDRESS_HEX, OTHER_ADDRESS_HEX, OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX, PROXY_ACCOUNT_CLASS_HASH_HEX,
+    };
+    use crate::mock::mock_starknet::{fixtures, AvailableFixtures};
+
+    #[tokio::test]
+    async fn test_to_eth_block_block_with_tx_hashes() {
+        // Given
+        let starknet_block_with_tx_hashes: MaybePendingBlockWithTxHashes =
+            serde_json::from_str(include_str!("test_data/conversion/starknet/block_with_tx_hashes.json")).unwrap();
+        let starknet_block_with_tx_hashes = BlockWithTxHashes::new(starknet_block_with_tx_hashes);
+
+        let fixtures = fixtures(vec![]);
+        let client = init_client(Some(fixtures));
+
+        // When
+        let eth_block_with_tx_hashes = starknet_block_with_tx_hashes.to_eth_block(&client).await.inner;
+
+        // Then
+        let expected: Block =
+            serde_json::from_str(include_str!("test_data/conversion/eth/block_with_tx_hashes.json")).unwrap();
+        assert_eq!(expected, eth_block_with_tx_hashes);
+    }
+
+    #[tokio::test]
+    async fn test_to_eth_block_block_with_txs() {
+        // Given
+        let starknet_block_with_txs: MaybePendingBlockWithTxs =
+            serde_json::from_str(include_str!("test_data/conversion/starknet/block_with_txs.json")).unwrap();
+        let starknet_block_with_txs = BlockWithTxs::new(starknet_block_with_txs);
+
+        let fixtures = fixtures(vec![
+            AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
+            AvailableFixtures::GetClassHashAt(OTHER_ADDRESS_HEX.into(), OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
+            AvailableFixtures::GetEvmAddress,
+        ]);
+        let client = init_client(Some(fixtures));
+
+        // When
+        let eth_block_with_txs = starknet_block_with_txs.to_eth_block(&client).await.inner;
+
+        // Then
+        let expected: Block =
+            serde_json::from_str(include_str!("test_data/conversion/eth/block_with_txs.json")).unwrap();
+        assert_eq!(expected, eth_block_with_txs);
     }
 }

@@ -10,7 +10,7 @@ use crate::client::KakarotClient;
 use crate::mock::constants::{
     ABDEL_ETHEREUM_ADDRESS, ABDEL_STARKNET_ADDRESS, KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
 };
-use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, KakarotJsonRpcMethod, StarknetRpcFixture};
+use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, AvailableFixtures, StarknetRpcFixture};
 use crate::wrap_kakarot;
 
 pub fn init_client(fixtures: Option<Vec<StarknetRpcFixture>>) -> KakarotClient<JsonRpcClient<MockJsonRpcTransport>> {
@@ -40,7 +40,7 @@ async fn test_block_number() {
 #[tokio::test]
 async fn test_nonce() {
     // Given
-    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::GetNonce), KakarotJsonRpcMethod::ComputeStarknetAddress]);
+    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::GetNonce), AvailableFixtures::ComputeStarknetAddress]);
     let client = init_client(Some(fixtures));
 
     // When
@@ -53,7 +53,7 @@ async fn test_nonce() {
 #[tokio::test]
 async fn test_get_evm_address() {
     // Given
-    let fixtures = fixtures(vec![KakarotJsonRpcMethod::GetEvmAddress]);
+    let fixtures = fixtures(vec![AvailableFixtures::GetEvmAddress]);
     let client = init_client(Some(fixtures));
 
     // When
