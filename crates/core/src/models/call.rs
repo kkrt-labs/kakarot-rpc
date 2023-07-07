@@ -164,4 +164,20 @@ mod tests {
         // Then
         assert_eq!(to, Some(Address::from_str("0x2e11ed82f5ec165ab8ce3cc094f025fe7527f4d1").unwrap()));
     }
+
+    #[test]
+    fn test_slice_calls() {
+        // Given
+        let raw: Vec<FieldElement> = serde_json::from_str(include_str!("test_data/call/raw_call.json")).unwrap();
+        let calls: Calls = raw.try_into().unwrap();
+
+        // When
+        let slice = calls.get(1..3).unwrap();
+
+        // Then
+        let expected: Vec<SerdeCall> = serde_json::from_str(include_str!("test_data/call/call.json")).unwrap();
+        assert_eq!(slice.len(), 2);
+        assert_eq!(expected[1].calldata, slice[0].calldata);
+        assert_eq!(expected[2].calldata, slice[1].calldata)
+    }
 }
