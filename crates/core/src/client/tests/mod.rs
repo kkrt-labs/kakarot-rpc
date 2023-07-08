@@ -10,7 +10,8 @@ use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
 use crate::client::config::StarknetConfig;
 use crate::client::KakarotClient;
 use crate::mock::constants::{
-    ABDEL_ETHEREUM_ADDRESS, ABDEL_STARKNET_ADDRESS, KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
+    ABDEL_ETHEREUM_ADDRESS, ABDEL_STARKNET_ADDRESS, ABDEL_STARKNET_ADDRESS_HEX, KAKAROT_ADDRESS,
+    PROXY_ACCOUNT_CLASS_HASH, PROXY_ACCOUNT_CLASS_HASH_HEX,
 };
 use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, AvailableFixtures, StarknetRpcFixture};
 use crate::wrap_kakarot;
@@ -105,9 +106,9 @@ async fn test_transaction_by_hash() {
     // Given
     let fixtures = fixtures(vec![
         wrap_kakarot!(JsonRpcMethod::GetTransactionByHash),
-        wrap_kakarot!(JsonRpcMethod::GetClassHashAt),
         wrap_kakarot!(JsonRpcMethod::GetTransactionReceipt),
-        KakarotJsonRpcMethod::GetEvmAddress,
+        AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
+        AvailableFixtures::GetEvmAddress,
     ]);
     let client = init_client(Some(fixtures));
 
