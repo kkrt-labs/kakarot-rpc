@@ -1,11 +1,16 @@
 HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
+NETWORK?=katana
+
 pull-kakarot: .gitmodules 
 	git submodule update --init --recursive
 	cd lib/kakarot && make setup
 
 build-kakarot: setup 
 	cd lib/kakarot && make build && make build-sol
+
+deploy-kakarot:
+	cd lib/kakarot && STARKNET_NETWORK=$(NETWORK) make deploy
 
 setup: pull-kakarot build-kakarot
 
@@ -20,6 +25,9 @@ build:
 # run
 run: 
 	source .env && RUST_LOG=debug cargo run -p kakarot-rpc
+
+run-dev: deploy-kakarot
+	source .env && KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(NETWORK)/deployments.json) RUST_LOG=debug cargo run -p kakarot-rpc
 
 #run-release
 run-release:
