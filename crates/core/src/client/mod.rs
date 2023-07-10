@@ -112,8 +112,21 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             entry_point_selector: BYTECODE,
             calldata: vec![],
         };
+
+        dbg!(&request);
+
         // Make the function call to get the contract bytecode
-        let contract_bytecode = self.starknet_provider.call(request, starknet_block_id).await?;
+        let contract_bytecode =
+            self.starknet_provider.call(request, starknet_block_id).await.or_else(|err| match err {
+                ProviderError::StarknetError(starknet_error) => match starknet_error {
+                    // TODO: we just need to test against ContractNotFound but madara is currently returning the wrong
+                    // error See https://github.com/keep-starknet-strange/madara/issues/853
+                    StarknetError::ContractError | StarknetError::ContractNotFound => Ok(vec![]),
+                    _ => Err(EthApiError::from(err)),
+                },
+                _ => Err(EthApiError::from(err)),
+            })?;
+
         // Convert the result of the function call to a vector of bytes
         let contract_bytecode_in_u8: Vec<u8> = contract_bytecode.into_iter().flat_map(|x| x.to_bytes_be()).collect();
         let bytes_result = Bytes::from(contract_bytecode_in_u8);
