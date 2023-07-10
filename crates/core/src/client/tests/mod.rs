@@ -63,3 +63,38 @@ async fn test_get_evm_address() {
     // Then
     assert_eq!(*ABDEL_ETHEREUM_ADDRESS, evm_address);
 }
+
+#[tokio::test]
+async fn test_fee_history() {
+    // Given
+    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber)]);
+    let client = init_client(Some(fixtures));
+
+    // When
+    let count = 10;
+    let block_count = U256::from(count);
+    let newest_block = BlockNumberOrTag::Latest;
+    let fee_history = client.fee_history(block_count, newest_block, None).await.unwrap();
+
+    // Then
+    dbg!(fee_history.base_fee_per_gas.len());
+    assert_eq!(vec![U256::from(1); count + 1], fee_history.base_fee_per_gas);
+    assert_eq!(vec![0.9; count], fee_history.gas_used_ratio);
+    assert_eq!(U256::from(19630), fee_history.oldest_block);
+    assert_eq!(None, fee_history.reward);
+}
+
+#[tokio::test]
+async fn test_fee_history_should_return_oldest_block_0() {
+    // Given
+    let fixtures = fixtures(vec![]);
+    let client = init_client(Some(fixtures));
+
+    // When
+    let block_count = U256::from(10);
+    let newest_block = BlockNumberOrTag::Number(1);
+    let fee_history = client.fee_history(block_count, newest_block, None).await.unwrap();
+
+    // Then
+    assert_eq!(U256::from(0), fee_history.oldest_block);
+}

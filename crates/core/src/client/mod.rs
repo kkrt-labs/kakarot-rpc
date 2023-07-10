@@ -511,7 +511,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory, EthApiError<P::Error>> {
-        let block_count_usize = usize::from_str_radix(&block_count.to_string(), 16).unwrap_or(1);
+        let block_count_usize =
+            usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
 
         let base_fee = self.base_fee_per_gas();
 
@@ -524,7 +525,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         };
 
         let gas_used_ratio: Vec<f64> = vec![0.9; block_count_usize];
-        let oldest_block: U256 = U256::from(newest_block) - block_count;
+        let newest_block = U256::from(newest_block);
+        let oldest_block: U256 = if newest_block >= block_count { newest_block - block_count } else { U256::from(0) };
 
         Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: None })
     }
