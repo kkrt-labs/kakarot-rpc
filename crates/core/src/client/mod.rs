@@ -113,8 +113,6 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             calldata: vec![],
         };
 
-        dbg!(&request);
-
         // Make the function call to get the contract bytecode
         let contract_bytecode =
             self.starknet_provider.call(request, starknet_block_id).await.or_else(|err| match err {
