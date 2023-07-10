@@ -166,4 +166,19 @@ mod tests {
             ]
         );
     }
+
+    #[test]
+    fn test_vec_felt_to_bytes() {
+        // Given
+        let bytecode: Vec<FieldElement> =
+            serde_json::from_str(include_str!("../models/test_data/bytecode/starknet/counter.json")).unwrap();
+
+        // When
+        let bytes = vec_felt_to_bytes(bytecode);
+
+        // Then
+        let expected: Bytes =
+            serde_json::from_str(include_str!("../models/test_data/bytecode/eth/counter.json")).unwrap();
+        assert_eq!(expected, bytes);
+    }
 }
