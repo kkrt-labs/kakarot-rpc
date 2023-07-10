@@ -37,8 +37,8 @@ lazy_static = "1.4.0"
 
 dotenv = { workspace = true }  
 bytes = "1"  
-ethers = "2.0"
-foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }  
+ethers = { workspace = true }
+foundry-config = { workspace = true }
 
 [dev-dependencies]
 dojo-test-utils = { workspace = true }

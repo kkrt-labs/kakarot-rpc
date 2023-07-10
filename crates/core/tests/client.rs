@@ -3,7 +3,6 @@ mod tests {
 
     use std::str::FromStr;
 
-    use dojo_test_utils::sequencer::TestSequencer;
     use ethers::types::Address as EthersAddress;
     use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
     use kakarot_rpc_core::client::config::StarknetConfig;
@@ -16,7 +15,9 @@ mod tests {
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::models::ConversionError;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{create_raw_ethereum_tx, deploy_kakarot_system};
+    use kakarot_rpc_core::test_utils::deploy_helpers::{
+        construct_kakarot_test_sequencer, create_raw_ethereum_tx, deploy_kakarot_system,
+    };
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
     use reth_rpc_types::Log;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, Event, FieldElement};
@@ -26,7 +27,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rpc_should_not_raise_when_eoa_not_deployed() {
-        let starknet_test_sequencer = TestSequencer::start().await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
 
@@ -51,7 +52,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_counter() {
-        let starknet_test_sequencer = TestSequencer::start().await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("10000000000000000000").unwrap();
 
@@ -129,8 +130,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_plain_opcodes() {
-        // initial setup of PlainOpcodes to test we can deploy contracts w/ constructor arguments
-        let starknet_test_sequencer = TestSequencer::start().await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
 

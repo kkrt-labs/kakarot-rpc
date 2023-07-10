@@ -3,7 +3,7 @@ use std::fs;
 use std::sync::Arc;
 
 use bytes::BytesMut;
-use dojo_test_utils::sequencer::TestSequencer;
+use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
 use dotenv::dotenv;
 use ethers::abi::{Abi, Tokenize};
 use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
@@ -534,6 +534,45 @@ impl DeployedKakarot {
         .await
         .ok_or_else(|| "Evm contract deployment failed.".into())
     }
+}
+
+/// Returns a `StarknetConfig` instance customized for "Kakarot".
+///
+/// This function generates a `StarknetConfig` instance with `allow_zero_max_fee` set to `true`
+/// and a custom `Environment` object with its `chain_id` set to "SN_GOERLI".
+/// It also sets `invoke_max_steps` and `validate_max_steps` to `2**24` to facilitate
+/// computations associated with the "Kakarot" environment.
+/// Any other configuration fields in `StarknetConfig` and `Environment` are filled with default
+/// values.
+///
+/// This function is intended to provide a convenient way to obtain a Starknet configuration
+/// specifically tailored for testing or running "Kakarot"-centric applications.
+pub fn get_kakarot_starknet_config() -> StarknetConfig {
+    let kakarot_steps = 2u32.pow(24);
+    StarknetConfig {
+        allow_zero_max_fee: true,
+        env: Environment {
+            chain_id: "SN_GOERLI".into(),
+            invoke_max_steps: kakarot_steps,
+            validate_max_steps: kakarot_steps,
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Constructs a test sequencer with the Starknet configuration tailored for "Kakarot".
+///
+/// This function initializes a `TestSequencer` instance with the default `SequencerConfig`
+/// and a custom `StarknetConfig` obtained from the `get_kakarot_starknet_config()` function.
+/// The custom `StarknetConfig` sets the chain_id to "SN_GOERLI" and both the `invoke_max_steps`
+/// and `validate_max_steps` to `2**24`. It also sets `allow_zero_max_fee` to true in
+/// `StarknetConfig`. This setup is aimed to provide an appropriate environment for testing
+/// "Kakarot" based applications.
+///
+/// Returns a `TestSequencer` configured for "Kakarot".
+pub async fn construct_kakarot_test_sequencer() -> TestSequencer {
+    TestSequencer::start(SequencerConfig::default(), get_kakarot_starknet_config()).await
 }
 
 /// Asynchronously deploys a Kakarot system to the StarkNet network and returns the

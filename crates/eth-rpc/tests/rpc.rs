@@ -1,10 +1,12 @@
 #![recursion_limit = "1024"]
+#[macro_use]
 mod utils;
 
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
 
+    use ethers::prelude::{Block as EthersBlock, Http as EthersHttp, H256 as EthersH256};
     use kakarot_rpc::eth_api::EthApiServer;
     use kakarot_rpc_core::mock::assert_helpers::{assert_block, assert_block_header, assert_transaction};
     use reth_primitives::{BlockNumberOrTag, H160, H256, U256, U64};
@@ -13,7 +15,7 @@ mod tests {
     use starknet::core::types::{FieldElement, Transaction as StarknetTransaction};
     use starknet::macros::felt;
 
-    use crate::utils::setup_kakarot_eth_rpc;
+    use crate::utils::{run_kakarot_integration, setup_kakarot_eth_rpc};
 
     fn get_test_tx() -> serde_json::Value {
         json!({
@@ -1012,5 +1014,20 @@ mod tests {
             Some(H256::from(felt!("0x000000000000000000000000000000000000000000000000000000000000000d").to_bytes_be()))
         );
         assert_eq!(U256::from(transaction.block_number.unwrap()), U256::from(13));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+    async fn test_get_block_rpc() {
+        run_kakarot_integration(|port| async move {
+            // Your test code here
+            let provider = EthersHttp::from_str(format!("http://localhost:{}", port).as_ref()).unwrap();
+            let block_number: U64 =
+                ethers::prelude::JsonRpcClient::request(&provider, "eth_blockNumber", ()).await.unwrap();
+            let params = (block_number, true);
+            let block: std::result::Result<EthersBlock<EthersH256>, _> =
+                ethers::prelude::JsonRpcClient::request(&provider, "eth_getBlockByNumber", params).await;
+            assert!(block.is_ok());
+        })
+        .await;
     }
 }
