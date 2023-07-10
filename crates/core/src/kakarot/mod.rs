@@ -4,7 +4,7 @@ use starknet::core::types::{BlockId, FunctionCall};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
-use crate::client::constants::selectors::{BALANCE_OF, BYTECODE, COMPUTE_STARKNET_ADDRESS, GET_EVM_ADDRESS};
+use crate::client::constants::selectors::{BALANCE_OF, BYTECODE, COMPUTE_STARKNET_ADDRESS, ETH_CALL, GET_EVM_ADDRESS};
 use crate::client::constants::STARKNET_NATIVE_TOKEN;
 use crate::client::errors::EthApiError;
 use crate::client::helpers::DataDecodingError;
@@ -93,7 +93,7 @@ impl<P: Provider + Send + Sync> KakarotContract<P> {
 
         calldata.append(eth_calldata);
 
-        let request = FunctionCall { contract_address: self.address, entry_point_selector: BYTECODE, calldata };
+        let request = FunctionCall { contract_address: self.address, entry_point_selector: ETH_CALL, calldata };
         Ok(provider.call(request, block_id).await?)
     }
 
