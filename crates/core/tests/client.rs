@@ -4,7 +4,7 @@ mod tests {
     use dojo_test_utils::sequencer::TestSequencer;
     use ethers::types::Address as EthersAddress;
     use kakarot_rpc_core::client::api::KakarotEthApi;
-    use kakarot_rpc_core::client::config::StarknetConfig;
+    use kakarot_rpc_core::client::config::{Network, StarknetConfig};
     use kakarot_rpc_core::client::KakarotClient;
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
@@ -25,9 +25,10 @@ mod tests {
 
         let kakarot_client = KakarotClient::new(
             StarknetConfig::new(
-                starknet_test_sequencer.url().as_ref().to_string(),
+                Some(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
                 deployed_kakarot.kakarot_proxy,
+                Network::Mock,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
@@ -60,9 +61,10 @@ mod tests {
 
         let kakarot_client = KakarotClient::new(
             StarknetConfig::new(
-                starknet_test_sequencer.url().as_ref().to_string(),
+                Some(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
                 deployed_kakarot.kakarot_proxy,
+                Network::Mock,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
@@ -158,9 +160,10 @@ mod tests {
 
         let kakarot_client = KakarotClient::new(
             StarknetConfig::new(
-                starknet_test_sequencer.url().as_ref().to_string(),
+                Some(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
                 deployed_kakarot.kakarot_proxy,
+                Network::Mock,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );

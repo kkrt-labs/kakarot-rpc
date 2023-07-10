@@ -4,31 +4,71 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
 use starknet::providers::JsonRpcClient;
 use url::Url;
 
+use super::constants::{KATANA_RPC_URL, MADARA_RPC_URL};
 use super::errors::ConfigError;
 
 fn get_env_var(name: &str) -> Result<String, ConfigError> {
     std::env::var(name).map_err(|_| ConfigError::EnvironmentVariableMissing(name.into()))
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
+pub enum Network {
+    #[default]
+    Katana,
+    Madara,
+    Mainnet,
+    Goerli1,
+    Goerli2,
+    Mock,
+}
+
+#[derive(Default, Clone)]
 /// Configuration for the Starknet RPC client.
 pub struct StarknetConfig {
-    /// Rpc url.
-    pub url: String,
+    /// Rpc url. Optional as it can be provided by the environment variable `STARKNET_NETWORK`.
+    pub url: Option<Url>,
     /// Kakarot contract address.
     pub kakarot_address: FieldElement,
     /// Proxy account class hash.
     pub proxy_account_class_hash: FieldElement,
+    /// Additional configuration if the underlying provider is a Sequencer provider.
+    pub network: Network,
 }
 
 impl StarknetConfig {
-    pub fn new(url: String, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
-        StarknetConfig { url, kakarot_address, proxy_account_class_hash }
+    pub fn new(
+        url: Option<Url>,
+        kakarot_address: FieldElement,
+        proxy_account_class_hash: FieldElement,
+        network: Network,
+    ) -> Self {
+        StarknetConfig { url, kakarot_address, proxy_account_class_hash, network }
     }
 
     /// Create a new `StarknetConfig` from environment variables.
     pub fn from_env() -> Result<Self, ConfigError> {
-        let starknet_rpc = get_env_var("STARKNET_RPC_URL")?;
+        let mut provider_url = None;
+        let starknet_rpc = get_env_var("STARKNET_NETWORK")?;
+        let network = match starknet_rpc.to_lowercase().as_str() {
+            // TODO: Add possibility to set url for katana and madara in env rather than constants.
+            "katana" => {
+                provider_url = Some(Url::parse(KATANA_RPC_URL)?);
+                Network::Katana
+            }
+            "madara" => {
+                provider_url = Some(Url::parse(MADARA_RPC_URL)?);
+                Network::Madara
+            }
+            // TODO: Add possibility to override gateway url for mainnet and testnet.
+            "mainnet" => Network::Mainnet,
+            "goerli1" => Network::Goerli1,
+            "goerli2" => Network::Goerli2,
+            "testnet" => Network::Goerli1,
+            _ => Err(ConfigError::EnvironmentVariableSetWrong(format!(
+                "STARKNET_NETWORK should be either katana, madara, goerli1, goerli2, testnet or mainnet got \
+                 {starknet_rpc}"
+            )))?,
+        };
 
         let kakarot_address = get_env_var("KAKAROT_ADDRESS")?;
         let kakarot_address = FieldElement::from_hex_be(&kakarot_address).map_err(|_| {
@@ -44,7 +84,7 @@ impl StarknetConfig {
             ))
         })?;
 
-        Ok(StarknetConfig::new(starknet_rpc, kakarot_address, proxy_account_class_hash))
+        Ok(StarknetConfig::new(provider_url, kakarot_address, proxy_account_class_hash, network))
     }
 }
 
@@ -73,18 +113,24 @@ impl JsonRpcClientBuilder<HttpTransport> {
     /// # Example
     ///
     /// ```rust
-    /// use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, StarknetConfig};
+    /// use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, Network, StarknetConfig};
     /// use starknet::core::types::FieldElement;
     /// use starknet::providers::jsonrpc::HttpTransport;
     /// use starknet::providers::JsonRpcClient;
+    /// use url::Url;
     ///
-    /// let url = String::from("http://0.0.0.0:1234/rpc");
-    /// let config = StarknetConfig::new(url, FieldElement::default(), FieldElement::default());
+    /// let url = "http://0.0.0.0:1234/rpc";
+    /// let config = StarknetConfig::new(
+    ///     Some(Url::parse(url).unwrap()),
+    ///     FieldElement::default(),
+    ///     FieldElement::default(),
+    ///     Network::Katana,
+    /// );
     /// let provider: JsonRpcClient<HttpTransport> =
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
     pub fn with_http(config: &StarknetConfig) -> Result<Self> {
-        let url = Url::parse(&config.url)?;
+        let url = config.clone().url.ok_or(eyre::eyre!("No url provided"))?;
         let transport = HttpTransport::new(url);
         Ok(Self::new(transport))
     }
