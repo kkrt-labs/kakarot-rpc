@@ -156,4 +156,29 @@ mod tests {
         // When
         starknet_event.to_eth_log(&client, None, None, None, None, None).unwrap();
     }
+
+    #[test]
+    fn test_to_eth_log_with_optional_parameters() {
+        // Given
+        let event: Event = serde_json::from_str(include_str!("test_data/conversion/starknet/event_log3.json")).unwrap();
+        let starknet_event = StarknetEvent::new(event);
+
+        let fixtures = fixtures(vec![]);
+        let client = init_client(Some(fixtures));
+
+        // When
+        let block_hash = Some(H256::from_low_u64_be(0xdeadbeef));
+        let block_number = Some(U256::from(0x1));
+        let transaction_hash = Some(H256::from_low_u64_be(0x12));
+        let transaction_index = Some(U256::from(0x123));
+        let log_index = Some(U256::from(0x1234));
+        let eth_event = starknet_event
+            .to_eth_log(&client, block_hash, block_number, transaction_hash, log_index, transaction_index)
+            .unwrap();
+
+        // Then
+        let expected: Log =
+            serde_json::from_str(include_str!("test_data/conversion/eth/event_log3_with_optionals.json")).unwrap();
+        assert_eq!(expected, eth_event);
+    }
 }
