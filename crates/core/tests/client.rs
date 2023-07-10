@@ -16,7 +16,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_rpc_should_not_raise_when_eoa_not_deployed() {
-        let starknet_test_sequencer = TestSequencer::start().await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
 
@@ -41,7 +41,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_counter() {
-        let starknet_test_sequencer = TestSequencer::start().await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("10000000000000000000").unwrap();
 
@@ -119,8 +119,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_plain_opcodes() {
-        // initial setup of PlainOpcodes to test we can deploy contracts w/ constructor arguments
-        let starknet_test_sequencer = TestSequencer::start().await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
 

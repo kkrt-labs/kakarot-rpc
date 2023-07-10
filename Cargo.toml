@@ -20,6 +20,7 @@ readme = "./README.md"
 license = "MIT"
 
 [workspace.dependencies]
+ethers = "2.0"  
 starknet = "0.4.0"
 starknet-crypto = "0.5.1"
 reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
@@ -30,12 +31,14 @@ async-trait = "0.1.58"
 jsonrpsee = { version = "0.18.2", features = ["full"] }
 lazy_static = "1.4.0"
 dotenv = "0.15.0"  
+foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
+forge = { git = "https://github.com/foundry-rs/foundry", branch = "master" }  
 
 
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "24e8a78" }
+dojo-test-utils = { git = "https://github.com/jobez/dojo", branch = "custom-steps-and-get-block-potential-fix"  }
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
