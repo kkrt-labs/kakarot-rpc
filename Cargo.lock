@@ -1491,6 +1491,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "comfy-table"
+version = "6.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e959d788268e3bf9d35ace83e81b124190378e4c91c9067524675e33394b8ba"
+dependencies = [
+ "crossterm",
+ "strum 0.24.1",
+ "strum_macros 0.24.3",
+ "unicode-width",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2013,7 +2025,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "dojo-lang"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#2e40087f7cd0b5dd59d3e7ad4e80febba8fd71c4"
+source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#cca4b11ca8fab724365c9a4da78438d605cb9c3a"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2052,7 +2064,7 @@ dependencies = [
 [[package]]
 name = "dojo-test-utils"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#2e40087f7cd0b5dd59d3e7ad4e80febba8fd71c4"
+source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#cca4b11ca8fab724365c9a4da78438d605cb9c3a"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2082,7 +2094,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#2e40087f7cd0b5dd59d3e7ad4e80febba8fd71c4"
+source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#cca4b11ca8fab724365c9a4da78438d605cb9c3a"
 dependencies = [
  "serde",
  "starknet",
@@ -2091,7 +2103,7 @@ dependencies = [
 [[package]]
 name = "dojo-world"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#2e40087f7cd0b5dd59d3e7ad4e80febba8fd71c4"
+source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#cca4b11ca8fab724365c9a4da78438d605cb9c3a"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2464,6 +2476,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethers-contract-abigen"
+version = "2.0.7"
+source = "git+https://github.com/gakonst/ethers-rs#311086466871204c3965065b8c81e47418261412"
+dependencies = [
+ "Inflector",
+ "dunce",
+ "ethers-core 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
+ "eyre",
+ "hex",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "serde",
+ "serde_json",
+ "syn 2.0.25",
+ "toml 0.7.6",
+ "walkdir",
+]
+
+[[package]]
 name = "ethers-contract-derive"
 version = "2.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2491,7 +2524,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "serde_json",
- "syn 2.0.23",
+ "syn 2.0.25",
 ]
 
 [[package]]
@@ -2546,7 +2579,7 @@ dependencies = [
  "serde",
  "serde_json",
  "strum 0.25.0",
- "syn 2.0.23",
+ "syn 2.0.25",
  "tempfile",
  "thiserror",
  "tiny-keccak",
@@ -2925,8 +2958,8 @@ checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
 name = "forge"
-version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#c78a811a8af95fb1e029427583a07b2ca3a3fa51"
+version = "1.0.0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "comfy-table",
  "ethers 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
@@ -2954,8 +2987,8 @@ dependencies = [
 
 [[package]]
 name = "forge-fmt"
-version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#c78a811a8af95fb1e029427583a07b2ca3a3fa51"
+version = "1.0.0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "ariadne",
  "ethers-core 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
@@ -2978,8 +3011,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-abi"
-version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#c78a811a8af95fb1e029427583a07b2ca3a3fa51"
+version = "1.0.0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "ethers-contract 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-contract-abigen 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
@@ -2987,13 +3020,13 @@ dependencies = [
  "ethers-providers 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
  "eyre",
  "foundry-macros",
- "syn 2.0.23",
+ "syn 2.0.25",
 ]
 
 [[package]]
 name = "foundry-common"
-version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#c78a811a8af95fb1e029427583a07b2ca3a3fa51"
+version = "1.0.0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "auto_impl",
  "clap",
@@ -3024,8 +3057,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-config"
-version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#e488e2bb2c53434e866b7c0fb1cc68ae6ce5cb07"
+version = "1.0.0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "Inflector",
  "dirs-next",
@@ -3054,8 +3087,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-evm"
-version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#c78a811a8af95fb1e029427583a07b2ca3a3fa51"
+version = "1.0.0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "auto_impl",
  "bytes",
@@ -3089,8 +3122,8 @@ dependencies = [
 
 [[package]]
 name = "foundry-macros"
-version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#c78a811a8af95fb1e029427583a07b2ca3a3fa51"
+version = "1.0.0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "ethers-core 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
  "foundry-macros-impl",
@@ -3101,17 +3134,17 @@ dependencies = [
 [[package]]
 name = "foundry-macros-impl"
 version = "0.0.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#c78a811a8af95fb1e029427583a07b2ca3a3fa51"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.23",
+ "syn 2.0.25",
 ]
 
 [[package]]
 name = "foundry-utils"
-version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#c78a811a8af95fb1e029427583a07b2ca3a3fa51"
+version = "1.0.0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
 dependencies = [
  "ethers-addressbook 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-contract 2.0.7 (git+https://github.com/gakonst/ethers-rs)",
@@ -4315,24 +4348,7 @@ dependencies = [
  "rustls",
  "rustls-native-certs",
  "tokio",
- "tokio-rustls 0.23.4",
- "webpki-roots 0.22.6",
-]
-
-[[package]]
-name = "hyper-rustls"
-version = "0.24.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d78e1e73ec14cf7375674f74d7dde185c8206fd9dea6fb6295e8a98098aaa97"
-dependencies = [
- "futures-util",
- "http",
- "hyper",
- "log",
- "rustls 0.21.3",
- "rustls-native-certs",
- "tokio",
- "tokio-rustls 0.24.1",
+ "tokio-rustls",
 ]
 
 [[package]]
@@ -4768,7 +4784,7 @@ checksum = "1705c65069729e3dccff6fd91ee431d5d31cabcf00ce68a62a2c6435ac713af9"
 dependencies = [
  "async-trait",
  "hyper",
- "hyper-rustls 0.24.1",
+ "hyper-rustls",
  "jsonrpsee-core 0.18.2",
  "jsonrpsee-types 0.18.2",
  "serde",
@@ -4996,7 +5012,7 @@ dependencies = [
 [[package]]
 name = "katana-core"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#2e40087f7cd0b5dd59d3e7ad4e80febba8fd71c4"
+source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#cca4b11ca8fab724365c9a4da78438d605cb9c3a"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5021,7 +5037,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#2e40087f7cd0b5dd59d3e7ad4e80febba8fd71c4"
+source = "git+https://github.com/jobez/dojo?branch=custom-steps-and-get-block-potential-fix#cca4b11ca8fab724365c9a4da78438d605cb9c3a"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -6428,7 +6444,7 @@ dependencies = [
  "http",
  "http-body",
  "hyper",
- "hyper-rustls 0.24.1",
+ "hyper-rustls",
  "hyper-tls",
  "ipnet",
  "js-sys",
@@ -6438,7 +6454,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
- "rustls 0.21.3",
+ "rustls",
  "rustls-pemfile",
  "serde",
  "serde_json",
@@ -6754,21 +6770,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.21.3"
+version = "0.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b19faa85ecb5197342b54f987b142fb3e30d0c90da40f80ef4fa9a726e6676ed"
-dependencies = [
- "log",
- "ring",
- "sct",
- "webpki",
-]
-
-[[package]]
-name = "rustls"
-version = "0.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b19faa85ecb5197342b54f987b142fb3e30d0c90da40f80ef4fa9a726e6676ed"
+checksum = "8620e6b3ea4348874f156afce0032895cb1d483d6ab6bee37543b71ce3cbd01f"
 dependencies = [
  "log",
  "ring",
@@ -8055,7 +8059,7 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c28327cf380ac148141087fbfb9de9d7bd4e84ab5d2c28fbc911d753de8a7081"
 dependencies = [
- "rustls 0.21.3",
+ "rustls",
  "tokio",
 ]
 
@@ -8078,7 +8082,7 @@ checksum = "ec509ac96e9a0c43427c74f003127d953a265737636129424288d27cb5c4b12c"
 dependencies = [
  "futures-util",
  "log",
- "rustls 0.21.3",
+ "rustls",
  "tokio",
  "tokio-rustls",
  "tungstenite",
@@ -8309,7 +8313,7 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.8.5",
- "rustls 0.21.3",
+ "rustls",
  "sha1",
  "thiserror",
  "url",

@@ -70,7 +70,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         client: &dyn KakarotEthApi<P>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
-        transaction_index: Option<U256>,
+        _transaction_index: Option<U256>,
     ) -> Result<EthTransaction, EthApiError<P::Error>> {
         if !self.is_kakarot_tx(client).await? {
             return Err(EthApiError::KakarotDataFilteringError("Transaction".into()));
@@ -101,7 +101,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             nonce,
             block_hash,
             block_number,
-            transaction_index,
+            transaction_index: Some(U256::from(0)),
             from,
             to,                     // TODO fetch the to
             value: U256::from(100), // TODO fetch the value

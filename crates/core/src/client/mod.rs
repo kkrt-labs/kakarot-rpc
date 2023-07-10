@@ -355,7 +355,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
                     TransactionReceipt {
                         transaction_hash,
-                        transaction_index: None,
+                        transaction_index: Some(U256::from(0)),
                         block_hash,
                         block_number,
                         from,

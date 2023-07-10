@@ -1,5 +1,6 @@
 [profile.default]
 out = 'lib/kakarot/tests/integration/solidity_contracts/build'
+script = 'scripts'  
 libs = ['lib']
 eth_rpc_url = "localhost"
 legacy = true
