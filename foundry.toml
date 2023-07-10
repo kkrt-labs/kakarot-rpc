@@ -1,3 +1,9 @@
 [profile.default]
 out = 'lib/kakarot/tests/integration/solidity_contracts/build'
 libs = ['lib']
+eth_rpc_url = "localhost"
+legacy = true
+
+[rpc_endpoints]
+localhost = "http://127.0.0.1:3030"
+anvil = "http://127.0.0.1:8545"
