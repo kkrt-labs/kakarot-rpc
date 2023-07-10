@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
 
-    use std::str::FromStr;
-
     use ethers::types::Address as EthersAddress;
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::client::config::StarknetConfig;
@@ -12,10 +10,8 @@ mod tests {
     use kakarot_rpc_core::test_utils::deploy_helpers::{
         construct_kakarot_test_sequencer, create_raw_ethereum_tx, deploy_kakarot_system,
     };
-    use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
-    use reth_rpc_types::Log;
-    use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, Event, FieldElement};
-    use starknet::core::utils::get_selector_from_name;
+    use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
+    use starknet::core::types::FieldElement;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
 

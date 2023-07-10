@@ -5,17 +5,19 @@ mod utils;
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
+    use std::sync::Arc;
 
     use ethers::prelude::{Block as EthersBlock, Http as EthersHttp, H256 as EthersH256};
     use kakarot_rpc::eth_api::EthApiServer;
     use kakarot_rpc_core::mock::assert_helpers::{assert_block, assert_block_header, assert_transaction};
+    use kakarot_rpc_core::test_utils::deploy_helpers::construct_kakarot_test_sequencer;
     use reth_primitives::{BlockNumberOrTag, H160, H256, U256, U64};
     use reth_rpc_types::Index;
     use serde_json::json;
     use starknet::core::types::{FieldElement, Transaction as StarknetTransaction};
     use starknet::macros::felt;
 
-    use crate::utils::{run_kakarot_integration, setup_kakarot_eth_rpc};
+    use crate::utils::{run_kakarot_integration, setup_kakarot_eth_rpc, setup_kakarot_integration};
 
     fn get_test_tx() -> serde_json::Value {
         json!({
@@ -1014,6 +1016,26 @@ mod tests {
             Some(H256::from(felt!("0x000000000000000000000000000000000000000000000000000000000000000d").to_bytes_be()))
         );
         assert_eq!(U256::from(transaction.block_number.unwrap()), U256::from(13));
+    }
+
+    // elias' version doesn't terminate for me locally
+    #[tokio::test]
+    #[ignore]
+    async fn test_get_block_rpc_bis() {
+        // initialize a starknet sequencer
+        let starknet_test_sequencer = Arc::new(construct_kakarot_test_sequencer().await);
+
+        let (server_addr, server_handle) = setup_kakarot_integration(&starknet_test_sequencer).await;
+
+        // try to run the test
+        let provider = EthersHttp::from_str(format!("http://localhost:{}", server_addr.port()).as_ref()).unwrap();
+        let block_number: U64 =
+            ethers::prelude::JsonRpcClient::request(&provider, "eth_blockNumber", ()).await.unwrap();
+        let params = (block_number, true);
+        let block: std::result::Result<EthersBlock<EthersH256>, _> =
+            ethers::prelude::JsonRpcClient::request(&provider, "eth_getBlockByNumber", params).await;
+        assert!(block.is_ok());
+        server_handle.stopped().await;
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
