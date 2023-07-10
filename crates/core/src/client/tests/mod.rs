@@ -77,7 +77,6 @@ async fn test_fee_history() {
     let fee_history = client.fee_history(block_count, newest_block, None).await.unwrap();
 
     // Then
-    dbg!(fee_history.base_fee_per_gas.len());
     assert_eq!(vec![U256::from(1); count + 1], fee_history.base_fee_per_gas);
     assert_eq!(vec![0.9; count], fee_history.gas_used_ratio);
     assert_eq!(U256::from(19630), fee_history.oldest_block);
