@@ -12,7 +12,7 @@
   "gasLimit": "0xf4240",
   "gasUsed": "0x07a120",
   "timestamp": "0x63dd83cd",
-  "extraData": "0x00",
+  "extraData": "0x",
   "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "nonce": "0x0000000000000000",
   "baseFeePerGas": "0x1",

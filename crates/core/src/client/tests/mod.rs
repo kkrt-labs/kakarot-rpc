@@ -1,5 +1,7 @@
+use std::str::FromStr;
+
 use dojo_test_utils::rpc::MockJsonRpcTransport;
-use reth_primitives::{BlockId, BlockNumberOrTag, U256, U64};
+use reth_primitives::{BlockId, BlockNumberOrTag, H256, U256, U64};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::JsonRpcClient;
@@ -8,7 +10,8 @@ use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
 use crate::client::config::StarknetConfig;
 use crate::client::KakarotClient;
 use crate::mock::constants::{
-    ABDEL_ETHEREUM_ADDRESS, ABDEL_STARKNET_ADDRESS, KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
+    ABDEL_ETHEREUM_ADDRESS, ABDEL_STARKNET_ADDRESS, ABDEL_STARKNET_ADDRESS_HEX, KAKAROT_ADDRESS,
+    PROXY_ACCOUNT_CLASS_HASH, PROXY_ACCOUNT_CLASS_HASH_HEX,
 };
 use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, AvailableFixtures, StarknetRpcFixture};
 use crate::wrap_kakarot;
@@ -96,4 +99,28 @@ async fn test_fee_history_should_return_oldest_block_0() {
 
     // Then
     assert_eq!(U256::from(0), fee_history.oldest_block);
+}
+
+#[tokio::test]
+async fn test_transaction_by_hash() {
+    // Given
+    let fixtures = fixtures(vec![
+        wrap_kakarot!(JsonRpcMethod::GetTransactionByHash),
+        wrap_kakarot!(JsonRpcMethod::GetTransactionReceipt),
+        AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
+        AvailableFixtures::GetEvmAddress,
+    ]);
+    let client = init_client(Some(fixtures));
+
+    // When
+    let tx = client
+        .transaction_by_hash(
+            H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap(),
+        )
+        .await
+        .unwrap();
+
+    // Then
+    assert_eq!(*ABDEL_ETHEREUM_ADDRESS, tx.from);
+    assert_eq!(U256::from(0), tx.nonce);
 }
