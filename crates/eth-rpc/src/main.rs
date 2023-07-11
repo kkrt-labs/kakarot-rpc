@@ -11,8 +11,7 @@ async fn main() -> Result<()> {
     dotenv().ok();
     // Environment variables are safe to use after this
 
-    let filter = tracing_subscriber::EnvFilter::try_from_default_env()?
-        .add_directive("jsonrpsee[method_call{name = \"eth_chainId\"}]=trace".parse()?);
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()?;
     tracing_subscriber::FmtSubscriber::builder().with_env_filter(filter).finish().try_init()?;
 
     let starknet_config = StarknetConfig::from_env()?;
