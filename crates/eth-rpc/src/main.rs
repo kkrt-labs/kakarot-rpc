@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use dotenv::dotenv;
 use eyre::Result;
 use kakarot_rpc::config::RPCConfig;
+use kakarot_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::run_server;
 use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, Network, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
@@ -11,11 +14,6 @@ use tracing_subscriber::util::SubscriberInitExt;
 enum StarknetProvider {
     JsonRpcClient(JsonRpcClient<HttpTransport>),
     SequencerGatewayProvider(SequencerGatewayProvider),
-}
-
-enum KakarotClientType {
-    RpcClient(KakarotClient<JsonRpcClient<HttpTransport>>),
-    GatewayClient(KakarotClient<SequencerGatewayProvider>),
 }
 
 #[tokio::main]
@@ -52,19 +50,18 @@ async fn main() -> Result<()> {
         }
     };
 
-    let kakarot_client = match starknet_provider {
+    let kakarot_rpc_module = match starknet_provider {
         StarknetProvider::JsonRpcClient(starknet_provider) => {
-            KakarotClientType::RpcClient(KakarotClient::new(starknet_config, starknet_provider))
+            let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider));
+            KakarotRpcModuleBuilder::new(kakarot_client).rpc_module()
         }
         StarknetProvider::SequencerGatewayProvider(starknet_provider) => {
-            KakarotClientType::GatewayClient(KakarotClient::new(starknet_config, starknet_provider))
+            let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider));
+            KakarotRpcModuleBuilder::new(kakarot_client).rpc_module()
         }
-    };
+    }?;
 
-    let (server_addr, server_handle) = match kakarot_client {
-        KakarotClientType::GatewayClient(kakarot_client) => run_server(Box::new(kakarot_client), rpc_config).await?,
-        KakarotClientType::RpcClient(kakarot_client) => run_server(Box::new(kakarot_client), rpc_config).await?,
-    };
+    let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
 
     let url = format!("http://{server_addr}");
 

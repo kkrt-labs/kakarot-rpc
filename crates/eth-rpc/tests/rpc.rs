@@ -5,7 +5,7 @@ mod utils;
 mod tests {
     use std::str::FromStr;
 
-    use kakarot_rpc::eth_api::EthApiServer;
+    use kakarot_rpc::api::eth_api::EthApiServer;
     use kakarot_rpc_core::mock::assert_helpers::{assert_block, assert_block_header, assert_transaction};
     use reth_primitives::{BlockNumberOrTag, H160, H256, U256, U64};
     use reth_rpc_types::Index;

@@ -1,4 +1,6 @@
-use kakarot_rpc::eth_rpc::KakarotEthRpc;
+use std::sync::Arc;
+
+use kakarot_rpc::servers::eth_rpc::KakarotEthRpc;
 use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, Network, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::mock::wiremock_utils::setup_wiremock;
@@ -48,5 +50,5 @@ pub async fn setup_kakarot_eth_rpc() -> KakarotEthRpc<JsonRpcClient<HttpTranspor
 
     let kakarot_client = KakarotClient::new(config, starknet_provider);
 
-    KakarotEthRpc::new(Box::new(kakarot_client))
+    KakarotEthRpc::new(Arc::new(kakarot_client))
 }
