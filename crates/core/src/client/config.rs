@@ -47,23 +47,16 @@ impl StarknetConfig {
 
     /// Create a new `StarknetConfig` from environment variables.
     pub fn from_env() -> Result<Self, ConfigError> {
-        let mut provider_url = None;
         let starknet_rpc = get_env_var("STARKNET_NETWORK")?;
-        let network = match starknet_rpc.to_lowercase().as_str() {
+        let (network, provider_url) = match starknet_rpc.to_lowercase().as_str() {
             // TODO: Add possibility to set url for katana and madara in env rather than constants.
-            "katana" => {
-                provider_url = Some(Url::parse(KATANA_RPC_URL)?);
-                Network::Katana
-            }
-            "madara" => {
-                provider_url = Some(Url::parse(MADARA_RPC_URL)?);
-                Network::Madara
-            }
+            "katana" => (Network::Katana, Some(Url::parse(KATANA_RPC_URL)?)),
+            "madara" => (Network::Madara, Some(Url::parse(MADARA_RPC_URL)?)),
             // TODO: Add possibility to override gateway url for mainnet and testnet.
-            "mainnet" => Network::Mainnet,
-            "goerli1" => Network::Goerli1,
-            "goerli2" => Network::Goerli2,
-            "testnet" => Network::Goerli1,
+            "mainnet" => (Network::Mainnet, None),
+            "goerli1" => (Network::Goerli1, None),
+            "goerli2" => (Network::Goerli2, None),
+            "testnet" => (Network::Goerli1, None),
             _ => Err(ConfigError::EnvironmentVariableSetWrong(format!(
                 "STARKNET_NETWORK should be either katana, madara, goerli1, goerli2, testnet or mainnet got \
                  {starknet_rpc}"
