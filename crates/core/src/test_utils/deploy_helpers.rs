@@ -551,7 +551,7 @@ pub fn get_kakarot_starknet_config() -> StarknetConfig {
     }
 }
 
-/// Constructs a test sequencer with the Starknet configuration tailored for "Kakarot".
+/// Constructs a test sequencer with the Starknet configuration tailored for Kakarot.
 ///
 /// This function initializes a `TestSequencer` instance with the default `SequencerConfig`
 /// and a custom `StarknetConfig` obtained from the `get_kakarot_starknet_config()` function.
