@@ -11,7 +11,7 @@ pub const EARLIEST_BLOCK_NUMBER: u64 = 0;
 
 pub const MADARA_RPC_URL: &str = "http://127.0.0.1:9944";
 
-pub const KATANA_RPC_URL: &str = "http://0.0.0.0:5050/rpc";
+pub const KATANA_RPC_URL: &str = "http://0.0.0.0:5050";
 
 pub mod selectors {
     use starknet::core::types::FieldElement;
