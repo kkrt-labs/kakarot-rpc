@@ -19,47 +19,39 @@ pub enum Network {
     Mainnet,
     Goerli1,
     Goerli2,
-    Mock,
+    ProviderUrl(Url),
 }
 
 #[derive(Default, Clone)]
 /// Configuration for the Starknet RPC client.
 pub struct StarknetConfig {
-    /// Rpc url. Optional as it can be provided by the environment variable `STARKNET_NETWORK`.
-    pub url: Option<Url>,
+    /// Additional configuration if the underlying provider is a Sequencer provider.
+    pub network: Network,
     /// Kakarot contract address.
     pub kakarot_address: FieldElement,
     /// Proxy account class hash.
     pub proxy_account_class_hash: FieldElement,
-    /// Additional configuration if the underlying provider is a Sequencer provider.
-    pub network: Network,
 }
 
 impl StarknetConfig {
-    pub fn new(
-        url: Option<Url>,
-        kakarot_address: FieldElement,
-        proxy_account_class_hash: FieldElement,
-        network: Network,
-    ) -> Self {
-        StarknetConfig { url, kakarot_address, proxy_account_class_hash, network }
+    pub fn new(network: Network, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
+        StarknetConfig { network, kakarot_address, proxy_account_class_hash }
     }
 
     /// Create a new `StarknetConfig` from environment variables.
     pub fn from_env() -> Result<Self, ConfigError> {
-        let starknet_rpc = get_env_var("STARKNET_NETWORK")?;
-        let (network, provider_url) = match starknet_rpc.to_lowercase().as_str() {
+        let network = get_env_var("STARKNET_NETWORK")?;
+        let network = match network.to_lowercase().as_str() {
             // TODO: Add possibility to set url for katana and madara in env rather than constants.
-            "katana" => (Network::Katana, Some(Url::parse(KATANA_RPC_URL)?)),
-            "madara" => (Network::Madara, Some(Url::parse(MADARA_RPC_URL)?)),
+            "katana" => Network::Katana,
+            "madara" => Network::Madara,
             // TODO: Add possibility to override gateway url for mainnet and testnet.
-            "mainnet" => (Network::Mainnet, None),
-            "goerli1" => (Network::Goerli1, None),
-            "goerli2" => (Network::Goerli2, None),
-            "testnet" => (Network::Goerli1, None),
+            "mainnet" => Network::Mainnet,
+            "goerli1" => Network::Goerli1,
+            "goerli2" => Network::Goerli2,
+            "testnet" => Network::Goerli1,
             _ => Err(ConfigError::EnvironmentVariableSetWrong(format!(
-                "STARKNET_NETWORK should be either katana, madara, goerli1, goerli2, testnet or mainnet got \
-                 {starknet_rpc}"
+                "STARKNET_NETWORK should be either katana, madara, goerli1, goerli2, testnet or mainnet got {network}"
             )))?,
         };
 
@@ -77,7 +69,7 @@ impl StarknetConfig {
             ))
         })?;
 
-        Ok(StarknetConfig::new(provider_url, kakarot_address, proxy_account_class_hash, network))
+        Ok(StarknetConfig::new(network, kakarot_address, proxy_account_class_hash))
     }
 }
 
@@ -102,7 +94,7 @@ impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
 
 impl JsonRpcClientBuilder<HttpTransport> {
     /// Returns a new `JsonRpcClientBuilder` with a `HttpTransport`.
-    ///
+    /// Currently only supports Katana and Madara networks or manual provider URL.
     /// # Example
     ///
     /// ```rust
@@ -114,16 +106,24 @@ impl JsonRpcClientBuilder<HttpTransport> {
     ///
     /// let url = "http://0.0.0.0:1234/rpc";
     /// let config = StarknetConfig::new(
-    ///     Some(Url::parse(url).unwrap()),
+    ///     Network::ProviderUrl(Url::parse(url).unwrap()),
     ///     FieldElement::default(),
     ///     FieldElement::default(),
-    ///     Network::Katana,
     /// );
     /// let provider: JsonRpcClient<HttpTransport> =
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
     pub fn with_http(config: &StarknetConfig) -> Result<Self> {
-        let url = config.clone().url.ok_or(eyre::eyre!("No url provided"))?;
+        let url = match config.clone().network {
+            Network::Katana => Url::parse(KATANA_RPC_URL)?,
+            Network::Madara => Url::parse(MADARA_RPC_URL)?,
+            Network::ProviderUrl(url) => url,
+            _ => {
+                return Err(eyre::eyre!(
+                    "Constant networks (one of: [Mainnet, Goerli1, Goerli2, Mock]) is not supported"
+                ));
+            }
+        };
         let transport = HttpTransport::new(url);
         Ok(Self::new(transport))
     }

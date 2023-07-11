@@ -25,10 +25,9 @@ mod tests {
 
         let kakarot_client = KakarotClient::new(
             StarknetConfig::new(
-                Some(starknet_test_sequencer.url()),
+                Network::ProviderUrl(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
                 deployed_kakarot.kakarot_proxy,
-                Network::Mock,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
@@ -61,10 +60,9 @@ mod tests {
 
         let kakarot_client = KakarotClient::new(
             StarknetConfig::new(
-                Some(starknet_test_sequencer.url()),
+                Network::ProviderUrl(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
                 deployed_kakarot.kakarot_proxy,
-                Network::Mock,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
@@ -160,10 +158,9 @@ mod tests {
 
         let kakarot_client = KakarotClient::new(
             StarknetConfig::new(
-                Some(starknet_test_sequencer.url()),
+                Network::ProviderUrl(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
                 deployed_kakarot.kakarot_proxy,
-                Network::Mock,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
