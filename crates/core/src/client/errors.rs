@@ -49,6 +49,12 @@ pub enum EthApiError<E: std::error::Error> {
     /// Data not part of Kakarot.
     #[error("{0} not from Kakarot")]
     KakarotDataFilteringError(String),
+    /// Feeder gateway error.
+    #[error("Feeder gateway error: {0}")]
+    FeederGatewayError(String),
+    /// Missing parameter error.
+    #[error("Missing parameter: {0}")]
+    MissingParameterError(String),
     /// Other error.
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -88,6 +94,8 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
             EthApiError::ConversionError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
             EthApiError::DataDecodingError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
             EthApiError::KakarotDataFilteringError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
+            EthApiError::FeederGatewayError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
+            EthApiError::MissingParameterError(err) => rpc_err(INVALID_PARAMS_CODE, err),
             EthApiError::Other(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
         }
     }
