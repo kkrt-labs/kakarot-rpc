@@ -25,7 +25,7 @@ pub enum Network {
 #[derive(Default, Clone)]
 /// Configuration for the Starknet RPC client.
 pub struct StarknetConfig {
-    /// Additional configuration if the underlying provider is a Sequencer provider.
+    /// Starknet network.
     pub network: Network,
     /// Kakarot contract address.
     pub kakarot_address: FieldElement,
@@ -39,20 +39,19 @@ impl StarknetConfig {
     }
 
     /// Create a new `StarknetConfig` from environment variables.
+    /// When using non-standard providers (i.e. not "katana", "madara", "mainnet"), the
+    /// `STARKNET_NETWORK` environment variable should be set the URL of a JsonRpc
+    /// provider, e.g. https://starknet-goerli.g.alchemy.com/v2/some_key.
     pub fn from_env() -> Result<Self, ConfigError> {
         let network = get_env_var("STARKNET_NETWORK")?;
         let network = match network.to_lowercase().as_str() {
-            // TODO: Add possibility to set url for katana and madara in env rather than constants.
             "katana" => Network::Katana,
             "madara" => Network::Madara,
-            // TODO: Add possibility to override gateway url for mainnet and testnet.
             "mainnet" => Network::Mainnet,
             "goerli1" => Network::Goerli1,
             "goerli2" => Network::Goerli2,
             "testnet" => Network::Goerli1,
-            _ => Err(ConfigError::EnvironmentVariableSetWrong(format!(
-                "STARKNET_NETWORK should be either katana, madara, goerli1, goerli2, testnet or mainnet got {network}"
-            )))?,
+            network_url => Network::ProviderUrl(Url::parse(network_url)?),
         };
 
         let kakarot_address = get_env_var("KAKAROT_ADDRESS")?;
