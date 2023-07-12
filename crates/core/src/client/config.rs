@@ -33,6 +33,19 @@ impl Network {
             }
         }
     }
+
+    pub fn get_provider_url(&self) -> Result<Url> {
+        match config.clone().network {
+            Network::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
+            Network::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
+            Network::ProviderUrl(url) => Ok(url),
+            _ => {
+                return Err(eyre::eyre!(
+                    "Constant networks (one of: [Mainnet, Goerli1, Goerli2, Mock]) is not supported"
+                ));
+            }
+        }
+    }
 }
 
 #[derive(Default, Clone)]
@@ -126,17 +139,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
     pub fn with_http(config: &StarknetConfig) -> Result<Self> {
-        let url = match config.clone().network {
-            Network::Katana => Url::parse(KATANA_RPC_URL)?,
-            Network::Madara => Url::parse(MADARA_RPC_URL)?,
-            Network::JsonRpcProvider(url) => url,
-            _ => {
-                return Err(eyre::eyre!(
-                    "Constant networks (one of: [MainnetGateway, Goerli1Gateway, Goerli2Gateway, Mock]) is not \
-                     supported"
-                ));
-            }
-        };
+        let url = config.network.get_provider_url()?;
         let transport = HttpTransport::new(url);
         Ok(Self::new(transport))
     }
