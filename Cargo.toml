@@ -35,11 +35,11 @@ dotenv = "0.15.0"
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "24e8a78" }
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "8b3fcb9", features = ["skip-build"] }
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "9edddbc" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
 # patched for quantity U256 responses <https://github.com/recmo/uint/issues/224>
-ruint = { git = "https://github.com/paradigmxyz/uint" }  
+ruint = { git = "https://github.com/paradigmxyz/uint" }
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f5b684d" }
