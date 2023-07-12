@@ -315,6 +315,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
                     TransactionReceipt {
                         transaction_hash,
+                        // TODO: transition this hardcoded default out of nearing-demo-day hack and seeing how to
+                        // properly source/translate this value
                         transaction_index: Some(U256::ZERO),
                         block_hash,
                         block_number,
@@ -495,6 +497,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let newest_block = U256::from(newest_block);
         let oldest_block: U256 = if newest_block >= block_count { newest_block - block_count } else { U256::from(0) };
 
+        // TODO: transition `reward` hardcoded default out of nearing-demo-day hack and seeing how to
+        // properly source/translate this value
         Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: Some(vec![vec![U256::ZERO]]) })
     }
 
