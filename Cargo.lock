@@ -1975,7 +1975,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "dojo-lang"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=make_dojo_test_utils_build_optional#5778dd73e30e1869bbc90e4776b71755d8628294"
+source = "git+https://github.com/dojoengine/dojo?rev=8b3fcb9#8b3fcb94920c75487b531e32e071c8437c1d9acb"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2014,7 +2014,7 @@ dependencies = [
 [[package]]
 name = "dojo-test-utils"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=make_dojo_test_utils_build_optional#5778dd73e30e1869bbc90e4776b71755d8628294"
+source = "git+https://github.com/dojoengine/dojo?rev=8b3fcb9#8b3fcb94920c75487b531e32e071c8437c1d9acb"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2044,7 +2044,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=make_dojo_test_utils_build_optional#5778dd73e30e1869bbc90e4776b71755d8628294"
+source = "git+https://github.com/dojoengine/dojo?rev=8b3fcb9#8b3fcb94920c75487b531e32e071c8437c1d9acb"
 dependencies = [
  "serde",
  "starknet",
@@ -2053,7 +2053,7 @@ dependencies = [
 [[package]]
 name = "dojo-world"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=make_dojo_test_utils_build_optional#5778dd73e30e1869bbc90e4776b71755d8628294"
+source = "git+https://github.com/dojoengine/dojo?rev=8b3fcb9#8b3fcb94920c75487b531e32e071c8437c1d9acb"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2761,7 +2761,7 @@ dependencies = [
 [[package]]
 name = "foundry-config"
 version = "1.0.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#afdbbc05cc479468b15a6f42b577b62e0fd4895e"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#7170f7223a0fd2c6980d1c36d359e38b580d3e02"
 dependencies = [
  "Inflector",
  "dirs-next",
@@ -4617,7 +4617,7 @@ dependencies = [
 [[package]]
 name = "katana-core"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=make_dojo_test_utils_build_optional#5778dd73e30e1869bbc90e4776b71755d8628294"
+source = "git+https://github.com/dojoengine/dojo?rev=8b3fcb9#8b3fcb94920c75487b531e32e071c8437c1d9acb"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4643,7 +4643,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc"
 version = "0.1.0"
-source = "git+https://github.com/jobez/dojo?branch=make_dojo_test_utils_build_optional#5778dd73e30e1869bbc90e4776b71755d8628294"
+source = "git+https://github.com/dojoengine/dojo?rev=8b3fcb9#8b3fcb94920c75487b531e32e071c8437c1d9acb"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5611,9 +5611,9 @@ dependencies = [
 
 [[package]]
 name = "portable-atomic"
-version = "1.3.3"
+version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "767eb9f07d4a5ebcb39bbf2d452058a93c011373abf6832e24194a1c3f004794"
+checksum = "d220334a184db82b31b83f5ff093e3315280fb2b6bbc032022b2304a509aab7a"
 
 [[package]]
 name = "ppv-lite86"
@@ -6192,8 +6192,7 @@ dependencies = [
 [[package]]
 name = "ruint"
 version = "1.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d470e29e933dac4101180fd6574971892315c414cf2961a192729089687cc9b"
+source = "git+https://github.com/paradigmxyz/uint#38f565ff907ccaf2a2c57d395ed7c2b8905ae1ab"
 dependencies = [
  "derive_more",
  "primitive-types",
@@ -6207,8 +6206,7 @@ dependencies = [
 [[package]]
 name = "ruint-macro"
 version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "62cc5760263ea229d367e7dff3c0cbf09e4797a125bd87059a6c095804f3b2d1"
+source = "git+https://github.com/paradigmxyz/uint#38f565ff907ccaf2a2c57d395ed7c2b8905ae1ab"
 
 [[package]]
 name = "rustc-demangle"
@@ -6677,9 +6675,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.100"
+version = "1.0.102"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f1e14e89be7aa4c4b78bdbdc9eb5bf8517829a600ae8eaa39a6e1d960b5185c"
+checksum = "b5062a995d481b2308b6064e9af76011f2921c35f97b0468811ed9f6cd91dfed"
 dependencies = [
  "indexmap 2.0.0",
  "itoa",
