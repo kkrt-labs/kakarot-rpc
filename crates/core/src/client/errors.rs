@@ -30,6 +30,8 @@ pub enum ConfigError {
     /// {0} is details of what is wrong with the variable setting.
     #[error("{0}")]
     EnvironmentVariableSetWrong(String),
+    #[error("Invalid URL: {0}")]
+    InvalidUrl(#[from] url::ParseError),
 }
 
 /// Error that can accure when interacting with the Kakarot ETH API.

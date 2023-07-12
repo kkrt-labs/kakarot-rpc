@@ -9,6 +9,10 @@ pub const STARKNET_NATIVE_TOKEN: &str = "0x49d36570d4e46f48e99674bd3fcc84644ddd6
 
 pub const EARLIEST_BLOCK_NUMBER: u64 = 0;
 
+pub const MADARA_RPC_URL: &str = "http://127.0.0.1:9944";
+
+pub const KATANA_RPC_URL: &str = "http://0.0.0.0:5050";
+
 pub mod selectors {
     use starknet::core::types::FieldElement;
     use starknet::macros::selector;

@@ -22,9 +22,9 @@ pub fn init_client(fixtures: Option<Vec<StarknetRpcFixture>>) -> KakarotClient<J
         proxy_account_class_hash: *PROXY_ACCOUNT_CLASS_HASH,
         ..Default::default()
     };
-    let provider = mock_starknet_provider(fixtures);
+    let starknet_provider = mock_starknet_provider(fixtures);
 
-    KakarotClient::new(config, provider)
+    KakarotClient::new(config, starknet_provider)
 }
 
 #[tokio::test]

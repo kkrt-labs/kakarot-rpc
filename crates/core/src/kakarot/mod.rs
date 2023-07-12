@@ -23,7 +23,7 @@ impl<P: Provider + Send + Sync> KakarotContract<P> {
 
     pub async fn compute_starknet_address(
         &self,
-        provider: &P,
+        starknet_provider: &P,
         eth_address: &FieldElement,
         block_id: &BlockId,
     ) -> Result<FieldElement, EthApiError<P::Error>> {
@@ -33,7 +33,7 @@ impl<P: Provider + Send + Sync> KakarotContract<P> {
             FunctionCall { contract_address: self.address, entry_point_selector: COMPUTE_STARKNET_ADDRESS, calldata };
 
         // Make the function call to get the Starknet contract address
-        let result = provider.call(request, block_id).await?;
+        let result = starknet_provider.call(request, block_id).await?;
         match result.first() {
             Some(x) if result.len() == 1 => Ok(*x),
             _ => Err(DataDecodingError::InvalidReturnArrayLength {
@@ -47,7 +47,7 @@ impl<P: Provider + Send + Sync> KakarotContract<P> {
 
     pub async fn eth_call(
         &self,
-        provider: &P,
+        starknet_provider: &P,
         eth_address: &FieldElement,
         eth_calldata: &mut Vec<FieldElement>,
         block_id: &BlockId,
@@ -58,7 +58,7 @@ impl<P: Provider + Send + Sync> KakarotContract<P> {
         calldata.append(eth_calldata);
 
         let request = FunctionCall { contract_address: self.address, entry_point_selector: ETH_CALL, calldata };
-        let result = provider.call(request, block_id).await?;
+        let result = starknet_provider.call(request, block_id).await?;
 
         // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
         // fail is Kakarot API changes)
