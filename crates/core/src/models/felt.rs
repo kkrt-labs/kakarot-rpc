@@ -36,6 +36,22 @@ impl From<u64> for Felt252Wrapper {
     }
 }
 
+impl TryFrom<Felt252Wrapper> for u64 {
+    type Error = ConversionError;
+
+    fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
+        u64::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
+    }
+}
+
+impl TryFrom<Felt252Wrapper> for u128 {
+    type Error = ConversionError;
+
+    fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
+        u128::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
+    }
+}
+
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
         let felt = FieldElement::from_byte_slice_be(&address.0).unwrap(); // safe unwrap since H160 is 20 bytes
