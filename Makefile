@@ -26,7 +26,7 @@ build:
 run: 
 	RUST_LOG=info cargo run -p kakarot-rpc
 
-run-dev: deploy-kakarot
+run-dev:
 	KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run -p kakarot-rpc
 
 #run-release
