@@ -537,7 +537,7 @@ impl DeployedKakarot {
 }
 
 /// Returns a `StarknetConfig` instance customized for Kakarot.
-pub fn get_kakarot_starknet_config() -> StarknetConfig {
+pub fn kakarot_starknet_config() -> StarknetConfig {
     let kakarot_steps = 2u32.pow(24);
     StarknetConfig {
         allow_zero_max_fee: true,
@@ -562,7 +562,7 @@ pub fn get_kakarot_starknet_config() -> StarknetConfig {
 ///
 /// Returns a `TestSequencer` configured for Kakarot.
 pub async fn construct_kakarot_test_sequencer() -> TestSequencer {
-    TestSequencer::start(SequencerConfig::default(), get_kakarot_starknet_config()).await
+    TestSequencer::start(SequencerConfig::default(), kakarot_starknet_config()).await
 }
 
 /// Asynchronously deploys a Kakarot system to the StarkNet network and returns the
