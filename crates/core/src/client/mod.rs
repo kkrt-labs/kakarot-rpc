@@ -53,7 +53,7 @@ pub struct KakarotClient<P: Provider + Send + Sync> {
 
 impl<P: Provider + Send + Sync> KakarotClient<P> {
     /// Create a new `KakarotClient`.
-    pub fn new(starknet_config: StarknetConfig, starknet_provider: P) -> KakarotClient<P> {
+    pub fn new(starknet_config: StarknetConfig, starknet_provider: P) -> Self {
         let StarknetConfig { kakarot_address, proxy_account_class_hash, network } = starknet_config;
 
         let kakarot_contract = KakarotContract::new(kakarot_address, proxy_account_class_hash);
