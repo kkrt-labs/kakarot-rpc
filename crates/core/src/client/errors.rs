@@ -25,13 +25,18 @@ pub enum EthRpcErrorCode {
 // Error that can accure when preparing configuration.
 #[derive(Debug, Error)]
 pub enum ConfigError {
+    /// Missing mandatory environment variable error.
     #[error("Missing mandatory environment variable: {0}")]
     EnvironmentVariableMissing(String),
-    /// {0} is details of what is wrong with the variable setting.
+    /// Environment variable set wrong error.
     #[error("{0}")]
     EnvironmentVariableSetWrong(String),
+    /// Invalid URL error.
     #[error("Invalid URL: {0}")]
     InvalidUrl(#[from] url::ParseError),
+    /// Invalid network error.
+    #[error("Invalid network: {0}")]
+    InvalidNetwork(String),
 }
 
 /// Error that can accure when interacting with the Kakarot ETH API.
@@ -55,6 +60,9 @@ pub enum EthApiError<E: std::error::Error> {
     /// Missing parameter error.
     #[error("Missing parameter: {0}")]
     MissingParameterError(String),
+    /// Configuration error.
+    #[error(transparent)]
+    ConfigError(#[from] ConfigError),
     /// Other error.
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -96,6 +104,7 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
             EthApiError::KakarotDataFilteringError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
             EthApiError::FeederGatewayError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
             EthApiError::MissingParameterError(err) => rpc_err(INVALID_PARAMS_CODE, err),
+            EthApiError::ConfigError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
             EthApiError::Other(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
         }
     }

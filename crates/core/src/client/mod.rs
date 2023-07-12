@@ -28,10 +28,9 @@ use starknet::core::types::{
 };
 use starknet::providers::sequencer::models::TransactionSimulationInfo;
 use starknet::providers::{Provider, ProviderError};
-use url::Url;
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
-use self::config::StarknetConfig;
+use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, BYTECODE, ETH_SEND_TRANSACTION, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
 use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
@@ -49,22 +48,17 @@ use crate::models::ConversionError;
 pub struct KakarotClient<P: Provider + Send + Sync> {
     starknet_provider: P,
     kakarot_contract: KakarotContract<P>,
-    starknet_feeder_gateway_url: Url,
+    network: Network,
 }
 
 impl<P: Provider + Send + Sync> KakarotClient<P> {
     /// Create a new `KakarotClient`.
-    pub fn new(
-        starknet_config: StarknetConfig,
-        starknet_provider: P,
-    ) -> Result<KakarotClient<P>, EthApiError<P::Error>> {
-        let StarknetConfig { kakarot_address, proxy_account_class_hash, feeder_gateway_url, .. } = starknet_config;
-        let kakarot_contract = KakarotContract::new(kakarot_address, proxy_account_class_hash);
-        let starknet_feeder_gateway_url = Url::parse(&feeder_gateway_url).map_err(|e| {
-            EthApiError::FeederGatewayError(format!("gateway url {:?} parsing error: {:?}", feeder_gateway_url, e))
-        })?;
+    pub fn new(starknet_config: StarknetConfig, starknet_provider: P) -> KakarotClient<P> {
+        let StarknetConfig { kakarot_address, proxy_account_class_hash, network } = starknet_config;
 
-        Ok(Self { starknet_provider, starknet_feeder_gateway_url, kakarot_contract })
+        let kakarot_contract = KakarotContract::new(kakarot_address, proxy_account_class_hash);
+
+        Self { starknet_provider, network, kakarot_contract }
     }
 }
 
@@ -688,9 +682,11 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
 
         // build the url for simulate transaction
         let mut url = self
-            .starknet_feeder_gateway_url
+            .network
+            .get_gateway_url()?
             .join("simulate_transaction")
             .map_err(|e| EthApiError::FeederGatewayError(format!("gateway url parsing error: {:?}", e)))?;
+
         // add the block number and skipValidate query params
         url.query_pairs_mut()
             .append_pair("blockNumber", &block_number.to_string())

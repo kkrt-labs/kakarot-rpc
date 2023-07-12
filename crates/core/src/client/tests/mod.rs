@@ -1,17 +1,16 @@
 use std::str::FromStr;
 
 use dojo_test_utils::rpc::MockJsonRpcTransport;
-use dotenv::dotenv;
 use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256, U64};
 use reth_rpc_types::CallRequest;
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransactionV1};
 use starknet::macros::selector;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcMethod};
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::{JsonRpcClient, Provider, SequencerGatewayProvider};
 use starknet_crypto::FieldElement;
 use url::Url;
 
-use super::config::GatewayUrl;
+use super::config::{Network, SequencerGatewayProviderBuilder};
 use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
 use crate::client::config::StarknetConfig;
 use crate::client::KakarotClient;
@@ -23,20 +22,18 @@ use crate::mock::constants::{
 use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, AvailableFixtures, StarknetRpcFixture};
 use crate::wrap_kakarot;
 
-pub fn init_testnet_client() -> KakarotClient<JsonRpcClient<HttpTransport>> {
-    dotenv().ok();
+pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
     let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
     let config = StarknetConfig::new(Network::Goerli1, kakarot_address, Default::default());
 
-    let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
-    KakarotClient::new(config, provider).unwrap()
+    let provider = SequencerGatewayProviderBuilder::new(&Network::Goerli1).build();
+    KakarotClient::new(config, provider)
 }
 
 pub fn init_mock_client(
     fixtures: Option<Vec<StarknetRpcFixture>>,
 ) -> KakarotClient<JsonRpcClient<MockJsonRpcTransport>> {
-    dotenv().ok();
-    let config = StarknetConfig::new(Network::Goerli1, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
+    let config = StarknetConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
     let starknet_provider = mock_starknet_provider(fixtures);
 
     KakarotClient::new(config, starknet_provider)

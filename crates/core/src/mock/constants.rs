@@ -14,9 +14,6 @@ pub const OTHER_ADDRESS_HEX: &str = "0x744ed080b42c8883a7e31cd11a14b7ae9ef27698b
 pub const ACCOUNT_ADDRESS_HEX: &str = "0x044021e020d096bd375bddc0f8d122ecae520003ca4c2691cccaa9ad5b53eed7";
 pub const ACCOUNT_PUBLIC_HEX: &str = "0x05f8d139ff7b7ad69bed4f71a775a3ccb5efaaeedd1cc3a63ff51a725f9b9738";
 
-pub const KAKAROT_TESTNET_ADDRESS: &str = "0x01e98a4d6cadc1e3511d150ef2705b02fccb3fb6f15aba863503af58f4b217ea";
-pub const EXAMPLE_URL: &str = "http://example.net";
-
 // Mock values
 lazy_static! {
     /// Test value for Kakarot contract address.
@@ -33,6 +30,7 @@ lazy_static! {
 
 // Testnet values
 pub const INC_DATA: &str = "0x371303c0";
+pub const KAKAROT_TESTNET_ADDRESS: &str = "0x01e98a4d6cadc1e3511d150ef2705b02fccb3fb6f15aba863503af58f4b217ea";
 lazy_static! {
     pub static ref ACCOUNT_ADDRESS: FieldElement = FieldElement::from_hex_be(ACCOUNT_ADDRESS_HEX).unwrap();
     pub static ref COUNTER_ADDRESS: FieldElement =
