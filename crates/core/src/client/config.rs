@@ -11,7 +11,7 @@ fn get_env_var(name: &str) -> Result<String, ConfigError> {
     std::env::var(name).map_err(|_| ConfigError::EnvironmentVariableMissing(name.into()))
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub enum Network {
     #[default]
     Katana,
@@ -20,6 +20,19 @@ pub enum Network {
     Goerli1Gateway,
     Goerli2Gateway,
     JsonRpcProvider(Url),
+}
+
+impl Network {
+    pub fn get_gateway_url(&self) -> Url {
+        match self {
+            Network::Mainnet => Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/").unwrap(),
+            Network::Goerli1 => Url::parse("https://alpha4.starknet.io/feeder_gateway/").unwrap(),
+            _ => {
+                log::warn!("Using goerli1 gateway url for network {:?}", self);
+                Url::parse("https://alpha4.starknet.io/feeder_gateway/").unwrap()
+            }
+        }
+    }
 }
 
 #[derive(Default, Clone)]
