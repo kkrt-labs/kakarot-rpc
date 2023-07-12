@@ -41,7 +41,7 @@ impl StarknetConfig {
     /// Create a new `StarknetConfig` from environment variables.
     /// When using non-standard providers (i.e. not "katana", "madara", "mainnet"), the
     /// `STARKNET_NETWORK` environment variable should be set the URL of a JsonRpc
-    /// provider, e.g. https://starknet-goerli.g.alchemy.com/v2/some_key.
+    /// starknet provider, e.g. https://starknet-goerli.g.alchemy.com/v2/some_key.
     pub fn from_env() -> Result<Self, ConfigError> {
         let network = get_env_var("STARKNET_NETWORK")?;
         let network = match network.to_lowercase().as_str() {
@@ -93,7 +93,7 @@ impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
 
 impl JsonRpcClientBuilder<HttpTransport> {
     /// Returns a new `JsonRpcClientBuilder` with a `HttpTransport`.
-    /// Currently only supports Katana and Madara networks or manual provider URL.
+    /// Currently only supports Katana and Madara networks or manual Starknet provider URL.
     /// # Example
     ///
     /// ```rust
@@ -109,7 +109,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
     ///     FieldElement::default(),
     ///     FieldElement::default(),
     /// );
-    /// let provider: JsonRpcClient<HttpTransport> =
+    /// let starknet_provider: JsonRpcClient<HttpTransport> =
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
     pub fn with_http(config: &StarknetConfig) -> Result<Self> {

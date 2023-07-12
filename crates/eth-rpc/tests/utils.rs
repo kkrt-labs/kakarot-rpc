@@ -44,9 +44,9 @@ pub async fn setup_kakarot_eth_rpc() -> KakarotEthRpc<JsonRpcClient<HttpTranspor
         kakarot_address,
         proxy_account_class_hash,
     );
-    let provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
+    let starknet_provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
 
-    let kakarot_client = KakarotClient::new(config, provider);
+    let kakarot_client = KakarotClient::new(config, starknet_provider);
 
     KakarotEthRpc::new(Box::new(kakarot_client))
 }

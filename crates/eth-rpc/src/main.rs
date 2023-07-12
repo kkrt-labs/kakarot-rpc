@@ -30,7 +30,7 @@ async fn main() -> Result<()> {
 
     let rpc_config = RPCConfig::from_env()?;
 
-    let provider: StarknetProvider = match &starknet_config.network {
+    let starknet_provider: StarknetProvider = match &starknet_config.network {
         Network::Madara | Network::Katana => {
             StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build())
         }
@@ -52,12 +52,12 @@ async fn main() -> Result<()> {
         }
     };
 
-    let kakarot_client = match provider {
-        StarknetProvider::JsonRpcClient(provider) => {
-            KakarotClientType::RpcClient(KakarotClient::new(starknet_config, provider))
+    let kakarot_client = match starknet_provider {
+        StarknetProvider::JsonRpcClient(starknet_provider) => {
+            KakarotClientType::RpcClient(KakarotClient::new(starknet_config, starknet_provider))
         }
-        StarknetProvider::SequencerGatewayProvider(provider) => {
-            KakarotClientType::GatewayClient(KakarotClient::new(starknet_config, provider))
+        StarknetProvider::SequencerGatewayProvider(starknet_provider) => {
+            KakarotClientType::GatewayClient(KakarotClient::new(starknet_config, starknet_provider))
         }
     };
 
