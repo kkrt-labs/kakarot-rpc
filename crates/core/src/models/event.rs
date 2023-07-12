@@ -89,7 +89,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::tests::init_client;
+    use crate::client::tests::init_mock_client;
     use crate::mock::mock_starknet::fixtures;
 
     #[test]
@@ -99,7 +99,7 @@ mod tests {
         let starknet_event = StarknetEvent::new(event);
 
         let fixtures = fixtures(vec![]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         let eth_log = starknet_event.to_eth_log(&client, None, None, None, None, None).unwrap();
@@ -116,7 +116,7 @@ mod tests {
         let starknet_event = StarknetEvent::new(event);
 
         let fixtures = fixtures(vec![]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         let eth_log = starknet_event.to_eth_log(&client, None, None, None, None, None).unwrap();
@@ -136,7 +136,7 @@ mod tests {
         let starknet_event = StarknetEvent::new(event);
 
         let fixtures = fixtures(vec![]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         starknet_event.to_eth_log(&client, None, None, None, None, None).unwrap();
@@ -151,7 +151,7 @@ mod tests {
         let starknet_event = StarknetEvent::new(event);
 
         let fixtures = fixtures(vec![]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         starknet_event.to_eth_log(&client, None, None, None, None, None).unwrap();
@@ -164,7 +164,7 @@ mod tests {
         let starknet_event = StarknetEvent::new(event);
 
         let fixtures = fixtures(vec![]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         let block_hash = Some(H256::from_low_u64_be(0xdeadbeef));

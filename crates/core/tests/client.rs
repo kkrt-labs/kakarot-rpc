@@ -5,6 +5,7 @@ mod tests {
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::client::config::{Network, StarknetConfig};
     use kakarot_rpc_core::client::KakarotClient;
+    use kakarot_rpc_core::mock::constants::EXAMPLE_URL;
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
     use kakarot_rpc_core::test_utils::deploy_helpers::{
@@ -31,7 +32,8 @@ mod tests {
                 deployed_kakarot.kakarot_proxy,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
-        );
+        )
+        .unwrap();
 
         // Zero address shouldn't throw 'ContractNotFound', but return zero
         assert_eq!(
@@ -66,7 +68,8 @@ mod tests {
                 deployed_kakarot.kakarot_proxy,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
-        );
+        )
+        .unwrap();
 
         let deployed_balance = kakarot_client
             .balance(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
@@ -163,7 +166,8 @@ mod tests {
                 deployed_kakarot.kakarot_proxy,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
-        );
+        )
+        .unwrap();
 
         kakarot_client
             .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
