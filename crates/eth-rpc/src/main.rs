@@ -8,7 +8,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
 use tracing_subscriber::util::SubscriberInitExt;
 
-enum KakarotProvider {
+enum StarknetProvider {
     JsonRpcClient(JsonRpcClient<HttpTransport>),
     SequencerGatewayProvider(SequencerGatewayProvider),
 }
@@ -30,33 +30,33 @@ async fn main() -> Result<()> {
 
     let rpc_config = RPCConfig::from_env()?;
 
-    let provider: KakarotProvider = match &starknet_config.network {
+    let provider: StarknetProvider = match &starknet_config.network {
         Network::Madara | Network::Katana => {
-            KakarotProvider::JsonRpcClient(JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build())
+            StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build())
         }
 
         Network::Goerli1 => {
-            KakarotProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_goerli())
+            StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_goerli())
         }
 
         Network::Goerli2 => {
-            KakarotProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_goerli_2())
+            StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_goerli_2())
         }
 
         Network::Mainnet => {
-            KakarotProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_mainnet())
+            StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_mainnet())
         }
 
         Network::ProviderUrl(url) => {
-            KakarotProvider::JsonRpcClient(JsonRpcClientBuilder::new(HttpTransport::new(url.clone())).build())
+            StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::new(HttpTransport::new(url.clone())).build())
         }
     };
 
     let kakarot_client = match provider {
-        KakarotProvider::JsonRpcClient(provider) => {
+        StarknetProvider::JsonRpcClient(provider) => {
             KakarotClientType::RpcClient(KakarotClient::new(starknet_config, provider))
         }
-        KakarotProvider::SequencerGatewayProvider(provider) => {
+        StarknetProvider::SequencerGatewayProvider(provider) => {
             KakarotClientType::GatewayClient(KakarotClient::new(starknet_config, provider))
         }
     };
