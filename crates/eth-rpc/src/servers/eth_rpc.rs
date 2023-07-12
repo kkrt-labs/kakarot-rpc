@@ -3,7 +3,7 @@ use std::sync::Arc;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, METHOD_NOT_FOUND_CODE};
 use kakarot_rpc_core::client::api::KakarotEthApi;
-use kakarot_rpc_core::client::constants::{CHAIN_ID, ESTIMATE_GAS};
+use kakarot_rpc_core::client::constants::CHAIN_ID;
 use kakarot_rpc_core::client::errors::{rpc_err, EthApiError};
 use kakarot_rpc_core::models::block::EthBlockId;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
@@ -178,8 +178,10 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         todo!()
     }
 
-    async fn estimate_gas(&self, _request: CallRequest, _block_number: Option<BlockId>) -> Result<U256> {
-        Ok(*ESTIMATE_GAS)
+    async fn estimate_gas(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<U256> {
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+
+        Ok(self.kakarot_client.estimate_gas(request, block_id).await?)
     }
 
     async fn gas_price(&self) -> Result<U256> {
