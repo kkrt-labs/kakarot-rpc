@@ -499,7 +499,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
         // TODO: transition `reward` hardcoded default out of nearing-demo-day hack and seeing how to
         // properly source/translate this value
-        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: Some(vec![vec![U256::ZERO]]) })
+        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: Some(vec![vec![]]) })
     }
 
     /// Returns the estimated gas for a transaction

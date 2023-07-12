@@ -83,7 +83,7 @@ async fn test_fee_history() {
     assert_eq!(vec![U256::from(1); count + 1], fee_history.base_fee_per_gas);
     assert_eq!(vec![0.9; count], fee_history.gas_used_ratio);
     assert_eq!(U256::from(19630), fee_history.oldest_block);
-    assert_eq!((Some(vec![vec![U256::ZERO]])), fee_history.reward);
+    assert_eq!((Some(vec![vec![]])), fee_history.reward);
 }
 
 #[tokio::test]
