@@ -113,12 +113,16 @@ async fn test_transaction_by_hash() {
     let client = init_client(Some(fixtures));
 
     // When
-    let tx = client
+    let tx = match client
         .transaction_by_hash(
             H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+    {
+        Some(tx) => tx,
+        None => panic!("Tx should not be none"),
+    };
 
     // Then
     assert_eq!(*ABDEL_ETHEREUM_ADDRESS, tx.from);

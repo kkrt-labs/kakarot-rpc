@@ -16,7 +16,7 @@ use crate::models::transaction::StarknetTransactions;
 pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send + Sync {
     async fn block_number(&self) -> Result<U64, EthApiError<P::Error>>;
 
-    async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError<P::Error>>;
+    async fn transaction_by_hash(&self, hash: H256) -> Result<Option<EtherTransaction>, EthApiError<P::Error>>;
 
     async fn get_code(
         &self,
