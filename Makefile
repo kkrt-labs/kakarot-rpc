@@ -9,8 +9,11 @@ pull-kakarot: .gitmodules
 build-kakarot: setup 
 	cd lib/kakarot && make build && make build-sol
 
-deploy-kakarot:
+build-and-deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) make deploy
+
+deploy-kakarot:
+	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py
 
 setup: pull-kakarot build-kakarot
 
