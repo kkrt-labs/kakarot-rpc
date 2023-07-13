@@ -40,6 +40,7 @@ dotenv = { workspace = true }
 bytes = "1"  
 ethers = "2.0"
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }  
+walkdir = "2.3.3"
 
 [dev-dependencies]
 dojo-test-utils = { workspace = true }

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::JsonRpcClient;
+use walkdir::WalkDir;
 
 use super::constants::{KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH};
 use crate::client::config::StarknetConfig;
@@ -145,6 +146,36 @@ pub fn fixtures(methods: Vec<AvailableFixtures>) -> Vec<StarknetRpcFixture> {
         .collect()
 }
 
+/// Returns all the fixtures present in the fixtures directory.
+/// # Errors
+/// Returns an error if a fixture is not a valid json or if the fixture is not present in both
+/// requests and responses.
+pub fn all_fixtures() -> Vec<StarknetRpcFixture> {
+    let request_path = "src/mock/fixtures/requests/";
+    let mut fixtures: Vec<StarknetRpcFixture> = Vec::new();
+    for entry in WalkDir::new(request_path) {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        if !path.is_file() {
+            continue;
+        }
+        println!("Found fixture: {:?}", path);
+
+        let request = fs::read_to_string(path).unwrap().parse::<Value>().unwrap();
+        let params = request["params"].clone();
+        let method_name = request["method"].clone();
+        println!("Found params and method_name for fixture: {}", method_name);
+        let response = fs::read_to_string(path.to_string_lossy().replace("requests", "responses"))
+            .unwrap()
+            .parse::<Value>()
+            .unwrap();
+        println!("Found response for fixture: {:?}", response);
+        fixtures.push(StarknetRpcFixture { method: serde_json::from_value(method_name).unwrap(), params, response });
+    }
+    fixtures
+}
+
 /// Creates a mock `JsonRpcClient` with the given fixtures.
 ///
 /// # Arguments
@@ -194,5 +225,11 @@ mod tests {
         // Then
         assert_eq!(expected_params, fixture.params);
         assert_eq!(expected_response, fixture.response);
+    }
+
+    #[test]
+    fn test_rpc_all_fixtures() {
+        let fixtures = all_fixtures();
+        assert_eq!(fixtures.len(), 14);
     }
 }
