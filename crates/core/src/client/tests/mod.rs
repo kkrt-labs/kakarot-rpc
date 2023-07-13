@@ -25,9 +25,9 @@ use crate::wrap_kakarot;
 
 pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
     let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
-    let config = StarknetConfig::new(Network::Goerli1, kakarot_address, Default::default());
+    let config = StarknetConfig::new(Network::Goerli1Gateway, kakarot_address, Default::default());
 
-    let provider = SequencerGatewayProviderBuilder::new(&Network::Goerli1).build();
+    let provider = SequencerGatewayProviderBuilder::new(&Network::Goerli1Gateway).build();
     KakarotClient::new(config, provider)
 }
 

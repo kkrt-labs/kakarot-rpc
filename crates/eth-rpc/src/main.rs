@@ -34,7 +34,7 @@ async fn main() -> Result<()> {
         Network::Madara | Network::Katana => {
             StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build())
         }
-        Network::ProviderUrl(url) => {
+        Network::JsonRpcProvider(url) => {
             StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::new(HttpTransport::new(url.clone())).build())
         }
         _ => StarknetProvider::SequencerGatewayProvider(

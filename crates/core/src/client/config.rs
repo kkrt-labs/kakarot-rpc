@@ -25,9 +25,9 @@ pub enum Network {
 impl Network {
     pub fn gateway_url(&self) -> Result<Url, ConfigError> {
         match self {
-            Network::Mainnet => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/").unwrap()),
-            Network::Goerli1 => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/").unwrap()),
-            Network::Goerli2 => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/").unwrap()),
+            Network::MainnetGateway => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/").unwrap()),
+            Network::Goerli1Gateway => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/").unwrap()),
+            Network::Goerli2Gateway => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/").unwrap()),
             _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for gateway url", self))),
         }
     }
@@ -36,7 +36,7 @@ impl Network {
         match self {
             Network::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
             Network::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
-            Network::ProviderUrl(url) => Ok(url.clone()),
+            Network::JsonRpcProvider(url) => Ok(url.clone()),
             _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for provider url", self))),
         }
     }
@@ -142,9 +142,9 @@ impl SequencerGatewayProviderBuilder {
     /// Create a new `SequencerGatewayProviderBuilder`.
     pub fn new(network: &Network) -> Self {
         match network {
-            Network::Mainnet => Self(SequencerGatewayProvider::starknet_alpha_mainnet()),
-            Network::Goerli1 => Self(SequencerGatewayProvider::starknet_alpha_goerli()),
-            Network::Goerli2 => Self(SequencerGatewayProvider::starknet_alpha_goerli_2()),
+            Network::MainnetGateway => Self(SequencerGatewayProvider::starknet_alpha_mainnet()),
+            Network::Goerli1Gateway => Self(SequencerGatewayProvider::starknet_alpha_goerli()),
+            Network::Goerli2Gateway => Self(SequencerGatewayProvider::starknet_alpha_goerli_2()),
             _ => panic!("Unsupported network for SequencerGatewayProvider"),
         }
     }
