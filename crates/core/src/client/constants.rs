@@ -73,3 +73,7 @@ lazy_static! {
     pub static ref DIFFICULTY: U256 = U256::from(0);
     pub static ref TOTAL_DIFFICULTY: Option<U256> = None;
 }
+
+lazy_static! {
+    pub static ref KAKAROT_CLIENT_VERSION: String = format!("kakarot_{}", env!("CARGO_PKG_VERSION"));
+}
