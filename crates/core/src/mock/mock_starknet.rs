@@ -6,6 +6,10 @@ use serde_json::Value;
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::JsonRpcClient;
 
+use super::constants::{KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH};
+use crate::client::config::StarknetConfig;
+use crate::client::KakarotClient;
+
 /// A fixture for a Starknet RPC call.
 pub struct StarknetRpcFixture {
     /// The method to call.
@@ -154,6 +158,20 @@ pub fn mock_starknet_provider(fixtures: Option<Vec<StarknetRpcFixture>>) -> Json
             .for_each(|fixture| transport.set_response(fixture.method, fixture.params, fixture.response));
     }
     JsonRpcClient::new(transport)
+}
+
+/// Creates a mock `KakarotClient` with the given fixtures.
+pub fn init_mock_kakarot_client(
+    fixtures: Option<Vec<StarknetRpcFixture>>,
+) -> KakarotClient<JsonRpcClient<MockJsonRpcTransport>> {
+    let config = StarknetConfig {
+        kakarot_address: *KAKAROT_ADDRESS,
+        proxy_account_class_hash: *PROXY_ACCOUNT_CLASS_HASH,
+        ..Default::default()
+    };
+    let starknet_provider = mock_starknet_provider(fixtures);
+
+    KakarotClient::new(config, starknet_provider)
 }
 
 #[cfg(test)]

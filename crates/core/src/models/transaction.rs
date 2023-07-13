@@ -139,7 +139,7 @@ mod tests {
     use super::*;
     use crate::client::tests::init_mock_client;
     use crate::mock::constants::{ABDEL_STARKNET_ADDRESS_HEX, PROXY_ACCOUNT_CLASS_HASH_HEX};
-    use crate::mock::mock_starknet::{fixtures, AvailableFixtures};
+    use crate::mock::mock_starknet::{fixtures, init_mock_kakarot_client, AvailableFixtures};
 
     #[tokio::test]
     async fn test_is_kakarot_tx() {

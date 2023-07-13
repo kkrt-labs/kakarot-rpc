@@ -3,5 +3,5 @@
   "files.exclude": {
     "**/.git": false
   },
-  "rust-analyzer.check.command": "clippy"
+  "rust-analyzer.check.command": "check"
 }
