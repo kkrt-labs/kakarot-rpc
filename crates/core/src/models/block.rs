@@ -24,8 +24,8 @@ impl EthBlockId {
 }
 
 impl TryFrom<EthBlockId> for StarknetBlockId {
-    type Error = ConversionError;
-    fn try_from(eth_block_id: EthBlockId) -> Result<Self, ConversionError> {
+    type Error = ConversionError<()>;
+    fn try_from(eth_block_id: EthBlockId) -> Result<Self, Self::Error> {
         match eth_block_id.0 {
             EthereumBlockId::Hash(hash) => {
                 let hash: Felt252Wrapper = hash.block_hash.try_into()?;
@@ -277,7 +277,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 mod tests {
 
     use super::*;
-    use crate::client::tests::init_client;
+    use crate::client::tests::init_mock_client;
     use crate::mock::constants::{
         ABDEL_STARKNET_ADDRESS_HEX, OTHER_ADDRESS_HEX, OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX, PROXY_ACCOUNT_CLASS_HASH_HEX,
     };
@@ -291,7 +291,7 @@ mod tests {
         let starknet_block_with_tx_hashes = BlockWithTxHashes::new(starknet_block_with_tx_hashes);
 
         let fixtures = fixtures(vec![]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         let eth_block_with_tx_hashes = starknet_block_with_tx_hashes.to_eth_block(&client).await.inner;
@@ -314,7 +314,7 @@ mod tests {
             AvailableFixtures::GetClassHashAt(OTHER_ADDRESS_HEX.into(), OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
             AvailableFixtures::GetEvmAddress,
         ]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         let eth_block_with_txs = starknet_block_with_txs.to_eth_block(&client).await.inner;

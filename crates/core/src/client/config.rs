@@ -1,7 +1,7 @@
 use eyre::Result;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
 use url::Url;
 
 use super::constants::{KATANA_RPC_URL, MADARA_RPC_URL};
@@ -11,7 +11,7 @@ fn get_env_var(name: &str) -> Result<String, ConfigError> {
     std::env::var(name).map_err(|_| ConfigError::EnvironmentVariableMissing(name.into()))
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub enum Network {
     #[default]
     Katana,
@@ -20,6 +20,26 @@ pub enum Network {
     Goerli1Gateway,
     Goerli2Gateway,
     JsonRpcProvider(Url),
+}
+
+impl Network {
+    pub fn gateway_url(&self) -> Result<Url, ConfigError> {
+        match self {
+            Network::MainnetGateway => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/")?),
+            Network::Goerli1Gateway => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/")?),
+            Network::Goerli2Gateway => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/")?),
+            _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for gateway url", self))),
+        }
+    }
+
+    pub fn provider_url(&self) -> Result<Url, ConfigError> {
+        match self {
+            Network::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
+            Network::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
+            Network::JsonRpcProvider(url) => Ok(url.clone()),
+            _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for provider url", self))),
+        }
+    }
 }
 
 #[derive(Default, Clone)]
@@ -77,10 +97,6 @@ pub struct JsonRpcClientBuilder<T: JsonRpcTransport>(JsonRpcClient<T>);
 
 impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
     /// Create a new `JsonRpcClientBuilder`.
-    ///
-    /// # Arguments
-    ///
-    /// * `transport` - The transport to use.
     pub fn new(transport: T) -> Self {
         Self(JsonRpcClient::new(transport))
     }
@@ -113,18 +129,28 @@ impl JsonRpcClientBuilder<HttpTransport> {
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
     pub fn with_http(config: &StarknetConfig) -> Result<Self> {
-        let url = match config.clone().network {
-            Network::Katana => Url::parse(KATANA_RPC_URL)?,
-            Network::Madara => Url::parse(MADARA_RPC_URL)?,
-            Network::JsonRpcProvider(url) => url,
-            _ => {
-                return Err(eyre::eyre!(
-                    "Constant networks (one of: [MainnetGateway, Goerli1Gateway, Goerli2Gateway, Mock]) is not \
-                     supported"
-                ));
-            }
-        };
+        let url = config.network.provider_url()?;
         let transport = HttpTransport::new(url);
         Ok(Self::new(transport))
+    }
+}
+
+/// A builder for a `SequencerGatewayProvider`.
+pub struct SequencerGatewayProviderBuilder(SequencerGatewayProvider);
+
+impl SequencerGatewayProviderBuilder {
+    /// Create a new `SequencerGatewayProviderBuilder`.
+    pub fn new(network: &Network) -> Self {
+        match network {
+            Network::MainnetGateway => Self(SequencerGatewayProvider::starknet_alpha_mainnet()),
+            Network::Goerli1Gateway => Self(SequencerGatewayProvider::starknet_alpha_goerli()),
+            Network::Goerli2Gateway => Self(SequencerGatewayProvider::starknet_alpha_goerli_2()),
+            _ => panic!("Unsupported network for SequencerGatewayProvider"),
+        }
+    }
+
+    /// Build the `SequencerGatewayProvider`.
+    pub fn build(self) -> SequencerGatewayProvider {
+        self.0
     }
 }

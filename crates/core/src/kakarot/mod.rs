@@ -48,14 +48,14 @@ impl<P: Provider + Send + Sync> KakarotContract<P> {
     pub async fn eth_call(
         &self,
         starknet_provider: &P,
-        eth_address: &FieldElement,
-        eth_calldata: &mut Vec<FieldElement>,
+        to: &FieldElement,
+        mut eth_calldata: Vec<FieldElement>,
         block_id: &BlockId,
     ) -> Result<Bytes, EthApiError<P::Error>> {
         let mut calldata =
-            vec![*eth_address, FieldElement::MAX, FieldElement::ZERO, FieldElement::ZERO, eth_calldata.len().into()];
+            vec![*to, FieldElement::MAX, FieldElement::ZERO, FieldElement::ZERO, eth_calldata.len().into()];
 
-        calldata.append(eth_calldata);
+        calldata.append(&mut eth_calldata);
 
         let request = FunctionCall { contract_address: self.address, entry_point_selector: ETH_CALL, calldata };
         let result = starknet_provider.call(request, block_id).await?;

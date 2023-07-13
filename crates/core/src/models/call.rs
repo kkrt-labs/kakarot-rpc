@@ -24,7 +24,7 @@ impl From<Vec<Call>> for Calls {
 
 /// Converts a raw starknet transaction calldata to a vector of starknet calls.
 impl TryFrom<Vec<FieldElement>> for Calls {
-    type Error = ConversionError;
+    type Error = ConversionError<()>;
 
     fn try_from(value: Vec<FieldElement>) -> Result<Self, Self::Error> {
         // in account calls, the calldata is first each call as {contract address, selector, data offset,

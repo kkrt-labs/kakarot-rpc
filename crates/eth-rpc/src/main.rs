@@ -5,7 +5,9 @@ use eyre::Result;
 use kakarot_rpc::config::RPCConfig;
 use kakarot_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::run_server;
-use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, Network, StarknetConfig};
+use kakarot_rpc_core::client::config::{
+    JsonRpcClientBuilder, Network, SequencerGatewayProviderBuilder, StarknetConfig,
+};
 use kakarot_rpc_core::client::KakarotClient;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
@@ -32,22 +34,12 @@ async fn main() -> Result<()> {
         Network::Madara | Network::Katana => {
             StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build())
         }
-
-        Network::Goerli1Gateway => {
-            StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_goerli())
-        }
-
-        Network::Goerli2Gateway => {
-            StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_goerli_2())
-        }
-
-        Network::MainnetGateway => {
-            StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_mainnet())
-        }
-
         Network::JsonRpcProvider(url) => {
             StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::new(HttpTransport::new(url.clone())).build())
         }
+        _ => StarknetProvider::SequencerGatewayProvider(
+            SequencerGatewayProviderBuilder::new(&starknet_config.network).build(),
+        ),
     };
 
     let kakarot_rpc_module = match starknet_provider {

@@ -133,7 +133,7 @@ pub trait EthApi {
     /// Generates and returns an estimate of how much gas is necessary to allow the transaction to
     /// complete.
     #[method(name = "eth_estimateGas")]
-    async fn estimate_gas(&self, request: CallRequest, block_number: Option<BlockId>) -> Result<U256>;
+    async fn estimate_gas(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<U256>;
 
     /// Returns the current price per gas in wei.
     #[method(name = "eth_gasPrice")]

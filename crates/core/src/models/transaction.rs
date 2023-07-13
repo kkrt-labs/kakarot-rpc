@@ -28,7 +28,7 @@ impl From<StarknetTransaction> for Transaction {
 
 macro_rules! get_invoke_transaction_field {
     (($field_v0:ident, $field_v1:ident), $type:ty) => {
-        pub fn $field_v1(&self) -> Result<$type, ConversionError> {
+        pub fn $field_v1(&self) -> Result<$type, ConversionError<()>> {
             match &self.0 {
                 Transaction::Invoke(tx) => match tx {
                     InvokeTransaction::V0(tx) => Ok(tx.$field_v0.clone().into()),
@@ -137,7 +137,7 @@ impl StarknetTransaction {
 mod tests {
 
     use super::*;
-    use crate::client::tests::init_client;
+    use crate::client::tests::init_mock_client;
     use crate::mock::constants::{ABDEL_STARKNET_ADDRESS_HEX, PROXY_ACCOUNT_CLASS_HASH_HEX};
     use crate::mock::mock_starknet::{fixtures, AvailableFixtures};
 
@@ -152,7 +152,7 @@ mod tests {
             ABDEL_STARKNET_ADDRESS_HEX.into(),
             PROXY_ACCOUNT_CLASS_HASH_HEX.into(),
         )]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         let is_kakarot_tx = starknet_transaction.is_kakarot_tx(&client).await.unwrap();
@@ -172,7 +172,7 @@ mod tests {
             AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
             AvailableFixtures::GetEvmAddress,
         ]);
-        let client = init_client(Some(fixtures));
+        let client = init_mock_client(Some(fixtures));
 
         // When
         let eth_transaction = starknet_transaction.to_eth_transaction(&client, None, None, None).await.unwrap();

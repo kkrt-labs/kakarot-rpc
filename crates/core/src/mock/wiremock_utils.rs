@@ -3,16 +3,10 @@ use std::str::FromStr;
 use reqwest::StatusCode;
 use reth_primitives::{BlockId, H256};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
-use url::Url;
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 use wiremock::matchers::{body_json, method};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
-use crate::client::api::KakarotEthApi;
-use crate::client::config::{JsonRpcClientBuilder, Network, StarknetConfig};
-use crate::client::KakarotClient;
 use crate::models::block::EthBlockId;
 
 #[derive(Serialize, Debug)]
@@ -117,39 +111,6 @@ pub async fn setup_wiremock() -> String {
     // TODO: Use the latest mapping between starknet and EVM addresses
 
     mock_server.uri()
-}
-
-pub async fn setup_mock_client() -> Box<dyn KakarotEthApi<JsonRpcClient<HttpTransport>>> {
-    let provider_url = setup_wiremock().await;
-    let kakarot_address =
-        FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
-    let proxy_account_class_hash =
-        FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
-
-    let config = StarknetConfig::new(
-        Network::JsonRpcProvider(Url::parse(&provider_url).unwrap()),
-        kakarot_address,
-        proxy_account_class_hash,
-    );
-    let starknet_provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
-    Box::new(KakarotClient::new(config, starknet_provider))
-}
-
-pub async fn setup_mock_client_crate() -> KakarotClient<JsonRpcClient<HttpTransport>> {
-    let provider_url = setup_wiremock().await;
-    let kakarot_address =
-        FieldElement::from_hex_be("0x566864dbc2ae76c2d12a8a5a334913d0806f85b7a4dccea87467c3ba3616e75").unwrap();
-    let proxy_account_class_hash =
-        FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
-
-    let config = StarknetConfig::new(
-        Network::JsonRpcProvider(Url::parse(&provider_url).unwrap()),
-        kakarot_address,
-        proxy_account_class_hash,
-    );
-    let starknet_provider = JsonRpcClientBuilder::with_http(&config).unwrap().build();
-
-    KakarotClient::new(config, starknet_provider)
 }
 
 fn mock_block_number() -> Mock {
