@@ -42,7 +42,7 @@ pub async fn setup_kakarot_eth_rpc() -> KakarotEthRpc<JsonRpcClient<HttpTranspor
         FieldElement::from_hex_be("0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5").unwrap();
 
     let config = StarknetConfig::new(
-        Network::ProviderUrl(Url::parse(&provider_url).unwrap()),
+        Network::JsonRpcProvider(Url::parse(&provider_url).unwrap()),
         kakarot_address,
         proxy_account_class_hash,
     );
