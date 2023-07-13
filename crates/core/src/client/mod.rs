@@ -26,16 +26,16 @@ use starknet::core::types::{
     MaybePendingTransactionReceipt, StarknetError, SyncStatusType, Transaction as TransactionType,
     TransactionReceipt as StarknetTransactionReceipt, TransactionStatus as StarknetTransactionStatus,
 };
-use starknet::providers::sequencer::models::TransactionSimulationInfo;
+use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
 use starknet::providers::{Provider, ProviderError};
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
-use self::constants::selectors::{BALANCE_OF, BYTECODE, ETH_SEND_TRANSACTION, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
-use self::constants::{MAX_FEE, STARKNET_NATIVE_TOKEN};
+use self::constants::selectors::{BALANCE_OF, BYTECODE, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
+use self::constants::{ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN};
 use self::errors::EthApiError;
-use self::helpers::DataDecodingError;
+use self::helpers::{bytes_to_felt_vec, DataDecodingError};
 use crate::kakarot::KakarotContract;
 use crate::models::balance::{TokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
@@ -433,7 +433,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
         let nonce = FieldElement::from(transaction.nonce());
 
-        let calldata = raw_starknet_calldata(self.kakarot_address(), bytes);
+        let calldata = raw_starknet_calldata(self.kakarot_address(), bytes_to_felt_vec(&bytes));
 
         // Get estimated_fee from Starknet
         let max_fee = *MAX_FEE;
@@ -537,17 +537,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
         let mut data = vec![];
         tx.encode_with_signature(&Signature::default(), &mut data, false);
-        let mut eth_calldata = data.into_iter().map(FieldElement::from).collect::<Vec<_>>();
-
-        let mut calldata = vec![
-            FieldElement::ONE,         // call array length
-            self.kakarot_address(),    // to
-            ETH_SEND_TRANSACTION,      // selector
-            FieldElement::ZERO,        // data offset length
-            eth_calldata.len().into(), // data length
-            eth_calldata.len().into(), // calldata length
-        ];
-        calldata.append(&mut eth_calldata);
+        let data = data.into_iter().map(FieldElement::from).collect();
+        let calldata = raw_starknet_calldata(self.kakarot_address(), data);
 
         let tx = BroadcastedInvokeTransactionV1 {
             max_fee: FieldElement::ZERO,
@@ -688,9 +679,32 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
         let client = Client::new();
 
         // build the url for simulate transaction
-        let mut url = self
-            .network
-            .gateway_url()?
+        let url = self.network.gateway_url();
+
+        // if the url is invalid, return an empty simulation (allows to call simulate_transaction on Kakana,
+        // Madara, etc.)
+        if url.is_err() {
+            let gas_usage = (*ESTIMATE_GAS).try_into().map_err(ConversionError::UintConversionError)?;
+            let gas_price: Felt252Wrapper = (*MAX_FEE).into();
+            let overall_fee = Felt252Wrapper::from(gas_usage) * gas_price.clone();
+            return Ok(TransactionSimulationInfo {
+                trace: TransactionTrace {
+                    function_invocation: None,
+                    fee_transfer_invocation: None,
+                    validate_invocation: None,
+                    signature: vec![],
+                },
+                fee_estimation: FeeEstimate {
+                    gas_usage,
+                    gas_price: gas_price.try_into()?,
+                    overall_fee: overall_fee.try_into()?,
+                    unit: FeeUnit::Wei,
+                },
+            });
+        }
+
+        let mut url = url
+            .unwrap() // safe unwrap because we checked for error above
             .join("simulate_transaction")
             .map_err(|e| EthApiError::FeederGatewayError(format!("gateway url parsing error: {:?}", e)))?;
 

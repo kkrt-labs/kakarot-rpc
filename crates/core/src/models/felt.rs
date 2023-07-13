@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use reth_primitives::{Address, H256, U256};
 use starknet::core::types::FieldElement;
 
@@ -14,6 +16,14 @@ impl Felt252Wrapper {
     pub fn troncate_to_ethereum_address(&self) -> Address {
         let bytes = self.0.to_bytes_be();
         Address::from_slice(&bytes[12..])
+    }
+}
+
+impl Mul for Felt252Wrapper {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self(self.0 * rhs.0)
     }
 }
 

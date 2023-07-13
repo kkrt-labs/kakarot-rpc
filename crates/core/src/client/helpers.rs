@@ -2,7 +2,6 @@ use eyre::Result;
 use reth_primitives::{Bloom, Bytes, H160};
 use reth_rlp::DecodeError;
 use reth_rpc_types::TransactionReceipt;
-use starknet::accounts::Call;
 use starknet::core::types::{
     FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, ValueOutOfRangeError,
 };
@@ -109,33 +108,17 @@ pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
     bytes.to_vec().into_iter().map(FieldElement::from).collect()
 }
 
-/// Author: <https://github.com/xJonathanLEI/starknet-rs/blob/447182a90839a3e4f096a01afe75ef474186d911/starknet-accounts/src/account/execution.rs#L166>
 /// Constructs the calldata for a raw Starknet invoke transaction call
-/// ## Arguments
-/// * `kakarot_address` - The Kakarot contract address
-/// * `bytes` - The calldata to be passed to the contract - RLP encoded raw EVM transaction
-///
-/// ## Returns
-/// * `Vec<FieldElement>` - The calldata for the raw Starknet invoke transaction call
-pub fn raw_starknet_calldata(kakarot_address: FieldElement, bytes: Bytes) -> Vec<FieldElement> {
-    let calls: Vec<Call> =
-        vec![Call { to: kakarot_address, selector: ETH_SEND_TRANSACTION, calldata: bytes_to_felt_vec(&bytes) }];
-    let mut concated_calldata: Vec<FieldElement> = vec![];
-    let mut execute_calldata: Vec<FieldElement> = vec![calls.len().into()];
-    for call in &calls {
-        execute_calldata.push(call.to); // to
-        execute_calldata.push(call.selector); // selector
-        execute_calldata.push(concated_calldata.len().into()); // data_offset
-        execute_calldata.push(call.calldata.len().into()); // data_len
-
-        for item in &call.calldata {
-            concated_calldata.push(*item);
-        }
-    }
-    execute_calldata.push(concated_calldata.len().into()); // calldata_len
-    for item in concated_calldata {
-        execute_calldata.push(item); // calldata
-    }
+pub fn raw_starknet_calldata(kakarot_address: FieldElement, mut calldata: Vec<FieldElement>) -> Vec<FieldElement> {
+    let mut execute_calldata: Vec<FieldElement> = vec![
+        FieldElement::ONE,
+        kakarot_address,
+        ETH_SEND_TRANSACTION,
+        FieldElement::ZERO,
+        FieldElement::from(calldata.len()),
+        FieldElement::from(calldata.len()),
+    ];
+    execute_calldata.append(&mut calldata);
 
     execute_calldata
 }

@@ -25,9 +25,9 @@ pub enum Network {
 impl Network {
     pub fn gateway_url(&self) -> Result<Url, ConfigError> {
         match self {
-            Network::MainnetGateway => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/").unwrap()),
-            Network::Goerli1Gateway => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/").unwrap()),
-            Network::Goerli2Gateway => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/").unwrap()),
+            Network::MainnetGateway => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/")?),
+            Network::Goerli1Gateway => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/")?),
+            Network::Goerli2Gateway => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/")?),
             _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for gateway url", self))),
         }
     }
