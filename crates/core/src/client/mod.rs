@@ -225,12 +225,20 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     }
 
     /// Returns the transaction for a given transaction hash.
-    async fn transaction_by_hash(&self, hash: H256) -> Result<EtherTransaction, EthApiError<P::Error>> {
+    async fn transaction_by_hash(&self, hash: H256) -> Result<Option<EtherTransaction>, EthApiError<P::Error>> {
         let hash: Felt252Wrapper = hash.try_into()?;
         let hash: FieldElement = hash.into();
 
-        let transaction: StarknetTransaction = self.starknet_provider.get_transaction_by_hash(hash).await?.into();
-        let tx_receipt = self.starknet_provider.get_transaction_receipt(hash).await?;
+        let transaction: StarknetTransaction = match self.starknet_provider.get_transaction_by_hash(hash).await {
+            Err(_) => return Ok(None),
+            Ok(transaction) => transaction.into(),
+        };
+
+        let tx_receipt = match self.starknet_provider.get_transaction_receipt(hash).await {
+            Err(_) => return Ok(None),
+            Ok(receipt) => receipt,
+        };
+
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
                 let block_hash: Felt252Wrapper = tr.block_hash.into();
@@ -239,7 +247,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
         let eth_transaction = transaction.to_eth_transaction(self, block_hash, block_num, None).await?;
-        Ok(eth_transaction)
+        Ok(Some(eth_transaction))
     }
 
     /// Returns the receipt of a transaction by transaction hash.
@@ -247,7 +255,10 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         // TODO: Error when trying to transform 32 bytes hash to FieldElement
         let transaction_hash: Felt252Wrapper = hash.try_into()?;
         let starknet_tx_receipt =
-            self.starknet_provider.get_transaction_receipt::<FieldElement>(transaction_hash.into()).await?;
+            match self.starknet_provider.get_transaction_receipt::<FieldElement>(transaction_hash.into()).await {
+                Err(_) => return Ok(None),
+                Ok(receipt) => receipt,
+            };
 
         let res_receipt = match starknet_tx_receipt {
             MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
@@ -360,7 +371,9 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
                 nonce.into()
             })
             .or_else(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(U256::from(0)),
+                // Some RPCs return ContractError instead of ContractNotFound
+                ProviderError::StarknetError(StarknetError::ContractNotFound)
+                | ProviderError::StarknetError(StarknetError::ContractError) => Ok(U256::from(0)),
                 _ => Err(EthApiError::from(err)),
             })
     }

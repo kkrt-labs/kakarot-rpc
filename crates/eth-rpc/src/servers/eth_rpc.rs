@@ -106,7 +106,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
 
     async fn transaction_by_hash(&self, _hash: H256) -> Result<Option<EtherTransaction>> {
         let ether_tx = self.kakarot_client.transaction_by_hash(_hash).await?;
-        Ok(Some(ether_tx))
+        Ok(ether_tx)
     }
 
     async fn transaction_by_block_hash_and_index(&self, hash: H256, index: Index) -> Result<Option<EtherTransaction>> {
