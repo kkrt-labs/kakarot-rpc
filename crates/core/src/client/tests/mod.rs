@@ -5,19 +5,20 @@ use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256, U64};
 use reth_rpc_types::CallRequest;
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransactionV1};
 use starknet::macros::selector;
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcMethod};
-use starknet::providers::{JsonRpcClient, Provider, SequencerGatewayProvider};
+use starknet::providers::jsonrpc::JsonRpcMethod;
+use starknet::providers::sequencer::models::BlockId as SequencerBlockId;
+use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
 use starknet_crypto::FieldElement;
-use url::Url;
 
 use super::config::{Network, SequencerGatewayProviderBuilder};
 use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
 use crate::client::config::StarknetConfig;
+use crate::client::constants::CHAIN_ID;
 use crate::client::KakarotClient;
 use crate::mock::constants::{
     ABDEL_ETHEREUM_ADDRESS, ABDEL_STARKNET_ADDRESS, ABDEL_STARKNET_ADDRESS_HEX, ACCOUNT_ADDRESS, ACCOUNT_ADDRESS_EVM,
-    COUNTER_ADDRESS, COUNTER_ADDRESS_EVM, INC_DATA, KAKAROT_ADDRESS, KAKAROT_CHAIN_ID, KAKAROT_TESTNET_ADDRESS,
-    PROXY_ACCOUNT_CLASS_HASH, PROXY_ACCOUNT_CLASS_HASH_HEX,
+    COUNTER_ADDRESS, COUNTER_ADDRESS_EVM, INC_DATA, KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
+    PROXY_ACCOUNT_CLASS_HASH_HEX,
 };
 use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, AvailableFixtures, StarknetRpcFixture};
 use crate::wrap_kakarot;
@@ -138,16 +139,14 @@ async fn test_transaction_by_hash() {
 }
 
 #[tokio::test]
+#[allow(deprecated)]
 async fn test_simulate_transaction() {
     // Given
     let client = init_testnet_client();
-    let block_id = StarknetBlockId::Tag(BlockTag::Latest);
-    let rpc_client = JsonRpcClient::new(HttpTransport::new(
-        Url::from_str("https://starknet-goerli.infura.io/v3/f453f09c949a453c9bc03a34efcca010").unwrap(),
-    ));
+    let block_id = SequencerBlockId::Latest;
 
-    let block_number = rpc_client.block_number().await.unwrap();
-    let nonce = rpc_client.get_nonce(block_id, *ACCOUNT_ADDRESS).await.unwrap();
+    let block_number = client.block_number().await.unwrap().low_u64();
+    let nonce = client.starknet_provider.get_nonce(*ACCOUNT_ADDRESS, block_id).await.unwrap();
 
     let calldata = vec![
         FieldElement::ONE,  // call array length
@@ -172,7 +171,10 @@ async fn test_simulate_transaction() {
     // Then
     assert!(simulation.fee_estimation.gas_price > 0);
     assert!(simulation.fee_estimation.gas_usage > 0);
-    assert!(simulation.fee_estimation.overall_fee > 0);
+    assert_eq!(
+        simulation.fee_estimation.overall_fee,
+        simulation.fee_estimation.gas_price * simulation.fee_estimation.gas_usage
+    );
 }
 
 #[tokio::test]
@@ -184,7 +186,7 @@ async fn test_estimate_gas() {
         from: Some(*ACCOUNT_ADDRESS_EVM),               // account address
         to: Some(*COUNTER_ADDRESS_EVM),                 // counter address
         data: Some(Bytes::from_str(INC_DATA).unwrap()), // call to inc()
-        chain_id: Some(*KAKAROT_CHAIN_ID),              // "KKRT" chain id
+        chain_id: Some(U64::from(CHAIN_ID)),            // "KKRT" chain id
         ..Default::default()
     };
     let block_id = BlockId::Number(BlockNumberOrTag::Latest);
