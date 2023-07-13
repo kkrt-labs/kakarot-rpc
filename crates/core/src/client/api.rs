@@ -21,7 +21,7 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
 
     async fn get_code(&self, ethereum_address: Address, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>>;
 
-    async fn call_view(&self, to: Address, calldata: Bytes, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>>;
+    async fn call(&self, to: Address, calldata: Bytes, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>>;
 
     async fn transaction_by_block_id_and_index(
         &self,
@@ -73,7 +73,7 @@ pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
 
     fn starknet_provider(&self) -> &P;
 
-    async fn get_block_number(&self, block_id: &StarknetBlockId) -> Result<u64, EthApiError<P::Error>>;
+    async fn map_block_id_to_block_number(&self, block_id: &StarknetBlockId) -> Result<u64, EthApiError<P::Error>>;
 
     async fn submit_starknet_transaction(
         &self,

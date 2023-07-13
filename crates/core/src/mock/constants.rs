@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
-use reth_primitives::{Address, U64};
+use reth_primitives::Address;
 use starknet_crypto::FieldElement;
 
 pub const PROXY_ACCOUNT_CLASS_HASH_HEX: &str = "0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5";
@@ -39,5 +39,4 @@ lazy_static! {
         Address::from_str("0x54B288676B749DEF5FC10EB17244FE2C87375dE1").unwrap();
     pub static ref COUNTER_ADDRESS_EVM: Address =
         Address::from_str("0x2e11ed82f5ec165ab8ce3cc094f025fe7527f4d1").unwrap();
-    pub static ref KAKAROT_CHAIN_ID: U64 = U64::from(1263227476);
 }

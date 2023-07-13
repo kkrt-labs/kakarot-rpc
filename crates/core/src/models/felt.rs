@@ -37,7 +37,7 @@ impl From<u64> for Felt252Wrapper {
 }
 
 impl TryFrom<Felt252Wrapper> for u64 {
-    type Error = ConversionError;
+    type Error = ConversionError<()>;
 
     fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
         u64::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
@@ -45,7 +45,7 @@ impl TryFrom<Felt252Wrapper> for u64 {
 }
 
 impl TryFrom<Felt252Wrapper> for u128 {
-    type Error = ConversionError;
+    type Error = ConversionError<()>;
 
     fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
         u128::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
@@ -60,7 +60,7 @@ impl From<Address> for Felt252Wrapper {
 }
 
 impl TryFrom<Felt252Wrapper> for Address {
-    type Error = ConversionError;
+    type Error = ConversionError<()>;
 
     fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
         let felt: FieldElement = felt.into();
@@ -76,7 +76,7 @@ impl TryFrom<Felt252Wrapper> for Address {
 }
 
 impl TryFrom<H256> for Felt252Wrapper {
-    type Error = ConversionError;
+    type Error = ConversionError<()>;
 
     fn try_from(h256: H256) -> Result<Self, Self::Error> {
         let felt = FieldElement::from_bytes_be(&h256)?;
@@ -92,7 +92,7 @@ impl From<Felt252Wrapper> for H256 {
 }
 
 impl TryFrom<U256> for Felt252Wrapper {
-    type Error = ConversionError;
+    type Error = ConversionError<()>;
 
     fn try_from(u256: U256) -> Result<Self, Self::Error> {
         let felt = FieldElement::from_bytes_be(&u256.to_be_bytes())?;

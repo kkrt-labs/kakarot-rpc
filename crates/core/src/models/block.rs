@@ -24,8 +24,8 @@ impl EthBlockId {
 }
 
 impl TryFrom<EthBlockId> for StarknetBlockId {
-    type Error = ConversionError;
-    fn try_from(eth_block_id: EthBlockId) -> Result<Self, ConversionError> {
+    type Error = ConversionError<()>;
+    fn try_from(eth_block_id: EthBlockId) -> Result<Self, Self::Error> {
         match eth_block_id.0 {
             EthereumBlockId::Hash(hash) => {
                 let hash: Felt252Wrapper = hash.block_hash.try_into()?;

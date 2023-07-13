@@ -9,6 +9,7 @@ pub mod signature;
 pub mod tests;
 pub mod transaction;
 
+use ruint::FromUintError;
 use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
 
@@ -16,7 +17,7 @@ use crate::client::helpers::DataDecodingError;
 
 #[derive(Debug, Error)]
 /// Conversion error
-pub enum ConversionError {
+pub enum ConversionError<T> {
     /// Ethereum to Starknet transaction conversion error
     #[error("transaction conversion error: {0}")]
     TransactionConversionError(String),
@@ -35,6 +36,9 @@ pub enum ConversionError {
     /// Value out of range error
     #[error("value out of range: {0}")]
     ValueOutOfRange(String),
+    /// Uint conversion error
+    #[error(transparent)]
+    UintConversionError(#[from] FromUintError<T>),
     /// Other conversion error
     #[error("failed to convert value: {0}")]
     Other(String),

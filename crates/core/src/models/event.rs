@@ -143,7 +143,8 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "ToEthereumAddressError")]
+    #[should_panic(expected = "ConversionError(\"failed to convert Felt252Wrapper to Ethereum address: the value \
+                               exceeds the maximum size of an Ethereum address\")")]
     fn test_to_eth_log_should_fail_on_key_not_convertible_to_eth_address() {
         // Given
         let event: Event =

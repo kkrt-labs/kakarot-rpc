@@ -23,15 +23,16 @@ pub enum Network {
 }
 
 impl Network {
-    pub fn get_gateway_url(&self) -> Result<Url, ConfigError> {
+    pub fn gateway_url(&self) -> Result<Url, ConfigError> {
         match self {
             Network::Mainnet => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/").unwrap()),
             Network::Goerli1 => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/").unwrap()),
-            _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for provider url", self))),
+            Network::Goerli2 => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/").unwrap()),
+            _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for gateway url", self))),
         }
     }
 
-    pub fn get_provider_url(&self) -> Result<Url, ConfigError> {
+    pub fn provider_url(&self) -> Result<Url, ConfigError> {
         match self {
             Network::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
             Network::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
@@ -128,7 +129,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
     pub fn with_http(config: &StarknetConfig) -> Result<Self> {
-        let url = config.network.get_provider_url()?;
+        let url = config.network.provider_url()?;
         let transport = HttpTransport::new(url);
         Ok(Self::new(transport))
     }

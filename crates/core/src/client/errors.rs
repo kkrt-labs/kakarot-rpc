@@ -46,8 +46,8 @@ pub enum EthApiError<E: std::error::Error> {
     #[error(transparent)]
     RequestError(#[from] ProviderError<E>),
     /// Conversion between Starknet types and ETH failed.
-    #[error(transparent)]
-    ConversionError(#[from] ConversionError),
+    #[error("conversion error: {0}")]
+    ConversionError(String),
     /// Data decoding into ETH types failed.
     #[error(transparent)]
     DataDecodingError(#[from] DataDecodingError),
@@ -66,6 +66,12 @@ pub enum EthApiError<E: std::error::Error> {
     /// Other error.
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+}
+
+impl<T, E: std::error::Error> From<ConversionError<T>> for EthApiError<E> {
+    fn from(err: ConversionError<T>) -> Self {
+        Self::ConversionError(err.to_string())
+    }
 }
 
 impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
@@ -99,7 +105,7 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
                 ProviderError::RateLimited => rpc_err(SERVER_IS_BUSY_CODE, err_provider.to_string()),
                 ProviderError::Other(_) => rpc_err(UNKNOWN_ERROR_CODE, err_provider.to_string()),
             },
-            EthApiError::ConversionError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
+            EthApiError::ConversionError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
             EthApiError::DataDecodingError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
             EthApiError::KakarotDataFilteringError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
             EthApiError::FeederGatewayError(err) => rpc_err(INTERNAL_ERROR_CODE, err),

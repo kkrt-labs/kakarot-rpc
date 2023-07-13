@@ -165,7 +165,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         })?;
 
         let block_id = block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let result = self.kakarot_client.call_view(to, Bytes::from(calldata.0), block_id).await?;
+        let result = self.kakarot_client.call(to, Bytes::from(calldata.0), block_id).await?;
 
         Ok(result)
     }

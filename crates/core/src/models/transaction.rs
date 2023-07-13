@@ -28,7 +28,7 @@ impl From<StarknetTransaction> for Transaction {
 
 macro_rules! get_invoke_transaction_field {
     (($field_v0:ident, $field_v1:ident), $type:ty) => {
-        pub fn $field_v1(&self) -> Result<$type, ConversionError> {
+        pub fn $field_v1(&self) -> Result<$type, ConversionError<()>> {
             match &self.0 {
                 Transaction::Invoke(tx) => match tx {
                     InvokeTransaction::V0(tx) => Ok(tx.$field_v0.clone().into()),

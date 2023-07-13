@@ -106,7 +106,7 @@ mod tests {
 
         let count_selector = counter_abi.function("count").unwrap().short_signature();
         let counter_bytes = kakarot_client
-            .call_view(
+            .call(
                 counter_eth_address,
                 count_selector.into(),
                 BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
