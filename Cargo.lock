@@ -4564,6 +4564,8 @@ dependencies = [
  "starknet",
  "thiserror",
  "tokio",
+ "tower",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
  "url",
