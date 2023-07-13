@@ -1,10 +1,10 @@
+use std::sync::Arc;
+
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use jsonrpsee::proc_macros::rpc;
 use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, METHOD_NOT_FOUND_CODE};
 use kakarot_rpc_core::client::api::KakarotEthApi;
 use kakarot_rpc_core::client::constants::{CHAIN_ID, ESTIMATE_GAS};
 use kakarot_rpc_core::client::errors::{rpc_err, EthApiError};
-use kakarot_rpc_core::models::balance::TokenBalances;
 use kakarot_rpc_core::models::block::EthBlockId;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
@@ -16,16 +16,16 @@ use serde_json::Value;
 use starknet::core::types::BlockId as StarknetBlockId;
 use starknet::providers::Provider;
 
-use crate::eth_api::EthApiServer;
+use crate::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 pub struct KakarotEthRpc<P: Provider + Send + Sync> {
-    pub kakarot_client: Box<dyn KakarotEthApi<P>>,
+    pub kakarot_client: Arc<dyn KakarotEthApi<P>>,
 }
 
 impl<P: Provider + Send + Sync> KakarotEthRpc<P> {
     #[must_use]
-    pub fn new(kakarot_client: Box<dyn KakarotEthApi<P>>) -> Self {
+    pub fn new(kakarot_client: Arc<dyn KakarotEthApi<P>>) -> Self {
         Self { kakarot_client }
     }
 }
@@ -251,23 +251,5 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         _block_number: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse> {
         todo!()
-    }
-}
-
-#[rpc(server, client)]
-trait KakarotCustomApi {
-    #[method(name = "kakarot_getTokenBalances")]
-    async fn token_balances(
-        &self,
-        address: Address,
-        contract_addresses: Vec<Address>,
-    ) -> jsonrpsee::core::RpcResult<TokenBalances>;
-}
-
-#[async_trait]
-impl<P: Provider + Send + Sync + 'static> KakarotCustomApiServer for KakarotEthRpc<P> {
-    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> Result<TokenBalances> {
-        let token_balances = self.kakarot_client.token_balances(address, contract_addresses).await?;
-        Ok(token_balances)
     }
 }
