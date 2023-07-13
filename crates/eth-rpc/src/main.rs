@@ -33,19 +33,19 @@ async fn main() -> Result<()> {
             StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build())
         }
 
-        Network::Goerli1 => {
+        Network::Goerli1Gateway => {
             StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_goerli())
         }
 
-        Network::Goerli2 => {
+        Network::Goerli2Gateway => {
             StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_goerli_2())
         }
 
-        Network::Mainnet => {
+        Network::MainnetGateway => {
             StarknetProvider::SequencerGatewayProvider(SequencerGatewayProvider::starknet_alpha_mainnet())
         }
 
-        Network::ProviderUrl(url) => {
+        Network::JsonRpcProvider(url) => {
             StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::new(HttpTransport::new(url.clone())).build())
         }
     };

@@ -16,10 +16,10 @@ pub enum Network {
     #[default]
     Katana,
     Madara,
-    Mainnet,
-    Goerli1,
-    Goerli2,
-    ProviderUrl(Url),
+    MainnetGateway,
+    Goerli1Gateway,
+    Goerli2Gateway,
+    JsonRpcProvider(Url),
 }
 
 #[derive(Default, Clone)]
@@ -47,11 +47,11 @@ impl StarknetConfig {
         let network = match network.to_lowercase().as_str() {
             "katana" => Network::Katana,
             "madara" => Network::Madara,
-            "mainnet" => Network::Mainnet,
-            "goerli1" => Network::Goerli1,
-            "goerli2" => Network::Goerli2,
-            "testnet" => Network::Goerli1,
-            network_url => Network::ProviderUrl(Url::parse(network_url)?),
+            "mainnet" => Network::MainnetGateway,
+            "goerli1" => Network::Goerli1Gateway,
+            "goerli2" => Network::Goerli2Gateway,
+            "testnet" => Network::Goerli1Gateway,
+            network_url => Network::JsonRpcProvider(Url::parse(network_url)?),
         };
 
         let kakarot_address = get_env_var("KAKAROT_ADDRESS")?;
@@ -105,7 +105,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
     ///
     /// let url = "http://0.0.0.0:1234/rpc";
     /// let config = StarknetConfig::new(
-    ///     Network::ProviderUrl(Url::parse(url).unwrap()),
+    ///     Network::JsonRpcProvider(Url::parse(url).unwrap()),
     ///     FieldElement::default(),
     ///     FieldElement::default(),
     /// );
@@ -116,10 +116,11 @@ impl JsonRpcClientBuilder<HttpTransport> {
         let url = match config.clone().network {
             Network::Katana => Url::parse(KATANA_RPC_URL)?,
             Network::Madara => Url::parse(MADARA_RPC_URL)?,
-            Network::ProviderUrl(url) => url,
+            Network::JsonRpcProvider(url) => url,
             _ => {
                 return Err(eyre::eyre!(
-                    "Constant networks (one of: [Mainnet, Goerli1, Goerli2, Mock]) is not supported"
+                    "Constant networks (one of: [MainnetGateway, Goerli1Gateway, Goerli2Gateway, Mock]) is not \
+                     supported"
                 ));
             }
         };
