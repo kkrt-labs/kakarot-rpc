@@ -12,7 +12,7 @@ RUN rustup self update
 RUN cargo build --all --release
 
 # Create a new container from scratch to reduce image size
-FROM debian:buster-slim
+FROM debian:bullseye
 
 # Install any necessary dependencies
 RUN apt-get update && apt-get install -y libssl-dev ca-certificates tini && rm -rf /var/lib/apt/lists/*
@@ -37,4 +37,3 @@ ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
 # empty CMD is needed and cannot be --help because otherwise configuring from
 # environment variables only would be impossible and require a workaround.
 CMD []
-
