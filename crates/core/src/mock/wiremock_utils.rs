@@ -255,7 +255,7 @@ fn mock_get_code() -> Mock {
         ])))
         .respond_with(
             response_template_with_status(StatusCode::OK)
-                .set_body_raw(include_str!("fixtures/responses/starknet_getCode.json"), "application/json"),
+                .set_body_raw(include_str!("fixtures/responses/kakarot_getCode.json"), "application/json"),
         )
 }
 
