@@ -33,8 +33,6 @@ pub const INC_DATA: &str = "0x371303c0";
 pub const KAKAROT_TESTNET_ADDRESS: &str = "0x01e98a4d6cadc1e3511d150ef2705b02fccb3fb6f15aba863503af58f4b217ea";
 lazy_static! {
     pub static ref ACCOUNT_ADDRESS: FieldElement = FieldElement::from_hex_be(ACCOUNT_ADDRESS_HEX).unwrap();
-    pub static ref COUNTER_ADDRESS: FieldElement =
-        FieldElement::from_hex_be("0x03c12643f0e9f0b41de95a87e4f03f5fa69601930e9354a206a0b82a02119f2b").unwrap();
     pub static ref ACCOUNT_ADDRESS_EVM: Address =
         Address::from_str("0x54B288676B749DEF5FC10EB17244FE2C87375dE1").unwrap();
     pub static ref COUNTER_ADDRESS_EVM: Address =
