@@ -9,7 +9,7 @@ pub mod tests;
 use async_trait::async_trait;
 use eyre::Result;
 use futures::future::join_all;
-use helpers::{raw_starknet_calldata, vec_felt_to_bytes};
+use helpers::vec_felt_to_bytes;
 use reqwest::Client;
 use reth_primitives::{
     keccak256, AccessList, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Signature, Transaction, TransactionKind,
@@ -33,9 +33,12 @@ use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, BYTECODE, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
-use self::constants::{ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN};
+use self::constants::{
+    ACCOUNT_ADDRESS, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS, MAX_FEE,
+    STARKNET_NATIVE_TOKEN,
+};
 use self::errors::EthApiError;
-use self::helpers::{bytes_to_felt_vec, DataDecodingError};
+use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
 use crate::kakarot::KakarotContract;
 use crate::models::balance::{TokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
@@ -446,7 +449,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
         let nonce = FieldElement::from(transaction.nonce());
 
-        let calldata = raw_starknet_calldata(self.kakarot_address(), bytes_to_felt_vec(&bytes));
+        let calldata = raw_kakarot_calldata(self.kakarot_address(), bytes_to_felt_vec(&bytes));
 
         // Get estimated_fee from Starknet
         let max_fee = *MAX_FEE;
@@ -505,6 +508,11 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
     /// Returns the estimated gas for a transaction
     async fn estimate_gas(&self, request: CallRequest, block_id: BlockId) -> Result<U256, EthApiError<P::Error>> {
+        match self.network {
+            Network::MainnetGateway | Network::Goerli1Gateway | Network::Goerli2Gateway => (),
+            _ => return Ok(self.base_fee_per_gas()),
+        };
+
         let chain_id = request
             .chain_id
             .ok_or_else(|| EthApiError::MissingParameterError("chain_id for estimate_gas".into()))?
@@ -551,7 +559,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let mut data = vec![];
         tx.encode_with_signature(&Signature::default(), &mut data, false);
         let data = data.into_iter().map(FieldElement::from).collect();
-        let calldata = raw_starknet_calldata(self.kakarot_address(), data);
+        let calldata = raw_kakarot_calldata(self.kakarot_address(), data);
 
         let tx = BroadcastedInvokeTransactionV1 {
             max_fee: FieldElement::ZERO,
@@ -563,6 +571,34 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
         let fee_estimate = self.simulate_transaction(tx, block_number, true).await?.fee_estimation;
         Ok(U256::from(fee_estimate.gas_usage))
+    }
+
+    /// Returns the gas price on the network
+    async fn gas_price(&self) -> Result<U256, EthApiError<P::Error>> {
+        let call = match self.network {
+            Network::MainnetGateway => COUNTER_CALL_MAINNET.clone(),
+            Network::Goerli1Gateway => COUNTER_CALL_TESTNET1.clone(),
+            Network::Goerli2Gateway => COUNTER_CALL_TESTNET2.clone(),
+            _ => return Ok(self.base_fee_per_gas()),
+        };
+
+        let raw_calldata: Vec<FieldElement> = call.into();
+
+        let block_id = StarknetBlockId::Tag(BlockTag::Latest);
+        let nonce = self.starknet_provider.get_nonce(block_id, *ACCOUNT_ADDRESS).await?;
+
+        let tx = BroadcastedInvokeTransactionV1 {
+            max_fee: FieldElement::ZERO,
+            signature: vec![],
+            sender_address: *ACCOUNT_ADDRESS,
+            nonce,
+            calldata: raw_calldata,
+        };
+
+        let block_number = self.block_number().await?.as_u64();
+        let fee_estimate = self.simulate_transaction(tx, block_number, true).await?.fee_estimation;
+
+        Ok(U256::from(fee_estimate.gas_price))
     }
 }
 

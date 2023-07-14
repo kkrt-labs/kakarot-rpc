@@ -4,7 +4,6 @@ use dojo_test_utils::rpc::MockJsonRpcTransport;
 use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256, U64};
 use reth_rpc_types::CallRequest;
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransactionV1};
-use starknet::macros::selector;
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::sequencer::models::BlockId as SequencerBlockId;
 use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
@@ -13,11 +12,11 @@ use starknet_crypto::FieldElement;
 use super::config::{Network, SequencerGatewayProviderBuilder};
 use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
 use crate::client::config::StarknetConfig;
-use crate::client::constants::CHAIN_ID;
+use crate::client::constants::{CHAIN_ID, COUNTER_ADDRESS_TESTNET1, INC_SELECTOR};
 use crate::client::KakarotClient;
 use crate::mock::constants::{
     ABDEL_ETHEREUM_ADDRESS, ABDEL_STARKNET_ADDRESS, ABDEL_STARKNET_ADDRESS_HEX, ACCOUNT_ADDRESS, ACCOUNT_ADDRESS_EVM,
-    COUNTER_ADDRESS, COUNTER_ADDRESS_EVM, INC_DATA, KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
+    COUNTER_ADDRESS_EVM, INC_DATA, KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
     PROXY_ACCOUNT_CLASS_HASH_HEX,
 };
 use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, AvailableFixtures, StarknetRpcFixture};
@@ -153,12 +152,12 @@ async fn test_simulate_transaction() {
     let nonce = client.starknet_provider.get_nonce(*ACCOUNT_ADDRESS, block_id).await.unwrap();
 
     let calldata = vec![
-        FieldElement::ONE,  // call array length
-        *COUNTER_ADDRESS,   // counter address
-        selector!("inc"),   // selector
-        FieldElement::ZERO, // data offset length
-        FieldElement::ZERO, // data length
-        FieldElement::ZERO, // calldata length
+        FieldElement::ONE,         // call array length
+        *COUNTER_ADDRESS_TESTNET1, // counter address
+        *INC_SELECTOR,             // selector
+        FieldElement::ZERO,        // data offset length
+        FieldElement::ZERO,        // data length
+        FieldElement::ZERO,        // calldata length
     ];
 
     let tx = BroadcastedInvokeTransactionV1 {
@@ -200,4 +199,16 @@ async fn test_estimate_gas() {
 
     // Then
     assert!(estimate > U256::from(0));
+}
+
+#[tokio::test]
+async fn test_gas_price() {
+    // Given
+    let client = init_testnet_client();
+
+    // When
+    let gas_price = client.gas_price().await.unwrap();
+
+    // Then
+    assert!(gas_price > U256::from(0));
 }

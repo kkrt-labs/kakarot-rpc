@@ -1,6 +1,10 @@
 use lazy_static::lazy_static;
 use reth_primitives::{H256, H64, U128, U256, U8};
+use starknet::accounts::Call as StarknetCall;
 use starknet::core::types::FieldElement;
+use starknet::macros::selector;
+
+use crate::models::call::Call;
 
 /// CHAIN_ID = KKRT (0x4b4b5254) in ASCII
 pub const CHAIN_ID: u64 = 1_263_227_476;
@@ -76,4 +80,30 @@ lazy_static! {
 
 lazy_static! {
     pub static ref KAKAROT_CLIENT_VERSION: String = format!("kakarot_{}", env!("CARGO_PKG_VERSION"));
+}
+
+// This module contains constants related to transactions used to calculate
+// Starknet gas price
+lazy_static! {
+    /// The address of the argent account used to calculate the gas price.
+    /// (code: https://github.com/argentlabs/argent-contracts-starknet/blob/develop/contracts/account/ArgentAccount.cairo)
+    pub static ref ACCOUNT_ADDRESS: FieldElement =
+        FieldElement::from_hex_be("0x07142FbF6E8C9C07b079D47727C6D2ff49970203bfd5Bd6ED0D740e0f5a344E7").unwrap();
+    pub static ref INC_SELECTOR: FieldElement = selector!("inc");
+    /// The address of the counter contract used to calculate the gas price on mainnet
+    /// (code: https://gist.github.com/greged93/78b58f85cba6cf76eefaedab87f1b645)
+    pub static ref COUNTER_ADDRESS_MAINNET: FieldElement =
+        FieldElement::from_hex_be("0x02786c4cdfb2ee39727cb00695cf136710e2c3bfc5cb09315101be3d37c2c557").unwrap();
+    /// The address of the counter contract used to calculate the gas price on goerli 1
+    pub static ref COUNTER_ADDRESS_TESTNET1: FieldElement =
+        FieldElement::from_hex_be("0x03c12643f0e9f0b41de95a87e4f03f5fa69601930e9354a206a0b82a02119f2b").unwrap();
+    /// The address of the counter contract used to calculate the gas price on goerli 2
+    pub static ref COUNTER_ADDRESS_TESTNET2: FieldElement =
+        FieldElement::from_hex_be("0x00e438661a4775fdf10cf132cc50730f40e59f3d040b15e64cd292add25eb01b").unwrap();
+    pub static ref COUNTER_CALL_MAINNET: Call =
+        StarknetCall { to: *COUNTER_ADDRESS_MAINNET, selector: *INC_SELECTOR, calldata: vec![] }.into();
+    pub static ref COUNTER_CALL_TESTNET1: Call =
+        StarknetCall { to: *COUNTER_ADDRESS_TESTNET1, selector: *INC_SELECTOR, calldata: vec![] }.into();
+    pub static ref COUNTER_CALL_TESTNET2: Call =
+        StarknetCall { to: *COUNTER_ADDRESS_TESTNET2, selector: *INC_SELECTOR, calldata: vec![] }.into();
 }
