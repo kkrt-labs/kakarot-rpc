@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
     let rpc_config = RPCConfig::from_env()?;
 
     let starknet_provider: StarknetProvider = match &starknet_config.network {
-        Network::Madara | Network::Katana => {
+        Network::Madara | Network::Katana | Network::Sharingan => {
             StarknetProvider::JsonRpcClient(JsonRpcClientBuilder::with_http(&starknet_config).unwrap().build())
         }
         Network::JsonRpcProvider(url) => {

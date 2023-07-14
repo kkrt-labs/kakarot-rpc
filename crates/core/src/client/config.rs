@@ -16,6 +16,7 @@ pub enum Network {
     #[default]
     Katana,
     Madara,
+    Sharingan,
     MainnetGateway,
     Goerli1Gateway,
     Goerli2Gateway,
@@ -36,6 +37,7 @@ impl Network {
         match self {
             Network::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
             Network::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
+            Network::Sharingan => Ok(Url::parse(std::env::var("SHARINGAN_RPC_URL").unwrap().as_str())?),
             Network::JsonRpcProvider(url) => Ok(url.clone()),
             _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for provider url", self))),
         }
@@ -67,6 +69,7 @@ impl StarknetConfig {
         let network = match network.to_lowercase().as_str() {
             "katana" => Network::Katana,
             "madara" => Network::Madara,
+            "sharingan" => Network::Sharingan,
             "mainnet" => Network::MainnetGateway,
             "goerli1" => Network::Goerli1Gateway,
             "goerli2" => Network::Goerli2Gateway,
