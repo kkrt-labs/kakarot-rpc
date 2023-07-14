@@ -573,6 +573,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         Ok(U256::from(fee_estimate.gas_usage))
     }
 
+    /// Returns the gas price on the network
     async fn gas_price(&self) -> Result<U256, EthApiError<P::Error>> {
         let call = match self.network {
             Network::MainnetGateway => COUNTER_CALL_MAINNET.clone(),
