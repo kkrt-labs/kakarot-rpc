@@ -109,7 +109,7 @@ pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
 }
 
 /// Constructs the calldata for a raw Starknet invoke transaction call
-pub fn raw_starknet_calldata(kakarot_address: FieldElement, mut calldata: Vec<FieldElement>) -> Vec<FieldElement> {
+pub fn raw_kakarot_calldata(kakarot_address: FieldElement, mut calldata: Vec<FieldElement>) -> Vec<FieldElement> {
     let mut execute_calldata: Vec<FieldElement> = vec![
         FieldElement::ONE,
         kakarot_address,

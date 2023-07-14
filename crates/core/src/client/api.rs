@@ -63,6 +63,8 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
     ) -> Result<FeeHistory, EthApiError<P::Error>>;
 
     async fn estimate_gas(&self, request: CallRequest, block_id: BlockId) -> Result<U256, EthApiError<P::Error>>;
+
+    async fn gas_price(&self) -> Result<U256, EthApiError<P::Error>>;
 }
 
 #[async_trait]
