@@ -4604,6 +4604,8 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml 0.7.6",
+ "tracing",
+ "tracing-subscriber",
  "url",
  "wiremock",
 ]
