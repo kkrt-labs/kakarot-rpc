@@ -3,7 +3,15 @@ version: "3.2"
 services:
   katana:
     image: ghcr.io/dojoengine/dojo:latest
-    command: ["katana", "--allow-zero-max-fee"]
+    command: 
+      - "katana"
+      - "--allow-zero-max-fee"
+      - "--validate-max-steps"
+      - "16777216"
+      - "--invoke-max-steps"
+      - "16777216"
+      - "--gas-price"
+      - "0"
     ports:
       - 5050:5050
     restart: on-failure
