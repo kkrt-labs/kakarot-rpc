@@ -33,9 +33,12 @@ use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use self::constants::selectors::{BALANCE_OF, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
-use self::constants::{ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN};
+use self::constants::{
+    ACCOUNT_ADDRESS, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS, MAX_FEE,
+    STARKNET_NATIVE_TOKEN,
+};
 use self::errors::EthApiError;
-use self::helpers::{bytes_to_felt_vec, DataDecodingError};
+use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
 use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::kakarot::KakarotContract;
 use crate::models::balance::{TokenBalance, TokenBalances};
