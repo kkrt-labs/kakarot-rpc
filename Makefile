@@ -36,6 +36,13 @@ run-dev:
 run-release:
 	cargo run --release -p kakarot-rpc
 
+# Run Katana, Deploy Kakarot, Run Kakarot RPC
+katana-rpc-up:
+	docker-compose -f docker-compose.katana.yaml up -d
+
+katana-rpc-down:
+	docker-compose -f docker-compose.katana.yaml down
+
 test:
 	cargo test --all
 
