@@ -1,0 +1,47 @@
+version: "3.2"
+
+services:
+  katana:
+    image: ghcr.io/dojoengine/dojo:latest
+    command: ["katana", "--allow-zero-max-fee"]
+    ports:
+      - 5050:5050
+    restart: on-failure
+    networks:
+      - internal
+
+  kakarot-deployer:
+    image: ghcr.io/kkrt-labs/kakarot/deployer:latest
+    environment:
+      - STARKNET_NETWORK=katana
+      - KATANA_PRIVATE_KEY=${KATANA_PRIVATE_KEY}
+      - KATANA_ACCOUNT_ADDRESS=${KATANA_ACCOUNT_ADDRESS}
+      - KATANA_RPC_URL=http://katana:5050
+    volumes:
+      - ./deployments:/app/kakarot/deployments
+    depends_on:
+      - katana
+    networks:
+      - internal
+
+  kakarot-rpc:
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    ports:
+      - 9545:9545
+    entrypoint: ["./run.sh", "/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
+    environment:
+      - STARKNET_NETWORK=katana
+      - KATANA_RPC_URL=http://katana:5050
+      - RUST_LOG=trace
+    volumes:
+      - ./deployments:/usr/src/app/deployments
+      - ./scripts/run.sh:/usr/src/app/run.sh
+    depends_on:
+      kakarot-deployer:
+        condition: service_completed_successfully # only start if deployer is successful
+    restart: on-failure
+    networks:
+      - internal
+
+networks:
+  internal:
