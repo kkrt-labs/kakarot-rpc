@@ -4,7 +4,6 @@ use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
 use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
 use url::Url;
 
-use super::constants::{KATANA_RPC_URL, MADARA_RPC_URL};
 use super::errors::ConfigError;
 
 fn get_env_var(name: &str) -> Result<String, ConfigError> {
@@ -35,8 +34,8 @@ impl Network {
 
     pub fn provider_url(&self) -> Result<Url, ConfigError> {
         match self {
-            Network::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
-            Network::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
+            Network::Katana => Ok(Url::parse(std::env::var("KATANA_RPC_URL").unwrap().as_str())?),
+            Network::Madara => Ok(Url::parse(std::env::var("MADARA_RPC_URL").unwrap().as_str())?),
             Network::Sharingan => Ok(Url::parse(std::env::var("SHARINGAN_RPC_URL").unwrap().as_str())?),
             Network::JsonRpcProvider(url) => Ok(url.clone()),
             _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for provider url", self))),
