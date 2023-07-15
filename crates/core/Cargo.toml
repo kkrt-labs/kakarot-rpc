@@ -47,3 +47,4 @@ starknet-crypto = { workspace = true }
 toml = "0.7.5"
 tracing-subscriber = "0.3.17"
 tracing = "0.1.37"
+ctor = "0.2.4"

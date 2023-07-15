@@ -2,6 +2,7 @@ mod utils;
 
 mod tests {
 
+    use ctor::ctor;
     use ethers::types::Address as EthersAddress;
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::client::config::{Network, StarknetConfig};
@@ -11,15 +12,22 @@ mod tests {
     use starknet::core::types::FieldElement;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
+    use tracing_subscriber::FmtSubscriber;
 
     use crate::utils::constants::EOA_WALLET;
     use crate::utils::deploy_helpers::{
         construct_kakarot_test_sequencer, create_raw_ethereum_tx, deploy_kakarot_system,
     };
 
+    #[ctor]
+    fn setup() {
+        let subscriber = FmtSubscriber::builder().with_max_level(tracing::Level::ERROR).finish();
+        tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
+    }
+
     #[tokio::test]
     async fn test_rpc_should_not_raise_when_eoa_not_deployed() {
-        let starknet_test_sequencer = construct_kakarot_test_sequencer(tracing::Level::ERROR).await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
 
@@ -44,7 +52,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_counter() {
-        let starknet_test_sequencer = construct_kakarot_test_sequencer(tracing::Level::ERROR).await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("10000000000000000000").unwrap();
 
@@ -122,7 +130,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_plain_opcodes() {
-        let starknet_test_sequencer = construct_kakarot_test_sequencer(tracing::Level::ERROR).await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
 
@@ -176,7 +184,7 @@ mod tests {
     #[tokio::test]
     async fn test_storage_at() {
         // Given
-        let starknet_test_sequencer = construct_kakarot_test_sequencer(tracing::Level::ERROR).await;
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let amount_funded = FieldElement::from_dec_str("10000000000000000000").unwrap();
 

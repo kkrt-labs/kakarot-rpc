@@ -25,7 +25,6 @@ use starknet::core::utils::{get_contract_address, get_selector_from_name};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
-use tracing_subscriber::FmtSubscriber;
 use url::Url;
 
 /// Macro to find the root path of the project.
@@ -561,9 +560,7 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
 /// Kakarot based applications.
 ///
 /// Returns a `TestSequencer` configured for Kakarot.
-pub async fn construct_kakarot_test_sequencer(level: tracing::Level) -> TestSequencer {
-    let subscriber = FmtSubscriber::builder().with_max_level(level).finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
+pub async fn construct_kakarot_test_sequencer() -> TestSequencer {
     TestSequencer::start(SequencerConfig::default(), kakarot_starknet_config()).await
 }
 
