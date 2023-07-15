@@ -41,6 +41,13 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
 
     async fn balance(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<P::Error>>;
 
+    async fn storage_at(
+        &self,
+        ethereum_address: Address,
+        index: U256,
+        block_id: BlockId,
+    ) -> Result<U256, EthApiError<P::Error>>;
+
     async fn token_balances(
         &self,
         address: Address,

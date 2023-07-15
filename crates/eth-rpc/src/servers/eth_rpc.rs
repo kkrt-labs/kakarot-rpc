@@ -130,14 +130,16 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(receipt)
     }
 
-    async fn balance(&self, address: Address, block_number: Option<BlockId>) -> Result<U256> {
-        let block_id = block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+    async fn balance(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let balance = self.kakarot_client.balance(address, block_id).await?;
         Ok(balance)
     }
 
-    async fn storage_at(&self, _address: Address, _index: U256, _block_number: Option<BlockId>) -> Result<H256> {
-        todo!()
+    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<U256> {
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+        let value = self.kakarot_client.storage_at(address, index, block_id).await?;
+        Ok(value)
     }
 
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
@@ -148,13 +150,13 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(transaction_count)
     }
 
-    async fn get_code(&self, address: Address, block_number: Option<BlockId>) -> Result<Bytes> {
-        let block_id = block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes> {
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let code = self.kakarot_client.get_code(address, block_id).await?;
         Ok(code)
     }
 
-    async fn call(&self, request: CallRequest, block_number: Option<BlockId>) -> Result<Bytes> {
+    async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
         // unwrap option or return jsonrpc error
         let to = request.to.ok_or_else(|| {
             rpc_err(INTERNAL_ERROR_CODE, "CallRequest `to` field is None. Cannot process a Kakarot call")
@@ -164,7 +166,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
             rpc_err(INTERNAL_ERROR_CODE, "CallRequest `data` field is None. Cannot process a Kakarot call")
         })?;
 
-        let block_id = block_number.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let result = self.kakarot_client.call(to, Bytes::from(calldata.0), block_id).await?;
 
         Ok(result)
@@ -173,7 +175,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     async fn create_access_list(
         &self,
         _request: CallRequest,
-        _block_number: Option<BlockId>,
+        _block_id: Option<BlockId>,
     ) -> Result<AccessListWithGasUsed> {
         todo!()
     }
@@ -250,7 +252,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         &self,
         _address: Address,
         _keys: Vec<H256>,
-        _block_number: Option<BlockId>,
+        _block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse> {
         todo!()
     }

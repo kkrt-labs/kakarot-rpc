@@ -22,6 +22,7 @@ pub mod selectors {
     use starknet::macros::selector;
 
     pub const BYTECODE: FieldElement = selector!("bytecode");
+    pub const STORAGE: FieldElement = selector!("storage");
 
     pub const ETH_CALL: FieldElement = selector!("eth_call");
     pub const ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
