@@ -27,9 +27,10 @@ services:
   kakarot-rpc:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
     ports:
-      - 9545:9545
+      - 3030:3030
     entrypoint: ["./run.sh", "/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
     environment:
+      - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
       - STARKNET_NETWORK=katana
       - KATANA_RPC_URL=http://katana:5050
       - RUST_LOG=trace
