@@ -46,6 +46,13 @@ katana-rpc-up:
 katana-rpc-down:
 	docker-compose -f docker-compose.katana.yaml down
 
+# Run Madara, Deploy Kakarot, Run Kakarot RPC
+madara-rpc-up:
+	docker-compose -f docker-compose.madara.yaml up -d
+
+madara-rpc-down:
+	docker-compose -f docker-compose.madara.yaml down
+
 test:
 	cargo test --all
 

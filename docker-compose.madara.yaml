@@ -1,0 +1,53 @@
+version: "3.2"
+
+services:
+  madara:
+    image: ghcr.io/keep-starknet-strange/madara:latest
+    ports:
+      - "9615:9615"
+      - "9944:9944"
+      - "30333:30333"
+    command:
+      - "--rpc-external"
+      - "--rpc-methods=unsafe"
+      - "--dev"
+    networks:
+      - internal
+
+  kakarot-deployer:
+    image: ghcr.io/kkrt-labs/kakarot/deployer:latest
+    environment:
+      - STARKNET_NETWORK=madara
+      - MADARA_PRIVATE_KEY=${MADARA_PRIVATE_KEY}
+      - MADARA_ACCOUNT_ADDRESS=${MADARA_ACCOUNT_ADDRESS}
+      - MADARA_RPC_URL=http://madara:9944
+    volumes:
+      - ./deployments:/app/kakarot/deployments
+    depends_on:
+      - madara
+    restart: on-failure
+    networks:
+      - internal
+
+  kakarot-rpc:
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    ports:
+      - 3030:3030
+    entrypoint: ["./run.sh", "/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
+    environment:
+      - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
+      - STARKNET_NETWORK=madara
+      - MADARA_RPC_URL=http://madara:9944
+      - RUST_LOG=trace
+    volumes:
+      - ./deployments:/usr/src/app/deployments
+      - ./scripts/run.sh:/usr/src/app/run.sh
+    depends_on:
+      kakarot-deployer:
+        condition: service_completed_successfully # only start if deployer is successful
+    restart: on-failure
+    networks:
+      - internal
+
+networks:
+  internal:
