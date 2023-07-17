@@ -95,19 +95,19 @@ pub trait EthApi {
 
     /// Returns the value from a storage position at a given address
     #[method(name = "eth_getStorageAt")]
-    async fn storage_at(&self, address: Address, index: U256, block_number: Option<BlockId>) -> Result<H256>;
+    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<U256>;
 
     /// Returns the number of transactions sent from an address at given block number.
     #[method(name = "eth_getTransactionCount")]
-    async fn transaction_count(&self, address: Address, block_number: Option<BlockId>) -> Result<U256>;
+    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> Result<U256>;
 
     /// Returns code at a given address at given block number.
     #[method(name = "eth_getCode")]
-    async fn get_code(&self, address: Address, block_number: Option<BlockId>) -> Result<Bytes>;
+    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes>;
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "eth_call")]
-    async fn call(&self, request: CallRequest, block_number: Option<BlockId>) -> Result<Bytes>;
+    async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes>;
 
     /// Generates an access list for a transaction.
     ///
@@ -127,7 +127,7 @@ pub trait EthApi {
     async fn create_access_list(
         &self,
         request: CallRequest,
-        block_number: Option<BlockId>,
+        block_id: Option<BlockId>,
     ) -> Result<AccessListWithGasUsed>;
 
     /// Generates and returns an estimate of how much gas is necessary to allow the transaction to
@@ -209,6 +209,6 @@ pub trait EthApi {
         &self,
         address: Address,
         keys: Vec<H256>,
-        block_number: Option<BlockId>,
+        block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse>;
 }

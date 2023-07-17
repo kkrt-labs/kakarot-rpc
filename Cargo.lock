@@ -4578,6 +4578,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bytes",
+ "ctor",
  "dojo-test-utils",
  "dotenv",
  "env_logger 0.10.0",
@@ -4604,6 +4605,8 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml 0.7.6",
+ "tracing",
+ "tracing-subscriber",
  "url",
  "wiremock",
 ]

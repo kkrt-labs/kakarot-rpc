@@ -32,14 +32,15 @@ use starknet::providers::{Provider, ProviderError};
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
-use self::constants::selectors::{BALANCE_OF, BYTECODE, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
+use self::constants::selectors::{BALANCE_OF, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
 use self::constants::{
     ACCOUNT_ADDRESS, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS, MAX_FEE,
     STARKNET_NATIVE_TOKEN,
 };
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
-use crate::kakarot::KakarotContract;
+use crate::contracts::contract_account::ContractAccount;
+use crate::contracts::kakarot::KakarotContract;
 use crate::models::balance::{TokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
@@ -86,26 +87,10 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             .compute_starknet_address(&self.starknet_provider, &ethereum_address, &starknet_block_id)
             .await?;
 
-        // Prepare the calldata for the bytecode function call
-        let request = FunctionCall {
-            contract_address: starknet_contract_address,
-            entry_point_selector: BYTECODE,
-            calldata: vec![],
-        };
-
-        // Make the function call to get the contract bytecode
-        let bytecode = self.starknet_provider.call(request, starknet_block_id).await.or_else(|err| match err {
-            ProviderError::StarknetError(starknet_error) => match starknet_error {
-                // TODO: we just need to test against ContractNotFound but madara is currently returning the wrong
-                // error See https://github.com/keep-starknet-strange/madara/issues/853
-                StarknetError::ContractError | StarknetError::ContractNotFound => Ok(vec![]),
-                _ => Err(EthApiError::from(err)),
-            },
-            _ => Err(EthApiError::from(err)),
-        })?;
+        let contract_account = ContractAccount::new(starknet_contract_address);
+        let bytecode = contract_account.bytecode(&self.starknet_provider, &starknet_block_id).await?;
 
         // Convert the result of the function call to a vector of bytes
-        let bytecode: Bytes = vec_felt_to_bytes(bytecode);
         Ok(bytecode)
     }
 
@@ -389,6 +374,38 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         .into();
 
         Ok(balance.into())
+    }
+
+    /// Returns the storage value at a specific index of a contract given its address and a block
+    /// id.
+    async fn storage_at(
+        &self,
+        address: Address,
+        index: U256,
+        block_id: BlockId,
+    ) -> Result<U256, EthApiError<P::Error>> {
+        let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
+
+        let address: Felt252Wrapper = address.into();
+        let address = address.into();
+
+        let starknet_contract_address = self
+            .kakarot_contract
+            .compute_starknet_address(&self.starknet_provider, &address, &starknet_block_id)
+            .await?;
+
+        let key_low = index & U256::from(u128::MAX);
+        let key_low: Felt252Wrapper = key_low.try_into()?;
+
+        let key_high = index >> 128;
+        let key_high: Felt252Wrapper = key_high.try_into()?;
+
+        let contract_account = ContractAccount::new(starknet_contract_address);
+        let storage_value = contract_account
+            .storage(&self.starknet_provider, &key_low.into(), &key_high.into(), &starknet_block_id)
+            .await?;
+
+        Ok(storage_value)
     }
 
     /// Returns token balances for a specific address given a list of contracts addresses.
