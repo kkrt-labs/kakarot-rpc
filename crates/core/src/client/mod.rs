@@ -527,7 +527,9 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     async fn estimate_gas(&self, request: CallRequest, block_id: BlockId) -> Result<U256, EthApiError<P::Error>> {
         match self.network {
             Network::MainnetGateway | Network::Goerli1Gateway | Network::Goerli2Gateway => (),
-            _ => return Ok(self.base_fee_per_gas()),
+            _ => {
+                return Ok(*ESTIMATE_GAS);
+            }
         };
 
         let chain_id = request

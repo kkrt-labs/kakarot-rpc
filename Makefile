@@ -2,6 +2,8 @@ HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
 STARKNET_NETWORK?=madara
 
+include .env
+
 pull-kakarot: .gitmodules 
 	git submodule update --init --recursive
 	cd lib/kakarot && make setup
@@ -10,10 +12,10 @@ build-kakarot: setup
 	cd lib/kakarot && make build && make build-sol
 
 build-and-deploy-kakarot:
-	source .env && cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) make deploy
+	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) make deploy
 
 deploy-kakarot:
-	source .env && cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py
+	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py
 
 setup: pull-kakarot build-kakarot
 
@@ -27,7 +29,7 @@ build:
 
 # run
 run: 
-	RUST_LOG=info cargo run -p kakarot-rpc
+	cargo run -p kakarot-rpc
 
 run-dev:
 	KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run -p kakarot-rpc
