@@ -21,6 +21,7 @@ services:
       - MADARA_PRIVATE_KEY=${MADARA_PRIVATE_KEY}
       - MADARA_ACCOUNT_ADDRESS=${MADARA_ACCOUNT_ADDRESS}
       - MADARA_RPC_URL=http://madara:9944
+      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
     volumes:
       - ./deployments:/app/kakarot/deployments
     depends_on:
@@ -39,6 +40,7 @@ services:
       - STARKNET_NETWORK=madara
       - MADARA_RPC_URL=http://madara:9944
       - RUST_LOG=trace
+      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
     volumes:
       - ./deployments:/usr/src/app/deployments
       - ./scripts/run.sh:/usr/src/app/run.sh
