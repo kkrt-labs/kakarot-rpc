@@ -1,6 +1,6 @@
 HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
-STARKNET_NETWORK?=katana
+STARKNET_NETWORK?=madara
 
 pull-kakarot: .gitmodules 
 	git submodule update --init --recursive
@@ -10,10 +10,10 @@ build-kakarot: setup
 	cd lib/kakarot && make build && make build-sol
 
 build-and-deploy-kakarot:
-	source .env && cd lib/kakarot && make deploy
+	source .env && cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) make deploy
 
 deploy-kakarot:
-	source .env && cd lib/kakarot && poetry run python ./scripts/deploy_kakarot.py
+	source .env && cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py
 
 setup: pull-kakarot build-kakarot
 
