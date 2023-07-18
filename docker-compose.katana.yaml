@@ -25,6 +25,7 @@ services:
       - KATANA_PRIVATE_KEY=${KATANA_PRIVATE_KEY}
       - KATANA_ACCOUNT_ADDRESS=${KATANA_ACCOUNT_ADDRESS}
       - KATANA_RPC_URL=http://katana:5050
+      - EVM_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
     volumes:
       - ./deployments:/app/kakarot/deployments
     depends_on:
