@@ -2,7 +2,8 @@ HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
 STARKNET_NETWORK?=madara
 
-include .env
+-include .env
+export
 
 pull-kakarot: .gitmodules 
 	git submodule update --init --recursive
