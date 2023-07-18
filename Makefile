@@ -41,17 +41,17 @@ run-release:
 
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
-	docker-compose -f docker-compose.katana.yaml up -d
+	docker-compose -f docker-compose.katana.yaml up -d --force-recreate
 
 katana-rpc-down:
-	docker-compose -f docker-compose.katana.yaml down
+	docker-compose -f docker-compose.katana.yaml down --remove-orphans
 
 # Run Madara, Deploy Kakarot, Run Kakarot RPC
 madara-rpc-up:
-	docker-compose -f docker-compose.madara.yaml up -d
+	docker-compose -f docker-compose.madara.yaml up -d --force-recreate
 
 madara-rpc-down:
-	docker-compose -f docker-compose.madara.yaml down
+	docker-compose -f docker-compose.madara.yaml down --remove-orphans
 
 test:
 	cargo test --all
