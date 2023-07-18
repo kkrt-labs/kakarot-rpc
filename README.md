@@ -151,6 +151,31 @@ Some notes on `make devnet`:
 - feel free to run your own devnet if you are playing around with some custom
   changes to Kakarot.
 
+### Running with [Docker Compose](https://docs.docker.com/compose/)
+
+To orchestrate running a Katana/Madara devnet instance, deploy Kakarot contracts and initialize the RPC, you may use the following commands:
+
+**Note: Ensure that you have the `.env` file**
+
+For Katana
+```console
+make katana-rpc-up
+```
+
+For Madara
+```console
+make madara-rpc-up
+```
+
+### Sending transactions to RPC using [forge script](https://book.getfoundry.sh/reference/forge/forge-script)
+
+An example script to run which uses a pre-funded EOA account with private key `EVM_PRIVATE_KEY`
+
+```console
+forge script scripts/PlainOpcodes.s.sol --broadcast --legacy --compute-units-per-second 4000 --slow --fork-url http://0.0.0.0:3030
+```
+
+
 ### Configuration
 
 Kakarot RPC is configurable through environment variables.

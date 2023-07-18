@@ -22,10 +22,10 @@ services:
     image: ghcr.io/kkrt-labs/kakarot/deployer:latest
     environment:
       - STARKNET_NETWORK=katana
-      - KATANA_PRIVATE_KEY=${KATANA_PRIVATE_KEY}
-      - KATANA_ACCOUNT_ADDRESS=${KATANA_ACCOUNT_ADDRESS}
+      - KATANA_PRIVATE_KEY=${KATANA_PRIVATE_KEY} # taken from .env file
+      - KATANA_ACCOUNT_ADDRESS=${KATANA_ACCOUNT_ADDRESS} # taken from .env file
       - KATANA_RPC_URL=http://katana:5050
-      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
+      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY} # taken from .env file
     volumes:
       - ./deployments:/app/kakarot/deployments
     depends_on:
@@ -37,13 +37,15 @@ services:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
     ports:
       - 3030:3030
+    # run.sh will take the deployed KAKAROT_ADDRESS and PROXY_ACCOUNT_CLASS_HASH
+    # and inject them into the shell when running the RPC
     entrypoint: ["./run.sh", "/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
     environment:
-      - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
+      - KAKAROT_HTTP_RPC_ADDRESS=${KAKAROT_HTTP_RPC_ADDRESS} # taken from .env file
       - STARKNET_NETWORK=katana
       - KATANA_RPC_URL=http://katana:5050
       - RUST_LOG=trace
-      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
+      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY} # taken from .env file
     volumes:
       - ./deployments:/usr/src/app/deployments
       - ./scripts/run.sh:/usr/src/app/run.sh

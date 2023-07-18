@@ -18,10 +18,10 @@ services:
     image: ghcr.io/kkrt-labs/kakarot/deployer:latest
     environment:
       - STARKNET_NETWORK=madara
-      - MADARA_PRIVATE_KEY=${MADARA_PRIVATE_KEY}
-      - MADARA_ACCOUNT_ADDRESS=${MADARA_ACCOUNT_ADDRESS}
+      - MADARA_PRIVATE_KEY=${MADARA_PRIVATE_KEY} # taken from .env file
+      - MADARA_ACCOUNT_ADDRESS=${MADARA_ACCOUNT_ADDRESS} # taken from .env file
       - MADARA_RPC_URL=http://madara:9944
-      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
+      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY} # taken from .env file
     volumes:
       - ./deployments:/app/kakarot/deployments
     depends_on:
@@ -34,13 +34,15 @@ services:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
     ports:
       - 3030:3030
+    # run.sh will take the deployed KAKAROT_ADDRESS and PROXY_ACCOUNT_CLASS_HASH
+    # and inject them into the shell when running the RPC
     entrypoint: ["./run.sh", "/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
     environment:
-      - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
+      - KAKAROT_HTTP_RPC_ADDRESS=${KAKAROT_HTTP_RPC_ADDRESS} # taken from .env file
       - STARKNET_NETWORK=madara
       - MADARA_RPC_URL=http://madara:9944
       - RUST_LOG=trace
-      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY}
+      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY} # taken from .env file
     volumes:
       - ./deployments:/usr/src/app/deployments
       - ./scripts/run.sh:/usr/src/app/run.sh
