@@ -5,6 +5,8 @@ export KAKAROT_ADDRESS=$(jq -r '.kakarot.address' ./deployments/${STARKNET_NETWO
 export PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' ./deployments/${STARKNET_NETWORK}/declarations.json)
 
 echo "Starknet Network: $STARKNET_NETWORK"
+RPC_URL="$(echo "${STARKNET_NETWORK}" | tr '[:lower:]' '[:upper:]')_RPC_URL"
+echo "RPC_URL: ${!RPC_URL}"
 echo "Kakarot address: $KAKAROT_ADDRESS"
 echo "Proxy account class hash: $PROXY_ACCOUNT_CLASS_HASH"
 
