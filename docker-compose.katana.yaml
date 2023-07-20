@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   katana:
-    image: ghcr.io/dojoengine/dojo:latest
+    image: ghcr.io/dojoengine/dojo:nightly-224de0ee971123f1e9f873484261d1ec89b2f999
     command: 
       - "katana"
       - "--allow-zero-max-fee"
