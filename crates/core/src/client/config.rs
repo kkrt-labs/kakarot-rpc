@@ -34,9 +34,21 @@ impl Network {
 
     pub fn provider_url(&self) -> Result<Url, ConfigError> {
         match self {
-            Network::Katana => Ok(Url::parse(std::env::var("KATANA_RPC_URL").unwrap().as_str())?),
-            Network::Madara => Ok(Url::parse(std::env::var("MADARA_RPC_URL").unwrap().as_str())?),
-            Network::Sharingan => Ok(Url::parse(std::env::var("SHARINGAN_RPC_URL").unwrap().as_str())?),
+            Network::Katana => Ok(Url::parse(
+                std::env::var("KATANA_RPC_URL")
+                    .map_err(|_| ConfigError::EnvironmentVariableMissing("KATANA_RPC_URL".to_string()))?
+                    .as_str(),
+            )?),
+            Network::Madara => Ok(Url::parse(
+                std::env::var("MADARA_RPC_URL")
+                    .map_err(|_| ConfigError::EnvironmentVariableMissing("MADARA_RPC_URL".to_string()))?
+                    .as_str(),
+            )?),
+            Network::Sharingan => Ok(Url::parse(
+                std::env::var("SHARINGAN_RPC_URL")
+                    .map_err(|_| ConfigError::EnvironmentVariableMissing("SHARINGAN_RPC_URL".to_string()))?
+                    .as_str(),
+            )?),
             Network::JsonRpcProvider(url) => Ok(url.clone()),
             _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for provider url", self))),
         }
