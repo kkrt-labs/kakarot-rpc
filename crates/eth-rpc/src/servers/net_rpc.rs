@@ -1,5 +1,6 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::U64;
+use reth_rpc_types::PeerCount;
 
 use crate::api::net_api::NetApiServer;
 
@@ -16,8 +17,16 @@ impl NetRpc {
 #[async_trait]
 impl NetApiServer for NetRpc {
     /// Get the protocol version of the Kakarot Starknet RPC.
-    fn protocol_version(&self) -> Result<U64> {
+    fn version(&self) -> Result<U64> {
         let protocol_version = 1_u64;
         Ok(protocol_version.into())
+    }
+
+    fn peer_count(&self) -> Result<PeerCount> {
+        todo!()
+    }
+
+    fn is_listening(&self) -> Result<bool> {
+        todo!()
     }
 }
