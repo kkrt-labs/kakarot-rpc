@@ -1,7 +1,7 @@
 version: "3.2"
 
 services:
-  katana:
+  starknet:
     image: ghcr.io/dojoengine/dojo:nightly-224de0ee971123f1e9f873484261d1ec89b2f999
     command: 
       - "katana"
@@ -14,47 +14,13 @@ services:
       - "0"
     ports:
       - 5050:5050
-    restart: on-failure
-    networks:
-      - internal
 
   kakarot-deployer:
-    image: ghcr.io/kkrt-labs/kakarot/deployer:latest
     environment:
-      - STARKNET_NETWORK=katana
-      - KATANA_PRIVATE_KEY=${KATANA_PRIVATE_KEY} # taken from .env file
-      - KATANA_ACCOUNT_ADDRESS=${KATANA_ACCOUNT_ADDRESS} # taken from .env file
-      - KATANA_RPC_URL=http://katana:5050
-      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY} # taken from .env file
-    volumes:
-      - ./deployments:/app/kakarot/deployments
-    depends_on:
-      - katana
-    networks:
-      - internal
+      - ACCOUNT_ADDRESS=0x03ee9e18edc71a6df30ac3aca2e0b02a198fbce19b7480a63a0d71cbd76652e0
+      - PRIVATE_KEY=0x0300001800000000300000180000000000030000000000003006001800006600
+      - RPC_URL=http://starknet:5050
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
-    ports:
-      - 3030:3030
-    # run.sh will take the deployed KAKAROT_ADDRESS and PROXY_ACCOUNT_CLASS_HASH
-    # and inject them into the shell when running the RPC
-    entrypoint: ["./run.sh", "/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
     environment:
-      - KAKAROT_HTTP_RPC_ADDRESS=${KAKAROT_HTTP_RPC_ADDRESS} # taken from .env file
-      - STARKNET_NETWORK=katana
-      - KATANA_RPC_URL=http://katana:5050
-      - RUST_LOG=trace
-      - EVM_PRIVATE_KEY=${EVM_PRIVATE_KEY} # taken from .env file
-    volumes:
-      - ./deployments:/usr/src/app/deployments
-      - ./scripts/run.sh:/usr/src/app/run.sh
-    depends_on:
-      kakarot-deployer:
-        condition: service_completed_successfully # only start if deployer is successful
-    restart: on-failure
-    networks:
-      - internal
-
-networks:
-  internal:
+      - STARKNET_NETWORK=http://starknet:5050
