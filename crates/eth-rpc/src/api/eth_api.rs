@@ -13,10 +13,6 @@ pub trait EthApi {
     #[method(name = "blockNumber")]
     async fn block_number(&self) -> Result<U64>;
 
-    /// Returns the protocol version encoded as a string.
-    #[method(name = "net_version")]
-    fn protocol_version(&self) -> Result<U64>;
-
     /// Returns an object with data about the sync status or false.
     #[method(name = "syncing")]
     async fn syncing(&self) -> Result<SyncStatus>;
