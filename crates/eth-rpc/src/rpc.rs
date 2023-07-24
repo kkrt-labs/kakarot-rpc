@@ -9,9 +9,11 @@ use starknet::providers::Provider;
 
 use crate::api::alchemy_api::AlchemyApiServer;
 use crate::api::eth_api::EthApiServer;
+use crate::api::net_api::NetApiServer;
 use crate::api::web3_api::Web3ApiServer;
 use crate::servers::alchemy_rpc::AlchemyRpc;
 use crate::servers::eth_rpc::KakarotEthRpc;
+use crate::servers::net_rpc::NetRpc;
 use crate::servers::web3_rpc::Web3Rpc;
 
 /// Represents RPC modules that are supported by reth
@@ -20,6 +22,7 @@ pub enum KakarotRpcModule {
     Eth,
     Alchemy,
     Web3,
+    Net,
 }
 
 pub struct KakarotRpcModuleBuilder<P: Provider + Send + Sync + 'static> {
@@ -32,12 +35,14 @@ impl<P: Provider + Send + Sync + 'static> KakarotRpcModuleBuilder<P> {
         let eth_rpc_module = KakarotEthRpc::new(kakarot_client.clone()).into_rpc();
         let alchemy_rpc_module = AlchemyRpc::new(kakarot_client).into_rpc();
         let web3_rpc_module = Web3Rpc::default().into_rpc();
+        let net_rpc_module = NetRpc::default().into_rpc();
 
         let mut modules: HashMap<KakarotRpcModule, Methods> = HashMap::new();
 
         modules.insert(KakarotRpcModule::Eth, eth_rpc_module.into());
         modules.insert(KakarotRpcModule::Alchemy, alchemy_rpc_module.into());
         modules.insert(KakarotRpcModule::Web3, web3_rpc_module.into());
+        modules.insert(KakarotRpcModule::Net, net_rpc_module.into());
 
         Self { modules, _phantom: PhantomData }
     }

@@ -37,12 +37,6 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(block_number)
     }
 
-    /// Get the protocol version of the Kakarot Starknet RPC.
-    fn protocol_version(&self) -> Result<U64> {
-        let protocol_version = 1_u64;
-        Ok(protocol_version.into())
-    }
-
     async fn syncing(&self) -> Result<SyncStatus> {
         let status = self.kakarot_client.syncing().await?;
         Ok(status)
