@@ -57,8 +57,8 @@ pub mod gas {
 
     /// The minimum gas fee for a transaction
     ///
-    /// This minimum is used if the returned fee estimate is lower than the minimum.
-    /// Otherwise wallets such as Metamask will not allow the transaction to be sent.
+    /// This minimum of 21,000 is used if the returned fee estimate is lower,
+    /// otherwise wallets such as Metamask will not allow the transaction to be sent.
     pub const MINIMUM_GAS_FEE: u64 = 21000;
 }
 
