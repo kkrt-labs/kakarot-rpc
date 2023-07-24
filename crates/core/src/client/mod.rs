@@ -31,11 +31,11 @@ use starknet::providers::{Provider, ProviderError};
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
-use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
+use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
 use self::constants::selectors::{BALANCE_OF, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
 use self::constants::{
-    ACCOUNT_ADDRESS, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS, MAX_FEE,
-    STARKNET_NATIVE_TOKEN,
+    ACCOUNT_ADDRESS, CHAIN_ID, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS,
+    MAX_FEE, STARKNET_NATIVE_TOKEN,
 };
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
@@ -532,10 +532,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             }
         };
 
-        let chain_id = request
-            .chain_id
-            .ok_or_else(|| EthApiError::MissingParameterError("chain_id for estimate_gas".into()))?
-            .low_u64();
+        let chain_id = request.chain_id.unwrap_or(CHAIN_ID.into());
 
         let from = request.from.ok_or_else(|| EthApiError::MissingParameterError("from for estimate_gas".into()))?;
         let nonce = self.nonce(from, block_id).await?.try_into().map_err(ConversionError::<u64>::from)?;
@@ -559,7 +556,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let data = request.data.unwrap_or_default();
 
         let tx = Transaction::Eip1559(TxEip1559 {
-            chain_id,
+            chain_id: chain_id.low_u64(),
             nonce,
             gas_limit,
             max_fee_per_gas,
@@ -589,6 +586,9 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         };
 
         let fee_estimate = self.simulate_transaction(tx, block_number, true).await?.fee_estimation;
+        if fee_estimate.gas_usage < MINIMUM_GAS_FEE {
+            return Ok(U256::from(MINIMUM_GAS_FEE));
+        }
         Ok(U256::from(fee_estimate.gas_usage))
     }
 
