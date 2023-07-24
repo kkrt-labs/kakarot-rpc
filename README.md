@@ -96,7 +96,7 @@ TL;DR:
 To build the project from source do `make build` (this requires
 [nightly rustup](https://rust-lang.github.io/rustup/concepts/channels.html)):
 
-```bash
+```console
 make build
 ```
 
@@ -104,13 +104,13 @@ make build
 
 Copy the `.env.example` file to a `.env` file and populate each variable
 
-```bash
+```console
 cp examples/.env.example .env
 ```
 
 Meanwhile you can just use unit tests to dev.
 
-```bash
+```console
 make test
 ```
 
@@ -118,7 +118,7 @@ The binaries will be located in `target/release/`.
 
 Specify the environment variables and run the binary.
 
-```bash
+```console
 make run-release
 ```
 
@@ -126,13 +126,13 @@ make run-release
 
 run devnet
 
-```bash
+```console
 make devnet
 ```
 
 run
 
-```
+```console
 make run
 ```
 
@@ -158,11 +158,13 @@ To orchestrate running a Katana/Madara devnet instance, deploy Kakarot contracts
 **Note: Ensure that you have the `.env` file**
 
 For Katana
+
 ```console
 make katana-rpc-up
 ```
 
 For Madara
+
 ```console
 make madara-rpc-up
 ```
@@ -172,9 +174,8 @@ make madara-rpc-up
 An example script to run which uses a pre-funded EOA account with private key `EVM_PRIVATE_KEY`
 
 ```console
-forge script scripts/PlainOpcodes.s.sol --broadcast --legacy --compute-units-per-second 4000 --slow --fork-url http://0.0.0.0:3030
+forge script scripts/PlainOpcodes.s.sol --broadcast --legacy --slow
 ```
-
 
 ### Configuration
 
@@ -184,7 +185,7 @@ Here is the list of all the available environment variables:
 
 | Name                     | Default value           | Description              |
 | ------------------------ | ----------------------- | ------------------------ |
-| TARGET_RPC_URL           | http://0.0.0.0:5050/rpc | Target Starknet RPC URL  |
+| TARGET_RPC_URL           | <http://0.0.0.0:5050/rpc> | Target Starknet RPC URL  |
 | RUST_LOG                 | Debug                   | Log level                |
 | KAKAROT_HTTP_RPC_ADDRESS | 0.0.0.0:3030            | Kakarot RPC URL          |
 | KAKAROT_ADDRESS          | see below               | Kakarot address          |
