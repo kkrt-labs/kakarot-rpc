@@ -8,5 +8,5 @@ echo "Starknet Network: $STARKNET_NETWORK"
 echo "Kakarot address: $KAKAROT_ADDRESS"
 echo "Proxy account class hash: $PROXY_ACCOUNT_CLASS_HASH"
 
-# Run the command passed to the docker run
-exec "$@"
+# Run the RPC
+/usr/bin/tini -- /usr/local/bin/kakarot-rpc

@@ -35,7 +35,8 @@ services:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
     ports:
       - 3030:3030
-    entrypoint: ["./run.sh", "/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
+    # Override entrypoint to set custom env variables
+    entrypoint: ./entrypoint.sh
     environment:
       - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:9944
@@ -43,7 +44,7 @@ services:
       - EVM_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 
     volumes:
       - deployments:/usr/src/app/deployments
-      - ./scripts/run.sh:/usr/src/app/run.sh
+      - ./scripts/entrypoint.sh:/usr/src/app/entrypoint.sh
     depends_on:
       kakarot-deployer:
         condition: service_completed_successfully
