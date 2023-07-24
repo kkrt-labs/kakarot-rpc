@@ -37,14 +37,14 @@ services:
       - 3030:3030
     # Override entrypoint to set custom env variables
     entrypoint:
+      - "/usr/bin/tini"
+      - "--"
       - "/bin/sh"
       - "-c"
       - |
         export KAKAROT_ADDRESS=$(jq -r '.kakarot.address' ./deployments/deployments.json);
         export PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' ./deployments/declarations.json);
-        echo Kakarot address: \$KAKAROT_ADDRESS;
-        echo Proxy account class hash: \$PROXY_ACCOUNT_CLASS_HASH;
-        /usr/bin/tini -- /usr/local/bin/kakarot-rpc
+        /usr/local/bin/kakarot-rpc
     environment:
       - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:9944
