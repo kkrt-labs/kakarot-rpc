@@ -54,6 +54,12 @@ pub mod gas {
     /// on a "first come first served" basis by the Sequencer.
     /// As a result, the priority fee is set to 0.
     pub const MAX_PRIORITY_FEE_PER_GAS: U128 = U128::ZERO;
+
+    /// The minimum gas fee for a transaction
+    ///
+    /// This minimum is used if the returned fee estimate is lower than the minimum.
+    /// Otherwise wallets such as Metamask will not allow the transaction to be sent.
+    pub const MINIMUM_GAS_FEE: u64 = 21000;
 }
 
 /// This module contains error messages related to Kakarot.
