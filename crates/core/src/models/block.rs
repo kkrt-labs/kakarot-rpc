@@ -281,7 +281,7 @@ mod tests {
     use crate::mock::constants::{
         ABDEL_STARKNET_ADDRESS_HEX, OTHER_ADDRESS_HEX, OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX, PROXY_ACCOUNT_CLASS_HASH_HEX,
     };
-    use crate::mock::mock_starknet::{fixtures, init_mock_kakarot_client, AvailableFixtures};
+    use crate::mock::mock_starknet::{fixtures, AvailableFixtures};
 
     #[tokio::test]
     async fn test_to_eth_block_block_with_tx_hashes() {

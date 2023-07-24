@@ -19,7 +19,7 @@ use crate::mock::constants::{
     COUNTER_ADDRESS_EVM, INC_DATA, KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
     PROXY_ACCOUNT_CLASS_HASH_HEX,
 };
-use crate::mock::mock_starknet::{fixtures, init_mock_kakarot_client, AvailableFixtures};
+use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, AvailableFixtures, StarknetRpcFixture};
 use crate::wrap_kakarot;
 
 pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
