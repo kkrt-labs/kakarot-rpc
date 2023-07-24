@@ -26,7 +26,7 @@ impl NetApiServer for NetRpc {
         todo!()
     }
 
-    fn is_listening(&self) -> Result<bool> {
+    fn listening(&self) -> Result<bool> {
         todo!()
     }
 }

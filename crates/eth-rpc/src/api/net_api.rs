@@ -18,5 +18,5 @@ pub trait NetApi {
     /// Returns true if client is actively listening for network connections.
     /// Otherwise false.
     #[method(name = "listening")]
-    fn is_listening(&self) -> Result<bool>;
+    fn listening(&self) -> Result<bool>;
 }
