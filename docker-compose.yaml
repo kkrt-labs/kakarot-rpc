@@ -31,30 +31,28 @@ services:
     networks:
       - internal
 
+  deployments-parser:
+    build: ./deployments-parser
+    volumes:
+      - deployments:/app/deployments
+    depends_on:
+      kakarot-deployer:
+        condition: service_completed_successfully
+
   kakarot-rpc:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
     ports:
       - 3030:3030
-    # Override entrypoint to set custom env variables
-    entrypoint:
-      - "/usr/bin/tini"
-      - "--"
-      - "/bin/sh"
-      - "-c"
-      - |
-        export KAKAROT_ADDRESS=$(jq -r '.kakarot.address' ./deployments/deployments.json);
-        export PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' ./deployments/declarations.json);
-        /usr/local/bin/kakarot-rpc
     environment:
       - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:9944
       - RUST_LOG=trace
       - EVM_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 
     volumes:
-      # Mount the volume with deployments from deployer
-      - deployments:/usr/src/app/deployments
+      # Mount the volume on workdir and use .env stored in root of the volume
+      - deployments:/usr/src/app
     depends_on:
-      kakarot-deployer:
+      deployments-parser:
         condition: service_completed_successfully
     restart: on-failure
     networks:
