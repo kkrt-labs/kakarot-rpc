@@ -4,8 +4,13 @@ use dojo_test_utils::rpc::MockJsonRpcTransport;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use starknet::providers::jsonrpc::JsonRpcMethod;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
+use starknet_crypto::FieldElement;
 use walkdir::WalkDir;
+
+use super::constants::{KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH};
+use crate::client::config::{Network, SequencerGatewayProviderBuilder, StarknetConfig};
+use crate::client::KakarotClient;
 
 /// A fixture for a Starknet RPC call.
 pub struct StarknetRpcFixture {
@@ -143,7 +148,7 @@ pub fn fixtures(methods: Vec<AvailableFixtures>) -> Vec<StarknetRpcFixture> {
 }
 
 /// Returns all the fixtures present in the fixtures directory.
-/// # Errors
+/// # Panics
 /// Returns an error if a fixture is not a valid json or if the fixture is not present in both
 /// requests and responses.
 pub fn all_fixtures() -> Vec<StarknetRpcFixture> {
@@ -156,7 +161,6 @@ pub fn all_fixtures() -> Vec<StarknetRpcFixture> {
         if !path.is_file() {
             continue;
         }
-        println!("Found fixture: {:?}", path);
 
         let request = fs::read_to_string(path).unwrap().parse::<Value>().unwrap();
         let params = request["params"].clone();
@@ -166,7 +170,7 @@ pub fn all_fixtures() -> Vec<StarknetRpcFixture> {
             .unwrap()
             .parse::<Value>()
             .unwrap();
-        println!("Found response for fixture: {:?}", response);
+
         fixtures.push(StarknetRpcFixture { method: serde_json::from_value(method_name).unwrap(), params, response });
     }
     fixtures
@@ -185,6 +189,23 @@ pub fn mock_starknet_provider(fixtures: Option<Vec<StarknetRpcFixture>>) -> Json
             .for_each(|fixture| transport.set_response(fixture.method, fixture.params, fixture.response));
     }
     JsonRpcClient::new(transport)
+}
+
+pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
+    let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
+    let config = StarknetConfig::new(Network::Goerli1Gateway, kakarot_address, Default::default());
+
+    let provider = SequencerGatewayProviderBuilder::new(&Network::Goerli1Gateway).build();
+    KakarotClient::new(config, provider)
+}
+
+pub fn init_mock_client(
+    fixtures: Option<Vec<StarknetRpcFixture>>,
+) -> KakarotClient<JsonRpcClient<MockJsonRpcTransport>> {
+    let config = StarknetConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
+    let starknet_provider = mock_starknet_provider(fixtures);
+
+    KakarotClient::new(config, starknet_provider)
 }
 
 #[cfg(test)]
@@ -212,6 +233,6 @@ mod tests {
     #[test]
     fn test_rpc_all_fixtures() {
         let fixtures = all_fixtures();
-        assert_eq!(fixtures.len(), 14);
+        assert_eq!(fixtures.len(), 15);
     }
 }

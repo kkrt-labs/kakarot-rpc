@@ -4554,6 +4554,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cargo-husky",
+ "dojo-test-utils",
  "dotenv",
  "env_logger 0.10.0",
  "eyre",

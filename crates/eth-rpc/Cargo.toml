@@ -39,7 +39,16 @@ lazy_static = { workspace = true }
 tower = "0.4.13"
 tower-http = "0.4.1"
 
+[dev-dependencies]
+dojo-test-utils = { workspace = true }
+
+
 [dev-dependencies.cargo-husky]
 version = "1.5.0"
 default-features = false
-features = ["precommit-hook", "run-for-all", "run-cargo-clippy", "run-cargo-fmt"]
+features = [
+    "precommit-hook",
+    "run-for-all",
+    "run-cargo-clippy",
+    "run-cargo-fmt",
+]
