@@ -15,7 +15,7 @@ RUN cargo build --all --release
 FROM debian:bullseye
 
 # Install any necessary dependencies
-RUN apt-get update && apt-get install -y libssl-dev ca-certificates tini jq && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates tini && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /usr/src/app

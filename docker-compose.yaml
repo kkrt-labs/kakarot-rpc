@@ -32,9 +32,17 @@ services:
       - internal
 
   deployments-parser:
-    build: ./deployments-parser
+    image: jiapantw/jq-alpine:latest@sha256:cacf6adf3463ecfa1315c7bcdf8362fc36a651b071c1e913f048018a380b47cf
+    platform: linux/amd64
+    # Parse deployments and save the result to .env file
+    entrypoint:
+      - "/bin/sh"
+      - "-c"
+      - |
+        echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /jq/deployments.json)" > /jq/.env;
+        echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /jq/declarations.json)" >> /jq/.env
     volumes:
-      - deployments:/app/deployments
+      - deployments:/jq
     depends_on:
       kakarot-deployer:
         condition: service_completed_successfully
