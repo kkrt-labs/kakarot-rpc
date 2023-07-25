@@ -12,15 +12,12 @@ services:
       - "16777216"
       - "--gas-price"
       - "0"
+      - "--port"
+      - "9944"
     ports:
-      - 5050:5050
+      - 9944:9944
 
   kakarot-deployer:
     environment:
       - ACCOUNT_ADDRESS=0x03ee9e18edc71a6df30ac3aca2e0b02a198fbce19b7480a63a0d71cbd76652e0
       - PRIVATE_KEY=0x0300001800000000300000180000000000030000000000003006001800006600
-      - RPC_URL=http://starknet:5050
-
-  kakarot-rpc:
-    environment:
-      - STARKNET_NETWORK=http://starknet:5050
