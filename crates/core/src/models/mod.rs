@@ -1,9 +1,11 @@
+pub mod allowance;
 pub mod balance;
 pub mod block;
 pub mod call;
 pub mod convertible;
 pub mod event;
 pub mod felt;
+pub mod metadata;
 pub mod signature;
 #[cfg(test)]
 pub mod tests;
