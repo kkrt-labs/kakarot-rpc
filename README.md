@@ -96,7 +96,7 @@ TL;DR:
 To build the project from source do `make build` (this requires
 [nightly rustup](https://rust-lang.github.io/rustup/concepts/channels.html)):
 
-```bash
+```console
 make build
 ```
 
@@ -104,13 +104,13 @@ make build
 
 Copy the `.env.example` file to a `.env` file and populate each variable
 
-```bash
+```console
 cp examples/.env.example .env
 ```
 
 Meanwhile you can just use unit tests to dev.
 
-```bash
+```console
 make test
 ```
 
@@ -118,7 +118,7 @@ The binaries will be located in `target/release/`.
 
 Specify the environment variables and run the binary.
 
-```bash
+```console
 make run-release
 ```
 
@@ -126,13 +126,13 @@ make run-release
 
 run devnet
 
-```bash
+```console
 make devnet
 ```
 
 run
 
-```
+```console
 make run
 ```
 
@@ -140,16 +140,49 @@ Some notes on `make devnet`:
 
 - you can run a devnet, by running `make devnet` at the project root.
 
-- this will run a devnet by running katana, **with contracts automatically deployed**, so you
-  don't have to do them manually (see below for list of contracts and
-  addresses).
+- this will run a devnet by running katana, **with contracts automatically deployed**,
+so you don't have to do them manually (see below for list of contracts and addresses).
 
-- it will use the values from `.env.example` file for deployment by default, but you can ovveride any variable that you want by passing it to docker { changing `.env.example` won't work as it was copied during build phase of the image }, you can see the `devnet` target in the `Makefile` of the project, and see how we are overriding STARKNET_NETWORK environment variable, in similar fashion, you can override any other environment variable.
+- it will use the values from `.env.example` file for deployment by default,
+but you canovveride any variable that you want by passing it to docker {
+changing `.env.example` won't work as it was copied during build phase of
+the image }, you can see the `devnet` target in the `Makefile` of the
+project, and see how we are overriding STARKNET_NETWORK environment
+variable, in similar fashion, you can override any other environment variable.
 
-- the deployments and declarations for the devnet will be written to the `deployments/katana` folder inside your project root after a succesful run of the `make devnet` command.
+- the deployments and declarations for the devnet will be written to the
+`deployments/katana` folder inside your project root after a succesful run
+of the `make devnet` command.
 
 - feel free to run your own devnet if you are playing around with some custom
   changes to Kakarot.
+
+### Running with [Docker Compose](https://docs.docker.com/compose/)
+
+To orchestrate running a Katana/Madara devnet instance, deploy Kakarot
+contracts and initialize the RPC, you may use the following commands:
+
+**Note: Ensure that you have the `.env` file**
+
+For Katana
+
+```console
+make katana-rpc-up
+```
+
+For Madara
+
+```console
+make madara-rpc-up
+```
+
+### Sending transactions to RPC using [forge script](https://book.getfoundry.sh/reference/forge/forge-script)
+
+An example script to run which uses a pre-funded EOA account with private key `EVM_PRIVATE_KEY`
+
+```console
+forge script scripts/PlainOpcodes.s.sol --broadcast --legacy --slow
+```
 
 ### Configuration
 
@@ -157,13 +190,13 @@ Kakarot RPC is configurable through environment variables.
 
 Here is the list of all the available environment variables:
 
-| Name                     | Default value           | Description              |
-| ------------------------ | ----------------------- | ------------------------ |
-| TARGET_RPC_URL           | http://0.0.0.0:5050/rpc | Target Starknet RPC URL  |
-| RUST_LOG                 | Debug                   | Log level                |
-| KAKAROT_HTTP_RPC_ADDRESS | 0.0.0.0:3030            | Kakarot RPC URL          |
-| KAKAROT_ADDRESS          | see below               | Kakarot address          |
-| PROXY_ACCOUNT_CLASS_HASH | see below               | Proxy account class hash |
+| Name                     | Default value            | Description             |
+| ------------------------ | -----------------------  | ------------------------|
+| TARGET_RPC_URL           | <http://0.0.0.0:5050/rpc>| Target Starknet RPC URL |
+| RUST_LOG                 | Debug                    | Log level               |
+| KAKAROT_HTTP_RPC_ADDRESS | 0.0.0.0:3030             | Kakarot RPC URL         |
+| KAKAROT_ADDRESS          | see below                | Kakarot address         |
+| PROXY_ACCOUNT_CLASS_HASH | see below                | Proxy account class hash|
 
 ### Devnet deployed/declared contracts
 
@@ -176,11 +209,11 @@ Deployed:
 | Counter  | 0x2e11Ed82f5eC165AB8Ce3cC094f025Fe7527F4D1                        |
 
 Declared:
-
+<!-- markdownlint-disable MD013 -->
 | Contract                 | Class hash                                                        |
 | ------------------------ | ----------------------------------------------------------------- |
 | Proxy account class hash | 0x3010a53967fa04842bcbcb6de8817101f047ef0d074b3eacbe714a3fc42a2eb |
-
+<!-- markdownlint-enable MD013 -->
 The Counter contract implementation can be found
 [here](https://github.com/sayajin-labs/kakarot/blob/main/tests/integration/solidity_contracts/PlainOpcodes/Counter.sol)
 
