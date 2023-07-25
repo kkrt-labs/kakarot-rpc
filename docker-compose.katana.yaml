@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   starknet:
-    image: ghcr.io/dojoengine/dojo:nightly-224de0ee971123f1e9f873484261d1ec89b2f999
+    image: ghcr.io/dojoengine/dojo:v0.1.0
     command: 
       - "katana"
       - "--allow-zero-max-fee"
