@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   starknet:
-    image: ghcr.io/keep-starknet-strange/madara:v0.1.0-testnet-sharingan-beta.7.1.experimental.4@sha256:baff5a0aa1075d0f84b83ed366f56928b4a6a0c3316762df14e8b1656f784729
+    image: ghcr.io/keep-starknet-strange/madara:v0.1.0-testnet-sharingan-beta.7.1.experimental.4
     ports:
       - "9615:9615"
       - "9944:9944"
@@ -32,17 +32,16 @@ services:
       - internal
 
   deployments-parser:
-    image: jiapantw/jq-alpine:latest@sha256:cacf6adf3463ecfa1315c7bcdf8362fc36a651b071c1e913f048018a380b47cf
-    platform: linux/amd64
+    image: apteno/alpine-jq:2023-07-24
     # Parse deployments and save the result to .env file
     entrypoint:
       - "/bin/sh"
       - "-c"
       - |
-        echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /jq/deployments.json)" > /jq/.env;
-        echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /jq/declarations.json)" >> /jq/.env
+        echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /deployments/deployments.json)" > /deployments/.env;
+        echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /deployments/declarations.json)" >> /deployments/.env
     volumes:
-      - deployments:/jq
+      - deployments:/deployments
     depends_on:
       kakarot-deployer:
         condition: service_completed_successfully
