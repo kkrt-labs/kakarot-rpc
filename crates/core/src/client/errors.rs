@@ -1,6 +1,6 @@
 use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, SERVER_IS_BUSY_CODE, UNKNOWN_ERROR_CODE};
 use jsonrpsee::types::ErrorObject;
-use starknet::core::types::StarknetError;
+use starknet::core::types::{FromByteSliceError, StarknetError};
 use starknet::providers::ProviderError;
 use thiserror::Error;
 
@@ -71,6 +71,12 @@ pub enum EthApiError<E: std::error::Error> {
 impl<T, E: std::error::Error> From<ConversionError<T>> for EthApiError<E> {
     fn from(err: ConversionError<T>) -> Self {
         Self::ConversionError(err.to_string())
+    }
+}
+
+impl<E: std::error::Error> From<FromByteSliceError> for EthApiError<E> {
+    fn from(err: FromByteSliceError) -> Self {
+        Self::ConversionError(format!("Failed to convert from byte slice: {}", err))
     }
 }
 

@@ -414,8 +414,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         address: Address,
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, EthApiError<P::Error>> {
-        let entrypoint: Felt252Wrapper = keccak256("balanceOf(address)").try_into()?;
-        let entrypoint: FieldElement = entrypoint.into();
+        let entrypoint = FieldElement::from_byte_slice_be(&keccak256("balanceOf(address)").0[0..4])?;
 
         let addr: Felt252Wrapper = address.into();
         let addr: FieldElement = addr.into();
