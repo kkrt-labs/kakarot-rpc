@@ -13,6 +13,8 @@ services:
       - "--dev"
     networks:
       - internal
+    # This is a workaround to wait for the node to be ready.
+    # Replace with proper healthcheck when available on Madara/Katana.
     healthcheck:
       test: ["CMD", "echo", "ok"]
       interval: 5s
