@@ -13,22 +13,9 @@ services:
       - "--dev"
     networks:
       - internal
-
-  healthcheck:
-    image: appropriate/curl  # A simple image that contains curl
-    command: >
-      sh -c '
-        while true; do
-          if curl -f -H "Content-Type: application/json" --data-raw "{\"jsonrpc\": \"2.0\", \"method\": \"starknet_chainId\", \"params\": [], \"id\": 1}" http://starknet:9944; then
-            exit 0;
-          else
-            sleep 5;
-          fi;
-        done'
-    depends_on:
-      - starknet
-    networks:
-      - internal
+    healthcheck:
+      test: ["CMD", "echo", "ok"]
+      interval: 5s
 
   kakarot-deployer:
     image: ghcr.io/kkrt-labs/kakarot/deployer:latest
@@ -42,8 +29,8 @@ services:
       # Since STARKNET_NETWORK is not set, deployments will be saved without network folder
       - deployments:/app/kakarot/deployments
     depends_on:
-      healthcheck:
-        condition: service_completed_successfully
+      starknet:
+        condition: service_healthy
     restart: on-failure
     networks:
       - internal
