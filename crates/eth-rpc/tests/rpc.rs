@@ -925,7 +925,6 @@ mod tests {
     async fn test_transaction_receipt_invoke_is_ok() {
         let kakarot_rpc = setup_mock_eth_rpc().await;
         let hash = H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap();
-        println!("{}", &hash);
         let transaction_receipt = kakarot_rpc.transaction_receipt(hash).await.unwrap().unwrap();
 
         assert_eq!(
