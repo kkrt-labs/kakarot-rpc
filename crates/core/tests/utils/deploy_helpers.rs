@@ -53,7 +53,7 @@ use url::Url;
 /// cannot be represented as a UTF-8 string.
 macro_rules! root_project_path {
     ($relative_path:expr) => {{
-        let project_root_buf = find_project_root_path().unwrap();
+        let project_root_buf = find_project_root_path(None).unwrap();
         let project_root = project_root_buf.to_str().unwrap();
         let full_path = std::path::Path::new(project_root).join($relative_path);
         full_path
