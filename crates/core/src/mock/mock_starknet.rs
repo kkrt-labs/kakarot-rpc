@@ -239,6 +239,6 @@ mod tests {
     #[test]
     fn test_rpc_all_fixtures() {
         let fixtures = all_fixtures();
-        assert_eq!(fixtures.len(), 15);
+        assert_eq!(fixtures.len(), 22);
     }
 }
