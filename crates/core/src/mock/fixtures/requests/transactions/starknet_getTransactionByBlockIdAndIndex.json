@@ -2,12 +2,5 @@
   "id": 1,
   "jsonrpc": "2.0",
   "method": "starknet_getTransactionByBlockIdAndIndex",
-  "params": [
-    {
-      "block_id": {
-        "block_tag": "latest"
-      }
-    },
-    0
-  ]
+  "params": ["latest", 0]
 }

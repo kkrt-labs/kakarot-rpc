@@ -2,9 +2,5 @@
   "id": 1,
   "jsonrpc": "2.0",
   "method": "starknet_getBlockWithTxHashes",
-  "params": {
-    "block_id": {
-      "block_tag": "latest"
-    }
-  }
+  "params": ["latest"]
 }

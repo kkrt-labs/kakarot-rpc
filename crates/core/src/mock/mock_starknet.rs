@@ -1,6 +1,7 @@
 use std::fs;
 
 use dojo_test_utils::rpc::MockJsonRpcTransport;
+use foundry_config::find_git_root_path;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use starknet::providers::jsonrpc::JsonRpcMethod;
@@ -151,8 +152,11 @@ pub fn fixtures(methods: Vec<AvailableFixtures>) -> Vec<StarknetRpcFixture> {
 /// # Panics
 /// Returns an error if a fixture is not a valid json or if the fixture is not present in both
 /// requests and responses.
+///
+/// Panics if `all_fixtures` is called from a directory where `core` crate is not in scope.
 pub fn all_fixtures() -> Vec<StarknetRpcFixture> {
-    let request_path = "src/mock/fixtures/requests/";
+    let cwd = &std::env::current_dir().unwrap();
+    let request_path = find_git_root_path(cwd).unwrap().join("crates/core/src/mock/fixtures/requests");
     let mut fixtures: Vec<StarknetRpcFixture> = Vec::new();
     for entry in WalkDir::new(request_path) {
         let entry = entry.unwrap();
@@ -163,9 +167,11 @@ pub fn all_fixtures() -> Vec<StarknetRpcFixture> {
         }
 
         let request = fs::read_to_string(path).unwrap().parse::<Value>().unwrap();
+        // We need to clean the escape characters, we get the following error:
+        // panicked at 'Response not set in mock for method
+        // "\"starknet_getTransactionByBlockIdAndIndex\"" and params "[{\"block_hash\": [...]
         let params = request["params"].clone();
         let method_name = request["method"].clone();
-        println!("Found params and method_name for fixture: {}", method_name);
         let response = fs::read_to_string(path.to_string_lossy().replace("requests", "responses"))
             .unwrap()
             .parse::<Value>()
