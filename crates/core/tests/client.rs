@@ -198,7 +198,7 @@ mod tests {
             address.try_into().unwrap()
         };
 
-        let (plain_opcodes_abi, deployed_addresses) = deployed_kakarot
+        let (_plain_opcodes_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 starknet_test_sequencer.url(),
                 "PlainOpcodes",
