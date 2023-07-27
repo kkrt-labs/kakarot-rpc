@@ -32,7 +32,7 @@ use starknet::providers::{Provider, ProviderError};
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
-use self::constants::selectors::{BALANCE_OF, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
+use self::constants::selectors::{EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
 use self::constants::{
     ACCOUNT_ADDRESS, CHAIN_ID, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS,
     MAX_FEE, STARKNET_NATIVE_TOKEN,
@@ -40,6 +40,7 @@ use self::constants::{
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
 use crate::contracts::contract_account::ContractAccount;
+use crate::contracts::erc20::Erc20Contract;
 use crate::contracts::kakarot::KakarotContract;
 use crate::models::balance::{TokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
@@ -359,21 +360,11 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
         let starknet_address = self.compute_starknet_address(ethereum_address, &starknet_block_id).await?;
 
-        let request = FunctionCall {
-            // This FieldElement::from_hex_be cannot fail as the value is a constant
-            contract_address: FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(),
-            entry_point_selector: BALANCE_OF,
-            calldata: vec![starknet_address],
-        };
+        let native_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
+        let native_token = Erc20Contract::new(native_token_address);
+        let balance = native_token.balance_of(&self.starknet_provider, &starknet_address, &starknet_block_id).await?;
 
-        let balance = self.starknet_provider.call(request, starknet_block_id).await?;
-
-        let balance: Felt252Wrapper = (*balance.first().ok_or_else(|| {
-            DataDecodingError::InvalidReturnArrayLength { entrypoint: "balance".into(), expected: 1, actual: 0 }
-        })?)
-        .into();
-
-        Ok(balance.into())
+        Ok(balance)
     }
 
     /// Returns the storage value at a specific index of a contract given its address and a block
