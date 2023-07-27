@@ -3,7 +3,7 @@ mod utils;
 mod tests {
 
     use ctor::ctor;
-    use ethers::types::Address as EthersAddress;
+    use ethers::types::{Address as EthersAddress, Uint8};
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::client::config::{Network, StarknetConfig};
     use kakarot_rpc_core::client::KakarotClient;
@@ -130,7 +130,76 @@ mod tests {
 
     #[tokio::test]
     async fn test_alchemy_api() {
-        todo!()
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
+
+        let expected_funded_amount = FieldElement::from_dec_str("10000000000000000000").unwrap();
+
+        let deployed_kakarot =
+            deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
+
+        let (erc20_abi, deployed_addresses) = deployed_kakarot
+            .deploy_evm_contract(
+                starknet_test_sequencer.url(),
+                "ERC20",
+                (String::from("KakarotToken"), String::from("KKRTT"), Uint8::from(18)),
+            )
+            .await
+            .unwrap();
+
+        let kakarot_client = KakarotClient::new(
+            StarknetConfig::new(
+                Network::JsonRpcProvider(starknet_test_sequencer.url()),
+                deployed_kakarot.kakarot,
+                deployed_kakarot.kakarot_proxy,
+            ),
+            JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
+        );
+
+        let deployed_balance = kakarot_client
+            .balance(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await;
+
+        let _deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
+
+        let erc20_eth_address = {
+            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            address.try_into().unwrap()
+        };
+
+        kakarot_client
+            .get_code(erc20_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .expect("contract not deployed");
+
+        let decimals_selector = erc20_abi.function("decimals").unwrap().short_signature();
+        let name_selector = erc20_abi.function("name").unwrap().short_signature();
+        let symbol_selector = erc20_abi.function("symbol").unwrap().short_signature();
+
+        let decimals_bytes = kakarot_client
+            .call(
+                erc20_eth_address,
+                decimals_selector.into(),
+                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
+            )
+            .await
+            .unwrap();
+
+        let name_bytes = kakarot_client
+            .call(erc20_eth_address, name_selector.into(), BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .unwrap();
+
+        let symbol_bytes = kakarot_client
+            .call(erc20_eth_address, symbol_selector.into(), BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .unwrap();
+
+        let decimals = *decimals_bytes.last().expect("Empty byte array");
+        assert_eq!(decimals, 18);
+
+        // TODO: Add assertions for name and symbol
+        // TODO: Add testing logic for allowance
+        // TODO: Add calls with Alchemy routes
     }
 
     #[tokio::test]

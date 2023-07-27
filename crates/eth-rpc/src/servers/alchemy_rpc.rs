@@ -36,7 +36,7 @@ impl<P: Provider + Send + Sync + 'static> AlchemyApiServer for AlchemyRpc<P> {
         account_address: Address,
         spender_address: Address,
     ) -> Result<TokenAllowance> {
-        let entry_point = FieldElement::from_byte_slice_be(&keccak256("balanceOf(address)").0[0..4])
+        let entry_point = FieldElement::from_byte_slice_be(&keccak256("allowance(account,spender)").0[0..4])
             .map_err(EthApiError::<P::Error>::from)?;
 
         let account_addr: Felt252Wrapper = account_address.into();
