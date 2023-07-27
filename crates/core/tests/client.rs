@@ -129,6 +129,52 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_get_caller_address() {
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
+
+        let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
+
+        let deployed_kakarot =
+            deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
+
+        let (get_caller_address_abi, deployed_addresses) = deployed_kakarot
+            .deploy_evm_contract(
+                starknet_test_sequencer.url(),
+                "GetCallerAddress",
+                // no constructor is conveyed as a tuple
+                (),
+            )
+            .await
+            .unwrap();
+
+        let get_caller_address_selector =
+            get_caller_address_abi.function("getCallerAddress").unwrap().short_signature();
+
+        let get_caller_eth_address: Address = {
+            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            address.try_into().unwrap()
+        };
+
+        let kakarot_client = KakarotClient::new(
+            StarknetConfig::new(
+                Network::JsonRpcProvider(starknet_test_sequencer.url()),
+                deployed_kakarot.kakarot,
+                deployed_kakarot.kakarot_proxy,
+            ),
+            JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
+        );
+
+        let _opcode_staticcall = kakarot_client
+            .call(
+                get_caller_eth_address,
+                get_caller_address_selector.into(),
+                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
+            )
+            .await
+            .expect("call should be successful");
+    }
+
+    #[tokio::test]
     async fn test_plain_opcodes() {
         let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
@@ -152,7 +198,7 @@ mod tests {
             address.try_into().unwrap()
         };
 
-        let (_plain_opcodes_abi, deployed_addresses) = deployed_kakarot
+        let (plain_opcodes_abi, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 starknet_test_sequencer.url(),
                 "PlainOpcodes",
@@ -179,6 +225,18 @@ mod tests {
             .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
             .await
             .expect("contract not deployed");
+
+        let opcode_staticcall_selector = plain_opcodes_abi.function("opcodeStaticCall").unwrap().short_signature();
+
+        let opcode_staticcall = kakarot_client
+            .call(
+                plain_opcodes_eth_address,
+                opcode_staticcall_selector.into(),
+                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
+            )
+            .await;
+
+        dbg!(opcode_staticcall);
     }
 
     #[tokio::test]

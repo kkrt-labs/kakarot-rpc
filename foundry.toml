@@ -5,6 +5,9 @@ src = "lib/kakarot/tests/integration/solidity_contracts"
 eth_rpc_url = "localhost"
 legacy = true
 
+[profile.testing]
+src = "solidity_contracts"
+
 [rpc_endpoints]
 localhost = "http://127.0.0.1:3030"
 anvil = "http://127.0.0.1:8545"
