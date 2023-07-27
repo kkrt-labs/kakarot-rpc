@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use reth_primitives::{Bytes, U256};
 use starknet::core::types::{BlockId, FunctionCall, StarknetError};
 use starknet::providers::{Provider, ProviderError};
@@ -14,13 +12,12 @@ use crate::models::felt::Felt252Wrapper;
 pub struct ContractAccount<'a, P> {
     pub address: FieldElement,
     provider: &'a P,
-    _phantom: PhantomData<P>,
 }
 
 impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
     #[must_use]
     pub fn new(provider: &'a P, address: FieldElement) -> Self {
-        Self { provider, address, _phantom: PhantomData }
+        Self { provider, address }
     }
 
     pub async fn bytecode(&self, block_id: &BlockId) -> Result<Bytes, EthApiError<P::Error>> {

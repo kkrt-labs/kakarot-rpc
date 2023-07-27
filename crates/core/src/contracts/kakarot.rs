@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use reth_primitives::Bytes;
@@ -14,13 +13,12 @@ pub struct KakarotContract<P> {
     pub address: FieldElement,
     pub proxy_account_class_hash: FieldElement,
     provider: Arc<P>,
-    _phantom: PhantomData<P>,
 }
 
 impl<P: Provider + Send + Sync> KakarotContract<P> {
     #[must_use]
     pub fn new(provider: Arc<P>, address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
-        Self { address, proxy_account_class_hash, provider, _phantom: PhantomData }
+        Self { address, proxy_account_class_hash, provider }
     }
 
     pub async fn compute_starknet_address(
