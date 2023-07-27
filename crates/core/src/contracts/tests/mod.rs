@@ -6,14 +6,14 @@ use starknet_crypto::FieldElement;
 use crate::client::api::KakarotStarknetApi;
 use crate::client::constants::{ACCOUNT_ADDRESS, STARKNET_NATIVE_TOKEN};
 use crate::client::tests::init_testnet_client;
-use crate::contracts::eth::EthContract;
+use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 
 #[tokio::test]
 async fn test_balance_of() {
     // Given
     let client = init_testnet_client();
     let starknet_native_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
-    let eth = EthContract::<SequencerGatewayProvider>::new(client.starknet_provider(), starknet_native_token_address);
+    let eth = StarknetErc20::<SequencerGatewayProvider>::new(client.starknet_provider(), starknet_native_token_address);
 
     let random_block = BlockId::Number(838054);
 

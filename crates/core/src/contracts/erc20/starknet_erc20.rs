@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use reth_primitives::U256;
 use starknet::core::types::{BlockId, FunctionCall};
 use starknet::providers::Provider;
@@ -10,17 +8,16 @@ use crate::client::errors::EthApiError;
 use crate::client::helpers::DataDecodingError;
 use crate::models::felt::Felt252Wrapper;
 
-/// Abstraction for the Starknet native token contract.
-pub struct EthContract<'a, P> {
+/// Abstraction for a Starknet ERC20 contract.
+pub struct StarknetErc20<'a, P> {
     pub address: FieldElement,
     provider: &'a P,
-    _phantom: PhantomData<P>,
 }
 
-impl<'a, P: Provider + Send + Sync> EthContract<'a, P> {
+impl<'a, P: Provider + Send + Sync> StarknetErc20<'a, P> {
     #[must_use]
     pub fn new(provider: &'a P, address: FieldElement) -> Self {
-        Self { provider, address, _phantom: PhantomData }
+        Self { provider, address }
     }
 
     pub async fn balance_of(

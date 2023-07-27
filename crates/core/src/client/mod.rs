@@ -42,7 +42,7 @@ use self::constants::{
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
 use crate::contracts::contract_account::ContractAccount;
-use crate::contracts::eth::EthContract;
+use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot::KakarotContract;
 use crate::models::balance::{TokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
@@ -364,7 +364,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let starknet_address = self.compute_starknet_address(ethereum_address, &starknet_block_id).await?;
 
         let native_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
-        let native_token = EthContract::new(self.starknet_provider(), native_token_address);
+        let native_token = StarknetErc20::new(self.starknet_provider(), native_token_address);
         let balance = native_token.balance_of(&starknet_address, &starknet_block_id).await?;
 
         Ok(balance)
