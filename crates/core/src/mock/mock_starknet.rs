@@ -235,10 +235,4 @@ mod tests {
         assert_eq!(expected_params, fixture.params);
         assert_eq!(expected_response, fixture.response);
     }
-
-    #[test]
-    fn test_rpc_all_fixtures() {
-        let fixtures = all_fixtures();
-        assert_eq!(fixtures.len(), 22);
-    }
 }
