@@ -1,6 +1,6 @@
 use jsonrpsee::types::error::{INTERNAL_ERROR_CODE, INVALID_PARAMS_CODE, SERVER_IS_BUSY_CODE, UNKNOWN_ERROR_CODE};
 use jsonrpsee::types::ErrorObject;
-use starknet::core::types::StarknetError;
+use starknet::core::types::{FromByteSliceError, StarknetError};
 use starknet::providers::ProviderError;
 use thiserror::Error;
 
@@ -125,4 +125,10 @@ impl<E: std::error::Error> From<EthApiError<E>> for jsonrpsee::core::Error {
 /// Constructs a JSON-RPC error object, consisting of `code` and `message`.
 pub fn rpc_err(code: i32, msg: impl Into<String>) -> jsonrpsee::types::error::ErrorObject<'static> {
     jsonrpsee::types::error::ErrorObject::owned(code, msg.into(), None::<()>)
+}
+
+impl<E: std::error::Error> From<FromByteSliceError> for EthApiError<E> {
+    fn from(err: FromByteSliceError) -> Self {
+        Self::ConversionError(format!("Failed to convert from byte slice: {}", err))
+    }
 }

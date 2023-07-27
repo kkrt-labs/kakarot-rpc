@@ -129,6 +129,11 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_alchemy_api() {
+        todo!()
+    }
+
+    #[tokio::test]
     async fn test_plain_opcodes() {
         let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
