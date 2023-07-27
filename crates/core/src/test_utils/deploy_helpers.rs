@@ -373,14 +373,14 @@ async fn compute_starknet_address(
     contract_address: FieldElement,
     eoa_account_address: FieldElement,
 ) -> FieldElement {
-    let call_get_starknet_address = FunctionCall {
+    let call_compute_starknet_address = FunctionCall {
         contract_address,
         entry_point_selector: get_selector_from_name("compute_starknet_address").unwrap(),
         calldata: vec![eoa_account_address],
     };
 
     let eoa_account_starknet_address_result =
-        account.provider().call(call_get_starknet_address, BlockId::Tag(BlockTag::Latest)).await;
+        account.provider().call(call_compute_starknet_address, BlockId::Tag(BlockTag::Latest)).await;
 
     *eoa_account_starknet_address_result.unwrap().first().unwrap()
 }
