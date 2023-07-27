@@ -164,7 +164,7 @@ mod tests {
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
 
-        let _opcode_staticcall = kakarot_client
+        kakarot_client
             .call(
                 get_caller_eth_address,
                 get_caller_address_selector.into(),
@@ -225,18 +225,6 @@ mod tests {
             .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
             .await
             .expect("contract not deployed");
-
-        let opcode_staticcall_selector = plain_opcodes_abi.function("opcodeStaticCall").unwrap().short_signature();
-
-        let opcode_staticcall = kakarot_client
-            .call(
-                plain_opcodes_eth_address,
-                opcode_staticcall_selector.into(),
-                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
-            )
-            .await;
-
-        dbg!(opcode_staticcall);
     }
 
     #[tokio::test]
