@@ -8,8 +8,6 @@ use dotenv::dotenv;
 use ethers::abi::{Abi, Tokenize};
 use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
 use foundry_config::utils::{find_project_root_path, load_config};
-use kakarot_rpc_core::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
-use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
 };
@@ -26,6 +24,9 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
+
+use crate::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
+use crate::models::felt::Felt252Wrapper;
 
 /// Macro to find the root path of the project.
 ///
