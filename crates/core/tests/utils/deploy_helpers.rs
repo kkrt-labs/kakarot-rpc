@@ -405,7 +405,7 @@ async fn fund_eoa(
 
 /// Asynchronously deploys an Externally Owned Account (EOA) to the network and funds it.
 ///
-/// This function first computes the StarkNet address of the EOA to be deployed using the provided
+/// This function first computes the Starknet address of the EOA to be deployed using the provided
 /// account, contract address, and EOA account address. Then, it deploys the EOA to the network and
 /// funds it with the specified amount of fee token.
 async fn deploy_and_fund_eoa(
@@ -486,8 +486,8 @@ async fn deploy_kakarot_contracts(
 
 /// Structure representing a deployed Kakarot system, containing key details of the system.
 ///
-/// This includes the private key and address of the Externally Owned Account (EOA), the StarkNet
-/// addresses of the kakarot and kakarot_proxy contracts, and the StarkNet address of the EOA.
+/// This includes the private key and address of the Externally Owned Account (EOA), the Starknet
+/// addresses of the kakarot and kakarot_proxy contracts, and the Starknet address of the EOA.
 pub struct DeployedKakarot {
     pub eoa_private_key: H256,
     pub eoa_eth_address: Address,
@@ -499,13 +499,13 @@ pub struct DeployedKakarot {
 impl DeployedKakarot {
     /// Asynchronously deploys an EVM contract.
     ///
-    /// This function deploys an EVM contract to the StarkNet network by calling the
+    /// This function deploys an EVM contract to the Starknet network by calling the
     /// `deploy_evm_contract` function. It also wraps around the result to provide error
     /// handling capabilities. It returns an error when the deployment fails.
     ///
     /// # Arguments
     ///
-    /// * `starknet_sequencer_url` - A `Url` indicating the URL of the StarkNet sequencer.
+    /// * `starknet_sequencer_url` - A `Url` indicating the URL of the Starknet sequencer.
     ///
     /// * `eth_contract` - A string representing the name of the Ethereum contract to deploy.
     ///
@@ -564,7 +564,7 @@ pub async fn construct_kakarot_test_sequencer() -> TestSequencer {
     TestSequencer::start(SequencerConfig::default(), kakarot_starknet_config()).await
 }
 
-/// Asynchronously deploys a Kakarot system to the StarkNet network and returns the
+/// Asynchronously deploys a Kakarot system to the Starknet network and returns the
 /// `DeployedKakarot` object.
 ///
 /// This function deploys a Kakarot system to the network, which includes declaring Kakarot

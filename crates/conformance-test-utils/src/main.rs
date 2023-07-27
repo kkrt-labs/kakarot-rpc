@@ -21,7 +21,7 @@ pub struct ComputeStarknetAddressArgs {
 fn main() {
     let args = ComputeStarknetAddressArgs::parse();
 
-    // Compute StarkNet address
+    // Compute Starknet address
     let starknet_address =
         compute_starknet_address(args.kakarot_address, args.account_proxy_class_hash, args.evm_address);
 
