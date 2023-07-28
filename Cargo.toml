@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/eth-rpc", "crates/core"]
+members = ["crates/eth-rpc", "crates/core", "crates/conformance-test-utils"]
 resolver = "2"
 
 [workspace.package]
