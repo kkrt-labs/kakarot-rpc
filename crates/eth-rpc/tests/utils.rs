@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use dojo_test_utils::rpc::MockJsonRpcTransport;
+use dojo_test_utils::sequencer::TestSequencer;
 use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::config::RPCConfig;
 use kakarot_rpc::rpc::KakarotRpcModuleBuilder;
@@ -62,7 +63,8 @@ pub async fn setup_mock_eth_rpc() -> KakarotEthRpc<JsonRpcClient<MockJsonRpcTran
 /// # Returns
 ///
 /// A Result with a tuple on successful execution. The tuple contains the server's address
-/// (SocketAddr) and a handle (ServerHandle) to stop the server.
+/// (SocketAddr), a handle (ServerHandle) to stop the server, and the test sequencer
+/// (Arc<TestSequencer>).
 ///
 /// # Errors
 ///
@@ -70,7 +72,8 @@ pub async fn setup_mock_eth_rpc() -> KakarotEthRpc<JsonRpcClient<MockJsonRpcTran
 /// * There's an issue deploying the Kakarot contracts.
 /// * There's an issue constructing the Starknet test sequencer.
 /// * There's an issue running the RPC server.
-pub async fn setup_kakarot_rpc_integration_env() -> Result<(SocketAddr, ServerHandle), eyre::Report> {
+pub async fn setup_kakarot_rpc_integration_env() -> Result<(SocketAddr, ServerHandle, Arc<TestSequencer>), eyre::Report>
+{
     // Define expected funded amount.
     let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000")?;
 
@@ -98,5 +101,5 @@ pub async fn setup_kakarot_rpc_integration_env() -> Result<(SocketAddr, ServerHa
     let rpc_config = RPCConfig::from_env()?;
     let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
 
-    Ok((server_addr, server_handle))
+    Ok((server_addr, server_handle, starknet_test_sequencer))
 }
