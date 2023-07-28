@@ -1,5 +1,5 @@
 {
-  "cSpell.words": ["cairo", "hashrate", "KKRT", "lightclient", "wiremock"],
+  "cSpell.words": ["cairo", "hashrate", "KKRT", "lightclient"],
   "files.exclude": {
     "**/.git": false
   },

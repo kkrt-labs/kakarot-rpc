@@ -89,8 +89,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::tests::init_mock_client;
-    use crate::mock::mock_starknet::fixtures;
+    use crate::mock::mock_starknet::{fixtures, init_mock_client};
 
     #[test]
     fn test_to_eth_log_log3() {

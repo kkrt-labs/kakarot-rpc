@@ -13,7 +13,7 @@ mod tests {
     use starknet::core::types::{FieldElement, Transaction as StarknetTransaction};
     use starknet::macros::felt;
 
-    use crate::utils::setup_kakarot_eth_rpc;
+    use crate::utils::setup_mock_eth_rpc;
 
     fn get_test_tx() -> serde_json::Value {
         json!({
@@ -742,7 +742,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_number_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
 
         let block_number = kakarot_rpc.block_number().await.unwrap();
         assert_eq!(block_number.as_u64(), 19640);
@@ -750,7 +750,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_block_by_hash_hydrated_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let hash = H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap();
 
         let hydrated = true;
@@ -790,7 +790,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_block_by_hash_not_hydrated_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let hash = H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e").unwrap();
         let hydrated = false;
         let block = kakarot_rpc.block_by_hash(hash, hydrated).await.unwrap().unwrap();
@@ -827,7 +827,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_block_by_number_hydrated_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let block_number = BlockNumberOrTag::Latest;
         let hydrated = true;
 
@@ -867,7 +867,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_block_by_number_not_hydrated_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let block_number = BlockNumberOrTag::Latest;
         let hydrated = false;
 
@@ -905,7 +905,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_transaction_count_by_hash_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let hash = H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap();
 
         let transaction_count = kakarot_rpc.block_transaction_count_by_hash(hash).await.unwrap();
@@ -914,7 +914,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_transaction_count_by_number_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let block_number = BlockNumberOrTag::Latest;
 
         let transaction_count = kakarot_rpc.block_transaction_count_by_number(block_number).await.unwrap();
@@ -923,9 +923,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_transaction_receipt_invoke_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let hash = H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap();
-
         let transaction_receipt = kakarot_rpc.transaction_receipt(hash).await.unwrap().unwrap();
 
         assert_eq!(
@@ -967,7 +966,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transaction_by_block_number_and_index_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let block_number = BlockNumberOrTag::Latest;
 
         // workaround as Index does not implement new()
@@ -992,7 +991,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_transaction_by_block_hash_and_index_is_ok() {
-        let kakarot_rpc = setup_kakarot_eth_rpc().await;
+        let kakarot_rpc = setup_mock_eth_rpc().await;
         let hash = H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap();
 
         // workaround as Index does not implement new()
