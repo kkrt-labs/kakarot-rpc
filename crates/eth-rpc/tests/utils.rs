@@ -12,7 +12,7 @@ use kakarot_rpc_core::client::config::{Network, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::mock::mock_starknet::{all_fixtures, init_mock_client};
 use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
-use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, deploy_kakarot_system};
+use kakarot_rpc_core::test_utils::deploy_helpers::deploy_kakarot_system;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
 use starknet::providers::{JsonRpcClient, JsonRpcClient as StarknetJsonRpcClient};
@@ -30,13 +30,13 @@ use starknet::providers::{JsonRpcClient, JsonRpcClient as StarknetJsonRpcClient}
 ///
 ///       // Query whatever eth_rpc endpoints
 ///       let client = reqwest::Client::new();
-///        let res = client
-///            .post("http://127.0.0.1:3030")
-///            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_chainId\", \"params\": [] }")
-///            .header("content-type", "application/json")
-///            .send()
-///            .await
-///            .unwrap();
+///       let res = client
+///           .post("http://127.0.0.1:3030")
+///           .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_chainId\", \"params\": [] }")
+///           .header("content-type", "application/json")
+///           .send()
+///           .await
+///           .unwrap();
 ///
 ///        // Dont forget to close server at the end.
 ///        let _has_stop = server_handle.stop().unwrap();
@@ -48,38 +48,58 @@ pub async fn setup_mock_eth_rpc() -> KakarotEthRpc<JsonRpcClient<MockJsonRpcTran
     KakarotEthRpc::new(Arc::new(kakarot_client))
 }
 
-/// Deploys the Kakarot contracts, starts the Kakarot RPC server, and returns the server's address
-/// and a handle to stop the server.
+/// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
+/// and starting the Kakarot RPC server.
 ///
 /// This function:
-/// 1. Creates a Starknet test sequencer
-/// 2. Deploys the Kakarot contracts
-/// 3. Starts the Kakarot RPC server
+/// 1. Takes an `Arc<TestSequencer>` as input, which is used to deploy the Kakarot contracts and to
+///    set up the Kakarot RPC server.
+/// 2. Deploys the Kakarot contracts.
+/// 3. Creates Starknet and Kakarot clients.
+/// 4. Sets up and runs the Kakarot RPC module.
 ///
 /// # Arguments
 ///
-/// * No arguments.
+/// * `starknet_test_sequencer` - An Arc-wrapped TestSequencer. This is used to deploy the Kakarot
+///   contracts and to set up the Kakarot RPC server.
 ///
 /// # Returns
 ///
-/// A Result with a tuple on successful execution. The tuple contains the server's address
-/// (SocketAddr), a handle (ServerHandle) to stop the server, and the test sequencer
-/// (Arc<TestSequencer>).
+/// This function returns a Result containing a tuple with the server's address and a handle to
+/// stop the server upon successful execution.
 ///
-/// # Errors
+/// The function may return an Err variant of eyre::Report if there are issues with deploying the
+/// Kakarot contracts, creating the clients, or running the RPC server.
 ///
-/// Returns an Err variant of eyre::Report if:
-/// * There's an issue deploying the Kakarot contracts.
-/// * There's an issue constructing the Starknet test sequencer.
-/// * There's an issue running the RPC server.
-pub async fn setup_kakarot_rpc_integration_env() -> Result<(SocketAddr, ServerHandle, Arc<TestSequencer>), eyre::Report>
-{
+/// # Example
+/// ```ignore
+/// use kakarot_rpc::test_utils::setup_kakarot_rpc_integration_env;
+/// use dojo_test_utils::sequencer::TestSequencer;
+/// use std::sync::Arc;
+/// use tokio::runtime::Runtime;
+///
+/// #[tokio::test]
+/// async fn test_case() {
+///    // Create a TestSequencer.
+///    let test_sequencer = Arc::new(TestSequencer::new());
+///
+///    // Set up the Kakarot RPC integration environment.
+///    let (server_addr, server_handle) = setup_kakarot_rpc_integration_env(&test_sequencer).await.unwrap();
+///    
+///    // Query whatever eth_rpc endpoints
+///     
+///    // Dont forget to close server at the end.
+///    server_handle.stop().expect("Failed to stop the server");
+///
+/// }
+pub async fn setup_kakarot_rpc_integration_env(
+    starknet_test_sequencer: &Arc<TestSequencer>,
+) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
     // Define expected funded amount.
     let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000")?;
 
-    // Create Starknet test sequencer and deploy Kakarot contracts.
-    let starknet_test_sequencer = Arc::new(construct_kakarot_test_sequencer().await);
-    let deploying_kakarot = deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount);
+    // Deploy Kakarot contracts.
+    let deploying_kakarot = deploy_kakarot_system(starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount);
 
     // Initialize StarknetHttpTransport with sequencer's URL.
     let starknet_http_transport = StarknetHttpTransport::new(starknet_test_sequencer.url());
@@ -101,5 +121,5 @@ pub async fn setup_kakarot_rpc_integration_env() -> Result<(SocketAddr, ServerHa
     let rpc_config = RPCConfig::from_env()?;
     let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
 
-    Ok((server_addr, server_handle, starknet_test_sequencer))
+    Ok((server_addr, server_handle))
 }
