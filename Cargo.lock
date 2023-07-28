@@ -1447,6 +1447,9 @@ version = "0.1.0"
 dependencies = [
  "cargo-husky",
  "clap",
+ "serde",
+ "serde_json",
+ "serde_with",
  "starknet",
 ]
 
