@@ -4486,6 +4486,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bytes",
+ "cargo-husky",
  "ctor",
  "dojo-test-utils",
  "dotenv",

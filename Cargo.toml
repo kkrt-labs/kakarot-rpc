@@ -37,6 +37,8 @@ ruint = "1.9.0"
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "b37a655f536ffb02570e9dd17f5e212792acccfb" }
+cargo-husky = { version = "1.5.0", default-features = false, features = ["precommit-hook", "run-for-all", "run-cargo-clippy", "run-cargo-fmt"] }
+
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
