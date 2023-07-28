@@ -29,6 +29,7 @@ reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
 async-trait = "0.1.58"
 jsonrpsee = { version = "0.18.2", features = ["full"] }
+pin-project = "1.1.2"
 lazy_static = "1.4.0"
 dotenv = "0.15.0"
 ruint = "1.9.0"

@@ -23,6 +23,7 @@ starknet-crypto = { workspace = true }
 dojo-test-utils = { workspace = true }
 thiserror = "1.0.38"
 url = { workspace = true }
+pin-project = { workspace = true }
 
 num-bigint = "0.4.3"
 futures = "0.3.26"
