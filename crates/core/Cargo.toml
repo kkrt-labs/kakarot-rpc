@@ -22,7 +22,7 @@ starknet = { workspace = true }
 starknet-crypto = { workspace = true }
 dojo-test-utils = { workspace = true }
 thiserror = "1.0.38"
-url = "2.3.1"
+url = { workspace = true }
 
 num-bigint = "0.4.3"
 futures = "0.3.26"
@@ -30,7 +30,7 @@ serde = { version = "1.0" }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 serde_with = { workspace = true }
 
-tokio = { version = "1.21.2", features = ["macros"] }
+tokio = { workspace = true }
 ruint = { workspace = true }
 lazy_static = "1.4.0"
 

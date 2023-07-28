@@ -10,14 +10,14 @@ env_logger = "0.10.0"
 eyre = "0.6.8"
 kakarot_rpc_core = { path = "../core" }
 log = "0.4.17"
-url = "2.3.1"
+url = { workspace = true }
 
 # rpc
 jsonrpsee = { workspace = true }
 
 # async
 async-trait = { workspace = true }
-tokio = { version = "1.21.2", features = ["macros"] }
+tokio = { workspace = true }
 
 # misc
 anyhow = "1.0.68"

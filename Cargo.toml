@@ -35,6 +35,8 @@ ruint = "1.9.0"
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0"
 serde_with = "2.2.0"
+url = "2.3.1"
+tokio = { version = "1.21.2", features = ["macros"] }
 
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error

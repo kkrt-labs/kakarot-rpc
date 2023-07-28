@@ -1446,11 +1446,13 @@ name = "conformance-test-utils"
 version = "0.1.0"
 dependencies = [
  "cargo-husky",
- "clap",
+ "kakarot_rpc_core",
  "serde",
  "serde_json",
  "serde_with",
  "starknet",
+ "tokio",
+ "url",
 ]
 
 [[package]]
