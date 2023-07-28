@@ -1,10 +1,12 @@
 mod tests {
 
     use ctor::ctor;
+    use ethers::abi::Token;
     use ethers::types::Address as EthersAddress;
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::client::config::{Network, StarknetConfig};
     use kakarot_rpc_core::client::KakarotClient;
+    use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
     use kakarot_rpc_core::test_utils::deploy_helpers::{
@@ -234,5 +236,77 @@ mod tests {
 
         // Then
         assert_eq!(count, U256::from(1));
+    }
+
+    #[tokio::test]
+    async fn test_token_balances() {
+        // Given
+        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
+
+        let amount_funded = FieldElement::from_dec_str("10000000000000000000").unwrap();
+
+        let deployed_kakarot = deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), amount_funded).await;
+
+        let (erc20_abi, deployed_addresses) = deployed_kakarot
+            .deploy_evm_contract(
+                starknet_test_sequencer.url(),
+                "ERC20",
+                (
+                    Token::String("Test".into()),               // name
+                    Token::String("TT".into()),                 // symbol
+                    Token::Uint(ethers::types::U256::from(18)), // decimals
+                ),
+            )
+            .await
+            .unwrap();
+
+        let kakarot_client = KakarotClient::new(
+            StarknetConfig::new(
+                Network::JsonRpcProvider(starknet_test_sequencer.url()),
+                deployed_kakarot.kakarot,
+                deployed_kakarot.kakarot_proxy,
+            ),
+            JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
+        );
+
+        let erc20_eth_address = {
+            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            address.try_into().unwrap()
+        };
+
+        let nonce = kakarot_client
+            .nonce(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .unwrap();
+        let mint_selector = erc20_abi.function("mint").unwrap().short_signature();
+
+        let to = U256::try_from_be_slice(&deployed_kakarot.eoa_eth_address.to_fixed_bytes()[..]).unwrap();
+        let amount = U256::from(10_000);
+        let mint_tx = create_raw_ethereum_tx(
+            mint_selector,
+            deployed_kakarot.eoa_private_key,
+            erc20_eth_address,
+            vec![to, amount],
+            nonce.try_into().unwrap(),
+        );
+
+        kakarot_client.send_transaction(mint_tx).await.unwrap();
+
+        // When
+        let balances =
+            kakarot_client.token_balances(deployed_kakarot.eoa_eth_address, vec![erc20_eth_address]).await.unwrap();
+
+        // Then
+        assert_eq!(
+            TokenBalances {
+                address: deployed_kakarot.eoa_eth_address,
+                token_balances: vec![TokenBalance {
+                    contract_address: erc20_eth_address,
+                    token_balance: Some(U256::from(10_000)),
+                    error: None
+                }]
+            },
+            balances
+        );
     }
 }
