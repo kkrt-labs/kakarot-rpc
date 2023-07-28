@@ -99,13 +99,11 @@ pub async fn setup_kakarot_rpc_integration_env(
     let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000")?;
 
     // Deploy Kakarot contracts.
-    let deploying_kakarot = deploy_kakarot_system(starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount);
+    let deployed_kakarot =
+        deploy_kakarot_system(starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
 
     // Initialize StarknetHttpTransport with sequencer's URL.
     let starknet_http_transport = StarknetHttpTransport::new(starknet_test_sequencer.url());
-
-    // Await for the deploy_kakarot_system future and proceed with the initialization.
-    let deployed_kakarot = deploying_kakarot.await;
 
     // Create Starknet and Kakarot clients.
     let starknet_config = StarknetConfig::new(
