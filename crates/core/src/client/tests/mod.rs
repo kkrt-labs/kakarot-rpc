@@ -1,43 +1,20 @@
 use std::str::FromStr;
 
-use dojo_test_utils::rpc::MockJsonRpcTransport;
 use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256, U64};
 use reth_rpc_types::CallRequest;
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransactionV1};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::sequencer::models::BlockId as SequencerBlockId;
-use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
 use starknet_crypto::FieldElement;
 
-use super::config::{Network, SequencerGatewayProviderBuilder};
 use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
-use crate::client::config::StarknetConfig;
 use crate::client::constants::{CHAIN_ID, COUNTER_ADDRESS_TESTNET1, INC_SELECTOR};
-use crate::client::KakarotClient;
 use crate::mock::constants::{
     ABDEL_ETHEREUM_ADDRESS, ABDEL_STARKNET_ADDRESS, ABDEL_STARKNET_ADDRESS_HEX, ACCOUNT_ADDRESS, ACCOUNT_ADDRESS_EVM,
-    COUNTER_ADDRESS_EVM, INC_DATA, KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
-    PROXY_ACCOUNT_CLASS_HASH_HEX,
+    COUNTER_ADDRESS_EVM, INC_DATA, PROXY_ACCOUNT_CLASS_HASH_HEX,
 };
-use crate::mock::mock_starknet::{fixtures, mock_starknet_provider, AvailableFixtures, StarknetRpcFixture};
+use crate::mock::mock_starknet::{fixtures, init_mock_client, init_testnet_client, AvailableFixtures};
 use crate::wrap_kakarot;
-
-pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
-    let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
-    let config = StarknetConfig::new(Network::Goerli1Gateway, kakarot_address, Default::default());
-
-    let provider = SequencerGatewayProviderBuilder::new(&Network::Goerli1Gateway).build();
-    KakarotClient::new(config, provider)
-}
-
-pub fn init_mock_client(
-    fixtures: Option<Vec<StarknetRpcFixture>>,
-) -> KakarotClient<JsonRpcClient<MockJsonRpcTransport>> {
-    let config = StarknetConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
-    let starknet_provider = mock_starknet_provider(fixtures);
-
-    KakarotClient::new(config, starknet_provider)
-}
 
 #[tokio::test]
 async fn test_block_number() {

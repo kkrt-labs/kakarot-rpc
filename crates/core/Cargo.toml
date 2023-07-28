@@ -27,19 +27,18 @@ url = "2.3.1"
 num-bigint = "0.4.3"
 futures = "0.3.26"
 serde = { version = "1.0" }
-serde_json = { version = "1.0", features = ["preserve_order"]}
+serde_json = { version = "1.0", features = ["preserve_order"] }
 serde_with = "2.2.0"
 tokio = { version = "1.21.2", features = ["macros"] }
 ruint = { workspace = true }
-
-wiremock = "0.5.17"
 lazy_static = "1.4.0"
 
 
-dotenv = { workspace = true }  
-bytes = "1"  
+dotenv = { workspace = true }
+bytes = "1"
 ethers = "2.0"
-foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }  
+foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
+walkdir = "2.3.3"
 
 [dev-dependencies]
 dojo-test-utils = { workspace = true }

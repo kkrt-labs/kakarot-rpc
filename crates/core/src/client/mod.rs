@@ -6,6 +6,8 @@ pub mod helpers;
 #[cfg(test)]
 pub mod tests;
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use eyre::Result;
 use futures::future::join_all;
@@ -32,7 +34,7 @@ use starknet::providers::{Provider, ProviderError};
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
-use self::constants::selectors::{BALANCE_OF, EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
+use self::constants::selectors::{EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
 use self::constants::{
     ACCOUNT_ADDRESS, CHAIN_ID, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS,
     MAX_FEE, STARKNET_NATIVE_TOKEN,
@@ -40,6 +42,7 @@ use self::constants::{
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
 use crate::contracts::contract_account::ContractAccount;
+use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot::KakarotContract;
 use crate::models::balance::{TokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
@@ -50,7 +53,7 @@ use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 use crate::models::ConversionError;
 
 pub struct KakarotClient<P: Provider + Send + Sync> {
-    starknet_provider: P,
+    starknet_provider: Arc<P>,
     kakarot_contract: KakarotContract<P>,
     network: Network,
 }
@@ -60,7 +63,10 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     pub fn new(starknet_config: StarknetConfig, starknet_provider: P) -> Self {
         let StarknetConfig { kakarot_address, proxy_account_class_hash, network } = starknet_config;
 
-        let kakarot_contract = KakarotContract::new(kakarot_address, proxy_account_class_hash);
+        let starknet_provider = Arc::new(starknet_provider);
+
+        let kakarot_contract =
+            KakarotContract::new(Arc::clone(&starknet_provider), kakarot_address, proxy_account_class_hash);
 
         Self { starknet_provider, network, kakarot_contract }
     }
@@ -82,13 +88,11 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let ethereum_address: Felt252Wrapper = ethereum_address.into();
         let ethereum_address = ethereum_address.into();
 
-        let starknet_contract_address = self
-            .kakarot_contract
-            .compute_starknet_address(&self.starknet_provider, &ethereum_address, &starknet_block_id)
-            .await?;
+        let starknet_contract_address =
+            self.kakarot_contract.compute_starknet_address(&ethereum_address, &starknet_block_id).await?;
 
-        let contract_account = ContractAccount::new(starknet_contract_address);
-        let bytecode = contract_account.bytecode(&self.starknet_provider, &starknet_block_id).await?;
+        let contract_account = ContractAccount::new(self.starknet_provider(), starknet_contract_address);
+        let bytecode = contract_account.bytecode(&starknet_block_id).await?;
 
         // Convert the result of the function call to a vector of bytes
         Ok(bytecode)
@@ -359,21 +363,11 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
         let starknet_address = self.compute_starknet_address(ethereum_address, &starknet_block_id).await?;
 
-        let request = FunctionCall {
-            // This FieldElement::from_hex_be cannot fail as the value is a constant
-            contract_address: FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(),
-            entry_point_selector: BALANCE_OF,
-            calldata: vec![starknet_address],
-        };
+        let native_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
+        let native_token = StarknetErc20::new(self.starknet_provider(), native_token_address);
+        let balance = native_token.balance_of(&starknet_address, &starknet_block_id).await?;
 
-        let balance = self.starknet_provider.call(request, starknet_block_id).await?;
-
-        let balance: Felt252Wrapper = (*balance.first().ok_or_else(|| {
-            DataDecodingError::InvalidReturnArrayLength { entrypoint: "balance".into(), expected: 1, actual: 0 }
-        })?)
-        .into();
-
-        Ok(balance.into())
+        Ok(balance)
     }
 
     /// Returns the storage value at a specific index of a contract given its address and a block
@@ -389,10 +383,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let address: Felt252Wrapper = address.into();
         let address = address.into();
 
-        let starknet_contract_address = self
-            .kakarot_contract
-            .compute_starknet_address(&self.starknet_provider, &address, &starknet_block_id)
-            .await?;
+        let starknet_contract_address =
+            self.kakarot_contract.compute_starknet_address(&address, &starknet_block_id).await?;
 
         let key_low = index & U256::from(u128::MAX);
         let key_low: Felt252Wrapper = key_low.try_into()?;
@@ -400,10 +392,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let key_high = index >> 128;
         let key_high: Felt252Wrapper = key_high.try_into()?;
 
-        let contract_account = ContractAccount::new(starknet_contract_address);
-        let storage_value = contract_account
-            .storage(&self.starknet_provider, &key_low.into(), &key_high.into(), &starknet_block_id)
-            .await?;
+        let contract_account = ContractAccount::new(self.starknet_provider(), starknet_contract_address);
+        let storage_value = contract_account.storage(&key_low.into(), &key_high.into(), &starknet_block_id).await?;
 
         Ok(storage_value)
     }
@@ -695,10 +685,7 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
         let ethereum_address: Felt252Wrapper = ethereum_address.into();
         let ethereum_address = ethereum_address.into();
 
-        Ok(self
-            .kakarot_contract
-            .compute_starknet_address(&self.starknet_provider, &ethereum_address, starknet_block_id)
-            .await?)
+        Ok(self.kakarot_contract.compute_starknet_address(&ethereum_address, starknet_block_id).await?)
     }
 
     /// Returns the Ethereum transactions executed by the Kakarot contract by filtering the provided

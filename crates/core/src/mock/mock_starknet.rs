@@ -1,10 +1,17 @@
 use std::fs;
 
 use dojo_test_utils::rpc::MockJsonRpcTransport;
+use foundry_config::find_git_root_path;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 use starknet::providers::jsonrpc::JsonRpcMethod;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
+use starknet_crypto::FieldElement;
+use walkdir::WalkDir;
+
+use super::constants::{KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH};
+use crate::client::config::{Network, SequencerGatewayProviderBuilder, StarknetConfig};
+use crate::client::KakarotClient;
 
 /// A fixture for a Starknet RPC call.
 pub struct StarknetRpcFixture {
@@ -141,6 +148,40 @@ pub fn fixtures(methods: Vec<AvailableFixtures>) -> Vec<StarknetRpcFixture> {
         .collect()
 }
 
+/// Returns all the fixtures present in the fixtures directory.
+/// # Panics
+/// Returns an error if a fixture is not a valid json or if the fixture is not present in both
+/// requests and responses.
+///
+/// Panics if `all_fixtures` is called from a directory where `core` crate is not in scope.
+pub fn all_fixtures() -> Vec<StarknetRpcFixture> {
+    let cwd = &std::env::current_dir().unwrap();
+    let request_path = find_git_root_path(cwd).unwrap().join("crates/core/src/mock/fixtures/requests");
+    let mut fixtures: Vec<StarknetRpcFixture> = Vec::new();
+    for entry in WalkDir::new(request_path) {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        if !path.is_file() {
+            continue;
+        }
+
+        let request = fs::read_to_string(path).unwrap().parse::<Value>().unwrap();
+        // We need to clean the escape characters, we get the following error:
+        // panicked at 'Response not set in mock for method
+        // "\"starknet_getTransactionByBlockIdAndIndex\"" and params "[{\"block_hash\": [...]
+        let params = request["params"].clone();
+        let method_name = request["method"].clone();
+        let response = fs::read_to_string(path.to_string_lossy().replace("requests", "responses"))
+            .unwrap()
+            .parse::<Value>()
+            .unwrap();
+
+        fixtures.push(StarknetRpcFixture { method: serde_json::from_value(method_name).unwrap(), params, response });
+    }
+    fixtures
+}
+
 /// Creates a mock `JsonRpcClient` with the given fixtures.
 ///
 /// # Arguments
@@ -154,6 +195,23 @@ pub fn mock_starknet_provider(fixtures: Option<Vec<StarknetRpcFixture>>) -> Json
             .for_each(|fixture| transport.set_response(fixture.method, fixture.params, fixture.response));
     }
     JsonRpcClient::new(transport)
+}
+
+pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
+    let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
+    let config = StarknetConfig::new(Network::Goerli1Gateway, kakarot_address, Default::default());
+
+    let provider = SequencerGatewayProviderBuilder::new(&Network::Goerli1Gateway).build();
+    KakarotClient::new(config, provider)
+}
+
+pub fn init_mock_client(
+    fixtures: Option<Vec<StarknetRpcFixture>>,
+) -> KakarotClient<JsonRpcClient<MockJsonRpcTransport>> {
+    let config = StarknetConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
+    let starknet_provider = mock_starknet_provider(fixtures);
+
+    KakarotClient::new(config, starknet_provider)
 }
 
 #[cfg(test)]
