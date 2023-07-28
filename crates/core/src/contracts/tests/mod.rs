@@ -5,8 +5,8 @@ use starknet_crypto::FieldElement;
 
 use crate::client::api::KakarotStarknetApi;
 use crate::client::constants::{ACCOUNT_ADDRESS, STARKNET_NATIVE_TOKEN};
-use crate::client::tests::init_testnet_client;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
+use crate::mock::mock_starknet::init_testnet_client;
 
 #[tokio::test]
 async fn test_balance_of() {
