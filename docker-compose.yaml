@@ -57,7 +57,6 @@ services:
       - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:9944
       - RUST_LOG=trace
-      - EVM_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app
