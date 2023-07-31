@@ -5,6 +5,7 @@ use starknet::providers::ProviderError;
 use thiserror::Error;
 
 use super::helpers::DataDecodingError;
+use crate::contracts::erc20::ContractError;
 use crate::models::ConversionError;
 
 /// List of JSON-RPC error codes from reth
@@ -48,6 +49,9 @@ pub enum EthApiError<E: std::error::Error> {
     /// Conversion between Starknet types and ETH failed.
     #[error("conversion error: {0}")]
     ConversionError(String),
+    /// Contract error.
+    #[error("contract error: {0}")]
+    ContractError(#[from] ContractError),
     /// Data decoding into ETH types failed.
     #[error(transparent)]
     DataDecodingError(#[from] DataDecodingError),
@@ -112,6 +116,7 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
                 ProviderError::Other(_) => rpc_err(UNKNOWN_ERROR_CODE, err_provider.to_string()),
             },
             EthApiError::ConversionError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
+            EthApiError::ContractError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
             EthApiError::DataDecodingError(err) => rpc_err(INTERNAL_ERROR_CODE, err.to_string()),
             EthApiError::KakarotDataFilteringError(err) => rpc_err(INTERNAL_ERROR_CODE, err),
             EthApiError::FeederGatewayError(err) => rpc_err(INTERNAL_ERROR_CODE, err),

@@ -405,15 +405,17 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         address: Address,
         token_addresses: Vec<Address>,
     ) -> Result<TokenBalances, EthApiError<P::Error>> {
-        let addr: Felt252Wrapper = address.into();
-        let addr: FieldElement = addr.into();
+        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
 
         let handles = token_addresses.into_iter().map(|token_address| {
             let token_addr: Felt252Wrapper = token_address.into();
             let token = EthereumErc20::new(token_addr.into(), &self.kakarot_contract);
 
-            let block_id = StarknetBlockId::Tag(BlockTag::Latest);
-            FutureTokenBalance { balance: token.balance_of(addr, block_id), token_address, _phantom: PhantomData::<P> }
+            FutureTokenBalance {
+                balance: token.balance_of(address.into(), block_id),
+                token_address,
+                _phantom: PhantomData::<P>,
+            }
         });
 
         let token_balances = join_all(handles).await;
