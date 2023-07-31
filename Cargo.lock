@@ -1442,6 +1442,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "conformance-test-utils"
+version = "0.1.0"
+dependencies = [
+ "cargo-husky",
+ "kakarot_rpc_core",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "starknet",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "console"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4477,6 +4491,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bytes",
+ "cargo-husky",
  "ctor",
  "dojo-test-utils",
  "dotenv",

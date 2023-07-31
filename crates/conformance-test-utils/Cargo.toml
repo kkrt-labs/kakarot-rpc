@@ -1,0 +1,18 @@
+[package]
+name = "conformance-test-utils"
+version = { workspace = true }
+edition = { workspace = true }
+description = { workspace = true }
+homepage = { workspace = true }
+
+[dependencies]
+starknet = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_with = { workspace = true }
+kakarot_rpc_core = { path = "../core" }
+url = { workspace = true }
+tokio = { workspace = true }
+
+[dev-dependencies]
+cargo-husky = { workspace = true }

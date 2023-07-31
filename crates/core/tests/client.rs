@@ -1,5 +1,3 @@
-mod utils;
-
 mod tests {
 
     use ctor::ctor;
@@ -8,16 +6,15 @@ mod tests {
     use kakarot_rpc_core::client::config::{Network, StarknetConfig};
     use kakarot_rpc_core::client::KakarotClient;
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
+    use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
+    use kakarot_rpc_core::test_utils::deploy_helpers::{
+        construct_kakarot_test_sequencer, create_raw_ethereum_tx, deploy_kakarot_system,
+    };
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
     use starknet::core::types::FieldElement;
     use starknet::providers::jsonrpc::HttpTransport;
     use starknet::providers::JsonRpcClient;
     use tracing_subscriber::FmtSubscriber;
-
-    use crate::utils::constants::EOA_WALLET;
-    use crate::utils::deploy_helpers::{
-        construct_kakarot_test_sequencer, create_raw_ethereum_tx, deploy_kakarot_system,
-    };
 
     #[ctor]
     fn setup() {
