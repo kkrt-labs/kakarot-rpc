@@ -17,8 +17,8 @@ pub struct EthereumErc20<'a, P> {
 
 impl<'a, P: Provider + Send + Sync> EthereumErc20<'a, P> {
     #[must_use]
-    pub fn new(kakarot_contract: &'a KakarotContract<P>, address: FieldElement) -> Self {
-        Self { kakarot_contract, address }
+    pub fn new(address: FieldElement, kakarot_contract: &'a KakarotContract<P>) -> Self {
+        Self { address, kakarot_contract }
     }
 
     pub async fn balance_of(self, evm_address: FieldElement, block_id: BlockId) -> Result<U256, EthApiError<P::Error>> {

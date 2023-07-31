@@ -6,6 +6,7 @@ pub mod helpers;
 #[cfg(test)]
 pub mod tests;
 
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -44,7 +45,7 @@ use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot::KakarotContract;
-use crate::models::balance::{FutureTokenBalance, TokenBalance, TokenBalances};
+use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
 use crate::models::event::StarknetEvent;
@@ -402,27 +403,20 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     async fn token_balances(
         &self,
         address: Address,
-        contract_addresses: Vec<Address>,
+        token_addresses: Vec<Address>,
     ) -> Result<TokenBalances, EthApiError<P::Error>> {
         let addr: Felt252Wrapper = address.into();
         let addr: FieldElement = addr.into();
 
-        let handles = contract_addresses.into_iter().map(|token_address| {
+        let handles = token_addresses.into_iter().map(|token_address| {
             let token_addr: Felt252Wrapper = token_address.into();
-            let token = EthereumErc20::new(&self.kakarot_contract, token_addr.into());
+            let token = EthereumErc20::new(token_addr.into(), &self.kakarot_contract);
 
             let block_id = StarknetBlockId::Tag(BlockTag::Latest);
-            FutureTokenBalance { balance: token.balance_of(addr, block_id), token_address }
+            FutureTokenBalance { balance: token.balance_of(addr, block_id), token_address, _phantom: PhantomData::<P> }
         });
 
-        let token_balances = join_all(handles)
-            .await
-            .into_iter()
-            .map(|f| match f.0 {
-                Ok(balance) => TokenBalance { contract_address: f.1, token_balance: Some(balance), error: None },
-                Err(e) => TokenBalance { contract_address: address, token_balance: None, error: Some(e.to_string()) },
-            })
-            .collect();
+        let token_balances = join_all(handles).await;
 
         Ok(TokenBalances { address, token_balances })
     }

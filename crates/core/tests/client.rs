@@ -301,7 +301,7 @@ mod tests {
             TokenBalances {
                 address: deployed_kakarot.eoa_eth_address,
                 token_balances: vec![TokenBalance {
-                    contract_address: erc20_eth_address,
+                    token_address: erc20_eth_address,
                     token_balance: Some(U256::from(10_000)),
                     error: None
                 }]
