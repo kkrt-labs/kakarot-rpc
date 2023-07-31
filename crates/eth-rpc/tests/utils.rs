@@ -92,6 +92,7 @@ pub async fn setup_mock_eth_rpc() -> KakarotEthRpc<JsonRpcClient<MockJsonRpcTran
 ///    server_handle.stop().expect("Failed to stop the server");
 ///
 /// }
+/// ```
 pub async fn setup_kakarot_rpc_integration_env(
     starknet_test_sequencer: &Arc<TestSequencer>,
 ) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
