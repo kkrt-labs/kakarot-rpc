@@ -1,6 +1,5 @@
 #![recursion_limit = "1024"]
-#[macro_use]
-mod utils;
+pub mod utils;
 
 #[cfg(test)]
 mod tests {

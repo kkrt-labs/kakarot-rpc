@@ -1,4 +1,4 @@
-mod utils;
+pub mod utils;
 
 #[cfg(test)]
 mod integration_tests {
