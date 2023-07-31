@@ -19,11 +19,7 @@ mod integration_tests {
         // Deploy the Kakarot contracts and start the Kakarot RPC server
         let (server_addr, server_handle) = setup_kakarot_rpc_integration_env(&starknet_test_sequencer)
             .await
-            .map_err(|e| {
-                println!("Error setting up Kakarot RPC server: {}", e);
-                e
-            })
-            .unwrap();
+            .expect("Error setting up Kakarot RPC server");
 
         // Try to run the test
         let provider = EthersHttp::from_str(format!("http://localhost:{}", server_addr.port()).as_ref()).unwrap();
