@@ -96,12 +96,11 @@ pub async fn setup_mock_eth_rpc() -> KakarotEthRpc<JsonRpcClient<MockJsonRpcTran
 pub async fn setup_kakarot_rpc_integration_env(
     starknet_test_sequencer: &Arc<TestSequencer>,
 ) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    // Define expected funded amount.
-    let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000")?;
+    // Define the funding amount.
+    let funding_amount = FieldElement::from_dec_str("1000000000000000000")?;
 
     // Deploy Kakarot contracts.
-    let deployed_kakarot =
-        deploy_kakarot_system(starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
+    let deployed_kakarot = deploy_kakarot_system(starknet_test_sequencer, EOA_WALLET.clone(), funding_amount).await;
 
     // Initialize StarknetHttpTransport with sequencer's URL.
     let starknet_http_transport = StarknetHttpTransport::new(starknet_test_sequencer.url());

@@ -21,7 +21,7 @@ mod integration_tests {
             .await
             .expect("Error setting up Kakarot RPC server");
 
-        // Try to run the test
+        // Run the test
         let provider = EthersHttp::from_str(format!("http://localhost:{}", server_addr.port()).as_ref()).unwrap();
         let block_number: U64 =
             ethers::prelude::JsonRpcClient::request(&provider, "eth_blockNumber", ()).await.unwrap();
