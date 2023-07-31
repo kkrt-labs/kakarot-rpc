@@ -15,7 +15,7 @@ RUN cargo build --all --release
 FROM debian:bullseye
 
 # Install any necessary dependencies
-RUN apt-get update && apt-get install -y libssl-dev ca-certificates tini && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libssl-dev ca-certificates tini curl && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /usr/src/app
@@ -29,6 +29,12 @@ EXPOSE 3030
 
 # this is required to have exposing ports work from docker, the default is not this.
 ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:9545"
+
+# Add a health check to make sure the service is healthy
+HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
+  CMD curl --request POST \
+    --header "Content-Type: application/json" \
+    --data '{"jsonrpc": "2.0", "method": "eth_chainId", "id": 1}' http://${KAKAROT_HTTP_RPC_ADDRESS} || exit 1
 
 # Seen in https://github.com/eqlabs/pathfinder/blob/4ab915a830953ed6f02af907937b46cb447d9a92/Dockerfile#L120 - 
 # Allows for passing args down to the underlying binary easily
