@@ -11,10 +11,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use eyre::Result;
 use futures::future::join_all;
-use helpers::vec_felt_to_bytes;
 use reqwest::Client;
 use reth_primitives::{
-    keccak256, AccessList, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Signature, Transaction, TransactionKind,
+    AccessList, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Signature, Transaction, TransactionKind,
     TransactionSigned, TxEip1559, H256, U128, U256, U64, U8,
 };
 use reth_rlp::Decodable;
@@ -42,9 +41,10 @@ use self::constants::{
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
 use crate::contracts::contract_account::ContractAccount;
+use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot::KakarotContract;
-use crate::models::balance::{TokenBalance, TokenBalances};
+use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
 use crate::models::event::StarknetEvent;
@@ -106,9 +106,9 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let to: Felt252Wrapper = to.into();
         let to = to.into();
 
-        let calldata = calldata.clone().into_iter().map(FieldElement::from).collect::<Vec<_>>();
+        let calldata = bytes_to_felt_vec(&calldata);
 
-        let result = self.kakarot_contract.eth_call(&self.starknet_provider, &to, calldata, &starknet_block_id).await?;
+        let result = self.kakarot_contract.eth_call(&to, calldata, &starknet_block_id).await?;
 
         Ok(result)
     }
@@ -402,39 +402,18 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     async fn token_balances(
         &self,
         address: Address,
-        contract_addresses: Vec<Address>,
+        token_addresses: Vec<Address>,
     ) -> Result<TokenBalances, EthApiError<P::Error>> {
-        let entrypoint = FieldElement::from_byte_slice_be(&keccak256("balanceOf(address)").0[0..4])?;
+        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
 
-        let addr: Felt252Wrapper = address.into();
-        let addr: FieldElement = addr.into();
+        let handles = token_addresses.into_iter().map(|token_address| {
+            let token_addr: Felt252Wrapper = token_address.into();
+            let token = EthereumErc20::new(token_addr.into(), &self.kakarot_contract);
 
-        let handles = contract_addresses.into_iter().map(|token_address| {
-            let calldata = vec![entrypoint, addr];
-
-            self.call(
-                token_address,
-                Bytes::from(vec_felt_to_bytes(calldata).0),
-                BlockId::from(BlockNumberOrTag::Latest),
-            )
+            FutureTokenBalance::<P, _>::new(token.balance_of(address.into(), block_id), token_address)
         });
-        let token_balances = join_all(handles)
-            .await
-            .into_iter()
-            .map(|token_address| match token_address {
-                Ok(call) => {
-                    let balance = U256::try_from_be_slice(call.as_ref())
-                        .ok_or(ConversionError::<()>::Other("error converting from Bytes to U256".into()))
-                        .unwrap();
-                    TokenBalance { contract_address: address, token_balance: Some(balance), error: None }
-                }
-                Err(e) => TokenBalance {
-                    contract_address: address,
-                    token_balance: None,
-                    error: Some(format!("kakarot_getTokenBalances Error: {e}")),
-                },
-            })
-            .collect();
+
+        let token_balances = join_all(handles).await;
 
         Ok(TokenBalances { address, token_balances })
     }

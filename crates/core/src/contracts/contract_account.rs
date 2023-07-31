@@ -15,7 +15,6 @@ pub struct ContractAccount<'a, P> {
 }
 
 impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
-    #[must_use]
     pub fn new(provider: &'a P, address: FieldElement) -> Self {
         Self { provider, address }
     }

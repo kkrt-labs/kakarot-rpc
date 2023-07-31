@@ -4505,6 +4505,7 @@ dependencies = [
  "lazy_static",
  "log",
  "num-bigint",
+ "pin-project",
  "reqwest",
  "reth-primitives",
  "reth-rlp",
