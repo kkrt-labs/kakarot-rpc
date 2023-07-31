@@ -24,7 +24,6 @@ pub struct KakarotEthRpc<P: Provider + Send + Sync> {
 }
 
 impl<P: Provider + Send + Sync> KakarotEthRpc<P> {
-    #[must_use]
     pub fn new(kakarot_client: Arc<dyn KakarotEthApi<P>>) -> Self {
         Self { kakarot_client }
     }

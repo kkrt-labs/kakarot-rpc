@@ -16,7 +16,6 @@ pub struct KakarotContract<P> {
 }
 
 impl<P: Provider + Send + Sync> KakarotContract<P> {
-    #[must_use]
     pub fn new(provider: Arc<P>, address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
         Self { address, proxy_account_class_hash, provider }
     }
