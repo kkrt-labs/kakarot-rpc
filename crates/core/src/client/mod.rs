@@ -6,7 +6,6 @@ pub mod helpers;
 #[cfg(test)]
 pub mod tests;
 
-use std::marker::PhantomData;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -411,11 +410,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             let token_addr: Felt252Wrapper = token_address.into();
             let token = EthereumErc20::new(token_addr.into(), &self.kakarot_contract);
 
-            FutureTokenBalance {
-                balance: token.balance_of(address.into(), block_id),
-                token_address,
-                _phantom: PhantomData::<P>,
-            }
+            FutureTokenBalance::<P, _>::new(token.balance_of(address.into(), block_id), token_address)
         });
 
         let token_balances = join_all(handles).await;
