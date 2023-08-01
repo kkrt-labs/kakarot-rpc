@@ -1508,6 +1508,7 @@ name = "conformance-test-utils"
 version = "0.1.0"
 dependencies = [
  "cargo-husky",
+ "ethers",
  "eyre",
  "kakarot_rpc_core",
  "katana-core",
