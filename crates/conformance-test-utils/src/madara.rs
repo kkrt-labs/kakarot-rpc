@@ -46,7 +46,8 @@ pub fn genesis_set_storage_starknet_contract(
 
     let contract_address: ContractAddress = starknet_address.into();
 
-    // Create the tuple for the initial storage data on the Kakarot contract with the given storage key.
+    // Create the tuple for the initial storage data on the Starknet contract with the given storage
+    // key.
     let storage_data = ((contract_address, storage_key.into()), storage_value.into());
 
     Ok(storage_data)
@@ -64,25 +65,66 @@ pub fn genesis_fund_starknet_address(
     amount: U256,
 ) -> Result<Vec<((ContractAddress, StorageKey), StorageValue)>> {
     // Split the amount into two 128-bit chunks.
-    let low = amount & U256::from(U128::MAX);
-    let high = amount >> 128;
-
-    // The storage key offsets for the two 128-bit chunks.
-    let amount_offset = [(low, 0), (high, 1)]; // (value, offset)
+    let amount = split_u256_into_field_elements(amount);
 
     // Iterate over the storage key offsets and generate the storage tuples.
-    amount_offset
+    amount
         .iter()
-        .map(|(value, offset)| {
+        .enumerate() // Enumerate the key offsets.
+        .map(|(offset, value)| {
             genesis_set_storage_starknet_contract(
                 FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN)?,
                 "ERC20_balances",
                 &[starknet_address],
-                FieldElement::from_bytes_be(&value.to_be_bytes())?,
-                *offset,
+                *value,
+                offset as u64,
             )
         })
         .collect()
+}
+
+/// Generates the genesis storage tuples for setting the storage of the Kakarot contract.
+///
+/// This function calculates the storage keys for the Kakarot contract using the provided Starknet
+/// address. The resulting Vec of tuples represent the initial storage of the Kakarot contract,
+/// where the storage key is computed using the provided `key` of the storage variable "storage_"
+/// and the `value` is split into two 128-bit chunks, which are stored in the storage keys at
+/// offsets 0 and 1.
+pub fn genesis_set_storage_kakarot_contract_account(
+    starknet_address: FieldElement,
+    key: U256,
+    value: U256,
+) -> Result<Vec<((ContractAddress, StorageKey), StorageValue)>> {
+    // Split the key into Vec of two 128-bit chunks.
+    let keys = split_u256_into_field_elements(key);
+
+    // Split the value into two 128-bit chunks.
+    let values = split_u256_into_field_elements(value);
+
+    // Iterate over the storage key offsets and generate the storage tuples.
+    values
+        .iter()
+        .enumerate() // Enumerate the key offsets.
+        .map(|(offset, value)| {
+            genesis_set_storage_starknet_contract(
+                starknet_address,
+                "storage_",
+                &keys,
+                *value,
+                offset as u64,
+            )
+        })
+        .collect()
+}
+
+/// Helper function to split a U256 value into two FieldElements.
+pub fn split_u256_into_field_elements(value: U256) -> [FieldElement; 2] {
+    let low = value & U256::from(U128::MAX);
+    let high = value >> 128;
+    [
+        FieldElement::from_bytes_be(&low.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
+        FieldElement::from_bytes_be(&high.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
+    ]
 }
 
 #[cfg(test)]
@@ -243,8 +285,7 @@ mod tests {
         let token_fee_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
         let storage_variable_name = "ERC20_balances";
         let amount = U256::MAX;
-        let amount_low = amount & U256::from(U128::MAX); // u256.low
-        let amount_high = amount >> 128; // u256.high
+        let amount_split = split_u256_into_field_elements(amount);
 
         // This is equivalent to pre-funding the Starknet address with 2^256 - 1 Fee Tokens.
         // The first storage key is for u256.low
@@ -253,23 +294,82 @@ mod tests {
             (
                 (
                     token_fee_address.into(),
-                    get_storage_var_address(storage_variable_name, &[starknet_address]).unwrap().into(),
+                    get_storage_var_address(storage_variable_name, &[starknet_address]).unwrap().into(), /* offset for amount.low */
                 ),
-                FieldElement::from_bytes_be(&amount_low.to_be_bytes()).unwrap().into(),
+                amount_split[0].into(), // amount.low
             ),
             (
                 (
                     token_fee_address.into(),
                     (get_storage_var_address(storage_variable_name, &[starknet_address]).unwrap()
                         + FieldElement::from(1u64))
-                    .into(),
+                    .into(), // offset for amount.high
                 ),
-                FieldElement::from_bytes_be(&amount_high.to_be_bytes()).unwrap().into(),
+                amount_split[1].into(), // amount.high
             ),
         ];
 
         // When
         let result = genesis_fund_starknet_address(starknet_address, amount).unwrap();
+
+        // Then
+        assert_eq!(result, expected_output);
+    }
+
+    /// This test verifies that the `genesis_set_storage_kakarot_contract_account` function
+    /// generates the correct tuples for a given Starknet address, keys, storage value, and
+    /// storage key offset.
+    #[tokio::test]
+    async fn test_genesis_set_storage_kakarot_contract_account() {
+        // Given
+        let starknet_address = *ACCOUNT_ADDRESS;
+        let key = U256::from(U128::MAX + U128::from(123u64)); // U256(2^128 - 1, 123)
+        let storage_variable_name = "storage_";
+        let value = U256::MAX;
+        let value_split = split_u256_into_field_elements(value);
+
+        // This is equivalent to setting the storage of Kakarot's `storage_` variable at
+        // index U256(2^128 - 1, 123) to 2^256 - 1.
+        // The first storage key is for value.low.
+        // The second storage key is for value.high.
+        let expected_output = vec![
+            (
+                (
+                    starknet_address.into(),
+                    get_storage_var_address(storage_variable_name, &split_u256_into_field_elements(key))
+                        .unwrap()
+                        .into(), // offset for value.low
+                ),
+                value_split[0].into(), // value.low
+            ),
+            (
+                (
+                    starknet_address.into(),
+                    (get_storage_var_address(storage_variable_name, &split_u256_into_field_elements(key)).unwrap()
+                        + FieldElement::from(1u64))
+                    .into(), // offset for value.high
+                ),
+                value_split[1].into(), // value.high
+            ),
+        ];
+
+        // When
+        let result = genesis_set_storage_kakarot_contract_account(starknet_address, key, value).unwrap();
+        // Then
+        assert_eq!(result, expected_output);
+    }
+
+    #[test]
+    fn test_split_u256_into_field_elements() {
+        // Given
+        let value = U256::MAX;
+        let expected_output = [
+            FieldElement::from_hex_be("0xffffffffffffffffffffffffffffffff").unwrap(),
+            FieldElement::from_hex_be("0xffffffffffffffffffffffffffffffff").unwrap(),
+        ];
+
+        // When
+        let result = split_u256_into_field_elements(value);
 
         // Then
         assert_eq!(result, expected_output);
