@@ -32,19 +32,19 @@ pub fn genesis_load_bytecode(
 ///
 /// This function calculates the storage key for the storage variable `storage_variable_name` and
 /// its keys. The resulting tuple represents the initial storage of the contract, where the storage
-/// key at a given `storage_key_offset` is set to the specified `storage_value`.
+/// key at a given `storage_offset` is set to the specified `storage_value`.
 pub fn genesis_set_storage_starknet_contract(
     starknet_address: FieldElement,
     storage_variable_name: &str,
     keys: &[FieldElement],
     storage_value: FieldElement,
-    storage_key_offset: u64,
+    storage_offset: u64,
 ) -> Result<((ContractAddress, StorageKey), StorageValue)> {
     // Compute the storage key for the storage variable name and the keys.
     let mut storage_key = get_storage_var_address(storage_variable_name, keys)?;
 
     // Add the offset to the storage key.
-    storage_key += FieldElement::from(storage_key_offset);
+    storage_key += FieldElement::from(storage_offset);
 
     let contract_address: ContractAddress = starknet_address.into();
 
@@ -116,11 +116,10 @@ mod tests {
     async fn test_genesis_set_storage_starknet_contract() {
         // Given
         let starknet_address = *ACCOUNT_ADDRESS;
-        let storage_variable_name = "_signer";
+        let storage_variable_name = "test_name";
         let keys = vec![];
-        let storage_value =
-            FieldElement::from_hex_be("0x3603a2692a2ae60abb343e832ee53b55d6b25f02a3ef1565ec691edc7a209b2").unwrap();
-        let storage_key_offset = 0;
+        let storage_value = FieldElement::from_hex_be("0x1234").unwrap();
+        let storage_offset = 0;
 
         // This is the expected output tuple of storage data.
         let expected_output = (
@@ -134,7 +133,7 @@ mod tests {
             storage_variable_name,
             &keys,
             storage_value,
-            storage_key_offset,
+            storage_offset,
         )
         .unwrap();
 
