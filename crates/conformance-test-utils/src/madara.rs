@@ -1,4 +1,4 @@
-use ethers::types::Bytes;
+use reth_primitives::Bytes;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
@@ -32,9 +32,7 @@ mod tests {
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{
-        construct_kakarot_test_sequencer, deploy_kakarot_system, get_contract, get_contract_deployed_bytecode,
-    };
+    use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, deploy_kakarot_system};
     use katana_core::backend::state::StorageRecord;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
     use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
@@ -79,105 +77,62 @@ mod tests {
 
     #[tokio::test]
     async fn test_counter_bytecode() {
-        const ACTUAL_COUNTER_ADDRESS: &str = "0x1234";
-
-        // Construct a Starknet test sequencer
         let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
-        // Define the expected funded amount for the Kakarot system
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
 
-        // Deploy the Kakarot system
         let deployed_kakarot =
             deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
 
-        // Get account proxy class hash and contract account class hash
-        let contract_account_class_hash = deployed_kakarot.contract_account_class_hash;
-        let account_proxy_class_hash = deployed_kakarot.proxy_class_hash;
-
-        // Get the bytecode for the deployed counter contract account
-        let contract = get_contract("Counter");
-        let deployed_counter_bytecode = get_contract_deployed_bytecode(contract);
+        let starknet_client = JsonRpcClient::new(StarknetHttpTransport::new(starknet_test_sequencer.url()));
 
         // Deploy a counter contract
-        let (_, deployed_addresses) = deployed_kakarot
-            .deploy_evm_contract(
-                starknet_test_sequencer.url(),
-                "Counter",
-                // no constructor is conveyed as a tuple
-                (),
-            )
-            .await
-            .unwrap();
-        let expected_counter_address = deployed_addresses.starknet_address;
+        let (_, deployed_addresses) =
+            deployed_kakarot.deploy_evm_contract(starknet_test_sequencer.url(), "Counter", ()).await.unwrap();
+        let deployed_counter = ContractAccount::new(&starknet_client, deployed_addresses.starknet_address);
+        let deployed_bytecode = deployed_counter.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let deployed_bytecode_len = deployed_bytecode.len();
 
-        // Create a new HTTP transport using the sequencer's URL
-        let starknet_http_transport = StarknetHttpTransport::new(starknet_test_sequencer.url());
+        // Use genesis_load_bytecode to get the bytecode to be stored into counter
+        let counter_genesis_address = FieldElement::from_str("0x1234").unwrap();
+        let counter_genesis_storage = genesis_load_bytecode(&deployed_bytecode, counter_genesis_address);
 
-        // Create a new JSON RPC client using the HTTP transport
-        let starknet_client = JsonRpcClient::new(starknet_http_transport);
-
-        // Create a new counter contract linked to the expected deployed counter contract
-        let expected_counter = ContractAccount::new(&starknet_client, expected_counter_address);
-
-        // Create a new counter contract linked to the actual deployed counter contract
-        let actual_counter_address = FieldElement::from_str(ACTUAL_COUNTER_ADDRESS).unwrap();
-        let actual_counter = ContractAccount::new(&starknet_client, actual_counter_address);
-
-        // Use genesis_load_bytecode to get the bytecode to be loaded into counter
-        let counter_bytecode_storage = genesis_load_bytecode(&deployed_counter_bytecode, actual_counter_address);
-
-        // It is not possible to block the async task, so we need to spawn a blocking task
+        // It is not possible to block the async test task, so we need to spawn a blocking task
         tokio::task::spawn_blocking(move || {
             // Get lock on the Starknet sequencer
             let mut starknet = starknet_test_sequencer.sequencer.starknet.blocking_write();
-
-            // Deploy the proxy at the actual counter address, setting _implementation storage var to contract
-            // account class hash
-            let proxy_address =
-                StarknetContractAddress(Into::<StarkFelt>::into(actual_counter_address).try_into().unwrap());
-            let proxy_storage = StorageRecord {
-                nonce: Nonce(StarkFelt::from(0u8)),
-                class_hash: ClassHash(account_proxy_class_hash.into()),
-                storage: HashMap::from([(
-                    get_starknet_storage_key("_implementation", &[]),
-                    contract_account_class_hash.into(),
-                )]),
-            };
-            starknet.state.storage.insert(proxy_address, proxy_storage);
-
-            let counter_address: StarkFelt = actual_counter_address.into();
-
-            // Get the counter storage
-            let counter_storage = &mut starknet
-                .state
-                .storage
-                .get_mut(&StarknetContractAddress(counter_address.try_into().unwrap()))
-                .unwrap()
-                .storage;
+            let mut counter_storage = HashMap::new();
 
             // Load the counter bytecode length into the contract
             let key = get_starknet_storage_key("bytecode_len_", &[]);
-            let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_counter_bytecode.len() as u64));
+            let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_bytecode_len as u64));
             counter_storage.insert(key, value);
 
             // Load the counter bytecode into the contract
-            counter_bytecode_storage.into_iter().for_each(|((_, k), v)| {
+            counter_genesis_storage.into_iter().for_each(|((_, k), v)| {
                 let key = StarknetStorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
                 let value = Into::<StarkFelt>::into(v.0);
                 counter_storage.insert(key, value);
             });
+
+            // Deploy the contract account at genesis address
+            let counter_address =
+                StarknetContractAddress(Into::<StarkFelt>::into(counter_genesis_address).try_into().unwrap());
+            let counter_storage_record = StorageRecord {
+                nonce: Nonce(StarkFelt::from(0u8)),
+                class_hash: ClassHash(deployed_kakarot.contract_account_class_hash.into()),
+                storage: counter_storage,
+            };
+            starknet.state.storage.insert(counter_address, counter_storage_record);
         })
         .await
         .unwrap();
 
-        // Get the expected bytecode from the counter contract
-        let bytecode_expected = expected_counter.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
-
-        // Get the actual bytecode from the counter contract
-        let bytecode_actual = actual_counter.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
+        // Create a new counter contract pointing to the genesis initialized storage
+        let counter_genesis = ContractAccount::new(&starknet_client, counter_genesis_address);
+        let bytecode_actual = counter_genesis.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Assert that the expected and actual bytecodes are equal
-        assert_eq!(bytecode_expected, bytecode_actual);
+        assert_eq!(deployed_bytecode, bytecode_actual);
     }
 }
