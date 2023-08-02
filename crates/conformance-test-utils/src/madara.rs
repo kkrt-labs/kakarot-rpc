@@ -4,11 +4,11 @@ use reth_primitives::{Bytes, U128, U256};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
-use crate::types::{ContractAddress, Felt, StorageKey, StorageValue};
+use crate::types::{ContractAddress, StorageKey, StorageValue};
 
 pub fn genesis_load_bytecode(
     bytecode: &Bytes,
-    address: FieldElement,
+    starknet_address: FieldElement,
 ) -> Vec<((ContractAddress, StorageKey), StorageValue)> {
     bytecode
         .chunks(16)
@@ -17,11 +17,16 @@ pub fn genesis_load_bytecode(
             let mut storage_value = [0u8; 16];
             storage_value[..x.len()].copy_from_slice(x);
             let storage_value = u128::from_be_bytes(storage_value);
-            let storage_value = FieldElement::from(storage_value).into();
+            let storage_value = FieldElement::from(storage_value);
 
-            let storage_key: Felt = get_storage_var_address("bytecode_", &[FieldElement::from(i)]).unwrap().into(); // safe unwrap since bytecode_ is all ascii
-
-            ((address.into(), storage_key), storage_value)
+            genesis_set_storage_starknet_contract(
+                starknet_address,
+                "bytecode_",
+                &[FieldElement::from(i)],
+                storage_value,
+                0,
+            )
+            .unwrap() // safe unwrap since bytecode_ is all ascii
         })
         .collect()
 }
@@ -139,7 +144,7 @@ mod tests {
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
     use kakarot_rpc_core::test_utils::deploy_helpers::{ContractDeploymentArgs, KakarotTestEnvironment};
     use katana_core::backend::state::StorageRecord;
-    use reth_primitives::{U128, U256};
+    use reth_primitives::U256;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
     use starknet::core::utils::get_storage_var_address;
     use starknet_api::core::{ClassHash, ContractAddress as StarknetContractAddress, Nonce};
@@ -323,13 +328,13 @@ mod tests {
     async fn test_genesis_set_storage_kakarot_contract_account() {
         // Given
         let starknet_address = *ACCOUNT_ADDRESS;
-        let key = U256::from(U128::MAX + U128::from(123u64)); // U256(2^128 - 1, 123)
+        let key = U256::MAX;
         let storage_variable_name = "storage_";
         let value = U256::MAX;
         let value_split = split_u256_into_field_elements(value);
 
         // This is equivalent to setting the storage of Kakarot's `storage_` variable at
-        // index U256(2^128 - 1, 123) to 2^256 - 1.
+        // index 2^256 - 1 to 2^256 - 1.
         // The first storage key is for value.low.
         // The second storage key is for value.high.
         let expected_output = vec![
