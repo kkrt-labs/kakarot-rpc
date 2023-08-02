@@ -37,7 +37,7 @@ mod tests {
             StarknetConfig::new(
                 Network::JsonRpcProvider(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
-                deployed_kakarot.kakarot_proxy,
+                deployed_kakarot.proxy_class_hash,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
@@ -72,13 +72,16 @@ mod tests {
             StarknetConfig::new(
                 Network::JsonRpcProvider(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
-                deployed_kakarot.kakarot_proxy,
+                deployed_kakarot.proxy_class_hash,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
 
         let deployed_balance = kakarot_client
-            .balance(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .balance(
+                deployed_kakarot.eoa_addresses.eth_address,
+                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
+            )
             .await;
 
         let _deployed_balance = FieldElement::from_bytes_be(&deployed_balance.unwrap().to_be_bytes()).unwrap();
@@ -87,7 +90,7 @@ mod tests {
         // assert_eq!(deployed_balance, expected_funded_amount);
 
         let counter_eth_address = {
-            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            let address: Felt252Wrapper = deployed_addresses.eth_address.into();
             address.try_into().unwrap()
         };
 
@@ -99,7 +102,10 @@ mod tests {
         let inc_selector = counter_abi.function("inc").unwrap().short_signature();
 
         let nonce = kakarot_client
-            .nonce(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .nonce(
+                deployed_kakarot.eoa_addresses.eth_address,
+                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
+            )
             .await
             .unwrap();
         let inc_tx = create_raw_ethereum_tx(
@@ -147,7 +153,7 @@ mod tests {
             .unwrap();
 
         let counter_eth_address: Address = {
-            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            let address: Felt252Wrapper = deployed_addresses.eth_address.into();
             address.try_into().unwrap()
         };
 
@@ -161,7 +167,7 @@ mod tests {
             .unwrap();
 
         let plain_opcodes_eth_address: Address = {
-            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            let address: Felt252Wrapper = deployed_addresses.eth_address.into();
             address.try_into().unwrap()
         };
 
@@ -169,7 +175,7 @@ mod tests {
             StarknetConfig::new(
                 Network::JsonRpcProvider(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
-                deployed_kakarot.kakarot_proxy,
+                deployed_kakarot.proxy_class_hash,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
@@ -203,17 +209,20 @@ mod tests {
             StarknetConfig::new(
                 Network::JsonRpcProvider(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
-                deployed_kakarot.kakarot_proxy,
+                deployed_kakarot.proxy_class_hash,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
 
         let counter_eth_address = {
-            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            let address: Felt252Wrapper = deployed_addresses.eth_address.into();
             address.try_into().unwrap()
         };
         let nonce = kakarot_client
-            .nonce(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .nonce(
+                deployed_kakarot.eoa_addresses.eth_address,
+                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
+            )
             .await
             .unwrap();
         let inc_selector = counter_abi.function("inc").unwrap().short_signature();
@@ -264,23 +273,26 @@ mod tests {
             StarknetConfig::new(
                 Network::JsonRpcProvider(starknet_test_sequencer.url()),
                 deployed_kakarot.kakarot,
-                deployed_kakarot.kakarot_proxy,
+                deployed_kakarot.proxy_class_hash,
             ),
             JsonRpcClient::new(HttpTransport::new(starknet_test_sequencer.url())),
         );
 
         let erc20_eth_address = {
-            let address: Felt252Wrapper = (*deployed_addresses.first().unwrap()).into();
+            let address: Felt252Wrapper = deployed_addresses.eth_address.into();
             address.try_into().unwrap()
         };
 
         let nonce = kakarot_client
-            .nonce(deployed_kakarot.eoa_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .nonce(
+                deployed_kakarot.eoa_addresses.eth_address,
+                BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
+            )
             .await
             .unwrap();
         let mint_selector = erc20_abi.function("mint").unwrap().short_signature();
 
-        let to = U256::try_from_be_slice(&deployed_kakarot.eoa_eth_address.to_fixed_bytes()[..]).unwrap();
+        let to = U256::try_from_be_slice(&deployed_kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
         let amount = U256::from(10_000);
         let mint_tx = create_raw_ethereum_tx(
             mint_selector,
@@ -293,13 +305,15 @@ mod tests {
         kakarot_client.send_transaction(mint_tx).await.unwrap();
 
         // When
-        let balances =
-            kakarot_client.token_balances(deployed_kakarot.eoa_eth_address, vec![erc20_eth_address]).await.unwrap();
+        let balances = kakarot_client
+            .token_balances(deployed_kakarot.eoa_addresses.eth_address, vec![erc20_eth_address])
+            .await
+            .unwrap();
 
         // Then
         assert_eq!(
             TokenBalances {
-                address: deployed_kakarot.eoa_eth_address,
+                address: deployed_kakarot.eoa_addresses.eth_address,
                 token_balances: vec![TokenBalance {
                     token_address: erc20_eth_address,
                     token_balance: Some(U256::from(10_000)),

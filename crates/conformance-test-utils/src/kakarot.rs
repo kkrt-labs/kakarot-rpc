@@ -29,6 +29,7 @@ mod tests {
     use std::sync::Arc;
 
     use kakarot_rpc_core::contracts::kakarot::KakarotContract;
+    use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
     use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, deploy_kakarot_system};
     use starknet::core::types::{BlockId, BlockTag, FieldElement};
@@ -60,14 +61,14 @@ mod tests {
 
         // Create a new Kakarot contract
         let kakarot_contract =
-            KakarotContract::new(starknet_client, deployed_kakarot.kakarot, deployed_kakarot.kakarot_proxy);
+            KakarotContract::new(starknet_client, deployed_kakarot.kakarot, deployed_kakarot.proxy_class_hash);
 
         // Define the EVM address to be used for calculating the Starknet address
-        let evm_address = FieldElement::from_hex_be("0x123").unwrap();
+        let evm_address = *ACCOUNT_ADDRESS;
 
         // Calculate the Starknet address
         let starknet_address =
-            compute_starknet_address(deployed_kakarot.kakarot, deployed_kakarot.kakarot_proxy, evm_address);
+            compute_starknet_address(deployed_kakarot.kakarot, deployed_kakarot.proxy_class_hash, evm_address);
 
         // Calculate the expected Starknet address
         let expected_starknet_address =
