@@ -75,7 +75,6 @@ pub fn genesis_fund_starknet_address(
     // Iterate over the storage key offsets and generate the storage tuples.
     uint256_offset
         .iter()
-        .filter(|(value, _)| *value != U256::from(0)) // Only add non-zero balances.
         .map(|(value, offset)| {
             genesis_set_storage_starknet_contract(
                 FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN)?,
