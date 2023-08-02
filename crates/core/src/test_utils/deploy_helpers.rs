@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self};
 use std::sync::Arc;
 
 use bytes::BytesMut;
@@ -7,6 +7,7 @@ use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, T
 use dotenv::dotenv;
 use ethers::abi::{Abi, Tokenize};
 use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
+use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::utils::{find_project_root_path, load_config};
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
@@ -61,13 +62,28 @@ macro_rules! root_project_path {
     }};
 }
 
+/// Returns the abi for a compact contract bytecode
+pub fn get_contract_abi(contract: CompactContractBytecode) -> Abi {
+    contract.abi.unwrap()
+}
+
+/// Returns the bytecode for a compact contract bytecode
+pub fn get_contract_bytecode(contract: CompactContractBytecode) -> ethers::types::Bytes {
+    contract.bytecode.unwrap().object.as_bytes().unwrap().to_owned()
+}
+
+/// Returns the deployed bytecode for a compact contract bytecode
+pub fn get_contract_deployed_bytecode(contract: CompactContractBytecode) -> ethers::types::Bytes {
+    contract.deployed_bytecode.unwrap().bytecode.unwrap().object.as_bytes().unwrap().to_owned()
+}
+
 /// Loads and parses a compiled Solidity contract.
 ///
 /// This function assumes that a Solidity source file has been added to the `solidity_contracts`
-/// directory in the `kakarot-rpc` project root, and has been compiled with the `forge build`
-/// command. It loads the resulting JSON artifact, parses its contents, and extracts the
-/// contract's ABI and bytecode.
-pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
+/// directory in the `lib/kakarot/tests/integration/solidity_contracts` path, and has been compiled
+/// with the `forge build` command. It loads the resulting JSON artifact and returns a
+/// CompactContractBytecode
+pub fn get_contract(filename: &str) -> CompactContractBytecode {
     let dot_sol = format!("{filename}.sol");
     let dot_json = format!("{filename}.json");
 
@@ -80,18 +96,7 @@ pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
         panic!("Could not read file: {}. please run `make setup` to ensure solidity files are compiled", filename)
     });
 
-    // Parse the entire JSON content into a Value
-    let json: serde_json::Value = serde_json::from_str(&contents).unwrap();
-
-    // Extract the `abi` field and parse it into the Abi type
-    let abi: Abi = serde_json::from_value(json["abi"].clone()).unwrap();
-
-    // Extract the `bytecode` field
-    let bytecode_str = json["bytecode"]["object"].as_str().unwrap();
-    let bytecode_vec = hex::decode(bytecode_str.trim_start_matches("0x")).unwrap();
-    let bytecode = ethers::types::Bytes::from(bytecode_vec);
-
-    (abi, bytecode)
+    serde_json::from_str(&contents).unwrap()
 }
 
 /// Encodes a contract's bytecode and constructor arguments into deployable bytecode.
@@ -112,10 +117,11 @@ pub fn get_contract(filename: &str) -> (Abi, ethers::types::Bytes) {
 /// # Example
 ///
 /// ```no_run
-/// # use kakarot_rpc_core::test_utils::deploy_helpers::get_contract;
-/// # use kakarot_rpc_core::test_utils::deploy_helpers::encode_contract;
+/// # use kakarot_rpc_core::test_utils::deploy_helpers::{get_contract, encode_contract, get_contract_abi, get_contract_bytecode};
 /// # use ethers::abi::Abi;
-/// let (abi, bytecode) = get_contract("MyContract");
+/// let contract = get_contract("MyContract");
+/// let abi = get_contract_abi(contract.clone());
+/// let bytecode = get_contract_bytecode(contract);
 /// let constructor_args = (1, 42);
 /// let deploy_bytecode = encode_contract(&abi, &bytecode, constructor_args);
 /// ```
@@ -210,7 +216,7 @@ async fn deploy_evm_contract<T: Tokenize>(
     eoa_secret_key: H256,
     contract_name: &str,
     constructor_args: T,
-) -> Option<(Abi, Vec<FieldElement>)> {
+) -> Option<(Abi, ContractAddresses)> {
     // This a made up signing key so we can reuse starknet-rs abstractions
     // to see the flow of how kakarot-rpc handles eth payloads -> starknet txns
     // see ./crates/core/src/client.rs::send_transaction
@@ -223,7 +229,9 @@ async fn deploy_evm_contract<T: Tokenize>(
         chain_id::TESTNET,
     );
 
-    let (abi, contract_bytes) = get_contract(contract_name);
+    let contract = get_contract(contract_name);
+    let abi = get_contract_abi(contract.clone());
+    let contract_bytes = get_contract_bytecode(contract);
     let contract_bytes = encode_contract(&abi, &contract_bytes, constructor_args);
     let nonce = eoa_starknet_account.get_nonce().await.unwrap();
     let transaction =
@@ -257,10 +265,20 @@ async fn deploy_evm_contract<T: Tokenize>(
         .unwrap();
 
     into_receipt(maybe_receipt).and_then(|InvokeTransactionReceipt { events, .. }| {
-        events
-            .iter()
-            .find(|event| event.keys.contains(&get_selector_from_name("evm_contract_deployed").unwrap()))
-            .map(|event| (abi, event.data.clone()))
+        events.iter().find(|event| event.keys.contains(&get_selector_from_name("evm_contract_deployed").unwrap())).map(
+            |event| {
+                (
+                    abi,
+                    ContractAddresses {
+                        eth_address: {
+                            let evm_address: Felt252Wrapper = event.data[0].into();
+                            evm_address.try_into().unwrap()
+                        },
+                        starknet_address: event.data[1],
+                    },
+                )
+            },
+        )
     })
 }
 
@@ -491,10 +509,15 @@ async fn deploy_kakarot_contracts(
 /// addresses of the kakarot and kakarot_proxy contracts, and the Starknet address of the EOA.
 pub struct DeployedKakarot {
     pub eoa_private_key: H256,
-    pub eoa_eth_address: Address,
     pub kakarot: FieldElement,
-    pub kakarot_proxy: FieldElement,
-    pub eoa_starknet_address: FieldElement,
+    pub proxy_class_hash: FieldElement,
+    pub contract_account_class_hash: FieldElement,
+    pub eoa_addresses: ContractAddresses,
+}
+
+pub struct ContractAddresses {
+    pub eth_address: Address,
+    pub starknet_address: FieldElement,
 }
 
 impl DeployedKakarot {
@@ -523,10 +546,10 @@ impl DeployedKakarot {
         starknet_sequencer_url: Url,
         eth_contract: &str,
         constructor_args: T,
-    ) -> Result<(Abi, Vec<FieldElement>), Box<dyn std::error::Error>> {
+    ) -> Result<(Abi, ContractAddresses), Box<dyn std::error::Error>> {
         deploy_evm_contract(
             starknet_sequencer_url,
-            self.eoa_starknet_address,
+            self.eoa_addresses.starknet_address,
             self.eoa_private_key,
             eth_contract,
             constructor_args,
@@ -595,11 +618,13 @@ pub async fn deploy_kakarot_system(
     let deployed_eoa_sn_address =
         deploy_and_fund_eoa(&starknet_account, *kkrt_address, funding_amount, eoa_sn_address, fee_token_address).await;
 
+    let eoa_addresses = ContractAddresses { eth_address: eoa_eth_address, starknet_address: deployed_eoa_sn_address };
+
     DeployedKakarot {
         eoa_private_key,
-        eoa_eth_address,
+        eoa_addresses,
         kakarot: *kkrt_address,
-        kakarot_proxy: *class_hash.get("proxy").unwrap(),
-        eoa_starknet_address: deployed_eoa_sn_address,
+        proxy_class_hash: *class_hash.get("proxy").unwrap(),
+        contract_account_class_hash: *class_hash.get("contract_account").unwrap(),
     }
 }
