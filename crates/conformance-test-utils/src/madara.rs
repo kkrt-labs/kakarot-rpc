@@ -34,19 +34,6 @@ pub fn genesis_load_bytecode(
 /// contract using the provided Starknet address. The resulting tuple represents the initial
 /// storage of the Fee Token contract, where the account associated with the Starknet address is
 /// pre-funded with the specified `amount`.
-///
-/// # Arguments
-///
-/// * `starknet_address` - The Starknet address to be funded
-/// * `amount` - The amount of funds to allocate to the Starknet account.
-/// * `storage_offset_key` - The offset to be added to the storage key for the ERC20 Fee Token
-///
-/// # Returns
-///
-/// * `Result<((ContractAddress, StorageKey), StorageValue)>` - A tuple representing the initial
-///   storage of the Fee Token contract where the Starknet address has been pre-funded with the
-///   specified `amount`. Returns an error if the constant `STARKNET_NATIVE_TOKEN` could not be
-///   converted to a `FieldElement` or if there was an error calculating the storage key.
 pub fn genesis_fund_starknet_address(
     starknet_address: FieldElement,
     amount: FieldElement,
