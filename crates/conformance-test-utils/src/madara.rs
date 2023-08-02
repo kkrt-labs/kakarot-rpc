@@ -39,12 +39,9 @@ mod tests {
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
     use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
     use starknet::providers::JsonRpcClient;
-    use starknet_api::core::{
-        calculate_contract_address, ClassHash, ContractAddress as StarknetContractAddress, Nonce,
-    };
+    use starknet_api::core::{ClassHash, ContractAddress as StarknetContractAddress, Nonce};
     use starknet_api::hash::StarkFelt;
     use starknet_api::state::StorageKey as StarknetStorageKey;
-    use starknet_api::transaction::{Calldata, ContractAddressSalt};
 
     use super::*;
 
@@ -82,6 +79,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_counter_bytecode() {
+        const ACTUAL_COUNTER_ADDRESS: &str = "0x1234";
+
         // Construct a Starknet test sequencer
         let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
@@ -95,17 +94,6 @@ mod tests {
         // Get account proxy class hash and contract account class hash
         let contract_account_class_hash = deployed_kakarot.contract_account_class_hash;
         let account_proxy_class_hash = deployed_kakarot.proxy_class_hash;
-
-        let actual_counter_address: FieldElement = (*calculate_contract_address(
-            ContractAddressSalt(StarkFelt::from(1u8)),
-            ClassHash(account_proxy_class_hash.into()),
-            &Calldata(vec![].into()),
-            StarknetContractAddress(StarkFelt::from(0u8).try_into().unwrap()),
-        )
-        .unwrap()
-        .0
-        .key())
-        .into();
 
         // Get the bytecode for the deployed counter contract account
         let contract = get_contract("Counter");
@@ -133,6 +121,7 @@ mod tests {
         let expected_counter = ContractAccount::new(&starknet_client, expected_counter_address);
 
         // Create a new counter contract linked to the actual deployed counter contract
+        let actual_counter_address = FieldElement::from_str(ACTUAL_COUNTER_ADDRESS).unwrap();
         let actual_counter = ContractAccount::new(&starknet_client, actual_counter_address);
 
         // Use genesis_load_bytecode to get the bytecode to be loaded into counter
@@ -157,13 +146,13 @@ mod tests {
             };
             starknet.state.storage.insert(proxy_address, proxy_storage);
 
-            let counter_addr: StarkFelt = actual_counter_address.into();
+            let counter_address: StarkFelt = actual_counter_address.into();
 
             // Get the counter storage
             let counter_storage = &mut starknet
                 .state
                 .storage
-                .get_mut(&StarknetContractAddress(counter_addr.try_into().unwrap()))
+                .get_mut(&StarknetContractAddress(counter_address.try_into().unwrap()))
                 .unwrap()
                 .storage;
 

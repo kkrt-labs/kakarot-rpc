@@ -63,13 +63,13 @@ macro_rules! root_project_path {
 }
 
 /// Returns the abi for a compact contract bytecode
-pub fn get_contract_abi(contract: CompactContractBytecode) -> Abi {
-    contract.abi.unwrap()
+pub fn get_contract_abi(contract: &CompactContractBytecode) -> Abi {
+    contract.abi.as_ref().unwrap().to_owned()
 }
 
 /// Returns the bytecode for a compact contract bytecode
-pub fn get_contract_bytecode(contract: CompactContractBytecode) -> ethers::types::Bytes {
-    contract.bytecode.unwrap().object.as_bytes().unwrap().to_owned()
+pub fn get_contract_bytecode(contract: &CompactContractBytecode) -> ethers::types::Bytes {
+    contract.bytecode.as_ref().unwrap().object.as_bytes().unwrap().to_owned()
 }
 
 /// Returns the deployed bytecode for a compact contract bytecode
@@ -120,8 +120,8 @@ pub fn get_contract(filename: &str) -> CompactContractBytecode {
 /// # use kakarot_rpc_core::test_utils::deploy_helpers::{get_contract, encode_contract, get_contract_abi, get_contract_bytecode};
 /// # use ethers::abi::Abi;
 /// let contract = get_contract("MyContract");
-/// let abi = get_contract_abi(contract.clone());
-/// let bytecode = get_contract_bytecode(contract);
+/// let abi = get_contract_abi(&contract);
+/// let bytecode = get_contract_bytecode(&contract);
 /// let constructor_args = (1, 42);
 /// let deploy_bytecode = encode_contract(&abi, &bytecode, constructor_args);
 /// ```
@@ -230,8 +230,8 @@ async fn deploy_evm_contract<T: Tokenize>(
     );
 
     let contract = get_contract(contract_name);
-    let abi = get_contract_abi(contract.clone());
-    let contract_bytes = get_contract_bytecode(contract);
+    let abi = get_contract_abi(&contract);
+    let contract_bytes = get_contract_bytecode(&contract);
     let contract_bytes = encode_contract(&abi, &contract_bytes, constructor_args);
     let nonce = eoa_starknet_account.get_nonce().await.unwrap();
     let transaction =
