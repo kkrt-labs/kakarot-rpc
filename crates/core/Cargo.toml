@@ -38,7 +38,8 @@ tokio = { workspace = true }
 
 bytes = "1"
 dotenv = { workspace = true }
-ethers = "2.0"
+ethers = { workspace = true }
+ethers-solc = { workspace = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
 walkdir = "2.3.3"
 

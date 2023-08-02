@@ -6,6 +6,7 @@ description = { workspace = true }
 homepage = { workspace = true }
 
 [dependencies]
+ethers = { workspace = true }
 eyre = { workspace = true }
 kakarot_rpc_core = { path = "../core" }
 starknet_api = { workspace = true }
@@ -19,3 +20,4 @@ url = { workspace = true }
 
 [dev-dependencies]
 cargo-husky = { workspace = true }
+katana-core = { workspace = true }

@@ -1507,8 +1507,10 @@ name = "conformance-test-utils"
 version = "0.1.0"
 dependencies = [
  "cargo-husky",
+ "ethers",
  "eyre",
  "kakarot_rpc_core",
+ "katana-core",
  "reth-primitives",
  "serde",
  "serde_json",
@@ -4581,6 +4583,7 @@ dependencies = [
  "dotenv",
  "env_logger 0.10.0",
  "ethers",
+ "ethers-solc 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "eyre",
  "foundry-config",
  "futures",
