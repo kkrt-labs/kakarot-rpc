@@ -4,8 +4,6 @@ use reth_primitives::{Bytes, U128, U256};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
-pub const FEE_TOKEN_ADDRESS_HEX: &str = "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7";
-
 use crate::types::{ContractAddress, Felt, StorageKey, StorageValue};
 
 pub fn genesis_load_bytecode(
@@ -70,10 +68,10 @@ pub fn genesis_fund_starknet_address(
     let high = amount >> 128;
 
     // The storage key offsets for the two 128-bit chunks.
-    let uint256_offset = [(low, 0), (high, 1)]; // (value, offset)
+    let amount_offset = [(low, 0), (high, 1)]; // (value, offset)
 
     // Iterate over the storage key offsets and generate the storage tuples.
-    uint256_offset
+    amount_offset
         .iter()
         .map(|(value, offset)| {
             genesis_set_storage_starknet_contract(
@@ -110,8 +108,8 @@ mod tests {
     use super::*;
 
     /// This test verifies that the `genesis_set_storage_starknet_contract` function generates the
-    /// correct tuples for a given Starknet address, storage variable name, keys, storage value,
-    /// and storage key offset.
+    /// correct storage data tuples for a given Starknet address, storage variable name, keys,
+    /// storage value, and storage key offset.
     #[tokio::test]
     async fn test_genesis_set_storage_starknet_contract() {
         // Given
@@ -234,13 +232,8 @@ mod tests {
         assert_eq!(deployed_bytecode, bytecode_actual);
     }
 
-    /// This test verifies that the `genesis_fund_starknet_address` function generates the
-    /// correct storage data for a given Starknet address and amount. The expected
-    /// storage key was generated using the tested get_storage_var_address utility
-    /// function.
     /// This test verifies that the `genesis_fund_starknet_address` function generates the correct
-    /// Vec of tuples for a given Starknet address and amount. The expected storage key was
-    /// generated using the tested get_storage_var_address utility function.
+    /// Vec of storage data tuples for a given Starknet address and amount.
     #[tokio::test]
     async fn test_genesis_fund_starknet_address() {
         // Given
