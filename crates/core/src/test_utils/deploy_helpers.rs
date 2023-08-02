@@ -541,6 +541,7 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
     let kakarot_steps = 2u32.pow(24);
     StarknetConfig {
         allow_zero_max_fee: true,
+        auto_mine: true,
         env: Environment {
             chain_id: "SN_GOERLI".into(),
             invoke_max_steps: kakarot_steps,
