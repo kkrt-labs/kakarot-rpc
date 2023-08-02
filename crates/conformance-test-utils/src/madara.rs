@@ -1,20 +1,21 @@
-use reth_primitives::Bytes;
+use ethers::types::Bytes;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
 use crate::types::{ContractAddress, Felt, StorageKey, StorageValue};
 
 pub fn genesis_load_bytecode(
-    bytecode: Bytes,
+    bytecode: &Bytes,
     address: FieldElement,
 ) -> Vec<((ContractAddress, StorageKey), StorageValue)> {
     bytecode
         .chunks(16)
         .enumerate()
         .map(|(i, x)| {
-            let mut storage_value = [0u8; 32];
-            storage_value[16..16 + x.len()].copy_from_slice(x);
-            let storage_value = FieldElement::from_bytes_be(&storage_value).unwrap().into(); //safe unwrap since x.len() == 16
+            let mut storage_value = [0u8; 16];
+            storage_value[..x.len()].copy_from_slice(x);
+            let storage_value = u128::from_be_bytes(storage_value);
+            let storage_value = FieldElement::from(storage_value).into();
 
             let storage_key: Felt = get_storage_var_address("bytecode_", &[FieldElement::from(i)]).unwrap().into(); // safe unwrap since bytecode_ is all ascii
 
@@ -25,45 +26,55 @@ pub fn genesis_load_bytecode(
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::str::FromStr;
 
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, deploy_kakarot_system};
+    use kakarot_rpc_core::test_utils::deploy_helpers::{
+        construct_kakarot_test_sequencer, deploy_kakarot_system, get_contract, get_contract_deployed_bytecode,
+    };
+    use katana_core::backend::state::StorageRecord;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
     use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
     use starknet::providers::JsonRpcClient;
-    use starknet_api::core::ContractAddress as StarknetContractAddress;
+    use starknet_api::core::{
+        calculate_contract_address, ClassHash, ContractAddress as StarknetContractAddress, Nonce,
+    };
     use starknet_api::hash::StarkFelt;
-    use starknet_api::state::StorageKey;
-
-    const TEST_BYTECODE: &str = "0xf234567890abcdef1234567890abcdeff234567890abcdef1234567890abcdef";
-    const BIG_ENDIAN_BYTECODE: &str = "0xf234567890abcdef1234567890abcdef";
-
-    const COUNTER_DEPLOYED_BYTECODE: &str = "0x608060405234801561001057600080fd5b50600436106100625760003560e01c806306661abd14610067578063371303c0146100825780637c507cbd1461008c578063b3bcfa8214610094578063d826f88f1461009c578063f0707ea9146100a5575b600080fd5b61007060005481565b60405190815260200160405180910390f35b61008a6100ad565b005b61008a6100c6565b61008a610106565b61008a60008055565b61008a610139565b60016000808282546100bf919061017c565b9091555050565b60008054116100f05760405162461bcd60e51b81526004016100e790610195565b60405180910390fd5b6000805490806100ff836101dc565b9190505550565b60008054116101275760405162461bcd60e51b81526004016100e790610195565b60016000808282546100bf91906101f3565b600080541161015a5760405162461bcd60e51b81526004016100e790610195565b60008054600019019055565b634e487b7160e01b600052601160045260246000fd5b8082018082111561018f5761018f610166565b92915050565b60208082526027908201527f636f756e742073686f756c64206265207374726963746c7920677265617465726040820152660207468616e20360cc1b606082015260800190565b6000816101eb576101eb610166565b506000190190565b8181038181111561018f5761018f61016656fea26469706673582212203091d34e6cbebc53198d4c0d09786b51423a7ae0de314456c74c68aaccc311e364736f6c63430008110033";
-    const COUNTER_DEPLOYED_BYTECODE_LEN: u64 = (COUNTER_DEPLOYED_BYTECODE.len() / 2 - 1) as u64; // remove 0x and divide by 2 for byte length
+    use starknet_api::state::StorageKey as StarknetStorageKey;
+    use starknet_api::transaction::{Calldata, ContractAddressSalt};
 
     use super::*;
+
+    fn get_starknet_storage_key(var_name: &str, args: &[FieldElement]) -> StarknetStorageKey {
+        StarknetStorageKey(
+            Into::<StarkFelt>::into(get_storage_var_address(var_name, args).unwrap()).try_into().unwrap(),
+        )
+    }
 
     #[test]
     fn test_genesis_load_bytecode() {
         // Given
+        const TEST_BYTECODE: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+        const BIG_ENDIAN_BYTECODE_ONE: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+        const BIG_ENDIAN_BYTECODE_TWO: &str = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         let bytecode = Bytes::from_str(TEST_BYTECODE).unwrap();
         let address = *ACCOUNT_ADDRESS;
 
         // When
-        let storage = genesis_load_bytecode(bytecode, address);
+        let storage = genesis_load_bytecode(&bytecode, address);
 
         // Then
-        let expected_storage: Vec<((Felt, Felt), Felt)> = vec![
+        let expected_storage: Vec<((ContractAddress, StorageKey), StorageValue)> = vec![
             (
                 (address.into(), get_storage_var_address("bytecode_", &[FieldElement::from(0u8)]).unwrap().into()),
-                FieldElement::from_hex_be(BIG_ENDIAN_BYTECODE).unwrap().into(),
+                FieldElement::from_hex_be(BIG_ENDIAN_BYTECODE_ONE).unwrap().into(),
             ),
             (
                 (address.into(), get_storage_var_address("bytecode_", &[FieldElement::from(1u8)]).unwrap().into()),
-                FieldElement::from_hex_be(BIG_ENDIAN_BYTECODE).unwrap().into(),
+                FieldElement::from_hex_be(BIG_ENDIAN_BYTECODE_TWO).unwrap().into(),
             ),
         ];
         assert_eq!(expected_storage, storage);
@@ -81,6 +92,25 @@ mod tests {
         let deployed_kakarot =
             deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
 
+        // Get account proxy class hash and contract account class hash
+        let contract_account_class_hash = deployed_kakarot.contract_account_class_hash;
+        let account_proxy_class_hash = deployed_kakarot.proxy_class_hash;
+
+        let actual_counter_address: FieldElement = (*calculate_contract_address(
+            ContractAddressSalt(StarkFelt::from(1u8)),
+            ClassHash(account_proxy_class_hash.into()),
+            &Calldata(vec![].into()),
+            StarknetContractAddress(StarkFelt::from(0u8).try_into().unwrap()),
+        )
+        .unwrap()
+        .0
+        .key())
+        .into();
+
+        // Get the bytecode for the deployed counter contract account
+        let contract = get_contract("Counter");
+        let deployed_counter_bytecode = get_contract_deployed_bytecode(contract);
+
         // Deploy a counter contract
         let (_, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
@@ -91,19 +121,7 @@ mod tests {
             )
             .await
             .unwrap();
-        let expected_counter_address = deployed_addresses[1]; // index 0 is evm address, index 1 is starknet address
-
-        // Deploy a safe contract for which we will set the counter bytecode
-        let (_, deployed_addresses) = deployed_kakarot
-            .deploy_evm_contract(
-                starknet_test_sequencer.url(),
-                "Safe",
-                // no constructor is conveyed as a tuple
-                (),
-            )
-            .await
-            .unwrap();
-        let actual_counter_address = deployed_addresses[1];
+        let expected_counter_address = deployed_addresses.starknet_address; // index 0 is evm address, index 1 is starknet address
 
         // Create a new HTTP transport using the sequencer's URL
         let starknet_http_transport = StarknetHttpTransport::new(starknet_test_sequencer.url());
@@ -118,12 +136,27 @@ mod tests {
         let actual_counter = ContractAccount::new(&starknet_client, actual_counter_address);
 
         // Use genesis_load_bytecode to get the bytecode to be loaded into counter
-        let counter_bytecode_storage =
-            genesis_load_bytecode(Bytes::from_str(COUNTER_DEPLOYED_BYTECODE).unwrap(), actual_counter_address);
+        let counter_bytecode_storage = genesis_load_bytecode(&deployed_counter_bytecode, actual_counter_address);
 
         // It is not possible to block the async task, so we need to spawn a blocking task
         tokio::task::spawn_blocking(move || {
+            // Get lock on the Starknet sequencer
             let mut starknet = starknet_test_sequencer.sequencer.starknet.blocking_write();
+
+            // Deploy the proxy at the actual counter address, setting _implementation storage var to contract
+            // account class hash
+            let proxy_address =
+                StarknetContractAddress(Into::<StarkFelt>::into(actual_counter_address).try_into().unwrap());
+            let proxy_storage = StorageRecord {
+                nonce: Nonce(StarkFelt::from(0u8)),
+                class_hash: ClassHash(account_proxy_class_hash.into()),
+                storage: HashMap::from([(
+                    get_starknet_storage_key("_implementation", &[]),
+                    contract_account_class_hash.into(),
+                )]),
+            };
+            starknet.state.storage.insert(proxy_address, proxy_storage);
+
             let counter_addr: StarkFelt = actual_counter_address.into();
 
             // Get the counter storage
@@ -135,15 +168,13 @@ mod tests {
                 .storage;
 
             // Load the counter bytecode length into the contract
-            let key = StorageKey(
-                Into::<StarkFelt>::into(get_storage_var_address("bytecode_len_", &[]).unwrap()).try_into().unwrap(),
-            );
-            let value = Into::<StarkFelt>::into(StarkFelt::from(COUNTER_DEPLOYED_BYTECODE_LEN));
+            let key = get_starknet_storage_key("bytecode_len_", &[]);
+            let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_counter_bytecode.len() as u64));
             counter_storage.insert(key, value);
 
             // Load the counter bytecode into the contract
             counter_bytecode_storage.into_iter().for_each(|((_, k), v)| {
-                let key = StorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
+                let key = StarknetStorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
                 let value = Into::<StarkFelt>::into(v.0);
                 counter_storage.insert(key, value);
             });
