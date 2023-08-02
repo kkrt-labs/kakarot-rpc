@@ -13,7 +13,7 @@ pub fn genesis_load_bytecode(
         .enumerate()
         .map(|(i, x)| {
             let mut storage_value = [0u8; 32];
-            storage_value[32 - x.len()..].copy_from_slice(x);
+            storage_value[16..16 + x.len()].copy_from_slice(x);
             let storage_value = FieldElement::from_bytes_be(&storage_value).unwrap().into(); //safe unwrap since x.len() == 16
 
             let storage_key: Felt = get_storage_var_address("bytecode_", &[FieldElement::from(i)]).unwrap().into(); // safe unwrap since bytecode_ is all ascii
@@ -38,10 +38,11 @@ mod tests {
     use starknet_api::hash::StarkFelt;
     use starknet_api::state::StorageKey;
 
-    const TEST_BYTECODE: &str = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
-    const BIG_ENDIAN_BYTECODE: &str = "0x1234567890abcdef1234567890abcdef";
+    const TEST_BYTECODE: &str = "0xf234567890abcdef1234567890abcdeff234567890abcdef1234567890abcdef";
+    const BIG_ENDIAN_BYTECODE: &str = "0xf234567890abcdef1234567890abcdef";
 
-    const COUNTER_BYTECODE: &str = "0x608060405234801561001057600080fd5b50600436106100625760003560e01c806306661abd14610067578063371303c0146100825780637c507cbd1461008c578063b3bcfa8214610094578063d826f88f1461009c578063f0707ea9146100a5575b600080fd5b61007060005481565b60405190815260200160405180910390f35b61008a6100ad565b005b61008a6100c6565b61008a610106565b61008a60008055565b61008a610139565b60016000808282546100bf919061017c565b9091555050565b60008054116100f05760405162461bcd60e51b81526004016100e790610195565b60405180910390fd5b6000805490806100ff836101dc565b9190505550565b60008054116101275760405162461bcd60e51b81526004016100e790610195565b60016000808282546100bf91906101f3565b600080541161015a5760405162461bcd60e51b81526004016100e790610195565b60008054600019019055565b634e487b7160e01b600052601160045260246000fd5b8082018082111561018f5761018f610166565b92915050565b60208082526027908201527f636f756e742073686f756c64206265207374726963746c7920677265617465726040820152660207468616e20360cc1b606082015260800190565b6000816101eb576101eb610166565b506000190190565b8181038181111561018f5761018f61016656fea26469706673582212203091d34e6cbebc53198d4c0d09786b51423a7ae0de314456c74c68aaccc311e364736f6c63430008110033";
+    const COUNTER_DEPLOYED_BYTECODE: &str = "0x608060405234801561001057600080fd5b50600436106100625760003560e01c806306661abd14610067578063371303c0146100825780637c507cbd1461008c578063b3bcfa8214610094578063d826f88f1461009c578063f0707ea9146100a5575b600080fd5b61007060005481565b60405190815260200160405180910390f35b61008a6100ad565b005b61008a6100c6565b61008a610106565b61008a60008055565b61008a610139565b60016000808282546100bf919061017c565b9091555050565b60008054116100f05760405162461bcd60e51b81526004016100e790610195565b60405180910390fd5b6000805490806100ff836101dc565b9190505550565b60008054116101275760405162461bcd60e51b81526004016100e790610195565b60016000808282546100bf91906101f3565b600080541161015a5760405162461bcd60e51b81526004016100e790610195565b60008054600019019055565b634e487b7160e01b600052601160045260246000fd5b8082018082111561018f5761018f610166565b92915050565b60208082526027908201527f636f756e742073686f756c64206265207374726963746c7920677265617465726040820152660207468616e20360cc1b606082015260800190565b6000816101eb576101eb610166565b506000190190565b8181038181111561018f5761018f61016656fea26469706673582212203091d34e6cbebc53198d4c0d09786b51423a7ae0de314456c74c68aaccc311e364736f6c63430008110033";
+    const COUNTER_DEPLOYED_BYTECODE_LEN: u64 = (COUNTER_DEPLOYED_BYTECODE.len() / 2 - 1) as u64; // remove 0x and divide by 2 for byte length
 
     use super::*;
 
@@ -80,7 +81,7 @@ mod tests {
         let deployed_kakarot =
             deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
 
-        // Deploy a counter contract which
+        // Deploy a counter contract
         let (_, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 starknet_test_sequencer.url(),
@@ -90,9 +91,9 @@ mod tests {
             )
             .await
             .unwrap();
-        let expected_counter_address = deployed_addresses[1]; // starknet address
+        let expected_counter_address = deployed_addresses[1]; // index 0 is evm address, index 1 is starknet address
 
-        // Deploy a counter contract
+        // Deploy a safe contract for which we will set the counter bytecode
         let (_, deployed_addresses) = deployed_kakarot
             .deploy_evm_contract(
                 starknet_test_sequencer.url(),
@@ -118,37 +119,34 @@ mod tests {
 
         // Use genesis_load_bytecode to get the bytecode to be loaded into counter
         let counter_bytecode_storage =
-            genesis_load_bytecode(Bytes::from_str(COUNTER_BYTECODE).unwrap(), actual_counter_address);
+            genesis_load_bytecode(Bytes::from_str(COUNTER_DEPLOYED_BYTECODE).unwrap(), actual_counter_address);
 
         // It is not possible to block the async task, so we need to spawn a blocking task
         tokio::task::spawn_blocking(move || {
+            let mut starknet = starknet_test_sequencer.sequencer.starknet.blocking_write();
+            let counter_addr: StarkFelt = actual_counter_address.into();
+
             // Get the counter storage
-            let mut starknet_wrapper = starknet_test_sequencer.sequencer.starknet.blocking_write();
-            let addr: StarkFelt = actual_counter_address.into();
-            let counter_storage = &mut starknet_wrapper
+            let counter_storage = &mut starknet
                 .state
                 .storage
-                .get_mut(&StarknetContractAddress(addr.try_into().unwrap()))
+                .get_mut(&StarknetContractAddress(counter_addr.try_into().unwrap()))
                 .unwrap()
                 .storage;
 
-            // Load the counter bytecode length into the caller contract
+            // Load the counter bytecode length into the contract
             let key = StorageKey(
                 Into::<StarkFelt>::into(get_storage_var_address("bytecode_len_", &[]).unwrap()).try_into().unwrap(),
             );
-            let value = Into::<StarkFelt>::into(StarkFelt::from(counter_bytecode_storage.len() as u32));
-            println!("key: {:?}, value: {:?}", key, value);
+            let value = Into::<StarkFelt>::into(StarkFelt::from(COUNTER_DEPLOYED_BYTECODE_LEN));
             counter_storage.insert(key, value);
 
-            // Load the counter bytecode into the caller contract
+            // Load the counter bytecode into the contract
             counter_bytecode_storage.into_iter().for_each(|((_, k), v)| {
                 let key = StorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
                 let value = Into::<StarkFelt>::into(v.0);
-                println!("key: {:?}, value: {:?}", key, value);
                 counter_storage.insert(key, value);
             });
-
-            starknet_wrapper.generate_latest_block();
         })
         .await
         .unwrap();
@@ -159,7 +157,7 @@ mod tests {
         // Get the actual bytecode from the counter contract
         let bytecode_actual = actual_counter.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
-        // Get the actual bytecode loaded into the counter contract
+        // Assert that the expected and actual bytecodes are equal
         assert_eq!(bytecode_expected, bytecode_actual);
     }
 }
