@@ -121,7 +121,7 @@ mod tests {
             )
             .await
             .unwrap();
-        let expected_counter_address = deployed_addresses.starknet_address; // index 0 is evm address, index 1 is starknet address
+        let expected_counter_address = deployed_addresses.starknet_address;
 
         // Create a new HTTP transport using the sequencer's URL
         let starknet_http_transport = StarknetHttpTransport::new(starknet_test_sequencer.url());
