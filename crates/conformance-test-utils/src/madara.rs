@@ -1,4 +1,5 @@
 use eyre::Result;
+use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use reth_primitives::Bytes;
 use serde_json::Value;
 use starknet::core::types::FieldElement;
@@ -44,13 +45,13 @@ pub fn genesis_load_bytecode(
 ///
 /// * `Result<Value>` - A JSON array representing the initial storage of the Fee Token contract
 ///   where the Starknet address has been pre-funded with the specified `amount`. Returns an error
-///   if the constant `FEE_TOKEN_ADDRESS_HEX` could not be converted to a `FieldElement` or if there
+///   if the constant `STARKNET_NATIVE_TOKEN` could not be converted to a `FieldElement` or if there
 ///   was an error calculating the storage variable address.
 pub fn genesis_fund_starknet_address(starknet_address: FieldElement, amount: FieldElement) -> Result<Value> {
     // Compute the storage key for `ERC20_balances` and the Starknet address
     let storage_var_address = get_storage_var_address("ERC20_balances", &[starknet_address])?;
 
-    let fee_token_address = FieldElement::from_hex_be(FEE_TOKEN_ADDRESS_HEX)?;
+    let fee_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN)?;
 
     // Create the JSON array for the initial storage data
     let storage_data = serde_json::json!([[[Felt(fee_token_address), Felt(storage_var_address),], Felt(amount),]]);
