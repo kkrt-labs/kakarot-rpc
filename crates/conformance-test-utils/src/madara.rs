@@ -31,7 +31,7 @@ pub fn genesis_load_bytecode(
 /// Generates the genesis storage data for pre-funding a Starknet address on Madara.
 ///
 /// This function calculates the storage key for the balance of the ERC20 Fee Token
-/// contract using the provided Starknet address. The resulting JSON object represents the initial
+/// contract using the provided Starknet address. The resulting JSON array represents the initial
 /// storage of the Fee Token contract, where the account associated with the Starknet address is
 /// pre-funded with the specified `amount`.
 ///
@@ -42,7 +42,7 @@ pub fn genesis_load_bytecode(
 ///
 /// # Returns
 ///
-/// * `Result<Value>` - A JSON object representing the initial storage of the Fee Token contract
+/// * `Result<Value>` - A JSON array representing the initial storage of the Fee Token contract
 ///   where the Starknet address has been pre-funded with the specified `amount`. Returns an error
 ///   if the constant `FEE_TOKEN_ADDRESS_HEX` could not be converted to a `FieldElement` or if there
 ///   was an error calculating the storage variable address.
@@ -52,18 +52,8 @@ pub fn genesis_fund_starknet_address(starknet_address: FieldElement, amount: Fie
 
     let fee_token_address = FieldElement::from_hex_be(FEE_TOKEN_ADDRESS_HEX)?;
 
-    // Create the storage data
-    let storage_data = serde_json::json!({
-        "storage": [
-            [
-                [
-                    Felt(fee_token_address),
-                    Felt(storage_var_address),
-                ],
-                Felt(amount),
-            ]
-        ]
-    });
+    // Create the JSON array for the initial storage data
+    let storage_data = serde_json::json!([[[Felt(fee_token_address), Felt(storage_var_address),], Felt(amount),]]);
 
     Ok(storage_data)
 }
@@ -78,6 +68,7 @@ mod tests {
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
     use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, deploy_kakarot_system};
     use katana_core::backend::state::StorageRecord;
+    use serde_json::json;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
     use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
     use starknet::providers::JsonRpcClient;
@@ -178,39 +169,35 @@ mod tests {
 
         // Assert that the expected and actual bytecodes are equal
         assert_eq!(deployed_bytecode, bytecode_actual);
-        use serde_json::json;
-        use starknet::core::types::FieldElement;
+    }
 
-        use super::genesis_fund_starknet_address;
+    /// This test verifies that the `genesis_fund_starknet_address` function generates the
+    /// correct storage data for a given Starknet address and amount. The expected
+    /// storage key was generated using the tested get_storage_var_address utility
+    /// function.
+    #[tokio::test]
+    async fn test_genesis_fund_starknet_address() {
+        // Given
+        let starknet_address = FieldElement::from_hex_be("0x3").unwrap();
+        let amount = FieldElement::from_hex_be("0xffffffffffffffffffffffffffffffff").unwrap();
 
-        /// This test verifies that the `genesis_fund_starknet_address` function generates the
-        /// correct storage data for a given Starknet address and amount. The expected
-        /// storage key was generated using the tested get_storage_var_address utility
-        /// function.
-        #[tokio::test]
-        async fn test_genesis_fund_starknet_address() {
-            // Given
-            let starknet_address = FieldElement::from_hex_be("0x3").unwrap();
-            let amount = FieldElement::from_hex_be("0xffffffffffffffffffffffffffffffff").unwrap();
-
-            // This is the expected storage data for a given starknet_address and amount.
-            let expected_output = json!({
-                "storage": [
+        // This is the expected storage data for a given starknet_address and amount.
+        let expected_output = json!({
+            "storage": [
+                [
                     [
-                        [
-                            "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
-                            "0x262e096a838c0d8f34f641ff917d47d7dcb345c69efe61d9ab6b675e7340fc6",
-                        ],
-                        "0xffffffffffffffffffffffffffffffff"
-                    ]
+                        "0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+                        "0x262e096a838c0d8f34f641ff917d47d7dcb345c69efe61d9ab6b675e7340fc6",
+                    ],
+                    "0xffffffffffffffffffffffffffffffff"
                 ]
-            });
+            ]
+        });
 
-            // When
-            let result = genesis_fund_starknet_address(starknet_address, amount).unwrap();
+        // When
+        let result = genesis_fund_starknet_address(starknet_address, amount).unwrap();
 
-            // Then
-            assert_eq!(result, expected_output);
-        }
+        // Then
+        assert_eq!(result, expected_output);
     }
 }
