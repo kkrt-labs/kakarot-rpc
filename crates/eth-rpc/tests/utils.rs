@@ -17,7 +17,7 @@ use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
 use starknet::providers::{JsonRpcClient, JsonRpcClient as StarknetJsonRpcClient};
 
-/// Run wiremock to fake Starknet rpc and then run our own `kakarot_rpc_server`.
+/// Run init_mock_client to fake Starknet rpc and then run our own `kakarot_rpc_server`.
 ///
 /// Example :
 /// ```ignore
