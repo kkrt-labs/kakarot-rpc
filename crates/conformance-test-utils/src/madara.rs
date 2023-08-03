@@ -24,7 +24,7 @@ pub fn genesis_load_bytecode(
                 "bytecode_",
                 &[FieldElement::from(i)],
                 storage_value,
-                0,
+                0, // only felt is stored so offset is always 0
             )
             .unwrap() // safe unwrap since bytecode_ is all ascii
         })
