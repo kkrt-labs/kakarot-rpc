@@ -173,6 +173,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_counter_bytecode() {
+        // Given
         let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
 
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
@@ -192,6 +193,8 @@ mod tests {
         // Use genesis_load_bytecode to get the bytecode to be stored into counter
         let counter_genesis_address = FieldElement::from_str("0x1234").unwrap();
         let counter_genesis_storage = genesis_load_bytecode(&deployed_bytecode, counter_genesis_address);
+
+        // When
 
         // It is not possible to block the async test task, so we need to spawn a blocking task
         tokio::task::spawn_blocking(move || {
@@ -228,8 +231,10 @@ mod tests {
         let counter_genesis = ContractAccount::new(&starknet_client, counter_genesis_address);
         let bytecode_actual = counter_genesis.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
+        // Then
+
         // Assert that the expected and actual bytecodes are equal
-        assert_eq!(deployed_bytecode, bytecode_actual);
+        assert_eq!(bytecode_actual, deployed_bytecode);
     }
 
     /// This test verifies that the `genesis_fund_starknet_address` function generates the correct
