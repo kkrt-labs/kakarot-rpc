@@ -88,9 +88,8 @@ pub fn genesis_fund_starknet_address(
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::ops::DerefMut;
     use std::str::FromStr;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
 
     use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
@@ -174,15 +173,14 @@ mod tests {
     #[tokio::test]
     async fn test_counter_bytecode() {
         // Given
-        let test_environment = Arc::new(Mutex::new(
+        let test_environment = Arc::new(
             KakarotTestEnvironment::new()
                 .await
                 .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
                 .await,
-        ));
-        let lock = test_environment.lock().unwrap();
-        let starknet_client = lock.client().starknet_provider();
-        let counter = lock.evm_contract("Counter");
+        );
+        let starknet_client = test_environment.client().starknet_provider();
+        let counter = test_environment.evm_contract("Counter");
         let counter_contract = ContractAccount::new(&starknet_client, counter.addresses.starknet_address);
 
         // When
@@ -193,14 +191,12 @@ mod tests {
         let counter_genesis_address = FieldElement::from_str("0x1234").unwrap();
         let counter_genesis_storage = genesis_load_bytecode(&deployed_bytecode, counter_genesis_address);
 
+        // Create an atomic reference to the test environment to avoid dropping it
         let env = Arc::clone(&test_environment);
-        drop(lock);
         // It is not possible to block the async test task, so we need to spawn a blocking task
         tokio::task::spawn_blocking(move || {
             // Get lock on the Starknet sequencer
-            let mut lock = test_environment.lock().unwrap();
-            let lock = lock.deref_mut();
-            let mut starknet = lock.sequencer().sequencer.starknet.blocking_write();
+            let mut starknet = env.sequencer().sequencer.starknet.blocking_write();
             let mut counter_storage = HashMap::new();
 
             // Load the counter bytecode length into the contract
@@ -216,12 +212,12 @@ mod tests {
             });
 
             // Deploy the contract account at genesis address
-            let proxy_class_hash = lock.kakarot().proxy_class_hash;
+            let contract_account_class_hash = env.kakarot().contract_account_class_hash;
             let counter_address =
                 StarknetContractAddress(Into::<StarkFelt>::into(counter_genesis_address).try_into().unwrap());
             let counter_storage_record = StorageRecord {
-                nonce: Nonce(StarkFelt::from(1u8)),
-                class_hash: ClassHash(proxy_class_hash.into()),
+                nonce: Nonce(StarkFelt::from(0u8)),
+                class_hash: ClassHash(contract_account_class_hash.into()),
                 storage: counter_storage,
             };
             starknet.state.storage.insert(counter_address, counter_storage_record);
@@ -230,13 +226,10 @@ mod tests {
         .unwrap();
 
         // Create a new counter contract pointing to the genesis initialized storage
-        let lock = env.lock().unwrap();
-        let starknet_client = lock.client().starknet_provider();
         let counter_genesis = ContractAccount::new(&starknet_client, counter_genesis_address);
         let bytecode_actual = counter_genesis.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Then
-
         // Assert that the expected and actual bytecodes are equal
         assert_eq!(bytecode_actual, deployed_bytecode);
     }

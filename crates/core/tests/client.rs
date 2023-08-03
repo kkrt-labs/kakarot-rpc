@@ -73,7 +73,6 @@ mod tests {
             .expect("contract not deployed");
 
         // When
-
         let inc_selector = counter.abi.function("inc").unwrap().short_signature();
 
         let nonce = client
@@ -207,7 +206,6 @@ mod tests {
         let kakarot = test_environment.kakarot();
 
         // When
-
         let nonce = client
             .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
             .await
