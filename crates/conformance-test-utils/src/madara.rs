@@ -6,7 +6,7 @@ use starknet::core::utils::get_storage_var_address;
 
 use crate::types::{ContractAddress, StorageKey, StorageValue};
 
-pub fn genesis_load_bytecode(
+pub fn genesis_set_bytecode(
     bytecode: &Bytes,
     starknet_address: FieldElement,
 ) -> Vec<((ContractAddress, StorageKey), StorageValue)> {
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn test_genesis_load_bytecode() {
+    fn test_genesis_set_bytecode() {
         // Given
         const TEST_BYTECODE: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
         const BIG_ENDIAN_BYTECODE_ONE: &str = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -201,7 +201,7 @@ mod tests {
         let address = *ACCOUNT_ADDRESS;
 
         // When
-        let storage = genesis_load_bytecode(&bytecode, address);
+        let storage = genesis_set_bytecode(&bytecode, address);
 
         // Then
         let expected_storage: Vec<((ContractAddress, StorageKey), StorageValue)> = vec![
@@ -234,9 +234,9 @@ mod tests {
         let deployed_bytecode = counter_contract.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
         let deployed_bytecode_len = deployed_bytecode.len();
 
-        // Use genesis_load_bytecode to get the bytecode to be stored into counter
+        // Use genesis_set_bytecode to get the bytecode to be stored into counter
         let counter_genesis_address = FieldElement::from_str("0x1234").unwrap();
-        let counter_genesis_storage = genesis_load_bytecode(&deployed_bytecode, counter_genesis_address);
+        let counter_genesis_storage = genesis_set_bytecode(&deployed_bytecode, counter_genesis_address);
 
         // Create an atomic reference to the test environment to avoid dropping it
         let env = Arc::clone(&test_environment);
@@ -246,12 +246,12 @@ mod tests {
             let mut starknet = env.sequencer().sequencer.starknet.blocking_write();
             let mut counter_storage = HashMap::new();
 
-            // Load the counter bytecode length into the contract
+            // Set the counter bytecode length into the contract
             let key = get_starknet_storage_key("bytecode_len_", &[]);
             let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_bytecode_len as u64));
             counter_storage.insert(key, value);
 
-            // Load the counter bytecode into the contract
+            // Set the counter bytecode into the contract
             counter_genesis_storage.into_iter().for_each(|((_, k), v)| {
                 let key = StarknetStorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
                 let value = Into::<StarkFelt>::into(v.0);
