@@ -237,7 +237,7 @@ mod tests {
     #[tokio::test]
     async fn test_genesis_fund_starknet_address() {
         // Given
-        let starknet_address = *ACCOUNT_ADDRESS;
+        let starknet_address = FieldElement::from_hex_be("0x1234").unwrap();
         let token_fee_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
         let storage_variable_name = "ERC20_balances";
         let amount = U256::MAX;
