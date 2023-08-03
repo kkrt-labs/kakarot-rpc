@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ethers::types::{Address, Bytes, H256, I256, U256, U64};
+use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct HiveGenesisConfig {
     pub config: Config,
     pub coinbase: Address,
-    pub difficulty: I256,
+    pub difficulty: U64,
     pub extraData: Bytes,
     pub gasLimit: U64,
     pub nonce: U64,
@@ -37,7 +37,9 @@ pub struct AccountInfo {
 
 #[cfg(test)]
 mod tests {
-    use ethers::types::U256;
+    use std::str::FromStr;
+
+    use reth_primitives::U256;
 
     use super::HiveGenesisConfig;
 
@@ -57,9 +59,20 @@ mod tests {
         assert!(genesis.alloc.values().all(|account_info| {
             account_info.storage.as_ref().map_or(true, |storage| {
                 storage.len() == 2
-                    && storage.get(&U256::from(0)) == Some(&U256::from("0x1234"))
-                    && storage.get(&U256::from("0x6661e9d6d8b923d5bbaab1b96e1dd51ff6ea2a93520fdc9eb75d059238b8c5e9"))
-                        == Some(&U256::from("0x01"))
+                    && *storage
+                        .get(
+                            &U256::from_str("0x0000000000000000000000000000000000000000000000000000000000000000")
+                                .unwrap(),
+                        )
+                        .unwrap()
+                        == U256::from_str("0x1234").unwrap()
+                    && *storage
+                        .get(
+                            &U256::from_str("0x6661e9d6d8b923d5bbaab1b96e1dd51ff6ea2a93520fdc9eb75d059238b8c5e9")
+                                .unwrap(),
+                        )
+                        .unwrap()
+                        == U256::from_str("0x01").unwrap()
             })
         }));
 
