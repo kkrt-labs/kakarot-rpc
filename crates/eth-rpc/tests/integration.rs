@@ -1,15 +1,12 @@
-pub mod utils;
-
 #[cfg(test)]
 mod integration_tests {
     use std::str::FromStr;
     use std::sync::Arc;
 
     use ethers::prelude::{Block as EthersBlock, Http as EthersHttp, H256 as EthersH256};
+    use kakarot_rpc::test_utils::setup_kakarot_rpc_integration_env;
     use kakarot_rpc_core::test_utils::deploy_helpers::construct_kakarot_test_sequencer;
     use reth_primitives::U64;
-
-    use crate::utils::setup_kakarot_rpc_integration_env;
 
     #[tokio::test]
     async fn test_get_block_rpc() {
