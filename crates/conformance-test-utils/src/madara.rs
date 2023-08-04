@@ -6,6 +6,12 @@ use starknet::core::utils::get_storage_var_address;
 
 use crate::types::{ContractAddress, StorageKey, StorageValue};
 
+/// Generates the genesis storage tuples for setting the bytecode of a Kakarot countract account
+///
+/// This function calculates the storage keys for the Kakarot contract using the provided bytecode
+/// and Starknet address. The resulting Vec of tuples represent the initial storage of the Kakarot
+/// contract, where the storage key is computed using the storage variable "bytecode_" and the index
+/// of the 16-byte chunk of the bytecode. The value stored is the 16-byte chunk of the bytecode.
 pub fn genesis_set_bytecode(
     bytecode: &Bytes,
     starknet_address: FieldElement,
@@ -58,7 +64,7 @@ pub fn genesis_set_storage_starknet_contract(
     Ok(storage_data)
 }
 
-/// Generates the genesis storage tuples for pre-funding a Starknet address on Starknet.
+/// Generates the genesis storage tuples for pre-funding a Starknet address on Madara.
 ///
 /// This function calculates the storage keys for the balance of the ERC20 Fee Token
 /// contract using the provided Starknet address. The resulting Vec of tuples represent the initial
