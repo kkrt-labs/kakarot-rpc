@@ -22,8 +22,7 @@ pub fn genesis_set_bytecode(
         .map(|(i, x)| {
             let mut storage_value = [0u8; 16];
             storage_value[..x.len()].copy_from_slice(x);
-            let storage_value = u128::from_be_bytes(storage_value);
-            let storage_value = FieldElement::from(storage_value);
+            let storage_value = FieldElement::from(u128::from_be_bytes(storage_value));
 
             genesis_set_storage_starknet_contract(
                 starknet_address,
