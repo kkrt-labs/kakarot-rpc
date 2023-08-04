@@ -5,13 +5,12 @@ use serde::{Deserialize, Serialize};
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct HiveGenesisConfig {
     pub config: Config,
     pub coinbase: Address,
     pub difficulty: U64,
-    #[serde(rename = "extraData")]
     pub extra_data: Bytes,
-    #[serde(rename = "gasLimit")]
     pub gas_limit: U64,
     pub nonce: U64,
     pub timestamp: U64,
@@ -25,18 +24,13 @@ impl HiveGenesisConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct Config {
-    #[serde(rename = "chainId")]
     pub chain_id: i128,
-    #[serde(rename = "homesteadBlock")]
     pub homestead_block: i128,
-    #[serde(rename = "eip150Block")]
     pub eip150_block: i128,
-    #[serde(rename = "eip150Hash")]
     pub eip150_hash: H256,
-    #[serde(rename = "eip155Block")]
     pub eip155_block: i128,
-    #[serde(rename = "eip158Block")]
     pub eip158_block: i128,
 }
 
