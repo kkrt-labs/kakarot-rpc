@@ -18,6 +18,12 @@ pub struct HiveGenesisConfig {
     pub alloc: HashMap<Address, AccountInfo>,
 }
 
+impl HiveGenesisConfig {
+    pub fn new() -> Result<Self, serde_json::Error> {
+        serde_json::from_str(std::include_str!("./genesis.json"))
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     #[serde(rename(deserialize = "chainId"))]
@@ -52,7 +58,7 @@ mod tests {
     #[test]
     fn test_read_hive_genesis() {
         // Read the hive genesis file
-        let genesis: HiveGenesisConfig = serde_json::from_str(std::include_str!("./genesis.json")).unwrap();
+        let genesis = HiveGenesisConfig::new().expect("Failed to read genesis.json");
 
         // Verify the genesis file has the expected number of accounts
         assert_eq!(genesis.alloc.len(), 7);
