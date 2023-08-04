@@ -339,7 +339,7 @@ mod tests {
         let value = U256::from_str("0xccccccccccccccccccccccccccccccccdddddddddddddddddddddddddddddddd").unwrap();
         let value_split = split_u256_into_field_elements(value);
 
-        // This is equivalent to setting the storage of Kakarot's `storage_` variable at
+        // This is equivalent to setting the storage of Kakarot contract account's `storage_` variable at
         // index 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb to
         // 0xccccccccccccccccccccccccccccccccdddddddddddddddddddddddddddddddd. The first storage key
         // is for value.low. The second storage key is for value.high.
@@ -449,7 +449,7 @@ mod tests {
                 U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
 
             // Assert that the original and recombined U256 values are equal
-            assert_eq!(result, value, "Failed for value: {}", value_str);
+            assert_eq!(result, value, "Failed for value: {value_str}");
         });
     }
 }
