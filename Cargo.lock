@@ -4464,6 +4464,7 @@ dependencies = [
  "dojo-test-utils",
  "dotenv",
  "env_logger 0.10.0",
+ "ethers",
  "eyre",
  "hex",
  "jsonrpsee 0.18.2",

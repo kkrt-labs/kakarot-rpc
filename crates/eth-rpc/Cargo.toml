@@ -38,7 +38,8 @@ tower = "0.4.13"
 tower-http = "0.4.1"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
+dojo-test-utils = { workspace = true }
 
 [dev-dependencies]
-dojo-test-utils = { workspace = true }
 cargo-husky = { workspace = true }
+ethers = { workspace = true }

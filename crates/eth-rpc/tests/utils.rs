@@ -5,7 +5,7 @@ use kakarot_rpc::servers::eth_rpc::KakarotEthRpc;
 use kakarot_rpc_core::mock::mock_starknet::{all_fixtures, init_mock_client};
 use starknet::providers::JsonRpcClient;
 
-/// Run wiremock to fake starknet rpc and then run our own `kakarot_rpc_server`.
+/// Run init_mock_client to fake Starknet rpc and then run our own `kakarot_rpc_server`.
 ///
 /// Example :
 /// ```ignore
@@ -18,7 +18,7 @@ use starknet::providers::JsonRpcClient;
 ///
 ///       // Query whatever eth_rpc endpoints
 ///       let client = reqwest::Client::new();
-///        let res = client
+///       let res = client
 ///            .post("http://127.0.0.1:3030")
 ///            .body("{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"eth_chainId\", \"params\": [] }")
 ///            .header("content-type", "application/json")
