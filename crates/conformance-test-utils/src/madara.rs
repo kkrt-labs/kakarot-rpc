@@ -164,7 +164,7 @@ mod tests {
     #[tokio::test]
     async fn test_genesis_set_storage_starknet_contract() {
         // Given
-        let starknet_address = *ACCOUNT_ADDRESS;
+        let starknet_address = FieldElement::from_hex_be("0x1234").unwrap();
         let storage_variable_name = "test_name";
         let keys = vec![];
         let storage_value = FieldElement::from_hex_be("0x1234").unwrap();
@@ -294,10 +294,11 @@ mod tests {
         let starknet_address = FieldElement::from_hex_be("0x1234").unwrap();
         let token_fee_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
         let storage_variable_name = "ERC20_balances";
-        let amount = U256::MAX;
+        let amount = U256::from_str("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb").unwrap();
         let amount_split = split_u256_into_field_elements(amount);
 
-        // This is equivalent to pre-funding the Starknet address with 2^256 - 1 Fee Tokens.
+        // This is equivalent to pre-funding the Starknet address with
+        // 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb Fee Tokens.
         // The first storage key is for u256.low
         // The second storage key is for u256.high
         let expected_output = vec![
@@ -332,16 +333,16 @@ mod tests {
     #[tokio::test]
     async fn test_genesis_set_storage_kakarot_contract_account() {
         // Given
-        let starknet_address = *ACCOUNT_ADDRESS;
-        let key = U256::MAX;
+        let starknet_address = FieldElement::from_hex_be("0x1234").unwrap();
+        let key = U256::from_str("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb").unwrap();
         let storage_variable_name = "storage_";
-        let value = U256::MAX;
+        let value = U256::from_str("0xccccccccccccccccccccccccccccccccdddddddddddddddddddddddddddddddd").unwrap();
         let value_split = split_u256_into_field_elements(value);
 
         // This is equivalent to setting the storage of Kakarot's `storage_` variable at
-        // index 2^256 - 1 to 2^256 - 1.
-        // The first storage key is for value.low.
-        // The second storage key is for value.high.
+        // index 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb to
+        // 0xccccccccccccccccccccccccccccccccdddddddddddddddddddddddddddddddd. The first storage key
+        // is for value.low. The second storage key is for value.high.
         let expected_output = vec![
             (
                 (
@@ -383,8 +384,10 @@ mod tests {
         // Use genesis_set_storage_kakarot_contract_account define the storage data
         // to be stored into the contract account
         let genesis_address = FieldElement::from_str("0x1234").unwrap();
-        let expected_key = U256::MAX;
-        let expected_value = U256::MAX;
+        let expected_key =
+            U256::from_str("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb").unwrap();
+        let expected_value =
+            U256::from_str("0xccccccccccccccccccccccccccccccccdddddddddddddddddddddddddddddddd").unwrap();
         let genesis_storage_data =
             genesis_set_storage_kakarot_contract_account(genesis_address, expected_key, expected_value).unwrap();
 
