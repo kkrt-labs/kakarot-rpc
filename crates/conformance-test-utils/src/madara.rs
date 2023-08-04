@@ -1,4 +1,6 @@
-use reth_primitives::Bytes;
+use eyre::Result;
+use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
+use reth_primitives::{Bytes, U128, U256};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
@@ -24,17 +26,79 @@ pub fn genesis_load_bytecode(
         .collect()
 }
 
+/// Generates the genesis storage tuple for setting the storage of a Starknet contract.
+///
+/// This function calculates the storage key for the storage variable `storage_variable_name` and
+/// its keys. The resulting tuple represents the initial storage of the contract, where the storage
+/// key at a given `storage_offset` is set to the specified `storage_value`.
+pub fn genesis_set_storage_starknet_contract(
+    starknet_address: FieldElement,
+    storage_variable_name: &str,
+    keys: &[FieldElement],
+    storage_value: FieldElement,
+    storage_offset: u64,
+) -> Result<((ContractAddress, StorageKey), StorageValue)> {
+    // Compute the storage key for the storage variable name and the keys.
+    let mut storage_key = get_storage_var_address(storage_variable_name, keys)?;
+
+    // Add the offset to the storage key.
+    storage_key += FieldElement::from(storage_offset);
+
+    let contract_address: ContractAddress = starknet_address.into();
+
+    // Create the tuple for the initial storage data on the Kakarot contract with the given storage key.
+    let storage_data = ((contract_address, storage_key.into()), storage_value.into());
+
+    Ok(storage_data)
+}
+
+/// Generates the genesis storage tuples for pre-funding a Starknet address on Starknet.
+///
+/// This function calculates the storage keys for the balance of the ERC20 Fee Token
+/// contract using the provided Starknet address. The resulting Vec of tuples represent the initial
+/// storage of the Fee Token contract, where the account associated with the Starknet address is
+/// pre-funded with the specified `amount`. The `amount` is split into two 128-bit chunks, which
+/// are stored in the storage keys at offsets 0 and 1.
+pub fn genesis_fund_starknet_address(
+    starknet_address: FieldElement,
+    amount: U256,
+) -> Result<Vec<((ContractAddress, StorageKey), StorageValue)>> {
+    // Split the amount into two 128-bit chunks.
+    let low = amount & U256::from(U128::MAX);
+    let high = amount >> 128;
+
+    // The storage key offsets for the two 128-bit chunks.
+    let amount_offset = [(low, 0), (high, 1)]; // (value, offset)
+
+    // Iterate over the storage key offsets and generate the storage tuples.
+    amount_offset
+        .iter()
+        .map(|(value, offset)| {
+            genesis_set_storage_starknet_contract(
+                FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN)?,
+                "ERC20_balances",
+                &[starknet_address],
+                FieldElement::from_bytes_be(&value.to_be_bytes())?,
+                *offset,
+            )
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
 
+    use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
     use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
     use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, deploy_kakarot_system};
     use katana_core::backend::state::StorageRecord;
-    use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
+    use reth_primitives::{U128, U256};
+    use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
+    use starknet::core::utils::get_storage_var_address;
     use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
     use starknet::providers::JsonRpcClient;
     use starknet_api::core::{ClassHash, ContractAddress as StarknetContractAddress, Nonce};
@@ -42,6 +106,38 @@ mod tests {
     use starknet_api::state::StorageKey as StarknetStorageKey;
 
     use super::*;
+
+    /// This test verifies that the `genesis_set_storage_starknet_contract` function generates the
+    /// correct storage data tuples for a given Starknet address, storage variable name, keys,
+    /// storage value, and storage key offset.
+    #[tokio::test]
+    async fn test_genesis_set_storage_starknet_contract() {
+        // Given
+        let starknet_address = *ACCOUNT_ADDRESS;
+        let storage_variable_name = "test_name";
+        let keys = vec![];
+        let storage_value = FieldElement::from_hex_be("0x1234").unwrap();
+        let storage_offset = 0;
+
+        // This is the expected output tuple of storage data.
+        let expected_output = (
+            (starknet_address.into(), get_storage_var_address(storage_variable_name, &keys).unwrap().into()),
+            storage_value.into(),
+        );
+
+        // When
+        let result = genesis_set_storage_starknet_contract(
+            starknet_address,
+            storage_variable_name,
+            &keys,
+            storage_value,
+            storage_offset,
+        )
+        .unwrap();
+
+        // Then
+        assert_eq!(result, expected_output);
+    }
 
     fn get_starknet_storage_key(var_name: &str, args: &[FieldElement]) -> StarknetStorageKey {
         StarknetStorageKey(
@@ -134,5 +230,46 @@ mod tests {
 
         // Assert that the expected and actual bytecodes are equal
         assert_eq!(deployed_bytecode, bytecode_actual);
+    }
+
+    /// This test verifies that the `genesis_fund_starknet_address` function generates the correct
+    /// Vec of storage data tuples for a given Starknet address and amount.
+    #[tokio::test]
+    async fn test_genesis_fund_starknet_address() {
+        // Given
+        let starknet_address = FieldElement::from_hex_be("0x1234").unwrap();
+        let token_fee_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
+        let storage_variable_name = "ERC20_balances";
+        let amount = U256::MAX;
+        let amount_low = amount & U256::from(U128::MAX); // u256.low
+        let amount_high = amount >> 128; // u256.high
+
+        // This is equivalent to pre-funding the Starknet address with 2^256 - 1 Fee Tokens.
+        // The first storage key is for u256.low
+        // The second storage key is for u256.high
+        let expected_output = vec![
+            (
+                (
+                    token_fee_address.into(),
+                    get_storage_var_address(storage_variable_name, &[starknet_address]).unwrap().into(),
+                ),
+                FieldElement::from_bytes_be(&amount_low.to_be_bytes()).unwrap().into(),
+            ),
+            (
+                (
+                    token_fee_address.into(),
+                    (get_storage_var_address(storage_variable_name, &[starknet_address]).unwrap()
+                        + FieldElement::from(1u64))
+                    .into(),
+                ),
+                FieldElement::from_bytes_be(&amount_high.to_be_bytes()).unwrap().into(),
+            ),
+        ];
+
+        // When
+        let result = genesis_fund_starknet_address(starknet_address, amount).unwrap();
+
+        // Then
+        assert_eq!(result, expected_output);
     }
 }
