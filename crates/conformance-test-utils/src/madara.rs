@@ -425,17 +425,29 @@ mod tests {
 
     #[test]
     fn test_split_u256_into_field_elements() {
-        // Given
-        let value = U256::MAX;
-        let expected_output = [
-            FieldElement::from_hex_be("0xffffffffffffffffffffffffffffffff").unwrap(),
-            FieldElement::from_hex_be("0xffffffffffffffffffffffffffffffff").unwrap(),
+        let test_cases = vec![
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", // Normal case
+            "0x0000000000000000000000000000000000000000000000000000000000000000", // Minimum value
+            "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // Maximum value
         ];
 
-        // When
-        let result = split_u256_into_field_elements(value);
+        test_cases.iter().for_each(|&value_str| {
+            // Given
+            // U256 value from the hexadecimal string
+            let value = U256::from_str(value_str).unwrap();
 
-        // Then
-        assert_eq!(result, expected_output);
+            // When
+            let result = split_u256_into_field_elements(value);
+
+            // Then
+            // Recalculate the U256 values using the resulting FieldElements
+            // The first is the low 128 bits of the U256 value
+            // The second is the high 128 bits of the U256 value and is left shifted by 128 bits
+            let result: U256 =
+                U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
+
+            // Assert that the original and recombined U256 values are equal
+            assert_eq!(result, value, "Failed for value: {}", value_str);
+        });
     }
 }
