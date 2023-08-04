@@ -1,0 +1,69 @@
+[workspace]
+members = ["crates/eth-rpc", "crates/core", "crates/conformance-test-utils"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = [
+  "Abdelhamid Bakhta <@abdelhamidbakhta>",
+  "Elias Tazartes <@eikix>",
+  "Clement Walter <@clementwalter>",
+  "Gregory Edison <@greged93>",
+  "Johann Bestowrous <@jobez>",
+  "Harsh Bajpai <@bajpai244>",
+  "Danilo Kim <@danilowhk>",
+]
+description = "RPC node for the Kakarot zk EVM"
+homepage = "https://github.com/kkrt-labs"
+repository = "https://github.com/kkrt-labs/kakarot-rpc"
+readme = "./README.md"
+license = "MIT"
+
+[workspace.dependencies]
+# Starknet dependencies
+starknet = "0.4.0"
+starknet-crypto = "0.5.1"
+starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "a4c78ff" }
+
+# Ethereum dependencies
+ethers = "2.0"
+ethers-solc = "2.0"
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
+jsonrpsee = { version = "0.18.2", features = ["full"] }
+
+# Serde
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = "1.0"
+serde_with = "2.2.0"
+
+# Others
+eyre = "0.6.8"
+async-trait = "0.1.58"
+pin-project = "1.1.2"
+lazy_static = "1.4.0"
+dotenv = "0.15.0"
+ruint = "1.9.0"
+url = "2.3.1"
+tokio = { version = "1.21.2", features = ["macros"] }
+
+# In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
+# Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
+# see https://github.com/dojoengine/dojo/issues/563
+katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "b37a655f536ffb02570e9dd17f5e212792acccfb" }
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "b37a655f536ffb02570e9dd17f5e212792acccfb" }
+cargo-husky = { version = "1.5.0", default-features = false, features = [
+  "precommit-hook",
+  "run-for-all",
+  "run-cargo-clippy",
+  "run-cargo-fmt",
+] }
+
+[patch.crates-io]
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
+[patch."https://github.com/starkware-libs/blockifier"]
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f5b684d" }
