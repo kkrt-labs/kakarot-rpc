@@ -372,15 +372,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_kakarot_contract_account_storage() {
-        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
+        // Given
+        let test_environment = Arc::new(KakarotTestEnvironment::new().await);
 
-        let funding_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
-
-        let deployed_kakarot =
-            deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), funding_amount).await;
-
-        let starknet_client = JsonRpcClient::new(StarknetHttpTransport::new(starknet_test_sequencer.url()));
-
+        // When
         // Use genesis_set_storage_kakarot_contract_account define the storage data
         // to be stored into the contract account
         let genesis_address = FieldElement::from_str("0x1234").unwrap();
@@ -391,10 +386,12 @@ mod tests {
         let genesis_storage_data =
             genesis_set_storage_kakarot_contract_account(genesis_address, expected_key, expected_value).unwrap();
 
+        // Create an atomic reference to the test environment to avoid dropping it
+        let env = Arc::clone(&test_environment);
         // It is not possible to block the async test task, so we need to spawn a blocking task
         tokio::task::spawn_blocking(move || {
             // Get lock on the Starknet sequencer
-            let mut starknet = starknet_test_sequencer.sequencer.starknet.blocking_write();
+            let mut starknet = env.sequencer().sequencer.starknet.blocking_write();
             let mut storage = HashMap::new();
 
             // Prepare the record to be inserted into the storage
@@ -405,10 +402,11 @@ mod tests {
             });
 
             // Set the storage record for the contract
+            let contract_account_class_hash = env.kakarot().contract_account_class_hash;
             let genesis_address = StarknetContractAddress(Into::<StarkFelt>::into(genesis_address).try_into().unwrap());
             let storage_record = StorageRecord {
                 nonce: Nonce(StarkFelt::from(0u8)),
-                class_hash: ClassHash(deployed_kakarot.contract_account_class_hash.into()),
+                class_hash: ClassHash(contract_account_class_hash.into()),
                 storage,
             };
             starknet.state.storage.insert(genesis_address, storage_record);
@@ -417,6 +415,7 @@ mod tests {
         .unwrap();
 
         // Deploy the contract account with the set genesis storage and retrieve the storage on the contract
+        let starknet_client = test_environment.client().starknet_provider();
         let genesis_contract = ContractAccount::new(&starknet_client, genesis_address);
         let [key_low, key_high] = split_u256_into_field_elements(expected_key);
         let actual_value =
