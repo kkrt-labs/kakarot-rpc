@@ -5,27 +5,33 @@ use serde::{Deserialize, Serialize};
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
 #[derive(Serialize, Deserialize, Debug)]
-#[allow(non_snake_case)]
 pub struct HiveGenesisConfig {
     pub config: Config,
     pub coinbase: Address,
     pub difficulty: U64,
-    pub extraData: Bytes,
-    pub gasLimit: U64,
+    #[serde(rename = "extraData")]
+    pub extra_data: Bytes,
+    #[serde(rename(deserialize = "gasLimit"))]
+    pub gas_limit: U64,
     pub nonce: U64,
     pub timestamp: U64,
     pub alloc: HashMap<Address, AccountInfo>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-#[allow(non_snake_case)]
 pub struct Config {
-    pub chainId: i128,
-    pub homesteadBlock: i128,
-    pub eip150Block: i128,
-    pub eip150Hash: H256,
-    pub eip155Block: i128,
-    pub eip158Block: i128,
+    #[serde(rename(deserialize = "chainId"))]
+    pub chain_id: i128,
+    #[serde(rename(deserialize = "homesteadBlock"))]
+    pub homestead_block: i128,
+    #[serde(rename(deserialize = "eip150Block"))]
+    pub eip150_block: i128,
+    #[serde(rename(deserialize = "eip150Hash"))]
+    pub eip150_hash: H256,
+    #[serde(rename(deserialize = "eip155Block"))]
+    pub eip155_block: i128,
+    #[serde(rename(deserialize = "eip158Block"))]
+    pub eip158_block: i128,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
