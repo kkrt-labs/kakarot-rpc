@@ -11,7 +11,7 @@ pub struct HiveGenesisConfig {
     pub difficulty: U64,
     #[serde(rename = "extraData")]
     pub extra_data: Bytes,
-    #[serde(rename(deserialize = "gasLimit"))]
+    #[serde(rename = "gasLimit")]
     pub gas_limit: U64,
     pub nonce: U64,
     pub timestamp: U64,
@@ -26,17 +26,17 @@ impl HiveGenesisConfig {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    #[serde(rename(deserialize = "chainId"))]
+    #[serde(rename = "chainId")]
     pub chain_id: i128,
-    #[serde(rename(deserialize = "homesteadBlock"))]
+    #[serde(rename = "homesteadBlock")]
     pub homestead_block: i128,
-    #[serde(rename(deserialize = "eip150Block"))]
+    #[serde(rename = "eip150Block")]
     pub eip150_block: i128,
-    #[serde(rename(deserialize = "eip150Hash"))]
+    #[serde(rename = "eip150Hash")]
     pub eip150_hash: H256,
-    #[serde(rename(deserialize = "eip155Block"))]
+    #[serde(rename = "eip155Block")]
     pub eip155_block: i128,
-    #[serde(rename(deserialize = "eip158Block"))]
+    #[serde(rename = "eip158Block")]
     pub eip158_block: i128,
 }
 
