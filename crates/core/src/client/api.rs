@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use eyre::Result;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U128, U256, U64};
@@ -80,7 +82,7 @@ pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
 
     fn proxy_account_class_hash(&self) -> FieldElement;
 
-    fn starknet_provider(&self) -> &P;
+    fn starknet_provider(&self) -> Arc<P>;
 
     async fn map_block_id_to_block_number(&self, block_id: &StarknetBlockId) -> Result<u64, EthApiError<P::Error>>;
 

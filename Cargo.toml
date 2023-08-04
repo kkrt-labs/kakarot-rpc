@@ -62,8 +62,9 @@ cargo-husky = { version = "1.5.0", default-features = false, features = [
   "run-cargo-fmt",
 ] }
 
-[patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "b1a3683fe20bb668e4ab72cd9f99b8a0a33515a8" }
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "f5b684d" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "a31892d" }
+
+[patch.crates-io]
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "51a35b2b405f29786e48a94f364d64d373d79eea" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "51a35b2b405f29786e48a94f364d64d373d79eea" }

@@ -26,8 +26,13 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
+use crate::client::api::KakarotStarknetApi;
+use crate::client::config::{Network, StarknetConfig as StarknetClientConfig};
 use crate::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
+use crate::client::KakarotClient;
+use crate::contracts::kakarot::KakarotContract;
 use crate::models::felt::Felt252Wrapper;
+use crate::test_utils::constants::EOA_WALLET;
 
 /// Macro to find the root path of the project.
 ///
@@ -509,7 +514,7 @@ async fn deploy_kakarot_contracts(
 /// addresses of the kakarot and kakarot_proxy contracts, and the Starknet address of the EOA.
 pub struct DeployedKakarot {
     pub eoa_private_key: H256,
-    pub kakarot: FieldElement,
+    pub kakarot_address: FieldElement,
     pub proxy_class_hash: FieldElement,
     pub contract_account_class_hash: FieldElement,
     pub eoa_addresses: ContractAddresses,
@@ -575,6 +580,84 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
     }
 }
 
+pub struct KakarotTestEnvironment {
+    sequencer: TestSequencer,
+    kakarot_client: KakarotClient<JsonRpcClient<HttpTransport>>,
+    kakarot: DeployedKakarot,
+    kakarot_contract: KakarotContract<JsonRpcClient<HttpTransport>>,
+    evm_contracts: HashMap<String, Contract>,
+}
+
+pub struct Contract {
+    pub addresses: ContractAddresses,
+    pub abi: Abi,
+}
+
+pub struct ContractDeploymentArgs<T: Tokenize> {
+    pub name: String,
+    pub constructor_args: T,
+}
+
+impl KakarotTestEnvironment {
+    pub async fn new() -> KakarotTestEnvironment {
+        // Construct a Starknet test sequencer
+        let sequencer = construct_kakarot_test_sequencer().await;
+
+        // Define the expected funded amount for the Kakarot system
+        let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
+
+        // Deploy the Kakarot system
+        let kakarot = deploy_kakarot_system(&sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
+
+        // Create a Kakarot client
+        let kakarot_client = KakarotClient::new(
+            StarknetClientConfig::new(
+                Network::JsonRpcProvider(sequencer.url()),
+                kakarot.kakarot_address,
+                kakarot.proxy_class_hash,
+            ),
+            JsonRpcClient::new(HttpTransport::new(sequencer.url())),
+        );
+
+        let kakarot_contract =
+            KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
+
+        KakarotTestEnvironment { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts: HashMap::new() }
+    }
+
+    pub async fn deploy_evm_contract<T: Tokenize>(mut self, contract_args: ContractDeploymentArgs<T>) -> Self {
+        let kakarot = &self.kakarot;
+        let sequencer = &self.sequencer;
+        let evm_contracts = &mut self.evm_contracts;
+
+        match kakarot.deploy_evm_contract(sequencer.url(), &contract_args.name, contract_args.constructor_args).await {
+            Ok((abi, addresses)) => evm_contracts.insert(contract_args.name, Contract { addresses, abi }),
+            Err(err) => panic!("Failed to deploy contract {}: {:?}", contract_args.name, err.to_string()),
+        };
+        self
+    }
+
+    pub fn sequencer(&self) -> &TestSequencer {
+        &self.sequencer
+    }
+
+    pub fn client(&self) -> &KakarotClient<JsonRpcClient<HttpTransport>> {
+        &self.kakarot_client
+    }
+
+    pub fn kakarot(&self) -> &DeployedKakarot {
+        &self.kakarot
+    }
+
+    pub fn evm_contract(&self, name: &str) -> &Contract {
+        self.evm_contracts.get(name).unwrap_or_else(|| panic!("could not find contract with name: {}", name))
+    }
+
+    pub fn kakarot_contract(&self) -> &KakarotContract<JsonRpcClient<HttpTransport>> {
+        &self.kakarot_contract
+    }
+}
+
 /// Constructs a test sequencer with the Starknet configuration tailored for Kakarot.
 ///
 /// This function initializes a `TestSequencer` instance with the default `SequencerConfig`
@@ -623,7 +706,7 @@ pub async fn deploy_kakarot_system(
     DeployedKakarot {
         eoa_private_key,
         eoa_addresses,
-        kakarot: *kkrt_address,
+        kakarot_address: *kkrt_address,
         proxy_class_hash: *class_hash.get("proxy").unwrap(),
         contract_account_class_hash: *class_hash.get("contract_account").unwrap(),
     }

@@ -91,7 +91,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let starknet_contract_address =
             self.kakarot_contract.compute_starknet_address(&ethereum_address, &starknet_block_id).await?;
 
-        let contract_account = ContractAccount::new(self.starknet_provider(), starknet_contract_address);
+        let provider = self.starknet_provider();
+        let contract_account = ContractAccount::new(&provider, starknet_contract_address);
         let bytecode = contract_account.bytecode(&starknet_block_id).await?;
 
         // Convert the result of the function call to a vector of bytes
@@ -364,7 +365,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let starknet_address = self.compute_starknet_address(ethereum_address, &starknet_block_id).await?;
 
         let native_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
-        let native_token = StarknetErc20::new(self.starknet_provider(), native_token_address);
+        let provider = self.starknet_provider();
+        let native_token = StarknetErc20::new(&provider, native_token_address);
         let balance = native_token.balance_of(&starknet_address, &starknet_block_id).await?;
 
         Ok(balance)
@@ -392,7 +394,8 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let key_high = index >> 128;
         let key_high: Felt252Wrapper = key_high.try_into()?;
 
-        let contract_account = ContractAccount::new(self.starknet_provider(), starknet_contract_address);
+        let provider = self.starknet_provider();
+        let contract_account = ContractAccount::new(&provider, starknet_contract_address);
         let storage_value = contract_account.storage(&key_low.into(), &key_high.into(), &starknet_block_id).await?;
 
         Ok(storage_value)
@@ -602,8 +605,8 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
     }
 
     /// Returns a reference to the Starknet provider.
-    fn starknet_provider(&self) -> &P {
-        &self.starknet_provider
+    fn starknet_provider(&self) -> Arc<P> {
+        Arc::clone(&self.starknet_provider)
     }
 
     /// Returns the Starknet block number for a given block id.

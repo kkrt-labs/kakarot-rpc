@@ -75,7 +75,7 @@ pub async fn setup_kakarot_rpc_integration_env(
     // Create Starknet and Kakarot clients.
     let starknet_config = StarknetConfig::new(
         Network::JsonRpcProvider(starknet_test_sequencer.url()),
-        deployed_kakarot.kakarot,
+        deployed_kakarot.kakarot_address,
         deployed_kakarot.proxy_class_hash,
     );
     let starknet_client = StarknetJsonRpcClient::new(starknet_http_transport);
