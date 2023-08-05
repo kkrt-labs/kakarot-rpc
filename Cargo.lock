@@ -1786,7 +1786,6 @@ dependencies = [
  "cargo-husky",
  "dotenv",
  "eyre",
- "foundry-config",
  "kakarot_rpc_core",
  "katana-core",
  "mp-starknet",

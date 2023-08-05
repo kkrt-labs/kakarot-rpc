@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::fs;
+use std::io::Error as IoError;
+use std::path::{Path, PathBuf};
 
 use dotenv::dotenv;
 use eyre::Result;
-use foundry_config::find_project_root_path;
-use kakarot_rpc_core::root_project_path;
 use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, declare_kakarot_contracts};
 use pallet_starknet::genesis_loader::{read_file_to_string, ContractClass, GenesisLoader, HexFelt};
 use reth_primitives::{Address, Bytes, H256, U256, U64};
@@ -44,17 +45,23 @@ impl HiveGenesisConfig {
 /// 3. Declare Kakarot contracts
 /// 4. Add Kakarot contracts to Loader
 /// 5. Add Hive accounts to Loader
-pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisConfig) -> Result<GenesisLoader> {
+/// 6. Serialize Loader to Madara genesis file
+pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisConfig) -> Result<(), IoError> {
     // Load the Madara genesis file
     let mut loader: GenesisLoader =
         serde_json::from_str(&read_file_to_string("crates/conformance-test-utils/src/madara/genesis.json"))
             .expect("Failed to load Madara genesis file");
 
+    // Get compiled path of contracts on loader
+    let mut compiled_path = PathBuf::from("");
+    if let ContractClass::Path { path, .. } = &loader.contract_classes[0].1 {
+        compiled_path = PathBuf::from(path);
+
+        // Remove filename
+        compiled_path.pop();
+    }
+
     dotenv().ok();
-    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
-        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
-         `./scripts/make_with_env.sh test`"
-    ));
 
     // Construct a Starknet test sequencer
     let sequencer = construct_kakarot_test_sequencer().await;
@@ -70,8 +77,9 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
         loader.contract_classes.push((
             HexFelt(*class_hash),
             ContractClass::Path {
-                path: compiled_kakarot_path.join(filename).into_os_string().into_string().unwrap(), /* safe unwrap,
-                                                                                                     * valid path */
+                // Add the compiled path to the Kakarot contract filename
+                path: compiled_path.join(filename).with_extension("json").into_os_string().into_string().unwrap(), /* safe unwrap,
+                                                                                             * valid path */
                 version: 0,
             },
         ));
@@ -135,7 +143,12 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
         }
     });
 
-    Ok(loader)
+    // Serialize the loader to a string
+    let madara_genesis_str = serde_json::to_string_pretty(&loader)?;
+    // Write the string to a file
+    fs::write(Path::new("src/hive/madara_genesis.json"), madara_genesis_str)?;
+
+    Ok(())
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -207,8 +220,9 @@ mod tests {
     #[tokio::test]
     async fn test_madara_genesis() {
         let hive_genesis = HiveGenesisConfig::new().expect("Failed to read genesis.json");
-        let madara_genesis = serialize_hive_to_madara_genesis_config(hive_genesis).await.unwrap();
-        let madara_genesis_str = serde_json::to_string(&madara_genesis).unwrap();
-        println!("{madara_genesis_str}");
+        serialize_hive_to_madara_genesis_config(hive_genesis).await.unwrap();
+        let loader: GenesisLoader =
+            serde_json::from_str(std::include_str!("madara_genesis.json")).expect("Failed to read madara_genesis.json");
+        assert_eq!(9 + 5 + 7, loader.contracts.len()); // 9 original + 5 Kakarot contracts + 7 hive
     }
 }

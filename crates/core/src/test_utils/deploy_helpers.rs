@@ -58,7 +58,6 @@ use crate::test_utils::constants::EOA_WALLET;
 ///
 /// This macro will panic if it fails to find the root path of the project or if the root path
 /// cannot be represented as a UTF-8 string.
-#[macro_export]
 macro_rules! root_project_path {
     ($relative_path:expr) => {{
         let project_root_buf = find_project_root_path(None).unwrap();
@@ -516,7 +515,6 @@ async fn deploy_kakarot_contracts(
 pub struct DeployedKakarot {
     pub eoa_private_key: H256,
     pub kakarot_address: FieldElement,
-    pub kakarot_class_hash: FieldElement,
     pub proxy_class_hash: FieldElement,
     pub contract_account_class_hash: FieldElement,
     pub eoa_addresses: ContractAddresses,
@@ -709,7 +707,6 @@ pub async fn deploy_kakarot_system(
         eoa_private_key,
         eoa_addresses,
         kakarot_address: *kkrt_address,
-        kakarot_class_hash: *class_hash.get("kakarot").unwrap(),
         proxy_class_hash: *class_hash.get("proxy").unwrap(),
         contract_account_class_hash: *class_hash.get("contract_account").unwrap(),
     }
