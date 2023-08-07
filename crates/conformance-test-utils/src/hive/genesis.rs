@@ -95,7 +95,7 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
             },
         ));
 
-        let address = *address_map.get(filename).expect(&format!("Address for {} not found", filename));
+        let address = *address_map.get(filename).expect("Failed to get contract address");
 
         // Add Kakarot contracts (address, class_hash) to Kakarot Contracts HashMap
         // Remove .json from filename to get contract name
