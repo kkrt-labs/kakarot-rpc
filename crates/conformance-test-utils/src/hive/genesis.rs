@@ -39,13 +39,8 @@ impl HiveGenesisConfig {
 }
 
 // Define constant addresses for Kakarot contracts
-const KAKAROT_ADDRESSES: &[(&str, &str)] = &[
-    ("kakarot", "0x9001"),
-    ("contract_account", "0x9003"),
-    ("externally_owned_account", "0x9002"),
-    ("proxy", "0x9004"),
-    ("blockhash_registry", "0x9005"),
-];
+const KAKAROT_ADDRESSES: &str = "0x9001";
+const BLOCKHASH_REGISTRY_ADDRESS: &str = "0x9002";
 
 /// Convert Hive Genesis Config to Madara Genesis Config
 ///
@@ -64,14 +59,8 @@ pub async fn serialize_hive_to_madara_genesis_config(
     // Compute the class hash of Kakarot contracts
     let class_hashes = compute_kakarot_contracts_class_hash();
 
-    // Convert constant addresses into HashMap for easy lookup
-    let address_map: HashMap<String, FieldElement> = KAKAROT_ADDRESSES
-        .iter()
-        .map(|(name, address)| (name.to_string(), FieldElement::from_hex_be(address).unwrap())) // safe unwrap
-        .collect();
-
-    // { contract : (address, class_hash) }
-    let mut kakarot_contracts = HashMap::<String, (FieldElement, FieldElement)>::new();
+    // { contract : class_hash }
+    let mut kakarot_contracts = HashMap::<String, FieldElement>::new();
 
     // Add Kakarot contracts Contract Classes to loader
     // Vec so no need to sort
@@ -86,27 +75,28 @@ pub async fn serialize_hive_to_madara_genesis_config(
             },
         ));
 
-        let address = *address_map.get(filename).expect("Failed to get contract address");
-
-        // Add Kakarot contracts (address, class_hash) to Kakarot Contracts HashMap
+        // Add Kakarot contracts {contract : class_hash} to Kakarot Contracts HashMap
         // Remove .json from filename to get contract name
-        kakarot_contracts.insert(filename.replace(".json", ""), (address, *class_hash));
+        kakarot_contracts.insert(filename.replace(".json", ""), *class_hash);
     });
 
-    // Get Kakarot contracts address and proxy class hash
-    let kakarot_address = kakarot_contracts.get("kakarot").unwrap().0;
-    let blockhash_registry_address = kakarot_contracts.get("blockhash_registry").unwrap().0;
-    let account_proxy_class_hash = kakarot_contracts.get("proxy").unwrap().1;
-    let contract_account_class_hash = kakarot_contracts.get("contract_account").unwrap().1;
-    let eoa_class_hash = kakarot_contracts.get("externally_owned_account").unwrap().1;
+    // Set the Kakarot contracts address and proxy class hash
+    let kakarot_address = FieldElement::from_hex_be(KAKAROT_ADDRESSES).unwrap(); // Safe unwrap, 0x9001
+    let blockhash_registry_address = FieldElement::from_hex_be(BLOCKHASH_REGISTRY_ADDRESS).unwrap(); // Safe unwrap, 0x9002
+    let account_proxy_class_hash = *kakarot_contracts.get("proxy").expect("Failed to get proxy class hash");
+    let contract_account_class_hash =
+        *kakarot_contracts.get("contract_account").expect("Failed to get contract_account class hash");
+    let eoa_class_hash = *kakarot_contracts.get("externally_owned_account").expect("Failed to get eoa class hash");
 
     // Add Kakarot contracts to Loader
-    // Convert the HashMap to Vec and sort by key to ensure deterministic order
-    let mut kakarot_contracts: Vec<(String, (FieldElement, FieldElement))> = kakarot_contracts.into_iter().collect();
-    kakarot_contracts.sort_by_key(|(_, (address, _))| *address);
-    kakarot_contracts.iter().for_each(|(_, (address, class_hash))| {
-        madara_loader.contracts.push((HexFelt(*address), HexFelt(*class_hash)));
-    });
+    madara_loader.contracts.push((
+        HexFelt(kakarot_address),
+        HexFelt(*kakarot_contracts.get("kakarot").expect("Failed to get kakarot class hash")),
+    ));
+    madara_loader.contracts.push((
+        HexFelt(blockhash_registry_address),
+        HexFelt(*kakarot_contracts.get("blockhash_registry").expect("Failed to get blockhash_registry class hash")),
+    ));
 
     // Set storage keys of Kakarot contract
     // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/constants.cairo
@@ -115,7 +105,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
         ("contract_account_class_hash", contract_account_class_hash),
         ("externally_owned_account", eoa_class_hash),
         ("account_proxy_class_hash", account_proxy_class_hash),
-        ("blockhash_registry_address", blockhash_registry_address),
+        ("blockhash_registry_address", blockhash_registry_address), // Safe unwrap 0x9002
     ];
 
     storage_keys.iter().for_each(|(key, value)| {
