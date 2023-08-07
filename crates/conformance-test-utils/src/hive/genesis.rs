@@ -38,6 +38,15 @@ impl HiveGenesisConfig {
     }
 }
 
+// Define constant addresses for Kakarot contracts
+const KAKAROT_ADDRESSES: &[(&str, &str)] = &[
+    ("kakarot", "0x9001"),
+    ("contract_account", "0x9003"),
+    ("externally_owned_account", "0x9002"),
+    ("proxy", "0x9004"),
+    ("blockhash_registry", "0x9005"),
+];
+
 /// Convert Hive Genesis Config to Madara Genesis Config
 ///
 /// This function will:
@@ -64,11 +73,18 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
     // Declare Kakarot contracts
     let class_hashes = compute_kakarot_contracts_class_hash();
 
+    // Convert constant addresses into HashMap for easy lookup
+    let address_map: HashMap<String, FieldElement> = KAKAROT_ADDRESSES
+        .iter()
+        .map(|(name, address)| (name.to_string(), FieldElement::from_hex_be(address).unwrap())) // safe unwrap
+        .collect();
+
     // { contract : (address, class_hash) }
     let mut kakarot_contracts = HashMap::<String, (FieldElement, FieldElement)>::new();
+
     // Add Kakarot contracts Contract Classes to loader
     // Vec so no need to sort
-    class_hashes.iter().enumerate().for_each(|(index, (filename, class_hash))| {
+    class_hashes.iter().for_each(|(filename, class_hash)| {
         loader.contract_classes.push((
             HexFelt(*class_hash),
             ContractClass::Path {
@@ -78,10 +94,12 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
                 version: 0,
             },
         ));
+
+        let address = *address_map.get(filename).expect(&format!("Address for {} not found", filename));
+
         // Add Kakarot contracts (address, class_hash) to Kakarot Contracts HashMap
         // Remove .json from filename to get contract name
-        // 36865 is over 0x9000
-        kakarot_contracts.insert(filename.replace(".json", ""), (FieldElement::from(36865 + index), *class_hash));
+        kakarot_contracts.insert(filename.replace(".json", ""), (address, *class_hash));
     });
 
     // Get Kakarot contracts address and proxy class hash
