@@ -4,6 +4,7 @@ use std::io::Error as IoError;
 use std::path::{Path, PathBuf};
 
 use eyre::Result;
+use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use kakarot_rpc_core::test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
 use pallet_starknet::genesis_loader::{read_file_to_string, ContractClass, GenesisLoader, HexFelt};
 use reth_primitives::{Address, Bytes, H256, U256, U64};
@@ -13,6 +14,7 @@ use starknet::core::types::FieldElement;
 use crate::kakarot::compute_starknet_address;
 use crate::madara::utils::{
     genesis_fund_starknet_address, genesis_set_bytecode, genesis_set_storage_kakarot_contract_account,
+    genesis_set_storage_starknet_contract,
 };
 use crate::types::Felt;
 
@@ -84,7 +86,10 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
 
     // Get Kakarot contracts address and proxy class hash
     let kakarot_address = kakarot_contracts.get("kakarot").unwrap().0;
+    let blockhash_registry_address = kakarot_contracts.get("blockhash_registry").unwrap().0;
     let account_proxy_class_hash = kakarot_contracts.get("proxy").unwrap().1;
+    let contract_account_class_hash = kakarot_contracts.get("contract_account").unwrap().1;
+    let eoa_class_hash = kakarot_contracts.get("externally_owned_account").unwrap().1;
 
     // Add Kakarot contracts to Loader
     // Convert the HashMap to Vec and sort by key to ensure deterministic order
@@ -92,6 +97,23 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
     kakarot_contracts.sort_by_key(|(name, (_, _))| name.clone());
     kakarot_contracts.iter().for_each(|(_, (address, class_hash))| {
         loader.contracts.push((HexFelt(*address), HexFelt(*class_hash)));
+    });
+
+    // Set storage keys of Kakarot contract
+    // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/constants.cairo
+    let storage_keys = [
+        ("native_token_address", FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap()),
+        ("contract_account_class_hash", contract_account_class_hash),
+        ("externally_owned_account", eoa_class_hash),
+        ("account_proxy_class_hash", account_proxy_class_hash),
+        ("blockhash_registry_address", blockhash_registry_address),
+    ];
+
+    storage_keys.iter().for_each(|(key, value)| {
+        let storage_tuple = genesis_set_storage_starknet_contract(kakarot_address, key, &[], *value, 0);
+        loader
+            .storage
+            .push(unsafe { std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(storage_tuple) });
     });
 
     // Add Hive accounts to loader
