@@ -12,7 +12,9 @@ use starknet::providers::sequencer::models::TransactionSimulationInfo;
 use starknet::providers::Provider;
 
 use super::errors::EthApiError;
+use crate::models::allowance::TokenAllowance;
 use crate::models::balance::TokenBalances;
+use crate::models::metadata::TokenMetadata;
 use crate::models::transaction::StarknetTransactions;
 
 #[async_trait]
@@ -50,11 +52,20 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
         block_id: BlockId,
     ) -> Result<U256, EthApiError<P::Error>>;
 
+    async fn token_allowance(
+        &self,
+        contract_address: Address,
+        account_address: Address,
+        spender_address: Address,
+    ) -> Result<TokenAllowance, EthApiError<P::Error>>;
+
     async fn token_balances(
         &self,
         address: Address,
         contract_addresses: Vec<Address>,
     ) -> Result<TokenBalances, EthApiError<P::Error>>;
+
+    async fn token_metadata(&self, contract_address: Address) -> Result<TokenMetadata, EthApiError<P::Error>>;
 
     async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<P::Error>>;
 

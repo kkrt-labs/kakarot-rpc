@@ -44,11 +44,13 @@ use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot::KakarotContract;
+use crate::models::allowance::TokenAllowance;
 use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
 use crate::models::event::StarknetEvent;
 use crate::models::felt::Felt252Wrapper;
+use crate::models::metadata::TokenMetadata;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
 use crate::models::ConversionError;
 
@@ -401,6 +403,16 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         Ok(storage_value)
     }
 
+    /// Returns the amount which the sender is allowed to withdraw from the owner.
+    async fn token_allowance(
+        &self,
+        _contract_address: Address,
+        _account_address: Address,
+        _spender_address: Address,
+    ) -> Result<TokenAllowance, EthApiError<P::Error>> {
+        todo!()
+    }
+
     /// Returns token balances for a specific address given a list of contracts addresses.
     async fn token_balances(
         &self,
@@ -419,6 +431,11 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let token_balances = join_all(handles).await;
 
         Ok(TokenBalances { address, token_balances })
+    }
+
+    /// Returns metadata (name, symbol, decimals) for a given token contract address.
+    async fn token_metadata(&self, _contract_address: Address) -> Result<TokenMetadata, EthApiError<P::Error>> {
+        todo!()
     }
 
     /// Sends raw Ethereum transaction bytes to Kakarot

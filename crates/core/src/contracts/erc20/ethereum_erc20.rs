@@ -49,4 +49,27 @@ impl<'a, P: Provider + Send + Sync> EthereumErc20<'a, P> {
             actual: balance.len(),
         })?)
     }
+
+    pub async fn allowance(
+        self,
+        account_address: Address,
+        spender_address: Address,
+        block_id: BlockId,
+    ) -> Result<U256, EthApiError<P::Error>> {
+        let calldata =
+            IERC20Calls::Allowance(AllowanceCall { owner: account_address, spender: spender_address }).encode();
+        let calldata = calldata.into_iter().map(FieldElement::from).collect();
+
+        let block_id = EthBlockId::new(block_id);
+        let block_id: StarknetBlockId = block_id.try_into()?;
+
+        let result = self.kakarot_contract.eth_call(&self.address, calldata, &block_id).await?;
+        let allowance: Vec<u8> = result.0.into();
+
+        Ok(U256::try_from_be_slice(allowance.as_slice()).ok_or(DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "allowance".into(),
+            expected: 32,
+            actual: allowance.len(),
+        })?)
+    }
 }
