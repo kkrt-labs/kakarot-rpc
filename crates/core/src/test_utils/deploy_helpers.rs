@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use bytes::BytesMut;
@@ -331,26 +332,7 @@ async fn deploy_starknet_contract(
 async fn declare_kakarot_contracts(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) -> HashMap<String, FieldElement> {
-    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
-        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
-         `./scripts/make_with_env.sh test`"
-    ));
-
-    let paths = fs::read_dir(&compiled_kakarot_path)
-        .unwrap_or_else(|_| panic!("Could not read directory: {}", compiled_kakarot_path.display()));
-
-    let kakarot_compiled_contract_paths: Vec<_> = paths
-        .filter_map(|entry| {
-            let path = entry.expect("Failed to read directory entry").path();
-            if path.is_dir() || path.extension().unwrap_or_default() != "json" { None } else { Some(path) }
-        })
-        .collect();
-
-    assert!(
-        !kakarot_compiled_contract_paths.is_empty(),
-        "{} is empty, please run `make setup` to ensure that Kakarot evm is built.",
-        compiled_kakarot_path.display()
-    );
+    let kakarot_compiled_contract_paths = compiled_kakarot_paths();
 
     let mut class_hash: HashMap<String, FieldElement> = HashMap::new();
     for path in kakarot_compiled_contract_paths {
@@ -393,26 +375,7 @@ async fn compute_starknet_address(
 pub fn compute_kakarot_contracts_class_hash() -> Vec<(String, FieldElement)> {
     dotenv().ok();
     // Get the compiled Kakarot contracts directory path.
-    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
-        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
-         `./scripts/make_with_env.sh test`"
-    ));
-
-    let paths = fs::read_dir(&compiled_kakarot_path)
-        .unwrap_or_else(|_| panic!("Could not read directory: {}", compiled_kakarot_path.display()));
-
-    let kakarot_compiled_contract_paths: Vec<_> = paths
-        .filter_map(|entry| {
-            let path = entry.expect("Failed to read directory entry").path();
-            if path.is_dir() || path.extension().unwrap_or_default() != "json" { None } else { Some(path) }
-        })
-        .collect();
-
-    assert!(
-        !kakarot_compiled_contract_paths.is_empty(),
-        "{} is empty, please run `make setup` to ensure that Kakarot evm is built.",
-        compiled_kakarot_path.display()
-    );
+    let kakarot_compiled_contract_paths = compiled_kakarot_paths();
 
     // Deserialize each contract file into a `LegacyContractClass` object.
     // Compute the class hash of each contract.
@@ -434,6 +397,31 @@ pub fn compute_kakarot_contracts_class_hash() -> Vec<(String, FieldElement)> {
             (filename, contract_class.class_hash().expect("Failed to compute class hash"))
         })
         .collect()
+}
+
+fn compiled_kakarot_paths() -> Vec<PathBuf> {
+    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
+        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
+         `./scripts/make_with_env.sh test`"
+    ));
+
+    let paths = fs::read_dir(&compiled_kakarot_path)
+        .unwrap_or_else(|_| panic!("Could not read directory: {}", compiled_kakarot_path.display()));
+
+    let kakarot_compiled_contract_paths: Vec<_> = paths
+        .filter_map(|entry| {
+            let path = entry.expect("Failed to read directory entry").path();
+            if path.is_dir() || path.extension().unwrap_or_default() != "json" { None } else { Some(path) }
+        })
+        .collect();
+
+    assert!(
+        !kakarot_compiled_contract_paths.is_empty(),
+        "{} is empty, please run `make setup` to ensure that Kakarot evm is built.",
+        compiled_kakarot_path.display()
+    );
+
+    kakarot_compiled_contract_paths
 }
 
 async fn deploy_eoa(
