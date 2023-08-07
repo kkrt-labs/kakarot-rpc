@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use kakarot_rpc_core::test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
-use pallet_starknet::genesis_loader::{read_file_to_string, ContractClass, GenesisLoader, HexFelt};
+use pallet_starknet::genesis_loader::{ContractClass, GenesisLoader, HexFelt};
 use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
@@ -55,22 +55,13 @@ const KAKAROT_ADDRESSES: &[(&str, &str)] = &[
 /// 3. Add Kakarot contracts to Loader
 /// 4. Add Hive accounts to Loader (fund, storage, bytecode)
 /// 5. Serialize Loader to Madara genesis file
-pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisConfig) -> Result<(), IoError> {
-    // Load the Madara genesis file
-    let mut loader: GenesisLoader =
-        serde_json::from_str(&read_file_to_string("crates/conformance-test-utils/src/madara/genesis.json"))
-            .expect("Failed to load Madara genesis file");
-
-    // Get compiled path of contracts on loader
-    let mut compiled_path = PathBuf::from("");
-    if let ContractClass::Path { path, .. } = &loader.contract_classes[0].1 {
-        compiled_path = PathBuf::from(path);
-
-        // Remove filename
-        compiled_path.pop();
-    }
-
-    // Declare Kakarot contracts
+pub async fn serialize_hive_to_madara_genesis_config(
+    hive_genesis: HiveGenesisConfig,
+    mut madara_loader: GenesisLoader,
+    madara_genesis: &Path,
+    compiled_path: PathBuf,
+) -> Result<(), IoError> {
+    // Compute the class hash of Kakarot contracts
     let class_hashes = compute_kakarot_contracts_class_hash();
 
     // Convert constant addresses into HashMap for easy lookup
@@ -85,7 +76,7 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
     // Add Kakarot contracts Contract Classes to loader
     // Vec so no need to sort
     class_hashes.iter().for_each(|(filename, class_hash)| {
-        loader.contract_classes.push((
+        madara_loader.contract_classes.push((
             HexFelt(*class_hash),
             ContractClass::Path {
                 // Add the compiled path to the Kakarot contract filename
@@ -112,9 +103,9 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
     // Add Kakarot contracts to Loader
     // Convert the HashMap to Vec and sort by key to ensure deterministic order
     let mut kakarot_contracts: Vec<(String, (FieldElement, FieldElement))> = kakarot_contracts.into_iter().collect();
-    kakarot_contracts.sort_by_key(|(name, (_, _))| name.clone());
+    kakarot_contracts.sort_by_key(|(_, (address, _))| *address);
     kakarot_contracts.iter().for_each(|(_, (address, class_hash))| {
-        loader.contracts.push((HexFelt(*address), HexFelt(*class_hash)));
+        madara_loader.contracts.push((HexFelt(*address), HexFelt(*class_hash)));
     });
 
     // Set storage keys of Kakarot contract
@@ -129,7 +120,7 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
 
     storage_keys.iter().for_each(|(key, value)| {
         let storage_tuple = genesis_set_storage_starknet_contract(kakarot_address, key, &[], *value, 0);
-        loader
+        madara_loader
             .storage
             .push(unsafe { std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(storage_tuple) });
     });
@@ -148,13 +139,13 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
                                                                                 * is 20 bytes */
         );
         // Push to contracts
-        loader.contracts.push((HexFelt(starknet_address), HexFelt(account_proxy_class_hash)));
+        madara_loader.contracts.push((HexFelt(starknet_address), HexFelt(account_proxy_class_hash)));
 
         // Set the balance of the account
         // Call genesis_fund_starknet_address util to get the storage tuples
         let balance_storage_tuples = genesis_fund_starknet_address(starknet_address, account_info.balance);
         balance_storage_tuples.iter().for_each(|balance_storage_tuple| {
-            loader.storage.push(unsafe {
+            madara_loader.storage.push(unsafe {
                 std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*balance_storage_tuple)
             });
         });
@@ -167,7 +158,7 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
                 // Call genesis_set_storage_kakarot_contract_account util to get the storage tuples
                 let storage_tuples = genesis_set_storage_kakarot_contract_account(starknet_address, *key, *value);
                 storage_tuples.iter().for_each(|storage_tuples| {
-                    loader.storage.push(unsafe {
+                    madara_loader.storage.push(unsafe {
                         std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*storage_tuples)
                     });
                 });
@@ -179,7 +170,7 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
             // Call genesis_set_code_kakarot_contract_account util to get the storage tuples
             let code_storage_tuples = genesis_set_bytecode(bytecode, starknet_address);
             code_storage_tuples.iter().for_each(|code_storage_tuple| {
-                loader.storage.push(unsafe {
+                madara_loader.storage.push(unsafe {
                     std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*code_storage_tuple)
                 });
             });
@@ -187,9 +178,9 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
     });
 
     // Serialize the loader to a string
-    let madara_genesis_str = serde_json::to_string_pretty(&loader)?;
+    let madara_genesis_str = serde_json::to_string_pretty(&madara_loader)?;
     // Write the string to a file
-    fs::write(Path::new("src/hive/madara_genesis.json"), madara_genesis_str)?;
+    fs::write(madara_genesis, madara_genesis_str)?;
 
     Ok(())
 }
@@ -262,10 +253,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_madara_genesis() {
+        // Given
         let hive_genesis = HiveGenesisConfig::new().expect("Failed to read genesis.json");
-        serialize_hive_to_madara_genesis_config(hive_genesis).await.unwrap();
+        let madara_loader = serde_json::from_str::<GenesisLoader>(std::include_str!("../madara/genesis.json")).unwrap();
+        let madara_genesis = Path::new("src/hive/madara_genesis.json");
+        let compiled_path = PathBuf::from("./cairo-contracts/build");
+
+        // When
+        serialize_hive_to_madara_genesis_config(hive_genesis, madara_loader, madara_genesis, compiled_path)
+            .await
+            .unwrap();
+
+        // Then
         let loader: GenesisLoader =
-            serde_json::from_str(std::include_str!("madara_genesis.json")).expect("Failed to read madara_genesis.json");
+            serde_json::from_str(include_str!("./madara_genesis.json")).expect("Failed to read madara_genesis.json");
         assert_eq!(9 + 5 + 7, loader.contracts.len()); // 9 original + 5 Kakarot contracts + 7 hive
     }
 }
