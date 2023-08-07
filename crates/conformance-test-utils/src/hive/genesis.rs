@@ -257,6 +257,6 @@ mod tests {
         // Then
         let loader: GenesisLoader =
             serde_json::from_str(include_str!("./madara_genesis.json")).expect("Failed to read madara_genesis.json");
-        assert_eq!(9 + 5 + 7, loader.contracts.len()); // 9 original + 5 Kakarot contracts + 7 hive
+        assert_eq!(9 + 2 + 7, loader.contracts.len()); // 9 original + 2 Kakarot contracts + 7 hive
     }
 }
