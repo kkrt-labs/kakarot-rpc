@@ -15,7 +15,6 @@ pub struct ContractAccount<'a, P> {
 }
 
 impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
-    #[must_use]
     pub fn new(provider: &'a P, address: FieldElement) -> Self {
         Self { provider, address }
     }
@@ -30,7 +29,10 @@ impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
             ProviderError::StarknetError(starknet_error) => match starknet_error {
                 // TODO: we just need to test against ContractNotFound but madara is currently returning the wrong
                 // error See https://github.com/keep-starknet-strange/madara/issues/853
-                StarknetError::ContractError | StarknetError::ContractNotFound => Ok(vec![]),
+                StarknetError::ContractError | StarknetError::ContractNotFound => {
+                    log::error!("error in provider.call: {:?}", err);
+                    Ok(vec![])
+                }
                 _ => Err(EthApiError::from(err)),
             },
             _ => Err(EthApiError::from(err)),

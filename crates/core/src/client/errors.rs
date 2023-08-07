@@ -132,9 +132,3 @@ impl<E: std::error::Error> From<EthApiError<E>> for jsonrpsee::core::Error {
 pub fn rpc_err(code: i32, msg: impl Into<String>) -> jsonrpsee::types::error::ErrorObject<'static> {
     jsonrpsee::types::error::ErrorObject::owned(code, msg.into(), None::<()>)
 }
-
-impl<E: std::error::Error> From<FromByteSliceError> for EthApiError<E> {
-    fn from(err: FromByteSliceError) -> Self {
-        Self::ConversionError(format!("Failed to convert from byte slice: {}", err))
-    }
-}

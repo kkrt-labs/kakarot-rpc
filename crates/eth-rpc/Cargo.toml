@@ -7,49 +7,40 @@ homepage = { workspace = true }
 
 [dependencies]
 env_logger = "0.10.0"
-eyre = "0.6.8"
+eyre = { workspace = true }
 kakarot_rpc_core = { path = "../core" }
 log = "0.4.17"
-url = "2.3.1"
+url = { workspace = true }
 
 # rpc
 jsonrpsee = { workspace = true }
 
 # async
 async-trait = { workspace = true }
-tokio = { version = "1.21.2", features = ["macros"] }
+tokio = { workspace = true }
 futures = "0.3.26"
 
 # misc
 anyhow = "1.0.68"
 dotenv = { workspace = true }
 hex = "0.4"
+lazy_static = { workspace = true }
 reqwest = "0.11.13"
 reth-primitives = { workspace = true }
 reth-rlp = { workspace = true }
 reth-rpc-api = { workspace = true }
 reth-rpc-types = { workspace = true }
-serde = { version = "1.0.147", features = ["derive"] }
-serde_json = "1.0"
-serde_with = "2.2.0"
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_with = { workspace = true }
 starknet = { workspace = true }
 thiserror = "1.0.38"
-tracing = "0.1.34"
-tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
-lazy_static = { workspace = true }
 tower = "0.4.13"
 tower-http = "0.4.1"
-
-[dev-dependencies]
+tracing = "0.1.34"
+tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
 dojo-test-utils = { workspace = true }
 
-
-[dev-dependencies.cargo-husky]
-version = "1.5.0"
-default-features = false
-features = [
-    "precommit-hook",
-    "run-for-all",
-    "run-cargo-clippy",
-    "run-cargo-fmt",
-]
+[dev-dependencies]
+cargo-husky = { workspace = true }
+ethers = { workspace = true }

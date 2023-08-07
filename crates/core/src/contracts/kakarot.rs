@@ -16,7 +16,6 @@ pub struct KakarotContract<P> {
 }
 
 impl<P: Provider + Send + Sync> KakarotContract<P> {
-    #[must_use]
     pub fn new(provider: Arc<P>, address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
         Self { address, proxy_account_class_hash, provider }
     }
@@ -46,7 +45,6 @@ impl<P: Provider + Send + Sync> KakarotContract<P> {
 
     pub async fn eth_call(
         &self,
-        starknet_provider: &P,
         to: &FieldElement,
         mut eth_calldata: Vec<FieldElement>,
         block_id: &BlockId,
@@ -57,7 +55,7 @@ impl<P: Provider + Send + Sync> KakarotContract<P> {
         calldata.append(&mut eth_calldata);
 
         let request = FunctionCall { contract_address: self.address, entry_point_selector: ETH_CALL, calldata };
-        let result = starknet_provider.call(request, block_id).await?;
+        let result = self.provider.call(request, block_id).await?;
 
         // Parse and decode Kakarot's call return data (temporary solution and not scalable - will
         // fail is Kakarot API changes)

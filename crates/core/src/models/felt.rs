@@ -1,6 +1,6 @@
 use std::ops::Mul;
 
-use reth_primitives::{Address, H256, U256};
+use reth_primitives::{Address, Bytes, H256, U256};
 use starknet::core::types::FieldElement;
 
 use super::ConversionError;
@@ -117,6 +117,13 @@ impl From<Felt252Wrapper> for U256 {
     }
 }
 
+impl From<Felt252Wrapper> for Bytes {
+    fn from(felt: Felt252Wrapper) -> Self {
+        let bytes = felt.0.to_bytes_be();
+        Bytes::from(bytes)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
@@ -200,5 +207,18 @@ mod tests {
 
         // When
         Felt252Wrapper::try_from(hash).unwrap();
+    }
+
+    #[test]
+    fn test_bytes_from_felt() {
+        // Given
+        let felt = Felt252Wrapper::from(1);
+
+        // When
+        let bytes = Bytes::from(felt);
+
+        // Then
+        let expected = Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000000001").unwrap();
+        assert_eq!(expected, bytes);
     }
 }

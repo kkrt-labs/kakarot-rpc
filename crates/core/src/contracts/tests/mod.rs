@@ -13,7 +13,8 @@ async fn test_balance_of() {
     // Given
     let client = init_testnet_client();
     let starknet_native_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
-    let eth = StarknetErc20::<SequencerGatewayProvider>::new(client.starknet_provider(), starknet_native_token_address);
+    let provider = client.starknet_provider();
+    let eth = StarknetErc20::<SequencerGatewayProvider>::new(&provider, starknet_native_token_address);
 
     let random_block = BlockId::Number(838054);
 

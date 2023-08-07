@@ -8,11 +8,13 @@ homepage = { workspace = true }
 [dependencies]
 anyhow = "1.0.68"
 async-trait = { workspace = true }
+dojo-test-utils = { workspace = true }
 env_logger = "0.10.0"
-eyre = "0.6.8"
+eyre = { workspace = true }
 hex = "0.4"
 jsonrpsee = { workspace = true }
 log = "0.4.17"
+pin-project = { workspace = true }
 reqwest = "0.11.13"
 reth-primitives = { workspace = true }
 reth-rlp = { workspace = true }
@@ -20,23 +22,24 @@ reth-rpc-api = { workspace = true }
 reth-rpc-types = { workspace = true }
 starknet = { workspace = true }
 starknet-crypto = { workspace = true }
-dojo-test-utils = { workspace = true }
 thiserror = "1.0.38"
-url = "2.3.1"
+url = { workspace = true }
 
-num-bigint = "0.4.3"
 futures = "0.3.26"
+num-bigint = "0.4.3"
 serde = { version = "1.0" }
 serde_json = { version = "1.0", features = ["preserve_order"] }
-serde_with = "2.2.0"
-tokio = { version = "1.21.2", features = ["macros"] }
-ruint = { workspace = true }
+serde_with = { workspace = true }
+
 lazy_static = "1.4.0"
+ruint = { workspace = true }
+tokio = { workspace = true }
 
 
-dotenv = { workspace = true }
 bytes = "1"
-ethers = "2.0"
+dotenv = { workspace = true }
+ethers = { workspace = true }
+ethers-solc = { workspace = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
 walkdir = "2.3.3"
 
@@ -47,3 +50,4 @@ toml = "0.7.5"
 tracing-subscriber = "0.3.17"
 tracing = "0.1.37"
 ctor = "0.2.4"
+cargo-husky = { workspace = true }
