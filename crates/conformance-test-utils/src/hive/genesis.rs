@@ -3,9 +3,8 @@ use std::fs;
 use std::io::Error as IoError;
 use std::path::{Path, PathBuf};
 
-use dotenv::dotenv;
 use eyre::Result;
-use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, declare_kakarot_contracts};
+use kakarot_rpc_core::test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
 use pallet_starknet::genesis_loader::{read_file_to_string, ContractClass, GenesisLoader, HexFelt};
 use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};
@@ -61,18 +60,13 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
         compiled_path.pop();
     }
 
-    dotenv().ok();
-
-    // Construct a Starknet test sequencer
-    let sequencer = construct_kakarot_test_sequencer().await;
-    let starknet_account = sequencer.account();
-
     // Declare Kakarot contracts
-    let class_hashes = declare_kakarot_contracts(&starknet_account).await;
+    let class_hashes = compute_kakarot_contracts_class_hash();
 
-    // Add Kakarot contracts Contract Classes to loader
     // { contract : (address, class_hash) }
     let mut kakarot_contracts = HashMap::<String, (FieldElement, FieldElement)>::new();
+    // Add Kakarot contracts Contract Classes to loader
+    // Vec so no need to sort
     class_hashes.iter().enumerate().for_each(|(index, (filename, class_hash))| {
         loader.contract_classes.push((
             HexFelt(*class_hash),
@@ -89,16 +83,24 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
         kakarot_contracts.insert(filename.replace(".json", ""), (FieldElement::from(36865 + index), *class_hash));
     });
 
+    // Get Kakarot contracts address and proxy class hash
+    let kakarot_address = kakarot_contracts.get("kakarot").unwrap().0;
+    let account_proxy_class_hash = kakarot_contracts.get("proxy").unwrap().1;
+
     // Add Kakarot contracts to Loader
+    // Convert the HashMap to Vec and sort by key to ensure deterministic order
+    let mut kakarot_contracts: Vec<(String, (FieldElement, FieldElement))> = kakarot_contracts.into_iter().collect();
+    kakarot_contracts.sort_by_key(|(name, (_, _))| name.clone());
     kakarot_contracts.iter().for_each(|(_, (address, class_hash))| {
         loader.contracts.push((HexFelt(*address), HexFelt(*class_hash)));
     });
 
     // Add Hive accounts to loader
     // Convert the EVM accounts to Starknet accounts using compute_starknet_address
-    let kakarot_address = kakarot_contracts.get("kakarot").unwrap().0;
-    let account_proxy_class_hash = kakarot_contracts.get("proxy").unwrap().1;
-    hive_genesis.alloc.iter().for_each(|(evm_address, account_info)| {
+    // Sort by key to ensure deterministic order
+    let mut hive_accounts: Vec<(reth_primitives::H160, AccountInfo)> = hive_genesis.alloc.into_iter().collect();
+    hive_accounts.sort_by_key(|(address, _)| *address);
+    hive_accounts.iter().for_each(|(evm_address, account_info)| {
         // Use the given Kakarot contract address and declared proxy class hash for compute_starknet_address
         let starknet_address = compute_starknet_address(
             kakarot_address,
@@ -120,6 +122,8 @@ pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisCo
 
         // Set the storage of the account, if any
         if let Some(storage) = account_info.storage.as_ref() {
+            let mut storage: Vec<(U256, U256)> = storage.iter().map(|(k, v)| (*k, *v)).collect();
+            storage.sort_by_key(|(key, _)| *key);
             storage.iter().for_each(|(key, value)| {
                 // Call genesis_set_storage_kakarot_contract_account util to get the storage tuples
                 let storage_tuples = genesis_set_storage_kakarot_contract_account(starknet_address, *key, *value);

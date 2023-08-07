@@ -328,7 +328,7 @@ async fn deploy_starknet_contract(
 ///
 /// This example declares all Kakarot contracts in the directory specified by
 /// `COMPILED_KAKAROT_PATH`, and prints the name and class hash of each contract.
-pub async fn declare_kakarot_contracts(
+async fn declare_kakarot_contracts(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) -> HashMap<String, FieldElement> {
     let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
@@ -388,6 +388,52 @@ async fn compute_starknet_address(
         account.provider().call(call_compute_starknet_address, BlockId::Tag(BlockTag::Latest)).await;
 
     *eoa_account_starknet_address_result.unwrap().first().unwrap()
+}
+
+pub fn compute_kakarot_contracts_class_hash() -> Vec<(String, FieldElement)> {
+    dotenv().ok();
+    // Get the compiled Kakarot contracts directory path.
+    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
+        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
+         `./scripts/make_with_env.sh test`"
+    ));
+
+    let paths = fs::read_dir(&compiled_kakarot_path)
+        .unwrap_or_else(|_| panic!("Could not read directory: {}", compiled_kakarot_path.display()));
+
+    let kakarot_compiled_contract_paths: Vec<_> = paths
+        .filter_map(|entry| {
+            let path = entry.expect("Failed to read directory entry").path();
+            if path.is_dir() || path.extension().unwrap_or_default() != "json" { None } else { Some(path) }
+        })
+        .collect();
+
+    assert!(
+        !kakarot_compiled_contract_paths.is_empty(),
+        "{} is empty, please run `make setup` to ensure that Kakarot evm is built.",
+        compiled_kakarot_path.display()
+    );
+
+    // Deserialize each contract file into a `LegacyContractClass` object.
+    // Compute the class hash of each contract.
+    kakarot_compiled_contract_paths
+        .iter()
+        .map(|path| {
+            let file = fs::File::open(path).unwrap_or_else(|_| panic!("Failed to open file: {}", path.display()));
+            let contract_class: LegacyContractClass = serde_json::from_reader(file)
+                .unwrap_or_else(|_| panic!("Failed to deserialize contract from file: {}", path.display()));
+
+            let filename = path
+                .file_stem()
+                .expect("File has no stem")
+                .to_str()
+                .expect("Cannot convert filename to string")
+                .to_owned();
+
+            // Compute the class hash
+            (filename, contract_class.class_hash().expect("Failed to compute class hash"))
+        })
+        .collect()
 }
 
 async fn deploy_eoa(
