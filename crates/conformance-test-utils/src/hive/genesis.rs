@@ -40,11 +40,10 @@ impl HiveGenesisConfig {
 ///
 /// This function will:
 /// 1. Load the Madara genesis file
-/// 2. Construct a Starknet test sequencer
-/// 3. Declare Kakarot contracts
-/// 4. Add Kakarot contracts to Loader
-/// 5. Add Hive accounts to Loader
-/// 6. Serialize Loader to Madara genesis file
+/// 2. Compute the class hash of Kakarot contracts
+/// 3. Add Kakarot contracts to Loader
+/// 4. Add Hive accounts to Loader (fund, storage, bytecode)
+/// 5. Serialize Loader to Madara genesis file
 pub async fn serialize_hive_to_madara_genesis_config(hive_genesis: HiveGenesisConfig) -> Result<(), IoError> {
     // Load the Madara genesis file
     let mut loader: GenesisLoader =
