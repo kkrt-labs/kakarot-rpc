@@ -1787,6 +1787,7 @@ dependencies = [
  "eyre",
  "kakarot_rpc_core",
  "katana-core",
+ "lazy_static",
  "mp-starknet",
  "pallet-starknet",
  "reth-primitives",

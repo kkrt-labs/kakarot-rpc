@@ -6,6 +6,7 @@ use std::path::Path;
 use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use kakarot_rpc_core::test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
+use lazy_static::lazy_static;
 use pallet_starknet::genesis_loader::{ContractClass, GenesisLoader, HexFelt};
 use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};
@@ -39,8 +40,10 @@ impl HiveGenesisConfig {
 }
 
 // Define constant addresses for Kakarot contracts
-const KAKAROT_ADDRESSES: &str = "0x9001";
-const BLOCKHASH_REGISTRY_ADDRESS: &str = "0x9002";
+lazy_static! {
+    pub static ref KAKAROT_ADDRESSES: FieldElement = FieldElement::from_hex_be("0x9001").unwrap(); // Safe unwrap, 0x9001
+    pub static ref BLOCKHASH_REGISTRY_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9002").unwrap(); // Safe unwrap, 0x9002
+}
 
 /// Convert Hive Genesis Config to Madara Genesis Config
 ///
@@ -81,8 +84,6 @@ pub async fn serialize_hive_to_madara_genesis_config(
     });
 
     // Set the Kakarot contracts address and proxy class hash
-    let kakarot_address = FieldElement::from_hex_be(KAKAROT_ADDRESSES).unwrap(); // Safe unwrap, 0x9001
-    let blockhash_registry_address = FieldElement::from_hex_be(BLOCKHASH_REGISTRY_ADDRESS).unwrap(); // Safe unwrap, 0x9002
     let account_proxy_class_hash = *kakarot_contracts.get("proxy").expect("Failed to get proxy class hash");
     let contract_account_class_hash =
         *kakarot_contracts.get("contract_account").expect("Failed to get contract_account class hash");
@@ -90,11 +91,11 @@ pub async fn serialize_hive_to_madara_genesis_config(
 
     // Add Kakarot contracts to Loader
     madara_loader.contracts.push((
-        HexFelt(kakarot_address),
+        HexFelt(*KAKAROT_ADDRESSES),
         HexFelt(*kakarot_contracts.get("kakarot").expect("Failed to get kakarot class hash")),
     ));
     madara_loader.contracts.push((
-        HexFelt(blockhash_registry_address),
+        HexFelt(*BLOCKHASH_REGISTRY_ADDRESS),
         HexFelt(*kakarot_contracts.get("blockhash_registry").expect("Failed to get blockhash_registry class hash")),
     ));
 
@@ -105,11 +106,11 @@ pub async fn serialize_hive_to_madara_genesis_config(
         ("contract_account_class_hash", contract_account_class_hash),
         ("externally_owned_account", eoa_class_hash),
         ("account_proxy_class_hash", account_proxy_class_hash),
-        ("blockhash_registry_address", blockhash_registry_address), // Safe unwrap 0x9002
+        ("blockhash_registry_address", *BLOCKHASH_REGISTRY_ADDRESS), // Safe unwrap 0x9002
     ];
 
     storage_keys.iter().for_each(|(key, value)| {
-        let storage_tuple = genesis_set_storage_starknet_contract(kakarot_address, key, &[], *value, 0);
+        let storage_tuple = genesis_set_storage_starknet_contract(*KAKAROT_ADDRESSES, key, &[], *value, 0);
         madara_loader
             .storage
             .push(unsafe { std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(storage_tuple) });
@@ -123,7 +124,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
     hive_accounts.iter().for_each(|(evm_address, account_info)| {
         // Use the given Kakarot contract address and declared proxy class hash for compute_starknet_address
         let starknet_address = compute_starknet_address(
-            kakarot_address,
+            *KAKAROT_ADDRESSES,
             account_proxy_class_hash,
             FieldElement::from_byte_slice_be(evm_address.as_bytes()).unwrap(), /* safe unwrap since evm_address
                                                                                 * is 20 bytes */
