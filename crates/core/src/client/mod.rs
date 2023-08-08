@@ -104,6 +104,18 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
     /// Returns the logs corresponding to the filter
     async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, EthApiError<P::Error>> {
+        // Check the block range
+        let current_block: u64 = self.block_number().await?.low_u64();
+        let from_block = filter.get_from_block();
+        let to_block = filter.get_to_block();
+
+        let filter = match (from_block, to_block) {
+            (Some(from), _) if from > current_block => return Ok(vec![]),
+            (_, Some(to)) if to > current_block => filter.to_block(current_block),
+            (Some(from), Some(to)) if to < from => return Ok(vec![]),
+            _ => filter,
+        };
+
         let filter: EthEventFilter = filter.into();
         let event_filter = filter.to_starknet_filter(self)?;
 
@@ -822,6 +834,7 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
         let mut events = vec![];
 
         loop {
+            dbg!("getting events");
             result = provider.get_events(filter.clone(), result.continuation_token, chunk_size).await?;
             events.append(&mut result.events);
 

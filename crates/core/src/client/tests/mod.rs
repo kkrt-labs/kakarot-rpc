@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256, U64};
-use reth_rpc_types::CallRequest;
+use reth_rpc_types::{CallRequest, Filter, FilterBlockOption};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransactionV1};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::sequencer::models::BlockId as SequencerBlockId;
@@ -188,4 +188,44 @@ async fn test_gas_price() {
 
     // Then
     assert!(gas_price > U256::from(0));
+}
+
+#[tokio::test]
+async fn test_get_logs_from_bigger_than_current() {
+    // Given
+    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber)]);
+    let client = init_mock_client(Some(fixtures));
+    let filter = Filter {
+        block_option: FilterBlockOption::Range {
+            from_block: Some(BlockNumberOrTag::Number(19641)),
+            to_block: Some(BlockNumberOrTag::Number(19642)),
+        },
+        ..Default::default()
+    };
+
+    // When
+    let logs = client.get_logs(filter).await.unwrap();
+
+    // Then
+    assert!(logs.is_empty());
+}
+
+#[tokio::test]
+async fn test_get_logs_to_less_than_from() {
+    // Given
+    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber)]);
+    let client = init_mock_client(Some(fixtures));
+    let filter = Filter {
+        block_option: FilterBlockOption::Range {
+            from_block: Some(BlockNumberOrTag::Number(2)),
+            to_block: Some(BlockNumberOrTag::Number(1)),
+        },
+        ..Default::default()
+    };
+
+    // When
+    let logs = client.get_logs(filter).await.unwrap();
+
+    // Then
+    assert!(logs.is_empty());
 }
