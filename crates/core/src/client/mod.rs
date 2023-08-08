@@ -23,9 +23,9 @@ use reth_rpc_types::{
 };
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, EmittedEvent,
-    Event, EventFilterWithPage, FieldElement, FunctionCall, InvokeTransactionReceipt, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, ResultPageRequest, StarknetError, SyncStatusType,
-    Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
+    Event, EventFilterWithPage, EventsPage, FieldElement, FunctionCall, InvokeTransactionReceipt,
+    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, ResultPageRequest,
+    StarknetError, SyncStatusType, Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
@@ -813,22 +813,21 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
 
     async fn filter_events(&self, filter: EventFilterWithPage) -> Result<Vec<EmittedEvent>, EthApiError<P::Error>> {
         let provider = self.starknet_provider();
+
+        let chunk_size = filter.result_page_request.chunk_size;
+        let continuation_token = filter.result_page_request.continuation_token;
+        let filter = filter.event_filter;
+
+        let mut result = EventsPage { events: Vec::new(), continuation_token };
         let mut events = vec![];
 
-        let mut result = provider
-            .get_events(
-                filter.event_filter,
-                filter.result_page_request.continuation_token,
-                filter.result_page_request.chunk_size,
-            )
-            .await?;
-        events.append(&mut result.events);
-
-        while let Some(continuation_token) = result.continuation_token {
-            result = provider
-                .get_events(filter.event_filter, Some(continuation_token), filter.result_page_request.chunk_size)
-                .await?;
+        loop {
+            result = provider.get_events(filter.clone(), result.continuation_token, chunk_size).await?;
             events.append(&mut result.events);
+
+            if result.continuation_token.is_none() {
+                break;
+            }
         }
 
         Ok(events)

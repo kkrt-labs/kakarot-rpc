@@ -1,5 +1,6 @@
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
-use reth_primitives::{Bytes, U128, U256};
+use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
+use reth_primitives::{Bytes, U256};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
