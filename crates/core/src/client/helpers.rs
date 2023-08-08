@@ -1,5 +1,5 @@
 use eyre::Result;
-use reth_primitives::{Bloom, Bytes, H160};
+use reth_primitives::{Bloom, Bytes, H160, U128, U256};
 use reth_rlp::DecodeError;
 use reth_rpc_types::TransactionReceipt;
 use starknet::core::types::{
@@ -121,6 +121,16 @@ pub fn raw_kakarot_calldata(kakarot_address: FieldElement, mut calldata: Vec<Fie
     execute_calldata.append(&mut calldata);
 
     execute_calldata
+}
+
+/// Helper function to split a U256 value into two FieldElements.
+pub fn split_u256_into_field_elements(value: U256) -> [FieldElement; 2] {
+    let low = value & U256::from(U128::MAX);
+    let high = value >> 128;
+    [
+        FieldElement::from_bytes_be(&low.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
+        FieldElement::from_bytes_be(&high.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
+    ]
 }
 
 #[cfg(test)]

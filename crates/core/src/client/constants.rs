@@ -13,6 +13,8 @@ pub const STARKNET_NATIVE_TOKEN: &str = "0x49d36570d4e46f48e99674bd3fcc84644ddd6
 
 pub const EARLIEST_BLOCK_NUMBER: u64 = 0;
 
+pub const CHUNK_SIZE_LIMIT: u64 = 1024;
+
 pub const MADARA_RPC_URL: &str = "http://127.0.0.1:9944";
 
 pub const KATANA_RPC_URL: &str = "http://0.0.0.0:5050";

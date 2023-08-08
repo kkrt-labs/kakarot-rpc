@@ -124,16 +124,6 @@ pub fn genesis_set_storage_kakarot_contract_account(
         .collect()
 }
 
-/// Helper function to split a U256 value into two FieldElements.
-pub fn split_u256_into_field_elements(value: U256) -> [FieldElement; 2] {
-    let low = value & U256::from(U128::MAX);
-    let high = value >> 128;
-    [
-        FieldElement::from_bytes_be(&low.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
-        FieldElement::from_bytes_be(&high.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
-    ]
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -142,7 +132,7 @@ mod tests {
 
     use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
-    use kakarot_rpc_core::contracts::account::Account;
+    use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
     use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
