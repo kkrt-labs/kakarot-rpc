@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::io::Error as IoError;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
@@ -54,7 +54,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
     hive_genesis: HiveGenesisConfig,
     mut madara_loader: GenesisLoader,
     madara_genesis: &Path,
-    compiled_path: PathBuf,
+    compiled_path: &Path,
 ) -> Result<(), IoError> {
     // Compute the class hash of Kakarot contracts
     let class_hashes = compute_kakarot_contracts_class_hash();
@@ -77,7 +77,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
 
         // Add Kakarot contracts {contract : class_hash} to Kakarot Contracts HashMap
         // Remove .json from filename to get contract name
-        kakarot_contracts.insert(filename.replace(".json", ""), *class_hash);
+        kakarot_contracts.insert(filename.to_string(), *class_hash);
     });
 
     // Set the Kakarot contracts address and proxy class hash
@@ -247,7 +247,7 @@ mod tests {
         let hive_genesis = HiveGenesisConfig::new().expect("Failed to read genesis.json");
         let madara_loader = serde_json::from_str::<GenesisLoader>(std::include_str!("../madara/genesis.json")).unwrap();
         let madara_genesis = Path::new("src/hive/madara_genesis.json");
-        let compiled_path = PathBuf::from("./cairo-contracts/build");
+        let compiled_path = Path::new("./cairo-contracts/build");
 
         // When
         serialize_hive_to_madara_genesis_config(hive_genesis, madara_loader, madara_genesis, compiled_path)
