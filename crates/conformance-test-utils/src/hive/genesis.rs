@@ -156,45 +156,36 @@ pub async fn serialize_hive_to_madara_genesis_config(
             });
         }
 
-        // Set the bytecode of the account, if any
-        if let Some(bytecode) = account_info.code.as_ref() {
+        // Determine the proxy implementation class hash based on whether bytecode is present
+        // Set the bytecode to the storage of the account, if any
+        let proxy_implementation_class_hash = if let Some(bytecode) = account_info.code.as_ref() {
             // Call genesis_set_code_kakarot_contract_account util to get the storage tuples
             let code_storage_tuples = genesis_set_bytecode(bytecode, starknet_address);
-            code_storage_tuples.iter().for_each(|code_storage_tuple| {
-                madara_loader.storage.push(unsafe {
-                    std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*code_storage_tuple)
-                });
-            });
+            // Set the bytecode of the account
+            madara_loader.storage.extend(code_storage_tuples.iter().map(|code_storage_tuple| unsafe {
+                std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*code_storage_tuple)
+            }));
 
             // Since it has bytecode, it's a contract account
-            // Set the proxy implementation of the account to the contract account class hash
-            let proxy_implementation_storage_tuples = genesis_set_storage_starknet_contract(
-                starknet_address,
-                "_implementation",
-                &[],
-                contract_account_class_hash,
-                0, // 0 since it's storage value is felt
-            );
-            madara_loader.storage.push(unsafe {
-                std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(
-                    proxy_implementation_storage_tuples,
-                )
-            });
+            contract_account_class_hash
         } else {
-            // Since it's an EOA, set the proxy implementation to the EOA class hash
-            let proxy_implementation_storage_tuples = genesis_set_storage_starknet_contract(
-                starknet_address,
-                "_implementation",
-                &[],
-                eoa_class_hash,
-                0, // 0 since it's storage value is felt
-            );
-            madara_loader.storage.push(unsafe {
-                std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(
-                    proxy_implementation_storage_tuples,
-                )
-            });
-        }
+            // Since it has no bytecode, it's an externally owned account
+            eoa_class_hash
+        };
+
+        // Set the proxy implementation of the account to the determined class hash
+        let proxy_implementation_storage_tuples = genesis_set_storage_starknet_contract(
+            starknet_address,
+            "_implementation",
+            &[],
+            proxy_implementation_class_hash,
+            0, // 0 since it's storage value is felt
+        );
+        madara_loader.storage.push(unsafe {
+            std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(
+                proxy_implementation_storage_tuples,
+            )
+        });
     });
 
     // Serialize the loader to a string
