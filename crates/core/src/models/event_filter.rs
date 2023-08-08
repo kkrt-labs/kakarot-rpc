@@ -4,6 +4,7 @@ use starknet::core::types::{BlockId, EventFilter};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
+use super::block::EthBlockNumberOrTag;
 use super::felt::Felt252Wrapper;
 use crate::client::api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
@@ -31,8 +32,6 @@ impl EthEventFilter {
     ) -> Result<EventFilter, EthApiError<P::Error>> {
         let filter: Filter = self.into();
         let block_hash = filter.get_block_hash();
-        let from_block = filter.get_from_block();
-        let to_block = filter.get_to_block();
 
         // Extract keys into topics
         let mut keys: Vec<FieldElement> = filter
@@ -83,9 +82,14 @@ impl EthEventFilter {
                 keys,
             }
         } else {
-            let from_block = from_block.map(BlockId::Number);
-            let to_block = to_block.map(BlockId::Number);
-            EventFilter { from_block, to_block, address: Some(client.kakarot_address()), keys }
+            let from_block = filter.block_option.get_from_block().copied().map(Into::<EthBlockNumberOrTag>::into);
+            let to_block = filter.block_option.get_to_block().copied().map(Into::<EthBlockNumberOrTag>::into);
+            EventFilter {
+                from_block: from_block.map(Into::<BlockId>::into),
+                to_block: to_block.map(Into::<BlockId>::into),
+                address: Some(client.kakarot_address()),
+                keys,
+            }
         };
 
         Ok(starknet_filter)
