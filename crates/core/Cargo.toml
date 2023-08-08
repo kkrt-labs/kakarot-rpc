@@ -51,3 +51,4 @@ tracing-subscriber = "0.3.17"
 tracing = "0.1.37"
 ctor = "0.2.4"
 cargo-husky = { workspace = true }
+rstest = { workspace = true }
