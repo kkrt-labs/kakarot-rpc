@@ -47,7 +47,8 @@ pub fn genesis_set_storage_starknet_contract(
     storage_offset: u64,
 ) -> ((ContractAddress, StorageKey), StorageValue) {
     // Compute the storage key for the storage variable name and the keys.
-    let mut storage_key = get_storage_var_address(storage_variable_name, keys).unwrap(); // safe unwrap since storage_variable_name is all ascii
+    let mut storage_key =
+        get_storage_var_address(storage_variable_name, keys).expect("Non-ASCII storage variable name");
 
     // Add the offset to the storage key.
     storage_key += FieldElement::from(storage_offset);
@@ -79,7 +80,7 @@ pub fn genesis_fund_starknet_address(
         .enumerate() // Enumerate the key offsets.
         .map(|(offset, value)| {
             genesis_set_storage_starknet_contract(
-                FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(), // Safe unwrap since STARKNET_NATIVE_TOKEN is a valid hex string.
+                FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(), // Safe unwrap
                 "ERC20_balances",
                 &[starknet_address],
                 *value,
