@@ -51,7 +51,7 @@ lazy_static! {
 /// 1. Load the Madara genesis file
 /// 2. Compute the class hash of Kakarot contracts
 /// 3. Add Kakarot contracts to Loader
-/// 4. Add Hive accounts to Loader (fund, storage, bytecode)
+/// 4. Add Hive accounts to Loader (fund, storage, bytecode, proxy implementation)
 /// 5. Serialize Loader to Madara genesis file
 pub async fn serialize_hive_to_madara_genesis_config(
     hive_genesis: HiveGenesisConfig,
@@ -164,6 +164,35 @@ pub async fn serialize_hive_to_madara_genesis_config(
                 madara_loader.storage.push(unsafe {
                     std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*code_storage_tuple)
                 });
+            });
+
+            // Since it has bytecode, it's a contract account
+            // Set the proxy implementation of the account to the contract account class hash
+            let proxy_implementation_storage_tuples = genesis_set_storage_starknet_contract(
+                starknet_address,
+                "_implementation",
+                &[],
+                contract_account_class_hash,
+                0, // 0 since it's storage value is felt
+            );
+            madara_loader.storage.push(unsafe {
+                std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(
+                    proxy_implementation_storage_tuples,
+                )
+            });
+        } else {
+            // Since it's an EOA, set the proxy implementation to the EOA class hash
+            let proxy_implementation_storage_tuples = genesis_set_storage_starknet_contract(
+                starknet_address,
+                "_implementation",
+                &[],
+                eoa_class_hash,
+                0, // 0 since it's storage value is felt
+            );
+            madara_loader.storage.push(unsafe {
+                std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(
+                    proxy_implementation_storage_tuples,
+                )
             });
         }
     });
