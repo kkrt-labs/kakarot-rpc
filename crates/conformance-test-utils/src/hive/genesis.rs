@@ -20,7 +20,7 @@ use crate::madara::utils::{
 use crate::types::Felt;
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HiveGenesisConfig {
     pub config: Config,
@@ -196,7 +196,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
     Ok(())
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub chain_id: i128,
@@ -207,7 +207,7 @@ pub struct Config {
     pub eip158_block: i128,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct AccountInfo {
     pub balance: U256,
     pub code: Option<Bytes>,
