@@ -6,8 +6,9 @@ use std::sync::Arc;
 use bytes::BytesMut;
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
 use dotenv::dotenv;
-use ethers::abi::{Abi, Tokenize};
+use ethers::abi::{Abi, Token, Tokenize};
 use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
+use ethers::types::Address as EthersAddress;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::utils::{find_project_root_path, load_config};
 use reth_primitives::{
@@ -614,7 +615,7 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
     }
 }
 
-pub struct KakarotTestEnvironment {
+pub struct KakarotTestEnvironmentContext {
     sequencer: TestSequencer,
     kakarot_client: KakarotClient<JsonRpcClient<HttpTransport>>,
     kakarot: DeployedKakarot,
@@ -632,8 +633,15 @@ pub struct ContractDeploymentArgs<T: Tokenize> {
     pub constructor_args: T,
 }
 
-impl KakarotTestEnvironment {
-    pub async fn new() -> KakarotTestEnvironment {
+pub enum TestContext {
+    Simple,
+    Counter,
+    PlainOpcodes,
+    ERC20,
+}
+
+impl KakarotTestEnvironmentContext {
+    pub async fn new(test_context: TestContext) -> Self {
         // Construct a Starknet test sequencer
         let sequencer = construct_kakarot_test_sequencer().await;
 
@@ -656,7 +664,55 @@ impl KakarotTestEnvironment {
         let kakarot_contract =
             KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
 
-        KakarotTestEnvironment { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts: HashMap::new() }
+        let mut test_environment =
+            Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts: HashMap::new() };
+
+        // Deploy the evm contracts depending on the test context
+        match test_context {
+            TestContext::Simple => test_environment,
+
+            TestContext::Counter => {
+                // Deploy the Counter contract
+                test_environment = test_environment
+                    .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
+                    .await;
+                test_environment
+            }
+            TestContext::PlainOpcodes => {
+                // Deploy the Counter contract
+                test_environment = test_environment
+                    .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
+                    .await;
+                let counter = test_environment.evm_contract("Counter");
+                let counter_eth_address: Address = {
+                    let address: Felt252Wrapper = counter.addresses.eth_address.into();
+                    address.try_into().unwrap()
+                };
+
+                // Deploy the PlainOpcodes contract
+                test_environment = test_environment
+                    .deploy_evm_contract(ContractDeploymentArgs {
+                        name: "PlainOpcodes".into(),
+                        constructor_args: (EthersAddress::from(counter_eth_address.as_fixed_bytes()),),
+                    })
+                    .await;
+                test_environment
+            }
+            TestContext::ERC20 => {
+                // Deploy the ERC20 contract
+                test_environment = test_environment
+                    .deploy_evm_contract(ContractDeploymentArgs {
+                        name: "ERC20".into(),
+                        constructor_args: (
+                            Token::String("Test".into()),               // name
+                            Token::String("TT".into()),                 // symbol
+                            Token::Uint(ethers::types::U256::from(18)), // decimals
+                        ),
+                    })
+                    .await;
+                test_environment
+            }
+        }
     }
 
     pub async fn deploy_evm_contract<T: Tokenize>(mut self, contract_args: ContractDeploymentArgs<T>) -> Self {
@@ -689,6 +745,10 @@ impl KakarotTestEnvironment {
 
     pub fn kakarot_contract(&self) -> &KakarotContract<JsonRpcClient<HttpTransport>> {
         &self.kakarot_contract
+    }
+
+    pub fn resources(&self) -> (&KakarotClient<JsonRpcClient<HttpTransport>>, &DeployedKakarot) {
+        (&self.kakarot_client, &self.kakarot)
     }
 }
 

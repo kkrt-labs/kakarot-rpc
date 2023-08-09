@@ -144,7 +144,8 @@ mod tests {
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{ContractDeploymentArgs, KakarotTestEnvironment};
+    use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
+    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use katana_core::backend::state::StorageRecord;
     use reth_primitives::U256;
     use rstest::rstest;
@@ -219,15 +220,11 @@ mod tests {
         assert_eq!(expected_storage, storage);
     }
 
-    #[tokio::test]
-    async fn test_counter_bytecode() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_counter_bytecode(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let test_environment = Arc::new(
-            KakarotTestEnvironment::new()
-                .await
-                .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-                .await,
-        );
+        let test_environment = Arc::new(kakarot_test_env_ctx);
         let starknet_client = test_environment.client().starknet_provider();
         let counter = test_environment.evm_contract("Counter");
         let counter_contract = ContractAccount::new(&starknet_client, counter.addresses.starknet_address);
@@ -367,10 +364,13 @@ mod tests {
         assert_eq!(result, expected_output);
     }
 
-    #[tokio::test]
-    async fn test_kakarot_contract_account_storage() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_kakarot_contract_account_storage(
+        #[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
+    ) {
         // Given
-        let test_environment = Arc::new(KakarotTestEnvironment::new().await);
+        let test_environment = Arc::new(kakarot_test_env_ctx);
 
         // When
         // Use genesis_set_storage_kakarot_contract_account define the storage data

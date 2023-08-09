@@ -1,17 +1,17 @@
-mod fixtures;
 mod tests {
 
     use ctor::ctor;
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
-    use kakarot_rpc_core::test_utils::deploy_helpers::create_raw_ethereum_tx;
+    use kakarot_rpc_core::test_utils::deploy_helpers::{
+        create_raw_ethereum_tx, KakarotTestEnvironmentContext, TestContext,
+    };
+    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
     use rstest::*;
     use starknet::core::types::FieldElement;
     use tracing_subscriber::FmtSubscriber;
-
-    use crate::fixtures::{kakarot_test_env_ctx, KakarotTestEnvironmentContext, TestContext};
 
     #[ctor]
     fn setup() {
@@ -25,7 +25,7 @@ mod tests {
         #[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
     ) {
         // Given
-        let (_, client, _) = kakarot_test_env_ctx.resources();
+        let client = kakarot_test_env_ctx.client();
 
         // When
         let nonce = client.nonce(Address::zero(), BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
@@ -39,7 +39,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_eoa_balance(#[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (_, client, kakarot) = kakarot_test_env_ctx.resources();
+        let (client, kakarot) = kakarot_test_env_ctx.resources();
 
         // When
         let eoa_balance = client
@@ -56,8 +56,8 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_counter(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (test_environment, client, kakarot) = kakarot_test_env_ctx.resources();
-        let counter = test_environment.evm_contract("Counter");
+        let (client, kakarot) = kakarot_test_env_ctx.resources();
+        let counter = kakarot_test_env_ctx.evm_contract("Counter");
 
         let counter_eth_address = {
             let address: Felt252Wrapper = counter.addresses.eth_address.into();
@@ -109,8 +109,8 @@ mod tests {
         #[with(TestContext::PlainOpcodes)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
     ) {
         // Given
-        let (test_environment, client, _) = kakarot_test_env_ctx.resources();
-        let plain_opcodes = test_environment.evm_contract("PlainOpcodes");
+        let client = kakarot_test_env_ctx.client();
+        let plain_opcodes = kakarot_test_env_ctx.evm_contract("PlainOpcodes");
         let plain_opcodes_eth_address: Address = {
             let address: Felt252Wrapper = plain_opcodes.addresses.eth_address.into();
             address.try_into().unwrap()
@@ -127,8 +127,8 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_storage_at(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (test_environment, client, kakarot) = kakarot_test_env_ctx.resources();
-        let counter = test_environment.evm_contract("Counter");
+        let (client, kakarot) = kakarot_test_env_ctx.resources();
+        let counter = kakarot_test_env_ctx.evm_contract("Counter");
         let counter_eth_address = {
             let address: Felt252Wrapper = counter.addresses.eth_address.into();
             address.try_into().unwrap()
@@ -165,8 +165,8 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_token_balances(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (test_environment, client, kakarot) = kakarot_test_env_ctx.resources();
-        let erc20 = test_environment.evm_contract("ERC20");
+        let (client, kakarot) = kakarot_test_env_ctx.resources();
+        let erc20 = kakarot_test_env_ctx.evm_contract("ERC20");
         let erc20_eth_address = {
             let address: Felt252Wrapper = erc20.addresses.eth_address.into();
             address.try_into().unwrap()
