@@ -3,7 +3,6 @@ mod tests {
     use ctor::ctor;
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
-    use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::test_utils::deploy_helpers::{
         create_raw_ethereum_tx, KakarotTestEnvironmentContext, TestContext,
     };
@@ -56,13 +55,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_counter(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (client, kakarot) = kakarot_test_env_ctx.resources();
-        let counter = kakarot_test_env_ctx.evm_contract("Counter");
-
-        let counter_eth_address = {
-            let address: Felt252Wrapper = counter.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
+        let (client, kakarot, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
 
         client
             .get_code(counter_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
@@ -109,13 +102,7 @@ mod tests {
         #[with(TestContext::PlainOpcodes)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
     ) {
         // Given
-        let client = kakarot_test_env_ctx.client();
-        let plain_opcodes = kakarot_test_env_ctx.evm_contract("PlainOpcodes");
-        let plain_opcodes_eth_address: Address = {
-            let address: Felt252Wrapper = plain_opcodes.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
-
+        let (client, _, _, plain_opcodes_eth_address) = kakarot_test_env_ctx.resources_with_contract("PlainOpcodes");
         // Then
         client
             .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
@@ -127,13 +114,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_storage_at(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (client, kakarot) = kakarot_test_env_ctx.resources();
-        let counter = kakarot_test_env_ctx.evm_contract("Counter");
-        let counter_eth_address = {
-            let address: Felt252Wrapper = counter.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
-
+        let (client, kakarot, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
         // When
         let inc_selector = counter.abi.function("inc").unwrap().short_signature();
 
@@ -165,12 +146,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_token_balances(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (client, kakarot) = kakarot_test_env_ctx.resources();
-        let erc20 = kakarot_test_env_ctx.evm_contract("ERC20");
-        let erc20_eth_address = {
-            let address: Felt252Wrapper = erc20.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
+        let (client, kakarot, erc20, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
         // When
         let nonce = client

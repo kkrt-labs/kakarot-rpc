@@ -750,6 +750,17 @@ impl KakarotTestEnvironmentContext {
     pub fn resources(&self) -> (&KakarotClient<JsonRpcClient<HttpTransport>>, &DeployedKakarot) {
         (&self.kakarot_client, &self.kakarot)
     }
+
+    pub fn resources_with_contract(
+        &self,
+        contract_name: &str,
+    ) -> (&KakarotClient<JsonRpcClient<HttpTransport>>, &DeployedKakarot, &Contract, Address) {
+        let contract = self.evm_contract(contract_name);
+        let eth_address: Felt252Wrapper = contract.addresses.eth_address.into();
+        let contract_eth_address: Address = eth_address.try_into().expect("Failed to convert address");
+
+        (&self.kakarot_client, &self.kakarot, contract, contract_eth_address)
+    }
 }
 
 /// Constructs a test sequencer with the Starknet configuration tailored for Kakarot.
