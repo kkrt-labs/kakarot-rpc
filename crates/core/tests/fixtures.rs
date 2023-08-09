@@ -24,8 +24,6 @@ pub enum TestContext {
 
 impl KakarotTestEnvironmentContext {
     pub async fn setup(test_context: TestContext) -> Self {
-        println!("async setup");
-
         // Create a new test environment
         let mut test_environment = KakarotTestEnvironment::new().await;
 
@@ -81,12 +79,6 @@ impl KakarotTestEnvironmentContext {
         &self,
     ) -> (&KakarotTestEnvironment, &KakarotClient<JsonRpcClient<HttpTransport>>, &DeployedKakarot) {
         (&self.test_environment, self.test_environment.client(), self.test_environment.kakarot())
-    }
-}
-
-impl Drop for KakarotTestEnvironmentContext {
-    fn drop(&mut self) {
-        block_on(async move { println!("async teardown") })
     }
 }
 
