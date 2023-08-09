@@ -20,7 +20,7 @@ use crate::madara::utils::{
 use crate::types::Felt;
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct HiveGenesisConfig {
     pub config: Config,
@@ -34,8 +34,8 @@ pub struct HiveGenesisConfig {
 }
 
 impl HiveGenesisConfig {
-    pub fn new() -> Result<Self, serde_json::Error> {
-        serde_json::from_str(std::include_str!("./genesis.json"))
+    pub fn from_file(path: &str) -> Result<Self> {
+        Ok(serde_json::from_str(&fs::read_to_string(path)?)?)
     }
 }
 
@@ -196,7 +196,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
     Ok(())
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub chain_id: i128,
@@ -226,7 +226,7 @@ mod tests {
     #[test]
     fn test_read_hive_genesis() {
         // Read the hive genesis file
-        let genesis = HiveGenesisConfig::new().expect("Failed to read genesis.json");
+        let genesis = HiveGenesisConfig::from_file("./src/test_data/hive_genesis.json").unwrap();
 
         // Verify the genesis file has the expected number of accounts
         assert_eq!(genesis.alloc.len(), 7);
@@ -265,9 +265,10 @@ mod tests {
     #[tokio::test]
     async fn test_madara_genesis() {
         // Given
-        let hive_genesis = HiveGenesisConfig::new().expect("Failed to read genesis.json");
-        let madara_loader = serde_json::from_str::<GenesisLoader>(std::include_str!("../madara/genesis.json")).unwrap();
-        let madara_genesis = Path::new("src/hive/madara_genesis.json");
+        let hive_genesis = HiveGenesisConfig::from_file("./src/test_data/hive_genesis.json").unwrap();
+        let madara_loader =
+            serde_json::from_str::<GenesisLoader>(std::include_str!("../test_data/madara_genesis.json")).unwrap();
+        let madara_genesis = Path::new("./src/test_data/combined_genesis.json");
         let compiled_path = Path::new("./cairo-contracts/build");
 
         // When
@@ -276,8 +277,12 @@ mod tests {
             .unwrap();
 
         // Then
+        let combined_genesis = fs::read_to_string("./src/test_data/combined_genesis.json").unwrap();
         let loader: GenesisLoader =
-            serde_json::from_str(include_str!("./madara_genesis.json")).expect("Failed to read madara_genesis.json");
+            serde_json::from_str(&combined_genesis).expect("Failed to read madara_genesis.json");
         assert_eq!(9 + 2 + 7, loader.contracts.len()); // 9 original + 2 Kakarot contracts + 7 hive
+
+        // After
+        fs::remove_file("./src/test_data/combined_genesis.json").unwrap();
     }
 }
