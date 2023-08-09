@@ -373,7 +373,6 @@ async fn compute_starknet_address(
 }
 
 pub fn compute_kakarot_contracts_class_hash() -> Vec<(String, FieldElement)> {
-    dotenv().ok();
     // Get the compiled Kakarot contracts directory path.
     let kakarot_compiled_contract_paths = compiled_kakarot_paths();
 
@@ -400,6 +399,7 @@ pub fn compute_kakarot_contracts_class_hash() -> Vec<(String, FieldElement)> {
 }
 
 fn compiled_kakarot_paths() -> Vec<PathBuf> {
+    dotenv().ok();
     let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
         "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
          `./scripts/make_with_env.sh test`"

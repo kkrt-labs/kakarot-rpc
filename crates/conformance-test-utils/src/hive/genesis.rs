@@ -106,7 +106,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
         ("contract_account_class_hash", contract_account_class_hash),
         ("externally_owned_account", eoa_class_hash),
         ("account_proxy_class_hash", account_proxy_class_hash),
-        ("blockhash_registry_address", *BLOCKHASH_REGISTRY_ADDRESS), // Safe unwrap 0x9002
+        ("blockhash_registry_address", *BLOCKHASH_REGISTRY_ADDRESS),
     ];
 
     storage_keys.iter().for_each(|(key, value)| {
