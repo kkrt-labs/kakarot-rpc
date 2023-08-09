@@ -147,6 +147,7 @@ mod tests {
     use kakarot_rpc_core::test_utils::deploy_helpers::{ContractDeploymentArgs, KakarotTestEnvironment};
     use katana_core::backend::state::StorageRecord;
     use reth_primitives::U256;
+    use rstest::rstest;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
     use starknet::core::utils::get_storage_var_address;
     use starknet_api::core::{ClassHash, ContractAddress as StarknetContractAddress, Nonce};
@@ -421,31 +422,32 @@ mod tests {
         assert_eq!(expected_value, actual_value);
     }
 
+    #[rstest]
     #[test]
-    fn test_split_u256_into_field_elements() {
-        let test_cases = vec![
-            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", // Normal case
-            "0x0000000000000000000000000000000000000000000000000000000000000000", // Minimum value
-            "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // Maximum value
-        ];
+    #[case(
+        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    )]
+    #[case(
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    )]
+    #[case(
+        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )]
+    fn test_split_u256_into_field_elements(#[case] input: U256, #[case] expected: U256) {
+        // When
+        let result = split_u256_into_field_elements(input);
 
-        test_cases.iter().for_each(|&value_str| {
-            // Given
-            // U256 value from the hexadecimal string
-            let value = U256::from_str(value_str).unwrap();
+        // Then
+        // Recalculate the U256 values using the resulting FieldElements
+        // The first is the low 128 bits of the U256 value
+        // The second is the high 128 bits of the U256 value and is left shifted by 128 bits
+        let result: U256 =
+            U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
 
-            // When
-            let result = split_u256_into_field_elements(value);
-
-            // Then
-            // Recalculate the U256 values using the resulting FieldElements
-            // The first is the low 128 bits of the U256 value
-            // The second is the high 128 bits of the U256 value and is left shifted by 128 bits
-            let result: U256 =
-                U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
-
-            // Assert that the original and recombined U256 values are equal
-            assert_eq!(result, value, "Failed for value: {value_str}");
-        });
+        // Assert that the expected and recombined U256 values are equal
+        assert_eq!(expected, result);
     }
 }
