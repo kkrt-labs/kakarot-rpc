@@ -1,4 +1,3 @@
-use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use reth_primitives::{Bytes, U128, U256};
 use starknet::core::types::FieldElement;
@@ -31,7 +30,6 @@ pub fn genesis_set_bytecode(
                 storage_value,
                 0, // only felt is stored so offset is always 0
             )
-            .unwrap() // safe unwrap since bytecode_ is all ascii
         })
         .collect()
 }
@@ -47,9 +45,10 @@ pub fn genesis_set_storage_starknet_contract(
     keys: &[FieldElement],
     storage_value: FieldElement,
     storage_offset: u64,
-) -> Result<((ContractAddress, StorageKey), StorageValue)> {
+) -> ((ContractAddress, StorageKey), StorageValue) {
     // Compute the storage key for the storage variable name and the keys.
-    let mut storage_key = get_storage_var_address(storage_variable_name, keys)?;
+    let mut storage_key =
+        get_storage_var_address(storage_variable_name, keys).expect("Non-ASCII storage variable name");
 
     // Add the offset to the storage key.
     storage_key += FieldElement::from(storage_offset);
@@ -58,9 +57,7 @@ pub fn genesis_set_storage_starknet_contract(
 
     // Create the tuple for the initial storage data on the Starknet contract with the given storage
     // key.
-    let storage_data = ((contract_address, storage_key.into()), storage_value.into());
-
-    Ok(storage_data)
+    ((contract_address, storage_key.into()), storage_value.into())
 }
 
 /// Generates the genesis storage tuples for pre-funding a Starknet address on Madara.
@@ -73,7 +70,7 @@ pub fn genesis_set_storage_starknet_contract(
 pub fn genesis_fund_starknet_address(
     starknet_address: FieldElement,
     amount: U256,
-) -> Result<Vec<((ContractAddress, StorageKey), StorageValue)>> {
+) -> Vec<((ContractAddress, StorageKey), StorageValue)> {
     // Split the amount into two 128-bit chunks.
     let amount = split_u256_into_field_elements(amount);
 
@@ -83,7 +80,7 @@ pub fn genesis_fund_starknet_address(
         .enumerate() // Enumerate the key offsets.
         .map(|(offset, value)| {
             genesis_set_storage_starknet_contract(
-                FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN)?,
+                FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(), // Safe unwrap
                 "ERC20_balances",
                 &[starknet_address],
                 *value,
@@ -104,7 +101,7 @@ pub fn genesis_set_storage_kakarot_contract_account(
     starknet_address: FieldElement,
     key: U256,
     value: U256,
-) -> Result<Vec<((ContractAddress, StorageKey), StorageValue)>> {
+) -> Vec<((ContractAddress, StorageKey), StorageValue)> {
     // Split the key into Vec of two 128-bit chunks.
     let keys = split_u256_into_field_elements(key);
 
@@ -183,8 +180,7 @@ mod tests {
             &keys,
             storage_value,
             storage_offset,
-        )
-        .unwrap();
+        );
 
         // Then
         assert_eq!(result, expected_output);
@@ -321,7 +317,7 @@ mod tests {
         ];
 
         // When
-        let result = genesis_fund_starknet_address(starknet_address, amount).unwrap();
+        let result = genesis_fund_starknet_address(starknet_address, amount);
 
         // Then
         assert_eq!(result, expected_output);
@@ -365,7 +361,7 @@ mod tests {
         ];
 
         // When
-        let result = genesis_set_storage_kakarot_contract_account(starknet_address, key, value).unwrap();
+        let result = genesis_set_storage_kakarot_contract_account(starknet_address, key, value);
         // Then
         assert_eq!(result, expected_output);
     }
@@ -384,7 +380,7 @@ mod tests {
         let expected_value =
             U256::from_str("0xccccccccccccccccccccccccccccccccdddddddddddddddddddddddddddddddd").unwrap();
         let genesis_storage_data =
-            genesis_set_storage_kakarot_contract_account(genesis_address, expected_key, expected_value).unwrap();
+            genesis_set_storage_kakarot_contract_account(genesis_address, expected_key, expected_value);
 
         // Create an atomic reference to the test environment to avoid dropping it
         let env = Arc::clone(&test_environment);

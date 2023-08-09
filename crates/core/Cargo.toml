@@ -31,7 +31,7 @@ serde = { version = "1.0" }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 serde_with = { workspace = true }
 
-lazy_static = "1.4.0"
+lazy_static = { workspace = true }
 ruint = { workspace = true }
 tokio = { workspace = true }
 
