@@ -20,7 +20,7 @@ use crate::madara::utils::{
 use crate::types::Felt;
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HiveGenesisConfig {
     pub config: Config,
@@ -34,8 +34,8 @@ pub struct HiveGenesisConfig {
 }
 
 impl HiveGenesisConfig {
-    pub fn new() -> Result<Self, serde_json::Error> {
-        serde_json::from_str(std::include_str!("./genesis.json"))
+    pub fn from_file(path: &str) -> Result<Self> {
+        Ok(serde_json::from_str(&fs::read_to_string(path)?)?)
     }
 }
 
@@ -56,7 +56,7 @@ lazy_static! {
 pub async fn serialize_hive_to_madara_genesis_config(
     hive_genesis: HiveGenesisConfig,
     mut madara_loader: GenesisLoader,
-    madara_genesis: &Path,
+    combined_genesis: &Path,
     compiled_path: &Path,
 ) -> Result<(), IoError> {
     // Compute the class hash of Kakarot contracts
@@ -191,12 +191,12 @@ pub async fn serialize_hive_to_madara_genesis_config(
     // Serialize the loader to a string
     let madara_genesis_str = serde_json::to_string_pretty(&madara_loader)?;
     // Write the string to a file
-    fs::write(madara_genesis, madara_genesis_str)?;
+    fs::write(combined_genesis, madara_genesis_str)?;
 
     Ok(())
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub chain_id: i128,
@@ -207,7 +207,7 @@ pub struct Config {
     pub eip158_block: i128,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct AccountInfo {
     pub balance: U256,
     pub code: Option<Bytes>,
@@ -226,7 +226,7 @@ mod tests {
     #[test]
     fn test_read_hive_genesis() {
         // Read the hive genesis file
-        let genesis = HiveGenesisConfig::new().expect("Failed to read genesis.json");
+        let genesis = HiveGenesisConfig::from_file("./src/test_data/hive_genesis.json").unwrap();
 
         // Verify the genesis file has the expected number of accounts
         assert_eq!(genesis.alloc.len(), 7);
@@ -265,19 +265,24 @@ mod tests {
     #[tokio::test]
     async fn test_madara_genesis() {
         // Given
-        let hive_genesis = HiveGenesisConfig::new().expect("Failed to read genesis.json");
-        let madara_loader = serde_json::from_str::<GenesisLoader>(std::include_str!("../madara/genesis.json")).unwrap();
-        let madara_genesis = Path::new("src/hive/madara_genesis.json");
+        let hive_genesis = HiveGenesisConfig::from_file("./src/test_data/hive_genesis.json").unwrap();
+        let madara_loader =
+            serde_json::from_str::<GenesisLoader>(std::include_str!("../test_data/madara_genesis.json")).unwrap();
+        let combined_genesis = Path::new("./src/test_data/combined_genesis.json");
         let compiled_path = Path::new("./cairo-contracts/build");
 
         // When
-        serialize_hive_to_madara_genesis_config(hive_genesis, madara_loader, madara_genesis, compiled_path)
+        serialize_hive_to_madara_genesis_config(hive_genesis, madara_loader, combined_genesis, compiled_path)
             .await
             .unwrap();
 
         // Then
+        let combined_genesis = fs::read_to_string("./src/test_data/combined_genesis.json").unwrap();
         let loader: GenesisLoader =
-            serde_json::from_str(include_str!("./madara_genesis.json")).expect("Failed to read madara_genesis.json");
+            serde_json::from_str(&combined_genesis).expect("Failed to read combined_genesis.json");
         assert_eq!(9 + 2 + 7, loader.contracts.len()); // 9 original + 2 Kakarot contracts + 7 hive
+
+        // After
+        fs::remove_file("./src/test_data/combined_genesis.json").unwrap();
     }
 }
