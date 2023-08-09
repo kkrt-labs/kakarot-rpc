@@ -57,28 +57,9 @@ mod tests {
         // Given
         let (client, kakarot, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
 
-        client
-            .get_code(counter_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
-            .await
-            .expect("contract not deployed");
-
         // When
-        let inc_selector = counter.abi.function("inc").unwrap().short_signature();
-
-        let nonce = client
-            .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
-            .await
-            .unwrap();
-        let inc_tx = create_raw_ethereum_tx(
-            inc_selector,
-            kakarot.eoa_private_key,
-            counter_eth_address,
-            vec![],
-            nonce.try_into().unwrap(),
-        );
-        let inc_res = client.send_transaction(inc_tx).await.unwrap();
-
-        client.transaction_receipt(inc_res).await.expect("increment transaction failed");
+        let hash = execute_tx(&test_environment, "Counter", "inc", vec![]).await;
+        client.transaction_receipt(hash).await.expect("increment transaction failed");
 
         let count_selector = counter.abi.function("count").unwrap().short_signature();
         let counter_bytes = client
@@ -116,29 +97,13 @@ mod tests {
         // Given
         let (client, kakarot, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
         // When
-        let inc_selector = counter.abi.function("inc").unwrap().short_signature();
+        execute_tx(&test_environment, "Counter", "inc", vec![]).await;
 
-        let nonce = client
-            .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
-            .await
-            .unwrap();
-
-        let inc_tx = create_raw_ethereum_tx(
-            inc_selector,
-            kakarot.eoa_private_key,
-            counter_eth_address,
-            vec![],
-            nonce.try_into().unwrap(),
-        );
-
-        client.send_transaction(inc_tx).await.unwrap();
-
+        // Then
         let count = client
             .storage_at(counter_eth_address, U256::from(0), BlockId::Number(BlockNumberOrTag::Latest))
             .await
             .unwrap();
-
-        // Then
         assert_eq!(U256::from(1), count);
     }
 
@@ -149,27 +114,12 @@ mod tests {
         let (client, kakarot, erc20, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
         // When
-        let nonce = client
-            .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
-            .await
-            .unwrap();
-        let mint_selector = erc20.abi.function("mint").unwrap().short_signature();
-
         let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
         let amount = U256::from(10_000);
-        let mint_tx = create_raw_ethereum_tx(
-            mint_selector,
-            kakarot.eoa_private_key,
-            erc20_eth_address,
-            vec![to, amount],
-            nonce.try_into().unwrap(),
-        );
-
-        client.send_transaction(mint_tx).await.unwrap();
-
-        let balances = client.token_balances(kakarot.eoa_addresses.eth_address, vec![erc20_eth_address]).await.unwrap();
+        execute_tx(&test_environment, "ERC20", "mint", vec![to, amount]).await;
 
         // Then
+        let balances = client.token_balances(kakarot.eoa_addresses.eth_address, vec![erc20_eth_address]).await.unwrap();
         assert_eq!(
             TokenBalances {
                 address: kakarot.eoa_addresses.eth_address,
@@ -181,5 +131,55 @@ mod tests {
             },
             balances
         );
+    }
+
+    #[tokio::test]
+    async fn test_get_logs_integration() {
+        // Given
+        let test_environment = KakarotTestEnvironment::new()
+            .await
+            .deploy_evm_contract(ContractDeploymentArgs {
+                name: "ERC20".into(),
+                constructor_args: (
+                    Token::String("Test".into()),               // name
+                    Token::String("TT".into()),                 // symbol
+                    Token::Uint(ethers::types::U256::from(18)), // decimals
+                ),
+            })
+            .await;
+        let erc20 = test_environment.evm_contract("ERC20");
+        let client = test_environment.client();
+        let kakarot = test_environment.kakarot();
+
+        // When
+        let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
+        let amount = U256::from(10_000);
+        execute_tx(&test_environment, "ERC20", "mint", vec![to, amount]).await;
+
+        let to = U256::try_from_be_slice(ACCOUNT_ADDRESS_EVM.as_bytes()).unwrap();
+        let amount = U256::from(10_000);
+        execute_tx(&test_environment, "ERC20", "transfer", vec![to, amount]).await;
+
+        let filter = Filter {
+            block_option: FilterBlockOption::Range {
+                from_block: Some(BlockNumberOrTag::Number(0)),
+                to_block: Some(BlockNumberOrTag::Number(100)),
+            },
+            address: Some(ValueOrArray::Value(erc20.addresses.eth_address)),
+            topics: [None, None, None, None],
+        };
+        let events = client.get_logs(filter).await.unwrap();
+
+        dbg!(client.kakarot_address());
+        dbg!(erc20.addresses.eth_address);
+
+        let provider = client.starknet_provider();
+        let filter =
+            EventFilter { address: Some(client.kakarot_address()), from_block: None, to_block: None, keys: None };
+        let provider_events = provider.get_events(filter, None, 10).await.unwrap();
+        dbg!(provider_events);
+
+        // Then
+        assert_eq!(2, events.len());
     }
 }

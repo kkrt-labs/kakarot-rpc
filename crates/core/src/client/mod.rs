@@ -834,7 +834,6 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
         let mut events = vec![];
 
         loop {
-            dbg!("getting events");
             result = provider.get_events(filter.clone(), result.continuation_token, chunk_size).await?;
             events.append(&mut result.events);
 
