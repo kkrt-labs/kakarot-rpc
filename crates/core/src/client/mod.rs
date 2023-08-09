@@ -23,9 +23,9 @@ use reth_rpc_types::{
 };
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, FieldElement,
-    FunctionCall, InvokeTransactionReceipt, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, StarknetError, SyncStatusType, Transaction as TransactionType,
-    TransactionReceipt as StarknetTransactionReceipt, TransactionStatus as StarknetTransactionStatus,
+    InvokeTransactionReceipt, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
+    StarknetError, SyncStatusType, Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
+    TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
 use starknet::providers::{Provider, ProviderError};
@@ -33,13 +33,14 @@ use starknet::providers::{Provider, ProviderError};
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
-use self::constants::selectors::{EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
+use self::constants::selectors::EVM_CONTRACT_DEPLOYED;
 use self::constants::{
     ACCOUNT_ADDRESS, CHAIN_ID, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS,
     MAX_FEE, STARKNET_NATIVE_TOKEN,
 };
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
+use crate::contracts::account::{Account, KakarotAccount};
 use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
@@ -92,7 +93,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             self.kakarot_contract.compute_starknet_address(&ethereum_address, &starknet_block_id).await?;
 
         let provider = self.starknet_provider();
-        let contract_account = ContractAccount::new(&provider, starknet_contract_address);
+        let contract_account = ContractAccount::new(starknet_contract_address, &provider);
         let bytecode = contract_account.bytecode(&starknet_block_id).await?;
 
         // Convert the result of the function call to a vector of bytes
@@ -395,7 +396,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let key_high: Felt252Wrapper = key_high.try_into()?;
 
         let provider = self.starknet_provider();
-        let contract_account = ContractAccount::new(&provider, starknet_contract_address);
+        let contract_account = ContractAccount::new(starknet_contract_address, &provider);
         let storage_value = contract_account.storage(&key_low.into(), &key_high.into(), &starknet_block_id).await?;
 
         Ok(storage_value)
@@ -631,19 +632,8 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
         starknet_address: &FieldElement,
         starknet_block_id: &StarknetBlockId,
     ) -> Result<Address, EthApiError<P::Error>> {
-        let request = FunctionCall {
-            contract_address: *starknet_address,
-            entry_point_selector: GET_EVM_ADDRESS,
-            calldata: vec![],
-        };
-
-        let evm_address = self.starknet_provider.call(request, starknet_block_id).await?;
-        let evm_address: Felt252Wrapper = (*evm_address.first().ok_or_else(|| {
-            DataDecodingError::InvalidReturnArrayLength { entrypoint: "get_evm_address".into(), expected: 1, actual: 0 }
-        })?)
-        .into();
-
-        Ok(evm_address.troncate_to_ethereum_address())
+        let kakarot_account = KakarotAccount::new(*starknet_address, &self.starknet_provider);
+        kakarot_account.get_evm_address(starknet_block_id).await
     }
 
     /// Submits a Kakarot transaction to the Starknet provider.
