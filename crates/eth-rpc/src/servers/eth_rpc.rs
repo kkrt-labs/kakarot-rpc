@@ -7,10 +7,10 @@ use kakarot_rpc_core::client::constants::CHAIN_ID;
 use kakarot_rpc_core::client::errors::{rpc_err, EthApiError};
 use kakarot_rpc_core::models::block::EthBlockId;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64, Log};
 use reth_rpc_types::{
     CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
-    Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
+    Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work, Filter
 };
 use serde_json::Value;
 use starknet::core::types::BlockId as StarknetBlockId;
@@ -247,6 +247,30 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         _keys: Vec<H256>,
         _block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse> {
+        todo!()
+    }
+
+    async fn new_filter(&self, _filter: Filter) -> Result<U64> {
+        todo!()
+    }
+
+    async fn new_block_filter(&self) -> Result<U64> {
+        todo!()
+    }
+
+    async fn new_pending_transaction_filter(&self) -> Result<U64> {
+        todo!()
+    }
+
+    async fn uninstall_filter(&self, _id: U64) -> Result<bool> {
+        todo!()
+    }
+
+    async fn get_filter_changes(&self, _id: U64) -> Result<Vec<Log>> {
+        todo!()
+    }
+
+    async fn get_filter_logs(&self, _id: U64) -> Result<Vec<Log>> {
         todo!()
     }
 }
