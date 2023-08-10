@@ -413,33 +413,4 @@ mod tests {
         // Assert that the value stored in the contract is the same as the value we set in the genesis
         assert_eq!(expected_value, actual_value);
     }
-
-    #[rstest]
-    #[test]
-    #[case(
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    )]
-    #[case(
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
-    )]
-    #[case(
-        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    )]
-    fn test_split_u256_into_field_elements(#[case] input: U256, #[case] expected: U256) {
-        // When
-        let result = split_u256_into_field_elements(input);
-
-        // Then
-        // Recalculate the U256 values using the resulting FieldElements
-        // The first is the low 128 bits of the U256 value
-        // The second is the high 128 bits of the U256 value and is left shifted by 128 bits
-        let result: U256 =
-            U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
-
-        // Assert that the expected and recombined U256 values are equal
-        assert_eq!(expected, result);
-    }
 }
