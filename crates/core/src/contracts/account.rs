@@ -27,7 +27,7 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
         })?)
         .into();
 
-        Ok(evm_address.troncate_to_ethereum_address())
+        Ok(evm_address.truncate_to_ethereum_address())
     }
 
     async fn bytecode(&self, block_id: &BlockId) -> Result<Bytes, EthApiError<P::Error>> {
