@@ -116,15 +116,19 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             _ => filter,
         };
 
+        // Convert the eth log filter to a starknet event filter
         let filter: EthEventFilter = filter.into();
         let event_filter = filter.to_starknet_filter(self)?;
 
+        // Filter events
         let events = self
             .filter_events(EventFilterWithPage {
                 event_filter,
                 result_page_request: ResultPageRequest { continuation_token: None, chunk_size: CHUNK_SIZE_LIMIT },
             })
             .await?;
+
+        // Convert events to eth logs
         let logs = events
             .into_iter()
             .filter_map(|emitted| {

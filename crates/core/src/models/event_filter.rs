@@ -58,7 +58,7 @@ impl EthEventFilter {
             .take(8) // take up to 4 topics split into 2 field elements
             .collect();
 
-        // Get the filter address if any
+        // Get the filter address if any (added as first key)
         if let Some(address) = filter.address {
             let address = match address {
                 ValueOrArray::Array(addresses) => addresses.first().copied(),
@@ -70,8 +70,10 @@ impl EthEventFilter {
             }
         }
 
+        // Convert to expected format Vec<Vec<FieldElement>> or None if no keys
         let keys = if !keys.is_empty() { Some(keys.into_iter().map(|key| vec![key]).collect()) } else { None };
 
+        // Add filter block range
         let starknet_filter = if let Some(block_hash) = block_hash {
             let block_hash: Felt252Wrapper = block_hash.try_into()?;
 
