@@ -66,7 +66,7 @@ impl EthEventFilter {
             };
             if let Some(address) = address {
                 let address: Felt252Wrapper = address.into();
-                keys.append(&mut vec![address.into()])
+                keys = [vec![address.into()], keys].concat();
             }
         }
 
