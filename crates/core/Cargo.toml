@@ -42,6 +42,7 @@ ethers = { workspace = true }
 ethers-solc = { workspace = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
 walkdir = "2.3.3"
+rstest = { workspace = true }
 
 [dev-dependencies]
 dojo-test-utils = { workspace = true }
