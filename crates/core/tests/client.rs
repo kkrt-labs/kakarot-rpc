@@ -3,16 +3,24 @@ mod tests {
     use std::str::FromStr;
 
     use ctor::ctor;
-    use kakarot_rpc_core::client::api::KakarotEthApi;
+    use ethers::signers::{LocalWallet, Signer};
+    use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
+    use kakarot_rpc_core::client::constants::DEPLOY_FEE;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
+    use kakarot_rpc_core::models::felt::Felt252Wrapper;
+    use kakarot_rpc_core::test_utils::constants::EOA_RECEIVER_ADDRESS;
     use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
-    use kakarot_rpc_core::test_utils::execution_helpers::execute_tx;
+    use kakarot_rpc_core::test_utils::execution_helpers::{execute_eth_transfer_tx, execute_tx};
     use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
     use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
     use rstest::*;
-    use starknet::core::types::FieldElement;
+    use starknet::core::types::{
+        BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingTransactionReceipt, TransactionReceipt,
+        TransactionStatus,
+    };
+    use starknet::providers::Provider;
     use tracing_subscriber::FmtSubscriber;
 
     #[ctor]
@@ -49,7 +57,7 @@ mod tests {
         let eoa_balance = FieldElement::from_bytes_be(&eoa_balance.to_be_bytes()).unwrap();
 
         // Then
-        assert_eq!(FieldElement::from_dec_str("1000000000000000000").unwrap(), eoa_balance);
+        assert_eq!(FieldElement::from_dec_str("1000000000000000000").unwrap() - *DEPLOY_FEE, eoa_balance);
     }
 
     #[rstest]
@@ -198,5 +206,115 @@ mod tests {
             }
             _ => panic!("Expected FilterChanges::Logs variant, got {:?}", logs),
         }
+    }
+
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_wait_for_confirmation_on_l2(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+        let (client, kakarot) = kakarot_test_env_ctx.resources();
+        let amount = Felt252Wrapper::from(*DEPLOY_FEE).try_into().unwrap();
+
+        let transaction_hash =
+            execute_eth_transfer_tx(&kakarot_test_env_ctx, kakarot.eoa_private_key, *EOA_RECEIVER_ADDRESS, amount)
+                .await;
+        let transaction_hash: FieldElement = Felt252Wrapper::try_from(transaction_hash).unwrap().into();
+
+        let _ = client.wait_for_confirmation_on_l2(transaction_hash, 10).await;
+
+        let transaction_receipt = client.starknet_provider().get_transaction_receipt(transaction_hash).await.unwrap();
+
+        match transaction_receipt {
+            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
+                assert_eq!(TransactionStatus::AcceptedOnL2, receipt.status)
+            }
+            _ => panic!(
+                "Expected MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke), got {:?}",
+                transaction_receipt
+            ),
+        }
+    }
+
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_check_eoa_account_exists(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+        let (client, kakarot) = kakarot_test_env_ctx.resources();
+        let block_id = StarknetBlockId::Tag(BlockTag::Latest);
+        // this address shouldn't be shared with other tests, otherwise a test might deploy it in parallel,
+        // and this test will fail; source -> ganache (https://github.com/trufflesuite/ganache)
+        let evm_address_not_existing = Address::from_str("0xcE16e8eb8F4BF2E65BA9536C07E305b912BAFaCF").unwrap();
+
+        let res = client.check_eoa_account_exists(kakarot.eoa_addresses.eth_address, &block_id).await.unwrap();
+        assert!(res);
+
+        let res = client.check_eoa_account_exists(evm_address_not_existing, &block_id).await.unwrap();
+        assert!(!res)
+    }
+
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_deploy_eoa(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+        let (client, kakarot) = kakarot_test_env_ctx.resources();
+        let block_id = StarknetBlockId::Tag(BlockTag::Latest);
+        // this address shouldn't be shared with other tests, otherwise a test might deploy it in parallel,
+        // and this test will fail; source -> ganache (https://github.com/trufflesuite/ganache)
+        let ethereum_address_to_deploy = Address::from_str("0x02f1c4C93AFEd946Cce5Ad7D34354A150bEfCFcF").unwrap();
+        let amount: u128 = Felt252Wrapper::from(*DEPLOY_FEE).try_into().unwrap();
+
+        // checking the account is not already deployed
+        let res = client.check_eoa_account_exists(ethereum_address_to_deploy, &block_id).await.unwrap();
+        assert!(!res);
+
+        // funding account so it can cover its deployment fee
+        let _ =
+            execute_eth_transfer_tx(&kakarot_test_env_ctx, kakarot.eoa_private_key, ethereum_address_to_deploy, amount)
+                .await;
+
+        let _ = client.deploy_eoa(ethereum_address_to_deploy).await.unwrap();
+
+        // checking that the account is deployed
+        let res = client.check_eoa_account_exists(ethereum_address_to_deploy, &block_id).await.unwrap();
+        assert!(res);
+
+        let balance =
+            client.balance(ethereum_address_to_deploy, BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
+        assert_eq!(balance, U256::ZERO);
+    }
+
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_automatic_deployment_of_eoa(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+        let (_, kakarot) = kakarot_test_env_ctx.resources();
+        let block_id_latest = BlockId::Number(BlockNumberOrTag::Latest);
+
+        // the private key has been taken from the ganache repo and can be safely published, do no share
+        // with other tests https://github.com/trufflesuite/ganache
+        let ethereum_private_key = "0x7f109a9e3b0d8ecfba9cc23a3614433ce0fa7ddcc80f2a8f10b222179a5a80d6";
+        let to = LocalWallet::from_str(ethereum_private_key).unwrap();
+        let to_private_key = {
+            let signing_key_bytes = to.signer().to_bytes(); // Convert to bytes
+            H256::from_slice(&signing_key_bytes) // Convert to H256
+        };
+        let to_address: Address = to.address().into();
+
+        let deploy_fee: u128 = Felt252Wrapper::from(*DEPLOY_FEE).try_into().unwrap();
+
+        let _ =
+            execute_eth_transfer_tx(&kakarot_test_env_ctx, kakarot.eoa_private_key, to_address, deploy_fee * 2).await;
+
+        let balance = kakarot_test_env_ctx.client().balance(to_address, block_id_latest).await.unwrap();
+
+        assert_eq!(balance, U256::from(deploy_fee * 2));
+
+        let _ = execute_eth_transfer_tx(
+            &kakarot_test_env_ctx,
+            to_private_key,
+            kakarot.eoa_addresses.eth_address,
+            deploy_fee,
+        )
+        .await;
+
+        let balance = kakarot_test_env_ctx.client().balance(to_address, block_id_latest).await.unwrap();
+
+        assert_eq!(balance, U256::ZERO);
     }
 }

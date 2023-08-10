@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs::{self};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use bytes::BytesMut;
@@ -31,10 +31,10 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
-use super::constants::{DEPLOY_FEE, EVM_CONTRACTS};
+use super::constants::{EVM_CONTRACTS, STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY};
 use crate::client::api::KakarotStarknetApi;
 use crate::client::config::{Network, StarknetConfig as StarknetClientConfig};
-use crate::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
+use crate::client::constants::{CHAIN_ID, DEPLOY_FEE, STARKNET_NATIVE_TOKEN};
 use crate::client::KakarotClient;
 use crate::contracts::kakarot::KakarotContract;
 use crate::models::felt::Felt252Wrapper;
@@ -161,7 +161,7 @@ pub fn encode_contract<T: Tokenize>(
 ///
 /// This function creates an EIP-1559 transaction with certain fields set according to the function
 /// parameters and the others set to their default values.
-pub fn to_kakarot_transaction(nonce: u64, to: TransactionKind, input: Bytes) -> Transaction {
+pub fn to_kakarot_transaction(nonce: u64, to: TransactionKind, value: u128, input: Bytes) -> Transaction {
     Transaction::Eip1559(TxEip1559 {
         chain_id: CHAIN_ID,
         nonce,
@@ -169,7 +169,7 @@ pub fn to_kakarot_transaction(nonce: u64, to: TransactionKind, input: Bytes) -> 
         max_fee_per_gas: Default::default(),
         gas_limit: Default::default(),
         to,
-        value: Default::default(),
+        value,
         input,
         access_list: Default::default(),
     })
@@ -196,8 +196,24 @@ pub fn create_raw_ethereum_tx(
         data.extend_from_slice(&arg_bytes);
     }
 
-    // Create a transaction object
-    let transaction = to_kakarot_transaction(nonce, TransactionKind::Call(to), data.into());
+    let transaction = to_kakarot_transaction(nonce, TransactionKind::Call(to), Default::default(), data.into());
+    let signature =
+        sign_message(eoa_secret_key, transaction.signature_hash()).expect("Signing of ethereum transaction failed.");
+
+    let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
+    let mut raw_tx = BytesMut::new(); // Create a new empty buffer
+
+    signed_transaction.encode_enveloped(&mut raw_tx); // Encode the transaction into the buffer
+
+    raw_tx.to_vec().into()
+}
+
+/// Constructs and signs a raw Ethereum transaction based on given parameters.
+///
+/// This function creates a transaction which will transfer a certain amount of wei to a recipient
+/// eoa. The transaction is signed using the provided EOA secret.
+pub fn create_eth_transfer_tx(eoa_secret_key: H256, to: Address, value: u128, nonce: u64) -> Bytes {
+    let transaction = to_kakarot_transaction(nonce, TransactionKind::Call(to), value, Bytes::default());
     let signature =
         sign_message(eoa_secret_key, transaction.signature_hash()).expect("Signing of ethereum transaction failed.");
 
@@ -245,8 +261,12 @@ async fn deploy_evm_contract<T: Tokenize>(
     let contract_bytes = get_contract_bytecode(&contract);
     let contract_bytes = encode_contract(&abi, &contract_bytes, constructor_args);
     let nonce = eoa_starknet_account.get_nonce().await.unwrap();
-    let transaction =
-        to_kakarot_transaction(nonce.try_into().unwrap(), TransactionKind::Create, contract_bytes.to_vec().into());
+    let transaction = to_kakarot_transaction(
+        nonce.try_into().unwrap(),
+        TransactionKind::Create,
+        Default::default(),
+        contract_bytes.to_vec().into(),
+    );
     let signature = sign_message(eoa_secret_key, transaction.signature_hash()).unwrap();
     let signed_transaction = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
@@ -469,9 +489,9 @@ async fn fund_eoa(
 /// Asynchronously deploys an Externally Owned Account (EOA) to the network and funds it.
 ///
 /// This function first computes the Starknet address of the EOA to be deployed using the provided
-/// account, contract address, and EOA account address. Then, it deploys the EOA to the network and
-/// funds it with the specified amount of fee token.
-async fn deploy_and_fund_eoa(
+/// account, contract address, and EOA account address. Then, it firstly funds the eoa to be able to
+/// pay for its deploymebt fee and then deploys the EOA to the network.
+async fn fund_and_deploy_eoa(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     contract_address: FieldElement,
     amount: FieldElement,
@@ -479,7 +499,7 @@ async fn deploy_and_fund_eoa(
     fee_token_address: FieldElement,
 ) -> FieldElement {
     let eoa_account_starknet_address = compute_starknet_address(account, contract_address, eoa_account_address).await;
-    fund_eoa(account, eoa_account_starknet_address, amount + *DEPLOY_FEE, fee_token_address).await;
+    fund_eoa(account, eoa_account_starknet_address, amount, fee_token_address).await;
     deploy_eoa(account, contract_address, eoa_account_address).await;
 
     eoa_account_starknet_address
@@ -631,6 +651,12 @@ pub struct KakarotTestEnvironmentContext {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct DeployerAccount {
+    pub address: FieldElement,
+    pub private_key: FieldElement,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct Contract {
     pub addresses: ContractAddresses,
     pub abi: Abi,
@@ -653,11 +679,16 @@ impl KakarotTestEnvironmentContext {
         // Construct a Starknet test sequencer
         let sequencer = construct_kakarot_test_sequencer().await;
 
+        let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+        let starknet_account = sequencer.account();
+
         // Define the expected funded amount for the Kakarot system
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
 
         // Deploy the Kakarot system
         let kakarot = deploy_kakarot_system(&sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
+
+        let starknet_deployer_account = deploy_deployer_account(starknet_provider.clone(), &starknet_account).await;
 
         // Create a Kakarot client
         let kakarot_client = KakarotClient::new(
@@ -666,7 +697,8 @@ impl KakarotTestEnvironmentContext {
                 kakarot.kakarot_address,
                 kakarot.proxy_class_hash,
             ),
-            JsonRpcClient::new(HttpTransport::new(sequencer.url())),
+            starknet_provider,
+            starknet_deployer_account,
         );
 
         let kakarot_contract =
@@ -770,6 +802,17 @@ impl KakarotTestEnvironmentContext {
             evm_contracts.insert(contract_name.to_string(), contract);
         }
 
+        let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(env.url())));
+
+        let chain_id = starknet_provider.chain_id().await.unwrap();
+
+        let deployer_account: DeployerAccount =
+            serde_json::from_value(contracts.get("DeployerAccount").unwrap().to_owned())
+                .expect("Failed to fetch Deployer Account");
+        let local_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(deployer_account.private_key));
+        let deployer_account =
+            SingleOwnerAccount::new(starknet_provider.clone(), local_wallet, deployer_account.address, chain_id);
+
         // Create a Kakarot client
         let kakarot_client = KakarotClient::new(
             StarknetClientConfig::new(
@@ -777,7 +820,8 @@ impl KakarotTestEnvironmentContext {
                 kakarot.kakarot_address,
                 kakarot.proxy_class_hash,
             ),
-            JsonRpcClient::new(HttpTransport::new(env.url())),
+            starknet_provider,
+            deployer_account,
         );
 
         let kakarot_contract =
@@ -855,6 +899,30 @@ pub async fn construct_kakarot_test_sequencer() -> TestSequencer {
     TestSequencer::start(SequencerConfig::default(), kakarot_starknet_config()).await
 }
 
+/// Get filepath of a given a compiled contract which is part of the kakarot system
+pub fn get_kakarot_contract_file_path(contract_name: &str) -> PathBuf {
+    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
+        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
+         `./scripts/make_with_env.sh test`"
+    ));
+
+    let mut path = compiled_kakarot_path.join(Path::new(contract_name));
+    let _ = path.set_extension("json");
+    path
+}
+
+/// Compute the class hash given PathBuf to a compiled Kakarot system contract
+pub fn compute_kakarot_contract_class_hash(path: PathBuf) -> FieldElement {
+    let file = fs::File::open(&path).unwrap_or_else(|_| panic!("Failed to open file: {}", path.display()));
+    let legacy_contract: LegacyContractClass = serde_json::from_reader(file)
+        .unwrap_or_else(|_| panic!("Failed to deserialize contract from file: {}", path.display()));
+    let contract_class = Arc::new(legacy_contract);
+
+    contract_class
+        .class_hash()
+        .unwrap_or_else(|_| panic!("Failed to compuete class hash for contract from file: {}", path.display()))
+}
+
 /// Asynchronously deploys a Kakarot system to the Starknet network and returns the
 /// `DeployedKakarot` object.
 ///
@@ -881,8 +949,9 @@ pub async fn deploy_kakarot_system(
     let fee_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
     let deployments = deploy_kakarot_contracts(&starknet_account, &class_hash, fee_token_address).await;
     let kkrt_address = deployments.get("kakarot").unwrap();
+
     let deployed_eoa_sn_address =
-        deploy_and_fund_eoa(&starknet_account, *kkrt_address, funding_amount, eoa_sn_address, fee_token_address).await;
+        fund_and_deploy_eoa(&starknet_account, *kkrt_address, funding_amount, eoa_sn_address, fee_token_address).await;
 
     let eoa_addresses = ContractAddresses { eth_address: eoa_eth_address, starknet_address: deployed_eoa_sn_address };
 
@@ -893,4 +962,34 @@ pub async fn deploy_kakarot_system(
         proxy_class_hash: *class_hash.get("proxy").unwrap(),
         contract_account_class_hash: *class_hash.get("contract_account").unwrap(),
     }
+}
+
+/// Asynchronously deploys a deployer account
+/// deployer account is used by kakarot client to deploy externally owned accounts
+pub async fn deploy_deployer_account(
+    starknet_provider: Arc<JsonRpcClient<HttpTransport>>,
+    account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+) -> SingleOwnerAccount<Arc<JsonRpcClient<HttpTransport>>, LocalWallet> {
+    let account_class_path = get_kakarot_contract_file_path("OpenzeppelinAccount");
+    let account_class_hash = compute_kakarot_contract_class_hash(account_class_path);
+
+    let signing_key = SigningKey::from_secret_scalar(*STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY);
+    let local_wallet = LocalWallet::from_signing_key(signing_key.clone());
+
+    let deployer_account_public_key = signing_key.verifying_key().scalar();
+
+    let deployer_account_address =
+        deploy_starknet_contract(account, &account_class_hash, vec![deployer_account_public_key]).await.expect("");
+
+    let _ = account
+        .execute(vec![Call {
+            to: FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(),
+            selector: get_selector_from_name("transfer").unwrap(),
+            calldata: vec![deployer_account_address, FieldElement::from(10000000000000_u64), FieldElement::ZERO],
+        }])
+        .send()
+        .await
+        .unwrap();
+
+    SingleOwnerAccount::new(starknet_provider, local_wallet, deployer_account_address, account.chain_id())
 }

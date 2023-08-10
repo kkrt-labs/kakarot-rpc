@@ -28,7 +28,7 @@ impl From<Event> for StarknetEvent {
 }
 
 impl ConvertibleStarknetEvent for StarknetEvent {
-    fn to_eth_log<P: Provider + Send + Sync>(
+    fn to_eth_log<P: Provider + Send + Sync + 'static>(
         self,
         client: &dyn KakarotStarknetApi<P>,
         block_hash: Option<H256>,

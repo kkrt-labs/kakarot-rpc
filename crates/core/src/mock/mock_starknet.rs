@@ -1,11 +1,14 @@
 use std::fs;
+use std::sync::Arc;
 
 use dojo_test_utils::rpc::MockJsonRpcTransport;
 use foundry_config::find_git_root_path;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
+use starknet::accounts::SingleOwnerAccount;
 use starknet::providers::jsonrpc::JsonRpcMethod;
-use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
+use starknet::providers::{JsonRpcClient, Provider, SequencerGatewayProvider};
+use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::FieldElement;
 use walkdir::WalkDir;
 
@@ -201,17 +204,33 @@ pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
     let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
     let config = StarknetConfig::new(Network::Goerli1Gateway, kakarot_address, Default::default());
 
-    let provider = SequencerGatewayProviderBuilder::new(&Network::Goerli1Gateway).build();
-    KakarotClient::new(config, provider)
+    let provider = Arc::new(SequencerGatewayProviderBuilder::new(&Network::Goerli1Gateway).build());
+    let starknet_account = mock_account(provider.clone());
+
+    KakarotClient::new(config, provider, starknet_account)
 }
 
 pub fn init_mock_client(
     fixtures: Option<Vec<StarknetRpcFixture>>,
 ) -> KakarotClient<JsonRpcClient<MockJsonRpcTransport>> {
-    let config = StarknetConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
-    let starknet_provider = mock_starknet_provider(fixtures);
+    let starknet_provider = Arc::new(mock_starknet_provider(fixtures));
+    let starknet_account = mock_account(starknet_provider.clone());
 
-    KakarotClient::new(config, starknet_provider)
+    let config = StarknetConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
+
+    KakarotClient::new(config, starknet_provider, starknet_account)
+}
+
+/// returns a mock deployer account to satisfy the KakarotClient::new function signature
+fn mock_account<P: Provider + Send + Sync>(provider: P) -> SingleOwnerAccount<P, LocalWallet> {
+    let starknet_account_private_key: FieldElement = SigningKey::from_random().secret_scalar();
+    // Dummy Address
+    let starknet_account_public_address = FieldElement::from(42_u64);
+    let local_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(starknet_account_private_key));
+    // Dummy chain id
+    let chain_id = FieldElement::from(42_u64);
+
+    SingleOwnerAccount::new(provider, local_wallet, starknet_account_public_address, chain_id)
 }
 
 #[cfg(test)]

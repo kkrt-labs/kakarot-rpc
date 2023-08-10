@@ -11,7 +11,7 @@ mod integration_tests {
     use rstest::*;
 
     #[rstest]
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_get_block_rpc(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Load env
         dotenv().ok();

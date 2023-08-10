@@ -21,14 +21,17 @@ use reth_rpc_types::{
     BlockTransactions, CallRequest, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncInfo, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt,
 };
+use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, EmittedEvent,
     Event, EventFilterWithPage, EventsPage, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     MaybePendingTransactionReceipt, ResultPageRequest, StarknetError, SyncStatusType, Transaction as TransactionType,
-    TransactionReceipt as StarknetTransactionReceipt,
+    TransactionReceipt as StarknetTransactionReceipt, TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
 use starknet::providers::{Provider, ProviderError};
+use starknet::signers::LocalWallet;
+use tokio::time::{sleep, Duration};
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
@@ -59,26 +62,29 @@ use crate::models::ConversionError;
 
 pub struct KakarotClient<P: Provider + Send + Sync> {
     starknet_provider: Arc<P>,
+    deployer_account: SingleOwnerAccount<Arc<P>, LocalWallet>,
     kakarot_contract: KakarotContract<P>,
     network: Network,
 }
 
-impl<P: Provider + Send + Sync> KakarotClient<P> {
+impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
     /// Create a new `KakarotClient`.
-    pub fn new(starknet_config: StarknetConfig, starknet_provider: P) -> Self {
+    pub fn new(
+        starknet_config: StarknetConfig,
+        starknet_provider: Arc<P>,
+        starknet_account: SingleOwnerAccount<Arc<P>, LocalWallet>,
+    ) -> Self {
         let StarknetConfig { kakarot_address, proxy_account_class_hash, network } = starknet_config;
-
-        let starknet_provider = Arc::new(starknet_provider);
 
         let kakarot_contract =
             KakarotContract::new(Arc::clone(&starknet_provider), kakarot_address, proxy_account_class_hash);
 
-        Self { starknet_provider, network, kakarot_contract }
+        Self { starknet_provider, network, kakarot_contract, deployer_account: starknet_account }
     }
 }
 
 #[async_trait]
-impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
+impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> {
     /// Returns the latest block number
     async fn block_number(&self) -> Result<U64, EthApiError<P::Error>> {
         let block_number = self.starknet_provider.block_number().await?;
@@ -400,6 +406,13 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 
         let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
 
+        let account_exists = self.check_eoa_account_exists(evm_address, &starknet_block_id).await?;
+        if !account_exists {
+            let starknet_transaction_hash: FieldElement =
+                Felt252Wrapper::from(self.deploy_eoa(evm_address).await?).into();
+            let _ = self.wait_for_confirmation_on_l2(starknet_transaction_hash, 10).await?;
+        }
+
         let starknet_address = self.compute_starknet_address(evm_address, &starknet_block_id).await?;
 
         let nonce = FieldElement::from(transaction.nonce());
@@ -560,7 +573,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
 }
 
 #[async_trait]
-impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
+impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClient<P> {
     /// Returns the Kakarot contract address.
     fn kakarot_address(&self) -> FieldElement {
         self.kakarot_contract.address
@@ -574,6 +587,11 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
     /// Returns a reference to the Starknet provider.
     fn starknet_provider(&self) -> Arc<P> {
         Arc::clone(&self.starknet_provider)
+    }
+
+    /// Returns a reference to the starknet account used for deployment
+    fn deployer_account(&self) -> &SingleOwnerAccount<Arc<P>, LocalWallet> {
+        &self.deployer_account
     }
 
     /// Returns the Starknet block number for a given block id.
@@ -756,5 +774,95 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
         }
 
         Ok(events)
+    }
+
+    async fn check_eoa_account_exists(
+        &self,
+        ethereum_address: Address,
+        starknet_block_id: &StarknetBlockId,
+    ) -> Result<bool, EthApiError<P::Error>> {
+        let eoa_account_starknet_address = self.compute_starknet_address(ethereum_address, starknet_block_id).await?;
+
+        let result = self.get_evm_address(&eoa_account_starknet_address, starknet_block_id).await;
+
+        let result: Result<bool, EthApiError<<P as Provider>::Error>> = match result {
+            Ok(_) => Ok(true),
+            Err(error) => match error {
+                EthApiError::RequestError(error) => match error {
+                    ProviderError::StarknetError(error) => match error {
+                        StarknetError::ContractNotFound => Ok(false),
+                        _ => Err(EthApiError::from(ProviderError::StarknetError(error))),
+                    },
+                    _ => Err(EthApiError::from(error)),
+                },
+                _ => Err(error),
+            },
+        };
+
+        Ok(result?)
+    }
+
+    async fn deploy_eoa(&self, ethereum_address: Address) -> Result<FieldElement, EthApiError<P::Error>> {
+        let ethereum_address: FieldElement = Felt252Wrapper::from(ethereum_address).into();
+        self.kakarot_contract.deploy_externally_owned_account(ethereum_address, &self.deployer_account).await
+    }
+
+    /// given a transaction hash, waits for it to be confirmed on L2
+    /// each retry is every 1 second, tries for max_retries*1s and then timeouts after that
+    /// returns a boolean indicating whether the transaction was accepted or not L2, it will always
+    /// be true, otherwise should return error
+    async fn wait_for_confirmation_on_l2(
+        &self,
+        transaction_hash: FieldElement,
+        max_retries: u64,
+    ) -> Result<bool, EthApiError<P::Error>> {
+        let mut idx = 0;
+
+        loop {
+            if idx >= max_retries {
+                return Err(EthApiError::Other(anyhow::format_err!(
+                    "timeout: max retries: {max_retries} attempted for polling the transaction receipt"
+                )));
+            }
+
+            let receipt = self.starknet_provider.get_transaction_receipt(transaction_hash).await;
+
+            match receipt {
+                Ok(receipt) => match receipt {
+                    MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
+                        StarknetTransactionReceipt::Invoke(receipt) => match receipt.status {
+                            StarknetTransactionStatus::AcceptedOnL2 | StarknetTransactionStatus::AcceptedOnL1 => {
+                                return Ok(true);
+                            }
+                            StarknetTransactionStatus::Rejected => {
+                                return Err(EthApiError::Other(anyhow::anyhow!(
+                                    "the transaction {transaction_hash} has been rejected"
+                                )));
+                            }
+                            _ => (),
+                        },
+                        _ => {
+                            return Err(EthApiError::Other(anyhow::anyhow!("expected receipt to found {receipt:#?}")));
+                        }
+                    },
+                    MaybePendingTransactionReceipt::PendingReceipt(_) => (),
+                },
+                Err(error) => {
+                    match error {
+                        ProviderError::StarknetError(StarknetError::TransactionHashNotFound) => {
+                            // do nothing because to comply with json-rpc spec, even in case of
+                            // TransactionStatus::Received an error will be returned, so we should
+                            // continue polling see: https://github.com/xJonathanLEI/starknet-rs/blob/832c6cdc36e5899cf2c82f8391a4dd409650eed1/starknet-providers/src/sequencer/provider.rs#L134C1-L134C1
+                        }
+                        _ => {
+                            return Err(error.into());
+                        }
+                    }
+                }
+            };
+
+            idx += 1;
+            sleep(Duration::from_secs(1)).await;
+        }
     }
 }

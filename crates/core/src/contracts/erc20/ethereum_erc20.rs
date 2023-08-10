@@ -27,7 +27,7 @@ pub struct EthereumErc20<'a, P> {
     kakarot_contract: &'a KakarotContract<P>,
 }
 
-impl<'a, P: Provider + Send + Sync> EthereumErc20<'a, P> {
+impl<'a, P: Provider + Send + Sync + 'static> EthereumErc20<'a, P> {
     pub fn new(address: FieldElement, kakarot_contract: &'a KakarotContract<P>) -> Self {
         Self { address, kakarot_contract }
     }

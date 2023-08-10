@@ -7,11 +7,13 @@ use reth_rpc_types::{
     BlockTransactions, CallRequest, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt,
 };
+use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::{
     BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, EmittedEvent, EventFilterWithPage, FieldElement,
 };
 use starknet::providers::sequencer::models::TransactionSimulationInfo;
 use starknet::providers::Provider;
+use starknet::signers::LocalWallet;
 
 use super::errors::EthApiError;
 use crate::models::balance::TokenBalances;
@@ -88,6 +90,8 @@ pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
 
     fn starknet_provider(&self) -> Arc<P>;
 
+    fn deployer_account(&self) -> &SingleOwnerAccount<Arc<P>, LocalWallet>;
+
     async fn map_block_id_to_block_number(&self, block_id: &StarknetBlockId) -> Result<u64, EthApiError<P::Error>>;
 
     async fn submit_starknet_transaction(
@@ -128,4 +132,18 @@ pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
     ) -> Result<TransactionSimulationInfo, EthApiError<P::Error>>;
 
     async fn filter_events(&self, request: EventFilterWithPage) -> Result<Vec<EmittedEvent>, EthApiError<P::Error>>;
+
+    async fn check_eoa_account_exists(
+        &self,
+        ethereum_address: Address,
+        starknet_block_id: &StarknetBlockId,
+    ) -> Result<bool, EthApiError<P::Error>>;
+
+    async fn deploy_eoa(&self, ethereum_address: Address) -> Result<FieldElement, EthApiError<P::Error>>;
+
+    async fn wait_for_confirmation_on_l2(
+        &self,
+        transaction_hash: FieldElement,
+        max_retries: u64,
+    ) -> Result<bool, EthApiError<P::Error>>;
 }
