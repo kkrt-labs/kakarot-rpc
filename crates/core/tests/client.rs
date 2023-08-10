@@ -1,15 +1,14 @@
 mod tests {
 
     use ctor::ctor;
-    use ethers::abi::Token;
-    use ethers::types::Address as EthersAddress;
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
-    use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::test_utils::deploy_helpers::{
-        create_raw_ethereum_tx, ContractDeploymentArgs, KakarotTestEnvironment,
+        create_raw_ethereum_tx, KakarotTestEnvironmentContext, TestContext,
     };
+    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
+    use rstest::*;
     use starknet::core::types::FieldElement;
     use tracing_subscriber::FmtSubscriber;
 
@@ -19,26 +18,27 @@ mod tests {
         tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
     }
 
-    #[tokio::test]
-    async fn test_rpc_should_not_raise_when_eoa_not_deployed() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_rpc_should_not_raise_when_eoa_not_deployed(
+        #[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
+    ) {
         // Given
-        let test_environment = KakarotTestEnvironment::new().await;
+        let client = kakarot_test_env_ctx.client();
 
         // When
-        let nonce =
-            test_environment.client().nonce(Address::zero(), BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
+        let nonce = client.nonce(Address::zero(), BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
 
         // Then
         // Zero address shouldn't throw 'ContractNotFound', but return zero
         assert_eq!(U256::from(0), nonce);
     }
 
-    #[tokio::test]
-    async fn test_eoa_balance() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_eoa_balance(#[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let test_environment = KakarotTestEnvironment::new().await;
-        let client = test_environment.client();
-        let kakarot = test_environment.kakarot();
+        let (client, kakarot) = kakarot_test_env_ctx.resources();
 
         // When
         let eoa_balance = client
@@ -51,21 +51,11 @@ mod tests {
         assert_eq!(FieldElement::from_dec_str("1000000000000000000").unwrap(), eoa_balance);
     }
 
-    #[tokio::test]
-    async fn test_counter() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_counter(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let test_environment = KakarotTestEnvironment::new()
-            .await
-            .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-            .await;
-        let client = test_environment.client();
-        let kakarot = test_environment.kakarot();
-        let counter = test_environment.evm_contract("Counter");
-
-        let counter_eth_address = {
-            let address: Felt252Wrapper = counter.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
+        let (client, kakarot, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
 
         client
             .get_code(counter_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
@@ -106,56 +96,25 @@ mod tests {
         assert_eq!(num, 1);
     }
 
-    #[tokio::test]
-    async fn test_plain_opcodes() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_plain_opcodes(
+        #[with(TestContext::PlainOpcodes)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
+    ) {
         // Given
-        let mut test_environment = KakarotTestEnvironment::new().await;
-
-        test_environment = test_environment
-            .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-            .await;
-        let counter = test_environment.evm_contract("Counter");
-        let counter_eth_address: Address = {
-            let address: Felt252Wrapper = counter.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
-
-        // When
-        test_environment = test_environment
-            .deploy_evm_contract(ContractDeploymentArgs {
-                name: "PlainOpcodes".into(),
-                constructor_args: (EthersAddress::from(counter_eth_address.as_fixed_bytes()),),
-            })
-            .await;
-        let plain_opcodes = test_environment.evm_contract("PlainOpcodes");
-        let plain_opcodes_eth_address: Address = {
-            let address: Felt252Wrapper = plain_opcodes.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
-
+        let (client, _, _, plain_opcodes_eth_address) = kakarot_test_env_ctx.resources_with_contract("PlainOpcodes");
         // Then
-        let client = test_environment.client();
         client
             .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
             .await
             .expect("contract not deployed");
     }
 
-    #[tokio::test]
-    async fn test_storage_at() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_storage_at(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let test_environment = KakarotTestEnvironment::new()
-            .await
-            .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-            .await;
-        let counter = test_environment.evm_contract("Counter");
-        let counter_eth_address = {
-            let address: Felt252Wrapper = counter.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
-        let client = test_environment.client();
-        let kakarot = test_environment.kakarot();
-
+        let (client, kakarot, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
         // When
         let inc_selector = counter.abi.function("inc").unwrap().short_signature();
 
@@ -183,27 +142,11 @@ mod tests {
         assert_eq!(U256::from(1), count);
     }
 
-    #[tokio::test]
-    async fn test_token_balances() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_token_balances(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let test_environment = KakarotTestEnvironment::new()
-            .await
-            .deploy_evm_contract(ContractDeploymentArgs {
-                name: "ERC20".into(),
-                constructor_args: (
-                    Token::String("Test".into()),               // name
-                    Token::String("TT".into()),                 // symbol
-                    Token::Uint(ethers::types::U256::from(18)), // decimals
-                ),
-            })
-            .await;
-        let erc20 = test_environment.evm_contract("ERC20");
-        let erc20_eth_address = {
-            let address: Felt252Wrapper = erc20.addresses.eth_address.into();
-            address.try_into().unwrap()
-        };
-        let client = test_environment.client();
-        let kakarot = test_environment.kakarot();
+        let (client, kakarot, erc20, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
         // When
         let nonce = client

@@ -144,9 +144,11 @@ mod tests {
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{ContractDeploymentArgs, KakarotTestEnvironment};
+    use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
+    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use katana_core::backend::state::StorageRecord;
     use reth_primitives::U256;
+    use rstest::rstest;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
     use starknet::core::utils::get_storage_var_address;
     use starknet_api::core::{ClassHash, ContractAddress as StarknetContractAddress, Nonce};
@@ -218,15 +220,11 @@ mod tests {
         assert_eq!(expected_storage, storage);
     }
 
-    #[tokio::test]
-    async fn test_counter_bytecode() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_counter_bytecode(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let test_environment = Arc::new(
-            KakarotTestEnvironment::new()
-                .await
-                .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-                .await,
-        );
+        let test_environment = Arc::new(kakarot_test_env_ctx);
         let starknet_client = test_environment.client().starknet_provider();
         let counter = test_environment.evm_contract("Counter");
         let counter_contract = ContractAccount::new(&starknet_client, counter.addresses.starknet_address);
@@ -366,10 +364,13 @@ mod tests {
         assert_eq!(result, expected_output);
     }
 
-    #[tokio::test]
-    async fn test_kakarot_contract_account_storage() {
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_kakarot_contract_account_storage(
+        #[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
+    ) {
         // Given
-        let test_environment = Arc::new(KakarotTestEnvironment::new().await);
+        let test_environment = Arc::new(kakarot_test_env_ctx);
 
         // When
         // Use genesis_set_storage_kakarot_contract_account define the storage data
@@ -421,31 +422,32 @@ mod tests {
         assert_eq!(expected_value, actual_value);
     }
 
+    #[rstest]
     #[test]
-    fn test_split_u256_into_field_elements() {
-        let test_cases = vec![
-            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", // Normal case
-            "0x0000000000000000000000000000000000000000000000000000000000000000", // Minimum value
-            "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // Maximum value
-        ];
+    #[case(
+        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    )]
+    #[case(
+        "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "0x0000000000000000000000000000000000000000000000000000000000000000"
+    )]
+    #[case(
+        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    )]
+    fn test_split_u256_into_field_elements(#[case] input: U256, #[case] expected: U256) {
+        // When
+        let result = split_u256_into_field_elements(input);
 
-        test_cases.iter().for_each(|&value_str| {
-            // Given
-            // U256 value from the hexadecimal string
-            let value = U256::from_str(value_str).unwrap();
+        // Then
+        // Recalculate the U256 values using the resulting FieldElements
+        // The first is the low 128 bits of the U256 value
+        // The second is the high 128 bits of the U256 value and is left shifted by 128 bits
+        let result: U256 =
+            U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
 
-            // When
-            let result = split_u256_into_field_elements(value);
-
-            // Then
-            // Recalculate the U256 values using the resulting FieldElements
-            // The first is the low 128 bits of the U256 value
-            // The second is the high 128 bits of the U256 value and is left shifted by 128 bits
-            let result: U256 =
-                U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
-
-            // Assert that the original and recombined U256 values are equal
-            assert_eq!(result, value, "Failed for value: {value_str}");
-        });
+        // Assert that the expected and recombined U256 values are equal
+        assert_eq!(expected, result);
     }
 }
