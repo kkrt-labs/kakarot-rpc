@@ -1,5 +1,7 @@
 mod tests {
 
+    use std::str::FromStr;
+
     use ctor::ctor;
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
@@ -134,7 +136,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_logs_integration() {
+    async fn test_get_logs() {
         // Given
         let test_environment = KakarotTestEnvironment::new()
             .await
@@ -170,16 +172,47 @@ mod tests {
         };
         let events = client.get_logs(filter).await.unwrap();
 
-        dbg!(client.kakarot_address());
-        dbg!(erc20.addresses.eth_address);
-
-        let provider = client.starknet_provider();
-        let filter =
-            EventFilter { address: Some(client.kakarot_address()), from_block: None, to_block: None, keys: None };
-        let provider_events = provider.get_events(filter, None, 10).await.unwrap();
-        dbg!(provider_events);
-
         // Then
         assert_eq!(2, events.len());
+        assert_eq!(
+            Log {
+                address: erc20.addresses.eth_address,
+                topics: vec![
+                    H256::from_str("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef").unwrap(), /* keccak256("Transfer(address,address,uint256)") */
+                    H256::from_low_u64_be(0u64),                   // from
+                    H256::from(kakarot.eoa_addresses.eth_address)  // to
+                ],
+                data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710").unwrap(), /* amount */
+                block_hash: events[0].block_hash, // block hash changes so just set to event value
+                block_number: Some(U256::from_str("0xc").unwrap()),
+                transaction_hash: Some(
+                    H256::from_str("0x076cbbdfc79e24e03589ba4e95173941f55c977d90d67eeb038b26b61b29b62c").unwrap()
+                ),
+                transaction_index: None,
+                log_index: None,
+                removed: false
+            },
+            events[0]
+        );
+        assert_eq!(
+            Log {
+                address: erc20.addresses.eth_address,
+                topics: vec![
+                    H256::from_str("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef").unwrap(), /* keccak256("Transfer(address,address,uint256)") */
+                    H256::from(kakarot.eoa_addresses.eth_address), // from
+                    H256::from(*ACCOUNT_ADDRESS_EVM)               // to
+                ],
+                data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710").unwrap(), /* amount */
+                block_hash: events[1].block_hash, // block hash changes so just set to event value
+                block_number: Some(U256::from_str("0xd").unwrap()),
+                transaction_hash: Some(
+                    H256::from_str("0x057988a38fa62d972c1594ac687a24710445ba90cf91d784be3c3a6569626890").unwrap()
+                ),
+                transaction_index: None,
+                log_index: None,
+                removed: false
+            },
+            events[1]
+        );
     }
 }
