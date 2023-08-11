@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691783441107,
+  "lastUpdate": 1691783443999,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -131,6 +131,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 1.25,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8926bb972ddf63d5a3aae2b0f1599bbf32f557c0",
+          "message": "feat: account abstraction (#402)\n\n* account trait + kakarot account\n\n* update codebase with Account trait\n\n* fix typo troncate",
+          "timestamp": "2023-08-11T19:15:54Z",
+          "tree_id": "c5a40dd239a6522b1862aafe9451d867c10d3dbc",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/8926bb972ddf63d5a3aae2b0f1599bbf32f557c0"
+        },
+        "date": 1691783440084,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 2.733333333333333,
             "unit": "transactions/second"
           }
         ]
