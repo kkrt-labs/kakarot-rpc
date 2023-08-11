@@ -52,6 +52,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           tags: ${{ env.REGISTRY_IMAGE }}:latest
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           outputs:
             type=image,name=${{ env.REGISTRY_IMAGE
             }},name-canonical=true,push=true
