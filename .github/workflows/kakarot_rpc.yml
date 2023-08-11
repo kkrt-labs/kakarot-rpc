@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-32-cores
     strategy:
       fail-fast: false
       matrix:
@@ -50,6 +50,7 @@ jobs:
           context: .
           file: Dockerfile
           platforms: ${{ matrix.platform }}
+          tags: ${{ env.REGISTRY_IMAGE }}:latest
           labels: ${{ steps.meta.outputs.labels }}
           outputs:
             type=image,name=${{ env.REGISTRY_IMAGE
