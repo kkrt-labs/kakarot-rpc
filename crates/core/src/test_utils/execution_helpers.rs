@@ -1,10 +1,10 @@
 use reth_primitives::{BlockId, H256, U256};
 
-use super::deploy_helpers::{create_raw_ethereum_tx, KakarotTestEnvironment};
+use super::deploy_helpers::{create_raw_ethereum_tx, KakarotTestEnvironmentContext};
 use crate::client::api::KakarotEthApi;
 use crate::models::felt::Felt252Wrapper;
 
-pub async fn execute_tx(env: &KakarotTestEnvironment, contract: &str, selector: &str, args: Vec<U256>) -> H256 {
+pub async fn execute_tx(env: &KakarotTestEnvironmentContext, contract: &str, selector: &str, args: Vec<U256>) -> H256 {
     let contract = env.evm_contract(contract);
     let contract_eth_address = {
         let address: Felt252Wrapper = contract.addresses.eth_address.into();
