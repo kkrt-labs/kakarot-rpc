@@ -151,7 +151,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
         let mix_hash = *MIX_HASH;
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
-        let sequencer = Felt252Wrapper::from(self.sequencer_address()).troncate_to_ethereum_address();
+        let sequencer = Felt252Wrapper::from(self.sequencer_address()).truncate_to_ethereum_address();
         let timestamp = U256::from(self.timestamp());
 
         let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
@@ -228,7 +228,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
 
-        let sequencer = Felt252Wrapper::from(self.sequencer_address()).troncate_to_ethereum_address();
+        let sequencer = Felt252Wrapper::from(self.sequencer_address()).truncate_to_ethereum_address();
 
         let timestamp = U256::from(self.timestamp());
 

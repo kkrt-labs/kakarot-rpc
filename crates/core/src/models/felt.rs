@@ -13,7 +13,7 @@ impl Felt252Wrapper {
     /// Ethereum address. This is used to convert Starknet addresses to Ethereum addresses in
     /// cases where the Starknet address does not represent a Kakarot address, i.e. it does not have
     /// a `get_evm_address()` entrypoint.
-    pub fn troncate_to_ethereum_address(&self) -> Address {
+    pub fn truncate_to_ethereum_address(&self) -> Address {
         let bytes = self.0.to_bytes_be();
         Address::from_slice(&bytes[12..])
     }
