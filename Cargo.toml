@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/eth-rpc", "crates/core", "crates/conformance-test-utils"]
+members = ["crates/eth-rpc", "crates/core", "crates/conformance-test-utils", "crates/scripts"]
 resolver = "2"
 
 [workspace.package]
@@ -24,7 +24,9 @@ license = "MIT"
 # Starknet dependencies
 starknet = "0.4.0"
 starknet-crypto = "0.5.1"
-starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "a4c78ff" }
+starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
+pallet-starknet = { git ="https://github.com/keep-starknet-strange/madara.git", rev = "8c0eb02" }
+mp-starknet = { git ="https://github.com/keep-starknet-strange/madara.git", rev = "8c0eb02" }
 
 # Ethereum dependencies
 ethers = "2.0"
@@ -54,8 +56,8 @@ rstest = "0.18.1"
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
-katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "b37a655f536ffb02570e9dd17f5e212792acccfb" }
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "b37a655f536ffb02570e9dd17f5e212792acccfb" }
+katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "7893eed" }
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "7893eed" }
 cargo-husky = { version = "1.5.0", default-features = false, features = [
   "precommit-hook",
   "run-for-all",
@@ -64,8 +66,8 @@ cargo-husky = { version = "1.5.0", default-features = false, features = [
 ] }
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "a31892d" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "c794d1b" }
 
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "51a35b2b405f29786e48a94f364d64d373d79eea" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "51a35b2b405f29786e48a94f364d64d373d79eea" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }

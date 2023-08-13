@@ -243,7 +243,7 @@ mod tests {
         // It is not possible to block the async test task, so we need to spawn a blocking task
         tokio::task::spawn_blocking(move || {
             // Get lock on the Starknet sequencer
-            let mut starknet = env.sequencer().sequencer.starknet.blocking_write();
+            let mut starknet = env.sequencer().sequencer.backend.state.blocking_write();
             let mut counter_storage = HashMap::new();
 
             // Set the counter bytecode length into the contract
@@ -267,7 +267,7 @@ mod tests {
                 class_hash: ClassHash(contract_account_class_hash.into()),
                 storage: counter_storage,
             };
-            starknet.state.storage.insert(counter_address, counter_storage_record);
+            starknet.storage.insert(counter_address, counter_storage_record);
         })
         .await
         .unwrap();
@@ -389,7 +389,7 @@ mod tests {
         // It is not possible to block the async test task, so we need to spawn a blocking task
         tokio::task::spawn_blocking(move || {
             // Get lock on the Starknet sequencer
-            let mut starknet = env.sequencer().sequencer.starknet.blocking_write();
+            let mut starknet = env.sequencer().sequencer.backend.state.blocking_write();
             let mut storage = HashMap::new();
 
             // Prepare the record to be inserted into the storage
@@ -407,7 +407,7 @@ mod tests {
                 class_hash: ClassHash(contract_account_class_hash.into()),
                 storage,
             };
-            starknet.state.storage.insert(genesis_address, storage_record);
+            starknet.storage.insert(genesis_address, storage_record);
         })
         .await
         .unwrap();
