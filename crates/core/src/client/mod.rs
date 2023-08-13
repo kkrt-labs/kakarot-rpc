@@ -23,9 +23,9 @@ use reth_rpc_types::{
 };
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, EmittedEvent,
-    Event, EventFilterWithPage, EventsPage, FieldElement, FunctionCall, InvokeTransactionReceipt,
-    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, ResultPageRequest,
-    StarknetError, SyncStatusType, Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
+    Event, EventFilterWithPage, EventsPage, FieldElement, InvokeTransactionReceipt, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, ResultPageRequest, StarknetError, SyncStatusType,
+    Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
     TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};

@@ -134,6 +134,7 @@ mod tests {
     use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
     use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
+    use kakarot_rpc_core::contracts::account::Account;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
     use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
