@@ -28,6 +28,7 @@ use starknet::providers::{JsonRpcClient, Provider};
 use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
+use super::constants::DEPLOY_FEE;
 use crate::client::api::KakarotStarknetApi;
 use crate::client::config::{Network, StarknetConfig as StarknetClientConfig};
 use crate::client::constants::{CHAIN_ID, STARKNET_NATIVE_TOKEN};
@@ -475,8 +476,8 @@ async fn deploy_and_fund_eoa(
     fee_token_address: FieldElement,
 ) -> FieldElement {
     let eoa_account_starknet_address = compute_starknet_address(account, contract_address, eoa_account_address).await;
+    fund_eoa(account, eoa_account_starknet_address, amount + *DEPLOY_FEE, fee_token_address).await;
     deploy_eoa(account, contract_address, eoa_account_address).await;
-    fund_eoa(account, eoa_account_starknet_address, amount, fee_token_address).await;
 
     eoa_account_starknet_address
 }
@@ -492,6 +493,7 @@ async fn deploy_kakarot(
         *class_hash.get("contract_account").unwrap(),
         *class_hash.get("externally_owned_account").unwrap(),
         *class_hash.get("proxy").unwrap(),
+        *DEPLOY_FEE,
     ];
 
     deploy_starknet_contract(account, class_hash.get("kakarot").unwrap(), kkrt_constructor_calldata)

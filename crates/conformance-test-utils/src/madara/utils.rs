@@ -1,5 +1,6 @@
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
-use reth_primitives::{Bytes, U128, U256};
+use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
+use reth_primitives::{Bytes, U256};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
@@ -124,16 +125,6 @@ pub fn genesis_set_storage_kakarot_contract_account(
         .collect()
 }
 
-/// Helper function to split a U256 value into two FieldElements.
-pub fn split_u256_into_field_elements(value: U256) -> [FieldElement; 2] {
-    let low = value & U256::from(U128::MAX);
-    let high = value >> 128;
-    [
-        FieldElement::from_bytes_be(&low.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
-        FieldElement::from_bytes_be(&high.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
-    ]
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -142,6 +133,7 @@ mod tests {
 
     use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
+    use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
     use kakarot_rpc_core::contracts::account::Account;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
@@ -421,34 +413,5 @@ mod tests {
 
         // Assert that the value stored in the contract is the same as the value we set in the genesis
         assert_eq!(expected_value, actual_value);
-    }
-
-    #[rstest]
-    #[test]
-    #[case(
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    )]
-    #[case(
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
-    )]
-    #[case(
-        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    )]
-    fn test_split_u256_into_field_elements(#[case] input: U256, #[case] expected: U256) {
-        // When
-        let result = split_u256_into_field_elements(input);
-
-        // Then
-        // Recalculate the U256 values using the resulting FieldElements
-        // The first is the low 128 bits of the U256 value
-        // The second is the high 128 bits of the U256 value and is left shifted by 128 bits
-        let result: U256 =
-            U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
-
-        // Assert that the expected and recombined U256 values are equal
-        assert_eq!(expected, result);
     }
 }
