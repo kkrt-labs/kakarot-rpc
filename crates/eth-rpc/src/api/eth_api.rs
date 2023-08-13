@@ -3,8 +3,8 @@ use jsonrpsee::proc_macros::rpc;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus, Transaction as EthTransaction,
-    TransactionReceipt, TransactionRequest, Work,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, Index, Log, RichBlock, SyncStatus,
+    Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 
 #[rpc(server, namespace = "eth")]
@@ -100,6 +100,10 @@ pub trait EthApi {
     /// Returns code at a given address at given block number.
     #[method(name = "getCode")]
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes>;
+
+    /// Returns the logs corresponding to the given filter object.
+    #[method(name = "getLogs")]
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>>;
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "call")]
