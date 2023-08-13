@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691783443999,
+  "lastUpdate": 1691922425464,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -197,6 +197,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 2.733333333333333,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba05d2f92e5c192a0adfb5c515aa29dbeb5d41ac",
+          "message": "feat: eth_getLogs (#405)\n\n* wip get logs\n\n* to starknet event filter testing\n\n* filter events update\n\n* verify block range\n\n* handle all block range variants\n\n* helper to execute a tx\n\n* update address filter\n\n* bump to latest kakarot commit and update deploy helpers\n\n* get_logs integration test\n\n* update test data with address key change\n\n* add comments\n\n* add mock test get logs\n\n* fix rebase\n\n* update execute_tx helper\n\n* fix rebase",
+          "timestamp": "2023-08-13T09:52:42Z",
+          "tree_id": "e4a71b8142748d4c86a9e921f84077b1c1b6451f",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/ba05d2f92e5c192a0adfb5c515aa29dbeb5d41ac"
+        },
+        "date": 1691922424312,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 2.766666666666667,
             "unit": "transactions/second"
           }
         ]
