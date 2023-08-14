@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692022901689,
+  "lastUpdate": 1692022904952,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -296,6 +296,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 1.8166666666666667,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c5346e7c108767cf1acef60b802cc44b37bbe87f",
+          "message": "feat: dump katana (#419)",
+          "timestamp": "2023-08-14T14:58:26+02:00",
+          "tree_id": "185198e3c02245959699732962925792e69ef1d2",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/c5346e7c108767cf1acef60b802cc44b37bbe87f"
+        },
+        "date": 1692022900565,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 2.6666666666666665,
             "unit": "transactions/second"
           }
         ]
