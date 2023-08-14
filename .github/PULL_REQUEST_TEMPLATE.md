@@ -26,3 +26,8 @@ Please check the type of change your PR introduces:
 
 - [ ] Yes
 - [ ] No
+
+# Added changes to [`CHANGELOG.md`](../CHANGELOG.md)
+
+- [ ] Yes
+- [ ] No
