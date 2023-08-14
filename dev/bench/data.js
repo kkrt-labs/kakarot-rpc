@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692024966993,
+  "lastUpdate": 1692024988486,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -428,6 +428,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 2.6999999999999997,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5e4a677caacc4cdfcedff3048318a3ff0566bd07",
+          "message": "build(deps): bump lib/madara from `c46c02e` to `a78da52` (#417)",
+          "timestamp": "2023-08-14T15:36:30+02:00",
+          "tree_id": "4f07b64b580fdaf6f36d13c4f37ee71240dc99b9",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/5e4a677caacc4cdfcedff3048318a3ff0566bd07"
+        },
+        "date": 1692024987833,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.5,
             "unit": "transactions/second"
           }
         ]
