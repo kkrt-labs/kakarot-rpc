@@ -410,9 +410,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
                 nonce.into()
             })
             .or_else(|err| match err {
-                // Some RPCs return ContractError instead of ContractNotFound
-                ProviderError::StarknetError(StarknetError::ContractNotFound)
-                | ProviderError::StarknetError(StarknetError::ContractError) => Ok(U256::from(0)),
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(U256::from(0)),
                 _ => Err(EthApiError::from(err)),
             })
     }
