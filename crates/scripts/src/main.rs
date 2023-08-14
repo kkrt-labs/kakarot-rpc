@@ -34,19 +34,16 @@ async fn main() {
         std::fs::write(".katana/dump.json", state).expect("Failed to write dump to .katana/dump.json");
 
         // Store contracts information
-        let mut contract_addresses = HashMap::new();
-        contract_addresses.insert("Kakarot", serde_json::to_value(test_context.kakarot()).unwrap());
-
-        contract_addresses.insert("ERC20", serde_json::to_value(test_context.evm_contract("ERC20")).unwrap());
-        contract_addresses.insert("Counter", serde_json::to_value(test_context.evm_contract("Counter")).unwrap());
-        contract_addresses
-            .insert("PlainOpcodes", serde_json::to_value(test_context.evm_contract("PlainOpcodes")).unwrap());
+        let mut contracts = HashMap::new();
+        contracts.insert("Kakarot", serde_json::to_value(test_context.kakarot()).unwrap());
+        contracts.insert("ERC20", serde_json::to_value(test_context.evm_contract("ERC20")).unwrap());
+        contracts.insert("Counter", serde_json::to_value(test_context.evm_contract("Counter")).unwrap());
+        contracts.insert("PlainOpcodes", serde_json::to_value(test_context.evm_contract("PlainOpcodes")).unwrap());
 
         // Dump the contracts information
-        let contract_addresses =
-            serde_json::to_string(&contract_addresses).expect("Failed to serialize contract addresses");
-        std::fs::write(".katana/contracts.json", contract_addresses)
-            .expect("Failed to write dump to .katana/contracts.json");
+        let contracts = serde_json::to_string(&contracts).expect("Failed to serialize contract addresses");
+        std::fs::write(".katana/contracts.json", contracts)
+            .expect("Failed to write contracts informations to .katana/contracts.json");
     })
     .await
     .expect("Failed to dump state");
