@@ -53,10 +53,10 @@ madara-rpc-up:
 madara-rpc-down:
 	docker-compose down --remove-orphans
 
-katana-dump:
-	cargo run -p scripts
+dump-katana:
+	cargo run --bin dump-katana
 
-test: katana-dump
+test: dump-katana
 	cargo test --all
 
 test-coverage:
