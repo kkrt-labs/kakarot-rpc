@@ -6,7 +6,8 @@ mod tests {
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
-    use kakarot_rpc_core::test_utils::deploy_helpers::{create_raw_ethereum_tx, KakarotTestEnvironmentContext};
+    use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
+    use kakarot_rpc_core::test_utils::execution_helpers::execute_tx;
     use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
     use reth_rpc_types::{Filter, FilterBlockOption, Log, ValueOrArray};
@@ -121,7 +122,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_get_logs(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_get_logs(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
@@ -156,9 +157,9 @@ mod tests {
                 ],
                 data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710").unwrap(), /* amount */
                 block_hash: events[0].block_hash, // block hash changes so just set to event value
-                block_number: Some(U256::from_str("0xc").unwrap()),
+                block_number: events[0].block_number, // block number changes so just set to event value
                 transaction_hash: Some(
-                    H256::from_str("0x076cbbdfc79e24e03589ba4e95173941f55c977d90d67eeb038b26b61b29b62c").unwrap()
+                    H256::from_str("0x0124c05cceb7e556f354f580a362845c746a2616d682ce3235c67e7b42a0fdd8").unwrap()
                 ),
                 transaction_index: None,
                 log_index: None,
@@ -176,9 +177,9 @@ mod tests {
                 ],
                 data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710").unwrap(), /* amount */
                 block_hash: events[1].block_hash, // block hash changes so just set to event value
-                block_number: Some(U256::from_str("0xd").unwrap()),
+                block_number: events[1].block_number, // block number changes so just set to event value
                 transaction_hash: Some(
-                    H256::from_str("0x057988a38fa62d972c1594ac687a24710445ba90cf91d784be3c3a6569626890").unwrap()
+                    H256::from_str("0x00c2f52f03d1f8bc3995c533983364b077040093207c03393b4fd6b99e4af3ab").unwrap()
                 ),
                 transaction_index: None,
                 log_index: None,

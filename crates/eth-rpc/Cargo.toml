@@ -43,3 +43,4 @@ dojo-test-utils = { workspace = true }
 [dev-dependencies]
 cargo-husky = { workspace = true }
 ethers = { workspace = true }
+rstest = { workspace = true }

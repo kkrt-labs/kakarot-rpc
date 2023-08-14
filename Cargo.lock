@@ -5267,6 +5267,7 @@ dependencies = [
  "reth-rlp",
  "reth-rpc-api",
  "reth-rpc-types",
+ "rstest",
  "serde",
  "serde_json",
  "serde_with",

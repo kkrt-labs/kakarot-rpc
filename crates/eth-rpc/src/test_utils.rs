@@ -1,15 +1,12 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use dojo_test_utils::sequencer::TestSequencer;
 use jsonrpsee::server::ServerHandle;
 use kakarot_rpc_core::client::config::{Network, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
-use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
-use kakarot_rpc_core::test_utils::deploy_helpers::deploy_kakarot_system;
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
-use starknet::providers::JsonRpcClient as StarknetJsonRpcClient;
+use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 
 use crate::config::RPCConfig;
 use crate::rpc::KakarotRpcModuleBuilder;
@@ -40,18 +37,19 @@ use crate::run_server;
 ///
 /// # Example
 /// ```ignore
-/// use kakarot_rpc::test_utils::setup_kakarot_rpc_integration_env;
+/// use kakarot_rpc::test_utils::start_kakarot_rpc_server;
+/// use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
+/// use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
 /// use dojo_test_utils::sequencer::TestSequencer;
 /// use std::sync::Arc;
 /// use tokio::runtime::Runtime;
+/// use rstest::*;
 ///
+/// #[rstest]
 /// #[tokio::test]
-/// async fn test_case() {
-///    // Create a TestSequencer.
-///    let test_sequencer = Arc::new(TestSequencer::new());
-///
+/// async fn test_case(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
 ///    // Set up the Kakarot RPC integration environment.
-///    let (server_addr, server_handle) = setup_kakarot_rpc_integration_env(&test_sequencer).await.unwrap();
+///    let (server_addr, server_handle) = start_kakarot_rpc_server(&kakarot_test_env_ctx).await.unwrap();
 ///    
 ///    // Query whatever eth_rpc endpoints
 ///     
@@ -60,26 +58,19 @@ use crate::run_server;
 ///
 /// }
 /// ```
-pub async fn setup_kakarot_rpc_integration_env(
-    starknet_test_sequencer: &Arc<TestSequencer>,
+pub async fn start_kakarot_rpc_server(
+    kakarot_test_env: &KakarotTestEnvironmentContext,
 ) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    // Define the funding amount.
-    let funding_amount = FieldElement::from_dec_str("1000000000000000000")?;
+    let sequencer = kakarot_test_env.sequencer();
+    let kakarot = kakarot_test_env.kakarot();
 
-    // Deploy Kakarot contracts.
-    let deployed_kakarot = deploy_kakarot_system(starknet_test_sequencer, EOA_WALLET.clone(), funding_amount).await;
-
-    // Initialize StarknetHttpTransport with sequencer's URL.
-    let starknet_http_transport = StarknetHttpTransport::new(starknet_test_sequencer.url());
-
-    // Create Starknet and Kakarot clients.
+    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
     let starknet_config = StarknetConfig::new(
-        Network::JsonRpcProvider(starknet_test_sequencer.url()),
-        deployed_kakarot.kakarot_address,
-        deployed_kakarot.proxy_class_hash,
+        Network::JsonRpcProvider(sequencer.url()),
+        kakarot.kakarot_address,
+        kakarot.proxy_class_hash,
     );
-    let starknet_client = StarknetJsonRpcClient::new(starknet_http_transport);
-    let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_client));
+    let kakarot_client = Arc::new(KakarotClient::new(starknet_config, provider));
 
     // Create and run Kakarot RPC module.
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(kakarot_client).rpc_module()?;
