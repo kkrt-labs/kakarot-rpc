@@ -1,5 +1,5 @@
 [package]
-name = "kakarot_rpc_core"
+name = "kakarot-rpc-core"
 version = { workspace = true }
 edition = { workspace = true }
 description = { workspace = true }
@@ -13,6 +13,7 @@ env_logger = "0.10.0"
 eyre = { workspace = true }
 hex = "0.4"
 jsonrpsee = { workspace = true }
+katana-core = { workspace = true }
 log = "0.4.17"
 pin-project = { workspace = true }
 reqwest = "0.11.13"

@@ -1787,7 +1787,7 @@ version = "0.1.0"
 dependencies = [
  "cargo-husky",
  "eyre",
- "kakarot_rpc_core",
+ "kakarot-rpc-core",
  "katana-core",
  "lazy_static",
  "mp-starknet",
@@ -5259,7 +5259,7 @@ dependencies = [
  "eyre",
  "hex",
  "jsonrpsee 0.18.2",
- "kakarot_rpc_core",
+ "kakarot-rpc-core",
  "lazy_static",
  "log",
  "reqwest",
@@ -5281,7 +5281,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kakarot_rpc_core"
+name = "kakarot-rpc-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -5299,6 +5299,7 @@ dependencies = [
  "futures",
  "hex",
  "jsonrpsee 0.18.2",
+ "katana-core",
  "lazy_static",
  "log",
  "num-bigint",
@@ -7723,6 +7724,13 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 [[package]]
 name = "scripts"
 version = "0.1.0"
+dependencies = [
+ "ethers",
+ "kakarot-rpc-core",
+ "katana-core",
+ "serde_json",
+ "tokio",
+]
 
 [[package]]
 name = "scrypt"

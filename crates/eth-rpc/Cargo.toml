@@ -8,7 +8,7 @@ homepage = { workspace = true }
 [dependencies]
 env_logger = "0.10.0"
 eyre = { workspace = true }
-kakarot_rpc_core = { path = "../core" }
+kakarot-rpc-core = { path = "../core" }
 log = "0.4.17"
 url = { workspace = true }
 

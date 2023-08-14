@@ -7,7 +7,7 @@ homepage = { workspace = true }
 
 [dependencies]
 eyre = { workspace = true }
-kakarot_rpc_core = { path = "../core" }
+kakarot-rpc-core = { path = "../core" }
 starknet_api = { workspace = true }
 reth-primitives = { workspace = true }
 serde = { workspace = true }
