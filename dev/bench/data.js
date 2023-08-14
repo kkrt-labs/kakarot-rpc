@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692026258507,
+  "lastUpdate": 1692033926406,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -659,6 +659,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.9333333333333332,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "46114123+aniketpr01@users.noreply.github.com",
+            "name": "Aniket Prajapati",
+            "username": "aniketpr01"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": false,
+          "id": "19ebd854385be87c499e09f9b74d5e82e7a51178",
+          "message": "feat: implement the eth filter methods as todo! (#403)\n\n* feat/implement-eth-filter-methods-as-todo - eth_api.rs\n\n* feat/implement-eth-filter-methods-as-todo - eth_rpc.rs\n\n* updated imports\n\n* Revert \"Merge branch 'kkrt-labs:main' into feat/implement-eth-filter-methods-as-todo\"\n\nThis reverts commit f7db399e48135894db7652406e94c7dab0f225ae, reversing\nchanges made to 8b553023067ab0fc12efa993b3506b84375fcc5f.\n\n* feat: add native token transfer benchmarks (#324)\n\nfeat: add benchmark to CI\n\n* feat: add `rstest` test framework (#399)\n\n* feat: add rstest fixtures\n\n* test: use rstest fixtures\n\n* feat: add parameterized test using rstest\n\n* dev: remove drop and println\n\n* refactor: use KakarotTestEnvironmentContext instead of KakarotTestEnvironment\n\n* dev: remove more boilerplate code\n\n* feat: account abstraction (#402)\n\n* account trait + kakarot account\n\n* update codebase with Account trait\n\n* fix typo troncate\n\n* feat: eth_getLogs (#405)\n\n* wip get logs\n\n* to starknet event filter testing\n\n* filter events update\n\n* verify block range\n\n* handle all block range variants\n\n* helper to execute a tx\n\n* update address filter\n\n* bump to latest kakarot commit and update deploy helpers\n\n* get_logs integration test\n\n* update test data with address key change\n\n* add comments\n\n* add mock test get logs\n\n* fix rebase\n\n* update execute_tx helper\n\n* fix rebase\n\n* updated return types for getFilterChanges, getFilterLogs as per execution-apis specs\n\n* updated return types for getFilterChanges, getFilterLogs as per execution-apis specs\n\n* removed Vec as return type is already an enum\n\n---------\n\nCo-authored-by: Harsh Bajpai <bajpaiharsh244@gmail.com>\nCo-authored-by: ftupas <35031356+ftupas@users.noreply.github.com>\nCo-authored-by: greged93 <82421016+greged93@users.noreply.github.com>",
+          "timestamp": "2023-08-14T15:40:16Z",
+          "tree_id": "db12b171b4d86e8422fea87aff3a86691308b4a4",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/19ebd854385be87c499e09f9b74d5e82e7a51178"
+        },
+        "date": 1692033925218,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.375,
             "unit": "transactions/second"
           }
         ]
