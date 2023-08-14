@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692025274764,
+  "lastUpdate": 1692025781265,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -527,6 +527,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.9,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bajpaiharsh244@gmail.com",
+            "name": "Harsh Bajpai",
+            "username": "bajpai244"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a0af5792763de3d5f0ab3ecb9a4e80434fdb96df",
+          "message": "feat: update benchmarking workflow to only run `push` (#421)",
+          "timestamp": "2023-08-14T15:33:26+02:00",
+          "tree_id": "f98e815e207a2dc8b463be34c1b4c64aa341067e",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/a0af5792763de3d5f0ab3ecb9a4e80434fdb96df"
+        },
+        "date": 1692025780517,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.8833333333333333,
             "unit": "transactions/second"
           }
         ]
