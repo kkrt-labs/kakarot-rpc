@@ -3,7 +3,7 @@ use jsonrpsee::proc_macros::rpc;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, Index, Log, RichBlock, SyncStatus,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
     Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 
@@ -103,7 +103,7 @@ pub trait EthApi {
 
     /// Returns the logs corresponding to the given filter object.
     #[method(name = "getLogs")]
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>>;
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<FilterChanges>>;
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "call")]
@@ -230,9 +230,9 @@ pub trait EthApi {
 
     /// Returns a list of all logs based on filter ID since the last log retrieval
     #[method(name = "getFilterChanges")]
-    async fn get_filter_changes(&self, id: U64) -> Result<Vec<Log>>;
+    async fn get_filter_changes(&self, id: U64) -> Result<Vec<FilterChanges>>;
 
     /// Returns a list of all logs based on filter ID
     #[method(name = "getFilterLogs")]
-    async fn get_filter_logs(&self, id: U64) -> Result<Vec<Log>>;
+    async fn get_filter_logs(&self, id: U64) -> Result<Vec<FilterChanges>>;
 }
