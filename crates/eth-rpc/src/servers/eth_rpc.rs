@@ -9,7 +9,7 @@ use kakarot_rpc_core::models::block::EthBlockId;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, Log, RichBlock, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
@@ -149,7 +149,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(code)
     }
 
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<FilterChanges>> {
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>> {
         let logs = self.kakarot_client.get_logs(filter).await?;
         Ok(logs)
     }
