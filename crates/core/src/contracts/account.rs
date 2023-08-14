@@ -30,6 +30,7 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
         Ok(evm_address.truncate_to_ethereum_address())
     }
 
+    /// Returns the evm bytecode of the contract.
     async fn bytecode(&self, block_id: &BlockId) -> Result<Bytes, EthApiError<P::Error>> {
         // Prepare the calldata for the bytecode function call
         let calldata = vec![];

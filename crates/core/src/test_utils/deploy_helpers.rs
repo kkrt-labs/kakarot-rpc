@@ -723,19 +723,18 @@ impl KakarotTestEnvironmentContext {
         }
     }
 
+    /// Constructs a Kakarot test environment from a dumped state and contracts.
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if there is no dumped state or contracts located
+    /// in the .katana folder at the root of the project.
     pub async fn from_dump_state() -> Self {
         // Construct a Starknet test sequencer
         let sequencer = Arc::new(construct_kakarot_test_sequencer().await);
 
         // Get root path
-        let workspace = std::process::Command::new(env!("CARGO"))
-            .args(["locate-project", "--workspace", "--message-format=plain"])
-            .output()
-            .expect("Failed to execute cargo locate-project command")
-            .stdout;
-        let mut dir = PathBuf::from(std::str::from_utf8(&workspace).unwrap().trim());
-        dir.pop();
-        dir.push(".katana/dump.json");
+        let mut dir = root_project_path!(".katana/dump.json");
 
         // Load the dumped state into the sequencer
         let state = std::fs::read_to_string(dir.clone()).expect("Failed to read Katana dump");
@@ -765,10 +764,10 @@ impl KakarotTestEnvironmentContext {
             .expect("Failed to fetch Kakarot contract");
 
         let mut evm_contracts = HashMap::new();
-        for c in EVM_CONTRACTS {
-            let contract: Contract = serde_json::from_value(contracts.get(c).unwrap().to_owned())
-                .unwrap_or_else(|_| panic!("Failed to fetch {} contract", c));
-            evm_contracts.insert(c.to_string(), contract);
+        for contract_name in EVM_CONTRACTS {
+            let contract: Contract = serde_json::from_value(contracts.get(contract_name).unwrap().to_owned())
+                .unwrap_or_else(|_| panic!("Failed to fetch {} contract", contract_name));
+            evm_contracts.insert(contract_name.to_string(), contract);
         }
 
         // Create a Kakarot client
