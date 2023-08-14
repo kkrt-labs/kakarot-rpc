@@ -767,7 +767,7 @@ impl KakarotTestEnvironmentContext {
         let mut evm_contracts = HashMap::new();
         for c in EVM_CONTRACTS {
             let contract: Contract = serde_json::from_value(contracts.get(c).unwrap().to_owned())
-                .expect(format!("Failed to fetch {} contract", c).as_str());
+                .unwrap_or_else(|_| panic!("Failed to fetch {} contract", c));
             evm_contracts.insert(c.to_string(), contract);
         }
 
