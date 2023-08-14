@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692033926406,
+  "lastUpdate": 1692035207089,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -692,6 +692,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.375,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ef866929b8ffb7c844c2ab572d65102637fea195",
+          "message": "test: update tests to use katana dump (#424)\n\n* wip katana dump\n\n* make tests blazingly fast again!\n\n* change log\n\n* fix CI\n\n* renaming + doc",
+          "timestamp": "2023-08-14T16:26:26Z",
+          "tree_id": "564bb3926d575ec4bb5e038e086b7d127fe81f3a",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/ef866929b8ffb7c844c2ab572d65102637fea195"
+        },
+        "date": 1692035205923,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.5208333333333334,
             "unit": "transactions/second"
           }
         ]
