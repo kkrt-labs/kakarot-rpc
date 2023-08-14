@@ -38,15 +38,7 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
 
         // Make the function call to get the Starknet contract address
         let bytecode = self.provider().call(request, block_id).await.or_else(|err| match err {
-            ProviderError::StarknetError(starknet_error) => match starknet_error {
-                // TODO: we just need to test against ContractNotFound but madara is currently returning the wrong
-                // error See https://github.com/keep-starknet-strange/madara/issues/853
-                StarknetError::ContractError | StarknetError::ContractNotFound => {
-                    log::error!("error in provider.call: {:?}", err);
-                    Ok(vec![])
-                }
-                _ => Err(EthApiError::from(err)),
-            },
+            ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(vec![]),
             _ => Err(EthApiError::from(err)),
         })?;
 
