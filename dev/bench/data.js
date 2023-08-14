@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692025270687,
+  "lastUpdate": 1692025274764,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -461,6 +461,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.5,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "35031356+ftupas@users.noreply.github.com",
+            "name": "ftupas",
+            "username": "ftupas"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "64fdcf7fcc89af89e89f334cb7212202f014a323",
+          "message": "dev: add changelog and enforce in ci (#410)\n\n* dev: add changelog and enforce in ci\n\n* ci: add skipLables",
+          "timestamp": "2023-08-14T13:22:53Z",
+          "tree_id": "caf1d7588617a38dbffad1a3ee2fee0bad6b50ee",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/64fdcf7fcc89af89e89f334cb7212202f014a323"
+        },
+        "date": 1692025269919,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.9,
             "unit": "transactions/second"
           }
         ]
