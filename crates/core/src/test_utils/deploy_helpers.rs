@@ -14,6 +14,7 @@ use foundry_config::utils::{find_project_root_path, load_config};
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
 };
+use serde::{Deserialize, Serialize};
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::chain_id;
@@ -549,6 +550,7 @@ async fn deploy_kakarot_contracts(
 ///
 /// This includes the private key and address of the Externally Owned Account (EOA), the Starknet
 /// addresses of the kakarot and kakarot_proxy contracts, and the Starknet address of the EOA.
+#[derive(Serialize, Deserialize)]
 pub struct DeployedKakarot {
     pub eoa_private_key: H256,
     pub kakarot_address: FieldElement,
@@ -557,6 +559,7 @@ pub struct DeployedKakarot {
     pub eoa_addresses: ContractAddresses,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct ContractAddresses {
     pub eth_address: Address,
     pub starknet_address: FieldElement,
@@ -605,7 +608,7 @@ impl DeployedKakarot {
 pub fn kakarot_starknet_config() -> StarknetConfig {
     let kakarot_steps = 2u32.pow(24);
     StarknetConfig {
-        allow_zero_max_fee: true,
+        disable_fee: true,
         auto_mine: true,
         env: Environment {
             chain_id: "SN_GOERLI".into(),
@@ -625,6 +628,7 @@ pub struct KakarotTestEnvironmentContext {
     evm_contracts: HashMap<String, Contract>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Contract {
     pub addresses: ContractAddresses,
     pub abi: Abi,
