@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692026254815,
+  "lastUpdate": 1692026258507,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -593,6 +593,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.8833333333333333,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "35031356+ftupas@users.noreply.github.com",
+            "name": "ftupas",
+            "username": "ftupas"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f554e401ed8a7b757151f4c69b1428770ce6b7d5",
+          "message": "dev: add large runners (#412)\n\n* dev: merge docker images\r\n\r\n* ci: add large runner\r\n\r\n* dev: add cache",
+          "timestamp": "2023-08-14T15:35:36+02:00",
+          "tree_id": "da11bbb4b30eb5b1fca6fee13b378b7384e23d8e",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/f554e401ed8a7b757151f4c69b1428770ce6b7d5"
+        },
+        "date": 1692026253492,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.9333333333333332,
             "unit": "transactions/second"
           }
         ]
