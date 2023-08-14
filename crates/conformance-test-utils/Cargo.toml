@@ -23,4 +23,3 @@ lazy_static = { workspace = true }
 [dev-dependencies]
 cargo-husky = { workspace = true }
 katana-core = { workspace = true }
-rstest = { workspace = true }

@@ -49,7 +49,6 @@ dotenv = "0.15.0"
 ruint = "1.9.0"
 url = "2.3.1"
 tokio = { version = "1.21.2", features = ["macros"] }
-rstest = "0.18.1"
 
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error

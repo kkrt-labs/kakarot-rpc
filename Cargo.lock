@@ -1791,7 +1791,6 @@ dependencies = [
  "mp-starknet",
  "pallet-starknet",
  "reth-primitives",
- "rstest",
  "serde",
  "serde_json",
  "serde_with",
@@ -5303,7 +5302,6 @@ dependencies = [
  "reth-rlp",
  "reth-rpc-api",
  "reth-rpc-types",
- "rstest",
  "ruint",
  "serde",
  "serde_json",
@@ -7267,35 +7265,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "rstest"
-version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b96577ca10cb3eade7b337eb46520108a67ca2818a24d0b63f41fd62bc9651c"
-dependencies = [
- "futures",
- "futures-timer",
- "rstest_macros",
- "rustc_version 0.4.0",
-]
-
-[[package]]
-name = "rstest_macros"
-version = "0.18.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "225e674cf31712b8bb15fdbca3ec0c1b9d825c5a24407ff2b7e005fb6a29ba03"
-dependencies = [
- "cfg-if",
- "glob",
- "proc-macro2",
- "quote",
- "regex",
- "relative-path",
- "rustc_version 0.4.0",
- "syn 2.0.28",
- "unicode-ident",
 ]
 
 [[package]]

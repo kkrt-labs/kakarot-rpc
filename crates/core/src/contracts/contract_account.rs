@@ -1,12 +1,11 @@
-use reth_primitives::U256;
-use starknet::core::types::{BlockId, FunctionCall};
-use starknet::providers::Provider;
+use reth_primitives::{Bytes, U256};
+use starknet::core::types::{BlockId, FunctionCall, StarknetError};
+use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::FieldElement;
 
-use super::account::Account;
-use crate::client::constants::selectors::STORAGE;
+use crate::client::constants::selectors::{BYTECODE, STORAGE};
 use crate::client::errors::EthApiError;
-use crate::client::helpers::DataDecodingError;
+use crate::client::helpers::{vec_felt_to_bytes, DataDecodingError};
 use crate::models::felt::Felt252Wrapper;
 
 /// Abstraction for a Kakarot contract account.
@@ -15,21 +14,33 @@ pub struct ContractAccount<'a, P> {
     provider: &'a P,
 }
 
-impl<'a, P: Provider + Send + Sync> Account<'a, P> for ContractAccount<'a, P> {
-    fn new(address: FieldElement, provider: &'a P) -> Self {
-        Self { address, provider }
-    }
-
-    fn provider(&self) -> &'a P {
-        self.provider
-    }
-
-    fn starknet_address(&self) -> FieldElement {
-        self.address
-    }
-}
-
 impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
+    pub fn new(provider: &'a P, address: FieldElement) -> Self {
+        Self { provider, address }
+    }
+
+    pub async fn bytecode(&self, block_id: &BlockId) -> Result<Bytes, EthApiError<P::Error>> {
+        // Prepare the calldata for the bytecode function call
+        let calldata = vec![];
+        let request = FunctionCall { contract_address: self.address, entry_point_selector: BYTECODE, calldata };
+
+        // Make the function call to get the Starknet contract address
+        let bytecode = self.provider.call(request, block_id).await.or_else(|err| match err {
+            ProviderError::StarknetError(starknet_error) => match starknet_error {
+                // TODO: we just need to test against ContractNotFound but madara is currently returning the wrong
+                // error See https://github.com/keep-starknet-strange/madara/issues/853
+                StarknetError::ContractError | StarknetError::ContractNotFound => {
+                    log::error!("error in provider.call: {:?}", err);
+                    Ok(vec![])
+                }
+                _ => Err(EthApiError::from(err)),
+            },
+            _ => Err(EthApiError::from(err)),
+        })?;
+
+        Ok(vec_felt_to_bytes(bytecode))
+    }
+
     pub async fn storage(
         &self,
         key_low: &FieldElement,

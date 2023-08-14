@@ -3,7 +3,6 @@ pub mod block;
 pub mod call;
 pub mod convertible;
 pub mod event;
-pub mod event_filter;
 pub mod felt;
 pub mod signature;
 #[cfg(test)]

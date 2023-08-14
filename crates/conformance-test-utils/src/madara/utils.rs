@@ -1,6 +1,5 @@
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
-use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
-use reth_primitives::{Bytes, U256};
+use reth_primitives::{Bytes, U128, U256};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
@@ -125,6 +124,16 @@ pub fn genesis_set_storage_kakarot_contract_account(
         .collect()
 }
 
+/// Helper function to split a U256 value into two FieldElements.
+pub fn split_u256_into_field_elements(value: U256) -> [FieldElement; 2] {
+    let low = value & U256::from(U128::MAX);
+    let high = value >> 128;
+    [
+        FieldElement::from_bytes_be(&low.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
+        FieldElement::from_bytes_be(&high.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -133,15 +142,11 @@ mod tests {
 
     use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
-    use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
-    use kakarot_rpc_core::contracts::account::Account;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
-    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
+    use kakarot_rpc_core::test_utils::deploy_helpers::{ContractDeploymentArgs, KakarotTestEnvironment};
     use katana_core::backend::state::StorageRecord;
     use reth_primitives::U256;
-    use rstest::rstest;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
     use starknet::core::utils::get_storage_var_address;
     use starknet_api::core::{ClassHash, ContractAddress as StarknetContractAddress, Nonce};
@@ -213,14 +218,18 @@ mod tests {
         assert_eq!(expected_storage, storage);
     }
 
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_counter_bytecode(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    #[tokio::test]
+    async fn test_counter_bytecode() {
         // Given
-        let test_environment = Arc::new(kakarot_test_env_ctx);
+        let test_environment = Arc::new(
+            KakarotTestEnvironment::new()
+                .await
+                .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
+                .await,
+        );
         let starknet_client = test_environment.client().starknet_provider();
         let counter = test_environment.evm_contract("Counter");
-        let counter_contract = ContractAccount::new(counter.addresses.starknet_address, &starknet_client);
+        let counter_contract = ContractAccount::new(&starknet_client, counter.addresses.starknet_address);
 
         // When
         let deployed_bytecode = counter_contract.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
@@ -265,7 +274,7 @@ mod tests {
         .unwrap();
 
         // Create a new counter contract pointing to the genesis initialized storage
-        let counter_genesis = ContractAccount::new(counter_genesis_address, &starknet_client);
+        let counter_genesis = ContractAccount::new(&starknet_client, counter_genesis_address);
         let bytecode_actual = counter_genesis.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Then
@@ -357,13 +366,10 @@ mod tests {
         assert_eq!(result, expected_output);
     }
 
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_kakarot_contract_account_storage(
-        #[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
+    #[tokio::test]
+    async fn test_kakarot_contract_account_storage() {
         // Given
-        let test_environment = Arc::new(kakarot_test_env_ctx);
+        let test_environment = Arc::new(KakarotTestEnvironment::new().await);
 
         // When
         // Use genesis_set_storage_kakarot_contract_account define the storage data
@@ -406,12 +412,40 @@ mod tests {
 
         // Deploy the contract account with the set genesis storage and retrieve the storage on the contract
         let starknet_client = test_environment.client().starknet_provider();
-        let genesis_contract = ContractAccount::new(genesis_address, &starknet_client);
+        let genesis_contract = ContractAccount::new(&starknet_client, genesis_address);
         let [key_low, key_high] = split_u256_into_field_elements(expected_key);
         let actual_value =
             genesis_contract.storage(&key_low, &key_high, &StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Assert that the value stored in the contract is the same as the value we set in the genesis
         assert_eq!(expected_value, actual_value);
+    }
+
+    #[test]
+    fn test_split_u256_into_field_elements() {
+        let test_cases = vec![
+            "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", // Normal case
+            "0x0000000000000000000000000000000000000000000000000000000000000000", // Minimum value
+            "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // Maximum value
+        ];
+
+        test_cases.iter().for_each(|&value_str| {
+            // Given
+            // U256 value from the hexadecimal string
+            let value = U256::from_str(value_str).unwrap();
+
+            // When
+            let result = split_u256_into_field_elements(value);
+
+            // Then
+            // Recalculate the U256 values using the resulting FieldElements
+            // The first is the low 128 bits of the U256 value
+            // The second is the high 128 bits of the U256 value and is left shifted by 128 bits
+            let result: U256 =
+                U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
+
+            // Assert that the original and recombined U256 values are equal
+            assert_eq!(result, value, "Failed for value: {value_str}");
+        });
     }
 }

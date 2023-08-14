@@ -31,10 +31,14 @@ impl TryFrom<EthBlockId> for StarknetBlockId {
                 let hash: Felt252Wrapper = hash.block_hash.try_into()?;
                 Ok(StarknetBlockId::Hash(hash.into()))
             }
-            EthereumBlockId::Number(block_number_or_tag) => {
-                let block_number_or_tag: EthBlockNumberOrTag = block_number_or_tag.into();
-                Ok(block_number_or_tag.into())
-            }
+            EthereumBlockId::Number(block_number_or_tag) => match block_number_or_tag {
+                BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
+                    Ok(StarknetBlockId::Tag(BlockTag::Latest))
+                }
+                BlockNumberOrTag::Earliest => Ok(StarknetBlockId::Number(EARLIEST_BLOCK_NUMBER)),
+                BlockNumberOrTag::Pending => Ok(StarknetBlockId::Tag(BlockTag::Pending)),
+                BlockNumberOrTag::Number(number) => Ok(StarknetBlockId::Number(number)),
+            },
         }
     }
 }
@@ -42,34 +46,6 @@ impl TryFrom<EthBlockId> for StarknetBlockId {
 impl From<EthBlockId> for EthereumBlockId {
     fn from(eth_block_id: EthBlockId) -> Self {
         eth_block_id.0
-    }
-}
-
-pub struct EthBlockNumberOrTag(BlockNumberOrTag);
-
-impl From<BlockNumberOrTag> for EthBlockNumberOrTag {
-    fn from(block_number_or_tag: BlockNumberOrTag) -> Self {
-        Self(block_number_or_tag)
-    }
-}
-
-impl From<EthBlockNumberOrTag> for BlockNumberOrTag {
-    fn from(eth_block_number_or_tag: EthBlockNumberOrTag) -> Self {
-        eth_block_number_or_tag.0
-    }
-}
-
-impl From<EthBlockNumberOrTag> for StarknetBlockId {
-    fn from(block_number_or_tag: EthBlockNumberOrTag) -> Self {
-        let block_number_or_tag = block_number_or_tag.into();
-        match block_number_or_tag {
-            BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
-                StarknetBlockId::Tag(BlockTag::Latest)
-            }
-            BlockNumberOrTag::Earliest => StarknetBlockId::Number(EARLIEST_BLOCK_NUMBER),
-            BlockNumberOrTag::Pending => StarknetBlockId::Tag(BlockTag::Pending),
-            BlockNumberOrTag::Number(number) => StarknetBlockId::Number(number),
-        }
     }
 }
 
@@ -175,7 +151,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
         let mix_hash = *MIX_HASH;
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
-        let sequencer = Felt252Wrapper::from(self.sequencer_address()).truncate_to_ethereum_address();
+        let sequencer = Felt252Wrapper::from(self.sequencer_address()).troncate_to_ethereum_address();
         let timestamp = U256::from(self.timestamp());
 
         let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
@@ -252,7 +228,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
 
-        let sequencer = Felt252Wrapper::from(self.sequencer_address()).truncate_to_ethereum_address();
+        let sequencer = Felt252Wrapper::from(self.sequencer_address()).troncate_to_ethereum_address();
 
         let timestamp = U256::from(self.timestamp());
 

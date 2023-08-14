@@ -4,12 +4,10 @@ use async_trait::async_trait;
 use eyre::Result;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U128, U256, U64};
 use reth_rpc_types::{
-    BlockTransactions, CallRequest, FeeHistory, Filter, Index, Log, RichBlock, SyncStatus,
-    Transaction as EtherTransaction, TransactionReceipt,
+    BlockTransactions, CallRequest, FeeHistory, Index, RichBlock, SyncStatus, Transaction as EtherTransaction,
+    TransactionReceipt,
 };
-use starknet::core::types::{
-    BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, EmittedEvent, EventFilterWithPage, FieldElement,
-};
+use starknet::core::types::{BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, FieldElement};
 use starknet::providers::sequencer::models::TransactionSimulationInfo;
 use starknet::providers::Provider;
 
@@ -24,8 +22,6 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
     async fn transaction_by_hash(&self, hash: H256) -> Result<Option<EtherTransaction>, EthApiError<P::Error>>;
 
     async fn get_code(&self, ethereum_address: Address, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>>;
-
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, EthApiError<P::Error>>;
 
     async fn call(&self, to: Address, calldata: Bytes, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>>;
 
@@ -126,6 +122,4 @@ pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
         block_number: u64,
         skip_validate: bool,
     ) -> Result<TransactionSimulationInfo, EthApiError<P::Error>>;
-
-    async fn filter_events(&self, request: EventFilterWithPage) -> Result<Vec<EmittedEvent>, EthApiError<P::Error>>;
 }

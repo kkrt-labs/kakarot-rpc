@@ -42,9 +42,9 @@ impl ConvertibleStarknetEvent for StarknetEvent {
             return Err(EthApiError::KakarotDataFilteringError("Event".into()));
         }
 
-        // Derive the evm address from the first item in the `event.keys` vector and remove it
+        // Derive the evm address from the last item in the `event.keys` vector and remove it
         let (evm_contract_address, keys) =
-            self.0.keys.split_first().ok_or_else(|| EthApiError::KakarotDataFilteringError("Event".into()))?;
+            self.0.keys.split_last().ok_or_else(|| EthApiError::KakarotDataFilteringError("Event".into()))?;
 
         let address: Address = {
             let felt_wrapper: Felt252Wrapper = (*evm_contract_address).into();

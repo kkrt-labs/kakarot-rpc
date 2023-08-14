@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256, U64};
-use reth_rpc_types::{CallRequest, Filter, FilterBlockOption, Log, ValueOrArray};
+use reth_rpc_types::CallRequest;
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransactionV1};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::sequencer::models::BlockId as SequencerBlockId;
@@ -188,101 +188,4 @@ async fn test_gas_price() {
 
     // Then
     assert!(gas_price > U256::from(0));
-}
-
-#[tokio::test]
-async fn test_get_logs_from_bigger_than_current() {
-    // Given
-    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber)]);
-    let client = init_mock_client(Some(fixtures));
-    let filter = Filter {
-        block_option: FilterBlockOption::Range {
-            from_block: Some(BlockNumberOrTag::Number(19641)),
-            to_block: Some(BlockNumberOrTag::Number(19642)),
-        },
-        ..Default::default()
-    };
-
-    // When
-    let logs = client.get_logs(filter).await.unwrap();
-
-    // Then
-    assert!(logs.is_empty());
-}
-
-#[tokio::test]
-async fn test_get_logs_to_less_than_from() {
-    // Given
-    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber)]);
-    let client = init_mock_client(Some(fixtures));
-    let filter = Filter {
-        block_option: FilterBlockOption::Range {
-            from_block: Some(BlockNumberOrTag::Number(2)),
-            to_block: Some(BlockNumberOrTag::Number(1)),
-        },
-        ..Default::default()
-    };
-
-    // When
-    let logs = client.get_logs(filter).await.unwrap();
-
-    // Then
-    assert!(logs.is_empty());
-}
-
-#[tokio::test]
-async fn test_get_logs() {
-    // Given
-    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber), wrap_kakarot!(JsonRpcMethod::GetEvents)]);
-    let client = init_mock_client(Some(fixtures));
-    let filter = Filter {
-        block_option: FilterBlockOption::Range {
-            from_block: Some(BlockNumberOrTag::Number(0)),
-            to_block: Some(BlockNumberOrTag::Number(10)),
-        },
-        address: Some(ValueOrArray::Value(*ABDEL_ETHEREUM_ADDRESS)),
-        ..Default::default()
-    };
-
-    // When
-    let logs = client.get_logs(filter).await.unwrap();
-
-    // Then
-    assert_eq!(2, logs.len());
-    assert_eq!(
-        Log {
-            address: *ABDEL_ETHEREUM_ADDRESS,
-            topics: vec![],
-            data: Bytes::from_str("0xdead").unwrap(),
-            block_hash: Some(
-                H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e").unwrap()
-            ),
-            block_number: Some(U256::from(5u8)),
-            transaction_hash: Some(
-                H256::from_str("0x032e08cabc0f34678351953576e64f300add9034945c4bffd355de094fd97258").unwrap()
-            ),
-            transaction_index: None,
-            log_index: None,
-            removed: false
-        },
-        logs[0]
-    );
-    assert_eq!(
-        Log {
-            address: *ABDEL_ETHEREUM_ADDRESS,
-            topics: vec![],
-            data: Bytes::from_str("0xbeef").unwrap(),
-            block_hash: Some(
-                H256::from_str("0x0197be2810df6b5eedd5d9e468b200d0b845b642b81a44755e19047f08cc8c6e").unwrap()
-            ),
-            block_number: Some(U256::from(5u8)),
-            transaction_hash: Some(
-                H256::from_str("0x01b7ec62724de1faba75fdc75cf11c1f855af33e4fe5f36d8a201237f3c9f257").unwrap()
-            ),
-            transaction_index: None,
-            log_index: None,
-            removed: false
-        },
-        logs[1]
-    )
 }

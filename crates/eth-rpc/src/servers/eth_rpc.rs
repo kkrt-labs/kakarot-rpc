@@ -149,11 +149,6 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(code)
     }
 
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>> {
-        let logs = self.kakarot_client.get_logs(filter).await?;
-        Ok(logs)
-    }
-
     async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
         // unwrap option or return jsonrpc error
         let to = request.to.ok_or_else(|| {

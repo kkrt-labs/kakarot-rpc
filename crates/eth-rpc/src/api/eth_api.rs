@@ -101,10 +101,6 @@ pub trait EthApi {
     #[method(name = "getCode")]
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes>;
 
-    /// Returns the logs corresponding to the given filter object.
-    #[method(name = "getLogs")]
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>>;
-
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "call")]
     async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes>;

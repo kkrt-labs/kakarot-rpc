@@ -1,17 +1,15 @@
 mod tests {
 
-    use std::str::FromStr;
-
     use ctor::ctor;
+    use ethers::abi::Token;
+    use ethers::types::Address as EthersAddress;
     use kakarot_rpc_core::client::api::KakarotEthApi;
-    use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
-    use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
-    use kakarot_rpc_core::test_utils::execution_helpers::execute_tx;
-    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
-    use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
-    use reth_rpc_types::{Filter, FilterBlockOption, Log, ValueOrArray};
-    use rstest::*;
+    use kakarot_rpc_core::models::felt::Felt252Wrapper;
+    use kakarot_rpc_core::test_utils::deploy_helpers::{
+        create_raw_ethereum_tx, ContractDeploymentArgs, KakarotTestEnvironment,
+    };
+    use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
     use starknet::core::types::FieldElement;
     use tracing_subscriber::FmtSubscriber;
 
@@ -21,27 +19,26 @@ mod tests {
         tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
     }
 
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_rpc_should_not_raise_when_eoa_not_deployed(
-        #[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
+    #[tokio::test]
+    async fn test_rpc_should_not_raise_when_eoa_not_deployed() {
         // Given
-        let client = kakarot_test_env_ctx.client();
+        let test_environment = KakarotTestEnvironment::new().await;
 
         // When
-        let nonce = client.nonce(Address::zero(), BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
+        let nonce =
+            test_environment.client().nonce(Address::zero(), BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
 
         // Then
         // Zero address shouldn't throw 'ContractNotFound', but return zero
         assert_eq!(U256::from(0), nonce);
     }
 
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_eoa_balance(#[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    #[tokio::test]
+    async fn test_eoa_balance() {
         // Given
-        let (client, kakarot) = kakarot_test_env_ctx.resources();
+        let test_environment = KakarotTestEnvironment::new().await;
+        let client = test_environment.client();
+        let kakarot = test_environment.kakarot();
 
         // When
         let eoa_balance = client
@@ -54,15 +51,44 @@ mod tests {
         assert_eq!(FieldElement::from_dec_str("1000000000000000000").unwrap(), eoa_balance);
     }
 
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_counter(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    #[tokio::test]
+    async fn test_counter() {
         // Given
-        let (client, _, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
+        let test_environment = KakarotTestEnvironment::new()
+            .await
+            .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
+            .await;
+        let client = test_environment.client();
+        let kakarot = test_environment.kakarot();
+        let counter = test_environment.evm_contract("Counter");
+
+        let counter_eth_address = {
+            let address: Felt252Wrapper = counter.addresses.eth_address.into();
+            address.try_into().unwrap()
+        };
+
+        client
+            .get_code(counter_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .expect("contract not deployed");
 
         // When
-        let hash = execute_tx(&kakarot_test_env_ctx, "Counter", "inc", vec![]).await;
-        client.transaction_receipt(hash).await.expect("increment transaction failed");
+        let inc_selector = counter.abi.function("inc").unwrap().short_signature();
+
+        let nonce = client
+            .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .unwrap();
+        let inc_tx = create_raw_ethereum_tx(
+            inc_selector,
+            kakarot.eoa_private_key,
+            counter_eth_address,
+            vec![],
+            nonce.try_into().unwrap(),
+        );
+        let inc_res = client.send_transaction(inc_tx).await.unwrap();
+
+        client.transaction_receipt(inc_res).await.expect("increment transaction failed");
 
         let count_selector = counter.abi.function("count").unwrap().short_signature();
         let counter_bytes = client
@@ -80,49 +106,127 @@ mod tests {
         assert_eq!(num, 1);
     }
 
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_plain_opcodes(
-        #[with(TestContext::PlainOpcodes)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
+    #[tokio::test]
+    async fn test_plain_opcodes() {
         // Given
-        let (client, _, _, plain_opcodes_eth_address) = kakarot_test_env_ctx.resources_with_contract("PlainOpcodes");
+        let mut test_environment = KakarotTestEnvironment::new().await;
+
+        test_environment = test_environment
+            .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
+            .await;
+        let counter = test_environment.evm_contract("Counter");
+        let counter_eth_address: Address = {
+            let address: Felt252Wrapper = counter.addresses.eth_address.into();
+            address.try_into().unwrap()
+        };
+
+        // When
+        test_environment = test_environment
+            .deploy_evm_contract(ContractDeploymentArgs {
+                name: "PlainOpcodes".into(),
+                constructor_args: (EthersAddress::from(counter_eth_address.as_fixed_bytes()),),
+            })
+            .await;
+        let plain_opcodes = test_environment.evm_contract("PlainOpcodes");
+        let plain_opcodes_eth_address: Address = {
+            let address: Felt252Wrapper = plain_opcodes.addresses.eth_address.into();
+            address.try_into().unwrap()
+        };
+
         // Then
+        let client = test_environment.client();
         client
             .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
             .await
             .expect("contract not deployed");
     }
 
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_storage_at(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    #[tokio::test]
+    async fn test_storage_at() {
         // Given
-        let (client, _, _, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
-        // When
-        execute_tx(&kakarot_test_env_ctx, "Counter", "inc", vec![]).await;
+        let test_environment = KakarotTestEnvironment::new()
+            .await
+            .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
+            .await;
+        let counter = test_environment.evm_contract("Counter");
+        let counter_eth_address = {
+            let address: Felt252Wrapper = counter.addresses.eth_address.into();
+            address.try_into().unwrap()
+        };
+        let client = test_environment.client();
+        let kakarot = test_environment.kakarot();
 
-        // Then
+        // When
+        let inc_selector = counter.abi.function("inc").unwrap().short_signature();
+
+        let nonce = client
+            .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .unwrap();
+
+        let inc_tx = create_raw_ethereum_tx(
+            inc_selector,
+            kakarot.eoa_private_key,
+            counter_eth_address,
+            vec![],
+            nonce.try_into().unwrap(),
+        );
+
+        client.send_transaction(inc_tx).await.unwrap();
+
         let count = client
             .storage_at(counter_eth_address, U256::from(0), BlockId::Number(BlockNumberOrTag::Latest))
             .await
             .unwrap();
+
+        // Then
         assert_eq!(U256::from(1), count);
     }
 
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_token_balances(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    #[tokio::test]
+    async fn test_token_balances() {
         // Given
-        let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
+        let test_environment = KakarotTestEnvironment::new()
+            .await
+            .deploy_evm_contract(ContractDeploymentArgs {
+                name: "ERC20".into(),
+                constructor_args: (
+                    Token::String("Test".into()),               // name
+                    Token::String("TT".into()),                 // symbol
+                    Token::Uint(ethers::types::U256::from(18)), // decimals
+                ),
+            })
+            .await;
+        let erc20 = test_environment.evm_contract("ERC20");
+        let erc20_eth_address = {
+            let address: Felt252Wrapper = erc20.addresses.eth_address.into();
+            address.try_into().unwrap()
+        };
+        let client = test_environment.client();
+        let kakarot = test_environment.kakarot();
 
         // When
+        let nonce = client
+            .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
+            .await
+            .unwrap();
+        let mint_selector = erc20.abi.function("mint").unwrap().short_signature();
+
         let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
         let amount = U256::from(10_000);
-        execute_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
+        let mint_tx = create_raw_ethereum_tx(
+            mint_selector,
+            kakarot.eoa_private_key,
+            erc20_eth_address,
+            vec![to, amount],
+            nonce.try_into().unwrap(),
+        );
+
+        client.send_transaction(mint_tx).await.unwrap();
+
+        let balances = client.token_balances(kakarot.eoa_addresses.eth_address, vec![erc20_eth_address]).await.unwrap();
 
         // Then
-        let balances = client.token_balances(kakarot.eoa_addresses.eth_address, vec![erc20_eth_address]).await.unwrap();
         assert_eq!(
             TokenBalances {
                 address: kakarot.eoa_addresses.eth_address,
@@ -133,75 +237,6 @@ mod tests {
                 }]
             },
             balances
-        );
-    }
-
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_get_logs(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
-        // Given
-        let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
-
-        // When
-        let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
-        let amount = U256::from(10_000);
-        execute_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
-
-        let to = U256::try_from_be_slice(ACCOUNT_ADDRESS_EVM.as_bytes()).unwrap();
-        let amount = U256::from(10_000);
-        execute_tx(&kakarot_test_env_ctx, "ERC20", "transfer", vec![to, amount]).await;
-
-        let filter = Filter {
-            block_option: FilterBlockOption::Range {
-                from_block: Some(BlockNumberOrTag::Number(0)),
-                to_block: Some(BlockNumberOrTag::Number(100)),
-            },
-            address: Some(ValueOrArray::Value(erc20_eth_address)),
-            topics: [None, None, None, None],
-        };
-        let events = client.get_logs(filter).await.unwrap();
-
-        // Then
-        assert_eq!(2, events.len());
-        assert_eq!(
-            Log {
-                address: erc20_eth_address,
-                topics: vec![
-                    H256::from_str("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef").unwrap(), /* keccak256("Transfer(address,address,uint256)") */
-                    H256::from_low_u64_be(0u64),                   // from
-                    H256::from(kakarot.eoa_addresses.eth_address)  // to
-                ],
-                data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710").unwrap(), /* amount */
-                block_hash: events[0].block_hash, // block hash changes so just set to event value
-                block_number: Some(U256::from_str("0xc").unwrap()),
-                transaction_hash: Some(
-                    H256::from_str("0x076cbbdfc79e24e03589ba4e95173941f55c977d90d67eeb038b26b61b29b62c").unwrap()
-                ),
-                transaction_index: None,
-                log_index: None,
-                removed: false
-            },
-            events[0]
-        );
-        assert_eq!(
-            Log {
-                address: erc20_eth_address,
-                topics: vec![
-                    H256::from_str("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef").unwrap(), /* keccak256("Transfer(address,address,uint256)") */
-                    H256::from(kakarot.eoa_addresses.eth_address), // from
-                    H256::from(*ACCOUNT_ADDRESS_EVM)               // to
-                ],
-                data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710").unwrap(), /* amount */
-                block_hash: events[1].block_hash, // block hash changes so just set to event value
-                block_number: Some(U256::from_str("0xd").unwrap()),
-                transaction_hash: Some(
-                    H256::from_str("0x057988a38fa62d972c1594ac687a24710445ba90cf91d784be3c3a6569626890").unwrap()
-                ),
-                transaction_index: None,
-                log_index: None,
-                removed: false
-            },
-            events[1]
         );
     }
 }
