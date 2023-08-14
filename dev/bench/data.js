@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1691922429011,
+  "lastUpdate": 1692010408595,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -263,6 +263,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 2.766666666666667,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e0c5509b65446404db6af5bb8dd9dd1d09914b0a",
+          "message": "build(deps): bump lib/forge-std from `f18e8aa` to `c0c6a42` (#406)\n\nBumps [lib/forge-std](https://github.com/foundry-rs/forge-std) from `f18e8aa` to `c0c6a42`.\n- [Release notes](https://github.com/foundry-rs/forge-std/releases)\n- [Commits](https://github.com/foundry-rs/forge-std/compare/f18e8aa3e72eef83518766eb34ad8c8d8e2aa0aa...c0c6a4206531a3f785538240412ea2467ef58ebf)\n\n---\nupdated-dependencies:\n- dependency-name: lib/forge-std\n  dependency-type: direct:production\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-08-14T10:12:31Z",
+          "tree_id": "44c9f7b6dc3d10451b6164b5a9d0c82586556444",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/e0c5509b65446404db6af5bb8dd9dd1d09914b0a"
+        },
+        "date": 1692010407587,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 1.8166666666666667,
             "unit": "transactions/second"
           }
         ]
