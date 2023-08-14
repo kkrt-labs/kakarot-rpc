@@ -137,7 +137,7 @@ mod tests {
     use kakarot_rpc_core::contracts::account::Account;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
+    use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
     use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use katana_core::backend::state::StorageRecord;
     use reth_primitives::U256;
@@ -215,7 +215,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_counter_bytecode(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_counter_bytecode(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let test_environment = Arc::new(kakarot_test_env_ctx);
         let starknet_client = test_environment.client().starknet_provider();
@@ -359,9 +359,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_kakarot_contract_account_storage(
-        #[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
+    async fn test_kakarot_contract_account_storage(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let test_environment = Arc::new(kakarot_test_env_ctx);
 

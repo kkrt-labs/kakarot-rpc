@@ -6,8 +6,7 @@ mod tests {
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
-    use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
-    use kakarot_rpc_core::test_utils::execution_helpers::execute_tx;
+    use kakarot_rpc_core::test_utils::deploy_helpers::{create_raw_ethereum_tx, KakarotTestEnvironmentContext};
     use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
     use reth_rpc_types::{Filter, FilterBlockOption, Log, ValueOrArray};
@@ -23,9 +22,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_rpc_should_not_raise_when_eoa_not_deployed(
-        #[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
+    async fn test_rpc_should_not_raise_when_eoa_not_deployed(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let client = kakarot_test_env_ctx.client();
 
@@ -39,7 +36,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_eoa_balance(#[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_eoa_balance(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, kakarot) = kakarot_test_env_ctx.resources();
 
@@ -56,7 +53,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_counter(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_counter(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, _, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
 
@@ -82,21 +79,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_plain_opcodes(
-        #[with(TestContext::PlainOpcodes)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
-        // Given
-        let (client, _, _, plain_opcodes_eth_address) = kakarot_test_env_ctx.resources_with_contract("PlainOpcodes");
-        // Then
-        client
-            .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
-            .await
-            .expect("contract not deployed");
-    }
-
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_storage_at(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_storage_at(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, _, _, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
         // When
@@ -112,7 +95,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_token_balances(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_token_balances(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
