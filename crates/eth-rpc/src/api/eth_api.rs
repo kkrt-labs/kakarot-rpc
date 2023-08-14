@@ -230,9 +230,9 @@ pub trait EthApi {
 
     /// Returns a list of all logs based on filter ID since the last log retrieval
     #[method(name = "getFilterChanges")]
-    async fn get_filter_changes(&self, id: U64) -> Result<Vec<FilterChanges>>;
+    async fn get_filter_changes(&self, id: U64) -> Result<FilterChanges>;
 
     /// Returns a list of all logs based on filter ID
     #[method(name = "getFilterLogs")]
-    async fn get_filter_logs(&self, id: U64) -> Result<Vec<FilterChanges>>;
+    async fn get_filter_logs(&self, id: U64) -> Result<FilterChanges>;
 }

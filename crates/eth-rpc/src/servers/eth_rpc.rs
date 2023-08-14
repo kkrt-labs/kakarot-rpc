@@ -271,11 +271,11 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         todo!()
     }
 
-    async fn get_filter_changes(&self, _id: U64) -> Result<Vec<FilterChanges>> {
+    async fn get_filter_changes(&self, _id: U64) -> Result<FilterChanges> {
         todo!()
     }
 
-    async fn get_filter_logs(&self, _id: U64) -> Result<Vec<FilterChanges>> {
+    async fn get_filter_logs(&self, _id: U64) -> Result<FilterChanges> {
         todo!()
     }
 }
