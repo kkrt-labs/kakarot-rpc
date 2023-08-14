@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692022904952,
+  "lastUpdate": 1692024964077,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -362,6 +362,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 2.6666666666666665,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "35031356+ftupas@users.noreply.github.com",
+            "name": "ftupas",
+            "username": "ftupas"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "88f87324f667bf5823d69d749afe8c2ebd26c41d",
+          "message": "dev: remove `ContractError` match (#423)",
+          "timestamp": "2023-08-14T15:33:49+02:00",
+          "tree_id": "4e923e760b783828014f1e026e851a1dc32fbf65",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/88f87324f667bf5823d69d749afe8c2ebd26c41d"
+        },
+        "date": 1692024963388,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 2.6999999999999997,
             "unit": "transactions/second"
           }
         ]
