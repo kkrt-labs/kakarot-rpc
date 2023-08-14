@@ -7,10 +7,10 @@ use kakarot_rpc_core::client::constants::CHAIN_ID;
 use kakarot_rpc_core::client::errors::{rpc_err, EthApiError};
 use kakarot_rpc_core::models::block::EthBlockId;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64, Log};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
-    Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work, Filter
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, Index, Log, RichBlock, SyncStatus,
+    Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
 use starknet::core::types::BlockId as StarknetBlockId;
