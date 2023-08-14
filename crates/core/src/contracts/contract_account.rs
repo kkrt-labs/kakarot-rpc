@@ -30,6 +30,8 @@ impl<'a, P: Provider + Send + Sync> Account<'a, P> for ContractAccount<'a, P> {
 }
 
 impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
+    /// Returns the value stored at the given key in the evm contract storage. Not to be confused
+    /// with the Starknet contract storage.
     pub async fn storage(
         &self,
         key_low: &FieldElement,

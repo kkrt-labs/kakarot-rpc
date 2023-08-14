@@ -59,7 +59,7 @@ dump-katana:
 test: dump-katana
 	cargo test --all
 
-test-coverage:
+test-coverage: dump-katana
 	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:

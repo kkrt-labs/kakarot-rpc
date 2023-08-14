@@ -6,7 +6,7 @@ mod tests {
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
-    use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
+    use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
     use kakarot_rpc_core::test_utils::execution_helpers::execute_tx;
     use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
@@ -23,9 +23,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_rpc_should_not_raise_when_eoa_not_deployed(
-        #[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
+    async fn test_rpc_should_not_raise_when_eoa_not_deployed(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let client = kakarot_test_env_ctx.client();
 
@@ -39,7 +37,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_eoa_balance(#[with(TestContext::Simple)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_eoa_balance(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, kakarot) = kakarot_test_env_ctx.resources();
 
@@ -56,7 +54,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_counter(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_counter(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, _, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
 
@@ -82,21 +80,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_plain_opcodes(
-        #[with(TestContext::PlainOpcodes)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
-        // Given
-        let (client, _, _, plain_opcodes_eth_address) = kakarot_test_env_ctx.resources_with_contract("PlainOpcodes");
-        // Then
-        client
-            .get_code(plain_opcodes_eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
-            .await
-            .expect("contract not deployed");
-    }
-
-    #[rstest]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_storage_at(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_storage_at(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, _, _, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
         // When
@@ -112,7 +96,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_token_balances(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_token_balances(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
@@ -138,7 +122,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_get_logs(#[with(TestContext::ERC20)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_get_logs(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
@@ -173,9 +157,9 @@ mod tests {
                 ],
                 data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710").unwrap(), /* amount */
                 block_hash: events[0].block_hash, // block hash changes so just set to event value
-                block_number: Some(U256::from_str("0xc").unwrap()),
+                block_number: events[0].block_number, // block number changes so just set to event value
                 transaction_hash: Some(
-                    H256::from_str("0x076cbbdfc79e24e03589ba4e95173941f55c977d90d67eeb038b26b61b29b62c").unwrap()
+                    H256::from_str("0x0124c05cceb7e556f354f580a362845c746a2616d682ce3235c67e7b42a0fdd8").unwrap()
                 ),
                 transaction_index: None,
                 log_index: None,
@@ -193,9 +177,9 @@ mod tests {
                 ],
                 data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710").unwrap(), /* amount */
                 block_hash: events[1].block_hash, // block hash changes so just set to event value
-                block_number: Some(U256::from_str("0xd").unwrap()),
+                block_number: events[1].block_number, // block number changes so just set to event value
                 transaction_hash: Some(
-                    H256::from_str("0x057988a38fa62d972c1594ac687a24710445ba90cf91d784be3c3a6569626890").unwrap()
+                    H256::from_str("0x00c2f52f03d1f8bc3995c533983364b077040093207c03393b4fd6b99e4af3ab").unwrap()
                 ),
                 transaction_index: None,
                 log_index: None,

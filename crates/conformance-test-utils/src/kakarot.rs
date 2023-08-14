@@ -26,42 +26,22 @@ pub fn compute_starknet_address(
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use kakarot_rpc_core::contracts::kakarot::KakarotContract;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_rpc_core::test_utils::constants::EOA_WALLET;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{construct_kakarot_test_sequencer, deploy_kakarot_system};
-    use starknet::core::types::{BlockId, BlockTag, FieldElement};
-    use starknet::providers::jsonrpc::HttpTransport as StarknetHttpTransport;
-    use starknet::providers::JsonRpcClient;
+    use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
+    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
+    use rstest::*;
+    use starknet::core::types::{BlockId, BlockTag};
 
     use super::compute_starknet_address;
 
     /// This test is done against the Kakarot system deployed on the Starknet test sequencer.
     /// It tests the compute_starknet_address function by comparing the result of the computation
     /// with the result when called on the deployed Kakarot contract.
+    #[rstest]
     #[tokio::test]
-    async fn test_compute_starknet_address() {
-        // Construct a Starknet test sequencer
-        let starknet_test_sequencer = construct_kakarot_test_sequencer().await;
-
-        // Define the expected funded amount for the Kakarot system
-        let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
-
-        // Deploy the Kakarot system
-        let deployed_kakarot =
-            deploy_kakarot_system(&starknet_test_sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
-
-        // Create a new HTTP transport using the sequencer's URL
-        let starknet_http_transport = StarknetHttpTransport::new(starknet_test_sequencer.url());
-
-        // Create a new JSON RPC client using the HTTP transport
-        let starknet_client = Arc::new(JsonRpcClient::new(starknet_http_transport));
-
-        // Create a new Kakarot contract
-        let kakarot_contract =
-            KakarotContract::new(starknet_client, deployed_kakarot.kakarot_address, deployed_kakarot.proxy_class_hash);
+    async fn test_compute_starknet_address(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+        let deployed_kakarot = kakarot_test_env_ctx.kakarot();
+        let kakarot_contract = kakarot_test_env_ctx.kakarot_contract();
 
         // Define the EVM address to be used for calculating the Starknet address
         let evm_address = *ACCOUNT_ADDRESS;

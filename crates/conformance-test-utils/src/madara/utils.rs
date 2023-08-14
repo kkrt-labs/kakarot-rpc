@@ -137,7 +137,7 @@ mod tests {
     use kakarot_rpc_core::contracts::account::Account;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_rpc_core::test_utils::deploy_helpers::{KakarotTestEnvironmentContext, TestContext};
+    use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
     use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use katana_core::backend::state::StorageRecord;
     use reth_primitives::U256;
@@ -215,7 +215,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_counter_bytecode(#[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_counter_bytecode(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let test_environment = Arc::new(kakarot_test_env_ctx);
         let starknet_client = test_environment.client().starknet_provider();
@@ -223,12 +223,12 @@ mod tests {
         let counter_contract = ContractAccount::new(counter.addresses.starknet_address, &starknet_client);
 
         // When
-        let deployed_bytecode = counter_contract.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
-        let deployed_bytecode_len = deployed_bytecode.len();
+        let deployed_evm_bytecode = counter_contract.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let deployed_evm_bytecode_len = deployed_evm_bytecode.len();
 
         // Use genesis_set_bytecode to get the bytecode to be stored into counter
         let counter_genesis_address = FieldElement::from_str("0x1234").unwrap();
-        let counter_genesis_storage = genesis_set_bytecode(&deployed_bytecode, counter_genesis_address);
+        let counter_genesis_storage = genesis_set_bytecode(&deployed_evm_bytecode, counter_genesis_address);
 
         // Create an atomic reference to the test environment to avoid dropping it
         let env = Arc::clone(&test_environment);
@@ -240,7 +240,7 @@ mod tests {
 
             // Set the counter bytecode length into the contract
             let key = get_starknet_storage_key("bytecode_len_", &[]);
-            let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_bytecode_len as u64));
+            let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_evm_bytecode_len as u64));
             counter_storage.insert(key, value);
 
             // Set the counter bytecode into the contract
@@ -266,11 +266,11 @@ mod tests {
 
         // Create a new counter contract pointing to the genesis initialized storage
         let counter_genesis = ContractAccount::new(counter_genesis_address, &starknet_client);
-        let bytecode_actual = counter_genesis.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let evm_bytecode_actual = counter_genesis.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Then
         // Assert that the expected and actual bytecodes are equal
-        assert_eq!(bytecode_actual, deployed_bytecode);
+        assert_eq!(evm_bytecode_actual, deployed_evm_bytecode);
     }
 
     /// This test verifies that the `genesis_fund_starknet_address` function generates the correct
@@ -359,9 +359,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_kakarot_contract_account_storage(
-        #[with(TestContext::Counter)] kakarot_test_env_ctx: KakarotTestEnvironmentContext,
-    ) {
+    async fn test_kakarot_contract_account_storage(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
         let test_environment = Arc::new(kakarot_test_env_ctx);
 
