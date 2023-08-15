@@ -35,31 +35,8 @@ impl<P: Provider + Send + Sync + 'static> AlchemyApiServer for AlchemyRpc<P> {
         account_address: Address,
         spender_address: Address,
     ) -> Result<TokenAllowance> {
-        let entry_point = FieldElement::from_byte_slice_be(&keccak256("allowance(account,spender)").0[0..4])
-            .map_err(EthApiError::<P::Error>::from)?;
-
-        let account_addr: Felt252Wrapper = account_address.into();
-        let account_addr: FieldElement = account_addr.into();
-
-        let spender_addr: Felt252Wrapper = spender_address.into();
-        let spender_addr: FieldElement = spender_addr.into();
-
-        let calldata = vec![entry_point, account_addr, spender_addr];
-
-        let handle = self
-            .kakarot_client
-            .call(contract_address, Bytes::from(vec_felt_to_bytes(calldata).0), BlockId::from(BlockNumberOrTag::Latest))
-            .await;
-
-        let token_allowance = match handle {
-            Ok(call) => {
-                let allowance = U256::try_from_be_slice(call.as_ref())
-                    .ok_or(EthApiError::<P::Error>::ConversionError("error converting from Bytes to U256".into()))?;
-                TokenAllowance { result: Some(allowance), error: None }
-            }
-            Err(e) => TokenAllowance { result: None, error: Some(format!("kakarot_getTokenAllowance Error: {e}")) },
-        };
-
+        let token_allowance =
+            self.kakarot_client.token_allowance(contract_address, account_address, spender_address).await?;
         Ok(token_allowance)
     }
 

@@ -44,7 +44,7 @@ use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot::KakarotContract;
-use crate::models::allowance::TokenAllowance;
+use crate::models::allowance::{FutureTokenAllowance, TokenAllowance};
 use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
@@ -406,11 +406,24 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     /// Returns the amount which the sender is allowed to withdraw from the owner.
     async fn token_allowance(
         &self,
-        _contract_address: Address,
-        _account_address: Address,
-        _spender_address: Address,
+        contract_address: Address,
+        account_address: Address,
+        spender_address: Address,
     ) -> Result<TokenAllowance, EthApiError<P::Error>> {
-        todo!()
+        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
+
+        let contract_addr: Felt252Wrapper = contract_address.into();
+        let contract = EthereumErc20::new(contract_addr.into(), &self.kakarot_contract);
+
+        let handle = FutureTokenAllowance::<P, _>::new(contract.allowance(
+            account_address.into(),
+            spender_address.into(),
+            block_id,
+        ));
+
+        let allowance = handle.await;
+
+        Ok(allowance)
     }
 
     /// Returns token balances for a specific address given a list of contracts addresses.
