@@ -58,6 +58,7 @@ impl HiveGenesisConfig {
 lazy_static! {
     pub static ref KAKAROT_ADDRESSES: FieldElement = FieldElement::from_hex_be("0x9001").unwrap(); // Safe unwrap, 0x9001
     pub static ref BLOCKHASH_REGISTRY_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9002").unwrap(); // Safe unwrap, 0x9002
+    pub static ref DEPLOYER_ACCOUNT_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9003").unwrap(); // Safe unwrap, 0x9003
 }
 
 /// Convert Hive Genesis Config to Madara Genesis Config
@@ -113,6 +114,10 @@ pub async fn serialize_hive_to_madara_genesis_config(
         Felt(*BLOCKHASH_REGISTRY_ADDRESS),
         Felt(*kakarot_contracts.get("blockhash_registry").expect("Failed to get blockhash_registry class hash")),
     ));
+    madara_loader.contracts.push((
+        HexFelt(*DEPLOYER_ACCOUNT_ADDRESS),
+        HexFelt(*kakarot_contracts.get("OpenzeppelinAccount").expect("Failed to get deployer account class hash")),
+    ));
 
     // Set storage keys of Kakarot contract
     // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/constants.cairo
@@ -122,6 +127,8 @@ pub async fn serialize_hive_to_madara_genesis_config(
         ("externally_owned_account", eoa_class_hash),
         ("account_proxy_class_hash", account_proxy_class_hash),
         ("blockhash_registry_address", *BLOCKHASH_REGISTRY_ADDRESS),
+        // TODO: Use DEPLOY_FEE constant https://github.com/kkrt-labs/kakarot-rpc/pull/431/files#diff-88f745498d0aaf0b185085d99a74f0feaf253f047babc85770847931e7f726c3R125
+        ("deploy_fee", FieldElement::from(100000_u64)),
     ];
 
     storage_keys.into_iter().for_each(|(key, value)| {
@@ -282,7 +289,7 @@ mod tests {
         let combined_genesis = fs::read_to_string("./src/test_data/combined_genesis.json").unwrap();
         let loader: GenesisLoader =
             serde_json::from_str(&combined_genesis).expect("Failed to read combined_genesis.json");
-        assert_eq!(9 + 2 + 7, loader.contracts.len()); // 9 original + 2 Kakarot contracts + 7 hive
+        assert_eq!(9 + 3 + 7, loader.contracts.len()); // 9 original + 3 Kakarot contracts + 7 hive
 
         // After
         fs::remove_file("./src/test_data/combined_genesis.json").unwrap();
