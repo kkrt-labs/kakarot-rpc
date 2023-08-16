@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692176524931,
+  "lastUpdate": 1692176528490,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -890,6 +890,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.48148148148148145,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2fd969295c90510931f97726025b1e4fead17b4b",
+          "message": "build(deps): bump lib/madara from `a78da52` to `327ac7f` (#429)\n\nBumps [lib/madara](https://github.com/keep-starknet-strange/madara) from `a78da52` to `327ac7f`.\n- [Release notes](https://github.com/keep-starknet-strange/madara/releases)\n- [Commits](https://github.com/keep-starknet-strange/madara/compare/a78da52ddbd7782d1d42b611efdf6c3b920ddd26...327ac7ff6654049cb5eb2bd5d20b10272590287e)\n\n---\nupdated-dependencies:\n- dependency-name: lib/madara\n  dependency-type: direct:production\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-08-16T07:37:45Z",
+          "tree_id": "337635790ac51ad7c45b4da96cafbb44caea42b5",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/2fd969295c90510931f97726025b1e4fead17b4b"
+        },
+        "date": 1692176524229,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.40740740740740744,
             "unit": "transactions/second"
           }
         ]
