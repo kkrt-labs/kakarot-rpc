@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692186748824,
+  "lastUpdate": 1692187618985,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1022,6 +1022,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.4166666666666667,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "35031356+ftupas@users.noreply.github.com",
+            "name": "ftupas",
+            "username": "ftupas"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "15d2571201c4d88ee894a513942d1d1177a21d39",
+          "message": "dev: `docker-compose` always pulls image for latest tags (#433)\n\n* dev: always pull image for latest tags\n\n* chore: update CHANGELOG.md",
+          "timestamp": "2023-08-16T10:43:58Z",
+          "tree_id": "bf6b8db9774f356c90099cc59d2697bc476d55ff",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/15d2571201c4d88ee894a513942d1d1177a21d39"
+        },
+        "date": 1692187618369,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.5,
             "unit": "transactions/second"
           }
         ]
