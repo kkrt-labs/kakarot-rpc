@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692035211547,
+  "lastUpdate": 1692175032975,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -758,6 +758,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.5208333333333334,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": false,
+          "id": "93015f1e0cac927c41860641182fd675af87da08",
+          "message": "build(deps): bump lib/kakarot from `b6e64b7` to `9773e4d` (#426)\n\nBumps [lib/kakarot](https://github.com/kkrt-labs/kakarot) from `b6e64b7` to `9773e4d`.\n- [Release notes](https://github.com/kkrt-labs/kakarot/releases)\n- [Commits](https://github.com/kkrt-labs/kakarot/compare/b6e64b728497afb22b2c039091840c617926a749...9773e4d10a3c3a32fb8aa3cfbf6fdbff35d6985e)\n\n---\nupdated-dependencies:\n- dependency-name: lib/kakarot\n  dependency-type: direct:production\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-08-16T07:14:04Z",
+          "tree_id": "0956badc4f961b92ab3308ec8d3d7fde6ba1e35e",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/93015f1e0cac927c41860641182fd675af87da08"
+        },
+        "date": 1692175031955,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.5625,
             "unit": "transactions/second"
           }
         ]
