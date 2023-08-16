@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692176528490,
+  "lastUpdate": 1692186744242,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -956,6 +956,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.40740740740740744,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "35031356+ftupas@users.noreply.github.com",
+            "name": "ftupas",
+            "username": "ftupas"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f6c151a30c5e813c124bdbfc44d583359649ab67",
+          "message": "dev: cross compile binaries to speed up build time (#428)\n\n* dev: improve cross-compilation\n\n* dev: pin katana\n\n* chore: update CHANGELOG.md",
+          "timestamp": "2023-08-16T10:09:51Z",
+          "tree_id": "04e338b01870c265be86125934075360fe72bbbc",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/f6c151a30c5e813c124bdbfc44d583359649ab67"
+        },
+        "date": 1692186743256,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.4166666666666667,
             "unit": "transactions/second"
           }
         ]
