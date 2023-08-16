@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692175036517,
+  "lastUpdate": 1692176380690,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -824,6 +824,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.5625,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "66871571+Eikix@users.noreply.github.com",
+            "name": "Elias Tazartes",
+            "username": "Eikix"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "05ef746e09ffb3da6874212c9d412f9afbb534b4",
+          "message": "fix: add dependencies as skip-label to not fail dependabot CI job (#432)",
+          "timestamp": "2023-08-16T07:38:23Z",
+          "tree_id": "080bc7243237e9605ebd38cdd8a84fe30d10f568",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/05ef746e09ffb3da6874212c9d412f9afbb534b4"
+        },
+        "date": 1692176379987,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.48148148148148145,
             "unit": "transactions/second"
           }
         ]
