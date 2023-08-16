@@ -12,3 +12,4 @@ and this project adheres to
 
 - ci: add `CHANGELOG.md` and enforce it is edited for each PR on `main`
 - test: update integration tests to use prepopulated Katana dumped state
+- ci: cross-compile binaries to improve build time

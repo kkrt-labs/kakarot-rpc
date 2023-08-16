@@ -1,4 +1,8 @@
-FROM rust:1.64 as builder
+# Define ARG for build platform
+FROM --platform=$BUILDPLATFORM rust:1.64 as builder
+
+# Set ARG for target platform
+ARG TARGETPLATFORM
 
 # Set working directory
 WORKDIR /usr/src/rpc
@@ -6,10 +10,36 @@ WORKDIR /usr/src/rpc
 # Copy source code
 COPY . .
 
-RUN rustup self update
-
-# Build the application
-RUN cargo build --all --release
+# Cross-compile the application for a given platform
+RUN build_platform() { \
+        ARCH=$1; \
+        COMPILER=$2; \
+        LINKER=$3; \
+        echo "Building for $TARGETPLATFORM"; \
+         # Add the specified Rust target architecture
+        rustup target add $ARCH; \
+        # Update package lists and install the specified compiler
+        apt-get update && apt-get -y install $COMPILER; \
+        # Build the Rust application for the specified target
+        cargo build --all --release \
+          --target=$ARCH \
+          --config target.$ARCH.linker=\"$LINKER\"; \
+        # Copy the built binary to a common release directory
+        cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
+    } \
+    && rustup self update \
+    && case "$TARGETPLATFORM" in \
+        "linux/amd64") \
+            build_platform "x86_64-unknown-linux-gnu" "gcc-x86-64-linux-gnu" "x86_64-linux-gnu-gcc"; \
+            ;; \
+        "linux/arm64") \
+            build_platform "aarch64-unknown-linux-gnu" "gcc-aarch64-linux-gnu" "aarch64-linux-gnu-gcc"; \
+            ;; \
+        *) \
+            echo "Unknown TARGETPLATFORM: $TARGETPLATFORM"; \
+            exit 1; \
+            ;; \
+    esac
 
 # Create a new container from scratch to reduce image size
 FROM debian:bullseye
