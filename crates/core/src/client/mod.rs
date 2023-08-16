@@ -18,7 +18,7 @@ use reth_primitives::{
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
-    BlockTransactions, CallRequest, FeeHistory, Filter, Index, Log, RichBlock, SyncInfo, SyncStatus,
+    BlockTransactions, CallRequest, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncInfo, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::core::types::{
@@ -105,16 +105,16 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     }
 
     /// Returns the logs corresponding to the filter
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, EthApiError<P::Error>> {
+    async fn get_logs(&self, filter: Filter) -> Result<FilterChanges, EthApiError<P::Error>> {
         // Check the block range
         let current_block: u64 = self.block_number().await?.low_u64();
         let from_block = filter.get_from_block();
         let to_block = filter.get_to_block();
 
         let filter = match (from_block, to_block) {
-            (Some(from), _) if from > current_block => return Ok(vec![]),
+            (Some(from), _) if from > current_block => return Ok(FilterChanges::Empty),
             (_, Some(to)) if to > current_block => filter.to_block(current_block),
-            (Some(from), Some(to)) if to < from => return Ok(vec![]),
+            (Some(from), Some(to)) if to < from => return Ok(FilterChanges::Empty),
             _ => filter,
         };
 
@@ -156,7 +156,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
                     .ok()
             })
             .collect::<Vec<_>>();
-        Ok(logs)
+        Ok(FilterChanges::Logs(logs))
     }
 
     /// Returns the result of executing a call on a ethereum address for a given calldata and block
