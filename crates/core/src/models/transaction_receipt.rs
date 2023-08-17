@@ -106,7 +106,7 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
                         transaction_hash,
                         // TODO: transition this hardcoded default out of nearing-demo-day hack and seeing how to
                         // properly source/translate this value
-                        transaction_index: Some(U256::ZERO),
+                        transaction_index: None, // TODO: Fetch real data
                         block_hash,
                         block_number,
                         from,
@@ -132,5 +132,38 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
         };
 
         Ok(Some(res_receipt))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use starknet::providers::jsonrpc::JsonRpcMethod;
+
+    use super::*;
+    use crate::mock::constants::{ABDEL_STARKNET_ADDRESS_HEX, PROXY_ACCOUNT_CLASS_HASH_HEX};
+    use crate::mock::mock_starknet::{fixtures, init_mock_client, AvailableFixtures};
+    use crate::wrap_kakarot;
+
+    #[tokio::test]
+    async fn test_to_eth_transaction_receipt() {
+        // Given
+        let starknet_transaction_receipt: MaybePendingTransactionReceipt =
+            serde_json::from_str(include_str!("test_data/conversion/starknet/transaction_receipt.json")).unwrap();
+        let starknet_transaction_receipt: StarknetTransactionReceipt = starknet_transaction_receipt.into();
+
+        let fixtures = fixtures(vec![
+            AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
+            AvailableFixtures::GetEvmAddress,
+            wrap_kakarot!(JsonRpcMethod::GetTransactionByHash),
+        ]);
+        let client = init_mock_client(Some(fixtures));
+
+        // When
+        let eth_transaction = starknet_transaction_receipt.to_eth_transaction_receipt(&client).await.unwrap();
+
+        // Then
+        let expected: EthTransactionReceipt =
+            serde_json::from_str(include_str!("test_data/conversion/eth/transaction_receipt.json")).unwrap();
+        assert_eq!(Some(expected), eth_transaction);
     }
 }
