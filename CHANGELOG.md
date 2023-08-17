@@ -14,3 +14,4 @@ and this project adheres to
 - test: update integration tests to use prepopulated Katana dumped state
 - ci: cross-compile binaries to improve build time
 - dev: always pull image for latest tags when doing `docker-compose`
+- ci: add timeout to all workflows
