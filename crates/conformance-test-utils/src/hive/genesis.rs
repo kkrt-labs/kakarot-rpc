@@ -7,9 +7,10 @@ use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use kakarot_rpc_core::test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
 use lazy_static::lazy_static;
-use pallet_starknet::genesis_loader::{ContractClass, GenesisLoader, HexFelt};
 use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::FieldElement;
 
 use crate::kakarot::compute_starknet_address;
@@ -18,6 +19,33 @@ use crate::madara::utils::{
     genesis_set_storage_starknet_contract,
 };
 use crate::types::Felt;
+
+/// A wrapper for FieldElement that implements serde's Serialize and Deserialize for hex strings.
+#[serde_as]
+#[derive(Serialize, Deserialize, Copy, Clone)]
+pub struct HexFelt(#[serde_as(as = "UfeHex")] pub FieldElement);
+
+type ClassHash = HexFelt;
+type ContractAddress = HexFelt;
+type StorageKey = HexFelt;
+type ContractStorageKey = (ContractAddress, StorageKey);
+type StorageValue = HexFelt;
+
+#[derive(Deserialize, Serialize)]
+pub struct GenesisLoader {
+    pub madara_path: Option<String>,
+    pub contract_classes: Vec<(ClassHash, ContractClassPath)>,
+    pub contracts: Vec<(ContractAddress, ClassHash)>,
+    pub storage: Vec<(ContractStorageKey, StorageValue)>,
+    pub fee_token_address: ContractAddress,
+    pub seq_addr_updated: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ContractClassPath {
+    pub path: String,
+    pub version: u8,
+}
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
 #[derive(Serialize, Deserialize)]
@@ -70,7 +98,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
     class_hashes.iter().for_each(|(filename, class_hash)| {
         madara_loader.contract_classes.push((
             HexFelt(*class_hash),
-            ContractClass::Path {
+            ContractClassPath {
                 // Add the compiled path to the Kakarot contract filename
                 path: compiled_path.join(filename).with_extension("json").into_os_string().into_string().unwrap(), /* safe unwrap,
                                                                                              * valid path */
@@ -218,7 +246,6 @@ pub struct AccountInfo {
 mod tests {
     use std::str::FromStr;
 
-    use pallet_starknet::genesis_loader::GenesisLoader;
     use reth_primitives::U256;
 
     use super::*;

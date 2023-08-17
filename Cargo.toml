@@ -25,8 +25,6 @@ license = "MIT"
 starknet = "0.4.0"
 starknet-crypto = "0.5.1"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
-pallet-starknet = { git ="https://github.com/keep-starknet-strange/madara.git", rev = "8c0eb02" }
-mp-starknet = { git ="https://github.com/keep-starknet-strange/madara.git", rev = "8c0eb02" }
 
 # Ethereum dependencies
 ethers = "2.0"
