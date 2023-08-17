@@ -115,8 +115,8 @@ pub async fn serialize_hive_to_madara_genesis_config(
         Felt(*kakarot_contracts.get("blockhash_registry").expect("Failed to get blockhash_registry class hash")),
     ));
     madara_loader.contracts.push((
-        HexFelt(*DEPLOYER_ACCOUNT_ADDRESS),
-        HexFelt(*kakarot_contracts.get("OpenzeppelinAccount").expect("Failed to get deployer account class hash")),
+        Felt(*DEPLOYER_ACCOUNT_ADDRESS),
+        Felt(*kakarot_contracts.get("OpenzeppelinAccount").expect("Failed to get deployer account class hash")),
     ));
 
     // Set storage keys of Kakarot contract
