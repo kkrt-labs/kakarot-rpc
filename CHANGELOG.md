@@ -23,3 +23,4 @@ and this project adheres to
 - dev: rename crate conformance-test-utils to hive-utils
 - dev: update code and integration tests to return correct datatype for get_logs
 - fix: update jsonrpsee error codes to EIP 1474 codes.
+- ci: use madara binary for benchmark CI
