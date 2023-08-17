@@ -19,3 +19,4 @@ and this project adheres to
   transaction receipt.
 - fix: remove Madara as dependency.
 - feat: add deployer account and deploy fee to Madara genesis
+- chore: bump madara image

@@ -1,16 +1,17 @@
-version: "3.2"
+version: '3.2'
 
 services:
   starknet:
-    image: ghcr.io/keep-starknet-strange/madara:v0.1.0-beta
+    image: ghcr.io/keep-starknet-strange/madara:v0.1.0.experimental.3
     ports:
-      - "9615:9615"
-      - "9944:9944"
-      - "30333:30333"
+      - '9615:9615'
+      - '9944:9944'
+      - '30333:30333'
     command:
-      - "--rpc-external"
-      - "--rpc-methods=unsafe"
-      - "--dev"
+      - '--rpc-external'
+      - '--rpc-methods=unsafe'
+      - '--rpc-cors=all'
+      - '--dev'
     networks:
       - internal
 
@@ -36,8 +37,8 @@ services:
     image: apteno/alpine-jq:2023-07-24
     # Parse deployments and save the result to .env file
     entrypoint:
-      - "/bin/sh"
-      - "-c"
+      - '/bin/sh'
+      - '-c'
       # First line overrides an existing .env, if any.
       # This is to make sure that it is clean even though docker volume was not cleaned.
       - |
