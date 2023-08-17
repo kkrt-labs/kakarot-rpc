@@ -20,3 +20,4 @@ and this project adheres to
 - fix: remove Madara as dependency.
 - feat: add deployer account and deploy fee to Madara genesis
 - chore: bump madara image
+- dev: rename crate conformance-test-utils to hive-utils

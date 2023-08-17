@@ -1,5 +1,5 @@
 [package]
-name = "conformance-test-utils"
+name = "hive-utils"
 version = { workspace = true }
 edition = { workspace = true }
 description = { workspace = true }
