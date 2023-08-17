@@ -17,3 +17,4 @@ and this project adheres to
 - ci: add timeout to all workflows
 - feat: add Starknet transaction receipt wrapper for idiomatic conversion to Eth
   transaction receipt.
+- fix: remove Madara as dependency.
