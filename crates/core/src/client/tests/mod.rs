@@ -228,7 +228,7 @@ async fn test_get_logs_to_less_than_from() {
     let logs = client.get_logs(filter).await.unwrap();
 
     // Then
-    assert!(matches!(logs, FilterChanges::Empty));
+    assert_eq!(logs, FilterChanges::Empty);
 }
 
 #[tokio::test]
