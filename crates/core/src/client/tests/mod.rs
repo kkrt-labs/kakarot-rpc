@@ -234,7 +234,7 @@ async fn test_get_logs_to_less_than_from() {
 #[tokio::test]
 async fn test_get_logs() {
     // Given
-    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber)]);
+    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber), wrap_kakarot!(JsonRpcMethod::GetEvents)]);
     let client = init_mock_client(Some(fixtures));
     let filter = Filter {
         block_option: FilterBlockOption::Range {
