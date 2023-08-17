@@ -18,3 +18,6 @@ and this project adheres to
 - feat: add Starknet transaction receipt wrapper for idiomatic conversion to Eth
   transaction receipt.
 - fix: remove Madara as dependency.
+- feat: add deployer account and deploy fee to Madara genesis
+- chore: bump madara image
+- dev: rename crate conformance-test-utils to hive-utils
