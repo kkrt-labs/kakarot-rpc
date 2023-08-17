@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692286391664,
+  "lastUpdate": 1692295807174,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1319,6 +1319,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.3703703703703704,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "35031356+ftupas@users.noreply.github.com",
+            "name": "ftupas",
+            "username": "ftupas"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4d401ad35043ec32e577278615d4b58b11c20d5a",
+          "message": "feat: add deployer account and deploy fee to madara genesis (#438)\n\n* feat: add deployer account and deploy_fee to madara genesis\n\n* chore: update CHANGELOG.md\n\n* chore: bump madara image\n\n* dev: rename conformance-test-utils to hive-utils",
+          "timestamp": "2023-08-17T16:54:03Z",
+          "tree_id": "01ee3b26fa71283bbee333d5b6570ff24a92b08e",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/4d401ad35043ec32e577278615d4b58b11c20d5a"
+        },
+        "date": 1692295806525,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.40740740740740744,
             "unit": "transactions/second"
           }
         ]
