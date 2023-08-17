@@ -7,7 +7,6 @@ use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use kakarot_rpc_core::test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
 use lazy_static::lazy_static;
-use pallet_starknet::genesis_loader::{ContractClass, GenesisLoader, HexFelt};
 use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
@@ -17,7 +16,23 @@ use crate::madara::utils::{
     genesis_fund_starknet_address, genesis_set_bytecode, genesis_set_storage_kakarot_contract_account,
     genesis_set_storage_starknet_contract,
 };
-use crate::types::Felt;
+use crate::types::{ClassHash, ContractAddress, ContractStorageKey, Felt, StorageValue};
+
+#[derive(Deserialize, Serialize)]
+pub struct GenesisLoader {
+    pub madara_path: Option<String>,
+    pub contract_classes: Vec<(ClassHash, ContractClassPath)>,
+    pub contracts: Vec<(ContractAddress, ClassHash)>,
+    pub storage: Vec<(ContractStorageKey, StorageValue)>,
+    pub fee_token_address: ContractAddress,
+    pub seq_addr_updated: bool,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct ContractClassPath {
+    pub path: String,
+    pub version: u8,
+}
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
 #[derive(Serialize, Deserialize)]
@@ -69,8 +84,8 @@ pub async fn serialize_hive_to_madara_genesis_config(
     // Vec so no need to sort
     class_hashes.iter().for_each(|(filename, class_hash)| {
         madara_loader.contract_classes.push((
-            HexFelt(*class_hash),
-            ContractClass::Path {
+            Felt(*class_hash),
+            ContractClassPath {
                 // Add the compiled path to the Kakarot contract filename
                 path: compiled_path.join(filename).with_extension("json").into_os_string().into_string().unwrap(), /* safe unwrap,
                                                                                              * valid path */
@@ -91,12 +106,12 @@ pub async fn serialize_hive_to_madara_genesis_config(
 
     // Add Kakarot contracts to Loader
     madara_loader.contracts.push((
-        HexFelt(*KAKAROT_ADDRESSES),
-        HexFelt(*kakarot_contracts.get("kakarot").expect("Failed to get kakarot class hash")),
+        Felt(*KAKAROT_ADDRESSES),
+        Felt(*kakarot_contracts.get("kakarot").expect("Failed to get kakarot class hash")),
     ));
     madara_loader.contracts.push((
-        HexFelt(*BLOCKHASH_REGISTRY_ADDRESS),
-        HexFelt(*kakarot_contracts.get("blockhash_registry").expect("Failed to get blockhash_registry class hash")),
+        Felt(*BLOCKHASH_REGISTRY_ADDRESS),
+        Felt(*kakarot_contracts.get("blockhash_registry").expect("Failed to get blockhash_registry class hash")),
     ));
 
     // Set storage keys of Kakarot contract
@@ -109,11 +124,9 @@ pub async fn serialize_hive_to_madara_genesis_config(
         ("blockhash_registry_address", *BLOCKHASH_REGISTRY_ADDRESS),
     ];
 
-    storage_keys.iter().for_each(|(key, value)| {
-        let storage_tuple = genesis_set_storage_starknet_contract(*KAKAROT_ADDRESSES, key, &[], *value, 0);
-        madara_loader
-            .storage
-            .push(unsafe { std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(storage_tuple) });
+    storage_keys.into_iter().for_each(|(key, value)| {
+        let storage_tuple = genesis_set_storage_starknet_contract(*KAKAROT_ADDRESSES, key, &[], value, 0);
+        madara_loader.storage.push(storage_tuple);
     });
 
     // Add Hive accounts to loader
@@ -121,7 +134,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
     // Sort by key to ensure deterministic order
     let mut hive_accounts: Vec<(reth_primitives::H160, AccountInfo)> = hive_genesis.alloc.into_iter().collect();
     hive_accounts.sort_by_key(|(address, _)| *address);
-    hive_accounts.iter().for_each(|(evm_address, account_info)| {
+    hive_accounts.into_iter().for_each(|(evm_address, account_info)| {
         // Use the given Kakarot contract address and declared proxy class hash for compute_starknet_address
         let starknet_address = compute_starknet_address(
             *KAKAROT_ADDRESSES,
@@ -130,41 +143,35 @@ pub async fn serialize_hive_to_madara_genesis_config(
                                                                                 * is 20 bytes */
         );
         // Push to contracts
-        madara_loader.contracts.push((HexFelt(starknet_address), HexFelt(account_proxy_class_hash)));
+        madara_loader.contracts.push((Felt(starknet_address), Felt(account_proxy_class_hash)));
 
         // Set the balance of the account
         // Call genesis_fund_starknet_address util to get the storage tuples
         let balance_storage_tuples = genesis_fund_starknet_address(starknet_address, account_info.balance);
-        balance_storage_tuples.iter().for_each(|balance_storage_tuple| {
-            madara_loader.storage.push(unsafe {
-                std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*balance_storage_tuple)
-            });
+        balance_storage_tuples.into_iter().for_each(|balance_storage_tuple| {
+            madara_loader.storage.push(balance_storage_tuple);
         });
 
         // Set the storage of the account, if any
-        if let Some(storage) = account_info.storage.as_ref() {
-            let mut storage: Vec<(U256, U256)> = storage.iter().map(|(k, v)| (*k, *v)).collect();
+        if let Some(storage) = account_info.storage {
+            let mut storage: Vec<(U256, U256)> = storage.into_iter().collect();
             storage.sort_by_key(|(key, _)| *key);
-            storage.iter().for_each(|(key, value)| {
+            storage.into_iter().for_each(|(key, value)| {
                 // Call genesis_set_storage_kakarot_contract_account util to get the storage tuples
-                let storage_tuples = genesis_set_storage_kakarot_contract_account(starknet_address, *key, *value);
-                storage_tuples.iter().for_each(|storage_tuples| {
-                    madara_loader.storage.push(unsafe {
-                        std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*storage_tuples)
-                    });
+                let storage_tuples = genesis_set_storage_kakarot_contract_account(starknet_address, key, value);
+                storage_tuples.into_iter().for_each(|storage_tuples| {
+                    madara_loader.storage.push(storage_tuples);
                 });
             });
         }
 
         // Determine the proxy implementation class hash based on whether bytecode is present
         // Set the bytecode to the storage of the account, if any
-        let proxy_implementation_class_hash = if let Some(bytecode) = account_info.code.as_ref() {
+        let proxy_implementation_class_hash = if let Some(bytecode) = account_info.code {
             // Call genesis_set_code_kakarot_contract_account util to get the storage tuples
-            let code_storage_tuples = genesis_set_bytecode(bytecode, starknet_address);
+            let code_storage_tuples = genesis_set_bytecode(&bytecode, starknet_address);
             // Set the bytecode of the account
-            madara_loader.storage.extend(code_storage_tuples.iter().map(|code_storage_tuple| unsafe {
-                std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(*code_storage_tuple)
-            }));
+            madara_loader.storage.extend(code_storage_tuples);
 
             // Since it has bytecode, it's a contract account
             contract_account_class_hash
@@ -181,11 +188,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
             proxy_implementation_class_hash,
             0, // 0 since it's storage value is felt
         );
-        madara_loader.storage.push(unsafe {
-            std::mem::transmute::<((Felt, Felt), Felt), ((HexFelt, HexFelt), HexFelt)>(
-                proxy_implementation_storage_tuples,
-            )
-        });
+        madara_loader.storage.push(proxy_implementation_storage_tuples);
     });
 
     // Serialize the loader to a string
@@ -218,7 +221,6 @@ pub struct AccountInfo {
 mod tests {
     use std::str::FromStr;
 
-    use pallet_starknet::genesis_loader::GenesisLoader;
     use reth_primitives::U256;
 
     use super::*;
