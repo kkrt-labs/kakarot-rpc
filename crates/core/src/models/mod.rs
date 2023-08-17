@@ -9,6 +9,7 @@ pub mod signature;
 #[cfg(test)]
 pub mod tests;
 pub mod transaction;
+pub mod transaction_receipt;
 
 use ruint::FromUintError;
 use starknet::core::types::FromByteArrayError;

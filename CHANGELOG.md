@@ -15,3 +15,5 @@ and this project adheres to
 - ci: cross-compile binaries to improve build time
 - dev: always pull image for latest tags when doing `docker-compose`
 - ci: add timeout to all workflows
+- feat: add Starknet transaction receipt wrapper for idiomatic conversion to Eth
+  transaction receipt.
