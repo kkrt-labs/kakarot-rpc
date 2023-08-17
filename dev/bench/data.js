@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692259270040,
+  "lastUpdate": 1692260192648,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1154,6 +1154,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.4583333333333333,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bajpaiharsh244@gmail.com",
+            "name": "Harsh Bajpai",
+            "username": "bajpai244"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": false,
+          "id": "62c5bb9cbe1afde80483b342ba96fad5b3cd4121",
+          "message": "feat: add timeout to all github workflows (#441)\n\nCo-authored-by: Harsh Bajpai <harshbajpai@Harshs-MacBook-Pro.local>",
+          "timestamp": "2023-08-17T06:36:56Z",
+          "tree_id": "b20044cd6e5533e3a760ff06a19f0307a473b43d",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/62c5bb9cbe1afde80483b342ba96fad5b3cd4121"
+        },
+        "date": 1692260191627,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.4285714285714286,
             "unit": "transactions/second"
           }
         ]
