@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692264457539,
+  "lastUpdate": 1692286391664,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1286,6 +1286,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.5625,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "637633502c6874248852d0dbdc0357692b24fc6a",
+          "message": "fix: remove madara as dep (#446)\n\n* remove madara as dep\n\n* changelog\n\n* cleaning",
+          "timestamp": "2023-08-17T14:00:23Z",
+          "tree_id": "d15ba448ecb0143508d303a0e4298c8a2bf71b65",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/637633502c6874248852d0dbdc0357692b24fc6a"
+        },
+        "date": 1692286390443,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.3703703703703704,
             "unit": "transactions/second"
           }
         ]
