@@ -141,5 +141,5 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY_IMAGE }}-hive:latest
           context: .
-          file: Dockerfile.hive
+          file: crates/hive-utils/Dockerfile
           platforms: linux/amd64,linux/arm64
