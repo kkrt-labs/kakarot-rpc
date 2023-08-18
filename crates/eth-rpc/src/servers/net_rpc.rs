@@ -1,4 +1,6 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
+use kakarot_rpc_core::client::constants::CHAIN_ID;
+use kakarot_rpc_core::client::errors::EthApiError;
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
 
@@ -16,17 +18,17 @@ impl NetRpc {
 
 #[async_trait]
 impl NetApiServer for NetRpc {
-    /// Get the protocol version of the Kakarot Starknet RPC.
     fn version(&self) -> Result<U64> {
-        let protocol_version = 1_u64;
-        Ok(protocol_version.into())
+        Ok(CHAIN_ID.into())
     }
 
     fn peer_count(&self) -> Result<PeerCount> {
-        todo!()
+        // TODO: replace jsonrpsee::types::ErrorObject with Provider::Error once NetRpc uses Provider
+        Err(EthApiError::<jsonrpsee::types::ErrorObject>::MethodNotSupported("eth_peerCount".to_string()).into())
     }
 
     fn listening(&self) -> Result<bool> {
-        todo!()
+        // TODO: replace jsonrpsee::types::ErrorObject with Provider::Error once NetRpc uses Provider
+        Err(EthApiError::<jsonrpsee::types::ErrorObject>::MethodNotSupported("eth_listening".to_string()).into())
     }
 }
