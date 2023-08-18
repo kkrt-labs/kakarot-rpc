@@ -3,8 +3,8 @@ use jsonrpsee::proc_macros::rpc;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus, Transaction as EthTransaction,
-    TransactionReceipt, TransactionRequest, Work,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, Log, RichBlock, SyncStatus,
+    Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 
 #[rpc(server, namespace = "eth")]
@@ -100,6 +100,10 @@ pub trait EthApi {
     /// Returns code at a given address at given block number.
     #[method(name = "getCode")]
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes>;
+
+    /// Returns the logs corresponding to the given filter object.
+    #[method(name = "getLogs")]
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>>;
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "call")]
@@ -207,4 +211,28 @@ pub trait EthApi {
         keys: Vec<H256>,
         block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse>;
+
+    /// Creates a filter object, based on filter options, to notify when the state changes (logs).
+    #[method(name = "newFilter")]
+    async fn new_filter(&self, filter: Filter) -> Result<U64>;
+
+    /// Creates a filter in the node, to notify when a new block arrives.
+    #[method(name = "newBlockFilter")]
+    async fn new_block_filter(&self) -> Result<U64>;
+
+    /// Creates a filter in the node, to notify when new pending transactions arrive.
+    #[method(name = "newPendingTransactionFilter")]
+    async fn new_pending_transaction_filter(&self) -> Result<U64>;
+
+    /// Destroys a filter based on filter ID
+    #[method(name = "uninstallFilter")]
+    async fn uninstall_filter(&self, id: U64) -> Result<bool>;
+
+    /// Returns a list of all logs based on filter ID since the last log retrieval
+    #[method(name = "getFilterChanges")]
+    async fn get_filter_changes(&self, id: U64) -> Result<FilterChanges>;
+
+    /// Returns a list of all logs based on filter ID
+    #[method(name = "getFilterLogs")]
+    async fn get_filter_logs(&self, id: U64) -> Result<FilterChanges>;
 }

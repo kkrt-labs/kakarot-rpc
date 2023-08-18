@@ -53,10 +53,13 @@ madara-rpc-up:
 madara-rpc-down:
 	docker-compose down --remove-orphans
 
-test:
+dump-katana:
+	cargo run --bin dump-katana
+
+test: dump-katana
 	cargo test --all
 
-test-coverage:
+test-coverage: dump-katana
 	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:

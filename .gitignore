@@ -21,6 +21,9 @@
 /cache/
 /solidity_contracts/build
 
+# ignore katana dump directory
+.katana/
+
 .env
 vscode
 broadcast

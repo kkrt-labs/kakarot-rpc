@@ -18,14 +18,15 @@ use reth_primitives::{
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
-    BlockTransactions, CallRequest, FeeHistory, Index, RichBlock, SyncInfo, SyncStatus,
+    BlockTransactions, CallRequest, FeeHistory, Filter, Index, Log, RichBlock, SyncInfo, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::core::types::{
-    BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, FieldElement,
-    FunctionCall, InvokeTransactionReceipt, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, StarknetError, SyncStatusType, Transaction as TransactionType,
-    TransactionReceipt as StarknetTransactionReceipt, TransactionStatus as StarknetTransactionStatus,
+    BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, EmittedEvent,
+    Event, EventFilterWithPage, EventsPage, FieldElement, InvokeTransactionReceipt, MaybePendingBlockWithTxHashes,
+    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, ResultPageRequest, StarknetError, SyncStatusType,
+    Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
+    TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
 use starknet::providers::{Provider, ProviderError};
@@ -33,13 +34,14 @@ use starknet::providers::{Provider, ProviderError};
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
-use self::constants::selectors::{EVM_CONTRACT_DEPLOYED, GET_EVM_ADDRESS};
+use self::constants::selectors::EVM_CONTRACT_DEPLOYED;
 use self::constants::{
-    ACCOUNT_ADDRESS, CHAIN_ID, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2, ESTIMATE_GAS,
-    MAX_FEE, STARKNET_NATIVE_TOKEN,
+    ACCOUNT_ADDRESS, CHAIN_ID, CHUNK_SIZE_LIMIT, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2,
+    ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN,
 };
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
+use crate::contracts::account::{Account, KakarotAccount};
 use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
@@ -49,6 +51,7 @@ use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
 use crate::models::event::StarknetEvent;
+use crate::models::event_filter::EthEventFilter;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::metadata::TokenMetadata;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
@@ -94,11 +97,66 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
             self.kakarot_contract.compute_starknet_address(&ethereum_address, &starknet_block_id).await?;
 
         let provider = self.starknet_provider();
-        let contract_account = ContractAccount::new(&provider, starknet_contract_address);
+        let contract_account = ContractAccount::new(starknet_contract_address, &provider);
         let bytecode = contract_account.bytecode(&starknet_block_id).await?;
 
         // Convert the result of the function call to a vector of bytes
         Ok(bytecode)
+    }
+
+    /// Returns the logs corresponding to the filter
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, EthApiError<P::Error>> {
+        // Check the block range
+        let current_block: u64 = self.block_number().await?.low_u64();
+        let from_block = filter.get_from_block();
+        let to_block = filter.get_to_block();
+
+        let filter = match (from_block, to_block) {
+            (Some(from), _) if from > current_block => return Ok(vec![]),
+            (_, Some(to)) if to > current_block => filter.to_block(current_block),
+            (Some(from), Some(to)) if to < from => return Ok(vec![]),
+            _ => filter,
+        };
+
+        // Convert the eth log filter to a starknet event filter
+        let filter: EthEventFilter = filter.into();
+        let event_filter = filter.to_starknet_filter(self)?;
+
+        // Filter events
+        let events = self
+            .filter_events(EventFilterWithPage {
+                event_filter,
+                result_page_request: ResultPageRequest { continuation_token: None, chunk_size: CHUNK_SIZE_LIMIT },
+            })
+            .await?;
+
+        // Convert events to eth logs
+        let logs = events
+            .into_iter()
+            .filter_map(|emitted| {
+                let event: StarknetEvent =
+                    Event { from_address: emitted.from_address, keys: emitted.keys, data: emitted.data }.into();
+                let block_hash = {
+                    let felt: Felt252Wrapper = emitted.block_hash.into();
+                    felt.into()
+                };
+                let transaction_hash = {
+                    let felt: Felt252Wrapper = emitted.transaction_hash.into();
+                    felt.into()
+                };
+                event
+                    .to_eth_log(
+                        self,
+                        Some(block_hash),
+                        Some(U256::from(emitted.block_number)),
+                        Some(transaction_hash),
+                        None,
+                        None,
+                    )
+                    .ok()
+            })
+            .collect::<Vec<_>>();
+        Ok(logs)
     }
 
     /// Returns the result of executing a call on a ethereum address for a given calldata and block
@@ -354,9 +412,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
                 nonce.into()
             })
             .or_else(|err| match err {
-                // Some RPCs return ContractError instead of ContractNotFound
-                ProviderError::StarknetError(StarknetError::ContractNotFound)
-                | ProviderError::StarknetError(StarknetError::ContractError) => Ok(U256::from(0)),
+                ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(U256::from(0)),
                 _ => Err(EthApiError::from(err)),
             })
     }
@@ -397,7 +453,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let key_high: Felt252Wrapper = key_high.try_into()?;
 
         let provider = self.starknet_provider();
-        let contract_account = ContractAccount::new(&provider, starknet_contract_address);
+        let contract_account = ContractAccount::new(starknet_contract_address, &provider);
         let storage_value = contract_account.storage(&key_low.into(), &key_high.into(), &starknet_block_id).await?;
 
         Ok(storage_value)
@@ -666,19 +722,8 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
         starknet_address: &FieldElement,
         starknet_block_id: &StarknetBlockId,
     ) -> Result<Address, EthApiError<P::Error>> {
-        let request = FunctionCall {
-            contract_address: *starknet_address,
-            entry_point_selector: GET_EVM_ADDRESS,
-            calldata: vec![],
-        };
-
-        let evm_address = self.starknet_provider.call(request, starknet_block_id).await?;
-        let evm_address: Felt252Wrapper = (*evm_address.first().ok_or_else(|| {
-            DataDecodingError::InvalidReturnArrayLength { entrypoint: "get_evm_address".into(), expected: 1, actual: 0 }
-        })?)
-        .into();
-
-        Ok(evm_address.troncate_to_ethereum_address())
+        let kakarot_account = KakarotAccount::new(*starknet_address, &self.starknet_provider);
+        kakarot_account.get_evm_address(starknet_block_id).await
     }
 
     /// Submits a Kakarot transaction to the Starknet provider.
@@ -813,5 +858,27 @@ impl<P: Provider + Send + Sync> KakarotStarknetApi<P> for KakarotClient<P> {
             })?;
 
         Ok(resp)
+    }
+
+    async fn filter_events(&self, filter: EventFilterWithPage) -> Result<Vec<EmittedEvent>, EthApiError<P::Error>> {
+        let provider = self.starknet_provider();
+
+        let chunk_size = filter.result_page_request.chunk_size;
+        let continuation_token = filter.result_page_request.continuation_token;
+        let filter = filter.event_filter;
+
+        let mut result = EventsPage { events: Vec::new(), continuation_token };
+        let mut events = vec![];
+
+        loop {
+            result = provider.get_events(filter.clone(), result.continuation_token, chunk_size).await?;
+            events.append(&mut result.events);
+
+            if result.continuation_token.is_none() {
+                break;
+            }
+        }
+
+        Ok(events)
     }
 }

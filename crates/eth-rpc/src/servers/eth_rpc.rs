@@ -9,7 +9,7 @@ use kakarot_rpc_core::models::block::EthBlockId;
 use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Index, RichBlock, SyncStatus,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, Log, RichBlock, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
@@ -149,6 +149,11 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(code)
     }
 
+    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>> {
+        let logs = self.kakarot_client.get_logs(filter).await?;
+        Ok(logs)
+    }
+
     async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
         // unwrap option or return jsonrpc error
         let to = request.to.ok_or_else(|| {
@@ -247,6 +252,30 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         _keys: Vec<H256>,
         _block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse> {
+        todo!()
+    }
+
+    async fn new_filter(&self, _filter: Filter) -> Result<U64> {
+        todo!()
+    }
+
+    async fn new_block_filter(&self) -> Result<U64> {
+        todo!()
+    }
+
+    async fn new_pending_transaction_filter(&self) -> Result<U64> {
+        todo!()
+    }
+
+    async fn uninstall_filter(&self, _id: U64) -> Result<bool> {
+        todo!()
+    }
+
+    async fn get_filter_changes(&self, _id: U64) -> Result<FilterChanges> {
+        todo!()
+    }
+
+    async fn get_filter_logs(&self, _id: U64) -> Result<FilterChanges> {
         todo!()
     }
 }
