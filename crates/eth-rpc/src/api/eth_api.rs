@@ -19,7 +19,7 @@ pub trait EthApi {
 
     /// Returns the client coinbase address.
     #[method(name = "coinbase")]
-    async fn author(&self) -> Result<Address>;
+    async fn coinbase(&self) -> Result<Address>;
 
     /// Returns a list of addresses owned by client.
     #[method(name = "accounts")]
@@ -47,11 +47,11 @@ pub trait EthApi {
 
     /// Returns the number of uncles in a block from a block matching the given block hash.
     #[method(name = "getUncleCountByBlockHash")]
-    async fn block_uncles_count_by_hash(&self, hash: H256) -> Result<U256>;
+    async fn block_uncles_count_by_block_hash(&self, hash: H256) -> Result<U256>;
 
     /// Returns the number of uncles in a block with given block number.
     #[method(name = "getUncleCountByBlockNumber")]
-    async fn block_uncles_count_by_number(&self, number: BlockNumberOrTag) -> Result<U256>;
+    async fn block_uncles_count_by_block_number(&self, number: BlockNumberOrTag) -> Result<U256>;
 
     /// Returns an uncle block of the given block and index.
     #[method(name = "getUncleByBlockHashAndIndex")]
@@ -160,7 +160,7 @@ pub trait EthApi {
 
     /// Returns whether the client is actively mining new blocks.
     #[method(name = "mining")]
-    async fn is_mining(&self) -> Result<bool>;
+    async fn mining(&self) -> Result<bool>;
 
     /// Returns the number of hashes per second that the node is mining with.
     #[method(name = "hashrate")]
