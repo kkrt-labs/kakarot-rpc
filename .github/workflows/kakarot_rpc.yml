@@ -124,7 +124,7 @@ jobs:
       - name: Retrieve cached dependencies
         uses: Swatinem/rust-cache@v2
       - name: Dump Genesis
-        run: make dump-genesis
+        run: ./scripts/make_with_env.sh dump-genesis
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
       - name: Set up Docker Buildx
