@@ -123,6 +123,11 @@ jobs:
           toolchain: stable
       - name: Retrieve cached dependencies
         uses: Swatinem/rust-cache@v2
+      # foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
       # Python setup
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
