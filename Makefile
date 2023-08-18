@@ -56,7 +56,7 @@ madara-rpc-down:
 dump-katana:
 	cargo run --bin dump-katana
 
-dump-genesis:
+dump-genesis: build-kakarot
 	cargo run --bin dump-genesis
 
 test: dump-katana

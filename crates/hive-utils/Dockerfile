@@ -2,8 +2,6 @@
 # FROM ghcr.io/keep-starknet-strange/madara:v0.1.0.experimental.3 as madara
 FROM fredtupas/madara as madara
 
-FROM ghcr.io/kkrt-labs/kakarot/deployer:latest as deployer
-
 FROM ghcr.io/kkrt-labs/kakarot-rpc/node:latest
 
 # Install svn to download Madara genesis config files
@@ -28,7 +26,7 @@ RUN svn export https://github.com/keep-starknet-strange/madara/trunk/configs ${M
 COPY .hive/genesis.json ${MADARA_CONFIG_PATH}/genesis-assets/genesis.json
 
 # Copy compiled Kakarot contracts to destination path of compiled contracts
-COPY --from=deployer /app/kakarot/build ${KAKAROT_CONTRACTS_PATH}
+COPY ./lib/kakarot/build ${KAKAROT_CONTRACTS_PATH}
 
 # RPC environment variables
 ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:3030"
