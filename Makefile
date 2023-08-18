@@ -41,14 +41,14 @@ run-release:
 
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
-	docker-compose -f docker-compose.yaml -f docker-compose.katana.yaml up -d --force-recreate
+	docker-compose -f docker-compose.yaml -f docker-compose.katana.yaml up -d --force-recreate --pull always
 
 katana-rpc-down:
 	docker-compose -f docker-compose.yaml -f docker-compose.katana.yaml down --remove-orphans
 
 # Run Madara, Deploy Kakarot, Run Kakarot RPC
 madara-rpc-up:
-	docker-compose up -d --force-recreate
+	docker-compose up -d --force-recreate --pull always
 
 madara-rpc-down:
 	docker-compose down --remove-orphans
@@ -60,7 +60,7 @@ test: dump-katana
 	cargo test --all
 
 test-coverage: dump-katana
-	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:
 	hurl $(HURL_FILES)

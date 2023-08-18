@@ -5,6 +5,7 @@ use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
 use super::block::EthBlockNumberOrTag;
+use super::convertible::ConvertibleEthEventFilter;
 use super::felt::Felt252Wrapper;
 use crate::client::api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
@@ -25,8 +26,8 @@ impl From<EthEventFilter> for Filter {
     }
 }
 
-impl EthEventFilter {
-    pub fn to_starknet_filter<P: Provider + Send + Sync>(
+impl ConvertibleEthEventFilter for EthEventFilter {
+    fn to_starknet_event_filter<P: Provider + Send + Sync>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<EventFilter, EthApiError<P::Error>> {
@@ -123,7 +124,7 @@ mod tests {
         let client = init_mock_client(Some(fixtures));
 
         // When
-        let starknet_event_filter = eth_event_filter.to_starknet_filter(&client).unwrap();
+        let starknet_event_filter = eth_event_filter.to_starknet_event_filter(&client).unwrap();
 
         // Then
         let expected: EventFilter =
@@ -142,7 +143,7 @@ mod tests {
         let client = init_mock_client(Some(fixtures));
 
         // When
-        let starknet_event_filter = eth_event_filter.to_starknet_filter(&client).unwrap();
+        let starknet_event_filter = eth_event_filter.to_starknet_event_filter(&client).unwrap();
 
         // Then
         let expected: EventFilter =
@@ -161,7 +162,7 @@ mod tests {
         let client = init_mock_client(Some(fixtures));
 
         // When
-        let starknet_event_filter = eth_event_filter.to_starknet_filter(&client).unwrap();
+        let starknet_event_filter = eth_event_filter.to_starknet_event_filter(&client).unwrap();
 
         // Then
         let expected: EventFilter =
@@ -181,7 +182,7 @@ mod tests {
         let client = init_mock_client(Some(fixtures));
 
         // When
-        let starknet_event_filter = eth_event_filter.to_starknet_filter(&client).unwrap();
+        let starknet_event_filter = eth_event_filter.to_starknet_event_filter(&client).unwrap();
 
         // Then
         let expected: EventFilter =
@@ -202,7 +203,7 @@ mod tests {
         let client = init_mock_client(Some(fixtures));
 
         // When
-        let starknet_event_filter = eth_event_filter.to_starknet_filter(&client).unwrap();
+        let starknet_event_filter = eth_event_filter.to_starknet_event_filter(&client).unwrap();
 
         // Then
         let expected: EventFilter = serde_json::from_str(include_str!(

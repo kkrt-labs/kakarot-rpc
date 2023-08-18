@@ -13,20 +13,19 @@ use eyre::Result;
 use futures::future::join_all;
 use reqwest::Client;
 use reth_primitives::{
-    AccessList, Address, BlockId, BlockNumberOrTag, Bloom, Bytes, Signature, Transaction, TransactionKind,
-    TransactionSigned, TxEip1559, H256, U128, U256, U64, U8,
+    AccessList, Address, BlockId, BlockNumberOrTag, Bytes, Signature, Transaction, TransactionKind, TransactionSigned,
+    TxEip1559, H256, U128, U256, U64,
 };
 use reth_rlp::Decodable;
 use reth_rpc_types::{
-    BlockTransactions, CallRequest, FeeHistory, Filter, Index, Log, RichBlock, SyncInfo, SyncStatus,
+    BlockTransactions, CallRequest, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncInfo, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, EmittedEvent,
-    Event, EventFilterWithPage, EventsPage, FieldElement, InvokeTransactionReceipt, MaybePendingBlockWithTxHashes,
-    MaybePendingBlockWithTxs, MaybePendingTransactionReceipt, ResultPageRequest, StarknetError, SyncStatusType,
-    Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
-    TransactionStatus as StarknetTransactionStatus,
+    Event, EventFilterWithPage, EventsPage, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+    MaybePendingTransactionReceipt, ResultPageRequest, StarknetError, SyncStatusType, Transaction as TransactionType,
+    TransactionReceipt as StarknetTransactionReceipt,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
 use starknet::providers::{Provider, ProviderError};
@@ -34,7 +33,6 @@ use starknet::providers::{Provider, ProviderError};
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
-use self::constants::selectors::EVM_CONTRACT_DEPLOYED;
 use self::constants::{
     ACCOUNT_ADDRESS, CHAIN_ID, CHUNK_SIZE_LIMIT, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2,
     ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN,
@@ -49,12 +47,16 @@ use crate::contracts::kakarot::KakarotContract;
 use crate::models::allowance::{FutureTokenAllowance, TokenAllowance};
 use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
-use crate::models::convertible::{ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction};
+use crate::models::convertible::{
+    ConvertibleEthEventFilter, ConvertibleStarknetBlock, ConvertibleStarknetEvent, ConvertibleStarknetTransaction,
+    ConvertibleStarknetTransactionReceipt,
+};
 use crate::models::event::StarknetEvent;
 use crate::models::event_filter::EthEventFilter;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::metadata::TokenMetadata;
 use crate::models::transaction::{StarknetTransaction, StarknetTransactions};
+use crate::models::transaction_receipt::StarknetTransactionReceipt as TransactionReceiptWrapper;
 use crate::models::ConversionError;
 
 pub struct KakarotClient<P: Provider + Send + Sync> {
@@ -105,22 +107,22 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     }
 
     /// Returns the logs corresponding to the filter
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, EthApiError<P::Error>> {
+    async fn get_logs(&self, filter: Filter) -> Result<FilterChanges, EthApiError<P::Error>> {
         // Check the block range
         let current_block: u64 = self.block_number().await?.low_u64();
         let from_block = filter.get_from_block();
         let to_block = filter.get_to_block();
 
         let filter = match (from_block, to_block) {
-            (Some(from), _) if from > current_block => return Ok(vec![]),
+            (Some(from), _) if from > current_block => return Ok(FilterChanges::Empty),
             (_, Some(to)) if to > current_block => filter.to_block(current_block),
-            (Some(from), Some(to)) if to < from => return Ok(vec![]),
+            (Some(from), Some(to)) if to < from => return Ok(FilterChanges::Empty),
             _ => filter,
         };
 
         // Convert the eth log filter to a starknet event filter
         let filter: EthEventFilter = filter.into();
-        let event_filter = filter.to_starknet_filter(self)?;
+        let event_filter = filter.to_starknet_event_filter(self)?;
 
         // Filter events
         let events = self
@@ -156,7 +158,7 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
                     .ok()
             })
             .collect::<Vec<_>>();
-        Ok(logs)
+        Ok(FilterChanges::Logs(logs))
     }
 
     /// Returns the result of executing a call on a ethereum address for a given calldata and block
@@ -295,106 +297,15 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>, EthApiError<P::Error>> {
         // TODO: Error when trying to transform 32 bytes hash to FieldElement
         let transaction_hash: Felt252Wrapper = hash.try_into()?;
-        let starknet_tx_receipt =
+        let starknet_tx_receipt: TransactionReceiptWrapper =
             match self.starknet_provider.get_transaction_receipt::<FieldElement>(transaction_hash.into()).await {
                 Err(_) => return Ok(None),
                 Ok(receipt) => receipt,
-            };
-
-        let res_receipt = match starknet_tx_receipt {
-            MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
-                StarknetTransactionReceipt::Invoke(InvokeTransactionReceipt {
-                    transaction_hash,
-                    status,
-                    block_hash,
-                    block_number,
-                    events,
-                    ..
-                }) => {
-                    let starknet_tx: StarknetTransaction =
-                        self.starknet_provider.get_transaction_by_hash(transaction_hash).await?.into();
-
-                    let transaction_hash: Felt252Wrapper = transaction_hash.into();
-                    let transaction_hash: Option<H256> = Some(transaction_hash.into());
-
-                    let block_hash: Felt252Wrapper = block_hash.into();
-                    let block_hash: Option<H256> = Some(block_hash.into());
-
-                    let block_number: Felt252Wrapper = block_number.into();
-                    let block_number: Option<U256> = Some(block_number.into());
-
-                    let eth_tx = starknet_tx.to_eth_transaction(self, None, None, None).await?;
-                    let from = eth_tx.from;
-                    let to = eth_tx.to;
-                    let contract_address = match to {
-                        // If to is Some, means contract_address should be None as it is a normal transaction
-                        Some(_) => None,
-                        // If to is None, is a contract creation transaction so contract_address should be Some
-                        None => {
-                            let event = events
-                                .iter()
-                                .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED))
-                                .ok_or(EthApiError::Other(anyhow::anyhow!(
-                                    "Kakarot Core: No contract deployment event found in Kakarot transaction receipt"
-                                )))?;
-
-                            let evm_address =
-                                event.data.first().ok_or(DataDecodingError::InvalidReturnArrayLength {
-                                    entrypoint: "deployment".into(),
-                                    expected: 1,
-                                    actual: 0,
-                                })?;
-
-                            let evm_address = Felt252Wrapper::from(*evm_address);
-                            Some(evm_address.try_into()?)
-                        }
-                    };
-
-                    let status_code = match status {
-                        StarknetTransactionStatus::Rejected | StarknetTransactionStatus::Pending => Some(U64::from(0)),
-                        StarknetTransactionStatus::AcceptedOnL1 | StarknetTransactionStatus::AcceptedOnL2 => {
-                            Some(U64::from(1))
-                        }
-                    };
-
-                    let logs = events
-                        .into_iter()
-                        .map(StarknetEvent::new)
-                        .filter_map(|event| {
-                            event.to_eth_log(self, block_hash, block_number, transaction_hash, None, None).ok()
-                        })
-                        .collect();
-
-                    TransactionReceipt {
-                        transaction_hash,
-                        // TODO: transition this hardcoded default out of nearing-demo-day hack and seeing how to
-                        // properly source/translate this value
-                        transaction_index: Some(U256::ZERO),
-                        block_hash,
-                        block_number,
-                        from,
-                        to,
-                        cumulative_gas_used: U256::from(1_000_000), // TODO: Fetch real data
-                        gas_used: Some(U256::from(500_000)),
-                        contract_address,
-                        logs,
-                        state_root: None,             // TODO: Fetch real data
-                        logs_bloom: Bloom::default(), // TODO: Fetch real data
-                        status_code,
-                        effective_gas_price: U128::from(1_000_000), // TODO: Fetch real data
-                        transaction_type: U8::from(0),              // TODO: Fetch real data
-                    }
-                }
-                // L1Handler, Declare, Deploy and DeployAccount transactions unsupported for now in
-                // Kakarot
-                _ => return Ok(None),
-            },
-            MaybePendingTransactionReceipt::PendingReceipt(_) => {
-                return Ok(None);
             }
-        };
+            .into();
 
-        Ok(Some(res_receipt))
+        let res_receipt = starknet_tx_receipt.to_eth_transaction_receipt(self).await?;
+        Ok(res_receipt)
     }
 
     /// Returns the nonce for a given ethereum address

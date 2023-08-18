@@ -1,23 +1,23 @@
-version: "3.2"
+version: '3.2'
 
 services:
   starknet:
-    image: ghcr.io/dojoengine/dojo:latest
+    image: ghcr.io/dojoengine/dojo:nightly-5cbe549ec0d8c17fe1abbddea36bf55228043107
     command:
-      - "katana"
-      - "--allow-zero-max-fee"
-      - "--validate-max-steps"
-      - "16777216"
-      - "--invoke-max-steps"
-      - "16777216"
-      - "--gas-price"
-      - "0"
-      - "--port"
-      - "9944"
+      - 'katana'
+      - '--allow-zero-max-fee'
+      - '--validate-max-steps'
+      - '16777216'
+      - '--invoke-max-steps'
+      - '16777216'
+      - '--gas-price'
+      - '0'
+      - '--port'
+      - '9944'
     environment:
       - HEALTH_CHECK_PORT=9944
     ports:
-      - "9944:9944"
+      - '9944:9944'
 
   kakarot-deployer:
     environment:

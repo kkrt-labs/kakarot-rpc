@@ -23,3 +23,9 @@ pub type StorageKey = Felt;
 
 /// Type wrapper for a storage value.
 pub type StorageValue = Felt;
+
+/// Type wrapper for a class hash.
+pub type ClassHash = Felt;
+
+/// Type wrapper for a contract storage key.
+pub type ContractStorageKey = (ContractAddress, StorageKey);
