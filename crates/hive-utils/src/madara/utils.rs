@@ -91,6 +91,32 @@ pub fn genesis_fund_starknet_address(
         .collect()
 }
 
+/// Generates the genesis storage tuples for infinite allowance to Kakarot of a Starknet address on
+/// Madara.
+pub fn genesis_approve_kakarot(
+    starknet_address: FieldElement,
+    kakarot_address: FieldElement,
+    amount: U256,
+) -> Vec<((ContractAddress, StorageKey), StorageValue)> {
+    // Split the amount into two 128-bit chunks.
+    let amount = split_u256_into_field_elements(amount);
+
+    // Iterate over the storage key offsets and generate the storage tuples.
+    amount
+        .iter()
+        .enumerate() // Enumerate the key offsets.
+        .map(|(offset, value)| {
+            genesis_set_storage_starknet_contract(
+                FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(), // Safe unwrap
+                "ERC20_allowances",
+                &[starknet_address, kakarot_address],
+                *value,
+                offset as u64,
+            )
+        })
+        .collect()
+}
+
 /// Generates the genesis storage tuples for setting the storage of the Kakarot contract.
 ///
 /// This function calculates the storage keys for the Kakarot contract using the provided Starknet
