@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use eyre::Result;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U128, U256, U64};
 use reth_rpc_types::{
-    BlockTransactions, CallRequest, FeeHistory, Filter, Index, Log, RichBlock, SyncStatus,
+    BlockTransactions, CallRequest, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt,
 };
 use starknet::core::types::{
@@ -25,7 +25,7 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
 
     async fn get_code(&self, ethereum_address: Address, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>>;
 
-    async fn get_logs(&self, filter: Filter) -> Result<Vec<Log>, EthApiError<P::Error>>;
+    async fn get_logs(&self, filter: Filter) -> Result<FilterChanges, EthApiError<P::Error>>;
 
     async fn call(&self, to: Address, calldata: Bytes, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>>;
 

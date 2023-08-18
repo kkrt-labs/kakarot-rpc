@@ -21,3 +21,4 @@ and this project adheres to
 - feat: add deployer account and deploy fee to Madara genesis
 - chore: bump madara image
 - dev: rename crate conformance-test-utils to hive-utils
+- dev: update code and integration tests to return correct datatype for get_logs
