@@ -213,7 +213,6 @@ async fn test_get_logs_from_bigger_than_current() {
 #[tokio::test]
 async fn test_get_logs_to_less_than_from() {
     // Given
-    // let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber)]);
     let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::BlockNumber)]);
     let client = init_mock_client(Some(fixtures));
     let filter = Filter {
