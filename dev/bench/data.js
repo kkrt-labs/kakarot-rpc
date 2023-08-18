@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692365323162,
+  "lastUpdate": 1692371575512,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1583,6 +1583,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.40740740740740744,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "bajpaiharsh244@gmail.com",
+            "name": "Harsh Bajpai",
+            "username": "bajpai244"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "24d14fcae210528be69fd5e40b79febf96efa6ed",
+          "message": "feat: update benchmark CI to use madara binary (#448)\n\nCo-authored-by: Harsh Bajpai <harshbajpai@Harshs-MacBook-Pro.local>",
+          "timestamp": "2023-08-18T15:00:25Z",
+          "tree_id": "7075f2619ef50601be6f23692705176722e229fa",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/24d14fcae210528be69fd5e40b79febf96efa6ed"
+        },
+        "date": 1692371575009,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.75,
             "unit": "transactions/second"
           }
         ]
