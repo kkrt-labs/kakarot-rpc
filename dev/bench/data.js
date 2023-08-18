@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692355130840,
+  "lastUpdate": 1692365319985,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1517,6 +1517,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.43333333333333335,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6547fe0d1f7c7cffc6802ba2184b8fc4e85ef078",
+          "message": "feat: error codes (#455)\n\n* add error codes from eip 1474\n\n* remove todo! + rename\n\n* change log",
+          "timestamp": "2023-08-18T12:55:57Z",
+          "tree_id": "cfe94dcbd332101b088a7ed4a403c605672d9998",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/6547fe0d1f7c7cffc6802ba2184b8fc4e85ef078"
+        },
+        "date": 1692365319379,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.40740740740740744,
             "unit": "transactions/second"
           }
         ]
