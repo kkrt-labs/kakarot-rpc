@@ -447,7 +447,12 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
     }
 
     /// Returns metadata (name, symbol, decimals) for a given token contract address.
-    async fn token_metadata(&self, _contract_address: Address) -> Result<TokenMetadata, EthApiError<P::Error>> {
+    async fn token_metadata(&self, contract_address: Address) -> Result<TokenMetadata, EthApiError<P::Error>> {
+        let _block_id = BlockId::Number(BlockNumberOrTag::Latest);
+
+        let contract_addr: Felt252Wrapper = contract_address.into();
+        let _contract = EthereumErc20::new(contract_addr.into(), &self.kakarot_contract);
+
         todo!()
     }
 
