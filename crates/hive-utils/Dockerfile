@@ -34,6 +34,7 @@ COPY --from=deployer /app/kakarot/build ${KAKAROT_CONTRACTS_PATH}
 ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:3030"
 ENV STARKNET_NETWORK=http://0.0.0.0:9944
 ENV RUST_LOG=trace
+# https://github.com/kkrt-labs/kakarot-rpc/blob/main/crates/hive-utils/src/hive/genesis.rs#L59
 ENV KAKAROT_ADDRESS="0x9001"
 
 # Add a health check to make sure the service is healthy
