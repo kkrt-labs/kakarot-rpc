@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692351808660,
+  "lastUpdate": 1692351811820,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1385,6 +1385,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.40740740740740744,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f541e58b20d586f70f3850f7cbe2b1f24932ae81",
+          "message": "build(deps): bump lib/madara from `327ac7f` to `fa98fe9` (#449)\n\nBumps [lib/madara](https://github.com/keep-starknet-strange/madara) from `327ac7f` to `fa98fe9`.\n- [Release notes](https://github.com/keep-starknet-strange/madara/releases)\n- [Commits](https://github.com/keep-starknet-strange/madara/compare/327ac7ff6654049cb5eb2bd5d20b10272590287e...fa98fe931892f5de636d952be003d8364a5a6c88)\n\n---\nupdated-dependencies:\n- dependency-name: lib/madara\n  dependency-type: direct:production\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-08-18T08:25:23Z",
+          "tree_id": "22cf33b5ba044fc3d1dfee524a4b7eb357d1158b",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/f541e58b20d586f70f3850f7cbe2b1f24932ae81"
+        },
+        "date": 1692351808010,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.4791666666666667,
             "unit": "transactions/second"
           }
         ]
