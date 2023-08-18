@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692351811820,
+  "lastUpdate": 1692355127565,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1451,6 +1451,39 @@ window.BENCHMARK_DATA = {
           {
             "name": "transactions per second",
             "value": 0.4791666666666667,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9828d4adbe6f1057d3a86ba1319d2292524795fd",
+          "message": "ci: add nextest in CI (#452)\n\nadd nextest in CI",
+          "timestamp": "2023-08-18T09:22:29Z",
+          "tree_id": "4c35bbb3bf085a1e36a29e571b48a41fc945712d",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/9828d4adbe6f1057d3a86ba1319d2292524795fd"
+        },
+        "date": 1692355126987,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.43333333333333335,
             "unit": "transactions/second"
           }
         ]
