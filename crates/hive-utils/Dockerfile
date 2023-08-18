@@ -29,7 +29,8 @@ COPY .hive/genesis.json ${MADARA_CONFIG_PATH}/genesis-assets/genesis.json
 COPY ./lib/kakarot/build ${KAKAROT_CONTRACTS_PATH}
 
 # RPC environment variables
-ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:3030"
+# Test running on this port https://github.com/ethereum/hive/blob/master/simulators/ethereum/rpc/helper.go#L50
+ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:8545"
 ENV STARKNET_NETWORK=http://0.0.0.0:9944
 ENV RUST_LOG=trace
 # https://github.com/kkrt-labs/kakarot-rpc/blob/main/crates/hive-utils/src/hive/genesis.rs#L59
@@ -47,8 +48,7 @@ HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
 EXPOSE 9944 9615 30333
 
 # Expose the port that the RPC server will run on
-EXPOSE 9545
-EXPOSE 3030
+EXPOSE 8545
 
 # Copy start script
 COPY crates/hive-utils/scripts/start.sh /start.sh
