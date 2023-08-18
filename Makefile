@@ -60,7 +60,7 @@ test: dump-katana
 	cargo test --all
 
 test-coverage: dump-katana
-	cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:
 	hurl $(HURL_FILES)
