@@ -56,6 +56,9 @@ madara-rpc-down:
 dump-katana:
 	cargo run --bin dump-katana
 
+dump-genesis:
+	cargo run --bin dump-genesis
+
 test: dump-katana
 	cargo test --all
 
