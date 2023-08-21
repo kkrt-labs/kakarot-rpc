@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692624825439,
+  "lastUpdate": 1692624826902,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1739,6 +1739,39 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/e3b518c34fd80a3c5f276090f7f10245d0345956"
         },
         "date": 1692624821930,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.75,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "82421016+greged93@users.noreply.github.com",
+            "name": "greged93",
+            "username": "greged93"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "efe70e587725157b5ac96327072c5f502187fa3d",
+          "message": "fix: hive storage (#460)\n\n* update the madara genesis\n\n* add missing storage variables\n\n* rebase",
+          "timestamp": "2023-08-21T13:20:09Z",
+          "tree_id": "8524a8c963302692eac5eb662346065fd62651e7",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/efe70e587725157b5ac96327072c5f502187fa3d"
+        },
+        "date": 1692624822157,
         "tool": "customBiggerIsBetter",
         "benches": [
           {
