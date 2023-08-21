@@ -148,8 +148,13 @@ mod tests {
                 from_block: Some(BlockNumberOrTag::Number(0)),
                 to_block: Some(BlockNumberOrTag::Number(100)),
             },
-            address: Some(ValueOrArray::Value(erc20_eth_address)),
-            topics: [None, None, None, None],
+            address: ValueOrArray::Value(erc20_eth_address).into(),
+            topics: [
+                ValueOrArray::Value(None).into(),
+                ValueOrArray::Value(None).into(),
+                ValueOrArray::Value(None).into(),
+                ValueOrArray::Value(None).into(),
+            ],
         };
         let logs = client.get_logs(filter).await.unwrap();
 

@@ -29,10 +29,10 @@ starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "
 # Ethereum dependencies
 ethers = "2.0"
 ethers-solc = "2.0"
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
-reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "fb710e5" }
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "eaca2a4" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "eaca2a4" }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "eaca2a4" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "eaca2a4" }
 jsonrpsee = { version = "0.18.2", features = ["full"] }
 
 # Serde
@@ -69,3 +69,6 @@ blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "c794d1b"
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
+
+[patch."https://github.com/ethereum/c-kzg-4844"]
+c-kzg = { git = "https://github.com/rjected/c-kzg-4844", branch = "dan/add-serde-feature" }

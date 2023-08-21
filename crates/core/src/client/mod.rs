@@ -504,7 +504,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
         let value = request.value.unwrap_or(U256::ZERO).try_into().map_err(ConversionError::<u128>::from)?;
 
-        let data = request.data.unwrap_or_default();
+        let data = request.input.data.unwrap_or_default();
 
         let tx = Transaction::Eip1559(TxEip1559 {
             chain_id: chain_id.low_u64(),

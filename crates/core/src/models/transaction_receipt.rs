@@ -106,7 +106,7 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
                         transaction_hash,
                         // TODO: transition this hardcoded default out of nearing-demo-day hack and seeing how to
                         // properly source/translate this value
-                        transaction_index: None, // TODO: Fetch real data
+                        transaction_index: U64::from(0), // TODO: Fetch real data
                         block_hash,
                         block_number,
                         from,
