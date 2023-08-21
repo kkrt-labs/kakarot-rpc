@@ -10,18 +10,18 @@ and this project adheres to
 
 ### Added
 
-- ci: add `CHANGELOG.md` and enforce it is edited for each PR on `main`
-- test: update integration tests to use prepopulated Katana dumped state
+- feat: add rpc docker image for hive testing
+- ci: use madara binary for benchmark CI
+- fix: update jsonrpsee error codes to EIP 1474 codes.
+- dev: update code and integration tests to return correct datatype for get_logs
+- dev: rename crate conformance-test-utils to hive-utils
+- chore: bump madara image
+- feat: add deployer account and deploy fee to Madara genesis
+- fix: remove Madara as dependency.
+- feat: add Starknet transaction receipt wrapper for idiomatic conversion to Eth
+  transaction receipt.
 - ci: cross-compile binaries to improve build time
 - dev: always pull image for latest tags when doing `docker-compose`
 - ci: add timeout to all workflows
-- feat: add Starknet transaction receipt wrapper for idiomatic conversion to Eth
-  transaction receipt.
-- fix: remove Madara as dependency.
-- feat: add deployer account and deploy fee to Madara genesis
-- chore: bump madara image
-- dev: rename crate conformance-test-utils to hive-utils
-- dev: update code and integration tests to return correct datatype for get_logs
-- fix: update jsonrpsee error codes to EIP 1474 codes.
-- ci: use madara binary for benchmark CI
-- feat: add rpc docker image for hive testing
+- test: update integration tests to use prepopulated Katana dumped state
+- ci: add `CHANGELOG.md` and enforce it is edited for each PR on `main`
