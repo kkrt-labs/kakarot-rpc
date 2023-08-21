@@ -91,8 +91,8 @@ pub fn genesis_fund_starknet_address(
         .collect()
 }
 
-/// Generates the genesis storage tuples for infinite allowance to Kakarot of a Starknet address on
-/// Madara.
+/// Generates the genesis storage tuples for a given amount of allowance to Kakarot of a Starknet
+/// address on Madara.
 pub fn genesis_approve_kakarot(
     starknet_address: FieldElement,
     kakarot_address: FieldElement,
