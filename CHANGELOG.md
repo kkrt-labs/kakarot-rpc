@@ -11,12 +11,13 @@ and this project adheres to
 ### Added
 
 - feat: add rpc docker image for hive testing
+- fix: update the hive genesis utils for missing Kakarot requirements.
 - ci: use madara binary for benchmark CI
 - fix: update jsonrpsee error codes to EIP 1474 codes.
 - dev: update code and integration tests to return correct datatype for get_logs
-- feat: add deployer account and deploy fee to Madara genesis
 - dev: rename crate conformance-test-utils to hive-utils
 - chore: bump madara image
+- feat: add deployer account and deploy fee to Madara genesis
 - fix: remove Madara as dependency.
 - feat: add Starknet transaction receipt wrapper for idiomatic conversion to Eth
   transaction receipt.
