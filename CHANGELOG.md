@@ -24,3 +24,4 @@ and this project adheres to
 - dev: update code and integration tests to return correct datatype for get_logs
 - fix: update jsonrpsee error codes to EIP 1474 codes.
 - ci: use madara binary for benchmark CI
+- feat: add rpc docker image for hive testing
