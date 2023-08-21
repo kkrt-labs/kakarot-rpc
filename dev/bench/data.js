@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1692371577209,
+  "lastUpdate": 1692624822895,
   "repoUrl": "https://github.com/kkrt-labs/kakarot-rpc",
   "entries": {
     "Benchmark": [
@@ -1640,6 +1640,39 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/24d14fcae210528be69fd5e40b79febf96efa6ed"
         },
         "date": 1692371575009,
+        "tool": "customBiggerIsBetter",
+        "benches": [
+          {
+            "name": "transactions per block",
+            "value": "transactions/block"
+          },
+          {
+            "name": "transactions per second",
+            "value": 0.75,
+            "unit": "transactions/second"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "49699333+dependabot[bot]@users.noreply.github.com",
+            "name": "dependabot[bot]",
+            "username": "dependabot[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e3b518c34fd80a3c5f276090f7f10245d0345956",
+          "message": "build(deps): bump lib/madara from `fa98fe9` to `1833549` (#462)\n\nBumps [lib/madara](https://github.com/keep-starknet-strange/madara) from `fa98fe9` to `1833549`.\n- [Release notes](https://github.com/keep-starknet-strange/madara/releases)\n- [Commits](https://github.com/keep-starknet-strange/madara/compare/fa98fe931892f5de636d952be003d8364a5a6c88...1833549b98f05079c0276b9715d46672e3a4f34e)\n\n---\nupdated-dependencies:\n- dependency-name: lib/madara\n  dependency-type: direct:production\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\nCo-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>",
+          "timestamp": "2023-08-21T13:20:42Z",
+          "tree_id": "6f621ed77e2a48d9a2e4c61adddfa52a36b3bd3c",
+          "url": "https://github.com/kkrt-labs/kakarot-rpc/commit/e3b518c34fd80a3c5f276090f7f10245d0345956"
+        },
+        "date": 1692624821930,
         "tool": "customBiggerIsBetter",
         "benches": [
           {
