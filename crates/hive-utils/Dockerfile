@@ -35,6 +35,9 @@ ENV STARKNET_NETWORK=http://0.0.0.0:9944
 ENV RUST_LOG=trace
 # https://github.com/kkrt-labs/kakarot-rpc/blob/main/crates/hive-utils/src/hive/genesis.rs#L59
 ENV KAKAROT_ADDRESS="0x9001"
+ENV DEPLOYER_ACCOUNT_ADDRESS="0x9003"
+# https://github.com/kkrt-labs/kakarot-rpc/blob/main/crates/core/src/test_utils/constants.rs#L14
+ENV DEPLOYER_PRIVATE_KEY="0x0288a51c164874bb6a1ca7bd1cb71823c234a86d0f7b150d70fa8f06de645396"
 
 # Add a health check to make sure the service is healthy
 HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
