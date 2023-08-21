@@ -5,6 +5,7 @@ use std::path::Path;
 
 use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
+use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use kakarot_rpc_core::test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Bytes, H256, U256, U64};
@@ -13,8 +14,8 @@ use starknet::core::types::FieldElement;
 
 use crate::kakarot::compute_starknet_address;
 use crate::madara::utils::{
-    genesis_fund_starknet_address, genesis_set_bytecode, genesis_set_storage_kakarot_contract_account,
-    genesis_set_storage_starknet_contract,
+    genesis_approve_kakarot, genesis_fund_starknet_address, genesis_set_bytecode,
+    genesis_set_storage_kakarot_contract_account, genesis_set_storage_starknet_contract,
 };
 use crate::types::{ClassHash, ContractAddress, ContractStorageKey, Felt, StorageValue};
 
@@ -56,7 +57,7 @@ impl HiveGenesisConfig {
 
 // Define constant addresses for Kakarot contracts
 lazy_static! {
-    pub static ref KAKAROT_ADDRESSES: FieldElement = FieldElement::from_hex_be("0x9001").unwrap(); // Safe unwrap, 0x9001
+    pub static ref KAKAROT_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9001").unwrap(); // Safe unwrap, 0x9001
     pub static ref BLOCKHASH_REGISTRY_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9002").unwrap(); // Safe unwrap, 0x9002
     pub static ref DEPLOYER_ACCOUNT_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9003").unwrap(); // Safe unwrap, 0x9003
 }
@@ -107,7 +108,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
 
     // Add Kakarot contracts to Loader
     madara_loader.contracts.push((
-        Felt(*KAKAROT_ADDRESSES),
+        Felt(*KAKAROT_ADDRESS),
         Felt(*kakarot_contracts.get("kakarot").expect("Failed to get kakarot class hash")),
     ));
     madara_loader.contracts.push((
@@ -132,8 +133,8 @@ pub async fn serialize_hive_to_madara_genesis_config(
     ];
 
     storage_keys.into_iter().for_each(|(key, value)| {
-        let storage_tuple = genesis_set_storage_starknet_contract(*KAKAROT_ADDRESSES, key, &[], value, 0);
-        madara_loader.storage.push(storage_tuple);
+        let storage = genesis_set_storage_starknet_contract(*KAKAROT_ADDRESS, key, &[], value, 0);
+        madara_loader.storage.push(storage);
     });
 
     // Add Hive accounts to loader
@@ -144,7 +145,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
     hive_accounts.into_iter().for_each(|(evm_address, account_info)| {
         // Use the given Kakarot contract address and declared proxy class hash for compute_starknet_address
         let starknet_address = compute_starknet_address(
-            *KAKAROT_ADDRESSES,
+            *KAKAROT_ADDRESS,
             account_proxy_class_hash,
             FieldElement::from_byte_slice_be(evm_address.as_bytes()).unwrap(), /* safe unwrap since evm_address
                                                                                 * is 20 bytes */
@@ -152,11 +153,13 @@ pub async fn serialize_hive_to_madara_genesis_config(
         // Push to contracts
         madara_loader.contracts.push((Felt(starknet_address), Felt(account_proxy_class_hash)));
 
-        // Set the balance of the account
+        // Set the balance of the account and approve Kakarot for infinite allowance
         // Call genesis_fund_starknet_address util to get the storage tuples
-        let balance_storage_tuples = genesis_fund_starknet_address(starknet_address, account_info.balance);
-        balance_storage_tuples.into_iter().for_each(|balance_storage_tuple| {
-            madara_loader.storage.push(balance_storage_tuple);
+        let balances = genesis_fund_starknet_address(starknet_address, account_info.balance);
+        let allowance = genesis_approve_kakarot(starknet_address, *KAKAROT_ADDRESS, U256::MAX);
+        balances.into_iter().zip(allowance.into_iter()).for_each(|(balance, allowance)| {
+            madara_loader.storage.push(balance);
+            madara_loader.storage.push(allowance);
         });
 
         // Set the storage of the account, if any
@@ -165,9 +168,9 @@ pub async fn serialize_hive_to_madara_genesis_config(
             storage.sort_by_key(|(key, _)| *key);
             storage.into_iter().for_each(|(key, value)| {
                 // Call genesis_set_storage_kakarot_contract_account util to get the storage tuples
-                let storage_tuples = genesis_set_storage_kakarot_contract_account(starknet_address, key, value);
-                storage_tuples.into_iter().for_each(|storage_tuples| {
-                    madara_loader.storage.push(storage_tuples);
+                let storages = genesis_set_storage_kakarot_contract_account(starknet_address, key, value);
+                storages.into_iter().for_each(|storage| {
+                    madara_loader.storage.push(storage);
                 });
             });
         }
@@ -175,27 +178,50 @@ pub async fn serialize_hive_to_madara_genesis_config(
         // Determine the proxy implementation class hash based on whether bytecode is present
         // Set the bytecode to the storage of the account, if any
         let proxy_implementation_class_hash = if let Some(bytecode) = account_info.code {
-            // Call genesis_set_code_kakarot_contract_account util to get the storage tuples
-            let code_storage_tuples = genesis_set_bytecode(&bytecode, starknet_address);
+            let bytecode_len =
+                genesis_set_storage_starknet_contract(starknet_address, "bytecode_len_", &[], bytecode.len().into(), 0);
+            let bytecode = genesis_set_bytecode(&bytecode, starknet_address);
+
             // Set the bytecode of the account
-            madara_loader.storage.extend(code_storage_tuples);
+            madara_loader.storage.extend(bytecode);
+            // Set the bytecode length of the account
+            madara_loader.storage.push(bytecode_len);
+
+            // Set the Owner
+            let owner =
+                genesis_set_storage_starknet_contract(starknet_address, "Ownable_owner", &[], *KAKAROT_ADDRESS, 0);
+            madara_loader.storage.push(owner);
 
             // Since it has bytecode, it's a contract account
             contract_account_class_hash
         } else {
+            // Set kakarot address
+            let kakarot_address =
+                genesis_set_storage_starknet_contract(starknet_address, "kakarot_address", &[], *KAKAROT_ADDRESS, 0);
+            madara_loader.storage.push(kakarot_address);
+
             // Since it has no bytecode, it's an externally owned account
             eoa_class_hash
         };
 
         // Set the proxy implementation of the account to the determined class hash
-        let proxy_implementation_storage_tuples = genesis_set_storage_starknet_contract(
+        let proxy_implementation_storage = genesis_set_storage_starknet_contract(
             starknet_address,
             "_implementation",
             &[],
             proxy_implementation_class_hash,
             0, // 0 since it's storage value is felt
         );
-        madara_loader.storage.push(proxy_implementation_storage_tuples);
+        madara_loader.storage.push(proxy_implementation_storage);
+
+        // Set the evm address of the account and the "is_initialized" flag
+        let evm_address: Felt252Wrapper = evm_address.into();
+        let evm_address =
+            genesis_set_storage_starknet_contract(starknet_address, "evm_address", &[], evm_address.into(), 0);
+        let is_initialized =
+            genesis_set_storage_starknet_contract(starknet_address, "is_initialized_", &[], FieldElement::ONE, 0);
+        madara_loader.storage.push(evm_address);
+        madara_loader.storage.push(is_initialized);
     });
 
     // Serialize the loader to a string
