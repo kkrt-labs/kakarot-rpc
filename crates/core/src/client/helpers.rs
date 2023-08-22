@@ -81,6 +81,7 @@ pub fn vec_felt_to_bytes(vec_felt: Vec<FieldElement>) -> Bytes {
 pub fn create_default_transaction_receipt() -> TransactionReceipt {
     TransactionReceipt {
         transaction_hash: None,
+        // TODO: Compute and return transaction index
         transaction_index: U64::from(0),
         block_hash: None,
         block_number: None,
