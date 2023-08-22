@@ -34,7 +34,7 @@ impl From<StarknetTransactionReceipt> for MaybePendingTransactionReceipt {
 
 #[async_trait]
 impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
-    async fn to_eth_transaction_receipt<P: Provider + Send + Sync>(
+    async fn to_eth_transaction_receipt<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<Option<EthTransactionReceipt>, EthApiError<P::Error>> {

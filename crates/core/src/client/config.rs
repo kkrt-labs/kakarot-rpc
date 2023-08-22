@@ -1,7 +1,11 @@
+use std::sync::Arc;
+
 use eyre::Result;
+use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
-use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
+use starknet::providers::{JsonRpcClient, Provider, SequencerGatewayProvider};
+use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
 use super::constants::{KATANA_RPC_URL, MADARA_RPC_URL};
@@ -160,4 +164,30 @@ impl SequencerGatewayProviderBuilder {
     pub fn build(self) -> SequencerGatewayProvider {
         self.0
     }
+}
+
+pub async fn get_starknet_account_from_env<P: Provider + Send + Sync + 'static>(
+    provider: Arc<P>,
+) -> Result<SingleOwnerAccount<Arc<P>, LocalWallet>> {
+    let (starknet_account_private_key, starknet_account_address) = {
+        let starknet_account_private_key = get_env_var("DEPLOYER_ACCOUNT_PRIVATE_KEY")?;
+        let starknet_account_private_key = FieldElement::from_hex_be(&starknet_account_private_key).map_err(|_| {
+            ConfigError::EnvironmentVariableSetWrong(format!(
+                "DEPLOYER_ACCOUNT_PRIVATE_KEY should be provided as a hex string, got {starknet_account_private_key}"
+            ))
+        })?;
+
+        let starknet_account_address = get_env_var("DEPLOYER_ACCOUNT_ADDRESS")?;
+        let starknet_account_address = FieldElement::from_hex_be(&starknet_account_address).map_err(|_| {
+            ConfigError::EnvironmentVariableSetWrong(format!(
+                "DEPLOYER_ACCOUNT_ADDRESS should be provided as a hex string, got {starknet_account_private_key}"
+            ))
+        })?;
+        (starknet_account_private_key, starknet_account_address)
+    };
+
+    let chain_id = provider.chain_id().await?;
+
+    let local_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(starknet_account_private_key));
+    Ok(SingleOwnerAccount::new(provider.clone(), local_wallet, starknet_account_address, chain_id))
 }

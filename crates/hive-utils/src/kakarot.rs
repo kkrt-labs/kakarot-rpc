@@ -38,7 +38,7 @@ mod tests {
     /// It tests the compute_starknet_address function by comparing the result of the computation
     /// with the result when called on the deployed Kakarot contract.
     #[rstest]
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_compute_starknet_address(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         let deployed_kakarot = kakarot_test_env_ctx.kakarot();
         let kakarot_contract = kakarot_test_env_ctx.kakarot_contract();

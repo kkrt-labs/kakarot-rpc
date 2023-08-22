@@ -29,6 +29,7 @@ pub mod selectors {
 
     pub const ETH_CALL: FieldElement = selector!("eth_call");
     pub const ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
+    pub const DEPLOY_EXTERNALLY_OWNED_ACCOUNT: FieldElement = selector!("deploy_externally_owned_account");
     pub const COMPUTE_STARKNET_ADDRESS: FieldElement = selector!("compute_starknet_address");
 
     pub const GET_EVM_ADDRESS: FieldElement = selector!("get_evm_address");
@@ -117,4 +118,9 @@ lazy_static! {
         StarknetCall { to: *COUNTER_ADDRESS_TESTNET1, selector: *INC_SELECTOR, calldata: vec![] }.into();
     pub static ref COUNTER_CALL_TESTNET2: Call =
         StarknetCall { to: *COUNTER_ADDRESS_TESTNET2, selector: *INC_SELECTOR, calldata: vec![] }.into();
+}
+
+// This module contains constants to be used for deployment of Kakarot System
+lazy_static! {
+    pub static ref DEPLOY_FEE: FieldElement = FieldElement::from(100000_u64);
 }

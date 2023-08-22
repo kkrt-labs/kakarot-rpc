@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use jsonrpsee::server::ServerHandle;
+use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::client::config::{Network, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
@@ -64,13 +65,16 @@ pub async fn start_kakarot_rpc_server(
     let sequencer = kakarot_test_env.sequencer();
     let kakarot = kakarot_test_env.kakarot();
 
-    let provider = JsonRpcClient::new(HttpTransport::new(sequencer.url()));
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
     let starknet_config = StarknetConfig::new(
         Network::JsonRpcProvider(sequencer.url()),
         kakarot.kakarot_address,
         kakarot.proxy_class_hash,
     );
-    let kakarot_client = Arc::new(KakarotClient::new(starknet_config, provider));
+
+    let deployer_account = kakarot_test_env.client().deployer_account().clone();
+
+    let kakarot_client = Arc::new(KakarotClient::new(starknet_config, provider, deployer_account));
 
     // Create and run Kakarot RPC module.
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(kakarot_client).rpc_module()?;
