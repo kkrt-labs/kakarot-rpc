@@ -27,7 +27,7 @@ impl From<EthEventFilter> for Filter {
 }
 
 impl ConvertibleEthEventFilter for EthEventFilter {
-    fn to_starknet_event_filter<P: Provider + Send + Sync>(
+    fn to_starknet_event_filter<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<EventFilter, EthApiError<P::Error>> {

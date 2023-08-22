@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
 use ethers::abi::Token;
+use kakarot_rpc_core::client::api::KakarotStarknetApi;
+use kakarot_rpc_core::test_utils::constants::STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY;
 use kakarot_rpc_core::test_utils::deploy_helpers::{
-    ContractDeploymentArgs, KakarotTestEnvironmentContext, TestContext,
+    ContractDeploymentArgs, DeployerAccount, KakarotTestEnvironmentContext, TestContext,
 };
 use katana_core::db::Db;
+use starknet::accounts::Account;
 
 #[tokio::main]
 async fn main() {
@@ -38,12 +41,18 @@ async fn main() {
         std::fs::create_dir_all(".katana/").expect("Failed to create Kakata dump dir");
         std::fs::write(".katana/dump.json", state).expect("Failed to write dump to .katana/dump.json");
 
+        let deployer_account = DeployerAccount {
+            address: test_context.client().deployer_account().address(),
+            private_key: *STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY,
+        };
+
         // Store contracts information
         let mut contracts = HashMap::new();
         contracts.insert("Kakarot", serde_json::to_value(test_context.kakarot()).unwrap());
         contracts.insert("ERC20", serde_json::to_value(test_context.evm_contract("ERC20")).unwrap());
         contracts.insert("Counter", serde_json::to_value(test_context.evm_contract("Counter")).unwrap());
         contracts.insert("PlainOpcodes", serde_json::to_value(test_context.evm_contract("PlainOpcodes")).unwrap());
+        contracts.insert("DeployerAccount", serde_json::to_value(deployer_account).unwrap());
 
         // Dump the contracts information
         let contracts = serde_json::to_string(&contracts).expect("Failed to serialize contract addresses");
