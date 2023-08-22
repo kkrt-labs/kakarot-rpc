@@ -29,10 +29,10 @@ starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "
 # Ethereum dependencies
 ethers = "2.0"
 ethers-solc = "2.0"
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "eaca2a4" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "eaca2a4" }
-reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", rev = "eaca2a4" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "eaca2a4" }
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
 jsonrpsee = { version = "0.18.2", features = ["full"] }
 
 # Serde
