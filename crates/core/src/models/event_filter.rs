@@ -36,31 +36,28 @@ impl ConvertibleEthEventFilter for EthEventFilter {
 
         // Extract keys into topics
         let mut keys: Vec<FieldElement> = filter
-            .topics()
+            .topics
+            .into_iter()
+            .map(|topic| topic.to_value_or_array())
             .flat_map(|topic| match topic {
-                ValueOrArray::Value(value) => match value {
-                    None => vec![],
-                    Some(topic) => {
-                        let topic = U256::from_be_bytes(topic.to_fixed_bytes());
-                        split_u256_into_field_elements(topic).to_vec()
-                    }
+                None => vec![],
+                Some(ValueOrArray::Value(value)) => {
+                    let topic = U256::from_be_bytes(value.to_fixed_bytes());
+                    split_u256_into_field_elements(topic).to_vec()
                 },
-                ValueOrArray::Array(topics) => topics
-                    .iter()
-                    .filter_map(|topic| {
-                        topic.map(|topic| {
-                            let topic = U256::from_be_bytes(topic.to_fixed_bytes());
-                            split_u256_into_field_elements(topic).to_vec()
-                        })
-                    })
-                    .flatten()
-                    .collect(),
+                Some(ValueOrArray::Array(topics)) => topics
+                .iter()
+                .flat_map(|topic| {
+                    let topic = U256::from_be_bytes(topic.to_fixed_bytes());
+                    split_u256_into_field_elements(topic).to_vec()
+                })
+                .collect(),
             })
             .take(8) // take up to 4 topics split into 2 field elements
             .collect();
 
         // Get the filter address if any (added as first key)
-        if let Some(address) = filter.address {
+        if let Some(address) = filter.address.to_value_or_array() {
             let address = match address {
                 ValueOrArray::Array(addresses) => addresses.first().copied(),
                 ValueOrArray::Value(address) => Some(address),

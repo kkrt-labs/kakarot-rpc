@@ -210,6 +210,8 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
             base_fee_per_gas: Some(base_fee_per_gas),
             mix_hash,
             withdrawals_root: Some(H256::zero()),
+            blob_gas_used: None,
+            excess_blob_gas: None,
         };
         let block = Block {
             header,
@@ -284,6 +286,8 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
             base_fee_per_gas: Some(base_fee_per_gas),
             mix_hash,
             withdrawals_root: Some(H256::zero()),
+            blob_gas_used: None,
+            excess_blob_gas: None,
         };
         let block = Block {
             header,

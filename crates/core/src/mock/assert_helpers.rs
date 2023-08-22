@@ -151,6 +151,7 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                             .unwrap(),
                         v: U256::from_str("0x000000000000000000000000000000000000000000000000000000009696a4cc")
                             .unwrap(),
+                        y_parity: None,
                     };
                     assert_eq!(ether_tx.signature, Some(signature));
                 }
@@ -170,6 +171,7 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
                             .unwrap(),
                         v: U256::from_str("0x000000000000000000000000000000000000000000000000000000009696a4cc")
                             .unwrap(),
+                        y_parity: None,
                     };
                     assert_eq!(ether_tx.signature, Some(signature));
                     // TODO: test ether_tx.input

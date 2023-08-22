@@ -94,7 +94,8 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         let to = tx.to();
 
         let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
-        let signature = Some(Signature { r: signature.r, s: signature.s, v: U256::from_limbs_slice(&[v]) });
+        let signature =
+            Some(Signature { r: signature.r, s: signature.s, v: U256::from_limbs_slice(&[v]), y_parity: None });
 
         Ok(EthTransaction {
             hash,
