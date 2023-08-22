@@ -37,7 +37,7 @@ const nativeTokenTransfer = async (context, ee, next) => {
 
     // break to make sure transactions arrive in order to RPC.
     // NOTE: reduce it if you are skipping validate
-    await sleep(350);
+    await sleep(500);
   }
 
   next();

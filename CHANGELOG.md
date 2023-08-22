@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - feat: add rpc docker image for hive testing
+- ci: decrease the rate which we send transactions in benchmark CI
 - fix: update the hive genesis utils for missing Kakarot requirements.
 - ci: use madara binary for benchmark CI
 - fix: update jsonrpsee error codes to EIP 1474 codes.
