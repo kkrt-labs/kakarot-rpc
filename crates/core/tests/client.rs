@@ -57,7 +57,7 @@ mod tests {
         let eoa_balance = FieldElement::from_bytes_be(&eoa_balance.to_be_bytes()).unwrap();
 
         // Then
-        assert_eq!(FieldElement::from_dec_str("1000000000000000000").unwrap() - *DEPLOY_FEE, eoa_balance);
+        assert_eq!(FieldElement::from_dec_str("1000000000000000000").unwrap(), eoa_balance);
     }
 
     #[rstest]

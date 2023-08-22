@@ -3,25 +3,5 @@
   "files.exclude": {
     "**/.git": false
   },
-  "rust-analyzer.check.command": "clippy",
-  "workbench.colorCustomizations": {
-    "activityBar.activeBackground": "#55ee52",
-    "activityBar.background": "#55ee52",
-    "activityBar.foreground": "#15202b",
-    "activityBar.inactiveForeground": "#15202b99",
-    "activityBarBadge.background": "#6e70f1",
-    "activityBarBadge.foreground": "#e7e7e7",
-    "commandCenter.border": "#15202b99",
-    "sash.hoverBorder": "#55ee52",
-    "statusBar.background": "#28ea23",
-    "statusBar.foreground": "#15202b",
-    "statusBarItem.hoverBackground": "#18c713",
-    "statusBarItem.remoteBackground": "#28ea23",
-    "statusBarItem.remoteForeground": "#15202b",
-    "titleBar.activeBackground": "#28ea23",
-    "titleBar.activeForeground": "#15202b",
-    "titleBar.inactiveBackground": "#28ea2399",
-    "titleBar.inactiveForeground": "#15202b99"
-  },
-  "peacock.color": "#28ea23"
+  "rust-analyzer.check.command": "clippy"
 }

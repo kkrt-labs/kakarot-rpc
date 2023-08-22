@@ -490,7 +490,7 @@ async fn fund_eoa(
 ///
 /// This function first computes the Starknet address of the EOA to be deployed using the provided
 /// account, contract address, and EOA account address. Then, it firstly funds the eoa to be able to
-/// pay for its deploymebt fee and then deploys the EOA to the network.
+/// pay for its deployment fee and then deploys the EOA to the network.
 async fn fund_and_deploy_eoa(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     contract_address: FieldElement,
@@ -499,7 +499,7 @@ async fn fund_and_deploy_eoa(
     fee_token_address: FieldElement,
 ) -> FieldElement {
     let eoa_account_starknet_address = compute_starknet_address(account, contract_address, eoa_account_address).await;
-    fund_eoa(account, eoa_account_starknet_address, amount, fee_token_address).await;
+    fund_eoa(account, eoa_account_starknet_address, amount + *DEPLOY_FEE, fee_token_address).await;
     deploy_eoa(account, contract_address, eoa_account_address).await;
 
     eoa_account_starknet_address
@@ -916,11 +916,10 @@ pub fn compute_kakarot_contract_class_hash(path: PathBuf) -> FieldElement {
     let file = fs::File::open(&path).unwrap_or_else(|_| panic!("Failed to open file: {}", path.display()));
     let legacy_contract: LegacyContractClass = serde_json::from_reader(file)
         .unwrap_or_else(|_| panic!("Failed to deserialize contract from file: {}", path.display()));
-    let contract_class = Arc::new(legacy_contract);
 
-    contract_class
+    legacy_contract
         .class_hash()
-        .unwrap_or_else(|_| panic!("Failed to compuete class hash for contract from file: {}", path.display()))
+        .unwrap_or_else(|_| panic!("Failed to compute class hash for contract from file: {}", path.display()))
 }
 
 /// Asynchronously deploys a Kakarot system to the Starknet network and returns the
