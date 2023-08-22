@@ -53,14 +53,14 @@ EXPOSE 9944 9615 30333
 # Expose the port that the RPC server will run on
 EXPOSE 8545
 
-# Copy start script
-COPY crates/hive-utils/scripts/start.sh /start.sh
-RUN chmod +x /start.sh
-
 # Misc
 RUN curl https://get.starkli.sh | sh
 ENV PATH="${PATH}:/root/.starkli/bin"
 RUN starkliup
+
+# Copy start script
+COPY crates/hive-utils/scripts/start.sh /start.sh
+RUN chmod +x /start.sh
 
 ENTRYPOINT ["/usr/bin/tini", "--", "/start.sh"]
 
