@@ -28,7 +28,7 @@ impl TryFrom<StarknetSignature> for EthSignature {
             (*value.0.get(1).ok_or(StarknetSignatureError::MissingSignatureParamsError("s".to_string()))?).into();
         let v: Felt252Wrapper =
             (*value.0.get(2).ok_or(StarknetSignatureError::MissingSignatureParamsError("v".to_string()))?).into();
-        Ok(EthSignature { r: r.into(), s: s.into(), v: v.into() })
+        Ok(EthSignature { r: r.into(), s: s.into(), v: v.into(), y_parity: None })
     }
 }
 

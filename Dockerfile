@@ -19,7 +19,7 @@ RUN build_platform() { \
          # Add the specified Rust target architecture
         rustup target add $ARCH; \
         # Update package lists and install the specified compiler
-        apt-get update && apt-get -y install $COMPILER; \
+        apt-get update && apt-get -y install $COMPILER libclang-dev; \
         # Build the Rust application for the specified target
         cargo build --all --release \
           --target=$ARCH \

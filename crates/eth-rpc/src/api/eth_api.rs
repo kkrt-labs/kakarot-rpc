@@ -1,7 +1,6 @@
 use jsonrpsee::core::RpcResult as Result;
 use jsonrpsee::proc_macros::rpc;
-use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
+use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
     CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
     Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
