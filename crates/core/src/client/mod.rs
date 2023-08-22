@@ -836,13 +836,15 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
                             }
                             StarknetTransactionStatus::Rejected => {
                                 return Err(EthApiError::Other(anyhow::anyhow!(
-                                    "the transaction {transaction_hash} has been rejected"
+                                    "Pooling Failed: the transaction {transaction_hash} has been rejected"
                                 )));
                             }
                             _ => (),
                         },
                         _ => {
-                            return Err(EthApiError::Other(anyhow::anyhow!("expected receipt to found {receipt:#?}")));
+                            return Err(EthApiError::Other(anyhow::anyhow!(
+                                "Pooling Failed: expected an invoke receipt, found {receipt:#?}"
+                            )));
                         }
                     },
                     MaybePendingTransactionReceipt::PendingReceipt(_) => (),
