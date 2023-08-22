@@ -11,5 +11,6 @@ export PROXY_ACCOUNT_CLASS_HASH=$(starkli class-hash ${MADARA_PATH}/cairo-contra
     --tmp \
     --dev &
 
+# Wait for Madara to start
 # Start RPC
-/usr/local/bin/kakarot-rpc
+sleep 20 && /usr/local/bin/kakarot-rpc
