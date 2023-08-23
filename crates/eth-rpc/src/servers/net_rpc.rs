@@ -22,10 +22,12 @@ impl NetApiServer for NetRpc {
     }
 
     fn peer_count(&self) -> Result<PeerCount> {
+        // Kakarot RPC currently does not have peers connected to node
         Ok(PEER_COUNT.clone())
     }
 
     fn listening(&self) -> Result<bool> {
+        // Kakarot RPC currently does not support peer-to-peer connections
         Ok(false)
     }
 }
