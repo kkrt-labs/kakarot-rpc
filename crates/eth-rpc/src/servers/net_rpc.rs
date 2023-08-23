@@ -3,7 +3,7 @@ use kakarot_rpc_core::client::constants::CHAIN_ID;
 use kakarot_rpc_core::client::errors::EthApiError;
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
-
+use reth_network_api::PeersInfo;
 use crate::api::net_api::NetApiServer;
 
 /// The RPC module for the implementing Net api
@@ -23,12 +23,11 @@ impl NetApiServer for NetRpc {
     }
 
     fn peer_count(&self) -> Result<PeerCount> {
-        // TODO: replace jsonrpsee::types::ErrorObject with Provider::Error once NetRpc uses Provider
-        Err(EthApiError::<jsonrpsee::types::ErrorObject>::MethodNotSupported("eth_peerCount".to_string()).into())
+        Ok(PeerCount::Number(0))
+        
     }
 
     fn listening(&self) -> Result<bool> {
-        // TODO: replace jsonrpsee::types::ErrorObject with Provider::Error once NetRpc uses Provider
-        Err(EthApiError::<jsonrpsee::types::ErrorObject>::MethodNotSupported("eth_listening".to_string()).into())
+        Ok(false)
     }
 }
