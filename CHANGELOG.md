@@ -10,7 +10,9 @@ and this project adheres to
 
 ### Added
 
-- feat: add automatic deployment of eoa from RPC if an account doesn't exist on chain
+- feat: add rpc docker image for hive testing
+- feat: add automatic deployment of eoa from RPC if an account doesn't exist on
+  chain
 - ci: decrease the rate which we send transactions in benchmark CI
 - fix: update the hive genesis utils for missing Kakarot requirements.
 - ci: use madara binary for benchmark CI
