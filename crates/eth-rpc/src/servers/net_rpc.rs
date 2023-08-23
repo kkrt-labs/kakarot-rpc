@@ -1,9 +1,8 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use kakarot_rpc_core::client::constants::CHAIN_ID;
-use kakarot_rpc_core::client::errors::EthApiError;
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
-use reth_network_api::PeersInfo;
+
 use crate::api::net_api::NetApiServer;
 
 /// The RPC module for the implementing Net api
@@ -24,7 +23,6 @@ impl NetApiServer for NetRpc {
 
     fn peer_count(&self) -> Result<PeerCount> {
         Ok(PeerCount::Number(0))
-        
     }
 
     fn listening(&self) -> Result<bool> {
