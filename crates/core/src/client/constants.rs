@@ -89,7 +89,7 @@ lazy_static! {
     pub static ref MIX_HASH: H256 = H256::zero();
     pub static ref DIFFICULTY: U256 = U256::from(0);
     pub static ref TOTAL_DIFFICULTY: Option<U256> = None;
-    pub static ref PEER_COUNT: PeerCount  = PeerCount::Number(0);
+    pub static ref PEER_COUNT: PeerCount = PeerCount::Number(0);
 }
 
 lazy_static! {

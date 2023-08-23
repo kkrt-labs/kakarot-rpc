@@ -22,7 +22,7 @@ impl NetApiServer for NetRpc {
     }
 
     fn peer_count(&self) -> Result<PeerCount> {
-        Ok(*PEER_COUNT)
+        Ok(PEER_COUNT.clone())
     }
 
     fn listening(&self) -> Result<bool> {
