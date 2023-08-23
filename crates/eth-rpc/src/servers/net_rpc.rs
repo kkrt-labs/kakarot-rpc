@@ -1,5 +1,5 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use kakarot_rpc_core::client::constants::{CHAIN_ID, PEER_COUNT};
+use kakarot_rpc_core::client::constants::CHAIN_ID;
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
 
@@ -23,7 +23,7 @@ impl NetApiServer for NetRpc {
 
     fn peer_count(&self) -> Result<PeerCount> {
         // Kakarot RPC currently does not have peers connected to node
-        Ok(PEER_COUNT.clone())
+        Ok(PeerCount::Number(0))
     }
 
     fn listening(&self) -> Result<bool> {
