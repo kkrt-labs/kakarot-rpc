@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- feat: implemented Net Api methods
 - feat: add automatic deployment of eoa from RPC if an account doesn't exist on chain
 - ci: decrease the rate which we send transactions in benchmark CI
 - fix: update the hive genesis utils for missing Kakarot requirements.
@@ -27,4 +28,3 @@ and this project adheres to
 - ci: cross-compile binaries to improve build time
 - test: update integration tests to use prepopulated Katana dumped state
 - ci: add `CHANGELOG.md` and enforce it is edited for each PR on `main`
-- feat: implemented Net Api methods
