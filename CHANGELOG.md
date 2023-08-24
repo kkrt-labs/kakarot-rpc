@@ -10,6 +10,7 @@ and this project adheres to
 
 ### Added
 
+- feat: implemented Net Api methods
 - feat: add rpc docker image for hive testing
 - feat: add automatic deployment of eoa from RPC if an account doesn't exist on
   chain
