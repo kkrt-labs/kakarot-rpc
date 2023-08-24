@@ -22,3 +22,7 @@ lazy_static = { workspace = true }
 cargo-husky = { workspace = true }
 katana-core = { workspace = true }
 rstest = { workspace = true }
+
+[[bin]]
+name = "dump-genesis"
+path = "src/hive/bin/dump-genesis.rs"
