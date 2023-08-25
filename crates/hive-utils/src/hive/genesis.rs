@@ -120,6 +120,10 @@ pub async fn serialize_hive_to_madara_genesis_config(
         Felt(*kakarot_contracts.get("OpenzeppelinAccount").expect("Failed to get deployer account class hash")),
     ));
 
+    // Fund the deployer
+    let deployer_balance = genesis_fund_starknet_address(*DEPLOYER_ACCOUNT_ADDRESS, U256::MAX);
+    madara_loader.storage.extend(deployer_balance);
+
     // Set storage keys of Kakarot contract
     // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/constants.cairo
     let storage_keys = [
