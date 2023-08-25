@@ -5,11 +5,8 @@ export PROXY_ACCOUNT_CLASS_HASH=$(starkli class-hash ${MADARA_PATH}/cairo-contra
 
 # Start madara-bin in the background
 /madara-bin \
-    --rpc-external \
-    --rpc-methods=unsafe \
     --rpc-cors=all \
     --disable-madara-configs \
-    --tmp \
     --dev &
 
 # Loop until the curl command succeeds
