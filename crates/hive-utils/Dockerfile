@@ -32,7 +32,7 @@ COPY ./lib/kakarot/build ${KAKAROT_CONTRACTS_PATH}
 # Test running on this port https://github.com/ethereum/hive/blob/master/simulators/ethereum/rpc/helper.go#L50
 ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:8545"
 ENV STARKNET_NETWORK=http://0.0.0.0:9944
-ENV RUST_LOG=trace
+ENV RUST_LOG=info
 # https://github.com/kkrt-labs/kakarot-rpc/blob/main/crates/hive-utils/src/hive/genesis.rs#L59
 ENV KAKAROT_ADDRESS="0x9001"
 ENV DEPLOYER_ACCOUNT_ADDRESS="0x9003"
