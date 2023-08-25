@@ -268,7 +268,7 @@ mod tests {
         let genesis = HiveGenesisConfig::from_file("./src/test_data/hive_genesis.json").unwrap();
 
         // Verify the genesis file has the expected number of accounts
-        assert_eq!(genesis.alloc.len(), 7);
+        assert_eq!(genesis.alloc.len(), 8);
 
         // Verify balance of each account is not empty
         assert!(genesis.alloc.values().all(|account_info| account_info.balance >= U256::from(0)));
@@ -319,7 +319,7 @@ mod tests {
         let combined_genesis = fs::read_to_string("./src/test_data/combined_genesis.json").unwrap();
         let loader: GenesisLoader =
             serde_json::from_str(&combined_genesis).expect("Failed to read combined_genesis.json");
-        assert_eq!(9 + 3 + 7, loader.contracts.len()); // 9 original + 3 Kakarot contracts + 7 hive
+        assert_eq!(9 + 3 + 8, loader.contracts.len()); // 9 original + 3 Kakarot contracts + 8 hive
 
         // After
         fs::remove_file("./src/test_data/combined_genesis.json").unwrap();
