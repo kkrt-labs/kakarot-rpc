@@ -11,7 +11,7 @@ async fn main() {
     let madara_loader =
         serde_json::from_str::<GenesisLoader>(std::include_str!("../../test_data/madara_genesis.json")).unwrap();
     let combined_genesis = Path::new(".hive/genesis.json");
-    let compiled_path = Path::new("cairo-contracts/kakarot");
+    let compiled_path = Path::new("genesis-assets/kakarot");
 
     // Dump the genesis
     std::fs::create_dir_all(".hive/").expect("Failed to create Hive dump dir");

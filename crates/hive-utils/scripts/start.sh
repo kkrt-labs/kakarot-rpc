@@ -8,6 +8,7 @@ export PROXY_ACCOUNT_CLASS_HASH=$(starkli class-hash ${MADARA_PATH}/cairo-contra
     --rpc-external \
     --rpc-methods=unsafe \
     --rpc-cors=all \
+    --disable-madara-configs \
     --tmp \
     --dev &
 

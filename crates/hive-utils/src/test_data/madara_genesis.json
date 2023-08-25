@@ -3,20 +3,20 @@
     [
       "0x0279d77db761fba82e0054125a6fdb5f6baa6286fa3fb73450cc44d193c2d37f",
       {
-        "path": "cairo-contracts/NoValidateAccount.json",
+        "path": "genesis-assets/NoValidateAccount.json",
         "version": 0
       }
     ],
     [
       "0x06f0d6f6ae72e1a507ff4b65181291642889742dbf8f1a53e9ec1c595d01ba7d",
       {
-        "path": "cairo-contracts/ArgentAccount.json",
+        "path": "genesis-assets/ArgentAccount.json",
         "version": 0
       }
     ],
     [
       "0x0424b7f61e3c5dfd74400d96fdea7e1f0bf2757f31df04387eaa957f095dd7b9",
-      { "path": "cairo-contracts/Proxy.json", "version": 0 }
+      { "path": "genesis-assets/Proxy.json", "version": 0 }
     ],
     [
       "0x2c2b8f559e1221468140ad7b2352b1a5be32660d0bf1a3ae3a054a4ec5254e4",
@@ -38,30 +38,30 @@
     ],
     [
       "0x3131fa018d520a037686ce3efddeab8f28895662f019ca3ca18a626650f7d1e",
-      { "path": "cairo-contracts/Proxy.json", "version": 0 }
+      { "path": "genesis-assets/Proxy.json", "version": 0 }
     ],
     [
       "0x006280083f8c2a2db9f737320d5e3029b380e0e820fe24b8d312a6a34fdba0cd",
       {
-        "path": "cairo-contracts/OpenzeppelinAccount.json",
+        "path": "genesis-assets/OpenzeppelinAccount.json",
         "version": 0
       }
     ],
     [
       "0x35ccefcf9d5656da623468e27e682271cd327af196785df99e7fee1436b6276",
       {
-        "path": "cairo-contracts/NoValidateAccount.casm.json",
+        "path": "genesis-assets/NoValidateAccount.casm.json",
         "version": 1
       }
     ],
-    ["0x1000", { "path": "cairo-contracts/test.json", "version": 0 }],
-    ["0x10000", { "path": "cairo-contracts/ERC20.json", "version": 0 }],
-    ["0x20000", { "path": "cairo-contracts/ERC20.json", "version": 0 }],
-    ["0x80000", { "path": "cairo-contracts/ERC721.json", "version": 0 }],
+    ["0x1000", { "path": "genesis-assets/test.json", "version": 0 }],
+    ["0x10000", { "path": "genesis-assets/ERC20.json", "version": 0 }],
+    ["0x20000", { "path": "genesis-assets/ERC20.json", "version": 0 }],
+    ["0x80000", { "path": "genesis-assets/ERC721.json", "version": 0 }],
     [
       "0x90000",
       {
-        "path": "cairo-contracts/UniversalDeployer.json",
+        "path": "genesis-assets/UniversalDeployer.json",
         "version": 0
       }
     ]

@@ -1,6 +1,6 @@
 # TODO: Use official madara image when https://github.com/keep-starknet-strange/madara/issues/982 is closed
 # FROM ghcr.io/keep-starknet-strange/madara:v0.1.0.experimental.3 as madara
-FROM fredtupas/madara as madara
+FROM fredtupas/madara-fixed as madara
 
 FROM ghcr.io/kkrt-labs/kakarot-rpc/node:latest
 
@@ -16,14 +16,14 @@ COPY --from=madara /madara-bin /madara-bin
 
 # Madara Path
 ENV MADARA_PATH=/root/.madara
-ENV MADARA_CONFIG_PATH=${MADARA_PATH}/configs
-ENV KAKAROT_CONTRACTS_PATH=${MADARA_PATH}/cairo-contracts/kakarot
+ENV MADARA_GENESIS_ASSETS_PATH=${MADARA_PATH}/configs/genesis-assets
+ENV KAKAROT_CONTRACTS_PATH=${MADARA_GENESIS_ASSETS_PATH}/kakarot
 
 # Download Madara genesis config to source path
-RUN svn export https://github.com/keep-starknet-strange/madara/trunk/configs ${MADARA_CONFIG_PATH}
+RUN svn export https://github.com/d-roak/madara/branches/feat/configs-index/configs/genesis-assets ${MADARA_GENESIS_ASSETS_PATH}
 
 # Copy combined genesis.json to source path
-COPY .hive/genesis.json ${MADARA_CONFIG_PATH}/genesis-assets/genesis.json
+COPY .hive/genesis.json ${MADARA_GENESIS_ASSETS_PATH}/genesis.json
 
 # Copy compiled Kakarot contracts to destination path of compiled contracts
 COPY ./lib/kakarot/build ${KAKAROT_CONTRACTS_PATH}
