@@ -41,7 +41,7 @@ use self::constants::{
     ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN,
 };
 use self::errors::EthApiError;
-use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
+use self::helpers::{bytes_to_felt_vec, prepare_kakarot_send_transaction_calldata, DataDecodingError};
 use crate::contracts::account::{Account, KakarotAccount};
 use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
@@ -400,24 +400,24 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
         let transaction = TransactionSigned::decode(&mut data).map_err(DataDecodingError::TransactionDecodingError)?;
 
-        let evm_address = transaction.recover_signer().ok_or_else(|| {
+        let transaction_origin = transaction.recover_signer().ok_or_else(|| {
             EthApiError::Other(anyhow::anyhow!("Kakarot send_transaction: signature ecrecover failed"))
         })?;
 
         let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
 
-        let account_exists = self.check_eoa_account_exists(evm_address, &starknet_block_id).await?;
+        let account_exists = self.check_eoa_account_exists(transaction_origin, &starknet_block_id).await?;
         if !account_exists {
             let starknet_transaction_hash: FieldElement =
-                Felt252Wrapper::from(self.deploy_eoa(evm_address).await?).into();
+                Felt252Wrapper::from(self.deploy_eoa(transaction_origin).await?).into();
             let _ = self.wait_for_confirmation_on_l2(starknet_transaction_hash, 10).await?;
         }
 
-        let starknet_address = self.compute_starknet_address(evm_address, &starknet_block_id).await?;
+        let starknet_address = self.compute_starknet_address(transaction_origin, &starknet_block_id).await?;
 
         let nonce = FieldElement::from(transaction.nonce());
 
-        let calldata = raw_kakarot_calldata(self.kakarot_address(), bytes_to_felt_vec(&bytes));
+        let calldata = prepare_kakarot_send_transaction_calldata(self.kakarot_address(), bytes, transaction_origin);
 
         // Get estimated_fee from Starknet
         let max_fee = *MAX_FEE;
@@ -525,8 +525,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
         let mut data = vec![];
         tx.encode_with_signature(&Signature::default(), &mut data, false);
-        let data = data.into_iter().map(FieldElement::from).collect();
-        let calldata = raw_kakarot_calldata(self.kakarot_address(), data);
+        let calldata = prepare_kakarot_send_transaction_calldata(self.kakarot_address(), Bytes::from(data), from);
 
         let tx = BroadcastedInvokeTransactionV1 {
             max_fee: FieldElement::ZERO,
