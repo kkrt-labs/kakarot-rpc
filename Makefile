@@ -54,7 +54,7 @@ madara-rpc-down:
 	docker-compose down --remove-orphans
 
 dump-katana:
-	cargo run --bin dump-katana
+	cargo run --features dump --bin dump-katana
 
 dump-genesis: build-kakarot
 	cargo run --bin dump-genesis
