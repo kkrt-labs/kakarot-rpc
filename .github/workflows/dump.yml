@@ -1,0 +1,34 @@
+name: Dump the Katana state into the .katana folder
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  dump:
+    name: dump
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+      - name: Load cached dumped state
+        id: dump-katana
+        uses: actions/cache@v3
+        with:
+          path: .katana
+          key: ${{ runner.os }}-dump-katana
+      - name: Setup Rust Toolchain
+        if: steps.dump-katana.outputs.cache-hit != 'true'
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          override: true
+      - name: Cache Rust dependencies
+        if: steps.dump-katana.outputs.cache-hit != 'true'
+        uses: Swatinem/rust-cache@v2
+      - name: Generate the Katana dumped state
+        if: steps.dump-katana.outputs.cache-hit != 'true'
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: --bin dump-katana
