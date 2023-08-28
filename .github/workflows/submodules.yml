@@ -33,6 +33,11 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
+      # foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
       - name: pull kakarot submodule and setup
         if: steps.cached-submodules.outputs.cache-hit != 'true'
         run: make setup
