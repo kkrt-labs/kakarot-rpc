@@ -62,7 +62,7 @@ dump-genesis: build-kakarot
 test: dump-katana
 	cargo test --all
 
-test-coverage: dump-katana
+test-coverage: 
 	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:

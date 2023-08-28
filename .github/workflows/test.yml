@@ -70,13 +70,13 @@ jobs:
       # nextest setup
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: taiki-e/install-action@nextest
-      # Load cached submodules
-      - name: Load cached submodules
-        id: cached-submodules
-        uses: actions/cache@v3
+      # Load dump
+      - name: Load dump
+        id: cached-dump
+        uses: actions/cache/restore@v3
         with:
-          path: ./lib/
-          key: ${{ runner.os }}-submodules
+          path: ./.katana/
+          key: ${{ runner.os }}-dump-katana
       - name: Generate code coverage
         run: ./scripts/make_with_env.sh test-coverage
       - name: Upload coverage to Codecov
