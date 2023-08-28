@@ -4,19 +4,13 @@ name: Workflow - Pull Request
 on: [pull_request]
 
 jobs:
-  changelog:
-    name: Enforce CHANGELOG
-    uses: ./.github/workflows/changelog.yml
-
   dump:
     name: Dump katana state
     uses: ./.github/workflows/dump.yml
-    needs: changelog
 
   spell_check:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
-    needs: changelog
 
   tests:
     name: Rust tests
