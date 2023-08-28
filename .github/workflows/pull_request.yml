@@ -11,6 +11,7 @@ jobs:
   dump:
     name: Dump katana state
     uses: ./.github/workflows/dump.yml
+    needs: submodules
 
   spell_check:
     name: Spell check
