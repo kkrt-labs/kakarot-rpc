@@ -42,9 +42,9 @@ services:
       # First line overrides an existing .env, if any.
       # This is to make sure that it is clean even though docker volume was not cleaned.
       - |
-        echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /deployments/custom_rpc/deployments.json)" > /deployments/.env;
-        echo "DEPLOYER_ACCOUNT_ADDRESS=$(jq -r '.deployer_account.address' /deployments/custom_rpc/deployments.json)" >> /deployments/.env;
-        echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /deployments/custom_rpc/declarations.json)" >> /deployments/.env
+        echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /deployments/custom-rpc/deployments.json)" > /deployments/.env;
+        echo "DEPLOYER_ACCOUNT_ADDRESS=$(jq -r '.deployer_account.address' /deployments/custom-rpc/deployments.json)" >> /deployments/.env;
+        echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
     volumes:
       - deployments:/deployments
     depends_on:
