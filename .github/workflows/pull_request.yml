@@ -1,0 +1,33 @@
+---
+name: Workflow - Pull Request
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+
+jobs:
+  changelog:
+    name: Enforce CHANGELOG
+    uses: ./.github/workflows/changelog.yml
+
+  dump:
+    name: Dump katana state
+    uses: ./.github/workflows/dump.yml
+    needs: changelog
+
+  spell_check:
+    name: Spell check
+    uses: ./.github/workflows/spell_check.yml
+    needs: changelog
+
+  tests:
+    name: Rust tests
+    uses: ./.github/workflows/test.yml
+    needs: dump
+
+  # TODO remove
+  artifacts:
+    name: load artifacts
+    uses: ./.github/workflows/artifacts.yml
+    needs: dump

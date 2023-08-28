@@ -1,15 +1,22 @@
 name: Load artifacts
 
-on: [pull_request]
+on:
+  workflow_dispatch:
+  workflow_call:
 
 jobs:
   dump:
-    name: Dump Katana state
-    uses: ./.github/workflows/dump.yml
-  save-dump:
     name: Save dump as artifact
-    uses: actions/upload-artifact@v3
-      with:
-        path: ./.katana/
-        name: dump-katana
-    
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Load cached dumped state
+        id: dump-katana
+        uses: actions/cache@v3
+        with:
+          path: .katana
+          key: ${{ runner.os }}-dump-katana
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./.katana/
+          name: katana

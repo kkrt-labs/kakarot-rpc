@@ -1,0 +1,38 @@
+---
+name: Workflow - Push
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+jobs:
+  changelog:
+    name: Enforce CHANGELOG
+    uses: ./.github/workflows/changelog.yml
+
+  dump:
+    name: Dump katana state
+    uses: ./.github/workflows/dump.yml
+    needs: changelog
+
+  artifacts:
+    name: load artifacts
+    uses: ./.github/workflows/artifacts.yml
+    needs: dump
+
+  spell_check:
+    name: Spell check
+    uses: ./.github/workflows/spell_check.yml
+    needs: changelog
+
+  benchmark:
+    name: Erc20 benchmark
+    uses: ./.github/workflows/benchmark.yml
+    needs: changelog
+
+  build: 
+    name: Build binaries
+    uses: ./.github/workflows/kakarot_rpc.yml 
+    needs: changelog
