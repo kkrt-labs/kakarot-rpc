@@ -5,7 +5,7 @@ on: [pull_request]
 
 jobs:
   submodules:
-    name: Set up submodules
+    name: Set up submodule
     uses: ./.github/workflows/submodules.yml
 
   dump:
