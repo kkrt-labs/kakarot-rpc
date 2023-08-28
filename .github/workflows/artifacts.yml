@@ -5,14 +5,11 @@ on: [pull_request]
 jobs:
   dump:
     name: Dump Katana state
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v3
-      - name: Dump the Katana state
-        uses: ./.github/workflows/dump.yml
-      - name: Store dump as artifact
-        uses: actions/upload-artifact@v3
-        with:
-          path: ./.katana/
-          name: dump-katana
+    uses: ./.github/workflows/dump.yml
+  save-dump:
+    name: Save dump as artifact
+    uses: actions/upload-artifact@v3
+      with:
+        path: ./.katana/
+        name: dump-katana
+    
