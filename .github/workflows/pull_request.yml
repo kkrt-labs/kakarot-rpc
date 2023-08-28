@@ -19,6 +19,6 @@ jobs:
 
   # TODO remove
   artifacts:
-    name: load artifacts
+    name: Save artifacts
     uses: ./.github/workflows/artifacts.yml
     needs: dump
