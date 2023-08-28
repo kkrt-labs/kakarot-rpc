@@ -417,7 +417,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
         let nonce = FieldElement::from(transaction.nonce());
 
-        let calldata = prepare_kakarot_send_transaction_calldata(self.kakarot_address(), bytes, transaction_origin);
+        let calldata = prepare_kakarot_send_transaction_calldata(self.kakarot_address(), bytes);
 
         // Get estimated_fee from Starknet
         let max_fee = *MAX_FEE;
@@ -525,7 +525,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
         let mut data = vec![];
         tx.encode_with_signature(&Signature::default(), &mut data, false);
-        let calldata = prepare_kakarot_send_transaction_calldata(self.kakarot_address(), Bytes::from(data), from);
+        let calldata = prepare_kakarot_send_transaction_calldata(self.kakarot_address(), Bytes::from(data));
 
         let tx = BroadcastedInvokeTransactionV1 {
             max_fee: FieldElement::ZERO,

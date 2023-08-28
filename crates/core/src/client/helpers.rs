@@ -1,5 +1,5 @@
 use eyre::Result;
-use reth_primitives::{Address, Bloom, Bytes, H160, U128, U256, U64};
+use reth_primitives::{Bloom, Bytes, H160, U128, U256, U64};
 use reth_rlp::DecodeError;
 use reth_rpc_types::TransactionReceipt;
 use starknet::core::types::{
@@ -10,7 +10,6 @@ use thiserror::Error;
 use super::constants::{CUMULATIVE_GAS_USED, EFFECTIVE_GAS_PRICE, GAS_USED, TRANSACTION_TYPE};
 use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
 use crate::client::errors::EthApiError;
-use crate::models::felt::Felt252Wrapper;
 use crate::models::ConversionError;
 
 #[derive(Debug, Error)]
@@ -118,14 +117,8 @@ pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
 pub fn prepare_kakarot_send_transaction_calldata(
     kakarot_address: FieldElement,
     eth_calldata: Bytes,
-    transaction_origin: Address,
 ) -> Vec<FieldElement> {
     let mut calldata = bytes_to_felt_vec(&eth_calldata);
-    // Reference: https://github.com/kkrt-labs/kakarot/blob/47cdfdfff90b86cc191060e7d01945f3efeee0a3/src/kakarot/kakarot.cairo#L157
-    // Function signature of Kakarot eth_send_transaction includes transaction origin
-    // Eth wallets' sendRawTransaction does not include explicit origin, as it is recovered from
-    // signature.
-    calldata.insert(0, Felt252Wrapper::from(transaction_origin).into());
 
     let mut execute_calldata: Vec<FieldElement> = vec![
         FieldElement::ONE,                  // call array length
