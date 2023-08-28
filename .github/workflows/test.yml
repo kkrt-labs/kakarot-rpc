@@ -77,6 +77,13 @@ jobs:
         with:
           path: ./.katana/
           key: ${{ runner.os }}-dump-katana
+      # Load lib submodules
+      - name: Load submodules
+        id: cached-submodules
+        uses: actions/cache/restore@v3
+        with:
+          path: ./lib/
+          key: ${{ runner.os }}-submodules
       - name: Generate code coverage
         run: ./scripts/make_with_env.sh test-coverage
       - name: Upload coverage to Codecov
