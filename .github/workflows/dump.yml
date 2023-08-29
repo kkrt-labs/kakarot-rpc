@@ -1,0 +1,31 @@
+name: Dump the Katana state into the .katana folder
+
+on:
+  workflow_call:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+      - name: Load cached submodules
+        id: cached-submodules
+        uses: actions/cache@v3
+        with:
+          path: ./lib/
+          key: ${{ runner.os }}-submodules
+      - name: Setup Rust Toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          override: true
+      - name: Retrieve cached dependencies
+        uses: Swatinem/rust-cache@v2
+      - name: Generate the Katana dumped state
+        run: ./scripts/make_with_env.sh dump-katana
+      - name: Save dump as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dump-katana
+          path: ./.katana/

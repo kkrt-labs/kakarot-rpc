@@ -11,6 +11,7 @@ async-trait = { workspace = true }
 dojo-test-utils = { workspace = true }
 env_logger = "0.10.0"
 eyre = { workspace = true }
+git2 = { workspace = true, optional = true }
 hex = "0.4"
 jsonrpsee = { workspace = true }
 katana-core = { workspace = true }
@@ -54,6 +55,10 @@ tracing = "0.1.37"
 ctor = "0.2.4"
 cargo-husky = { workspace = true }
 
+[features]
+dump = ["git2"]
+
 [[bin]]
 name = "dump-katana"
 path = "src/test_utils/bin/dump-katana.rs"
+required-features = ["dump"]

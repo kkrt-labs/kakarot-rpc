@@ -1,106 +1,106 @@
 ---
-    name: Task - Benchmark
-    
-    on:
-      push:
-        branches: [main]
+name: Task - Benchmark
 
-    permissions:
-      deployments: write
-      contents: write
-      pull-requests: write
-    
-    jobs:
-      benchmark:
-        runs-on: ubuntu-latest-16-cores
-        timeout-minutes: 120
-        steps:
-          - uses: actions/checkout@v3
-            with:
-              clean: false
-          
-          # install dependencies
-          - name: Install submodules and dependencies
-            run: |
-              git submodule update --init --recursive
-              sudo apt update
-              sudo apt install -y protobuf-compiler clang jq wget
+on:
+  workflow_call:
 
-          - uses: actions/cache@v3
-            id: cache
-            with:
-              path: |
-                ~/.cargo/bin/
-                ~/.cargo/registry/index/
-                ~/.cargo/registry/cache/
-                ~/.cargo/git/db/
-              key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}}
-          
-          # build rpc and madara  
-          - name: Setup Rust
-            uses: actions-rs/toolchain@v1
-            with:
-                toolchain: stable
-          - name: Build RPC
-            run: |
-              cargo build --release
-          - name: Download Madara
-            if: steps.cache.outputs.cache-hit  != 'true'
-            run: |
-              cd ./lib/madara
-              mkdir -p target/release
-              cd target/release
-              wget https://github.com/keep-starknet-strange/madara/releases/download/v0.1.0.experimental.3/x86_64-unknown-linux-gnu-madara
-              chmod +x x86_64-unknown-linux-gnu-madara && mv x86_64-unknown-linux-gnu-madara madara
-          
-          # Python Setup and dependencies installation
-          - uses: actions/setup-python@v4
-            with:
-              python-version: "3.9.13"
-          - name: Load cached Poetry installation
-            id: cached-poetry
-            uses: actions/cache@v3
-            with:
-              path: ~/.local
-              key: poetry-${{ runner.os }}
-          - name: Install Poetry
-            if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-            uses: snok/install-poetry@v1
-            with:
-              virtualenvs-create: true
-              virtualenvs-in-project: true
-              installer-parallel: true
-          - name: install kakarot python dependencies
-            run: |-
-              cd lib/kakarot
-              poetry install 
-          - name: Load cached venv
-            id: cached-poetry-dependencies
-            uses: actions/cache@v3
-            with:
-              path: .venv
-              key: venv-${{ runner.os }}-${{ hashFiles('./lib/kakarot/poetry.lock') }}
+permissions:
+  deployments: write
+  contents: write
+  pull-requests: write
 
-          # benchmark rpc
-          - name: install benchmark projects
-            run: |-
-              cd ./benchmarking
-              npm i
-          - name: Run benchmark
-            run: |
-              cd benchmarking
-              ./scripts/benchmark.sh
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          clean: false
 
-          # compare benchmarks and publish
-          - name: Compare result
-            uses: benchmark-action/github-action-benchmark@v1
-            with:
-              tool: "customBiggerIsBetter"
-              output-file-path: ./benchmarking/reports/metrics.json
-              alert-threshold: "120%"
-              github-token: ${{ secrets.GITHUB_TOKEN }}
-              fail-on-alert: true
-              summary-always: ${{ github.ref == 'refs/heads/main' }}
-              comment-always: false
-              comment-on-alert: false
-              auto-push: ${{ github.ref == 'refs/heads/main' }}
+      # install dependencies
+      - name: Install submodules and dependencies
+        run: |
+          git submodule update --init --recursive
+          sudo apt update
+          sudo apt install -y protobuf-compiler clang jq wget
+
+      - uses: actions/cache@v3
+        id: cache
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}}
+
+      # build rpc and madara
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build RPC
+        run: |
+          cargo build --release
+      - name: Download Madara
+        if: steps.cache.outputs.cache-hit  != 'true'
+        run: |
+          cd ./lib/madara
+          mkdir -p target/release
+          cd target/release
+          wget https://github.com/keep-starknet-strange/madara/releases/download/v0.1.0.experimental.3/x86_64-unknown-linux-gnu-madara
+          chmod +x x86_64-unknown-linux-gnu-madara && mv x86_64-unknown-linux-gnu-madara madara
+
+      # Python Setup and dependencies installation
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9.13'
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+      - name: Install Poetry
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: install kakarot python dependencies
+        run: |-
+          cd lib/kakarot
+          poetry install
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key:
+            venv-${{ runner.os }}-${{ hashFiles('./lib/kakarot/poetry.lock') }}
+
+      # benchmark rpc
+      - name: install benchmark projects
+        run: |-
+          cd ./benchmarking
+          npm i
+      - name: Run benchmark
+        run: |
+          cd benchmarking
+          ./scripts/benchmark.sh
+
+      # compare benchmarks and publish
+      - name: Compare result
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          tool: 'customBiggerIsBetter'
+          output-file-path: ./benchmarking/reports/metrics.json
+          alert-threshold: '120%'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          fail-on-alert: true
+          summary-always: ${{ github.ref == 'refs/heads/main' }}
+          comment-always: false
+          comment-on-alert: false
+          auto-push: ${{ github.ref == 'refs/heads/main' }}

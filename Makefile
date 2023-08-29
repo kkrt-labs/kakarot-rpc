@@ -54,7 +54,7 @@ madara-rpc-down:
 	docker-compose down --remove-orphans
 
 dump-katana:
-	cargo run --bin dump-katana
+	cargo run --features dump --bin dump-katana
 
 dump-genesis: build-kakarot
 	cargo run --bin dump-genesis
@@ -62,7 +62,7 @@ dump-genesis: build-kakarot
 test: dump-katana
 	cargo test --all
 
-test-coverage: dump-katana
+test-coverage: 
 	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:
