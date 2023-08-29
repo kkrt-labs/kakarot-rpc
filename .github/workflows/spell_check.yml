@@ -1,7 +1,6 @@
 name: Spell Check
 
 on:
-  workflow_dispatch:
   workflow_call:
 
 jobs:

@@ -1,7 +1,6 @@
 name: Submodules caching
 
 on:
-  workflow_dispatch:
   workflow_call:
 
 jobs:
@@ -27,7 +26,6 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
-      # foundry
       - name: install foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:

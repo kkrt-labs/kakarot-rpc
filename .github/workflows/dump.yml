@@ -1,7 +1,6 @@
 name: Dump the Katana state into the .katana folder
 
 on:
-  workflow_dispatch:
   workflow_call:
 
 jobs:

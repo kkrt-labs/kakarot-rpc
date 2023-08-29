@@ -1,7 +1,6 @@
 name: test
 
 on:
-  workflow_dispatch:
   workflow_call:
 
 jobs:
@@ -9,7 +8,6 @@ jobs:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 30
     steps:
-      # rust setup
       - uses: actions/checkout@v3
       - name: Setup rust env
         uses: actions-rs/toolchain@v1
