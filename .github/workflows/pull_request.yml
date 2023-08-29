@@ -17,6 +17,10 @@ jobs:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
 
+  linters:
+    name: Linters
+    uses: ./.github/workflows/linters.yml
+
   tests:
     name: Rust tests
     uses: ./.github/workflows/test.yml
