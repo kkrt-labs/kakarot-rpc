@@ -1,13 +1,22 @@
 use std::collections::HashMap;
 
 use ethers::abi::Token;
+use git2::Repository;
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::test_utils::constants::STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY;
 use kakarot_rpc_core::test_utils::deploy_helpers::{
     ContractDeploymentArgs, DeployerAccount, KakarotTestEnvironmentContext, TestContext,
 };
 use katana_core::db::Db;
+use serde::Serialize;
 use starknet::accounts::Account;
+
+#[derive(Debug, Serialize)]
+struct Submodule {
+    name: String,
+    url: String,
+    hash: String,
+}
 
 #[tokio::main]
 async fn main() {
@@ -61,4 +70,20 @@ async fn main() {
     })
     .await
     .expect("Failed to dump state");
+
+    let repo = Repository::open(".").unwrap();
+    let submodules: Vec<Submodule> = repo
+        .submodules()
+        .unwrap()
+        .iter()
+        .map(|submodule| Submodule {
+            name: submodule.name().unwrap().to_string(),
+            url: submodule.url().unwrap().to_string(),
+            hash: submodule.head_id().unwrap().to_string(),
+        })
+        .filter(|submodule| submodule.name != "katana")
+        .collect();
+    let submodules = serde_json::to_string(&submodules[0]).expect("Failed to serialize submodules");
+    std::fs::write(".katana/submodules.json", submodules)
+        .expect("Failed to write submodules to .katana/submodules.json");
 }

@@ -1,0 +1,41 @@
+name: Submodules caching
+
+on:
+  workflow_call:
+
+jobs:
+  submodules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+      - name: Install Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      - name: pull kakarot submodule and setup
+        if: steps.cached-submodules.outputs.cache-hit != 'true'
+        run: make setup
+      - name: Save submodules
+        id: cached-submodules
+        uses: actions/cache/save@v3
+        with:
+          path: ./lib/
+          key: ${{ runner.os }}-submodules

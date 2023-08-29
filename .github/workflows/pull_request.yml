@@ -1,0 +1,27 @@
+---
+name: Workflow - Pull Request
+
+on: [pull_request]
+
+jobs:
+  submodules:
+    name: Set up submodules
+    uses: ./.github/workflows/submodules.yml
+
+  dump:
+    name: Dump katana state
+    uses: ./.github/workflows/dump.yml
+    needs: submodules
+
+  spell_check:
+    name: Spell check
+    uses: ./.github/workflows/spell_check.yml
+
+  linters:
+    name: Linters
+    uses: ./.github/workflows/linters.yml
+
+  tests:
+    name: Rust tests
+    uses: ./.github/workflows/test.yml
+    needs: [dump, submodules]
