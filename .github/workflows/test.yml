@@ -72,11 +72,9 @@ jobs:
       - uses: taiki-e/install-action@nextest
       # Load dump
       - name: Load dump
-        id: cached-dump
-        uses: actions/cache/restore@v3
+        uses: actions/download-artifact@v3
         with:
-          path: ./.katana/
-          key: ${{ runner.os }}-dump-katana
+          name: dump-katana
       # Load lib submodules
       - name: Load submodules
         id: cached-submodules

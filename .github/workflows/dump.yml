@@ -25,9 +25,8 @@ jobs:
         uses: Swatinem/rust-cache@v2
       - name: Generate the Katana dumped state
         run: ./scripts/make_with_env.sh dump-katana
-      - name: Save dump
-        id: cached-dump
-        uses: actions/cache/save@v3
+      - name: Save dump as artifact
+        uses: actions/upload-artifact@v3
         with:
+          name: dump-katana
           path: ./.katana/
-          key: ${{ runner.os }}-dump-katana
