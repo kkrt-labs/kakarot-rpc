@@ -24,10 +24,4 @@ jobs:
   tests:
     name: Rust tests
     uses: ./.github/workflows/test.yml
-    needs: dump
-
-  # TODO remove
-  artifacts:
-    name: Save artifacts
-    uses: ./.github/workflows/artifacts.yml
-    needs: dump
+    needs: [dump, submodules]

@@ -2,7 +2,6 @@
 name: Workflow - Push
 
 on:
-  workflow_dispatch:
   push:
     branches: [main]
 
@@ -15,11 +14,6 @@ jobs:
     name: Dump katana state
     uses: ./.github/workflows/dump.yml
     needs: submodules
-
-  artifacts:
-    name: load artifacts
-    uses: ./.github/workflows/artifacts.yml
-    needs: dump
 
   spell_check:
     name: Spell check
