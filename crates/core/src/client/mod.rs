@@ -167,15 +167,23 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
     /// Returns the result of executing a call on a ethereum address for a given calldata and block
     /// without creating a transaction.
-    async fn call(&self, to: Address, calldata: Bytes, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>> {
+    async fn call(
+        &self,
+        origin: Address,
+        to: Address,
+        calldata: Bytes,
+        block_id: BlockId,
+    ) -> Result<Bytes, EthApiError<P::Error>> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
 
         let to: Felt252Wrapper = to.into();
         let to = to.into();
 
+        let origin: FieldElement = Felt252Wrapper::from(origin).into();
+
         let calldata = bytes_to_felt_vec(&calldata);
 
-        let result = self.kakarot_contract.eth_call(&to, calldata, &starknet_block_id).await?;
+        let result = self.kakarot_contract.eth_call(&origin, &to, calldata, &starknet_block_id).await?;
 
         Ok(result)
     }

@@ -5,7 +5,7 @@ mod tests {
     use ctor::ctor;
     use ethers::signers::{LocalWallet, Signer};
     use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
-    use kakarot_rpc_core::client::constants::DEPLOY_FEE;
+    use kakarot_rpc_core::client::constants::{DEPLOY_FEE, TX_ORIGIN_ZERO};
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
@@ -73,6 +73,7 @@ mod tests {
         let count_selector = counter.abi.function("count").unwrap().short_signature();
         let counter_bytes = client
             .call(
+                *TX_ORIGIN_ZERO,
                 counter_eth_address,
                 count_selector.into(),
                 BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),

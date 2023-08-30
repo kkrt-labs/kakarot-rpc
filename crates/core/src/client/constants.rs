@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use reth_primitives::{H256, H64, U128, U256, U8};
+use reth_primitives::{Address, H256, H64, U128, U256, U8};
 use starknet::accounts::Call as StarknetCall;
 use starknet::core::types::FieldElement;
 use starknet::macros::selector;
@@ -88,6 +88,7 @@ lazy_static! {
     pub static ref MIX_HASH: H256 = H256::zero();
     pub static ref DIFFICULTY: U256 = U256::from(0);
     pub static ref TOTAL_DIFFICULTY: Option<U256> = None;
+    pub static ref TX_ORIGIN_ZERO: Address = Address::zero();
 }
 
 lazy_static! {

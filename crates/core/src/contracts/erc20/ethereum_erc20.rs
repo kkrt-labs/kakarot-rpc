@@ -40,7 +40,9 @@ impl<'a, P: Provider + Send + Sync + 'static> EthereumErc20<'a, P> {
         let block_id = EthBlockId::new(block_id);
         let block_id: StarknetBlockId = block_id.try_into()?;
 
-        let result = self.kakarot_contract.eth_call(&self.address, calldata, &block_id).await?;
+        let origin = FieldElement::ZERO;
+
+        let result = self.kakarot_contract.eth_call(&origin, &self.address, calldata, &block_id).await?;
         let balance: Vec<u8> = result.0.into();
 
         Ok(U256::try_from_be_slice(balance.as_slice()).ok_or(DataDecodingError::InvalidReturnArrayLength {

@@ -47,12 +47,13 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
 
     pub async fn eth_call(
         &self,
+        origin: &FieldElement,
         to: &FieldElement,
         mut eth_calldata: Vec<FieldElement>,
         block_id: &BlockId,
     ) -> Result<Bytes, EthApiError<P::Error>> {
         let mut calldata =
-            vec![*to, FieldElement::MAX, FieldElement::ZERO, FieldElement::ZERO, eth_calldata.len().into()];
+            vec![*origin, *to, FieldElement::MAX, FieldElement::ZERO, FieldElement::ZERO, eth_calldata.len().into()];
 
         calldata.append(&mut eth_calldata);
 
