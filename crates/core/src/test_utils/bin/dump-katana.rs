@@ -60,7 +60,7 @@ async fn main() {
         contracts.insert("Kakarot", serde_json::to_value(test_context.kakarot()).unwrap());
         contracts.insert("ERC20", serde_json::to_value(test_context.evm_contract("ERC20")).unwrap());
         contracts.insert("Counter", serde_json::to_value(test_context.evm_contract("Counter")).unwrap());
-        contracts.insert(" PlainOpcodes", serde_json::to_value(test_context.evm_contract("PlainOpcodes")).unwrap());
+        contracts.insert("PlainOpcodes", serde_json::to_value(test_context.evm_contract("PlainOpcodes")).unwrap());
         contracts.insert("DeployerAccount", serde_json::to_value(deployer_account).unwrap());
 
         // Dump the contracts information
@@ -82,7 +82,7 @@ async fn main() {
                 .url()
                 .expect("Failed to get Kakarot origin remote url")
                 .to_string(),
-            hash: reference.target().unwrap().to_string(),
+            hash: reference.target().expect("Failed to get commit hash").to_string(),
         })
         .expect("Failed to get Kakarot submodule head");
     let submodules = serde_json::to_string(&submodule).expect("Failed to serialize submodule");
