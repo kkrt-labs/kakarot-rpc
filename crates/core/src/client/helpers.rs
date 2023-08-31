@@ -20,6 +20,8 @@ pub enum DataDecodingError {
     TransactionDecodingError(#[from] DecodeError),
     #[error("{entrypoint} returned invalid array length, expected {expected}, got {actual}")]
     InvalidReturnArrayLength { entrypoint: String, expected: usize, actual: usize },
+    #[error("failed to convert bytes to string {0}")]
+    InvalidBytesString(String),
 }
 
 #[derive(Debug)]

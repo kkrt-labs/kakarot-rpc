@@ -30,6 +30,12 @@ pub struct EthereumErc20<'a, P> {
     kakarot_contract: &'a KakarotContract<P>,
 }
 
+impl<'a, P> Clone for EthereumErc20<'a, P> {
+    fn clone(&self) -> Self {
+        EthereumErc20 { address: self.address.clone(), kakarot_contract: self.kakarot_contract.clone() }
+    }
+}
+
 impl<'a, P: Provider + Send + Sync> EthereumErc20<'a, P> {
     pub fn new(address: FieldElement, kakarot_contract: &'a KakarotContract<P>) -> Self {
         Self { address, kakarot_contract }
@@ -87,11 +93,7 @@ impl<'a, P: Provider + Send + Sync> EthereumErc20<'a, P> {
         let result = self.kakarot_contract.eth_call(&self.address, calldata, &block_id).await?;
         let name: Vec<u8> = result.0.into();
 
-        Ok(String::from_utf8(name.clone()).map_err(|_| DataDecodingError::InvalidReturnArrayLength {
-            entrypoint: "name".into(),
-            expected: 32,
-            actual: name.len(),
-        })?)
+        Ok(String::from_utf8(name.clone()).map_err(|err| DataDecodingError::InvalidBytesString(err.to_string()))?)
     }
 
     pub async fn symbol(self, block_id: BlockId) -> Result<String, EthApiError<P::Error>> {
@@ -105,11 +107,7 @@ impl<'a, P: Provider + Send + Sync> EthereumErc20<'a, P> {
         let result = self.kakarot_contract.eth_call(&self.address, calldata, &block_id).await?;
         let symbol: Vec<u8> = result.0.into();
 
-        Ok(String::from_utf8(symbol.clone()).map_err(|_| DataDecodingError::InvalidReturnArrayLength {
-            entrypoint: "symbol".into(),
-            expected: 32,
-            actual: symbol.len(),
-        })?)
+        Ok(String::from_utf8(symbol.clone()).map_err(|err| DataDecodingError::InvalidBytesString(err.to_string()))?)
     }
 
     pub async fn decimals(self, block_id: BlockId) -> Result<U8, EthApiError<P::Error>> {

@@ -56,21 +56,6 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
         block_id: BlockId,
     ) -> Result<U256, EthApiError<P::Error>>;
 
-    async fn token_allowance(
-        &self,
-        contract_address: Address,
-        account_address: Address,
-        spender_address: Address,
-    ) -> Result<TokenAllowance, EthApiError<P::Error>>;
-
-    async fn token_balances(
-        &self,
-        address: Address,
-        contract_addresses: Vec<Address>,
-    ) -> Result<TokenBalances, EthApiError<P::Error>>;
-
-    async fn token_metadata(&self, contract_address: Address) -> Result<TokenMetadata, EthApiError<P::Error>>;
-
     async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<P::Error>>;
 
     async fn get_transaction_count_by_block(&self, block_id: BlockId) -> Result<U64, EthApiError<P::Error>>;
@@ -89,6 +74,21 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
     async fn estimate_gas(&self, request: CallRequest, block_id: BlockId) -> Result<U256, EthApiError<P::Error>>;
 
     async fn gas_price(&self) -> Result<U256, EthApiError<P::Error>>;
+
+    async fn token_allowance(
+        &self,
+        contract_address: Address,
+        account_address: Address,
+        spender_address: Address,
+    ) -> Result<TokenAllowance, EthApiError<P::Error>>;
+
+    async fn token_balances(
+        &self,
+        address: Address,
+        contract_addresses: Vec<Address>,
+    ) -> Result<TokenBalances, EthApiError<P::Error>>;
+
+    async fn token_metadata(&self, contract_address: Address) -> Result<TokenMetadata, EthApiError<P::Error>>;
 }
 
 #[async_trait]

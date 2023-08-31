@@ -44,7 +44,7 @@ use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot::KakarotContract;
-use crate::models::allowance::{FutureTokenAllowance, TokenAllowance};
+use crate::models::allowance::TokenAllowance;
 use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::convertible::{
@@ -370,59 +370,6 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         Ok(storage_value)
     }
 
-    /// Returns the amount which the sender is allowed to withdraw from the owner.
-    async fn token_allowance(
-        &self,
-        contract_address: Address,
-        account_address: Address,
-        spender_address: Address,
-    ) -> Result<TokenAllowance, EthApiError<P::Error>> {
-        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
-
-        let contract_addr: Felt252Wrapper = contract_address.into();
-        let contract = EthereumErc20::new(contract_addr.into(), &self.kakarot_contract);
-
-        let handle = FutureTokenAllowance::<P, _>::new(contract.allowance(
-            account_address.into(),
-            spender_address.into(),
-            block_id,
-        ));
-
-        let allowance = handle.await;
-
-        Ok(allowance)
-    }
-
-    /// Returns token balances for a specific address given a list of contracts addresses.
-    async fn token_balances(
-        &self,
-        address: Address,
-        token_addresses: Vec<Address>,
-    ) -> Result<TokenBalances, EthApiError<P::Error>> {
-        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
-
-        let handles = token_addresses.into_iter().map(|token_address| {
-            let token_addr: Felt252Wrapper = token_address.into();
-            let token = EthereumErc20::new(token_addr.into(), &self.kakarot_contract);
-
-            FutureTokenBalance::<P, _>::new(token.balance_of(address.into(), block_id), token_address)
-        });
-
-        let token_balances = join_all(handles).await;
-
-        Ok(TokenBalances { address, token_balances })
-    }
-
-    /// Returns metadata (name, symbol, decimals) for a given token contract address.
-    async fn token_metadata(&self, contract_address: Address) -> Result<TokenMetadata, EthApiError<P::Error>> {
-        let _block_id = BlockId::Number(BlockNumberOrTag::Latest);
-
-        let contract_addr: Felt252Wrapper = contract_address.into();
-        let _contract = EthereumErc20::new(contract_addr.into(), &self.kakarot_contract);
-
-        todo!()
-    }
-
     /// Sends raw Ethereum transaction bytes to Kakarot
     async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<P::Error>> {
         let mut data = bytes.as_ref();
@@ -591,6 +538,69 @@ impl<P: Provider + Send + Sync> KakarotEthApi<P> for KakarotClient<P> {
         let fee_estimate = self.simulate_transaction(tx, block_number, true).await?.fee_estimation;
 
         Ok(U256::from(fee_estimate.gas_price))
+    }
+
+    /// Returns the amount which the sender is allowed to withdraw from the owner.
+    async fn token_allowance(
+        &self,
+        contract_address: Address,
+        account_address: Address,
+        spender_address: Address,
+    ) -> Result<TokenAllowance, EthApiError<P::Error>> {
+        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
+
+        let contract_addr: Felt252Wrapper = contract_address.into();
+        let contract = EthereumErc20::new(contract_addr.into(), &self.kakarot_contract);
+
+        let token_allowance = contract.allowance(account_address.into(), spender_address.into(), block_id).await;
+
+        let token_allowance = match token_allowance {
+            Ok(a) => TokenAllowance { result: Some(a), error: None },
+            Err(err) => TokenAllowance { result: None, error: Some(err.to_string()) },
+        };
+
+        Ok(token_allowance)
+    }
+
+    /// Returns token balances for a specific address given a list of contracts addresses.
+    async fn token_balances(
+        &self,
+        address: Address,
+        token_addresses: Vec<Address>,
+    ) -> Result<TokenBalances, EthApiError<P::Error>> {
+        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
+
+        let handles = token_addresses.into_iter().map(|token_address| {
+            let token_addr: Felt252Wrapper = token_address.into();
+            let token = EthereumErc20::new(token_addr.into(), &self.kakarot_contract);
+
+            FutureTokenBalance::<P, _>::new(token.balance_of(address.into(), block_id), token_address)
+        });
+
+        let token_balances = join_all(handles).await;
+
+        Ok(TokenBalances { address, token_balances })
+    }
+
+    /// Returns metadata (name, symbol, decimals) for a given token contract address.
+    async fn token_metadata(&self, contract_address: Address) -> Result<TokenMetadata, EthApiError<P::Error>> {
+        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
+
+        let contract_addr: Felt252Wrapper = contract_address.into();
+        let contract = EthereumErc20::new(contract_addr.into(), &self.kakarot_contract);
+
+        let name = contract.clone().name(block_id).await;
+        let symbol = contract.clone().symbol(block_id).await;
+        let decimals = contract.decimals(block_id).await;
+
+        let token_metadata = match (name, symbol, decimals) {
+            (Ok(n), Ok(s), Ok(d)) => TokenMetadata { name: Some(n), symbol: Some(s), decimals: Some(d), error: None },
+            (Err(err), _, _) | (_, Err(err), _) | (_, _, Err(err)) => {
+                TokenMetadata { name: None, symbol: None, decimals: None, error: Some(err.to_string()) }
+            }
+        };
+
+        Ok(token_metadata)
     }
 }
 
