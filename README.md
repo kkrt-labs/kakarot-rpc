@@ -222,7 +222,7 @@ Declared:
 
 | Contract                 | Class hash                                                        |
 | ------------------------ | ----------------------------------------------------------------- |
-| Proxy account class hash | 0x3010a53967fa04842bcbcb6de8817101f047ef0d074b3eacbe714a3fc42a2eb |
+| Proxy account class hash | 0xba8f3f34eb92f56498fdf14ecac1f19d507dcc6859fa6d85eb8545370654bd  |
 
 <!-- markdownlint-enable MD013 -->
 
