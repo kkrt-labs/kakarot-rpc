@@ -79,7 +79,7 @@ async fn main() {
         .map(|submodule| Submodule {
             name: submodule.name().unwrap().to_string(),
             url: submodule.url().unwrap().to_string(),
-            hash: submodule.workdir_id().unwrap().to_string(),
+            hash: submodule.workdir_id().unwrap_or_else(|| submodule.head_id().unwrap()).to_string(),
         })
         .filter(|submodule| submodule.name == "kakarot")
         .collect();
