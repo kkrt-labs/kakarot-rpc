@@ -71,19 +71,21 @@ async fn main() {
     .await
     .expect("Failed to dump state");
 
-    let repo = Repository::open(".").unwrap();
-    let submodules: Vec<Submodule> = repo
-        .submodules()
-        .unwrap()
-        .iter()
-        .map(|submodule| Submodule {
-            name: submodule.name().unwrap().to_string(),
-            url: submodule.url().unwrap().to_string(),
-            hash: submodule.head_id().unwrap().to_string(),
+    let repo = Repository::open("lib/kakarot").expect("Failed to open kakarot submodule");
+    let submodule: Submodule = repo
+        .head()
+        .map(|reference| Submodule {
+            name: "kakarot".to_string(),
+            url: repo
+                .find_remote("origin")
+                .expect("Failed to find origin remote for Kakarot")
+                .url()
+                .expect("Failed to get Kakarot origin remote url")
+                .to_string(),
+            hash: reference.target().expect("Failed to get commit hash").to_string(),
         })
-        .filter(|submodule| submodule.name != "katana")
-        .collect();
-    let submodules = serde_json::to_string(&submodules[0]).expect("Failed to serialize submodules");
+        .expect("Failed to get Kakarot submodule head");
+    let submodules = serde_json::to_string(&submodule).expect("Failed to serialize submodule");
     std::fs::write(".katana/submodules.json", submodules)
         .expect("Failed to write submodules to .katana/submodules.json");
 }
