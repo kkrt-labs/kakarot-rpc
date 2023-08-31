@@ -76,7 +76,7 @@ async fn main() {
         .submodules()
         .unwrap()
         .iter()
-        .filter(|submodule| submodule.name().unwrap().to_string() == "kakarot")
+        .filter(|submodule| submodule.name().unwrap() == "kakarot")
         .map(|submodule| submodule.workdir_id().unwrap_or_else(|| submodule.head_id().unwrap()).to_string())
         .collect();
     let submodules = serde_json::to_string(&submodules[0]).expect("Failed to serialize submodules");
