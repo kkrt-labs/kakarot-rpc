@@ -8,15 +8,7 @@ use kakarot_rpc_core::test_utils::deploy_helpers::{
     ContractDeploymentArgs, DeployerAccount, KakarotTestEnvironmentContext, TestContext,
 };
 use katana_core::db::Db;
-use serde::Serialize;
 use starknet::accounts::Account;
-
-#[derive(Debug, Serialize)]
-struct Submodule {
-    name: String,
-    url: String,
-    hash: String,
-}
 
 #[tokio::main]
 async fn main() {
