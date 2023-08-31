@@ -79,9 +79,9 @@ async fn main() {
         .map(|submodule| Submodule {
             name: submodule.name().unwrap().to_string(),
             url: submodule.url().unwrap().to_string(),
-            hash: submodule.head_id().unwrap().to_string(),
+            hash: submodule.workdir_id().unwrap().to_string(),
         })
-        .filter(|submodule| submodule.name != "katana")
+        .filter(|submodule| submodule.name == "kakarot")
         .collect();
     let submodules = serde_json::to_string(&submodules[0]).expect("Failed to serialize submodules");
     std::fs::write(".katana/submodules.json", submodules)
