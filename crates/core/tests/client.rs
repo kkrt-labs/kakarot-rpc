@@ -138,11 +138,11 @@ mod tests {
         // When
         let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
         let amount = U256::from(10_000);
-        execute_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
+        let mint_tx_hash = execute_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
 
         let to = U256::try_from_be_slice(ACCOUNT_ADDRESS_EVM.as_bytes()).unwrap();
         let amount = U256::from(10_000);
-        execute_tx(&kakarot_test_env_ctx, "ERC20", "transfer", vec![to, amount]).await;
+        let transfer_tx_hash = execute_tx(&kakarot_test_env_ctx, "ERC20", "transfer", vec![to, amount]).await;
 
         let filter = Filter {
             block_option: FilterBlockOption::Range {
@@ -176,10 +176,7 @@ mod tests {
                             .unwrap(), // amount
                         block_hash: logs[0].block_hash, // block hash changes so just set to event value
                         block_number: logs[0].block_number, // block number changes so just set to event value
-                        transaction_hash: Some(
-                            H256::from_str("0x0124c05cceb7e556f354f580a362845c746a2616d682ce3235c67e7b42a0fdd8")
-                                .unwrap()
-                        ),
+                        transaction_hash: Some(mint_tx_hash),
                         transaction_index: None,
                         log_index: None,
                         removed: false
@@ -199,10 +196,7 @@ mod tests {
                             .unwrap(), // amount
                         block_hash: logs[1].block_hash, // block hash changes so just set to event value
                         block_number: logs[1].block_number, // block number changes so just set to event value
-                        transaction_hash: Some(
-                            H256::from_str("0x00c2f52f03d1f8bc3995c533983364b077040093207c03393b4fd6b99e4af3ab")
-                                .unwrap()
-                        ),
+                        transaction_hash: Some(transfer_tx_hash),
                         transaction_index: None,
                         log_index: None,
                         removed: false
