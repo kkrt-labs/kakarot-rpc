@@ -71,6 +71,5 @@ async fn main() {
         .filter(|submodule| submodule.name().unwrap() == "kakarot")
         .map(|submodule| submodule.workdir_id().unwrap_or_else(|| submodule.head_id().unwrap()).to_string())
         .collect();
-    let submodules = serde_json::to_string(&submodules[0]).expect("Failed to serialize submodules");
-    std::fs::write(".katana/kakarot_sha", submodules).expect("Failed to write submodules to .katana/kakarot_sha");
+    std::fs::write(".katana/kakarot_sha", &submodules[0]).expect("Failed to write submodules to .katana/kakarot_sha");
 }
