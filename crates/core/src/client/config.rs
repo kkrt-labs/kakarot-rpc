@@ -61,11 +61,27 @@ pub struct StarknetConfig {
     pub kakarot_address: FieldElement,
     /// Proxy account class hash.
     pub proxy_account_class_hash: FieldElement,
+    /// EOA class hash.
+    pub externally_owned_account_class_hash: FieldElement,
+    /// Contract Account class hash.
+    pub contract_account_class_hash: FieldElement,
 }
 
 impl StarknetConfig {
-    pub fn new(network: Network, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
-        StarknetConfig { network, kakarot_address, proxy_account_class_hash }
+    pub fn new(
+        network: Network,
+        kakarot_address: FieldElement,
+        proxy_account_class_hash: FieldElement,
+        externally_owned_account_class_hash: FieldElement,
+        contract_account_class_hash: FieldElement,
+    ) -> Self {
+        StarknetConfig {
+            network,
+            kakarot_address,
+            proxy_account_class_hash,
+            externally_owned_account_class_hash,
+            contract_account_class_hash,
+        }
     }
 
     /// Create a new `StarknetConfig` from environment variables.
@@ -99,7 +115,29 @@ impl StarknetConfig {
             ))
         })?;
 
-        Ok(StarknetConfig::new(network, kakarot_address, proxy_account_class_hash))
+        let externally_owned_account_class_hash = get_env_var("EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH")?;
+        let externally_owned_account_class_hash = FieldElement::from_hex_be(&externally_owned_account_class_hash)
+            .map_err(|_| {
+                ConfigError::EnvironmentVariableSetWrong(format!(
+                    "EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH should be provided as a hex string, got \
+                     {externally_owned_account_class_hash}"
+                ))
+            })?;
+
+        let contract_account_class_hash = get_env_var("CONTRACT_ACCOUNT_CLASS_HASH")?;
+        let contract_account_class_hash = FieldElement::from_hex_be(&contract_account_class_hash).map_err(|_| {
+            ConfigError::EnvironmentVariableSetWrong(format!(
+                "CONTRACT_ACCOUNT_CLASS_HASH should be provided as a hex string, got {contract_account_class_hash}"
+            ))
+        })?;
+
+        Ok(StarknetConfig::new(
+            network,
+            kakarot_address,
+            proxy_account_class_hash,
+            externally_owned_account_class_hash,
+            contract_account_class_hash,
+        ))
     }
 }
 

@@ -70,6 +70,8 @@ pub async fn start_kakarot_rpc_server(
         Network::JsonRpcProvider(sequencer.url()),
         kakarot.kakarot_address,
         kakarot.proxy_class_hash,
+        kakarot.externally_owned_account_class_hash,
+        kakarot.contract_account_class_hash,
     );
 
     let deployer_account = kakarot_test_env.client().deployer_account().clone();

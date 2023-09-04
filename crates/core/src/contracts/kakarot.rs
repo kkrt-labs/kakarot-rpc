@@ -14,12 +14,26 @@ use crate::client::helpers::{decode_eth_call_return, vec_felt_to_bytes, DataDeco
 pub struct KakarotContract<P> {
     pub address: FieldElement,
     pub proxy_account_class_hash: FieldElement,
+    pub externally_owned_account_class_hash: FieldElement,
+    pub contract_account_class_hash: FieldElement,
     provider: Arc<P>,
 }
 
 impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
-    pub fn new(provider: Arc<P>, address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
-        Self { address, proxy_account_class_hash, provider }
+    pub fn new(
+        provider: Arc<P>,
+        address: FieldElement,
+        proxy_account_class_hash: FieldElement,
+        externally_owned_account_class_hash: FieldElement,
+        contract_account_class_hash: FieldElement,
+    ) -> Self {
+        Self {
+            address,
+            proxy_account_class_hash,
+            externally_owned_account_class_hash,
+            contract_account_class_hash,
+            provider,
+        }
     }
 
     pub async fn compute_starknet_address(

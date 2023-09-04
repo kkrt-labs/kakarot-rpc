@@ -577,6 +577,7 @@ pub struct DeployedKakarot {
     pub eoa_private_key: H256,
     pub kakarot_address: FieldElement,
     pub proxy_class_hash: FieldElement,
+    pub externally_owned_account_class_hash: FieldElement,
     pub contract_account_class_hash: FieldElement,
     pub eoa_addresses: ContractAddresses,
 }
@@ -696,13 +697,20 @@ impl KakarotTestEnvironmentContext {
                 Network::JsonRpcProvider(sequencer.url()),
                 kakarot.kakarot_address,
                 kakarot.proxy_class_hash,
+                kakarot.externally_owned_account_class_hash,
+                kakarot.contract_account_class_hash,
             ),
             starknet_provider,
             starknet_deployer_account,
         );
 
-        let kakarot_contract =
-            KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
+        let kakarot_contract = KakarotContract::new(
+            kakarot_client.starknet_provider(),
+            kakarot.kakarot_address,
+            kakarot.proxy_class_hash,
+            kakarot.externally_owned_account_class_hash,
+            kakarot.contract_account_class_hash,
+        );
 
         let mut test_environment =
             Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts: HashMap::new() };
@@ -819,13 +827,20 @@ impl KakarotTestEnvironmentContext {
                 Network::JsonRpcProvider(env.url()),
                 kakarot.kakarot_address,
                 kakarot.proxy_class_hash,
+                kakarot.externally_owned_account_class_hash,
+                kakarot.contract_account_class_hash,
             ),
             starknet_provider,
             deployer_account,
         );
 
-        let kakarot_contract =
-            KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
+        let kakarot_contract = KakarotContract::new(
+            kakarot_client.starknet_provider(),
+            kakarot.kakarot_address,
+            kakarot.proxy_class_hash,
+            kakarot.externally_owned_account_class_hash,
+            kakarot.contract_account_class_hash,
+        );
 
         // We have two atomic references: sequencer and env. Sequencer was moved into the
         // closure so unwrap should be safe.
@@ -960,6 +975,7 @@ pub async fn deploy_kakarot_system(
         kakarot_address: *kkrt_address,
         proxy_class_hash: *class_hash.get("proxy").unwrap(),
         contract_account_class_hash: *class_hash.get("contract_account").unwrap(),
+        externally_owned_account_class_hash: *class_hash.get("externally_owned_account").unwrap(),
     }
 }
 
