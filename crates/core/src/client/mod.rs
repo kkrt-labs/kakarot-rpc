@@ -346,7 +346,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             Err(_) => return Ok(U256::from(0)), // Return 0 if the account doesn't exist
         };
 
-        let nonce = if implementation == self.kakarot_contract.proxy_account_class_hash {
+        let nonce = if implementation == self.kakarot_contract.contract_account_class_hash {
             // Get the nonce of the contract account
             let contract_account = ContractAccount::new(starknet_address, &self.starknet_provider);
             contract_account.nonce(&starknet_block_id).await?
