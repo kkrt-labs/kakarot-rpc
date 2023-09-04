@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use reth_primitives::{H256, H64, U128, U256, U8};
+use reth_primitives::{Address, H256, H64, U128, U256, U8};
 use starknet::accounts::Call as StarknetCall;
 use starknet::core::types::FieldElement;
 use starknet::macros::selector;
@@ -88,6 +88,7 @@ lazy_static! {
     pub static ref MIX_HASH: H256 = H256::zero();
     pub static ref DIFFICULTY: U256 = U256::from(0);
     pub static ref TOTAL_DIFFICULTY: Option<U256> = None;
+    pub static ref TX_ORIGIN_ZERO: Address = Address::zero();
 }
 
 lazy_static! {
@@ -98,8 +99,10 @@ lazy_static! {
 // Starknet gas price
 lazy_static! {
     /// The address of the argent account used to calculate the gas price.
-    /// (code: https://github.com/argentlabs/argent-contracts-starknet/blob/develop/contracts/account/ArgentAccount.cairo)
-    pub static ref ACCOUNT_ADDRESS: FieldElement =
+    /// (code: https://github.com/argentlabs/argent-contracts-starknet/blob/develop/contracts/account/src/argent_account.cairo)
+    /// This account is ONLY used for the gasPrice JSON RPC route, to send a simulate_transaction payload for a dummy transaction on Starknet
+    /// Thus recovering the current gas_price
+    pub static ref DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS: FieldElement =
         FieldElement::from_hex_be("0x07142FbF6E8C9C07b079D47727C6D2ff49970203bfd5Bd6ED0D740e0f5a344E7").unwrap();
     pub static ref INC_SELECTOR: FieldElement = selector!("inc");
     /// The address of the counter contract used to calculate the gas price on mainnet

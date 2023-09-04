@@ -4,7 +4,7 @@ use starknet::providers::SequencerGatewayProvider;
 use starknet_crypto::FieldElement;
 
 use crate::client::api::KakarotStarknetApi;
-use crate::client::constants::{ACCOUNT_ADDRESS, STARKNET_NATIVE_TOKEN};
+use crate::client::constants::{DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS, STARKNET_NATIVE_TOKEN};
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::mock::mock_starknet::init_testnet_client;
 
@@ -19,7 +19,7 @@ async fn test_balance_of() {
     let random_block = BlockId::Number(838054);
 
     // When
-    let balance = eth.balance_of(&ACCOUNT_ADDRESS, &random_block).await.unwrap();
+    let balance = eth.balance_of(&DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS, &random_block).await.unwrap();
 
     // Then
     assert_eq!(U256::from(983627765290549u64), balance);

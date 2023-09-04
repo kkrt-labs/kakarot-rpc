@@ -6,10 +6,12 @@ use starknet::core::types::BlockId as StarknetBlockId;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
+use crate::client::constants::TX_ORIGIN_ZERO;
 use crate::client::errors::EthApiError;
 use crate::client::helpers::DataDecodingError;
 use crate::contracts::kakarot::KakarotContract;
 use crate::models::block::EthBlockId;
+use crate::models::felt::Felt252Wrapper;
 
 // abigen generates a lot of unused code, needs to be benchmarked if performances ever become a
 // concern
@@ -40,7 +42,9 @@ impl<'a, P: Provider + Send + Sync + 'static> EthereumErc20<'a, P> {
         let block_id = EthBlockId::new(block_id);
         let block_id: StarknetBlockId = block_id.try_into()?;
 
-        let result = self.kakarot_contract.eth_call(&self.address, calldata, &block_id).await?;
+        let origin = Felt252Wrapper::from(*TX_ORIGIN_ZERO);
+
+        let result = self.kakarot_contract.eth_call(&origin.into(), &self.address, calldata, &block_id).await?;
         let balance: Vec<u8> = result.0.into();
 
         Ok(U256::try_from_be_slice(balance.as_slice()).ok_or(DataDecodingError::InvalidReturnArrayLength {

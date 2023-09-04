@@ -37,8 +37,8 @@ use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
 use self::constants::{
-    ACCOUNT_ADDRESS, CHAIN_ID, CHUNK_SIZE_LIMIT, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2,
-    ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN,
+    CHAIN_ID, CHUNK_SIZE_LIMIT, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2,
+    DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS, ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN,
 };
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
@@ -167,15 +167,23 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
     /// Returns the result of executing a call on a ethereum address for a given calldata and block
     /// without creating a transaction.
-    async fn call(&self, to: Address, calldata: Bytes, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>> {
+    async fn call(
+        &self,
+        origin: Address,
+        to: Address,
+        calldata: Bytes,
+        block_id: BlockId,
+    ) -> Result<Bytes, EthApiError<P::Error>> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
 
         let to: Felt252Wrapper = to.into();
         let to = to.into();
 
+        let origin: FieldElement = Felt252Wrapper::from(origin).into();
+
         let calldata = bytes_to_felt_vec(&calldata);
 
-        let result = self.kakarot_contract.eth_call(&to, calldata, &starknet_block_id).await?;
+        let result = self.kakarot_contract.eth_call(&origin, &to, calldata, &starknet_block_id).await?;
 
         Ok(result)
     }
@@ -555,12 +563,12 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         let raw_calldata: Vec<FieldElement> = call.into();
 
         let block_id = StarknetBlockId::Tag(BlockTag::Latest);
-        let nonce = self.starknet_provider.get_nonce(block_id, *ACCOUNT_ADDRESS).await?;
+        let nonce = self.starknet_provider.get_nonce(block_id, *DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS).await?;
 
         let tx = BroadcastedInvokeTransactionV1 {
             max_fee: FieldElement::ZERO,
             signature: vec![],
-            sender_address: *ACCOUNT_ADDRESS,
+            sender_address: *DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS,
             nonce,
             calldata: raw_calldata,
         };

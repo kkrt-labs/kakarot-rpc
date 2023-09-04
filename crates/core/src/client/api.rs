@@ -29,7 +29,13 @@ pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send
 
     async fn get_logs(&self, filter: Filter) -> Result<FilterChanges, EthApiError<P::Error>>;
 
-    async fn call(&self, to: Address, calldata: Bytes, block_id: BlockId) -> Result<Bytes, EthApiError<P::Error>>;
+    async fn call(
+        &self,
+        origin: Address,
+        to: Address,
+        calldata: Bytes,
+        block_id: BlockId,
+    ) -> Result<Bytes, EthApiError<P::Error>>;
 
     async fn transaction_by_block_id_and_index(
         &self,
