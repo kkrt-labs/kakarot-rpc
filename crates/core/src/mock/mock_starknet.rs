@@ -33,6 +33,7 @@ pub struct StarknetRpcFixture {
 pub enum AvailableFixtures {
     ComputeStarknetAddress,
     GetEvmAddress,
+    GetImplementation,
     GetClassHashAt(String, String),
     Other(JsonRpcMethod),
 }
@@ -41,7 +42,9 @@ impl From<AvailableFixtures> for JsonRpcMethod {
     fn from(value: AvailableFixtures) -> Self {
         match value {
             AvailableFixtures::Other(method) => method,
-            AvailableFixtures::ComputeStarknetAddress | AvailableFixtures::GetEvmAddress => JsonRpcMethod::Call,
+            AvailableFixtures::ComputeStarknetAddress
+            | AvailableFixtures::GetImplementation
+            | AvailableFixtures::GetEvmAddress => JsonRpcMethod::Call,
             AvailableFixtures::GetClassHashAt(_, _) => JsonRpcMethod::GetClassHashAt,
         }
     }
@@ -55,6 +58,7 @@ impl Serialize for AvailableFixtures {
         match self {
             AvailableFixtures::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
             AvailableFixtures::GetEvmAddress => serializer.serialize_str("kakarot_getEvmAddress"),
+            AvailableFixtures::GetImplementation => serializer.serialize_str("kakarot_getImplementation"),
             AvailableFixtures::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
             AvailableFixtures::Other(method) => method.serialize(serializer),
         }
