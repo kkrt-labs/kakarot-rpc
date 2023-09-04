@@ -26,6 +26,8 @@ pub mod selectors {
 
     pub const BYTECODE: FieldElement = selector!("bytecode");
     pub const STORAGE: FieldElement = selector!("storage");
+    pub const GET_IMPLEMENTATION: FieldElement = selector!("get_implementation");
+    pub const GET_NONCE: FieldElement = selector!("get_nonce");
 
     pub const ETH_CALL: FieldElement = selector!("eth_call");
     pub const ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");

@@ -4,7 +4,7 @@ use starknet::core::types::{BlockId, FunctionCall, StarknetError};
 use starknet::providers::{Provider, ProviderError};
 use starknet_crypto::FieldElement;
 
-use crate::client::constants::selectors::{BYTECODE, GET_EVM_ADDRESS};
+use crate::client::constants::selectors::{BYTECODE, GET_EVM_ADDRESS, GET_IMPLEMENTATION};
 use crate::client::errors::EthApiError;
 use crate::client::helpers::{vec_felt_to_bytes, DataDecodingError};
 use crate::models::felt::Felt252Wrapper;
@@ -44,6 +44,33 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
         })?;
 
         Ok(vec_felt_to_bytes(bytecode))
+    }
+
+    /// Returns the class hash of account implementation of the contract.
+    async fn get_implementation(&self, block_id: &BlockId) -> Result<FieldElement, EthApiError<P::Error>> {
+        // Prepare the calldata for the get_implementation function call
+        let calldata = vec![];
+        let request = FunctionCall {
+            contract_address: self.starknet_address(),
+            entry_point_selector: GET_IMPLEMENTATION,
+            calldata,
+        };
+
+        // Make the function call to get the Starknet contract address
+        let implementation = self.provider().call(request, block_id).await.or_else(|err| match err {
+            ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(vec![]),
+            _ => Err(EthApiError::from(err)),
+        })?;
+        if implementation.len() != 1 {
+            return Err(DataDecodingError::InvalidReturnArrayLength {
+                entrypoint: "get_implementation".into(),
+                expected: 1,
+                actual: implementation.len(),
+            }
+            .into());
+        }
+
+        Ok(implementation[0])
     }
 }
 
