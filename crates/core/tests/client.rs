@@ -278,6 +278,9 @@ mod tests {
         let balance =
             client.balance(ethereum_address_to_deploy, BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
         assert_eq!(balance, U256::ZERO);
+
+        let nonce = client.nonce(ethereum_address_to_deploy, BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
+        assert_eq!(nonce, U256::ZERO);
     }
 
     #[rstest]
@@ -316,5 +319,26 @@ mod tests {
         let balance = kakarot_test_env_ctx.client().balance(to_address, block_id_latest).await.unwrap();
 
         assert_eq!(balance, U256::ZERO);
+    }
+
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_get_nonce_contract_account(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+        // Given
+        let (client, _kakarot, _plain_opcodes, plain_opcodes_eth_address) =
+            kakarot_test_env_ctx.resources_with_contract("PlainOpcodes");
+        let count = U256::from(1);
+        // When
+        let nonce_initial =
+            client.nonce(plain_opcodes_eth_address, BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
+
+        let hash = execute_tx(&kakarot_test_env_ctx, "PlainOpcodes", "create", vec![U256::default(), count]).await;
+        client.transaction_receipt(hash).await.expect("create transaction failed");
+
+        let nonce_final =
+            client.nonce(plain_opcodes_eth_address, BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
+
+        // Then
+        assert_eq!(nonce_final, nonce_initial + count);
     }
 }
