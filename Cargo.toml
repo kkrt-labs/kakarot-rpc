@@ -22,13 +22,13 @@ license = "MIT"
 
 [workspace.dependencies]
 # Starknet dependencies
-starknet = "0.4.0"
+starknet = "0.5.0"
 starknet-crypto = "0.5.1"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
 
 # Ethereum dependencies
-ethers = "2.0"
-ethers-solc = "2.0"
+ethers = "2.0.9"
+ethers-solc = "2.0.9"
 reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
 reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
@@ -50,13 +50,13 @@ ruint = "1.9.0"
 url = "2.3.1"
 tokio = { version = "1.21.2", features = ["macros"] }
 rstest = "0.18.1"
-git2 = "0.17.2"
+git2 = "0.18.0"
 
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
-katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "7893eed" }
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "7893eed" }
+dojo-test-utils = { path = "/Users/greg/code/cairo-1.0/dojo/crates/dojo-test-utils" }
+katana-core = { path = "/Users/greg/code/cairo-1.0/dojo/crates/katana/core" }
 cargo-husky = { version = "1.5.0", default-features = false, features = [
   "precommit-hook",
   "run-for-all",
