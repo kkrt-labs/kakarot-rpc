@@ -13,9 +13,7 @@ use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::utils::{find_project_root_path, load_config};
 use katana_core::db::serde::state::SerializableState;
 use katana_core::db::Db;
-use reth_primitives::{
-    sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
-};
+use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256};
 use serde::{Deserialize, Serialize};
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
@@ -179,23 +177,7 @@ pub fn to_kakarot_transaction(nonce: u64, to: TransactionKind, value: u128, inpu
 ///
 /// This function creates a transaction which calls a contract function with provided arguments.
 /// The transaction is signed using the provided EOA secret.
-pub fn create_raw_ethereum_tx(
-    selector: [u8; 4],
-    eoa_secret_key: H256,
-    to: Address,
-    args: Vec<U256>,
-    nonce: u64,
-) -> Bytes {
-    // Start with the function selector
-    // Append each argument
-    let mut data: Vec<u8> = selector.to_vec();
-
-    for arg in args {
-        // Ethereum uses big-endian encoding
-        let arg_bytes: [u8; 32] = arg.to_be_bytes();
-        data.extend_from_slice(&arg_bytes);
-    }
-
+pub fn create_raw_ethereum_tx(eoa_secret_key: H256, to: Address, data: Vec<u8>, nonce: u64) -> Bytes {
     let transaction = to_kakarot_transaction(nonce, TransactionKind::Call(to), Default::default(), data.into());
     let signature =
         sign_message(eoa_secret_key, transaction.signature_hash()).expect("Signing of ethereum transaction failed.");
