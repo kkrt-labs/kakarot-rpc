@@ -29,7 +29,7 @@ use starknet::core::types::{
     TransactionReceipt as StarknetTransactionReceipt, TransactionStatus as StarknetTransactionStatus,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 use starknet::signers::LocalWallet;
 use tokio::time::{sleep, Duration};
 
@@ -335,7 +335,10 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
                 nonce.into()
             })
             .or_else(|err| match err {
-                ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(U256::from(0)),
+                ProviderError::StarknetError(StarknetErrorWithMessage {
+                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                    ..
+                }) => Ok(U256::from(0)),
                 _ => Err(EthApiError::from(err)),
             })
     }
@@ -432,8 +435,14 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
         let signature = vec![];
 
-        let request =
-            BroadcastedInvokeTransactionV1 { max_fee, signature, nonce, sender_address: starknet_address, calldata };
+        let request = BroadcastedInvokeTransactionV1 {
+            max_fee,
+            signature,
+            nonce,
+            sender_address: starknet_address,
+            calldata,
+            is_query: false,
+        };
 
         let starknet_transaction_hash = self.submit_starknet_transaction(request).await?;
 
@@ -542,6 +551,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             sender_address,
             nonce: nonce.into(),
             calldata,
+            is_query: true,
         };
 
         let fee_estimate = self.simulate_transaction(tx, block_number, true).await?.fee_estimation;
@@ -571,6 +581,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             sender_address: *DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS,
             nonce,
             calldata: raw_calldata,
+            is_query: true,
         };
 
         let block_number = self.block_number().await?.as_u64();
@@ -611,7 +622,11 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
                 let block = self.starknet_provider.get_block_with_tx_hashes(block_id).await?;
                 match block {
                     MaybePendingBlockWithTxHashes::Block(block_with_tx_hashes) => Ok(block_with_tx_hashes.block_number),
-                    _ => Err(ProviderError::StarknetError(StarknetError::BlockNotFound).into()),
+                    _ => Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                        code: MaybeUnknownErrorCode::Known(StarknetError::BlockNotFound),
+                        message: "".to_string(),
+                    })
+                    .into()),
                 }
             }
         }
@@ -798,7 +813,10 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
             Err(error) => match error {
                 EthApiError::RequestError(error) => match error {
                     ProviderError::StarknetError(error) => match error {
-                        StarknetError::ContractNotFound => Ok(false),
+                        StarknetErrorWithMessage {
+                            code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                            ..
+                        } => Ok(false),
                         _ => Err(EthApiError::from(ProviderError::StarknetError(error))),
                     },
                     _ => Err(EthApiError::from(error)),
@@ -859,7 +877,10 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
                 },
                 Err(error) => {
                     match error {
-                        ProviderError::StarknetError(StarknetError::TransactionHashNotFound) => {
+                        ProviderError::StarknetError(StarknetErrorWithMessage {
+                            code: MaybeUnknownErrorCode::Known(StarknetError::TransactionHashNotFound),
+                            ..
+                        }) => {
                             // do nothing because to comply with json-rpc spec, even in case of
                             // TransactionStatus::Received an error will be returned, so we should
                             // continue polling see: https://github.com/xJonathanLEI/starknet-rs/blob/832c6cdc36e5899cf2c82f8391a4dd409650eed1/starknet-providers/src/sequencer/provider.rs#L134C1-L134C1
