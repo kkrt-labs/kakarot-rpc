@@ -12,7 +12,6 @@ use ethers::types::Address as EthersAddress;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::utils::{find_project_root_path, load_config};
 use katana_core::db::serde::state::SerializableState;
-use katana_core::db::Db;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
 };
@@ -361,6 +360,8 @@ async fn declare_kakarot_contracts(
 
     let mut class_hash: HashMap<String, FieldElement> = HashMap::new();
     for path in kakarot_compiled_contract_paths {
+        jsonrpsee::tracing::info!("Declaring contract: {:?}", path.as_os_str().to_str());
+        jsonrpsee::tracing::info!("Declaring contract using nonce: {:?}", account.get_nonce().await);
         let file = fs::File::open(&path).unwrap_or_else(|_| panic!("Failed to open file: {}", path.display()));
         let legacy_contract: LegacyContractClass = serde_json::from_reader(file)
             .unwrap_or_else(|_| panic!("Failed to deserialize contract from file: {}", path.display()));
@@ -557,6 +558,7 @@ async fn deploy_kakarot_contracts(
 ) -> HashMap<String, FieldElement> {
     let mut deployments: HashMap<String, FieldElement> = HashMap::new();
 
+    jsonrpsee::tracing::info!("Deploying kakarot contract using nonce: {:?}", account.get_nonce().await);
     let kkrt_address = deploy_kakarot(account, class_hash, fee_token_address).await;
     deployments.insert("kakarot".to_string(), kkrt_address);
 
@@ -631,7 +633,6 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
     let kakarot_steps = std::u32::MAX;
     StarknetConfig {
         disable_fee: true,
-        auto_mine: true,
         env: Environment {
             chain_id: "SN_GOERLI".into(),
             invoke_max_steps: kakarot_steps,
@@ -681,6 +682,7 @@ impl KakarotTestEnvironmentContext {
 
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
         let starknet_account = sequencer.account();
+        jsonrpsee::tracing::info!("Starknet account nonce at start: {:?}", starknet_account.get_nonce().await);
 
         // Define the expected funded amount for the Kakarot system
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
@@ -782,8 +784,7 @@ impl KakarotTestEnvironmentContext {
         .unwrap();
 
         // Generate the pending block from the loaded state
-        env.sequencer.backend.generate_latest_block().await;
-        env.sequencer.backend.generate_pending_block().await;
+        env.sequencer.backend.mine_empty_block().await;
 
         // Load the dumped contracts
         dir.pop();
