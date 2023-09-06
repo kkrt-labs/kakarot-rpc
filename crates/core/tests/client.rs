@@ -25,7 +25,7 @@ mod tests {
 
     #[ctor]
     fn setup() {
-        let subscriber = FmtSubscriber::builder().with_max_level(tracing::Level::ERROR).finish();
+        let subscriber = FmtSubscriber::builder().with_max_level(tracing::Level::WARN).finish();
         tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
     }
 
@@ -332,7 +332,16 @@ mod tests {
         let nonce_initial =
             client.nonce(plain_opcodes_eth_address, BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
 
-        let hash = execute_tx(&kakarot_test_env_ctx, "PlainOpcodes", "create", vec![U256::default(), count]).await;
+        // currently there is a bug when there is no return data from the init code execution
+        // see https://github.com/kkrt-labs/kakarot/issues/726
+        // for now, we test with bytecode that has return data
+        let hash = execute_tx(
+            &kakarot_test_env_ctx,
+            "PlainOpcodes",
+            "create",
+            vec![U256::from_str("0x604260005260206000F3").unwrap(), count],
+        )
+        .await;
         client.transaction_receipt(hash).await.expect("create transaction failed");
 
         let nonce_final =
