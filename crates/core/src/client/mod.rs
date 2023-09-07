@@ -332,7 +332,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
     }
 
     /// Returns the nonce for a given ethereum address
-    /// if it's an EOA, use native nonce. IF it's a contract account, use managed nonce
+    /// if it's an EOA, use native nonce and if it's a contract account, use managed nonce
     /// if ethereum -> stark mapping doesn't exist in the starknet provider, we translate
     /// ContractNotFound errors into zeros
     async fn nonce(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<P::Error>> {
