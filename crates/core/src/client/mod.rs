@@ -431,6 +431,8 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         let calldata = raw_kakarot_calldata(self.kakarot_address(), bytes_to_felt_vec(&bytes));
 
         // Get estimated_fee from Starknet
+        // TODO right now this is set to 0 in order to avoid failure on max fee for
+        // Katana.
         let max_fee = *MAX_FEE;
 
         let signature = vec![];
