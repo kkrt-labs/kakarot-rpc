@@ -2079,6 +2079,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "dojo-lang"
 version = "0.2.1"
+source = "git+https://github.com/dojoengine/dojo?rev=d2fce1a#d2fce1a0d0694b164d0923b6626fc81701cb9190"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2118,6 +2119,7 @@ dependencies = [
 [[package]]
 name = "dojo-test-utils"
 version = "0.2.1"
+source = "git+https://github.com/dojoengine/dojo?rev=d2fce1a#d2fce1a0d0694b164d0923b6626fc81701cb9190"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2147,6 +2149,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "0.2.1"
+source = "git+https://github.com/dojoengine/dojo?rev=d2fce1a#d2fce1a0d0694b164d0923b6626fc81701cb9190"
 dependencies = [
  "serde",
  "starknet",
@@ -2155,6 +2158,7 @@ dependencies = [
 [[package]]
 name = "dojo-world"
 version = "0.2.1"
+source = "git+https://github.com/dojoengine/dojo?rev=d2fce1a#d2fce1a0d0694b164d0923b6626fc81701cb9190"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4880,6 +4884,7 @@ dependencies = [
 [[package]]
 name = "katana-core"
 version = "0.2.1"
+source = "git+https://github.com/dojoengine/dojo?rev=d2fce1a#d2fce1a0d0694b164d0923b6626fc81701cb9190"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4908,6 +4913,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc"
 version = "0.2.1"
+source = "git+https://github.com/dojoengine/dojo?rev=d2fce1a#d2fce1a0d0694b164d0923b6626fc81701cb9190"
 dependencies = [
  "anyhow",
  "blockifier",

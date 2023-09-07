@@ -31,6 +31,7 @@ use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
 use super::constants::{EVM_CONTRACTS, STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY};
+use super::execution_helpers::{execute_tx, wait_for_tx};
 use crate::client::api::KakarotStarknetApi;
 use crate::client::config::{Network, StarknetConfig as StarknetClientConfig};
 use crate::client::constants::{CHAIN_ID, DEPLOY_FEE, STARKNET_NATIVE_TOKEN};
@@ -282,15 +283,16 @@ async fn deploy_evm_contract<T: Tokenize>(
         .collect();
 
     let unused_eoa_field = FieldElement::ZERO;
-    let deployment_of_counter_evm_contract_result = eoa_starknet_account
-        .execute(vec![Call { calldata: field_elements, to: unused_eoa_field, selector: unused_eoa_field }])
-        .send()
-        .await
-        .expect("Deployment of ethereum contract failed.");
+
+    let counter_deployement_result = execute_tx(
+        &eoa_starknet_account,
+        vec![Call { calldata: field_elements, to: unused_eoa_field, selector: unused_eoa_field }],
+    )
+    .await;
 
     let maybe_receipt = eoa_starknet_account
         .provider()
-        .get_transaction_receipt(deployment_of_counter_evm_contract_result.transaction_hash)
+        .get_transaction_receipt(counter_deployement_result.transaction_hash)
         .await
         .unwrap();
 
@@ -326,6 +328,7 @@ async fn deploy_starknet_contract(
     let factory = ContractFactory::new(*class_hash, account);
 
     factory.deploy(constructor_calldata.clone(), FieldElement::ZERO, false).send().await?;
+    wait_for_tx();
 
     let contract_address =
         get_contract_address(FieldElement::ZERO, *class_hash, &constructor_calldata.clone(), FieldElement::ZERO);
@@ -360,8 +363,6 @@ async fn declare_kakarot_contracts(
 
     let mut class_hash: HashMap<String, FieldElement> = HashMap::new();
     for path in kakarot_compiled_contract_paths {
-        jsonrpsee::tracing::info!("Declaring contract: {:?}", path.as_os_str().to_str());
-        jsonrpsee::tracing::info!("Declaring contract using nonce: {:?}", account.get_nonce().await);
         let file = fs::File::open(&path).unwrap_or_else(|_| panic!("Failed to open file: {}", path.display()));
         let legacy_contract: LegacyContractClass = serde_json::from_reader(file)
             .unwrap_or_else(|_| panic!("Failed to deserialize contract from file: {}", path.display()));
@@ -375,6 +376,7 @@ async fn declare_kakarot_contracts(
             .send()
             .await
             .unwrap_or_else(|_| panic!("Failed to declare {}", filename));
+        wait_for_tx();
 
         class_hash.insert(filename, res.class_hash);
     }
@@ -455,15 +457,15 @@ async fn deploy_eoa(
     contract_address: FieldElement,
     eoa_account_address: FieldElement,
 ) {
-    account
-        .execute(vec![Call {
+    execute_tx(
+        account,
+        vec![Call {
             calldata: vec![eoa_account_address],
             to: contract_address,
             selector: get_selector_from_name("deploy_externally_owned_account").unwrap(),
-        }])
-        .send()
-        .await
-        .expect("EOA deployment failed.");
+        }],
+    )
+    .await;
 }
 
 async fn fund_eoa(
@@ -475,16 +477,16 @@ async fn fund_eoa(
     let amount_high = FieldElement::ZERO;
     let transfer_calldata = vec![eoa_account_starknet_address, amount, amount_high];
 
-    account
-        .execute(vec![Call {
+    execute_tx(
+        account,
+        vec![Call {
             calldata: transfer_calldata,
             // eth fee addr
             to: fee_token_address,
             selector: get_selector_from_name("transfer").unwrap(),
-        }])
-        .send()
-        .await
-        .expect("Funding test eth account failed.");
+        }],
+    )
+    .await;
 }
 
 /// Asynchronously deploys an Externally Owned Account (EOA) to the network and funds it.
@@ -542,13 +544,15 @@ async fn set_blockhash_registry(
     kkrt_address: FieldElement,
     blockhash_registry_addr: FieldElement,
 ) {
-    let call_set_blockhash_registry = vec![Call {
-        to: kkrt_address,
-        selector: get_selector_from_name("set_blockhash_registry").unwrap(),
-        calldata: vec![blockhash_registry_addr],
-    }];
-
-    account.execute(call_set_blockhash_registry).send().await.expect("`set_blockhash_registry` failed");
+    execute_tx(
+        account,
+        vec![Call {
+            to: kkrt_address,
+            selector: get_selector_from_name("set_blockhash_registry").unwrap(),
+            calldata: vec![blockhash_registry_addr],
+        }],
+    )
+    .await;
 }
 
 async fn deploy_kakarot_contracts(
@@ -558,7 +562,6 @@ async fn deploy_kakarot_contracts(
 ) -> HashMap<String, FieldElement> {
     let mut deployments: HashMap<String, FieldElement> = HashMap::new();
 
-    jsonrpsee::tracing::info!("Deploying kakarot contract using nonce: {:?}", account.get_nonce().await);
     let kkrt_address = deploy_kakarot(account, class_hash, fee_token_address).await;
     deployments.insert("kakarot".to_string(), kkrt_address);
 
@@ -637,7 +640,7 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
             chain_id: "SN_GOERLI".into(),
             invoke_max_steps: kakarot_steps,
             validate_max_steps: kakarot_steps,
-            ..Default::default()
+            gas_price: 0,
         },
         ..Default::default()
     }
@@ -682,7 +685,6 @@ impl KakarotTestEnvironmentContext {
 
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
         let starknet_account = sequencer.account();
-        jsonrpsee::tracing::info!("Starknet account nonce at start: {:?}", starknet_account.get_nonce().await);
 
         // Define the expected funded amount for the Kakarot system
         let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
@@ -765,7 +767,7 @@ impl KakarotTestEnvironmentContext {
     /// in the .katana folder at the root of the project.
     pub async fn from_dump_state() -> Self {
         // Construct a Starknet test sequencer
-        let sequencer = Arc::new(construct_kakarot_test_sequencer().await);
+        let sequencer = construct_kakarot_test_sequencer().await;
 
         // Get root path
         let mut dir = root_project_path!(".katana/dump.json");
@@ -774,17 +776,12 @@ impl KakarotTestEnvironmentContext {
         let state = std::fs::read_to_string(dir.clone()).expect("Failed to read Katana dump");
         let state: SerializableState = serde_json::from_str(&state).expect("Failed to deserialize Katana dump");
 
-        // clone to avoid losing atomic reference
-        let env = Arc::clone(&sequencer);
-        tokio::task::spawn_blocking(move || {
-            let mut sequencer_state = sequencer.sequencer.backend.state.blocking_write();
-            sequencer_state.load_state(state).expect("Failed to load dumped state into sequencer");
-        })
-        .await
-        .unwrap();
+        let mut sequencer_state = sequencer.sequencer.backend.state.write().await;
+        sequencer_state.load_state(state).expect("Failed to load dumped state into sequencer");
+        drop(sequencer_state);
 
         // Generate the pending block from the loaded state
-        env.sequencer.backend.mine_empty_block().await;
+        sequencer.sequencer.backend.mine_empty_block().await;
 
         // Load the dumped contracts
         dir.pop();
@@ -803,7 +800,7 @@ impl KakarotTestEnvironmentContext {
             evm_contracts.insert(contract_name.to_string(), contract);
         }
 
-        let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(env.url())));
+        let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
         let chain_id = starknet_provider.chain_id().await.unwrap();
 
@@ -817,7 +814,7 @@ impl KakarotTestEnvironmentContext {
         // Create a Kakarot client
         let kakarot_client = KakarotClient::new(
             StarknetClientConfig::new(
-                Network::JsonRpcProvider(env.url()),
+                Network::JsonRpcProvider(sequencer.url()),
                 kakarot.kakarot_address,
                 kakarot.proxy_class_hash,
             ),
@@ -827,13 +824,6 @@ impl KakarotTestEnvironmentContext {
 
         let kakarot_contract =
             KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
-
-        // We have two atomic references: sequencer and env. Sequencer was moved into the
-        // closure so unwrap should be safe.
-        let sequencer = match Arc::try_unwrap(env) {
-            Ok(s) => s,
-            Err(_) => panic!("Failed to unwrap Arc sequencer"),
-        };
 
         Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts }
     }
@@ -897,7 +887,7 @@ impl KakarotTestEnvironmentContext {
 ///
 /// Returns a `TestSequencer` configured for Kakarot.
 pub async fn construct_kakarot_test_sequencer() -> TestSequencer {
-    TestSequencer::start(SequencerConfig::default(), kakarot_starknet_config()).await
+    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, kakarot_starknet_config()).await
 }
 
 /// Get filepath of a given a compiled contract which is part of the kakarot system

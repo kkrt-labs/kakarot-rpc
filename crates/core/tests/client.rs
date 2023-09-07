@@ -11,7 +11,7 @@ mod tests {
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_rpc_core::test_utils::constants::EOA_RECEIVER_ADDRESS;
     use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
-    use kakarot_rpc_core::test_utils::execution_helpers::{execute_eth_transfer_tx, execute_tx};
+    use kakarot_rpc_core::test_utils::execution_helpers::{execute_eth_transfer_tx, execute_eth_tx};
     use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
     use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
@@ -25,7 +25,7 @@ mod tests {
 
     #[ctor]
     fn setup() {
-        let subscriber = FmtSubscriber::builder().with_max_level(tracing::Level::ERROR).finish();
+        let subscriber = FmtSubscriber::builder().with_max_level(tracing::Level::INFO).finish();
         tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
     }
 
@@ -67,7 +67,7 @@ mod tests {
         let (client, _, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
 
         // When
-        let hash = execute_tx(&kakarot_test_env_ctx, "Counter", "inc", vec![]).await;
+        let hash = execute_eth_tx(&kakarot_test_env_ctx, "Counter", "inc", vec![]).await;
         client.transaction_receipt(hash).await.expect("increment transaction failed");
 
         let count_selector = counter.abi.function("count").unwrap().short_signature();
@@ -93,7 +93,7 @@ mod tests {
         // Given
         let (client, _, _, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
         // When
-        execute_tx(&kakarot_test_env_ctx, "Counter", "inc", vec![]).await;
+        execute_eth_tx(&kakarot_test_env_ctx, "Counter", "inc", vec![]).await;
 
         // Then
         let count = client
@@ -112,7 +112,7 @@ mod tests {
         // When
         let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
         let amount = U256::from(10_000);
-        execute_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
+        execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
 
         // Then
         let balances = client.token_balances(kakarot.eoa_addresses.eth_address, vec![erc20_eth_address]).await.unwrap();
@@ -138,11 +138,11 @@ mod tests {
         // When
         let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
         let amount = U256::from(10_000);
-        let mint_tx_hash = execute_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
+        let mint_tx_hash = execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
 
         let to = U256::try_from_be_slice(ACCOUNT_ADDRESS_EVM.as_bytes()).unwrap();
         let amount = U256::from(10_000);
-        let transfer_tx_hash = execute_tx(&kakarot_test_env_ctx, "ERC20", "transfer", vec![to, amount]).await;
+        let transfer_tx_hash = execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "transfer", vec![to, amount]).await;
 
         let filter = Filter {
             block_option: FilterBlockOption::Range {

@@ -551,7 +551,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             sender_address,
             nonce: nonce.into(),
             calldata,
-            is_query: true,
+            is_query: false,
         };
 
         let fee_estimate = self.simulate_transaction(tx, block_number, true).await?.fee_estimation;
@@ -833,9 +833,9 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
         self.kakarot_contract.deploy_externally_owned_account(ethereum_address, &self.deployer_account).await
     }
 
-    /// given a transaction hash, waits for it to be confirmed on L2
+    /// Given a transaction hash, waits for it to be confirmed on L2
     /// each retry is every 1 second, tries for max_retries*1s and then timeouts after that
-    /// returns a boolean indicating whether the transaction was accepted or not L2, it will always
+    /// Returns a boolean indicating whether the transaction was accepted or not L2, it will always
     /// be true, otherwise should return error
     async fn wait_for_confirmation_on_l2(
         &self,

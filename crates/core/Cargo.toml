@@ -49,13 +49,14 @@ tracing-subscriber = { version = "0.3.17", optional = true }
 tracing = { version = "0.1.37", optional = true }
 
 [dev-dependencies]
+cargo-husky = { workspace = true }
+ctor = "0.2.4"
 dojo-test-utils = { workspace = true }
 starknet-crypto = { workspace = true }
 toml = "0.7.5"
-ctor = "0.2.4"
-cargo-husky = { workspace = true }
 
 [features]
+default = ["tracing", "tracing-subscriber"]
 dump = ["git2", "tracing", "tracing-subscriber"]
 
 [[bin]]
