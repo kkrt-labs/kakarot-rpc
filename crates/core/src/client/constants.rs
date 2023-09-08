@@ -81,8 +81,7 @@ lazy_static! {
     pub static ref CUMULATIVE_GAS_USED: U256 = U256::from(1_000_000u64);
     pub static ref EFFECTIVE_GAS_PRICE: U128 = U128::from(1_000_000u64);
     pub static ref SIZE: Option<U256> = Some(U256::from(1_000_000u64));
-    // TODO consider the value for MAX_FEE
-    pub static ref MAX_FEE: FieldElement = FieldElement::from(0u64);
+    pub static ref MAX_FEE: FieldElement = FieldElement::from(100_000_000_000_000_000u64);
     pub static ref ESTIMATE_GAS: U256 = U256::from(100_000_000_000_000_000u64);
     pub static ref TRANSACTION_TYPE: U8 = U8::from(0);
     pub static ref NONCE: Option<H64> = Some(H64::zero());

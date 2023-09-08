@@ -147,9 +147,5 @@ pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
 
     async fn deploy_eoa(&self, ethereum_address: Address) -> Result<FieldElement, EthApiError<P::Error>>;
 
-    async fn wait_for_confirmation_on_l2(
-        &self,
-        transaction_hash: FieldElement,
-        max_retries: u64,
-    ) -> Result<bool, EthApiError<P::Error>>;
+    async fn wait_for_confirmation_on_l2(&self, transaction_hash: FieldElement) -> Result<(), EthApiError<P::Error>>;
 }
