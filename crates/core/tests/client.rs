@@ -21,11 +21,12 @@ mod tests {
         TransactionStatus,
     };
     use starknet::providers::Provider;
-    use tracing_subscriber::FmtSubscriber;
+    use tracing_subscriber::{filter, FmtSubscriber};
 
     #[ctor]
     fn setup() {
-        let subscriber = FmtSubscriber::builder().with_max_level(tracing::Level::INFO).finish();
+        let filter = filter::EnvFilter::new("info");
+        let subscriber = FmtSubscriber::builder().with_env_filter(filter).finish();
         tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
     }
 
@@ -219,7 +220,7 @@ mod tests {
                 .await;
         let transaction_hash: FieldElement = Felt252Wrapper::try_from(transaction_hash).unwrap().into();
 
-        let _ = client.wait_for_confirmation_on_l2(transaction_hash, 10).await;
+        let _ = client.wait_for_confirmation_on_l2(transaction_hash).await;
 
         let transaction_receipt = client.starknet_provider().get_transaction_receipt(transaction_hash).await.unwrap();
 

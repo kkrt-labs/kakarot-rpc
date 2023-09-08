@@ -8,13 +8,9 @@ use kakarot_rpc_core::test_utils::deploy_helpers::{
     ContractDeploymentArgs, DeployerAccount, KakarotTestEnvironmentContext, TestContext,
 };
 use starknet::accounts::Account;
-use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
 async fn main() {
-    let subscriber = FmtSubscriber::builder().with_max_level(tracing::Level::INFO).finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
-
     // Deploy all kakarot contracts + EVM contracts
     let mut test_context = KakarotTestEnvironmentContext::new(TestContext::PlainOpcodes).await;
     test_context = test_context

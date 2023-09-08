@@ -31,10 +31,11 @@ use starknet::signers::{LocalWallet, SigningKey};
 use url::Url;
 
 use super::constants::{EVM_CONTRACTS, STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY};
-use super::execution_helpers::{execute_tx, wait_for_tx};
+use super::execution_helpers::execute_and_wait_for_tx;
 use crate::client::api::KakarotStarknetApi;
 use crate::client::config::{Network, StarknetConfig as StarknetClientConfig};
 use crate::client::constants::{CHAIN_ID, DEPLOY_FEE, STARKNET_NATIVE_TOKEN};
+use crate::client::waiter::TransactionWaiter;
 use crate::client::KakarotClient;
 use crate::contracts::kakarot::KakarotContract;
 use crate::models::felt::Felt252Wrapper;
@@ -284,7 +285,7 @@ async fn deploy_evm_contract<T: Tokenize>(
 
     let unused_eoa_field = FieldElement::ZERO;
 
-    let counter_deployement_result = execute_tx(
+    let counter_deployement_result = execute_and_wait_for_tx(
         &eoa_starknet_account,
         vec![Call { calldata: field_elements, to: unused_eoa_field, selector: unused_eoa_field }],
     )
@@ -327,8 +328,9 @@ async fn deploy_starknet_contract(
 ) -> Result<FieldElement, Box<dyn std::error::Error>> {
     let factory = ContractFactory::new(*class_hash, account);
 
-    factory.deploy(constructor_calldata.clone(), FieldElement::ZERO, false).send().await?;
-    wait_for_tx();
+    let res = factory.deploy(constructor_calldata.clone(), FieldElement::ZERO, false).send().await?;
+    let waiter = TransactionWaiter::new(Arc::new(account.provider()), res.transaction_hash, 1000, 15_000);
+    waiter.poll().await?;
 
     let contract_address =
         get_contract_address(FieldElement::ZERO, *class_hash, &constructor_calldata.clone(), FieldElement::ZERO);
@@ -360,6 +362,7 @@ async fn declare_kakarot_contracts(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 ) -> HashMap<String, FieldElement> {
     let kakarot_compiled_contract_paths = compiled_kakarot_paths();
+    let mut waiter = TransactionWaiter::new(Arc::new(account.provider()), FieldElement::ZERO, 1000, 15_000);
 
     let mut class_hash: HashMap<String, FieldElement> = HashMap::new();
     for path in kakarot_compiled_contract_paths {
@@ -376,7 +379,7 @@ async fn declare_kakarot_contracts(
             .send()
             .await
             .unwrap_or_else(|_| panic!("Failed to declare {}", filename));
-        wait_for_tx();
+        waiter.with_transaction_hash(res.transaction_hash).poll().await.expect("Failed to poll tx");
 
         class_hash.insert(filename, res.class_hash);
     }
@@ -457,7 +460,7 @@ async fn deploy_eoa(
     contract_address: FieldElement,
     eoa_account_address: FieldElement,
 ) {
-    execute_tx(
+    execute_and_wait_for_tx(
         account,
         vec![Call {
             calldata: vec![eoa_account_address],
@@ -477,7 +480,7 @@ async fn fund_eoa(
     let amount_high = FieldElement::ZERO;
     let transfer_calldata = vec![eoa_account_starknet_address, amount, amount_high];
 
-    execute_tx(
+    execute_and_wait_for_tx(
         account,
         vec![Call {
             calldata: transfer_calldata,
@@ -544,7 +547,7 @@ async fn set_blockhash_registry(
     kkrt_address: FieldElement,
     blockhash_registry_addr: FieldElement,
 ) {
-    execute_tx(
+    execute_and_wait_for_tx(
         account,
         vec![Call {
             to: kkrt_address,

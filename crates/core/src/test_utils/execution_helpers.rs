@@ -1,30 +1,27 @@
-use std::thread;
+use std::sync::Arc;
 
 use ethers::signers::{LocalWallet, Signer};
 use reth_primitives::{Address, BlockId, H256, U256};
-use starknet::accounts::{Account, Call, SingleOwnerAccount};
+use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::InvokeTransactionResult;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet as StarknetLocalWallet;
-use tokio::time;
 
 use super::deploy_helpers::{create_eth_transfer_tx, create_raw_ethereum_tx, KakarotTestEnvironmentContext};
 use crate::client::api::KakarotEthApi;
+use crate::client::waiter::TransactionWaiter;
 
-pub async fn execute_tx(
+pub async fn execute_and_wait_for_tx(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, StarknetLocalWallet>,
     calls: Vec<Call>,
 ) -> InvokeTransactionResult {
     let c = calls.clone();
     let res = account.execute(calls).send().await.expect(format!("Failed to execute tx: {:?}", c).as_str());
 
-    wait_for_tx();
+    let waiter = TransactionWaiter::new(Arc::new(account.provider()), res.transaction_hash, 1000, 15_000);
+    waiter.poll().await.expect("Failed to poll tx");
     res
-}
-
-pub fn wait_for_tx() {
-    thread::sleep(time::Duration::from_secs(15));
 }
 
 pub async fn execute_eth_tx(
@@ -50,9 +47,7 @@ pub async fn execute_eth_tx(
         nonce.try_into().unwrap(),
     );
 
-    let res = client.send_transaction(tx).await.unwrap();
-    wait_for_tx();
-    res
+    client.send_transaction(tx).await.unwrap()
 }
 
 pub async fn execute_eth_transfer_tx(
@@ -71,7 +66,5 @@ pub async fn execute_eth_transfer_tx(
 
     let tx = create_eth_transfer_tx(eoa_secret_key, to, value, nonce.try_into().unwrap());
 
-    let res = client.send_transaction(tx).await.unwrap();
-    wait_for_tx();
-    res
+    client.send_transaction(tx).await.unwrap()
 }
