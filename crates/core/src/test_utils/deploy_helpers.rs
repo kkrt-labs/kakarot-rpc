@@ -783,7 +783,7 @@ impl KakarotTestEnvironmentContext {
         sequencer_state.load_state(state).expect("Failed to load dumped state into sequencer");
         drop(sequencer_state);
 
-        // Generate the pending block from the loaded state
+        // Generate an empty block to apply changes.
         sequencer.sequencer.backend.mine_empty_block().await;
 
         // Load the dumped contracts
