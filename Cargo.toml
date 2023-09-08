@@ -36,7 +36,7 @@ reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1
 jsonrpsee = { version = "0.18.2", features = ["full"] }
 
 # Serde
-serde = { version = "1.0.147", features = ["derive"] }
+serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0"
 serde_with = "2.2.0"
 
@@ -55,8 +55,8 @@ git2 = "0.18.0"
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
-katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "d2fce1a" }
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "d2fce1a" }
+katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "6e108db" }
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "6e108db" }
 cargo-husky = { version = "1.5.0", default-features = false, features = [
   "precommit-hook",
   "run-for-all",
