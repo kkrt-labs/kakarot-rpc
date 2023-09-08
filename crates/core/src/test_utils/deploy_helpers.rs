@@ -643,7 +643,7 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
             chain_id: "SN_GOERLI".into(),
             invoke_max_steps: kakarot_steps,
             validate_max_steps: kakarot_steps,
-            gas_price: 0,
+            gas_price: 1,
         },
         ..Default::default()
     }
