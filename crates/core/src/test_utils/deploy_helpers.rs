@@ -10,7 +10,7 @@ use ethers::abi::{Abi, Token, Tokenize};
 use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
 use ethers::types::Address as EthersAddress;
 use ethers_solc::artifacts::CompactContractBytecode;
-use foundry_config::utils::{find_project_root_path, load_config};
+use foundry_config::utils::find_project_root_path;
 use katana_core::db::serde::state::SerializableState;
 use katana_core::db::Db;
 use reth_primitives::{
@@ -98,12 +98,29 @@ pub fn get_contract(filename: &str) -> CompactContractBytecode {
     let dot_sol = format!("{filename}.sol");
     let dot_json = format!("{filename}.json");
 
-    let foundry_default_out = load_config().out;
-    let compiled_solidity_path = std::path::Path::new(&foundry_default_out).join(dot_sol).join(dot_json);
-    let compiled_solidity_path_from_root = root_project_path!(&compiled_solidity_path);
+    let foundry_output_path: PathBuf = {
+        let foundry_output_path = std::env::var("FOUNDRY_OUTPUT_PATH").expect(
+            "Expected a FOUNDRY_OUTPUT_PATH environment variable, set up your .env file or use \
+             `./scripts/make_with_env.sh test`",
+        );
+
+        // We search firstly for existence for absolute path
+        let foundry_output_path_absolute = PathBuf::from(&foundry_output_path);
+        if foundry_output_path_absolute.try_exists().unwrap() {
+            foundry_output_path_absolute
+        } else {
+            // If the absolute path is not found, then we search for a path relative to the project root
+            root_project_path!(foundry_output_path)
+        }
+    };
+
+    let mut compiled_solidity_path = std::path::Path::new(&foundry_output_path).join(dot_sol).join(dot_json);
+    if !compiled_solidity_path.try_exists().unwrap() {
+        compiled_solidity_path = root_project_path!(&compiled_solidity_path);
+    }
 
     // Read the content of the file
-    let contents = fs::read_to_string(compiled_solidity_path_from_root).unwrap_or_else(|_| {
+    let contents = fs::read_to_string(compiled_solidity_path).unwrap_or_else(|_| {
         panic!("Could not read file: {}. please run `make setup` to ensure solidity files are compiled", filename)
     });
 
@@ -423,14 +440,28 @@ pub fn compute_kakarot_contracts_class_hash() -> Vec<(String, FieldElement)> {
         .collect()
 }
 
+fn compiled_kakarot_path() -> PathBuf {
+    let compiled_kakarot_path = std::env::var("COMPILED_KAKAROT_PATH").expect(
+        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
+         `./scripts/make_with_env.sh test`",
+    );
+
+    // We search firstly for existence for absolute path
+    let compiled_kakarot_path_absolute = PathBuf::from(&compiled_kakarot_path);
+    if compiled_kakarot_path_absolute.try_exists().unwrap() {
+        compiled_kakarot_path_absolute
+    } else {
+        // If the absolute path is not found, then we search for a path relative to the project root
+        root_project_path!(compiled_kakarot_path)
+    }
+}
+
 fn compiled_kakarot_paths() -> Vec<PathBuf> {
     dotenv().ok();
-    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
-        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
-         `./scripts/make_with_env.sh test`"
-    ));
 
-    let paths = fs::read_dir(&compiled_kakarot_path)
+    let compiled_kakarot_path = &compiled_kakarot_path();
+
+    let paths = fs::read_dir(compiled_kakarot_path)
         .unwrap_or_else(|_| panic!("Could not read directory: {}", compiled_kakarot_path.display()));
 
     let kakarot_compiled_contract_paths: Vec<_> = paths
@@ -901,10 +932,7 @@ pub async fn construct_kakarot_test_sequencer() -> TestSequencer {
 
 /// Get filepath of a given a compiled contract which is part of the kakarot system
 pub fn get_kakarot_contract_file_path(contract_name: &str) -> PathBuf {
-    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
-        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
-         `./scripts/make_with_env.sh test`"
-    ));
+    let compiled_kakarot_path = compiled_kakarot_path();
 
     let mut path = compiled_kakarot_path.join(Path::new(contract_name));
     let _ = path.set_extension("json");
