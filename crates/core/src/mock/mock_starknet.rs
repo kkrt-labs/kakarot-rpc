@@ -57,8 +57,8 @@ impl Serialize for AvailableFixtures {
     {
         match self {
             AvailableFixtures::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
-            AvailableFixtures::GetEvmAddress => serializer.serialize_str("kakarot_getEvmAddress"),
-            AvailableFixtures::GetImplementation => serializer.serialize_str("kakarot_getImplementation"),
+            AvailableFixtures::GetEvmAddress => serializer.serialize_str("account_getEvmAddress"),
+            AvailableFixtures::GetImplementation => serializer.serialize_str("account_getImplementation"),
             AvailableFixtures::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
             AvailableFixtures::Other(method) => method.serialize(serializer),
         }
