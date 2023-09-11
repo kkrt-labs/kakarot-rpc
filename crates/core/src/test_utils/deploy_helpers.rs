@@ -104,12 +104,15 @@ pub fn get_contract(filename: &str) -> CompactContractBytecode {
              `./scripts/make_with_env.sh test`",
         );
 
-        // We search firstly for existence for absolute path
+        // We search firstly for existence for absolute path, i.e a path that is not relative to the project
+        // root, ex: /Users/Vitalik/kakarot/tests/integration/solidity_contracts/build
+        // checkout out -> https://www.linuxfoundation.org/blog/blog/classic-sysadmin-absolute-path-vs-relative-path-in-linux-unix
         let foundry_output_path_absolute = PathBuf::from(&foundry_output_path);
         if foundry_output_path_absolute.try_exists().unwrap() {
             foundry_output_path_absolute
         } else {
             // If the absolute path is not found, then we search for a path relative to the project root
+            // ex: ./lib/kakarot/tests/integration/solidity_contracts/build { relative to project root }
             root_project_path!(foundry_output_path)
         }
     };
@@ -446,12 +449,15 @@ fn compiled_kakarot_path() -> PathBuf {
          `./scripts/make_with_env.sh test`",
     );
 
-    // We search firstly for existence for absolute path
+    // We search firstly for existence for absolute path, i.e a path that is not relative to the project
+    // root, ex: /Users/Vitalik/kakarot/build
+    // checkout out -> https://www.linuxfoundation.org/blog/blog/classic-sysadmin-absolute-path-vs-relative-path-in-linux-unix
     let compiled_kakarot_path_absolute = PathBuf::from(&compiled_kakarot_path);
     if compiled_kakarot_path_absolute.try_exists().unwrap() {
         compiled_kakarot_path_absolute
     } else {
         // If the absolute path is not found, then we search for a path relative to the project root
+        // ex: ./lib/kakarot/tests/integration/solidity_contracts/build { relative to project root }
         root_project_path!(compiled_kakarot_path)
     }
 }
