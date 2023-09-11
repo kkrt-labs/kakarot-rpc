@@ -46,7 +46,13 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
             _ => Err(EthApiError::from(err)),
         })?;
 
-        Ok(vec_felt_to_bytes(bytecode))
+        if bytecode.is_empty() {
+            return Ok(Bytes::default());
+        }
+
+        // bytecode_len is the first element of the returned array
+        // TODO: Remove Manual Decoding
+        Ok(vec_felt_to_bytes(bytecode[1..].to_vec()))
     }
 }
 
