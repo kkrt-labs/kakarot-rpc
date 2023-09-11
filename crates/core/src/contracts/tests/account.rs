@@ -12,9 +12,8 @@ async fn test_bytecode(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
     // Given
     let contract_name = "Counter";
     let counter_starknet_address = kakarot_test_env_ctx.evm_contract(contract_name).addresses.starknet_address;
-
-    let contract = get_contract(contract_name);
-    let expected_bytecode = get_contract_deployed_bytecode(contract);
+    let counter_contract = get_contract(contract_name);
+    let expected_bytecode = get_contract_deployed_bytecode(counter_contract);
 
     let starknet_block_id = BlockId::Tag(BlockTag::Latest);
     let starknet_provider = kakarot_test_env_ctx.client().starknet_provider();
