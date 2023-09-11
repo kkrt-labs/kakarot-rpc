@@ -16,8 +16,8 @@ pub async fn execute_and_wait_for_tx(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, StarknetLocalWallet>,
     calls: Vec<Call>,
 ) -> InvokeTransactionResult {
-    let c = calls.clone();
-    let res = account.execute(calls).send().await.unwrap_or_else(|_| panic!("Failed to execute tx: {:?}", c));
+    let res =
+        account.execute(calls.clone()).send().await.unwrap_or_else(|_| panic!("Failed to execute tx: {:?}", calls));
 
     let waiter = TransactionWaiter::new(Arc::new(account.provider()), res.transaction_hash, 1000, 15_000);
     waiter.poll().await.expect("Failed to poll tx");
