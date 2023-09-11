@@ -1,6 +1,6 @@
 use jsonrpsee::types::ErrorObject;
 use starknet::core::types::{FromByteSliceError, StarknetError};
-use starknet::providers::ProviderError;
+use starknet::providers::{MaybeUnknownErrorCode, ProviderError};
 use thiserror::Error;
 
 use super::helpers::DataDecodingError;
@@ -11,6 +11,7 @@ use crate::models::ConversionError;
 #[derive(Debug, Copy, PartialEq, Eq, Clone)]
 pub enum EthRpcErrorCode {
     /// Custom geth error code, <https://github.com/vapory-legacy/wiki/blob/master/JSON-RPC-Error-Codes-Improvement-Proposal.md>
+    Unknown,
     ExecutionError = 3,
     ParseError = -32700,
     InvalidRequest = -32600,
@@ -91,25 +92,30 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
     fn from(error: EthApiError<E>) -> Self {
         match error {
             EthApiError::RequestError(err_provider) => match err_provider {
-                ProviderError::StarknetError(err) => match err {
-                    StarknetError::BlockNotFound
-                    | StarknetError::ClassHashNotFound
-                    | StarknetError::ContractNotFound
-                    | StarknetError::NoBlocks
-                    | StarknetError::TransactionHashNotFound => {
-                        rpc_err(EthRpcErrorCode::ResourceNotFound, err_provider.to_string())
-                    }
-                    StarknetError::ContractError => rpc_err(EthRpcErrorCode::ExecutionError, err_provider.to_string()),
-                    StarknetError::InvalidContractClass
-                    | StarknetError::InvalidContinuationToken
-                    | StarknetError::InvalidTransactionIndex
-                    | StarknetError::PageSizeTooBig
-                    | StarknetError::TooManyKeysInFilter
-                    | StarknetError::ClassAlreadyDeclared => {
-                        rpc_err(EthRpcErrorCode::InvalidInput, err_provider.to_string())
-                    }
-                    StarknetError::FailedToReceiveTransaction => {
-                        rpc_err(EthRpcErrorCode::TransactionRejected, err_provider.to_string())
+                ProviderError::StarknetError(err) => match err.code {
+                    MaybeUnknownErrorCode::Known(err) => match err {
+                        StarknetError::BlockNotFound
+                        | StarknetError::ClassHashNotFound
+                        | StarknetError::ContractNotFound
+                        | StarknetError::NoBlocks
+                        | StarknetError::TransactionHashNotFound => {
+                            rpc_err(EthRpcErrorCode::ResourceNotFound, err.to_string())
+                        }
+                        StarknetError::ContractError => rpc_err(EthRpcErrorCode::ExecutionError, err.to_string()),
+                        StarknetError::InvalidContractClass
+                        | StarknetError::InvalidContinuationToken
+                        | StarknetError::InvalidTransactionIndex
+                        | StarknetError::PageSizeTooBig
+                        | StarknetError::TooManyKeysInFilter
+                        | StarknetError::ClassAlreadyDeclared => {
+                            rpc_err(EthRpcErrorCode::InvalidInput, err.to_string())
+                        }
+                        StarknetError::FailedToReceiveTransaction => {
+                            rpc_err(EthRpcErrorCode::TransactionRejected, err.to_string())
+                        }
+                    },
+                    MaybeUnknownErrorCode::Unknown(code) => {
+                        rpc_err(EthRpcErrorCode::Unknown, format!("got code {} with: {}", code, err.message))
                     }
                 },
                 ProviderError::ArrayLengthMismatch => rpc_err(EthRpcErrorCode::InvalidParams, err_provider.to_string()),

@@ -143,6 +143,7 @@ async fn test_simulate_transaction() {
         max_fee: FieldElement::ZERO,
         nonce,
         signature: vec![],
+        is_query: true,
     };
 
     // When

@@ -10,6 +10,7 @@ use starknet_crypto::FieldElement;
 use crate::client::constants::selectors::{COMPUTE_STARKNET_ADDRESS, DEPLOY_EXTERNALLY_OWNED_ACCOUNT, ETH_CALL};
 use crate::client::errors::EthApiError;
 use crate::client::helpers::{decode_eth_call_return, vec_felt_to_bytes, DataDecodingError};
+use crate::client::waiter::TransactionWaiter;
 
 pub struct KakarotContract<P> {
     pub address: FieldElement,
@@ -86,7 +87,12 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
             .await;
 
         let result: Result<FieldElement, EthApiError<P::Error>> = match result {
-            Ok(invoke_result) => Ok(invoke_result.transaction_hash),
+            Ok(invoke_result) => {
+                let waiter =
+                    TransactionWaiter::new(self.provider.clone(), invoke_result.transaction_hash, 1000, 15_000);
+                waiter.poll().await?;
+                Ok(invoke_result.transaction_hash)
+            }
             Err(error) => match error {
                 AccountError::Provider(error) => Err(EthApiError::from(error)),
                 _ => Err(EthApiError::Other(error.into())),
