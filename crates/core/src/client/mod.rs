@@ -422,7 +422,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         if !account_exists {
             let starknet_transaction_hash: FieldElement =
                 Felt252Wrapper::from(self.deploy_eoa(evm_address).await?).into();
-            let _ = self.wait_for_confirmation_on_l2(starknet_transaction_hash).await?;
+            self.wait_for_confirmation_on_l2(starknet_transaction_hash).await?;
         }
 
         let starknet_address = self.compute_starknet_address(evm_address, &starknet_block_id).await?;

@@ -64,7 +64,7 @@ pub mod gas {
     /// This minimum of 21,000 (see https://ethereum.stackexchange.com/questions/34674/where-does-the-number-21000-come-from-for-the-base-gas-consumption-in-ethereum/34675#34675)
     /// is used if the returned fee estimate is lower, otherwise wallets such as Metamask will not
     /// allow the transaction to be sent.
-    pub const MINIMUM_GAS_FEE: u64 = 21000;
+    pub const MINIMUM_GAS_FEE: u64 = 21_000;
 }
 
 /// This module contains error messages related to Kakarot.
@@ -125,5 +125,5 @@ lazy_static! {
 
 // This module contains constants to be used for deployment of Kakarot System
 lazy_static! {
-    pub static ref DEPLOY_FEE: FieldElement = FieldElement::from(100000_u64);
+    pub static ref DEPLOY_FEE: FieldElement = FieldElement::from(100_000_u64);
 }

@@ -18,17 +18,12 @@ pub struct TransactionWaiter<P: Provider> {
 }
 
 impl<P: Provider> TransactionWaiter<P> {
-    pub fn new(
-        provider: Arc<P>,
-        transaction_hash: FieldElement,
-        interval_in_milli: u64,
-        timeout_in_milli: u64,
-    ) -> Self {
+    pub fn new(provider: Arc<P>, transaction_hash: FieldElement, interval_millis: u64, timeout_millis: u64) -> Self {
         Self {
             provider,
             transaction_hash,
-            interval: Duration::from_millis(interval_in_milli),
-            timeout: Duration::from_millis(timeout_in_milli),
+            interval: Duration::from_millis(interval_millis),
+            timeout: Duration::from_millis(timeout_millis),
         }
     }
 
