@@ -257,10 +257,12 @@ mod tests {
 
         // Create an atomic reference to the test environment to avoid dropping it
         let env = Arc::clone(&test_environment);
+
         // It is not possible to block the async test task, so we need to spawn a blocking task
+        let handle = tokio::runtime::Handle::current();
         tokio::task::spawn_blocking(move || {
             // Get lock on the Starknet sequencer
-            let mut starknet = env.sequencer().sequencer.backend.state.blocking_write();
+            let mut starknet = handle.block_on(async { env.sequencer().sequencer.backend.state.write().await });
             let mut counter_storage = HashMap::new();
 
             // Set the counter bytecode length into the contract
@@ -402,9 +404,10 @@ mod tests {
         // Create an atomic reference to the test environment to avoid dropping it
         let env = Arc::clone(&test_environment);
         // It is not possible to block the async test task, so we need to spawn a blocking task
+        let handle = tokio::runtime::Handle::current();
         tokio::task::spawn_blocking(move || {
             // Get lock on the Starknet sequencer
-            let mut starknet = env.sequencer().sequencer.backend.state.blocking_write();
+            let mut starknet = handle.block_on(async { env.sequencer().sequencer.backend.state.write().await });
             let mut storage = HashMap::new();
 
             // Prepare the record to be inserted into the storage

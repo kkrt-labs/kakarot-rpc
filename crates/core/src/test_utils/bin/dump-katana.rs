@@ -24,43 +24,40 @@ async fn main() {
         })
         .await;
 
-    tokio::task::spawn_blocking(move || {
-        // Get a serializable state for the sequencer
-        let sequencer = test_context.sequencer();
-        let dump_state = sequencer
-            .sequencer
-            .backend
-            .state
-            .blocking_write()
-            .dump_state()
-            .expect("Failed to call dump_state on Katana state");
+    // Get a serializable state for the sequencer
+    let sequencer = test_context.sequencer();
+    let dump_state = sequencer
+        .sequencer
+        .backend
+        .state
+        .write()
+        .await
+        .dump_state()
+        .expect("Failed to call dump_state on Katana state");
 
-        let state = serde_json::to_string(&dump_state).expect("Failed to serialize state");
+    let state = serde_json::to_string(&dump_state).expect("Failed to serialize state");
 
-        // Dump the state
-        std::fs::create_dir_all(".katana/").expect("Failed to create Kakata dump dir");
-        std::fs::write(".katana/dump.json", state).expect("Failed to write dump to .katana/dump.json");
+    // Dump the state
+    std::fs::create_dir_all(".katana/").expect("Failed to create Kakata dump dir");
+    std::fs::write(".katana/dump.json", state).expect("Failed to write dump to .katana/dump.json");
 
-        let deployer_account = DeployerAccount {
-            address: test_context.client().deployer_account().address(),
-            private_key: *STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY,
-        };
+    let deployer_account = DeployerAccount {
+        address: test_context.client().deployer_account().address(),
+        private_key: *STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY,
+    };
 
-        // Store contracts information
-        let mut contracts = HashMap::new();
-        contracts.insert("Kakarot", serde_json::to_value(test_context.kakarot()).unwrap());
-        contracts.insert("ERC20", serde_json::to_value(test_context.evm_contract("ERC20")).unwrap());
-        contracts.insert("Counter", serde_json::to_value(test_context.evm_contract("Counter")).unwrap());
-        contracts.insert("PlainOpcodes", serde_json::to_value(test_context.evm_contract("PlainOpcodes")).unwrap());
-        contracts.insert("DeployerAccount", serde_json::to_value(deployer_account).unwrap());
+    // Store contracts information
+    let mut contracts = HashMap::new();
+    contracts.insert("Kakarot", serde_json::to_value(test_context.kakarot()).unwrap());
+    contracts.insert("ERC20", serde_json::to_value(test_context.evm_contract("ERC20")).unwrap());
+    contracts.insert("Counter", serde_json::to_value(test_context.evm_contract("Counter")).unwrap());
+    contracts.insert("PlainOpcodes", serde_json::to_value(test_context.evm_contract("PlainOpcodes")).unwrap());
+    contracts.insert("DeployerAccount", serde_json::to_value(deployer_account).unwrap());
 
-        // Dump the contracts information
-        let contracts = serde_json::to_string(&contracts).expect("Failed to serialize contract addresses");
-        std::fs::write(".katana/contracts.json", contracts)
-            .expect("Failed to write contracts informations to .katana/contracts.json");
-    })
-    .await
-    .expect("Failed to dump state");
+    // Dump the contracts information
+    let contracts = serde_json::to_string(&contracts).expect("Failed to serialize contract addresses");
+    std::fs::write(".katana/contracts.json", contracts)
+        .expect("Failed to write contracts informations to .katana/contracts.json");
 
     // Get the sha of the kakarot submodule
     let repo = Repository::open(".").unwrap();
