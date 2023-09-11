@@ -48,6 +48,7 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
         }
 
         // bytecode_len is the first element of the returned array
+        // TODO: Remove Manual Decoding
         Ok(vec_felt_to_bytes(bytecode[1..].to_vec()))
     }
 }
