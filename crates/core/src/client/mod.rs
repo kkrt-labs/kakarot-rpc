@@ -5,6 +5,7 @@ pub mod errors;
 pub mod helpers;
 #[cfg(test)]
 pub mod tests;
+pub mod waiter;
 
 use std::sync::Arc;
 
@@ -26,12 +27,11 @@ use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, EmittedEvent,
     Event, EventFilterWithPage, EventsPage, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
     MaybePendingTransactionReceipt, ResultPageRequest, StarknetError, SyncStatusType, Transaction as TransactionType,
-    TransactionReceipt as StarknetTransactionReceipt, TransactionStatus as StarknetTransactionStatus,
+    TransactionReceipt as StarknetTransactionReceipt,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 use starknet::signers::LocalWallet;
-use tokio::time::{sleep, Duration};
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
 use self::config::{Network, StarknetConfig};
@@ -42,6 +42,7 @@ use self::constants::{
 };
 use self::errors::EthApiError;
 use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
+use self::waiter::TransactionWaiter;
 use crate::contracts::account::{Account, KakarotAccount};
 use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
@@ -346,10 +347,10 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             Err(_) => return Ok(U256::from(0)), // Return 0 if the account doesn't exist
         };
 
-        let nonce = if implementation == self.kakarot_contract.contract_account_class_hash {
+        if implementation == self.kakarot_contract.contract_account_class_hash {
             // Get the nonce of the contract account
             let contract_account = ContractAccount::new(starknet_address, &self.starknet_provider);
-            contract_account.nonce(&starknet_block_id).await?
+            contract_account.nonce(&starknet_block_id).await
         } else {
             // Get the nonce of the EOA
             self.starknet_provider
@@ -360,11 +361,13 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
                     nonce.into()
                 })
                 .or_else(|err| match err {
-                    ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(U256::from(0)),
+                    ProviderError::StarknetError(StarknetErrorWithMessage {
+                        code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                        ..
+                    }) => Ok(U256::from(0)),
                     _ => Err(EthApiError::from(err)),
-                })?
-        };
-        Ok(nonce)
+                })
+        }
     }
 
     /// Returns the balance in Starknet's native token of a specific EVM address.
@@ -445,7 +448,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         if !account_exists {
             let starknet_transaction_hash: FieldElement =
                 Felt252Wrapper::from(self.deploy_eoa(evm_address).await?).into();
-            let _ = self.wait_for_confirmation_on_l2(starknet_transaction_hash, 10).await?;
+            self.wait_for_confirmation_on_l2(starknet_transaction_hash).await?;
         }
 
         let starknet_address = self.compute_starknet_address(evm_address, &starknet_block_id).await?;
@@ -455,12 +458,20 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         let calldata = raw_kakarot_calldata(self.kakarot_address(), bytes_to_felt_vec(&bytes));
 
         // Get estimated_fee from Starknet
+        // TODO right now this is set to 0 in order to avoid failure on max fee for
+        // Katana.
         let max_fee = *MAX_FEE;
 
         let signature = vec![];
 
-        let request =
-            BroadcastedInvokeTransactionV1 { max_fee, signature, nonce, sender_address: starknet_address, calldata };
+        let request = BroadcastedInvokeTransactionV1 {
+            max_fee,
+            signature,
+            nonce,
+            sender_address: starknet_address,
+            calldata,
+            is_query: false,
+        };
 
         let starknet_transaction_hash = self.submit_starknet_transaction(request).await?;
 
@@ -569,6 +580,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             sender_address,
             nonce: nonce.into(),
             calldata,
+            is_query: false,
         };
 
         let fee_estimate = self.simulate_transaction(tx, block_number, true).await?.fee_estimation;
@@ -598,6 +610,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             sender_address: *DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS,
             nonce,
             calldata: raw_calldata,
+            is_query: true,
         };
 
         let block_number = self.block_number().await?.as_u64();
@@ -638,7 +651,11 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
                 let block = self.starknet_provider.get_block_with_tx_hashes(block_id).await?;
                 match block {
                     MaybePendingBlockWithTxHashes::Block(block_with_tx_hashes) => Ok(block_with_tx_hashes.block_number),
-                    _ => Err(ProviderError::StarknetError(StarknetError::BlockNotFound).into()),
+                    _ => Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                        code: MaybeUnknownErrorCode::Known(StarknetError::BlockNotFound),
+                        message: "".to_string(),
+                    })
+                    .into()),
                 }
             }
         }
@@ -662,6 +679,9 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
     ) -> Result<H256, EthApiError<P::Error>> {
         let transaction_result =
             self.starknet_provider.add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request)).await?;
+        let waiter =
+            TransactionWaiter::new(self.starknet_provider(), transaction_result.transaction_hash, 1000, 15_000);
+        waiter.poll().await?;
 
         Ok(H256::from(transaction_result.transaction_hash.to_bytes_be()))
     }
@@ -825,7 +845,10 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
             Err(error) => match error {
                 EthApiError::RequestError(error) => match error {
                     ProviderError::StarknetError(error) => match error {
-                        StarknetError::ContractNotFound => Ok(false),
+                        StarknetErrorWithMessage {
+                            code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                            ..
+                        } => Ok(false),
                         _ => Err(EthApiError::from(ProviderError::StarknetError(error))),
                     },
                     _ => Err(EthApiError::from(error)),
@@ -842,64 +865,10 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
         self.kakarot_contract.deploy_externally_owned_account(ethereum_address, &self.deployer_account).await
     }
 
-    /// given a transaction hash, waits for it to be confirmed on L2
-    /// each retry is every 1 second, tries for max_retries*1s and then timeouts after that
-    /// returns a boolean indicating whether the transaction was accepted or not L2, it will always
-    /// be true, otherwise should return error
-    async fn wait_for_confirmation_on_l2(
-        &self,
-        transaction_hash: FieldElement,
-        max_retries: u64,
-    ) -> Result<bool, EthApiError<P::Error>> {
-        let mut idx = 0;
-
-        loop {
-            if idx >= max_retries {
-                return Err(EthApiError::Other(anyhow::format_err!(
-                    "timeout: max retries: {max_retries} attempted for polling the transaction receipt"
-                )));
-            }
-
-            let receipt = self.starknet_provider.get_transaction_receipt(transaction_hash).await;
-
-            match receipt {
-                Ok(receipt) => match receipt {
-                    MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
-                        StarknetTransactionReceipt::Invoke(receipt) => match receipt.status {
-                            StarknetTransactionStatus::AcceptedOnL2 | StarknetTransactionStatus::AcceptedOnL1 => {
-                                return Ok(true);
-                            }
-                            StarknetTransactionStatus::Rejected => {
-                                return Err(EthApiError::Other(anyhow::anyhow!(
-                                    "Pooling Failed: the transaction {transaction_hash} has been rejected"
-                                )));
-                            }
-                            _ => (),
-                        },
-                        _ => {
-                            return Err(EthApiError::Other(anyhow::anyhow!(
-                                "Pooling Failed: expected an invoke receipt, found {receipt:#?}"
-                            )));
-                        }
-                    },
-                    MaybePendingTransactionReceipt::PendingReceipt(_) => (),
-                },
-                Err(error) => {
-                    match error {
-                        ProviderError::StarknetError(StarknetError::TransactionHashNotFound) => {
-                            // do nothing because to comply with json-rpc spec, even in case of
-                            // TransactionStatus::Received an error will be returned, so we should
-                            // continue polling see: https://github.com/xJonathanLEI/starknet-rs/blob/832c6cdc36e5899cf2c82f8391a4dd409650eed1/starknet-providers/src/sequencer/provider.rs#L134C1-L134C1
-                        }
-                        _ => {
-                            return Err(error.into());
-                        }
-                    }
-                }
-            };
-
-            idx += 1;
-            sleep(Duration::from_secs(1)).await;
-        }
+    /// Given a transaction hash, waits for it to be confirmed on L2
+    async fn wait_for_confirmation_on_l2(&self, transaction_hash: FieldElement) -> Result<(), EthApiError<P::Error>> {
+        let waiter = TransactionWaiter::new(self.starknet_provider(), transaction_hash, 1000, 15_000);
+        waiter.poll().await?;
+        Ok(())
     }
 }

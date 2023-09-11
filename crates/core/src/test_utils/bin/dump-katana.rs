@@ -7,7 +7,6 @@ use kakarot_rpc_core::test_utils::constants::STARKNET_DEPLOYER_ACCOUNT_PRIVATE_K
 use kakarot_rpc_core::test_utils::deploy_helpers::{
     ContractDeploymentArgs, DeployerAccount, KakarotTestEnvironmentContext, TestContext,
 };
-use katana_core::db::Db;
 use starknet::accounts::Account;
 
 #[tokio::main]
