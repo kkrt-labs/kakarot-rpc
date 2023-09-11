@@ -91,6 +91,32 @@ pub fn genesis_fund_starknet_address(
         .collect()
 }
 
+/// Generates the genesis storage tuples for a given amount of allowance to Kakarot of a Starknet
+/// address on Madara.
+pub fn genesis_approve_kakarot(
+    starknet_address: FieldElement,
+    kakarot_address: FieldElement,
+    amount: U256,
+) -> Vec<((ContractAddress, StorageKey), StorageValue)> {
+    // Split the amount into two 128-bit chunks.
+    let amount = split_u256_into_field_elements(amount);
+
+    // Iterate over the storage key offsets and generate the storage tuples.
+    amount
+        .iter()
+        .enumerate() // Enumerate the key offsets.
+        .map(|(offset, value)| {
+            genesis_set_storage_starknet_contract(
+                FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap(), // Safe unwrap
+                "ERC20_allowances",
+                &[starknet_address, kakarot_address],
+                *value,
+                offset as u64,
+            )
+        })
+        .collect()
+}
+
 /// Generates the genesis storage tuples for setting the storage of the Kakarot contract.
 ///
 /// This function calculates the storage keys for the Kakarot contract using the provided Starknet
@@ -139,7 +165,6 @@ mod tests {
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
     use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
     use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
-    use katana_core::backend::state::StorageRecord;
     use reth_primitives::U256;
     use rstest::rstest;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
@@ -254,12 +279,12 @@ mod tests {
             let contract_account_class_hash = env.kakarot().contract_account_class_hash;
             let counter_address =
                 StarknetContractAddress(Into::<StarkFelt>::into(counter_genesis_address).try_into().unwrap());
-            let counter_storage_record = StorageRecord {
-                nonce: Nonce(StarkFelt::from(0u8)),
-                class_hash: ClassHash(contract_account_class_hash.into()),
-                storage: counter_storage,
-            };
-            starknet.storage.insert(counter_address, counter_storage_record);
+
+            starknet.set_class_hash_at(counter_address, ClassHash(contract_account_class_hash.into())).unwrap();
+            starknet.set_nonce(counter_address, Nonce(StarkFelt::from(1u8)));
+            for (key, value) in counter_storage.into_iter() {
+                starknet.set_storage_at(counter_address, key, value);
+            }
         })
         .await
         .unwrap();
@@ -392,12 +417,12 @@ mod tests {
             // Set the storage record for the contract
             let contract_account_class_hash = env.kakarot().contract_account_class_hash;
             let genesis_address = StarknetContractAddress(Into::<StarkFelt>::into(genesis_address).try_into().unwrap());
-            let storage_record = StorageRecord {
-                nonce: Nonce(StarkFelt::from(0u8)),
-                class_hash: ClassHash(contract_account_class_hash.into()),
-                storage,
-            };
-            starknet.storage.insert(genesis_address, storage_record);
+
+            starknet.set_class_hash_at(genesis_address, ClassHash(contract_account_class_hash.into())).unwrap();
+            starknet.set_nonce(genesis_address, Nonce(StarkFelt::from(1u8)));
+            for (key, value) in storage.into_iter() {
+                starknet.set_storage_at(genesis_address, key, value);
+            }
         })
         .await
         .unwrap();

@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use reth_primitives::{H256, H64, U128, U256, U8};
+use reth_primitives::{Address, H256, H64, U128, U256, U8};
 use starknet::accounts::Call as StarknetCall;
 use starknet::core::types::FieldElement;
 use starknet::macros::selector;
@@ -29,6 +29,7 @@ pub mod selectors {
 
     pub const ETH_CALL: FieldElement = selector!("eth_call");
     pub const ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
+    pub const DEPLOY_EXTERNALLY_OWNED_ACCOUNT: FieldElement = selector!("deploy_externally_owned_account");
     pub const COMPUTE_STARKNET_ADDRESS: FieldElement = selector!("compute_starknet_address");
 
     pub const GET_EVM_ADDRESS: FieldElement = selector!("get_evm_address");
@@ -63,7 +64,7 @@ pub mod gas {
     /// This minimum of 21,000 (see https://ethereum.stackexchange.com/questions/34674/where-does-the-number-21000-come-from-for-the-base-gas-consumption-in-ethereum/34675#34675)
     /// is used if the returned fee estimate is lower, otherwise wallets such as Metamask will not
     /// allow the transaction to be sent.
-    pub const MINIMUM_GAS_FEE: u64 = 21000;
+    pub const MINIMUM_GAS_FEE: u64 = 21_000;
 }
 
 /// This module contains error messages related to Kakarot.
@@ -87,6 +88,7 @@ lazy_static! {
     pub static ref MIX_HASH: H256 = H256::zero();
     pub static ref DIFFICULTY: U256 = U256::from(0);
     pub static ref TOTAL_DIFFICULTY: Option<U256> = None;
+    pub static ref TX_ORIGIN_ZERO: Address = Address::zero();
 }
 
 lazy_static! {
@@ -97,8 +99,10 @@ lazy_static! {
 // Starknet gas price
 lazy_static! {
     /// The address of the argent account used to calculate the gas price.
-    /// (code: https://github.com/argentlabs/argent-contracts-starknet/blob/develop/contracts/account/ArgentAccount.cairo)
-    pub static ref ACCOUNT_ADDRESS: FieldElement =
+    /// (code: https://github.com/argentlabs/argent-contracts-starknet/blob/develop/contracts/account/src/argent_account.cairo)
+    /// This account is ONLY used for the gasPrice JSON RPC route, to send a simulate_transaction payload for a dummy transaction on Starknet
+    /// Thus recovering the current gas_price
+    pub static ref DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS: FieldElement =
         FieldElement::from_hex_be("0x07142FbF6E8C9C07b079D47727C6D2ff49970203bfd5Bd6ED0D740e0f5a344E7").unwrap();
     pub static ref INC_SELECTOR: FieldElement = selector!("inc");
     /// The address of the counter contract used to calculate the gas price on mainnet
@@ -117,4 +121,9 @@ lazy_static! {
         StarknetCall { to: *COUNTER_ADDRESS_TESTNET1, selector: *INC_SELECTOR, calldata: vec![] }.into();
     pub static ref COUNTER_CALL_TESTNET2: Call =
         StarknetCall { to: *COUNTER_ADDRESS_TESTNET2, selector: *INC_SELECTOR, calldata: vec![] }.into();
+}
+
+// This module contains constants to be used for deployment of Kakarot System
+lazy_static! {
+    pub static ref DEPLOY_FEE: FieldElement = FieldElement::from(100_000_u64);
 }

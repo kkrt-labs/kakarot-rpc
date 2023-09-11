@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use reth_primitives::{Address, Bytes};
 use starknet::core::types::{BlockId, FunctionCall, StarknetError};
-use starknet::providers::{Provider, ProviderError};
+use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 use starknet_crypto::FieldElement;
 
 use crate::client::constants::selectors::{BYTECODE, GET_EVM_ADDRESS};
@@ -39,11 +39,20 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
 
         // Make the function call to get the Starknet contract address
         let bytecode = self.provider().call(request, block_id).await.or_else(|err| match err {
-            ProviderError::StarknetError(StarknetError::ContractNotFound) => Ok(vec![]),
+            ProviderError::StarknetError(StarknetErrorWithMessage {
+                code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                ..
+            }) => Ok(vec![]),
             _ => Err(EthApiError::from(err)),
         })?;
 
-        Ok(vec_felt_to_bytes(bytecode))
+        if bytecode.is_empty() {
+            return Ok(Bytes::default());
+        }
+
+        // bytecode_len is the first element of the returned array
+        // TODO: Remove Manual Decoding
+        Ok(vec_felt_to_bytes(bytecode[1..].to_vec()))
     }
 }
 

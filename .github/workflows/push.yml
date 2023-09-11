@@ -1,0 +1,28 @@
+---
+name: Workflow - Push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  submodules:
+    name: Set up submodules
+    uses: ./.github/workflows/submodules.yml
+
+  dump:
+    name: Dump katana state
+    uses: ./.github/workflows/dump.yml
+    needs: submodules
+
+  spell_check:
+    name: Spell check
+    uses: ./.github/workflows/spell_check.yml
+
+  benchmark:
+    name: Erc20 benchmark
+    uses: ./.github/workflows/benchmark.yml
+
+  build:
+    name: Build binaries
+    uses: ./.github/workflows/kakarot_rpc.yml

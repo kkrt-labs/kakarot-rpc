@@ -1,7 +1,8 @@
 # Define ARG for build platform
 FROM --platform=$BUILDPLATFORM rust:1.64 as builder
 
-# Set ARG for target platform
+# Set ARG for build and target platform
+ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 
 # Set working directory
@@ -15,13 +16,20 @@ RUN build_platform() { \
         ARCH=$1; \
         COMPILER=$2; \
         LINKER=$3; \
-        echo "Building for $TARGETPLATFORM"; \
+        echo "Building for $TARGETPLATFORM on $BUILDPLATFORM"; \
          # Add the specified Rust target architecture
         rustup target add $ARCH; \
         # Update package lists and install the specified compiler
-        apt-get update && apt-get -y install $COMPILER; \
+        apt-get update && apt-get -y install $COMPILER libclang-dev; \
+        # Determine the BINDGEN_EXTRA_CLANG_ARGS based on comparison between BUILDPLATFORM and TARGETPLATFORM
+        if [ "$BUILDPLATFORM" = "$TARGETPLATFORM" ]; then \
+            BINDGEN_EXTRA_CLANG_ARGS=""; \
+        else \
+            BINDGEN_EXTRA_CLANG_ARGS="--sysroot /usr/${LINKER%-gcc}"; \
+        fi; \
+        echo "Using BINDGEN_EXTRA_CLANG_ARGS: $BINDGEN_EXTRA_CLANG_ARGS"; \
         # Build the Rust application for the specified target
-        cargo build --all --release \
+        BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
           --target=$ARCH \
           --config target.$ARCH.linker=\"$LINKER\"; \
         # Copy the built binary to a common release directory

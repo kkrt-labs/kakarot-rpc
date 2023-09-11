@@ -1,6 +1,5 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use kakarot_rpc_core::client::constants::CHAIN_ID;
-use kakarot_rpc_core::client::errors::EthApiError;
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
 
@@ -23,12 +22,12 @@ impl NetApiServer for NetRpc {
     }
 
     fn peer_count(&self) -> Result<PeerCount> {
-        // TODO: replace jsonrpsee::types::ErrorObject with Provider::Error once NetRpc uses Provider
-        Err(EthApiError::<jsonrpsee::types::ErrorObject>::MethodNotSupported("eth_peerCount".to_string()).into())
+        // Kakarot RPC currently does not have peers connected to node
+        Ok(PeerCount::Number(0))
     }
 
     fn listening(&self) -> Result<bool> {
-        // TODO: replace jsonrpsee::types::ErrorObject with Provider::Error once NetRpc uses Provider
-        Err(EthApiError::<jsonrpsee::types::ErrorObject>::MethodNotSupported("eth_listening".to_string()).into())
+        // Kakarot RPC currently does not support peer-to-peer connections
+        Ok(false)
     }
 }

@@ -194,13 +194,15 @@ Here is the list of all the available environment variables:
 
 <!-- markdownlint-disable MD013 -->
 
-| Name                     | Default value             | Description              |
-| ------------------------ | ------------------------- | ------------------------ |
-| TARGET_RPC_URL           | <http://0.0.0.0:5050/rpc> | Target Starknet RPC URL  |
-| RUST_LOG                 | Debug                     | Log level                |
-| KAKAROT_HTTP_RPC_ADDRESS | 0.0.0.0:3030              | Kakarot RPC URL          |
-| KAKAROT_ADDRESS          | see below                 | Kakarot address          |
-| PROXY_ACCOUNT_CLASS_HASH | see below                 | Proxy account class hash |
+| Name                          | Default value             | Description                  |
+| ----------------------------- | ------------------------- | ---------------------------- |
+| TARGET_RPC_URL                | <http://0.0.0.0:5050/rpc> | Target Starknet RPC URL      |
+| RUST_LOG                      | Debug                     | Log level                    |
+| KAKAROT_HTTP_RPC_ADDRESS      | 0.0.0.0:3030              | Kakarot RPC URL              |
+| KAKAROT_ADDRESS               | see below                 | Kakarot address              |
+| PROXY_ACCOUNT_CLASS_HASH      | see below                 | Proxy account class hash     |
+| DEPLOYER_ACCOUNT_ADDRESS      | N/A                       | Deployer Account Address     |
+| DEPLOYER_ACCOUNT_PRIVATE_KEY  | see below                 | Deployer Account Private Key |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -220,12 +222,24 @@ Declared:
 
 | Contract                 | Class hash                                                        |
 | ------------------------ | ----------------------------------------------------------------- |
-| Proxy account class hash | 0x3010a53967fa04842bcbcb6de8817101f047ef0d074b3eacbe714a3fc42a2eb |
+| Proxy account class hash | 0xba8f3f34eb92f56498fdf14ecac1f19d507dcc6859fa6d85eb8545370654bd  |
 
 <!-- markdownlint-enable MD013 -->
 
 The Counter contract implementation can be found
 [here](https://github.com/sayajin-labs/kakarot/blob/main/tests/integration/solidity_contracts/PlainOpcodes/Counter.sol)
+
+### Deployer Account
+The Kakarot RPC requires a funded deployer account to deploy ethereum EOAs whose on-chain smart contract don't exist, the role of
+the deployer is to deploy these accounts for a smoother UX { the deployer recovers the amount spent of this deployments }
+
+The kakarot [deploy scripts](https://github.com/kkrt-labs/kakarot/blob/9773e4d10a3c3a32fb8aa3cfbf6fdbff35d6985e/scripts/deploy_kakarot.py#L67) deploy and fund an account with the private key "0x0288a51c164874bb6a1ca7bd1cb71823c234a86d0f7b150d70fa8f06de645396" for [Katana](https://github.com/dojoengine/dojo/tree/main/crates/katana) and [Madara](https://github.com/keep-starknet-strange/madara), the address of this account can be found in the file `deployments/{network}/deployments.json` with the key `deployer_account` after running this script on [Kakarot](https://github.com/kkrt-labs/kakarot).
+
+You can configure Kakarot RPC to run with a particular Deployer Account via the following environment variables:
+- `DEPLOYER_ACCOUNT_ADDRESS`
+- `DEPLOYER_ACCOUNT_PRIVATE_KEY`
+
+When running in production on testnet and mainnet it is advised to have a separate pre-funded account for this.
 
 ### API
 

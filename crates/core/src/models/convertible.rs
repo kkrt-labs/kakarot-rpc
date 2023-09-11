@@ -14,7 +14,7 @@ pub trait ConvertibleStarknetBlock {
 }
 
 pub trait ConvertibleStarknetEvent {
-    fn to_eth_log<P: Provider + Send + Sync>(
+    fn to_eth_log<P: Provider + Send + Sync + 'static>(
         self,
         client: &dyn KakarotStarknetApi<P>,
         block_hash: Option<H256>,
@@ -26,7 +26,7 @@ pub trait ConvertibleStarknetEvent {
 }
 
 pub trait ConvertibleEthEventFilter {
-    fn to_starknet_event_filter<P: Provider + Send + Sync>(
+    fn to_starknet_event_filter<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<EventFilter, EthApiError<P::Error>>;
@@ -45,7 +45,7 @@ pub trait ConvertibleStarknetTransaction {
 
 #[async_trait]
 pub trait ConvertibleStarknetTransactionReceipt {
-    async fn to_eth_transaction_receipt<P: Provider + Send + Sync>(
+    async fn to_eth_transaction_receipt<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<Option<TransactionReceipt>, EthApiError<P::Error>>;

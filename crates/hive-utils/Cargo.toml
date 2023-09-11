@@ -8,17 +8,21 @@ homepage = { workspace = true }
 [dependencies]
 eyre = { workspace = true }
 kakarot-rpc-core = { path = "../core" }
-starknet_api = { workspace = true }
+lazy_static = { workspace = true }
 reth-primitives = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 serde_with = { workspace = true }
 starknet = { workspace = true }
+starknet_api = { workspace = true }
 tokio = { workspace = true }
 url = { workspace = true }
-lazy_static = { workspace = true }
 
 [dev-dependencies]
 cargo-husky = { workspace = true }
 katana-core = { workspace = true }
 rstest = { workspace = true }
+
+[[bin]]
+name = "dump-genesis"
+path = "src/hive/bin/dump-genesis.rs"

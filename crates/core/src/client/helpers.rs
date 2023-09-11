@@ -1,5 +1,5 @@
 use eyre::Result;
-use reth_primitives::{Bloom, Bytes, H160, U128, U256};
+use reth_primitives::{Bloom, Bytes, H160, U128, U256, U64};
 use reth_rlp::DecodeError;
 use reth_rpc_types::TransactionReceipt;
 use starknet::core::types::{
@@ -83,7 +83,8 @@ pub fn vec_felt_to_bytes(vec_felt: Vec<FieldElement>) -> Bytes {
 pub fn create_default_transaction_receipt() -> TransactionReceipt {
     TransactionReceipt {
         transaction_hash: None,
-        transaction_index: None,
+        // TODO: Compute and return transaction index
+        transaction_index: U64::from(0),
         block_hash: None,
         block_number: None,
         from: H160::from(0),

@@ -42,8 +42,9 @@ services:
       # First line overrides an existing .env, if any.
       # This is to make sure that it is clean even though docker volume was not cleaned.
       - |
-        echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /deployments/deployments.json)" > /deployments/.env;
-        echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /deployments/declarations.json)" >> /deployments/.env
+        echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /deployments/custom-rpc/deployments.json)" > /deployments/.env;
+        echo "DEPLOYER_ACCOUNT_ADDRESS=$(jq -r '.deployer_account.address' /deployments/custom-rpc/deployments.json)" >> /deployments/.env;
+        echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
     volumes:
       - deployments:/deployments
     depends_on:
@@ -58,6 +59,7 @@ services:
       - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:9944
       - RUST_LOG=trace
+      - DEPLOYER_ACCOUNT_PRIVATE_KEY=0x0288a51c164874bb6a1ca7bd1cb71823c234a86d0f7b150d70fa8f06de645396
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app

@@ -22,6 +22,7 @@ futures = "0.3.26"
 
 # misc
 anyhow = "1.0.68"
+dojo-test-utils = { workspace = true }
 dotenv = { workspace = true }
 hex = "0.4"
 lazy_static = { workspace = true }
@@ -39,7 +40,6 @@ tower = "0.4.13"
 tower-http = "0.4.1"
 tracing = "0.1.34"
 tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
-dojo-test-utils = { workspace = true }
 
 # for cross-compiling
 openssl = { version = "0.10", features = ["vendored"] }

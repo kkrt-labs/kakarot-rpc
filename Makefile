@@ -5,11 +5,11 @@ STARKNET_NETWORK?=madara
 -include .env
 export
 
-pull-kakarot: .gitmodules 
+pull-kakarot: .gitmodules
 	git submodule update --init --recursive
 	cd lib/kakarot && make setup
 
-build-kakarot: setup 
+build-kakarot: pull-kakarot
 	cd lib/kakarot && make build && make build-sol
 
 build-and-deploy-kakarot:
@@ -21,7 +21,7 @@ deploy-kakarot:
 setup: pull-kakarot build-kakarot
 
 # run devnet
-devnet: 
+devnet:
 	docker run --rm -it -p 5050:5050 -v $(PWD)/deployments:/app/kakarot/deployments -e STARKNET_NETWORK=katana ghcr.io/kkrt-labs/kakarot/katana:latest
 
 # build
@@ -29,7 +29,7 @@ build:
 	cargo build --all --release
 
 # run
-run: 
+run:
 	cargo run -p kakarot-rpc
 
 run-dev:
@@ -41,25 +41,28 @@ run-release:
 
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
-	docker-compose -f docker-compose.yaml -f docker-compose.katana.yaml up -d --force-recreate --pull always
+	docker compose -f docker-compose.yaml -f docker-compose.katana.yaml up -d --force-recreate --pull always
 
 katana-rpc-down:
-	docker-compose -f docker-compose.yaml -f docker-compose.katana.yaml down --remove-orphans
+	docker compose -f docker-compose.yaml -f docker-compose.katana.yaml down --remove-orphans
 
 # Run Madara, Deploy Kakarot, Run Kakarot RPC
 madara-rpc-up:
-	docker-compose up -d --force-recreate --pull always
+	docker compose up -d --force-recreate --pull always
 
 madara-rpc-down:
-	docker-compose down --remove-orphans
+	docker compose down --remove-orphans
 
 dump-katana:
-	cargo run --bin dump-katana
+	cargo run --features dump --bin dump-katana
+
+dump-genesis: build-kakarot
+	cargo run --bin dump-genesis
 
 test: dump-katana
 	cargo test --all
 
-test-coverage: dump-katana
+test-coverage:
 	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 test-examples:

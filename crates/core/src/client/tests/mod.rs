@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256, U64};
-use reth_rpc_types::{CallRequest, Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
+use reth_rpc_types::{CallInput, CallRequest, Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransactionV1};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::sequencer::models::BlockId as SequencerBlockId;
@@ -143,6 +143,7 @@ async fn test_simulate_transaction() {
         max_fee: FieldElement::ZERO,
         nonce,
         signature: vec![],
+        is_query: true,
     };
 
     // When
@@ -163,10 +164,10 @@ async fn test_estimate_gas() {
     let client = init_testnet_client();
 
     let request = CallRequest {
-        from: Some(*ACCOUNT_ADDRESS_EVM),               // account address
-        to: Some(*COUNTER_ADDRESS_EVM),                 // counter address
-        data: Some(Bytes::from_str(INC_DATA).unwrap()), // call to inc()
-        chain_id: Some(U64::from(CHAIN_ID)),            // "KKRT" chain id
+        from: Some(*ACCOUNT_ADDRESS_EVM), // account address
+        to: Some(*COUNTER_ADDRESS_EVM),   // counter address
+        input: CallInput { input: None, data: Some(Bytes::from_str(INC_DATA).unwrap()) }, // call to inc()
+        chain_id: Some(U64::from(CHAIN_ID)), // "KKRT" chain id
         ..Default::default()
     };
     let block_id = BlockId::Number(BlockNumberOrTag::Latest);
@@ -240,7 +241,7 @@ async fn test_get_logs() {
             from_block: Some(BlockNumberOrTag::Number(0)),
             to_block: Some(BlockNumberOrTag::Number(10)),
         },
-        address: Some(ValueOrArray::Value(*ABDEL_ETHEREUM_ADDRESS)),
+        address: ValueOrArray::Value(*ABDEL_ETHEREUM_ADDRESS).into(),
         ..Default::default()
     };
 

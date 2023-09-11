@@ -2,11 +2,10 @@ use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use kakarot_rpc_core::client::api::KakarotEthApi;
-use kakarot_rpc_core::client::constants::CHAIN_ID;
+use kakarot_rpc_core::client::constants::{CHAIN_ID, TX_ORIGIN_ZERO};
 use kakarot_rpc_core::client::errors::{rpc_err, EthApiError, EthRpcErrorCode};
 use kakarot_rpc_core::models::block::EthBlockId;
-use reth_primitives::rpc::transaction::eip2930::AccessListWithGasUsed;
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
+use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
     CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
@@ -159,12 +158,15 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
             rpc_err(EthRpcErrorCode::InternalError, "CallRequest `to` field is None. Cannot process a Kakarot call")
         })?;
 
-        let calldata = request.data.ok_or_else(|| {
+        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
+        let origin = request.from.unwrap_or(*TX_ORIGIN_ZERO);
+
+        let calldata = request.input.data.ok_or_else(|| {
             rpc_err(EthRpcErrorCode::InternalError, "CallRequest `data` field is None. Cannot process a Kakarot call")
         })?;
 
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let result = self.kakarot_client.call(to, Bytes::from(calldata.0), block_id).await?;
+        let result = self.kakarot_client.call(origin, to, Bytes::from(calldata.0), block_id).await?;
 
         Ok(result)
     }

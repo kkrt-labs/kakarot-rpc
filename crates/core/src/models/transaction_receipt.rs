@@ -34,7 +34,7 @@ impl From<StarknetTransactionReceipt> for MaybePendingTransactionReceipt {
 
 #[async_trait]
 impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
-    async fn to_eth_transaction_receipt<P: Provider + Send + Sync>(
+    async fn to_eth_transaction_receipt<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<Option<EthTransactionReceipt>, EthApiError<P::Error>> {
@@ -106,7 +106,7 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
                         transaction_hash,
                         // TODO: transition this hardcoded default out of nearing-demo-day hack and seeing how to
                         // properly source/translate this value
-                        transaction_index: None, // TODO: Fetch real data
+                        transaction_index: U64::from(0), // TODO: Fetch real data
                         block_hash,
                         block_number,
                         from,
