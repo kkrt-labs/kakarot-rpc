@@ -11,17 +11,13 @@ use crate::test_utils::fixtures::kakarot_test_env_ctx;
 async fn test_bytecode(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
     // Given
     let contract_name = "Counter";
-    let (client, _kakarot, _counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract(contract_name);
+    let counter_starknet_address = kakarot_test_env_ctx.evm_contract(contract_name).addresses.starknet_address;
 
     let contract = get_contract(contract_name);
     let expected_bytecode = get_contract_deployed_bytecode(contract);
 
     let starknet_block_id = BlockId::Tag(BlockTag::Latest);
-    let counter_starknet_address = client
-        .compute_starknet_address(counter_eth_address, &starknet_block_id)
-        .await
-        .expect("Failed to compute starknet address");
-    let starknet_provider = client.starknet_provider();
+    let starknet_provider = kakarot_test_env_ctx.client().starknet_provider();
     let counter_contract_account = KakarotAccount::new(counter_starknet_address, starknet_provider.as_ref());
 
     // When
