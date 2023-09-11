@@ -1,0 +1,46 @@
+[package]
+name = "kakarot_test_utils"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+homepage.workspace = true
+repository.workspace = true
+readme.workspace = true
+license.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+kakarot-rpc-core={ path = "../core" }
+
+dojo-test-utils = { workspace = true }
+katana-core = { workspace = true }
+reth-primitives = { workspace = true }
+starknet = { workspace = true }
+starknet-crypto = { workspace = true }
+url = { workspace = true }
+
+lazy_static = { workspace = true }
+tokio = { workspace = true }
+
+bytes = "1"
+dotenv = { workspace = true }
+ethers = { workspace = true }
+ethers-solc = { workspace = true }
+foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
+rstest = { workspace = true }
+git2 = { workspace = true, optional = true }
+
+futures = "0.3.26"
+serde = { version = "1.0" }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+serde_with = { workspace = true }
+
+[features]
+dump = ["git2"]
+
+[[bin]]
+name = "dump-katana"
+path = "src/bin/dump-katana.rs"
+required-features = ["dump"]

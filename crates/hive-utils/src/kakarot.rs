@@ -27,8 +27,8 @@ pub fn compute_starknet_address(
 #[cfg(test)]
 mod tests {
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
-    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
+    use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
+    use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
     use rstest::*;
     use starknet::core::types::{BlockId, BlockTag};
 

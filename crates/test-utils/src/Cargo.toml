@@ -1,0 +1,18 @@
+[package]
+name = "test-utils"
+version = { workspace = true }
+edition = { workspace = true }
+description = { workspace = true }
+homepage = { workspace = true }
+
+[dependencies]
+git2 = { workspace = true, optional = true }
+
+
+[features]
+dump = ["git2"]
+
+[[bin]]
+name = "dump-katana"
+path = "src/test_utils/bin/dump-katana.rs"
+required-features = ["dump"]

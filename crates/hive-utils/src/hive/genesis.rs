@@ -6,7 +6,7 @@ use std::path::Path;
 use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
-use kakarot_rpc_core::test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
+use kakarot_test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};

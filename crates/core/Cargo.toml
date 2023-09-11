@@ -54,11 +54,5 @@ starknet-crypto = { workspace = true }
 toml = "0.7.5"
 tracing = "0.1.37"
 tracing-subscriber = "0.3.17"
-
-[features]
-dump = ["git2"]
-
-[[bin]]
-name = "dump-katana"
-path = "src/test_utils/bin/dump-katana.rs"
-required-features = ["dump"]
+kakarot_test_utils = { path = "../test-utils" }
+kakarot-rpc-core = { path = "." }

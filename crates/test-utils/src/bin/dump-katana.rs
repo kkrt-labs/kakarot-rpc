@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use ethers::abi::Token;
 use git2::{Repository, SubmoduleIgnore};
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
-use kakarot_rpc_core::test_utils::constants::STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY;
-use kakarot_rpc_core::test_utils::deploy_helpers::{
+use kakarot_test_utils::constants::STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY;
+use kakarot_test_utils::deploy_helpers::{
     ContractDeploymentArgs, DeployerAccount, KakarotTestEnvironmentContext, TestContext,
 };
 use starknet::accounts::Account;
