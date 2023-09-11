@@ -281,7 +281,7 @@ mod tests {
                 StarknetContractAddress(Into::<StarkFelt>::into(counter_genesis_address).try_into().unwrap());
 
             starknet.set_class_hash_at(counter_address, ClassHash(contract_account_class_hash.into())).unwrap();
-            starknet.set_nonce(counter_address, Nonce(StarkFelt::from(0u8)));
+            starknet.set_nonce(counter_address, Nonce(StarkFelt::from(1u8)));
             for (key, value) in counter_storage.into_iter() {
                 starknet.set_storage_at(counter_address, key, value);
             }
@@ -419,7 +419,7 @@ mod tests {
             let genesis_address = StarknetContractAddress(Into::<StarkFelt>::into(genesis_address).try_into().unwrap());
 
             starknet.set_class_hash_at(genesis_address, ClassHash(contract_account_class_hash.into())).unwrap();
-            starknet.set_nonce(genesis_address, Nonce(StarkFelt::from(0u8)));
+            starknet.set_nonce(genesis_address, Nonce(StarkFelt::from(1u8)));
             for (key, value) in storage.into_iter() {
                 starknet.set_storage_at(genesis_address, key, value);
             }
