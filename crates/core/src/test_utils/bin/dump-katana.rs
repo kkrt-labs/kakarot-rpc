@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use ethers::abi::Token;
-use git2::Repository;
+use git2::{Repository, SubmoduleIgnore};
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::test_utils::constants::STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY;
 use kakarot_rpc_core::test_utils::deploy_helpers::{
@@ -62,13 +62,15 @@ async fn main() {
     .await
     .expect("Failed to dump state");
 
+    // Get the sha of the kakarot submodule
     let repo = Repository::open(".").unwrap();
-    let submodules: Vec<String> = repo
-        .submodules()
-        .unwrap()
-        .iter()
-        .filter(|submodule| submodule.name().unwrap() == "kakarot")
-        .map(|submodule| submodule.workdir_id().unwrap_or_else(|| submodule.head_id().unwrap()).to_string())
-        .collect();
-    std::fs::write(".katana/kakarot_sha", &submodules[0]).expect("Failed to write submodules to .katana/kakarot_sha");
+    let kakarot_submodule = repo.find_submodule("kakarot").expect("Failed to find kakarot submodule");
+    let sha = kakarot_submodule.index_id().unwrap_or_else(|| kakarot_submodule.head_id().unwrap()).to_string();
+
+    // Check if the submodule is dirty
+    let kakarot_submodule_status =
+        repo.submodule_status("kakarot", SubmoduleIgnore::None).expect("Failed to get kakarot submodule status");
+    let is_submodule_workdir_dirty = kakarot_submodule_status.is_wd_wd_modified();
+    let sha = if is_submodule_workdir_dirty { sha + "-dirty" } else { sha };
+    std::fs::write(".katana/kakarot_sha", sha).expect("Failed to write submodules to .katana/kakarot_sha");
 }
