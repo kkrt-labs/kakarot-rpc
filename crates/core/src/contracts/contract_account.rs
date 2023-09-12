@@ -79,6 +79,6 @@ impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
             .into());
         }
 
-        Ok(U256::from_be_bytes(result[0].to_bytes_be()))
+        Ok(Into::<Felt252Wrapper>::into(result[0]).into())
     }
 }
