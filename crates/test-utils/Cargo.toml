@@ -13,6 +13,10 @@ license.workspace = true
 
 [dependencies]
 kakarot-rpc-core={ path = "../core" }
+kakarot-rpc= { path = "../eth-rpc" }
+
+# rpc
+jsonrpsee = { workspace = true }
 
 dojo-test-utils = { workspace = true }
 eyre = { workspace = true }

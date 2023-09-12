@@ -7,7 +7,6 @@ pub mod api;
 pub mod config;
 pub mod rpc;
 pub mod servers;
-pub mod test_utils;
 
 use eyre::Result;
 use jsonrpsee::server::{ServerBuilder, ServerHandle};

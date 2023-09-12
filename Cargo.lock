@@ -4883,6 +4883,8 @@ dependencies = [
  "foundry-config",
  "futures",
  "git2",
+ "jsonrpsee 0.18.2",
+ "kakarot-rpc",
  "kakarot-rpc-core",
  "katana-core",
  "lazy_static",
