@@ -30,7 +30,7 @@ pub async fn execute_eth_tx(
     selector: &str,
     args: Vec<U256>,
 ) -> H256 {
-    let (client, kakarot, contract, contract_eth_address) = env.resources_with_contract(contract);
+    let (client, kakarot, contract) = env.resources_and_contract(contract);
 
     // When
     let nonce = client
@@ -42,7 +42,7 @@ pub async fn execute_eth_tx(
     let tx = create_raw_ethereum_tx(
         selector,
         kakarot.eoa_private_key,
-        contract_eth_address,
+        contract.addresses.eth_address,
         args,
         nonce.try_into().unwrap(),
     );

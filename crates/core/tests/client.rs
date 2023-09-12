@@ -65,7 +65,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_counter(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (client, _, counter, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
+        let (client, counter) = kakarot_test_env_ctx.client_and_contract("Counter");
 
         // When
         let hash = execute_eth_tx(&kakarot_test_env_ctx, "Counter", "inc", vec![]).await;
@@ -75,7 +75,7 @@ mod tests {
         let counter_bytes = client
             .call(
                 *TX_ORIGIN_ZERO,
-                counter_eth_address,
+                counter.addresses.eth_address,
                 count_selector.into(),
                 BlockId::Number(reth_primitives::BlockNumberOrTag::Latest),
             )
@@ -92,13 +92,13 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_storage_at(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (client, _, _, counter_eth_address) = kakarot_test_env_ctx.resources_with_contract("Counter");
+        let (client, counter) = kakarot_test_env_ctx.client_and_contract("Counter");
         // When
         execute_eth_tx(&kakarot_test_env_ctx, "Counter", "inc", vec![]).await;
 
         // Then
         let count = client
-            .storage_at(counter_eth_address, U256::from(0), BlockId::Number(BlockNumberOrTag::Latest))
+            .storage_at(counter.addresses.eth_address, U256::from(0), BlockId::Number(BlockNumberOrTag::Latest))
             .await
             .unwrap();
         assert_eq!(U256::from(1), count);
@@ -108,7 +108,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_token_balances(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
+        let (client, kakarot, erc20) = kakarot_test_env_ctx.resources_and_contract("ERC20");
 
         // When
         let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
@@ -116,6 +116,7 @@ mod tests {
         execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
 
         // Then
+        let erc20_eth_address = erc20.addresses.eth_address;
         let balances = client.token_balances(kakarot.eoa_addresses.eth_address, vec![erc20_eth_address]).await.unwrap();
         assert_eq!(
             TokenBalances {
@@ -134,7 +135,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn test_get_logs(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
         // Given
-        let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
+        let (client, kakarot, erc20) = kakarot_test_env_ctx.resources_and_contract("ERC20");
 
         // When
         let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
@@ -145,6 +146,7 @@ mod tests {
         let amount = U256::from(10_000);
         let transfer_tx_hash = execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "transfer", vec![to, amount]).await;
 
+        let erc20_eth_address = erc20.addresses.eth_address;
         let filter = Filter {
             block_option: FilterBlockOption::Range {
                 from_block: Some(BlockNumberOrTag::Number(0)),

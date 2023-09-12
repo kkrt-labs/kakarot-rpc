@@ -851,6 +851,13 @@ impl KakarotTestEnvironmentContext {
         &self.kakarot_client
     }
 
+    pub fn client_and_contract(
+        &self,
+        contract_name: &str,
+    ) -> (&KakarotClient<JsonRpcClient<HttpTransport>>, &Contract) {
+        (&self.kakarot_client, self.evm_contract(contract_name))
+    }
+
     pub fn kakarot(&self) -> &DeployedKakarot {
         &self.kakarot
     }
@@ -867,15 +874,11 @@ impl KakarotTestEnvironmentContext {
         (&self.kakarot_client, &self.kakarot)
     }
 
-    pub fn resources_with_contract(
+    pub fn resources_and_contract(
         &self,
         contract_name: &str,
-    ) -> (&KakarotClient<JsonRpcClient<HttpTransport>>, &DeployedKakarot, &Contract, Address) {
-        let contract = self.evm_contract(contract_name);
-        let eth_address: Felt252Wrapper = contract.addresses.eth_address.into();
-        let contract_eth_address: Address = eth_address.try_into().expect("Failed to convert address");
-
-        (&self.kakarot_client, &self.kakarot, contract, contract_eth_address)
+    ) -> (&KakarotClient<JsonRpcClient<HttpTransport>>, &DeployedKakarot, &Contract) {
+        (&self.kakarot_client, &self.kakarot, self.evm_contract(contract_name))
     }
 }
 
