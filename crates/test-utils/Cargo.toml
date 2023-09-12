@@ -15,9 +15,11 @@ license.workspace = true
 kakarot-rpc-core={ path = "../core" }
 
 dojo-test-utils = { workspace = true }
+eyre = { workspace = true }
 katana-core = { workspace = true }
 reth-primitives = { workspace = true }
 starknet = { workspace = true }
+starknet_api = { workspace = true }
 starknet-crypto = { workspace = true }
 url = { workspace = true }
 
@@ -44,3 +46,7 @@ dump = ["git2"]
 name = "dump-katana"
 path = "src/bin/dump-katana.rs"
 required-features = ["dump"]
+
+[[bin]]
+name = "dump-genesis"
+path = "src/bin/dump-genesis.rs"
