@@ -639,7 +639,7 @@ pub fn dumped_kakarot_state() -> SerializableState {
     // Get root path
     let dir = root_project_path!(".katana/dump.json");
 
-    // Create SeriazableState from dumped state
+    // Create SerializableState from dumped state
     let state = std::fs::read_to_string(dir).expect("Failed to read Katana dump");
     serde_json::from_str(&state).expect("Failed to deserialize Katana dump")
 }
