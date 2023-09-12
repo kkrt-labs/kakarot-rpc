@@ -18,12 +18,7 @@ fn env_var(name: &str) -> Result<String, ConfigError> {
 fn field_element_from_env(var_name: &str) -> Result<FieldElement, ConfigError> {
     let env_var = env_var(var_name)?;
 
-    FieldElement::from_hex_be(&env_var).map_err(|_| {
-        ConfigError::EnvironmentVariableSetWrong(format!(
-            "{} should be provided as a hex string, got {}",
-            var_name, env_var
-        ))
-    })
+    FieldElement::from_hex_be(&env_var).map_err(|_| ConfigError::EnvironmentVariableSetWrong(var_name.into(), env_var))
 }
 
 #[derive(Default, Clone, Debug)]
@@ -196,16 +191,15 @@ pub async fn get_starknet_account_from_env<P: Provider + Send + Sync + 'static>(
     let (starknet_account_private_key, starknet_account_address) = {
         let starknet_account_private_key = env_var("DEPLOYER_ACCOUNT_PRIVATE_KEY")?;
         let starknet_account_private_key = FieldElement::from_hex_be(&starknet_account_private_key).map_err(|_| {
-            ConfigError::EnvironmentVariableSetWrong(format!(
-                "DEPLOYER_ACCOUNT_PRIVATE_KEY should be provided as a hex string, got {starknet_account_private_key}"
-            ))
+            ConfigError::EnvironmentVariableSetWrong(
+                "DEPLOYER_ACCOUNT_PRIVATE_KEY".into(),
+                starknet_account_private_key,
+            )
         })?;
 
         let starknet_account_address = env_var("DEPLOYER_ACCOUNT_ADDRESS")?;
         let starknet_account_address = FieldElement::from_hex_be(&starknet_account_address).map_err(|_| {
-            ConfigError::EnvironmentVariableSetWrong(format!(
-                "DEPLOYER_ACCOUNT_ADDRESS should be provided as a hex string, got {starknet_account_private_key}"
-            ))
+            ConfigError::EnvironmentVariableSetWrong("DEPLOYER_ACCOUNT_ADDRESS".into(), starknet_account_address)
         })?;
         (starknet_account_private_key, starknet_account_address)
     };
