@@ -4009,6 +4009,7 @@ dependencies = [
  "cargo-husky",
  "eyre",
  "kakarot-rpc-core",
+ "kakarot-test-utils",
  "katana-core",
  "lazy_static",
  "reth-primitives",
@@ -4819,6 +4820,7 @@ dependencies = [
  "hex",
  "jsonrpsee 0.18.2",
  "kakarot-rpc-core",
+ "kakarot-test-utils",
  "lazy_static",
  "log",
  "openssl",
@@ -4861,6 +4863,8 @@ dependencies = [
  "git2",
  "hex",
  "jsonrpsee 0.18.2",
+ "kakarot-rpc-core",
+ "kakarot-test-utils",
  "katana-core",
  "lazy_static",
  "log",
@@ -4885,6 +4889,32 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "walkdir",
+]
+
+[[package]]
+name = "kakarot-test-utils"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "dojo-test-utils",
+ "dotenv",
+ "ethers",
+ "ethers-solc 2.0.9",
+ "foundry-config",
+ "futures",
+ "git2",
+ "kakarot-rpc-core",
+ "katana-core",
+ "lazy_static",
+ "reth-primitives",
+ "rstest",
+ "serde",
+ "serde_json",
+ "serde_with",
+ "starknet",
+ "starknet-crypto 0.5.1",
+ "tokio",
+ "url",
 ]
 
 [[package]]

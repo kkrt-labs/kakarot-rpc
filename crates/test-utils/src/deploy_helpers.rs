@@ -11,6 +11,13 @@ use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
 use ethers::types::Address as EthersAddress;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::utils::{find_project_root_path, load_config};
+use kakarot_rpc_core::client::api::KakarotStarknetApi;
+use kakarot_rpc_core::client::config::{Network, StarknetConfig as StarknetClientConfig};
+use kakarot_rpc_core::client::constants::{CHAIN_ID, DEPLOY_FEE, STARKNET_NATIVE_TOKEN};
+use kakarot_rpc_core::client::waiter::TransactionWaiter;
+use kakarot_rpc_core::client::KakarotClient;
+use kakarot_rpc_core::contracts::kakarot::KakarotContract;
+use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use katana_core::db::serde::state::SerializableState;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
@@ -32,14 +39,7 @@ use url::Url;
 
 use super::constants::{EVM_CONTRACTS, STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY};
 use super::execution_helpers::execute_and_wait_for_tx;
-use crate::client::api::KakarotStarknetApi;
-use crate::client::config::{Network, StarknetConfig as StarknetClientConfig};
-use crate::client::constants::{CHAIN_ID, DEPLOY_FEE, STARKNET_NATIVE_TOKEN};
-use crate::client::waiter::TransactionWaiter;
-use crate::client::KakarotClient;
-use crate::contracts::kakarot::KakarotContract;
-use crate::models::felt::Felt252Wrapper;
-use crate::test_utils::constants::EOA_WALLET;
+use crate::constants::EOA_WALLET;
 
 /// Macro to find the root path of the project.
 ///
@@ -129,7 +129,7 @@ pub fn get_contract(filename: &str) -> CompactContractBytecode {
 /// # Example
 ///
 /// ```no_run
-/// # use kakarot_rpc_core::test_utils::deploy_helpers::{get_contract, encode_contract, get_contract_abi, get_contract_bytecode};
+/// # use kakarot_test_utils::deploy_helpers::{get_contract, encode_contract, get_contract_abi, get_contract_bytecode};
 /// # use ethers::abi::Abi;
 /// let contract = get_contract("MyContract");
 /// let abi = get_contract_abi(&contract);

@@ -163,8 +163,8 @@ mod tests {
     use kakarot_rpc_core::contracts::account::Account;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
-    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
+    use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
+    use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::U256;
     use rstest::rstest;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
