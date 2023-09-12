@@ -4009,7 +4009,7 @@ dependencies = [
  "cargo-husky",
  "eyre",
  "kakarot-rpc-core",
- "kakarot_test_utils",
+ "kakarot-test-utils",
  "katana-core",
  "lazy_static",
  "reth-primitives",
@@ -4820,7 +4820,7 @@ dependencies = [
  "hex",
  "jsonrpsee 0.18.2",
  "kakarot-rpc-core",
- "kakarot_test_utils",
+ "kakarot-test-utils",
  "lazy_static",
  "log",
  "openssl",
@@ -4864,7 +4864,7 @@ dependencies = [
  "hex",
  "jsonrpsee 0.18.2",
  "kakarot-rpc-core",
- "kakarot_test_utils",
+ "kakarot-test-utils",
  "katana-core",
  "lazy_static",
  "log",
@@ -4892,7 +4892,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kakarot_test_utils"
+name = "kakarot-test-utils"
 version = "0.1.0"
 dependencies = [
  "bytes",

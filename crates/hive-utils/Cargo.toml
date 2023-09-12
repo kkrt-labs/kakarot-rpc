@@ -18,7 +18,7 @@ starknet_api = { workspace = true }
 tokio = { workspace = true }
 url = { workspace = true }
 
-kakarot_test_utils = { path = "../test-utils" }
+kakarot-test-utils = { path = "../test-utils" }
 
 [dev-dependencies]
 cargo-husky = { workspace = true }

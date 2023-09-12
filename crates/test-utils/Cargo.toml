@@ -1,5 +1,5 @@
 [package]
-name = "kakarot_test_utils"
+name = "kakarot-test-utils"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

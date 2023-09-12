@@ -62,7 +62,7 @@ use crate::models::transaction_receipt::StarknetTransactionReceipt as Transactio
 use crate::models::ConversionError;
 
 pub struct KakarotClient<P: Provider + Send + Sync> {
-    pub starknet_provider: Arc<P>,
+    starknet_provider: Arc<P>,
     deployer_account: SingleOwnerAccount<Arc<P>, LocalWallet>,
     kakarot_contract: KakarotContract<P>,
     network: Network,
