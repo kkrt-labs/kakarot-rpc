@@ -645,9 +645,9 @@ pub fn dumped_kakarot_state() -> SerializableState {
 }
 
 /// Returns a `StarknetConfig` instance customized for Kakarot.
-pub fn kakarot_starknet_config() -> StarknetConfig {
-    // Get the dumped Kakarot state
-    let state = dumped_kakarot_state();
+/// If `with_dumped_state` is true, the config will be initialized with the dumped state.
+pub fn kakarot_starknet_config(with_dumped_state: bool) -> StarknetConfig {
+    let state = if with_dumped_state { Some(dumped_kakarot_state()) } else { None };
 
     let kakarot_steps = std::u32::MAX;
     StarknetConfig {
@@ -658,17 +658,9 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
             validate_max_steps: kakarot_steps,
             gas_price: 1,
         },
-        init_state: Some(state),
+        init_state: state,
         ..Default::default()
     }
-}
-
-pub struct KakarotTestEnvironmentContext {
-    sequencer: TestSequencer,
-    kakarot_client: KakarotClient<JsonRpcClient<HttpTransport>>,
-    kakarot: DeployedKakarot,
-    kakarot_contract: KakarotContract<JsonRpcClient<HttpTransport>>,
-    evm_contracts: HashMap<String, Contract>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -688,19 +680,77 @@ pub struct ContractDeploymentArgs<T: Tokenize> {
     pub constructor_args: T,
 }
 
-pub enum TestContext {
-    Simple,
-    Counter,
-    PlainOpcodes,
-    ERC20,
+pub struct KakarotTestEnvironmentContext {
+    sequencer: TestSequencer,
+    kakarot_client: KakarotClient<JsonRpcClient<HttpTransport>>,
+    kakarot: DeployedKakarot,
+    kakarot_contract: KakarotContract<JsonRpcClient<HttpTransport>>,
+    evm_contracts: HashMap<String, Contract>,
 }
 
 impl KakarotTestEnvironmentContext {
-    pub async fn new(test_context: TestContext) -> Self {
-        // Construct a Starknet test sequencer
-        let sequencer = construct_kakarot_test_sequencer().await;
-
+    pub async fn new(with_dumped_state: bool) -> Self {
+        let sequencer = construct_kakarot_test_sequencer(with_dumped_state).await;
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+        if with_dumped_state {
+            Self::initialize_with_dumped_state(sequencer, starknet_provider).await
+        } else {
+            Self::initialize_without_dumped_state(sequencer, starknet_provider).await
+        }
+    }
+
+    /// Initializes the Kakarot test environment using the dumped state.
+    async fn initialize_with_dumped_state(
+        sequencer: TestSequencer,
+        starknet_provider: Arc<JsonRpcClient<HttpTransport>>,
+    ) -> KakarotTestEnvironmentContext {
+        // Get root path
+        let dir = root_project_path!(".katana/contracts.json");
+        let contracts = std::fs::read(dir).expect("Failed to read contracts");
+        let contracts: HashMap<&str, serde_json::Value> =
+            serde_json::from_slice(&contracts).expect("Failed to deserialize contracts");
+
+        let kakarot: DeployedKakarot = serde_json::from_value(contracts.get("Kakarot").unwrap().to_owned())
+            .expect("Failed to fetch Kakarot contract");
+
+        let mut evm_contracts = HashMap::new();
+        for contract_name in EVM_CONTRACTS {
+            let contract: Contract = serde_json::from_value(contracts.get(contract_name).unwrap().to_owned())
+                .unwrap_or_else(|_| panic!("Failed to fetch {} contract", contract_name));
+            evm_contracts.insert(contract_name.to_string(), contract);
+        }
+
+        let deployer_account: DeployerAccount =
+            serde_json::from_value(contracts.get("DeployerAccount").unwrap().to_owned())
+                .expect("Failed to fetch Deployer Account");
+        let local_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(deployer_account.private_key));
+        let chain_id = starknet_provider.chain_id().await.unwrap();
+        let deployer_account =
+            SingleOwnerAccount::new(starknet_provider.clone(), local_wallet, deployer_account.address, chain_id);
+
+        // Create a Kakarot client
+        let kakarot_client = KakarotClient::new(
+            StarknetClientConfig::new(
+                Network::JsonRpcProvider(sequencer.url()),
+                kakarot.kakarot_address,
+                kakarot.proxy_class_hash,
+            ),
+            starknet_provider,
+            deployer_account,
+        );
+
+        let kakarot_contract =
+            KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
+
+        KakarotTestEnvironmentContext { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts }
+    }
+
+    /// Initializes the Kakarot test environment and deploys the Kakarot system and EVM contracts.
+    async fn initialize_without_dumped_state(
+        sequencer: TestSequencer,
+        starknet_provider: Arc<JsonRpcClient<HttpTransport>>,
+    ) -> KakarotTestEnvironmentContext {
         let starknet_account = sequencer.account();
 
         // Define the expected funded amount for the Kakarot system
@@ -728,106 +778,37 @@ impl KakarotTestEnvironmentContext {
         let mut test_environment =
             Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts: HashMap::new() };
 
-        // Deploy the evm contracts depending on the test context
-        match test_context {
-            TestContext::Simple => test_environment,
+        // Deploy the Counter contract
+        test_environment = test_environment
+            .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
+            .await;
+        let counter = test_environment.evm_contract("Counter");
+        let counter_eth_address: Address = {
+            let address: Felt252Wrapper = counter.addresses.eth_address.into();
+            address.try_into().unwrap()
+        };
 
-            TestContext::Counter => {
-                // Deploy the Counter contract
-                test_environment = test_environment
-                    .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-                    .await;
-                test_environment
-            }
-            TestContext::PlainOpcodes => {
-                // Deploy the Counter contract
-                test_environment = test_environment
-                    .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-                    .await;
-                let counter = test_environment.evm_contract("Counter");
-                let counter_eth_address: Address = {
-                    let address: Felt252Wrapper = counter.addresses.eth_address.into();
-                    address.try_into().unwrap()
-                };
+        // Deploy the PlainOpcodes contract
+        test_environment = test_environment
+            .deploy_evm_contract(ContractDeploymentArgs {
+                name: "PlainOpcodes".into(),
+                constructor_args: (EthersAddress::from(counter_eth_address.as_fixed_bytes()),),
+            })
+            .await;
 
-                // Deploy the PlainOpcodes contract
-                test_environment = test_environment
-                    .deploy_evm_contract(ContractDeploymentArgs {
-                        name: "PlainOpcodes".into(),
-                        constructor_args: (EthersAddress::from(counter_eth_address.as_fixed_bytes()),),
-                    })
-                    .await;
-                test_environment
-            }
-            TestContext::ERC20 => {
-                // Deploy the ERC20 contract
-                test_environment = test_environment
-                    .deploy_evm_contract(ContractDeploymentArgs {
-                        name: "ERC20".into(),
-                        constructor_args: (
-                            Token::String("Test".into()),               // name
-                            Token::String("TT".into()),                 // symbol
-                            Token::Uint(ethers::types::U256::from(18)), // decimals
-                        ),
-                    })
-                    .await;
-                test_environment
-            }
-        }
-    }
+        // Deploy the ERC20 contract
+        test_environment = test_environment
+            .deploy_evm_contract(ContractDeploymentArgs {
+                name: "ERC20".into(),
+                constructor_args: (
+                    Token::String("Test".into()),               // name
+                    Token::String("TT".into()),                 // symbol
+                    Token::Uint(ethers::types::U256::from(18)), // decimals
+                ),
+            })
+            .await;
 
-    /// Constructs a Kakarot test environment from a dumped state and contracts.
-    ///
-    /// # Panics
-    ///
-    /// This function will panic if there is no dumped state or contracts located
-    /// in the .katana folder at the root of the project.
-    pub async fn from_dump_state() -> Self {
-        // Construct a Starknet test sequencer
-        let sequencer = construct_kakarot_test_sequencer().await;
-
-        // Get root path
-        let dir = root_project_path!(".katana/contracts.json");
-        let contracts = std::fs::read(dir).expect("Failed to read contracts");
-        let contracts: HashMap<&str, serde_json::Value> =
-            serde_json::from_slice(&contracts).expect("Failed to deserialize contracts");
-
-        let kakarot: DeployedKakarot = serde_json::from_value(contracts.get("Kakarot").unwrap().to_owned())
-            .expect("Failed to fetch Kakarot contract");
-
-        let mut evm_contracts = HashMap::new();
-        for contract_name in EVM_CONTRACTS {
-            let contract: Contract = serde_json::from_value(contracts.get(contract_name).unwrap().to_owned())
-                .unwrap_or_else(|_| panic!("Failed to fetch {} contract", contract_name));
-            evm_contracts.insert(contract_name.to_string(), contract);
-        }
-
-        let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
-
-        let chain_id = starknet_provider.chain_id().await.unwrap();
-
-        let deployer_account: DeployerAccount =
-            serde_json::from_value(contracts.get("DeployerAccount").unwrap().to_owned())
-                .expect("Failed to fetch Deployer Account");
-        let local_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(deployer_account.private_key));
-        let deployer_account =
-            SingleOwnerAccount::new(starknet_provider.clone(), local_wallet, deployer_account.address, chain_id);
-
-        // Create a Kakarot client
-        let kakarot_client = KakarotClient::new(
-            StarknetClientConfig::new(
-                Network::JsonRpcProvider(sequencer.url()),
-                kakarot.kakarot_address,
-                kakarot.proxy_class_hash,
-            ),
-            starknet_provider,
-            deployer_account,
-        );
-
-        let kakarot_contract =
-            KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
-
-        Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts }
+        test_environment
     }
 
     pub async fn deploy_evm_contract<T: Tokenize>(mut self, contract_args: ContractDeploymentArgs<T>) -> Self {
@@ -888,8 +869,12 @@ impl KakarotTestEnvironmentContext {
 /// Kakarot based applications.
 ///
 /// Returns a `TestSequencer` configured for Kakarot.
-pub async fn construct_kakarot_test_sequencer() -> TestSequencer {
-    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, kakarot_starknet_config()).await
+pub async fn construct_kakarot_test_sequencer(with_dumped_state: bool) -> TestSequencer {
+    TestSequencer::start(
+        SequencerConfig { no_mining: false, block_time: None },
+        kakarot_starknet_config(with_dumped_state),
+    )
+    .await
 }
 
 /// Get filepath of a given a compiled contract which is part of the kakarot system
