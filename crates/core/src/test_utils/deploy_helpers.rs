@@ -634,8 +634,21 @@ impl DeployedKakarot {
     }
 }
 
+/// Returns the dumped Katana state with deployed Kakarot + EVM contracts.
+pub fn dumped_kakarot_state() -> SerializableState {
+    // Get root path
+    let dir = root_project_path!(".katana/dump.json");
+
+    // Create SeriazableState from dumped state
+    let state = std::fs::read_to_string(dir).expect("Failed to read Katana dump");
+    serde_json::from_str(&state).expect("Failed to deserialize Katana dump")
+}
+
 /// Returns a `StarknetConfig` instance customized for Kakarot.
 pub fn kakarot_starknet_config() -> StarknetConfig {
+    // Get the dumped Kakarot state
+    let state = dumped_kakarot_state();
+
     let kakarot_steps = std::u32::MAX;
     StarknetConfig {
         disable_fee: true,
@@ -645,6 +658,7 @@ pub fn kakarot_starknet_config() -> StarknetConfig {
             validate_max_steps: kakarot_steps,
             gas_price: 1,
         },
+        init_state: Some(state),
         ..Default::default()
     }
 }
@@ -773,22 +787,7 @@ impl KakarotTestEnvironmentContext {
         let sequencer = construct_kakarot_test_sequencer().await;
 
         // Get root path
-        let mut dir = root_project_path!(".katana/dump.json");
-
-        // Load the dumped state into the sequencer
-        let state = std::fs::read_to_string(dir.clone()).expect("Failed to read Katana dump");
-        let state: SerializableState = serde_json::from_str(&state).expect("Failed to deserialize Katana dump");
-
-        let mut sequencer_state = sequencer.sequencer.backend.state.write().await;
-        sequencer_state.load_state(state).expect("Failed to load dumped state into sequencer");
-        drop(sequencer_state);
-
-        // Generate an empty block to apply changes.
-        sequencer.sequencer.backend.mine_empty_block().await;
-
-        // Load the dumped contracts
-        dir.pop();
-        dir.push("contracts.json");
+        let dir = root_project_path!(".katana/contracts.json");
         let contracts = std::fs::read(dir).expect("Failed to read contracts");
         let contracts: HashMap<&str, serde_json::Value> =
             serde_json::from_slice(&contracts).expect("Failed to deserialize contracts");
