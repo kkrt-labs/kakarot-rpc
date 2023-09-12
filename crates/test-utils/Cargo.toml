@@ -33,7 +33,7 @@ rstest = { workspace = true }
 git2 = { workspace = true, optional = true }
 
 futures = "0.3.26"
-serde = { workspace = true}
+serde = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde_with = { workspace = true }
 
