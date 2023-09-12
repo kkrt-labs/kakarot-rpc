@@ -10,10 +10,10 @@ mod tests {
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
-    use kakarot_rpc_core::test_utils::constants::EOA_RECEIVER_ADDRESS;
-    use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
-    use kakarot_rpc_core::test_utils::execution_helpers::{execute_eth_transfer_tx, execute_eth_tx};
-    use kakarot_rpc_core::test_utils::fixtures::kakarot_test_env_ctx;
+    use kakarot_test_utils::constants::EOA_RECEIVER_ADDRESS;
+    use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
+    use kakarot_test_utils::execution_helpers::{execute_eth_transfer_tx, execute_eth_tx};
+    use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
     use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
     use rstest::*;

@@ -5,7 +5,7 @@ use jsonrpsee::server::ServerHandle;
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::client::config::{Network, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
-use kakarot_rpc_core::test_utils::deploy_helpers::KakarotTestEnvironmentContext;
+use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
@@ -51,9 +51,9 @@ use crate::run_server;
 /// async fn test_case(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
 ///    // Set up the Kakarot RPC integration environment.
 ///    let (server_addr, server_handle) = start_kakarot_rpc_server(&kakarot_test_env_ctx).await.unwrap();
-///    
+///
 ///    // Query whatever eth_rpc endpoints
-///     
+///
 ///    // Dont forget to close server at the end.
 ///    server_handle.stop().expect("Failed to stop the server");
 ///
