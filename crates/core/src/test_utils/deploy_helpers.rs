@@ -704,7 +704,7 @@ impl KakarotTestEnvironmentContext {
     async fn initialize_with_dumped_state(
         sequencer: TestSequencer,
         starknet_provider: Arc<JsonRpcClient<HttpTransport>>,
-    ) -> KakarotTestEnvironmentContext {
+    ) -> Self {
         // Get root path
         let dir = root_project_path!(".katana/contracts.json");
         let contracts = std::fs::read(dir).expect("Failed to read contracts");
@@ -743,14 +743,14 @@ impl KakarotTestEnvironmentContext {
         let kakarot_contract =
             KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
 
-        KakarotTestEnvironmentContext { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts }
+        Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts }
     }
 
     /// Initializes the Kakarot test environment and deploys the Kakarot system and EVM contracts.
     async fn initialize_without_dumped_state(
         sequencer: TestSequencer,
         starknet_provider: Arc<JsonRpcClient<HttpTransport>>,
-    ) -> KakarotTestEnvironmentContext {
+    ) -> Self {
         let starknet_account = sequencer.account();
 
         // Define the expected funded amount for the Kakarot system
