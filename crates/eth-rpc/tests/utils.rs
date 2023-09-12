@@ -9,7 +9,7 @@ use starknet::providers::JsonRpcClient;
 ///
 /// Example :
 /// ```ignore
-///   use kakarot_rpc::test_utils::setup_rpc_server;
+///   use kakarot_test_utils::setup_rpc_server;
 ///
 ///   #[tokio::test]
 ///   async fn test_case() {

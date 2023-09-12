@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use ethers::signers::{LocalWallet, Signer};
+use kakarot_rpc_core::client::api::KakarotEthApi;
+use kakarot_rpc_core::client::waiter::TransactionWaiter;
 use reth_primitives::{Address, BlockId, H256, U256};
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::InvokeTransactionResult;
@@ -9,8 +11,6 @@ use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet as StarknetLocalWallet;
 
 use super::deploy_helpers::{create_eth_transfer_tx, create_raw_ethereum_tx, KakarotTestEnvironmentContext};
-use crate::client::api::KakarotEthApi;
-use crate::client::waiter::TransactionWaiter;
 
 pub async fn execute_and_wait_for_tx(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, StarknetLocalWallet>,
