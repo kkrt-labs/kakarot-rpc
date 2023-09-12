@@ -60,6 +60,10 @@ impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
     }
 
     /// Returns the nonce of the contract account.
+    /// In Kakarot EVM, there are two types of accounts: EOA and Contract Account.
+    /// EOA nonce is handled by Starknet protocol.
+    /// Contract Account nonce is handled by Kakarot through a dedicated storage, this function
+    /// returns that storage value.
     pub async fn nonce(&self, block_id: &BlockId) -> Result<U256, EthApiError<P::Error>> {
         // Prepare the calldata for the get_nonce function call
         let calldata = vec![];
