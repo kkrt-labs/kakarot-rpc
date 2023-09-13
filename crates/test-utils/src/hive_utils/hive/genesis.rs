@@ -51,8 +51,8 @@ pub struct HiveGenesisConfig {
 
 impl HiveGenesisConfig {
     pub fn from_file(path: &str) -> Result<Self> {
-        let hive_genesis_file = File::open(path).unwrap();
-        Ok(serde_json::from_reader(hive_genesis_file).unwrap())
+        let hive_genesis_file = File::open(path)?;
+        Ok(serde_json::from_reader(hive_genesis_file)?)
     }
 }
 
@@ -226,8 +226,8 @@ pub async fn serialize_hive_to_madara_genesis_config(
     });
 
     let combined_genesis_file =
-        File::options().create_new(true).write(true).append(true).open(combined_genesis_path).unwrap();
-    // Serialize the loader to a string and then write to a file
+        File::options().create_new(true).write(true).append(false).open(combined_genesis_path).unwrap();
+    // Serialize the loader to a file
     serde_json::to_writer_pretty(combined_genesis_file, &madara_loader)?;
 
     Ok(())
