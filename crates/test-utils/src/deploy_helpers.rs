@@ -636,19 +636,17 @@ impl DeployedKakarot {
 
 /// Returns the dumped Katana state with deployed Kakarot + EVM contracts.
 pub fn dumped_kakarot_state() -> SerializableState {
-    // Get root path
-    let dir = root_project_path!(".katana/dump.json");
+    // Get dump path
+    let path = root_project_path!(".katana/dump.json");
 
     // Create SerializableState from dumped state
-    let state = std::fs::read_to_string(dir).expect("Failed to read Katana dump");
+    let state = std::fs::read_to_string(path).expect("Failed to read Katana dump");
     serde_json::from_str(&state).expect("Failed to deserialize Katana dump")
 }
 
 /// Returns a `StarknetConfig` instance customized for Kakarot.
 /// If `with_dumped_state` is true, the config will be initialized with the dumped state.
 pub fn kakarot_starknet_config(with_dumped_state: bool) -> StarknetConfig {
-    let state = if with_dumped_state { Some(dumped_kakarot_state()) } else { None };
-
     let kakarot_steps = std::u32::MAX;
     StarknetConfig {
         disable_fee: true,
@@ -658,7 +656,7 @@ pub fn kakarot_starknet_config(with_dumped_state: bool) -> StarknetConfig {
             validate_max_steps: kakarot_steps,
             gas_price: 1,
         },
-        init_state: state,
+        init_state: if with_dumped_state { Some(dumped_kakarot_state()) } else { None },
         ..Default::default()
     }
 }
@@ -705,9 +703,9 @@ impl KakarotTestEnvironmentContext {
         sequencer: TestSequencer,
         starknet_provider: Arc<JsonRpcClient<HttpTransport>>,
     ) -> Self {
-        // Get root path
-        let dir = root_project_path!(".katana/contracts.json");
-        let contracts = std::fs::read(dir).expect("Failed to read contracts");
+        // Get contracts path
+        let path = root_project_path!(".katana/contracts.json");
+        let contracts = std::fs::read(path).expect("Failed to read contracts");
         let contracts: HashMap<&str, serde_json::Value> =
             serde_json::from_slice(&contracts).expect("Failed to deserialize contracts");
 
@@ -753,11 +751,11 @@ impl KakarotTestEnvironmentContext {
     ) -> Self {
         let starknet_account = sequencer.account();
 
-        // Define the expected funded amount for the Kakarot system
-        let expected_funded_amount = FieldElement::from_dec_str("1000000000000000000").unwrap();
+        // Define the funding amount for the Kakarot system
+        let funding_amount = FieldElement::from(1000000000000000000_u64);
 
         // Deploy the Kakarot system
-        let kakarot = deploy_kakarot_system(&sequencer, EOA_WALLET.clone(), expected_funded_amount).await;
+        let kakarot = deploy_kakarot_system(&sequencer, EOA_WALLET.clone(), funding_amount).await;
 
         let starknet_deployer_account = deploy_deployer_account(starknet_provider.clone(), &starknet_account).await;
 
