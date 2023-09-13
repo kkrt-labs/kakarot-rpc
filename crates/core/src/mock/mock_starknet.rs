@@ -34,6 +34,7 @@ pub enum AvailableFixtures {
     ComputeStarknetAddress,
     GetEvmAddress,
     GetImplementation,
+    GetNonce,
     GetClassHashAt(String, String),
     Other(JsonRpcMethod),
 }
@@ -44,7 +45,8 @@ impl From<AvailableFixtures> for JsonRpcMethod {
             AvailableFixtures::Other(method) => method,
             AvailableFixtures::ComputeStarknetAddress
             | AvailableFixtures::GetImplementation
-            | AvailableFixtures::GetEvmAddress => JsonRpcMethod::Call,
+            | AvailableFixtures::GetEvmAddress
+            | AvailableFixtures::GetNonce => JsonRpcMethod::Call,
             AvailableFixtures::GetClassHashAt(_, _) => JsonRpcMethod::GetClassHashAt,
         }
     }
@@ -59,6 +61,7 @@ impl Serialize for AvailableFixtures {
             AvailableFixtures::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
             AvailableFixtures::GetEvmAddress => serializer.serialize_str("account_getEvmAddress"),
             AvailableFixtures::GetImplementation => serializer.serialize_str("account_getImplementation"),
+            AvailableFixtures::GetNonce => serializer.serialize_str("account_getNonce"),
             AvailableFixtures::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
             AvailableFixtures::Other(method) => method.serialize(serializer),
         }

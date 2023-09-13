@@ -56,7 +56,7 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
     }
 
     /// Returns the class hash of account implementation of the contract.
-    async fn get_implementation(&self, block_id: &BlockId) -> Result<FieldElement, EthApiError<P::Error>> {
+    async fn implementation(&self, block_id: &BlockId) -> Result<FieldElement, EthApiError<P::Error>> {
         // Prepare the calldata for the get_implementation function call
         let calldata = vec![];
         let request = FunctionCall {
