@@ -267,38 +267,34 @@ mod tests {
         // Create an atomic reference to the test environment to avoid dropping it
         let env = Arc::clone(&test_environment);
 
-        // It is not possible to block the async test task, so we need to spawn a blocking task
-        let handle = tokio::runtime::Handle::current();
-        tokio::task::spawn_blocking(move || {
-            // Get lock on the Starknet sequencer
-            let mut starknet = handle.block_on(async { env.sequencer().sequencer.backend.state.write().await });
-            let mut counter_storage = HashMap::new();
+        // Get lock on the Starknet sequencer
+        let mut starknet = env.sequencer().sequencer.backend.state.write().await;
+        let mut counter_storage = HashMap::new();
 
-            // Set the counter bytecode length into the contract
-            let key = get_starknet_storage_key("bytecode_len_", &[]);
-            let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_evm_bytecode_len as u64));
+        // Set the counter bytecode length into the contract
+        let key = get_starknet_storage_key("bytecode_len_", &[]);
+        let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_evm_bytecode_len as u64));
+        counter_storage.insert(key, value);
+
+        // Set the counter bytecode into the contract
+        counter_genesis_storage.into_iter().for_each(|((_, k), v)| {
+            let key = StarknetStorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
+            let value = Into::<StarkFelt>::into(v.0);
             counter_storage.insert(key, value);
+        });
 
-            // Set the counter bytecode into the contract
-            counter_genesis_storage.into_iter().for_each(|((_, k), v)| {
-                let key = StarknetStorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
-                let value = Into::<StarkFelt>::into(v.0);
-                counter_storage.insert(key, value);
-            });
+        // Deploy the contract account at genesis address
+        let contract_account_class_hash = env.kakarot().contract_account_class_hash;
+        let counter_address =
+            StarknetContractAddress(Into::<StarkFelt>::into(counter_genesis_address).try_into().unwrap());
 
-            // Deploy the contract account at genesis address
-            let contract_account_class_hash = env.kakarot().contract_account_class_hash;
-            let counter_address =
-                StarknetContractAddress(Into::<StarkFelt>::into(counter_genesis_address).try_into().unwrap());
-
-            starknet.set_class_hash_at(counter_address, ClassHash(contract_account_class_hash.into())).unwrap();
-            starknet.set_nonce(counter_address, Nonce(StarkFelt::from(1u8)));
-            for (key, value) in counter_storage.into_iter() {
-                starknet.set_storage_at(counter_address, key, value);
-            }
-        })
-        .await
-        .unwrap();
+        starknet.set_class_hash_at(counter_address, ClassHash(contract_account_class_hash.into())).unwrap();
+        starknet.set_nonce(counter_address, Nonce(StarkFelt::from(1u8)));
+        for (key, value) in counter_storage.into_iter() {
+            starknet.set_storage_at(counter_address, key, value);
+        }
+        // Need to drop the lock on the sequencer to avoid deadlock, so we can then get the bytecode
+        drop(starknet);
 
         // Create a new counter contract pointing to the genesis initialized storage
         let counter_genesis = ContractAccount::new(counter_genesis_address, &starknet_client);
@@ -412,22 +408,21 @@ mod tests {
 
         // Create an atomic reference to the test environment to avoid dropping it
         let env = Arc::clone(&test_environment);
-        // It is not possible to block the async test task, so we need to spawn a blocking task
-        let handle = tokio::runtime::Handle::current();
-        tokio::task::spawn_blocking(move || {
-            // Get lock on the Starknet sequencer
-            let mut starknet = handle.block_on(async { env.sequencer().sequencer.backend.state.write().await });
-            let mut storage = HashMap::new();
 
-            // Prepare the record to be inserted into the storage
-            genesis_storage_data.into_iter().for_each(|((_, k), v)| {
-                let storage_key = StarknetStorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
-                let storage_value = Into::<StarkFelt>::into(v.0);
-                storage.insert(storage_key, storage_value);
-            });
+        // Get lock on the Starknet sequencer
+        let mut starknet = env.sequencer().sequencer.backend.state.write().await;
+        let mut storage = HashMap::new();
 
-            // Set the storage record for the contract
-            let contract_account_class_hash = env.kakarot().contract_account_class_hash;
+        // Prepare the record to be inserted into the storage
+        genesis_storage_data.into_iter().for_each(|((_, k), v)| {
+            let storage_key = StarknetStorageKey(Into::<StarkFelt>::into(k.0).try_into().unwrap());
+            let storage_value = Into::<StarkFelt>::into(v.0);
+            storage.insert(storage_key, storage_value);
+        });
+
+        // Set the storage record for the contract
+        let contract_account_class_hash = env.kakarot().contract_account_class_hash;
+        {
             let genesis_address = StarknetContractAddress(Into::<StarkFelt>::into(genesis_address).try_into().unwrap());
 
             starknet.set_class_hash_at(genesis_address, ClassHash(contract_account_class_hash.into())).unwrap();
@@ -435,9 +430,9 @@ mod tests {
             for (key, value) in storage.into_iter() {
                 starknet.set_storage_at(genesis_address, key, value);
             }
-        })
-        .await
-        .unwrap();
+        }
+        // Need to drop the lock on the sequencer to avoid deadlock, so we can then get the storage
+        drop(starknet);
 
         // Deploy the contract account with the set genesis storage and retrieve the storage on the contract
         let starknet_client = test_environment.client().starknet_provider();
