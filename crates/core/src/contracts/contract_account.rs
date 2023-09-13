@@ -79,6 +79,6 @@ impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
             .into());
         }
 
-        Ok(Into::<Felt252Wrapper>::into(result[0]).into())
+        Ok(Felt252Wrapper::from(result[0]).into())
     }
 }
