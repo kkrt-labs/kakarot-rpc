@@ -157,6 +157,7 @@ mod tests {
     use std::str::FromStr;
     use std::sync::Arc;
 
+    use ctor::ctor;
     use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
     use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
@@ -172,8 +173,16 @@ mod tests {
     use starknet_api::core::{ClassHash, ContractAddress as StarknetContractAddress, Nonce};
     use starknet_api::hash::StarkFelt;
     use starknet_api::state::StorageKey as StarknetStorageKey;
+    use tracing_subscriber::{filter, FmtSubscriber};
 
     use super::*;
+
+    #[ctor]
+    fn setup() {
+        let filter = filter::EnvFilter::new("info");
+        let subscriber = FmtSubscriber::builder().with_env_filter(filter).finish();
+        tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
+    }
 
     /// This test verifies that the `genesis_set_storage_starknet_contract` function generates the
     /// correct storage data tuples for a given Starknet address, storage variable name, keys,

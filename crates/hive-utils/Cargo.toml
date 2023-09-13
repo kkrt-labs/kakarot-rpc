@@ -17,6 +17,9 @@ starknet = { workspace = true }
 starknet_api = { workspace = true }
 tokio = { workspace = true }
 url = { workspace = true }
+ctor = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 kakarot-test-utils = { path = "../test-utils" }
 

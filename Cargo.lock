@@ -4007,6 +4007,7 @@ name = "hive-utils"
 version = "0.1.0"
 dependencies = [
  "cargo-husky",
+ "ctor",
  "eyre",
  "kakarot-rpc-core",
  "kakarot-test-utils",
@@ -4020,6 +4021,8 @@ dependencies = [
  "starknet",
  "starknet_api",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "url",
 ]
 
