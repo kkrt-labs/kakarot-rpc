@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::{self};
+use std::fs::{self, File};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -101,12 +101,10 @@ pub fn get_contract(filename: &str) -> CompactContractBytecode {
     let compiled_solidity_path = std::path::Path::new(&foundry_default_out).join(dot_sol).join(dot_json);
     let compiled_solidity_path_from_root = root_project_path!(&compiled_solidity_path);
 
-    // Read the content of the file
-    let contents = fs::read_to_string(compiled_solidity_path_from_root).unwrap_or_else(|_| {
+    let compiled_solidity_file = File::open(compiled_solidity_path_from_root).unwrap_or_else(|_| {
         panic!("Could not read file: {}. please run `make setup` to ensure solidity files are compiled", filename)
     });
-
-    serde_json::from_str(&contents).unwrap()
+    serde_json::from_reader(compiled_solidity_file).unwrap()
 }
 
 /// Encodes a contract's bytecode and constructor arguments into deployable bytecode.

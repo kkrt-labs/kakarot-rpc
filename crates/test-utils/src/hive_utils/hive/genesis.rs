@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs;
+use std::fs::File;
 use std::io::Error as IoError;
 use std::path::Path;
 
@@ -51,7 +51,8 @@ pub struct HiveGenesisConfig {
 
 impl HiveGenesisConfig {
     pub fn from_file(path: &str) -> Result<Self> {
-        Ok(serde_json::from_str(&fs::read_to_string(path)?)?)
+        let hive_genesis_file = File::open(path).unwrap();
+        Ok(serde_json::from_reader(hive_genesis_file).unwrap())
     }
 }
 
@@ -73,7 +74,7 @@ lazy_static! {
 pub async fn serialize_hive_to_madara_genesis_config(
     hive_genesis: HiveGenesisConfig,
     mut madara_loader: GenesisLoader,
-    combined_genesis: &Path,
+    combined_genesis_path: &Path,
     compiled_path: &Path,
 ) -> Result<(), IoError> {
     // Compute the class hash of Kakarot contracts
@@ -224,10 +225,10 @@ pub async fn serialize_hive_to_madara_genesis_config(
         madara_loader.storage.push(is_initialized);
     });
 
-    // Serialize the loader to a string
-    let madara_genesis_str = serde_json::to_string_pretty(&madara_loader)?;
-    // Write the string to a file
-    fs::write(combined_genesis, madara_genesis_str)?;
+    let combined_genesis_file =
+        File::options().create_new(true).write(true).append(true).open(combined_genesis_path).unwrap();
+    // Serialize the loader to a string and then write to a file
+    serde_json::to_writer_pretty(combined_genesis_file, &madara_loader)?;
 
     Ok(())
 }
@@ -252,6 +253,7 @@ pub struct AccountInfo {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
     use std::str::FromStr;
 
     use reth_primitives::U256;
@@ -303,21 +305,21 @@ mod tests {
         let hive_genesis = HiveGenesisConfig::from_file("./src/hive_utils/test_data/hive_genesis.json").unwrap();
         let madara_loader =
             serde_json::from_str::<GenesisLoader>(std::include_str!("../test_data/madara_genesis.json")).unwrap();
-        let combined_genesis = Path::new("./src/hive_utils/test_data/combined_genesis.json");
+        let combined_genesis_path = Path::new("./src/test_data/combined_genesis.json");
         let compiled_path = Path::new("./cairo-contracts/build");
 
         // When
-        serialize_hive_to_madara_genesis_config(hive_genesis, madara_loader, combined_genesis, compiled_path)
+        serialize_hive_to_madara_genesis_config(hive_genesis, madara_loader, combined_genesis_path, compiled_path)
             .await
             .unwrap();
 
+        let combined_genesis_file = File::open(combined_genesis_path).unwrap();
+
         // Then
-        let combined_genesis = fs::read_to_string("./src/hive_utils/test_data/combined_genesis.json").unwrap();
-        let loader: GenesisLoader =
-            serde_json::from_str(&combined_genesis).expect("Failed to read combined_genesis.json");
+        let loader: GenesisLoader = serde_json::from_reader(combined_genesis_file).unwrap();
         assert_eq!(9 + 3 + 7, loader.contracts.len()); // 9 original + 3 Kakarot contracts + 7 hive
 
         // After
-        fs::remove_file("./src/hive_utils/test_data/combined_genesis.json").unwrap();
+        std::fs::remove_file(combined_genesis_path).unwrap();
     }
 }
