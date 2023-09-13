@@ -635,7 +635,7 @@ impl DeployedKakarot {
 }
 
 /// Returns the dumped Katana state with deployed Kakarot + EVM contracts.
-pub fn dumped_kakarot_state() -> SerializableState {
+pub fn dumped_katana_state() -> SerializableState {
     // Get dump path
     let path = root_project_path!(".katana/dump.json");
 
@@ -656,7 +656,7 @@ pub fn kakarot_starknet_config(with_dumped_state: bool) -> StarknetConfig {
             validate_max_steps: kakarot_steps,
             gas_price: 1,
         },
-        init_state: if with_dumped_state { Some(dumped_kakarot_state()) } else { None },
+        init_state: if with_dumped_state { Some(dumped_katana_state()) } else { None },
         ..Default::default()
     }
 }
