@@ -647,13 +647,13 @@ pub fn dumped_katana_state() -> SerializableState {
 /// Returns a `StarknetConfig` instance customized for Kakarot.
 /// If `with_dumped_state` is true, the config will be initialized with the dumped state.
 pub fn kakarot_starknet_config(with_dumped_state: bool) -> StarknetConfig {
-    let kakarot_steps = std::u32::MAX;
+    let max_steps = std::u32::MAX;
     StarknetConfig {
         disable_fee: true,
         env: Environment {
             chain_id: "SN_GOERLI".into(),
-            invoke_max_steps: kakarot_steps,
-            validate_max_steps: kakarot_steps,
+            invoke_max_steps: max_steps,
+            validate_max_steps: max_steps,
             gas_price: 1,
         },
         init_state: if with_dumped_state { Some(dumped_katana_state()) } else { None },
