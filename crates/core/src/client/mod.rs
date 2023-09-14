@@ -344,7 +344,13 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         let account = KakarotAccount::new(starknet_address, &self.starknet_provider);
         let implementation = match account.implementation(&starknet_block_id).await {
             Ok(class_hash) => class_hash,
-            Err(_) => return Ok(U256::from(0)), // Return 0 if the account doesn't exist
+            Err(err) => match err {
+                EthApiError::RequestError(ProviderError::StarknetError(StarknetErrorWithMessage {
+                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                    ..
+                })) => return Ok(U256::from(0)), // Return 0 if the account doesn't exist
+                _ => return Err(err), // Propagate the error
+            },
         };
 
         if implementation == self.kakarot_contract.contract_account_class_hash {

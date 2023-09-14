@@ -66,17 +66,13 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
         };
 
         // Make the function call to get the Starknet contract address
-        let implementation = self.provider().call(request, block_id).await?;
-
-        if implementation.len() != 1 {
-            return Err(EthApiError::DataDecodingError(DataDecodingError::InvalidReturnArrayLength {
-                entrypoint: "get_implementation".into(),
-                expected: 1,
-                actual: implementation.len(),
-            }));
-        }
-
-        Ok(implementation[0])
+        let class_hash = self.provider().call(request, block_id).await?;
+        let class_hash = *class_hash.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "get_implementation".into(),
+            expected: 1,
+            actual: 0,
+        })?;
+        Ok(class_hash)
     }
 }
 
