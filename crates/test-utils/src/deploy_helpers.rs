@@ -104,7 +104,8 @@ pub fn get_contract(filename: &str) -> CompactContractBytecode {
     let compiled_solidity_file = File::open(compiled_solidity_path_from_root).unwrap_or_else(|_| {
         panic!("Could not read file: {}. please run `make setup` to ensure solidity files are compiled", filename)
     });
-    serde_json::from_reader(compiled_solidity_file).unwrap()
+    serde_json::from_reader(&compiled_solidity_file)
+        .unwrap_or_else(|_| panic!("Failed at reading from file path {:?}", compiled_solidity_file))
 }
 
 /// Encodes a contract's bytecode and constructor arguments into deployable bytecode.

@@ -225,8 +225,12 @@ pub async fn serialize_hive_to_madara_genesis_config(
         madara_loader.storage.push(is_initialized);
     });
 
-    let combined_genesis_file =
-        File::options().create_new(true).write(true).append(false).open(combined_genesis_path).unwrap();
+    let combined_genesis_file = File::options()
+        .create_new(true)
+        .write(true)
+        .append(false)
+        .open(combined_genesis_path)
+        .unwrap_or_else(|_| panic!("Failed to open file at path {:?}", combined_genesis_path));
     // Serialize the loader to a file
     serde_json::to_writer_pretty(combined_genesis_file, &madara_loader)?;
 
@@ -313,13 +317,16 @@ mod tests {
             .await
             .unwrap();
 
-        let combined_genesis_file = File::open(combined_genesis_path).unwrap();
+        let combined_genesis_file = File::open(combined_genesis_path)
+            .unwrap_or_else(|_| panic!("Failed to open file at path {:?}", &combined_genesis_path));
 
         // Then
-        let loader: GenesisLoader = serde_json::from_reader(combined_genesis_file).unwrap();
+        let loader: GenesisLoader = serde_json::from_reader(&combined_genesis_file)
+            .unwrap_or_else(|_| panic!("Failed to read from file at path {:?}", &combined_genesis_path));
         assert_eq!(9 + 3 + 7, loader.contracts.len()); // 9 original + 3 Kakarot contracts + 7 hive
 
         // After
-        std::fs::remove_file(combined_genesis_path).unwrap();
+        std::fs::remove_file(combined_genesis_path)
+            .unwrap_or_else(|_| panic!("Failed to remove file at path {:?}", combined_genesis_path));
     }
 }
