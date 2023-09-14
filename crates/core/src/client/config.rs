@@ -18,7 +18,8 @@ fn env_var(name: &str) -> Result<String, ConfigError> {
 fn field_element_from_env(var_name: &str) -> Result<FieldElement, ConfigError> {
     let env_var = env_var(var_name)?;
 
-    FieldElement::from_hex_be(&env_var).map_err(|_| ConfigError::EnvironmentVariableSetWrong(var_name.into(), env_var))
+    FieldElement::from_hex_be(&env_var)
+        .map_err(|err| ConfigError::EnvironmentVariableSetWrong(var_name.into(), err.to_string()))
 }
 
 #[derive(Default, Clone, Debug)]
@@ -190,16 +191,13 @@ pub async fn get_starknet_account_from_env<P: Provider + Send + Sync + 'static>(
 ) -> Result<SingleOwnerAccount<Arc<P>, LocalWallet>> {
     let (starknet_account_private_key, starknet_account_address) = {
         let starknet_account_private_key = env_var("DEPLOYER_ACCOUNT_PRIVATE_KEY")?;
-        let starknet_account_private_key = FieldElement::from_hex_be(&starknet_account_private_key).map_err(|_| {
-            ConfigError::EnvironmentVariableSetWrong(
-                "DEPLOYER_ACCOUNT_PRIVATE_KEY".into(),
-                starknet_account_private_key,
-            )
+        let starknet_account_private_key = FieldElement::from_hex_be(&starknet_account_private_key).map_err(|err| {
+            ConfigError::EnvironmentVariableSetWrong("DEPLOYER_ACCOUNT_PRIVATE_KEY".into(), err.to_string())
         })?;
 
         let starknet_account_address = env_var("DEPLOYER_ACCOUNT_ADDRESS")?;
-        let starknet_account_address = FieldElement::from_hex_be(&starknet_account_address).map_err(|_| {
-            ConfigError::EnvironmentVariableSetWrong("DEPLOYER_ACCOUNT_ADDRESS".into(), starknet_account_address)
+        let starknet_account_address = FieldElement::from_hex_be(&starknet_account_address).map_err(|err| {
+            ConfigError::EnvironmentVariableSetWrong("DEPLOYER_ACCOUNT_ADDRESS".into(), err.to_string())
         })?;
         (starknet_account_private_key, starknet_account_address)
     };
