@@ -4,9 +4,9 @@ mod integration_tests {
 
     use dotenv::dotenv;
     use ethers::prelude::{Block as EthersBlock, Http as EthersHttp, H256 as EthersH256};
-    use kakarot_rpc::test_utils::start_kakarot_rpc_server;
     use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
     use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
+    use kakarot_test_utils::rpc_helpers::start_kakarot_rpc_server;
     use reth_primitives::U64;
     use rstest::*;
 
