@@ -342,7 +342,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
         // Get the implementation of the account
         let account = KakarotAccount::new(starknet_address, &self.starknet_provider);
-        let implementation = match account.implementation(&starknet_block_id).await {
+        let class_hash = match account.implementation(&starknet_block_id).await {
             Ok(class_hash) => class_hash,
             Err(err) => match err {
                 EthApiError::RequestError(ProviderError::StarknetError(StarknetErrorWithMessage {
@@ -353,7 +353,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             },
         };
 
-        if implementation == self.kakarot_contract.contract_account_class_hash {
+        if class_hash == self.kakarot_contract.contract_account_class_hash {
             // Get the nonce of the contract account
             let contract_account = ContractAccount::new(starknet_address, &self.starknet_provider);
             contract_account.nonce(&starknet_block_id).await
