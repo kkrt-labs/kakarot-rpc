@@ -54,7 +54,7 @@ impl Network {
 
 #[derive(Default, Clone)]
 /// Configuration for the Starknet RPC client.
-pub struct StarknetConfig {
+pub struct KakarotRpcConfig {
     /// Starknet network.
     pub network: Network,
     /// Kakarot contract address.
@@ -63,9 +63,9 @@ pub struct StarknetConfig {
     pub proxy_account_class_hash: FieldElement,
 }
 
-impl StarknetConfig {
+impl KakarotRpcConfig {
     pub fn new(network: Network, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
-        StarknetConfig { network, kakarot_address, proxy_account_class_hash }
+        KakarotRpcConfig { network, kakarot_address, proxy_account_class_hash }
     }
 
     /// Create a new `StarknetConfig` from environment variables.
@@ -99,7 +99,7 @@ impl StarknetConfig {
             ))
         })?;
 
-        Ok(StarknetConfig::new(network, kakarot_address, proxy_account_class_hash))
+        Ok(KakarotRpcConfig::new(network, kakarot_address, proxy_account_class_hash))
     }
 }
 
@@ -139,7 +139,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
     /// let starknet_provider: JsonRpcClient<HttpTransport> =
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
-    pub fn with_http(config: &StarknetConfig) -> Result<Self> {
+    pub fn with_http(config: &KakarotRpcConfig) -> Result<Self> {
         let url = config.network.provider_url()?;
         let transport = HttpTransport::new(url);
         Ok(Self::new(transport))
