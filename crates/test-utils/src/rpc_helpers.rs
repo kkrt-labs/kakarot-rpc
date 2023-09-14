@@ -2,16 +2,16 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use jsonrpsee::server::ServerHandle;
+use kakarot_rpc::config::RPCConfig;
+use kakarot_rpc::rpc::KakarotRpcModuleBuilder;
+use kakarot_rpc::run_server;
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::client::config::{Network, StarknetConfig};
 use kakarot_rpc_core::client::KakarotClient;
-use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::config::RPCConfig;
-use crate::rpc::KakarotRpcModuleBuilder;
-use crate::run_server;
+use crate::deploy_helpers::KakarotTestEnvironmentContext;
 
 /// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
 /// and starting the Kakarot RPC server.

@@ -710,10 +710,9 @@ impl KakarotTestEnvironmentContext {
 
             TestContext::Counter => {
                 // Deploy the Counter contract
-                test_environment = test_environment
-                    .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-                    .await;
                 test_environment
+                    .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
+                    .await
             }
             TestContext::PlainOpcodes => {
                 // Deploy the Counter contract
@@ -727,17 +726,16 @@ impl KakarotTestEnvironmentContext {
                 };
 
                 // Deploy the PlainOpcodes contract
-                test_environment = test_environment
+                test_environment
                     .deploy_evm_contract(ContractDeploymentArgs {
                         name: "PlainOpcodes".into(),
                         constructor_args: (EthersAddress::from(counter_eth_address.as_fixed_bytes()),),
                     })
-                    .await;
-                test_environment
+                    .await
             }
             TestContext::ERC20 => {
                 // Deploy the ERC20 contract
-                test_environment = test_environment
+                test_environment
                     .deploy_evm_contract(ContractDeploymentArgs {
                         name: "ERC20".into(),
                         constructor_args: (
@@ -746,8 +744,7 @@ impl KakarotTestEnvironmentContext {
                             Token::Uint(ethers::types::U256::from(18)), // decimals
                         ),
                     })
-                    .await;
-                test_environment
+                    .await
             }
         }
     }
