@@ -13,7 +13,7 @@ use starknet_crypto::FieldElement;
 use walkdir::WalkDir;
 
 use super::constants::{KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH};
-use crate::client::config::{Network, SequencerGatewayProviderBuilder, StarknetConfig};
+use crate::client::config::{KakarotRpcConfig, Network, SequencerGatewayProviderBuilder};
 use crate::client::KakarotClient;
 
 /// A fixture for a Starknet RPC call.
@@ -202,7 +202,7 @@ pub fn mock_starknet_provider(fixtures: Option<Vec<StarknetRpcFixture>>) -> Json
 
 pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
     let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
-    let config = StarknetConfig::new(Network::Goerli1Gateway, kakarot_address, Default::default());
+    let config = KakarotRpcConfig::new(Network::Goerli1Gateway, kakarot_address, Default::default());
 
     let provider = Arc::new(SequencerGatewayProviderBuilder::new(&Network::Goerli1Gateway).build());
     let starknet_account = mock_account(provider.clone());
@@ -216,7 +216,7 @@ pub fn init_mock_client(
     let starknet_provider = Arc::new(mock_starknet_provider(fixtures));
     let starknet_account = mock_account(starknet_provider.clone());
 
-    let config = StarknetConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
+    let config = KakarotRpcConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
 
     KakarotClient::new(config, starknet_provider, starknet_account)
 }

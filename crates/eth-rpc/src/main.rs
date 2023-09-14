@@ -6,7 +6,7 @@ use kakarot_rpc::config::RPCConfig;
 use kakarot_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::run_server;
 use kakarot_rpc_core::client::config::{
-    get_starknet_account_from_env, JsonRpcClientBuilder, Network, SequencerGatewayProviderBuilder, StarknetConfig,
+    get_starknet_account_from_env, JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder,
 };
 use kakarot_rpc_core::client::KakarotClient;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
     let filter = tracing_subscriber::EnvFilter::try_from_default_env()?;
     tracing_subscriber::FmtSubscriber::builder().with_env_filter(filter).finish().try_init()?;
 
-    let starknet_config = StarknetConfig::from_env()?;
+    let starknet_config = KakarotRpcConfig::from_env()?;
 
     let rpc_config = RPCConfig::from_env()?;
 
