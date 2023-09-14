@@ -37,14 +37,14 @@ mod tests {
         // Given
         let fixtures = fixtures(vec![AvailableFixtures::GetImplementation]);
         let starknet_provider = Arc::new(mock_starknet_provider(Some(fixtures)));
-        let contract_account = ContractAccount::new(*ABDEL_STARKNET_ADDRESS, &starknet_provider);
+        let account = KakarotAccount::new(*ABDEL_STARKNET_ADDRESS, &starknet_provider);
 
         // When
-        let implementation = contract_account.implementation(&BlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let implementation = account.implementation(&BlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Then
         assert_eq!(
-            FieldElement::from_hex_be("0x050de736bbc22be1cdb0c741afc80d01b6f5d1c248034a4cbe6f0eba6bde3051").unwrap(),
+            FieldElement::from_hex_be("0x4730612e9d26ebca8dd27be1af79cea613f7dee43f5b1584a172040e39f4063").unwrap(),
             implementation
         );
     }

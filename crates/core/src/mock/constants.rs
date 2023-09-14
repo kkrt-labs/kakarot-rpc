@@ -6,8 +6,8 @@ use starknet_crypto::FieldElement;
 
 pub const PROXY_ACCOUNT_CLASS_HASH_HEX: &str = "0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5";
 pub const EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH_HEX: &str =
-    "0x050de736bbc22be1cdb0c741afc80d01b6f5d1c248034a4cbe6f0eba6bde3051";
-pub const CONTRACT_ACCOUNT_CLASS_HASH_HEX: &str = "0x04ea3da1315fd04212a6f08f2ab7c9ef40cfb1cefa86633d9f9f308a1275367d";
+    "0x4730612e9d26ebca8dd27be1af79cea613f7dee43f5b1584a172040e39f4063";
+pub const CONTRACT_ACCOUNT_CLASS_HASH_HEX: &str = "0x050de736bbc22be1cdb0c741afc80d01b6f5d1c248034a4cbe6f0eba6bde3051";
 pub const ABDEL_STARKNET_ADDRESS_HEX: &str = "0xabde1";
 
 pub const OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX: &str =
