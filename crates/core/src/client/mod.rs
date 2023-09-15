@@ -359,20 +359,8 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
             contract_account.nonce(&starknet_block_id).await
         } else {
             // Get the nonce of the EOA
-            self.starknet_provider
-                .get_nonce(starknet_block_id, starknet_address)
-                .await
-                .map(|nonce| {
-                    let nonce: Felt252Wrapper = nonce.into();
-                    nonce.into()
-                })
-                .or_else(|err| match err {
-                    ProviderError::StarknetError(StarknetErrorWithMessage {
-                        code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
-                        ..
-                    }) => Ok(U256::from(0)),
-                    _ => Err(EthApiError::from(err)),
-                })
+            let nonce = self.starknet_provider.get_nonce(starknet_block_id, starknet_address).await?;
+            Ok(Felt252Wrapper::from(nonce).into())
         }
     }
 
