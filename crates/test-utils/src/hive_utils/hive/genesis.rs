@@ -6,18 +6,18 @@ use std::path::Path;
 use eyre::Result;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
-use kakarot_test_utils::deploy_helpers::compute_kakarot_contracts_class_hash;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::FieldElement;
 
-use crate::kakarot::compute_starknet_address;
-use crate::madara::utils::{
+use crate::deploy_helpers::compute_kakarot_contracts_class_hash;
+use crate::hive_utils::kakarot::compute_starknet_address;
+use crate::hive_utils::madara::utils::{
     genesis_approve_kakarot, genesis_fund_starknet_address, genesis_set_bytecode,
     genesis_set_storage_kakarot_contract_account, genesis_set_storage_starknet_contract,
 };
-use crate::types::{ClassHash, ContractAddress, ContractStorageKey, Felt, StorageValue};
+use crate::hive_utils::types::{ClassHash, ContractAddress, ContractStorageKey, Felt, StorageValue};
 
 #[derive(Deserialize, Serialize)]
 pub struct GenesisLoader {
@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn test_read_hive_genesis() {
         // Read the hive genesis file
-        let genesis = HiveGenesisConfig::from_file("./src/test_data/hive_genesis.json").unwrap();
+        let genesis = HiveGenesisConfig::from_file("./src/hive_utils/test_data/hive_genesis.json").unwrap();
 
         // Verify the genesis file has the expected number of accounts
         assert_eq!(genesis.alloc.len(), 7);
@@ -300,10 +300,10 @@ mod tests {
     #[tokio::test]
     async fn test_madara_genesis() {
         // Given
-        let hive_genesis = HiveGenesisConfig::from_file("./src/test_data/hive_genesis.json").unwrap();
+        let hive_genesis = HiveGenesisConfig::from_file("./src/hive_utils/test_data/hive_genesis.json").unwrap();
         let madara_loader =
             serde_json::from_str::<GenesisLoader>(std::include_str!("../test_data/madara_genesis.json")).unwrap();
-        let combined_genesis = Path::new("./src/test_data/combined_genesis.json");
+        let combined_genesis = Path::new("./src/hive_utils/test_data/combined_genesis.json");
         let compiled_path = Path::new("./cairo-contracts/build");
 
         // When
@@ -312,12 +312,12 @@ mod tests {
             .unwrap();
 
         // Then
-        let combined_genesis = fs::read_to_string("./src/test_data/combined_genesis.json").unwrap();
+        let combined_genesis = fs::read_to_string("./src/hive_utils/test_data/combined_genesis.json").unwrap();
         let loader: GenesisLoader =
             serde_json::from_str(&combined_genesis).expect("Failed to read combined_genesis.json");
         assert_eq!(9 + 3 + 7, loader.contracts.len()); // 9 original + 3 Kakarot contracts + 7 hive
 
         // After
-        fs::remove_file("./src/test_data/combined_genesis.json").unwrap();
+        fs::remove_file("./src/hive_utils/test_data/combined_genesis.json").unwrap();
     }
 }

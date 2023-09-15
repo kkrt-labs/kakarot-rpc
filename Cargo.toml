@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/eth-rpc", "crates/core", "crates/hive-utils", "crates/test-utils"]
+members = ["crates/eth-rpc", "crates/core", "crates/test-utils"]
 resolver = "2"
 
 [workspace.package]

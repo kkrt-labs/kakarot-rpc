@@ -11,8 +11,15 @@ use url::Url;
 use super::constants::{KATANA_RPC_URL, MADARA_RPC_URL};
 use super::errors::ConfigError;
 
-fn get_env_var(name: &str) -> Result<String, ConfigError> {
+fn env_var(name: &str) -> Result<String, ConfigError> {
     std::env::var(name).map_err(|_| ConfigError::EnvironmentVariableMissing(name.into()))
+}
+
+fn field_element_from_env(var_name: &str) -> Result<FieldElement, ConfigError> {
+    let env_var = env_var(var_name)?;
+
+    FieldElement::from_hex_be(&env_var)
+        .map_err(|err| ConfigError::EnvironmentVariableSetWrong(var_name.into(), err.to_string()))
 }
 
 #[derive(Default, Clone, Debug)]
@@ -54,18 +61,34 @@ impl Network {
 
 #[derive(Default, Clone)]
 /// Configuration for the Starknet RPC client.
-pub struct StarknetConfig {
+pub struct KakarotRpcConfig {
     /// Starknet network.
     pub network: Network,
     /// Kakarot contract address.
     pub kakarot_address: FieldElement,
     /// Proxy account class hash.
     pub proxy_account_class_hash: FieldElement,
+    /// EOA class hash.
+    pub externally_owned_account_class_hash: FieldElement,
+    /// Contract Account class hash.
+    pub contract_account_class_hash: FieldElement,
 }
 
-impl StarknetConfig {
-    pub fn new(network: Network, kakarot_address: FieldElement, proxy_account_class_hash: FieldElement) -> Self {
-        StarknetConfig { network, kakarot_address, proxy_account_class_hash }
+impl KakarotRpcConfig {
+    pub fn new(
+        network: Network,
+        kakarot_address: FieldElement,
+        proxy_account_class_hash: FieldElement,
+        externally_owned_account_class_hash: FieldElement,
+        contract_account_class_hash: FieldElement,
+    ) -> Self {
+        KakarotRpcConfig {
+            network,
+            kakarot_address,
+            proxy_account_class_hash,
+            externally_owned_account_class_hash,
+            contract_account_class_hash,
+        }
     }
 
     /// Create a new `StarknetConfig` from environment variables.
@@ -73,7 +96,7 @@ impl StarknetConfig {
     /// `STARKNET_NETWORK` environment variable should be set the URL of a JsonRpc
     /// starknet provider, e.g. https://starknet-goerli.g.alchemy.com/v2/some_key.
     pub fn from_env() -> Result<Self, ConfigError> {
-        let network = get_env_var("STARKNET_NETWORK")?;
+        let network = env_var("STARKNET_NETWORK")?;
         let network = match network.to_lowercase().as_str() {
             "katana" => Network::Katana,
             "madara" => Network::Madara,
@@ -85,21 +108,18 @@ impl StarknetConfig {
             network_url => Network::JsonRpcProvider(Url::parse(network_url)?),
         };
 
-        let kakarot_address = get_env_var("KAKAROT_ADDRESS")?;
-        let kakarot_address = FieldElement::from_hex_be(&kakarot_address).map_err(|_| {
-            ConfigError::EnvironmentVariableSetWrong(format!(
-                "KAKAROT_ADDRESS should be provided as a hex string, got {kakarot_address}"
-            ))
-        })?;
+        let kakarot_address = field_element_from_env("KAKAROT_ADDRESS")?;
+        let proxy_account_class_hash = field_element_from_env("PROXY_ACCOUNT_CLASS_HASH")?;
+        let externally_owned_account_class_hash = field_element_from_env("EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH")?;
+        let contract_account_class_hash = field_element_from_env("CONTRACT_ACCOUNT_CLASS_HASH")?;
 
-        let proxy_account_class_hash = get_env_var("PROXY_ACCOUNT_CLASS_HASH")?;
-        let proxy_account_class_hash = FieldElement::from_hex_be(&proxy_account_class_hash).map_err(|_| {
-            ConfigError::EnvironmentVariableSetWrong(format!(
-                "PROXY_ACCOUNT_CLASS_HASH should be provided as a hex string, got {proxy_account_class_hash}"
-            ))
-        })?;
-
-        Ok(StarknetConfig::new(network, kakarot_address, proxy_account_class_hash))
+        Ok(KakarotRpcConfig::new(
+            network,
+            kakarot_address,
+            proxy_account_class_hash,
+            externally_owned_account_class_hash,
+            contract_account_class_hash,
+        ))
     }
 }
 
@@ -139,7 +159,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
     /// let starknet_provider: JsonRpcClient<HttpTransport> =
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
-    pub fn with_http(config: &StarknetConfig) -> Result<Self> {
+    pub fn with_http(config: &KakarotRpcConfig) -> Result<Self> {
         let url = config.network.provider_url()?;
         let transport = HttpTransport::new(url);
         Ok(Self::new(transport))
@@ -170,18 +190,14 @@ pub async fn get_starknet_account_from_env<P: Provider + Send + Sync + 'static>(
     provider: Arc<P>,
 ) -> Result<SingleOwnerAccount<Arc<P>, LocalWallet>> {
     let (starknet_account_private_key, starknet_account_address) = {
-        let starknet_account_private_key = get_env_var("DEPLOYER_ACCOUNT_PRIVATE_KEY")?;
-        let starknet_account_private_key = FieldElement::from_hex_be(&starknet_account_private_key).map_err(|_| {
-            ConfigError::EnvironmentVariableSetWrong(format!(
-                "DEPLOYER_ACCOUNT_PRIVATE_KEY should be provided as a hex string, got {starknet_account_private_key}"
-            ))
+        let starknet_account_private_key = env_var("DEPLOYER_ACCOUNT_PRIVATE_KEY")?;
+        let starknet_account_private_key = FieldElement::from_hex_be(&starknet_account_private_key).map_err(|err| {
+            ConfigError::EnvironmentVariableSetWrong("DEPLOYER_ACCOUNT_PRIVATE_KEY".into(), err.to_string())
         })?;
 
-        let starknet_account_address = get_env_var("DEPLOYER_ACCOUNT_ADDRESS")?;
-        let starknet_account_address = FieldElement::from_hex_be(&starknet_account_address).map_err(|_| {
-            ConfigError::EnvironmentVariableSetWrong(format!(
-                "DEPLOYER_ACCOUNT_ADDRESS should be provided as a hex string, got {starknet_account_private_key}"
-            ))
+        let starknet_account_address = env_var("DEPLOYER_ACCOUNT_ADDRESS")?;
+        let starknet_account_address = FieldElement::from_hex_be(&starknet_account_address).map_err(|err| {
+            ConfigError::EnvironmentVariableSetWrong("DEPLOYER_ACCOUNT_ADDRESS".into(), err.to_string())
         })?;
         (starknet_account_private_key, starknet_account_address)
     };

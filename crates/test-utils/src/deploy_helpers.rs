@@ -12,16 +12,14 @@ use ethers::types::Address as EthersAddress;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::utils::{find_project_root_path, load_config};
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
-use kakarot_rpc_core::client::config::{Network, StarknetConfig as StarknetClientConfig};
+use kakarot_rpc_core::client::config::{KakarotRpcConfig, Network};
 use kakarot_rpc_core::client::constants::{CHAIN_ID, DEPLOY_FEE, STARKNET_NATIVE_TOKEN};
 use kakarot_rpc_core::client::waiter::TransactionWaiter;
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::contracts::kakarot::KakarotContract;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use katana_core::db::serde::state::SerializableState;
-use reth_primitives::{
-    sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
-};
+use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256};
 use serde::{Deserialize, Serialize};
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
@@ -180,23 +178,7 @@ pub fn to_kakarot_transaction(nonce: u64, to: TransactionKind, value: u128, inpu
 ///
 /// This function creates a transaction which calls a contract function with provided arguments.
 /// The transaction is signed using the provided EOA secret.
-pub fn create_raw_ethereum_tx(
-    selector: [u8; 4],
-    eoa_secret_key: H256,
-    to: Address,
-    args: Vec<U256>,
-    nonce: u64,
-) -> Bytes {
-    // Start with the function selector
-    // Append each argument
-    let mut data: Vec<u8> = selector.to_vec();
-
-    for arg in args {
-        // Ethereum uses big-endian encoding
-        let arg_bytes: [u8; 32] = arg.to_be_bytes();
-        data.extend_from_slice(&arg_bytes);
-    }
-
+pub fn create_raw_ethereum_tx(eoa_secret_key: H256, to: Address, data: Vec<u8>, nonce: u64) -> Bytes {
     let transaction = to_kakarot_transaction(nonce, TransactionKind::Call(to), Default::default(), data.into());
     let signature =
         sign_message(eoa_secret_key, transaction.signature_hash()).expect("Signing of ethereum transaction failed.");
@@ -585,6 +567,7 @@ pub struct DeployedKakarot {
     pub eoa_private_key: H256,
     pub kakarot_address: FieldElement,
     pub proxy_class_hash: FieldElement,
+    pub externally_owned_account_class_hash: FieldElement,
     pub contract_account_class_hash: FieldElement,
     pub eoa_addresses: ContractAddresses,
 }
@@ -613,16 +596,15 @@ impl DeployedKakarot {
     ///
     /// # Returns
     ///
-    /// A `Result` that holds the `Abi` of the contract and a vector of `FieldElement` representing
-    /// the contract deployment, or an error of type `Box<dyn std::error::Error>` when the
-    /// deployment fails.
+    /// A `Result` that holds a `Contract` when the deployment succeeds, or an error of type
+    /// `Box<dyn std::error::Error>` when the deployment fails.
     pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
         starknet_sequencer_url: Url,
         eth_contract: &str,
         constructor_args: T,
-    ) -> Result<(Abi, ContractAddresses), Box<dyn std::error::Error>> {
-        deploy_evm_contract(
+    ) -> Result<Contract, Box<dyn std::error::Error>> {
+        match deploy_evm_contract(
             starknet_sequencer_url,
             self.eoa_addresses.starknet_address,
             self.eoa_private_key,
@@ -630,7 +612,10 @@ impl DeployedKakarot {
             constructor_args,
         )
         .await
-        .ok_or_else(|| "Evm contract deployment failed.".into())
+        {
+            Some((abi, addresses)) => Ok(Contract { addresses, abi }),
+            None => Err(format!("Failed to deploy EVM contract: {}", eth_contract).into()),
+        }
     }
 }
 
@@ -729,17 +714,24 @@ impl KakarotTestEnvironmentContext {
 
         // Create a Kakarot client
         let kakarot_client = KakarotClient::new(
-            StarknetClientConfig::new(
+            KakarotRpcConfig::new(
                 Network::JsonRpcProvider(sequencer.url()),
                 kakarot.kakarot_address,
                 kakarot.proxy_class_hash,
+                kakarot.externally_owned_account_class_hash,
+                kakarot.contract_account_class_hash,
             ),
             starknet_provider,
             deployer_account,
         );
 
-        let kakarot_contract =
-            KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
+        let kakarot_contract = KakarotContract::new(
+            kakarot_client.starknet_provider(),
+            kakarot.kakarot_address,
+            kakarot.proxy_class_hash,
+            kakarot.externally_owned_account_class_hash,
+            kakarot.contract_account_class_hash,
+        );
 
         Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts }
     }
@@ -761,64 +753,64 @@ impl KakarotTestEnvironmentContext {
 
         // Create a Kakarot client
         let kakarot_client = KakarotClient::new(
-            StarknetClientConfig::new(
+            KakarotRpcConfig::new(
                 Network::JsonRpcProvider(sequencer.url()),
                 kakarot.kakarot_address,
                 kakarot.proxy_class_hash,
+                kakarot.externally_owned_account_class_hash,
+                kakarot.contract_account_class_hash,
             ),
             starknet_provider,
             starknet_deployer_account,
         );
 
-        let kakarot_contract =
-            KakarotContract::new(kakarot_client.starknet_provider(), kakarot.kakarot_address, kakarot.proxy_class_hash);
+        let kakarot_contract = KakarotContract::new(
+            kakarot_client.starknet_provider(),
+            kakarot.kakarot_address,
+            kakarot.proxy_class_hash,
+            kakarot.externally_owned_account_class_hash,
+            kakarot.contract_account_class_hash,
+        );
 
-        let mut test_environment =
-            Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts: HashMap::new() };
+        // Deploy the EVM contracts
+        let mut evm_contracts = HashMap::new();
 
-        // Deploy the Counter contract
-        test_environment = test_environment
-            .deploy_evm_contract(ContractDeploymentArgs { name: "Counter".into(), constructor_args: () })
-            .await;
-        let counter = test_environment.evm_contract("Counter");
+        // Deploy Counter contract
+        let counter =
+            kakarot.deploy_evm_contract(sequencer.url(), "Counter", ()).await.unwrap_or_else(|err| panic!("{}", err));
         let counter_eth_address: Address = {
             let address: Felt252Wrapper = counter.addresses.eth_address.into();
             address.try_into().unwrap()
         };
+        evm_contracts.insert("Counter".into(), counter);
 
-        // Deploy the PlainOpcodes contract
-        test_environment = test_environment
-            .deploy_evm_contract(ContractDeploymentArgs {
-                name: "PlainOpcodes".into(),
-                constructor_args: (EthersAddress::from(counter_eth_address.as_fixed_bytes()),),
-            })
-            .await;
+        // Deploy PlainOpcodes contract
+        let plain_opcodes = kakarot
+            .deploy_evm_contract(
+                sequencer.url(),
+                "PlainOpcodes",
+                (EthersAddress::from(counter_eth_address.as_fixed_bytes()),),
+            )
+            .await
+            .unwrap_or_else(|err| panic!("{}", err));
+        evm_contracts.insert("PlainOpcodes".into(), plain_opcodes);
 
-        // Deploy the ERC20 contract
-        test_environment = test_environment
-            .deploy_evm_contract(ContractDeploymentArgs {
-                name: "ERC20".into(),
-                constructor_args: (
+        // Deploy ERC20 contract
+        let erc20 = kakarot
+            .deploy_evm_contract(
+                sequencer.url(),
+                "ERC20",
+                (
                     Token::String("Test".into()),               // name
                     Token::String("TT".into()),                 // symbol
                     Token::Uint(ethers::types::U256::from(18)), // decimals
                 ),
-            })
-            .await;
+            )
+            .await
+            .unwrap_or_else(|err| panic!("{}", err));
+        evm_contracts.insert("ERC20".into(), erc20);
 
-        test_environment
-    }
-
-    pub async fn deploy_evm_contract<T: Tokenize>(mut self, contract_args: ContractDeploymentArgs<T>) -> Self {
-        let kakarot = &self.kakarot;
-        let sequencer = &self.sequencer;
-        let evm_contracts = &mut self.evm_contracts;
-
-        match kakarot.deploy_evm_contract(sequencer.url(), &contract_args.name, contract_args.constructor_args).await {
-            Ok((abi, addresses)) => evm_contracts.insert(contract_args.name, Contract { addresses, abi }),
-            Err(err) => panic!("Failed to deploy contract {}: {:?}", contract_args.name, err.to_string()),
-        };
-        self
+        Self { sequencer, kakarot_client, kakarot, kakarot_contract, evm_contracts }
     }
 
     pub fn sequencer(&self) -> &TestSequencer {
@@ -936,6 +928,7 @@ pub async fn deploy_kakarot_system(
         kakarot_address: *kkrt_address,
         proxy_class_hash: *class_hash.get("proxy").unwrap(),
         contract_account_class_hash: *class_hash.get("contract_account").unwrap(),
+        externally_owned_account_class_hash: *class_hash.get("externally_owned_account").unwrap(),
     }
 }
 

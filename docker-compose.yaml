@@ -45,6 +45,8 @@ services:
         echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /deployments/custom-rpc/deployments.json)" > /deployments/.env;
         echo "DEPLOYER_ACCOUNT_ADDRESS=$(jq -r '.deployer_account.address' /deployments/custom-rpc/deployments.json)" >> /deployments/.env;
         echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
+        echo "EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(jq -r '.externally_owned_account' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
+        echo "CONTRACT_ACCOUNT_CLASS_HASH=$(jq -r '.contract_account' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
     volumes:
       - deployments:/deployments
     depends_on:

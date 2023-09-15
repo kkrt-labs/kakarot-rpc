@@ -34,7 +34,7 @@ use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, Starkn
 use starknet::signers::LocalWallet;
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
-use self::config::{Network, StarknetConfig};
+use self::config::{KakarotRpcConfig, Network};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
 use self::constants::{
     CHAIN_ID, CHUNK_SIZE_LIMIT, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2,
@@ -71,14 +71,25 @@ pub struct KakarotClient<P: Provider + Send + Sync> {
 impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
     /// Create a new `KakarotClient`.
     pub fn new(
-        starknet_config: StarknetConfig,
+        starknet_config: KakarotRpcConfig,
         starknet_provider: Arc<P>,
         starknet_account: SingleOwnerAccount<Arc<P>, LocalWallet>,
     ) -> Self {
-        let StarknetConfig { kakarot_address, proxy_account_class_hash, network } = starknet_config;
+        let KakarotRpcConfig {
+            kakarot_address,
+            proxy_account_class_hash,
+            externally_owned_account_class_hash,
+            contract_account_class_hash,
+            network,
+        } = starknet_config;
 
-        let kakarot_contract =
-            KakarotContract::new(Arc::clone(&starknet_provider), kakarot_address, proxy_account_class_hash);
+        let kakarot_contract = KakarotContract::new(
+            Arc::clone(&starknet_provider),
+            kakarot_address,
+            proxy_account_class_hash,
+            externally_owned_account_class_hash,
+            contract_account_class_hash,
+        );
 
         Self { starknet_provider, network, kakarot_contract, deployer_account: starknet_account }
     }
@@ -322,26 +333,35 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
     }
 
     /// Returns the nonce for a given ethereum address
+    /// if it's an EOA, use native nonce and if it's a contract account, use managed nonce
     /// if ethereum -> stark mapping doesn't exist in the starknet provider, we translate
     /// ContractNotFound errors into zeros
     async fn nonce(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError<P::Error>> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
         let starknet_address = self.compute_starknet_address(ethereum_address, &starknet_block_id).await?;
 
-        self.starknet_provider
-            .get_nonce(starknet_block_id, starknet_address)
-            .await
-            .map(|nonce| {
-                let nonce: Felt252Wrapper = nonce.into();
-                nonce.into()
-            })
-            .or_else(|err| match err {
-                ProviderError::StarknetError(StarknetErrorWithMessage {
+        // Get the implementation of the account
+        let account = KakarotAccount::new(starknet_address, &self.starknet_provider);
+        let class_hash = match account.implementation(&starknet_block_id).await {
+            Ok(class_hash) => class_hash,
+            Err(err) => match err {
+                EthApiError::RequestError(ProviderError::StarknetError(StarknetErrorWithMessage {
                     code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
                     ..
-                }) => Ok(U256::from(0)),
-                _ => Err(EthApiError::from(err)),
-            })
+                })) => return Ok(U256::from(0)), // Return 0 if the account doesn't exist
+                _ => return Err(err), // Propagate the error
+            },
+        };
+
+        if class_hash == self.kakarot_contract.contract_account_class_hash {
+            // Get the nonce of the contract account
+            let contract_account = ContractAccount::new(starknet_address, &self.starknet_provider);
+            contract_account.nonce(&starknet_block_id).await
+        } else {
+            // Get the nonce of the EOA
+            let nonce = self.starknet_provider.get_nonce(starknet_block_id, starknet_address).await?;
+            Ok(Felt252Wrapper::from(nonce).into())
+        }
     }
 
     /// Returns the balance in Starknet's native token of a specific EVM address.
