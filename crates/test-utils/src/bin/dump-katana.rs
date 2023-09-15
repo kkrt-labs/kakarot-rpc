@@ -9,7 +9,8 @@ use starknet::accounts::Account;
 #[tokio::main]
 async fn main() {
     // Deploy all kakarot contracts + EVM contracts
-    let test_context = KakarotTestEnvironmentContext::new(false).await;
+    let with_dumped_state = false;
+    let test_context = KakarotTestEnvironmentContext::new(with_dumped_state).await;
 
     tokio::task::spawn_blocking(move || {
         // Get a serializable state for the sequencer
