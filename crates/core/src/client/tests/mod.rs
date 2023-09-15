@@ -32,7 +32,11 @@ async fn test_block_number() {
 #[tokio::test]
 async fn test_nonce() {
     // Given
-    let fixtures = fixtures(vec![wrap_kakarot!(JsonRpcMethod::GetNonce), AvailableFixtures::ComputeStarknetAddress]);
+    let fixtures = fixtures(vec![
+        wrap_kakarot!(JsonRpcMethod::GetNonce),
+        AvailableFixtures::ComputeStarknetAddress,
+        AvailableFixtures::GetImplementation,
+    ]);
     let client = init_mock_client(Some(fixtures));
 
     // When

@@ -2,13 +2,14 @@ mod tests {
 
     use std::str::FromStr;
 
+    use ethers::abi::Token;
     use kakarot_rpc_core::client::api::KakarotEthApi;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::balance::{TokenBalance, TokenBalances};
     use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
     use kakarot_test_utils::execution_helpers::execute_eth_tx;
     use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
-    use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256};
+    use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
     use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
     use rstest::*;
     use starknet::core::types::FieldElement;
@@ -37,9 +38,15 @@ mod tests {
         let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
         // When
-        let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
+        let to = Address::from_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]);
         let amount = U256::from(10_000);
-        execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
+        execute_eth_tx(
+            &kakarot_test_env_ctx,
+            "ERC20",
+            "mint",
+            vec![Token::Address(to.into()), Token::Uint(amount.into())],
+        )
+        .await;
 
         // Then
         let balances = client.token_balances(kakarot.eoa_addresses.eth_address, vec![erc20_eth_address]).await.unwrap();
@@ -79,13 +86,26 @@ mod tests {
         let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
         // When
-        let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
         let amount = U256::from(10_000);
-        let mint_tx_hash = execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
+        let mint_tx_hash = execute_eth_tx(
+            &kakarot_test_env_ctx,
+            "ERC20",
+            "mint",
+            vec![
+                Token::Address(Address::from_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).into()),
+                Token::Uint(amount.into()),
+            ],
+        )
+        .await;
 
-        let to = U256::try_from_be_slice(ACCOUNT_ADDRESS_EVM.as_bytes()).unwrap();
-        let amount = U256::from(10_000);
-        let transfer_tx_hash = execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "transfer", vec![to, amount]).await;
+        let to = Address::from_slice(ACCOUNT_ADDRESS_EVM.as_bytes());
+        let transfer_tx_hash = execute_eth_tx(
+            &kakarot_test_env_ctx,
+            "ERC20",
+            "transfer",
+            vec![Token::Address(to.into()), Token::Uint(amount.into())],
+        )
+        .await;
 
         let filter = Filter {
             block_option: FilterBlockOption::Range {

@@ -4,7 +4,7 @@ use starknet::core::types::{BlockId, FunctionCall, StarknetError};
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 use starknet_crypto::FieldElement;
 
-use crate::client::constants::selectors::{BYTECODE, GET_EVM_ADDRESS};
+use crate::client::constants::selectors::{BYTECODE, GET_EVM_ADDRESS, GET_IMPLEMENTATION};
 use crate::client::errors::EthApiError;
 use crate::client::helpers::{vec_felt_to_bytes, DataDecodingError};
 use crate::models::felt::Felt252Wrapper;
@@ -53,6 +53,26 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
         // bytecode_len is the first element of the returned array
         // TODO: Remove Manual Decoding
         Ok(vec_felt_to_bytes(bytecode[1..].to_vec()))
+    }
+
+    /// Returns the class hash of account implementation of the contract.
+    async fn implementation(&self, block_id: &BlockId) -> Result<FieldElement, EthApiError<P::Error>> {
+        // Prepare the calldata for the get_implementation function call
+        let calldata = vec![];
+        let request = FunctionCall {
+            contract_address: self.starknet_address(),
+            entry_point_selector: GET_IMPLEMENTATION,
+            calldata,
+        };
+
+        // Make the function call to get the Starknet contract address
+        let class_hash = self.provider().call(request, block_id).await?;
+        let class_hash = *class_hash.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
+            entrypoint: "get_implementation".into(),
+            expected: 1,
+            actual: 0,
+        })?;
+        Ok(class_hash)
     }
 }
 

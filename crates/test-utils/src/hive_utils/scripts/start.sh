@@ -1,7 +1,9 @@
 #!/bin/sh
 
-# Compute the proxy account class hash
+# Compute the class hashes
 export PROXY_ACCOUNT_CLASS_HASH=$(starkli class-hash ${MADARA_PATH}/cairo-contracts/kakarot/proxy.json)
+export EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(starkli class-hash ${MADARA_PATH}/cairo-contracts/kakarot/externally_owned_account.json)
+export CONTRACT_ACCOUNT_CLASS_HASH=$(starkli class-hash ${MADARA_PATH}/cairo-contracts/kakarot/contract_account.json)
 
 # Start madara-bin in the background
 /madara-bin \
