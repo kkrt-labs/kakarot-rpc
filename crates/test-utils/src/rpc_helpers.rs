@@ -6,7 +6,7 @@ use kakarot_rpc::config::RPCConfig;
 use kakarot_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::run_server;
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
-use kakarot_rpc_core::client::config::{Network, StarknetConfig};
+use kakarot_rpc_core::client::config::{KakarotRpcConfig, Network};
 use kakarot_rpc_core::client::KakarotClient;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
@@ -66,7 +66,7 @@ pub async fn start_kakarot_rpc_server(
     let kakarot = kakarot_test_env.kakarot();
 
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
-    let starknet_config = StarknetConfig::new(
+    let starknet_config = KakarotRpcConfig::new(
         Network::JsonRpcProvider(sequencer.url()),
         kakarot.kakarot_address,
         kakarot.proxy_class_hash,

@@ -34,7 +34,7 @@ use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, Starkn
 use starknet::signers::LocalWallet;
 
 use self::api::{KakarotEthApi, KakarotStarknetApi};
-use self::config::{Network, StarknetConfig};
+use self::config::{KakarotRpcConfig, Network};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
 use self::constants::{
     CHAIN_ID, CHUNK_SIZE_LIMIT, COUNTER_CALL_MAINNET, COUNTER_CALL_TESTNET1, COUNTER_CALL_TESTNET2,
@@ -71,11 +71,11 @@ pub struct KakarotClient<P: Provider + Send + Sync> {
 impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
     /// Create a new `KakarotClient`.
     pub fn new(
-        starknet_config: StarknetConfig,
+        starknet_config: KakarotRpcConfig,
         starknet_provider: Arc<P>,
         starknet_account: SingleOwnerAccount<Arc<P>, LocalWallet>,
     ) -> Self {
-        let StarknetConfig {
+        let KakarotRpcConfig {
             kakarot_address,
             proxy_account_class_hash,
             externally_owned_account_class_hash,
