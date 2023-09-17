@@ -1,6 +1,8 @@
 use std::path::Path;
 
-use hive_utils::hive::genesis::{serialize_hive_to_madara_genesis_config, GenesisLoader, HiveGenesisConfig};
+use kakarot_test_utils::hive_utils::hive::genesis::{
+    serialize_hive_to_madara_genesis_config, GenesisLoader, HiveGenesisConfig,
+};
 
 #[tokio::main]
 async fn main() {
@@ -9,7 +11,8 @@ async fn main() {
 
     // Read the madara genesis
     let madara_loader =
-        serde_json::from_str::<GenesisLoader>(std::include_str!("../../test_data/madara_genesis.json")).unwrap();
+        serde_json::from_str::<GenesisLoader>(std::include_str!("../hive_utils/test_data/madara_genesis.json"))
+            .unwrap();
     let combined_genesis = Path::new(".hive/genesis.json");
     let compiled_path = Path::new("cairo-contracts/kakarot");
 

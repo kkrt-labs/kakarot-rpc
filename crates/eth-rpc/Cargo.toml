@@ -43,9 +43,9 @@ tracing-subscriber = { workspace = true }
 # for cross-compiling
 openssl = { version = "0.10", features = ["vendored"] }
 
-kakarot-test-utils = { path = "../test-utils" }
 
 [dev-dependencies]
 cargo-husky = { workspace = true }
 ethers = { workspace = true }
 rstest = { workspace = true }
+kakarot-test-utils = { path = "../test-utils" }

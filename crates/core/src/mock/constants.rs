@@ -5,6 +5,9 @@ use reth_primitives::Address;
 use starknet_crypto::FieldElement;
 
 pub const PROXY_ACCOUNT_CLASS_HASH_HEX: &str = "0x0775033b738dfe34c48f43a839c3d882ebe521befb3447240f2d218f14816ef5";
+pub const EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH_HEX: &str =
+    "0x4730612e9d26ebca8dd27be1af79cea613f7dee43f5b1584a172040e39f4063";
+pub const CONTRACT_ACCOUNT_CLASS_HASH_HEX: &str = "0x050de736bbc22be1cdb0c741afc80d01b6f5d1c248034a4cbe6f0eba6bde3051";
 pub const ABDEL_STARKNET_ADDRESS_HEX: &str = "0xabde1";
 
 pub const OTHER_PROXY_ACCOUNT_CLASS_HASH_HEX: &str =
@@ -26,6 +29,12 @@ lazy_static! {
     /// Test value for proxy account class hash.
     pub static ref PROXY_ACCOUNT_CLASS_HASH: FieldElement =
         FieldElement::from_hex_be(PROXY_ACCOUNT_CLASS_HASH_HEX).unwrap();
+    /// Test value for externally owned account class hash.
+    pub static ref EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH: FieldElement =
+        FieldElement::from_hex_be(EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH_HEX).unwrap();
+    /// Test value for contract account class hash.
+    pub static ref CONTRACT_ACCOUNT_CLASS_HASH: FieldElement =
+        FieldElement::from_hex_be(CONTRACT_ACCOUNT_CLASS_HASH_HEX).unwrap();
 }
 
 // Testnet values

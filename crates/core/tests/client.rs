@@ -3,6 +3,7 @@ mod tests {
     use std::str::FromStr;
 
     use ctor::ctor;
+    use ethers::abi::Token;
     use ethers::signers::{LocalWallet, Signer};
     use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
     use kakarot_rpc_core::client::constants::{DEPLOY_FEE, TX_ORIGIN_ZERO};
@@ -111,9 +112,15 @@ mod tests {
         let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
         // When
-        let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
+        let to = Address::from_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]);
         let amount = U256::from(10_000);
-        execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
+        execute_eth_tx(
+            &kakarot_test_env_ctx,
+            "ERC20",
+            "mint",
+            vec![Token::Address(to.into()), Token::Uint(amount.into())],
+        )
+        .await;
 
         // Then
         let balances = client.token_balances(kakarot.eoa_addresses.eth_address, vec![erc20_eth_address]).await.unwrap();
@@ -137,13 +144,25 @@ mod tests {
         let (client, kakarot, _, erc20_eth_address) = kakarot_test_env_ctx.resources_with_contract("ERC20");
 
         // When
-        let to = U256::try_from_be_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]).unwrap();
+        let to = Address::from_slice(&kakarot.eoa_addresses.eth_address.to_fixed_bytes()[..]);
         let amount = U256::from(10_000);
-        let mint_tx_hash = execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "mint", vec![to, amount]).await;
+        let mint_tx_hash = execute_eth_tx(
+            &kakarot_test_env_ctx,
+            "ERC20",
+            "mint",
+            vec![Token::Address(to.into()), Token::Uint(amount.into())],
+        )
+        .await;
 
-        let to = U256::try_from_be_slice(ACCOUNT_ADDRESS_EVM.as_bytes()).unwrap();
+        let to = Address::from_slice(ACCOUNT_ADDRESS_EVM.as_bytes());
         let amount = U256::from(10_000);
-        let transfer_tx_hash = execute_eth_tx(&kakarot_test_env_ctx, "ERC20", "transfer", vec![to, amount]).await;
+        let transfer_tx_hash = execute_eth_tx(
+            &kakarot_test_env_ctx,
+            "ERC20",
+            "transfer",
+            vec![Token::Address(to.into()), Token::Uint(amount.into())],
+        )
+        .await;
 
         let filter = Filter {
             block_option: FilterBlockOption::Range {
@@ -279,6 +298,9 @@ mod tests {
         let balance =
             client.balance(ethereum_address_to_deploy, BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
         assert_eq!(balance, U256::ZERO);
+
+        let nonce = client.nonce(ethereum_address_to_deploy, BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
+        assert_eq!(nonce, U256::ZERO);
     }
 
     #[rstest]
@@ -317,5 +339,31 @@ mod tests {
         let balance = kakarot_test_env_ctx.client().balance(to_address, block_id_latest).await.unwrap();
 
         assert_eq!(balance, U256::ZERO);
+    }
+
+    #[rstest]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_get_nonce_contract_account(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+        // Given
+        let (client, _kakarot, _plain_opcodes, plain_opcodes_eth_address) =
+            kakarot_test_env_ctx.resources_with_contract("PlainOpcodes");
+        let count = U256::from(1);
+        // When
+        let nonce_initial =
+            client.nonce(plain_opcodes_eth_address, BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
+
+        // currently there is a bug when there is no return data from the init code execution
+        // see https://github.com/kkrt-labs/kakarot/issues/726
+        // for now, we test with bytecode that has return data
+        let args =
+            vec![Token::Bytes(Bytes::from_str("0x604260005260206000F3").unwrap().to_vec()), Token::Uint(count.into())];
+        let hash = execute_eth_tx(&kakarot_test_env_ctx, "PlainOpcodes", "create", args).await;
+        client.transaction_receipt(hash).await.expect("create transaction failed");
+
+        let nonce_final =
+            client.nonce(plain_opcodes_eth_address, BlockId::from(BlockNumberOrTag::Latest)).await.unwrap();
+
+        // Then
+        assert_eq!(nonce_final, nonce_initial + count);
     }
 }

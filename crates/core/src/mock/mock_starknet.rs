@@ -12,8 +12,11 @@ use starknet::signers::{LocalWallet, SigningKey};
 use starknet_crypto::FieldElement;
 use walkdir::WalkDir;
 
-use super::constants::{KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS, PROXY_ACCOUNT_CLASS_HASH};
-use crate::client::config::{Network, SequencerGatewayProviderBuilder, StarknetConfig};
+use super::constants::{
+    CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH, KAKAROT_ADDRESS, KAKAROT_TESTNET_ADDRESS,
+    PROXY_ACCOUNT_CLASS_HASH,
+};
+use crate::client::config::{KakarotRpcConfig, Network, SequencerGatewayProviderBuilder};
 use crate::client::KakarotClient;
 
 /// A fixture for a Starknet RPC call.
@@ -30,6 +33,8 @@ pub struct StarknetRpcFixture {
 pub enum AvailableFixtures {
     ComputeStarknetAddress,
     GetEvmAddress,
+    GetImplementation,
+    GetNonce,
     GetClassHashAt(String, String),
     Other(JsonRpcMethod),
 }
@@ -38,7 +43,10 @@ impl From<AvailableFixtures> for JsonRpcMethod {
     fn from(value: AvailableFixtures) -> Self {
         match value {
             AvailableFixtures::Other(method) => method,
-            AvailableFixtures::ComputeStarknetAddress | AvailableFixtures::GetEvmAddress => JsonRpcMethod::Call,
+            AvailableFixtures::ComputeStarknetAddress
+            | AvailableFixtures::GetImplementation
+            | AvailableFixtures::GetEvmAddress
+            | AvailableFixtures::GetNonce => JsonRpcMethod::Call,
             AvailableFixtures::GetClassHashAt(_, _) => JsonRpcMethod::GetClassHashAt,
         }
     }
@@ -51,7 +59,9 @@ impl Serialize for AvailableFixtures {
     {
         match self {
             AvailableFixtures::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
-            AvailableFixtures::GetEvmAddress => serializer.serialize_str("kakarot_getEvmAddress"),
+            AvailableFixtures::GetEvmAddress => serializer.serialize_str("account_getEvmAddress"),
+            AvailableFixtures::GetImplementation => serializer.serialize_str("account_getImplementation"),
+            AvailableFixtures::GetNonce => serializer.serialize_str("account_getNonce"),
             AvailableFixtures::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
             AvailableFixtures::Other(method) => method.serialize(serializer),
         }
@@ -202,7 +212,13 @@ pub fn mock_starknet_provider(fixtures: Option<Vec<StarknetRpcFixture>>) -> Json
 
 pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
     let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
-    let config = StarknetConfig::new(Network::Goerli1Gateway, kakarot_address, Default::default());
+    let config = KakarotRpcConfig::new(
+        Network::Goerli1Gateway,
+        kakarot_address,
+        Default::default(),
+        Default::default(),
+        Default::default(),
+    );
 
     let provider = Arc::new(SequencerGatewayProviderBuilder::new(&Network::Goerli1Gateway).build());
     let starknet_account = mock_account(provider.clone());
@@ -216,7 +232,13 @@ pub fn init_mock_client(
     let starknet_provider = Arc::new(mock_starknet_provider(fixtures));
     let starknet_account = mock_account(starknet_provider.clone());
 
-    let config = StarknetConfig::new(Network::Katana, *KAKAROT_ADDRESS, *PROXY_ACCOUNT_CLASS_HASH);
+    let config = KakarotRpcConfig::new(
+        Network::Katana,
+        *KAKAROT_ADDRESS,
+        *PROXY_ACCOUNT_CLASS_HASH,
+        *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
+        *CONTRACT_ACCOUNT_CLASS_HASH,
+    );
 
     KakarotClient::new(config, starknet_provider, starknet_account)
 }

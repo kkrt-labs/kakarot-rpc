@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use ethers::abi::Token;
 use ethers::signers::{LocalWallet, Signer};
 use kakarot_rpc_core::client::api::KakarotEthApi;
 use kakarot_rpc_core::client::waiter::TransactionWaiter;
-use reth_primitives::{Address, BlockId, H256, U256};
+use reth_primitives::{Address, BlockId, H256};
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::InvokeTransactionResult;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -28,7 +29,7 @@ pub async fn execute_eth_tx(
     env: &KakarotTestEnvironmentContext,
     contract: &str,
     selector: &str,
-    args: Vec<U256>,
+    args: Vec<Token>,
 ) -> H256 {
     let (client, kakarot, contract, contract_eth_address) = env.resources_with_contract(contract);
 
@@ -37,15 +38,11 @@ pub async fn execute_eth_tx(
         .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
         .await
         .unwrap();
-    let selector = contract.abi.function(selector).unwrap().short_signature();
 
-    let tx = create_raw_ethereum_tx(
-        selector,
-        kakarot.eoa_private_key,
-        contract_eth_address,
-        args,
-        nonce.try_into().unwrap(),
-    );
+    // Encode input, otherwise throw error
+    let data = contract.abi.function(selector).unwrap().encode_input(&args).expect("Encoding error");
+
+    let tx = create_raw_ethereum_tx(kakarot.eoa_private_key, contract_eth_address, data, nonce.try_into().unwrap());
 
     client.send_transaction(tx).await.unwrap()
 }

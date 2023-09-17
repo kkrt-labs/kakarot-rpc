@@ -4,7 +4,7 @@ use reth_primitives::{Bytes, U256};
 use starknet::core::types::FieldElement;
 use starknet::core::utils::get_storage_var_address;
 
-use crate::types::{ContractAddress, StorageKey, StorageValue};
+use crate::hive_utils::types::{ContractAddress, StorageKey, StorageValue};
 
 /// Generates the genesis storage tuples for setting the bytecode of a Kakarot countract account
 ///
@@ -164,8 +164,6 @@ mod tests {
     use kakarot_rpc_core::contracts::account::Account;
     use kakarot_rpc_core::contracts::contract_account::ContractAccount;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
-    use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
-    use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
     use reth_primitives::U256;
     use rstest::rstest;
     use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
@@ -176,6 +174,8 @@ mod tests {
     use tracing_subscriber::{filter, FmtSubscriber};
 
     use super::*;
+    use crate::deploy_helpers::KakarotTestEnvironmentContext;
+    use crate::fixtures::kakarot_test_env_ctx;
 
     #[ctor]
     fn setup() {

@@ -34,8 +34,8 @@ pub enum ConfigError {
     #[error("Missing mandatory environment variable: {0}")]
     EnvironmentVariableMissing(String),
     /// Environment variable set wrong error.
-    #[error("{0}")]
-    EnvironmentVariableSetWrong(String),
+    #[error("Environment variable {0} set wrong: {1}")]
+    EnvironmentVariableSetWrong(String, String),
     /// Invalid URL error.
     #[error("Invalid URL: {0}")]
     InvalidUrl(#[from] url::ParseError),

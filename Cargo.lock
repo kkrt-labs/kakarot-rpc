@@ -4003,30 +4003,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
 
 [[package]]
-name = "hive-utils"
-version = "0.1.0"
-dependencies = [
- "cargo-husky",
- "ctor",
- "eyre",
- "kakarot-rpc-core",
- "kakarot-test-utils",
- "katana-core",
- "lazy_static",
- "reth-primitives",
- "rstest",
- "serde",
- "serde_json",
- "serde_with",
- "starknet",
- "starknet_api",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
 name = "hmac"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4899,13 +4875,17 @@ name = "kakarot-test-utils"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "ctor",
  "dojo-test-utils",
  "dotenv",
  "ethers",
  "ethers-solc 2.0.9",
+ "eyre",
  "foundry-config",
  "futures",
  "git2",
+ "jsonrpsee 0.18.2",
+ "kakarot-rpc",
  "kakarot-rpc-core",
  "katana-core",
  "lazy_static",
@@ -4916,7 +4896,10 @@ dependencies = [
  "serde_with",
  "starknet",
  "starknet-crypto 0.5.1",
+ "starknet_api",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "url",
 ]
 
