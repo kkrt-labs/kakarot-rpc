@@ -27,13 +27,8 @@ async fn main() {
     tokio::task::spawn_blocking(move || {
         // Get a serializable state for the sequencer
         let sequencer = test_context.sequencer();
-        let dump_state = sequencer
-            .sequencer
-            .backend
-            .state
-            .blocking_write()
-            .dump_state()
-            .expect("Failed to call dump_state on Katana state");
+        let dump_state =
+            sequencer.backend.state.blocking_write().dump_state().expect("Failed to call dump_state on Katana state");
 
         let state = serde_json::to_string(&dump_state).expect("Failed to serialize state");
 

@@ -62,12 +62,11 @@ use crate::deploy_helpers::KakarotTestEnvironmentContext;
 pub async fn start_kakarot_rpc_server(
     kakarot_test_env: &KakarotTestEnvironmentContext,
 ) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    let sequencer = kakarot_test_env.sequencer();
     let kakarot = kakarot_test_env.kakarot();
 
-    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(kakarot_test_env.url())));
     let starknet_config = KakarotRpcConfig::new(
-        Network::JsonRpcProvider(sequencer.url()),
+        Network::JsonRpcProvider(kakarot_test_env.url()),
         kakarot.kakarot_address,
         kakarot.proxy_class_hash,
         kakarot.externally_owned_account_class_hash,

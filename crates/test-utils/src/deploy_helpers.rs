@@ -19,6 +19,7 @@ use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::contracts::kakarot::KakarotContract;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use katana_core::db::serde::state::SerializableState;
+use katana_core::sequencer::KatanaSequencer;
 use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256};
 use serde::{Deserialize, Serialize};
 use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
@@ -843,8 +844,12 @@ impl KakarotTestEnvironmentContext {
         self
     }
 
-    pub fn sequencer(&self) -> &TestSequencer {
-        &self.sequencer
+    pub fn sequencer(&self) -> Arc<KatanaSequencer> {
+        self.sequencer.sequencer.clone()
+    }
+
+    pub fn url(&self) -> Url {
+        self.sequencer.url()
     }
 
     pub fn client(&self) -> &KakarotClient<JsonRpcClient<HttpTransport>> {
