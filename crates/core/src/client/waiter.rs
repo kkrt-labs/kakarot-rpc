@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use starknet::core::types::{MaybePendingTransactionReceipt, StarknetError, TransactionReceipt, TransactionStatus};
+use starknet::core::types::{ExecutionResult, MaybePendingTransactionReceipt, StarknetError};
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 use starknet_crypto::FieldElement;
 use tokio::time::Instant;
@@ -46,17 +46,16 @@ impl<P: Provider> TransactionWaiter<P> {
             let receipt = self.provider.get_transaction_receipt(self.transaction_hash).await;
             match receipt {
                 Ok(receipt) => match receipt {
-                    MaybePendingTransactionReceipt::Receipt(receipt) => match transaction_receipt_status(receipt) {
-                        TransactionStatus::AcceptedOnL2 | TransactionStatus::AcceptedOnL1 => {
+                    MaybePendingTransactionReceipt::Receipt(receipt) => match receipt.execution_result() {
+                        ExecutionResult::Succeeded => {
                             return Ok(());
                         }
-                        TransactionStatus::Rejected => {
+                        ExecutionResult::Reverted { reason } => {
                             return Err(EthApiError::Other(anyhow::anyhow!(
-                                "Pooling Failed: the transaction {} has been rejected",
-                                self.transaction_hash
+                                "Pooling Failed: the transaction {} has been rejected: {reason}",
+                                self.transaction_hash,
                             )));
                         }
-                        _ => (),
                     },
                     MaybePendingTransactionReceipt::PendingReceipt(_) => (),
                 },
@@ -78,15 +77,5 @@ impl<P: Provider> TransactionWaiter<P> {
             };
             tokio::time::sleep(self.interval).await;
         }
-    }
-}
-
-fn transaction_receipt_status(receipt: TransactionReceipt) -> TransactionStatus {
-    match receipt {
-        TransactionReceipt::Invoke(receipt) => receipt.status,
-        TransactionReceipt::Declare(receipt) => receipt.status,
-        TransactionReceipt::Deploy(receipt) => receipt.status,
-        TransactionReceipt::DeployAccount(receipt) => receipt.status,
-        TransactionReceipt::L1Handler(receipt) => receipt.status,
     }
 }

@@ -1,8 +1,10 @@
 use async_trait::async_trait;
 use reth_primitives::{TransactionSigned, H256, U256};
 use reth_rpc_types::{Signature, Transaction as EthTransaction};
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement, InvokeTransaction, Transaction};
-use starknet::providers::Provider;
+use starknet::core::types::{
+    BlockId as StarknetBlockId, BlockTag, FieldElement, InvokeTransaction, StarknetError, Transaction,
+};
+use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 
 use super::felt::Felt252Wrapper;
 use super::ConversionError;
@@ -44,7 +46,6 @@ macro_rules! get_invoke_transaction_field {
 
 impl StarknetTransaction {
     get_invoke_transaction_field!((transaction_hash, transaction_hash), Felt252Wrapper);
-    get_invoke_transaction_field!((nonce, nonce), Felt252Wrapper);
     get_invoke_transaction_field!((calldata, calldata), Vec<FieldElement>);
     get_invoke_transaction_field!((contract_address, sender_address), Felt252Wrapper);
 }
@@ -81,7 +82,28 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
         let hash: H256 = self.transaction_hash()?.into();
 
-        let nonce: U256 = self.nonce()?.into();
+        let starknet_block_id = match block_hash {
+            Some(block_hash) => StarknetBlockId::Hash(TryInto::<Felt252Wrapper>::try_into(block_hash)?.into()),
+            None => match block_number {
+                Some(block_number) => StarknetBlockId::Number(block_number.as_limbs()[0]),
+                None => {
+                    return Err(EthApiError::RequestError(ProviderError::StarknetError(StarknetErrorWithMessage {
+                        code: MaybeUnknownErrorCode::Known(StarknetError::BlockNotFound),
+                        message: "Block hash or block number must be provided".into(),
+                    })));
+                }
+            },
+        };
+        let nonce: Felt252Wrapper = match &self.0 {
+            Transaction::Invoke(invoke_tx) => match invoke_tx {
+                InvokeTransaction::V0(_) => {
+                    client.starknet_provider().get_nonce(starknet_block_id, sender_address).await?.into()
+                }
+                InvokeTransaction::V1(v1) => v1.nonce.into(),
+            },
+            _ => return Err(EthApiError::KakarotDataFilteringError("Transaction".into())),
+        };
+        let nonce: U256 = nonce.into();
 
         let from = client.get_evm_address(&sender_address, &starknet_block_latest).await?;
 
@@ -175,7 +197,8 @@ mod tests {
         let client = init_mock_client(Some(fixtures));
 
         // When
-        let eth_transaction = starknet_transaction.to_eth_transaction(&client, None, None, None).await.unwrap();
+        let eth_transaction =
+            starknet_transaction.to_eth_transaction(&client, None, Some(U256::from(1234u64)), None).await.unwrap();
 
         // Then
         let expected: EthTransaction =

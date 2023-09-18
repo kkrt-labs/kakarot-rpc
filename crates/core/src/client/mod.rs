@@ -24,9 +24,9 @@ use reth_rpc_types::{
 };
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::{
-    BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, EmittedEvent,
-    Event, EventFilterWithPage, EventsPage, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
-    MaybePendingTransactionReceipt, ResultPageRequest, StarknetError, SyncStatusType, Transaction as TransactionType,
+    BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction, EmittedEvent, Event, EventFilterWithPage,
+    EventsPage, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
+    ResultPageRequest, StarknetError, SyncStatusType, Transaction as TransactionType,
     TransactionReceipt as StarknetTransactionReceipt,
 };
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
@@ -458,7 +458,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
         let signature = vec![];
 
-        let request = BroadcastedInvokeTransactionV1 {
+        let request = BroadcastedInvokeTransaction {
             max_fee,
             signature,
             nonce,
@@ -568,7 +568,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         let data = data.into_iter().map(FieldElement::from).collect();
         let calldata = raw_kakarot_calldata(self.kakarot_address(), data);
 
-        let tx = BroadcastedInvokeTransactionV1 {
+        let tx = BroadcastedInvokeTransaction {
             max_fee: FieldElement::ZERO,
             signature: vec![],
             sender_address,
@@ -598,7 +598,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         let block_id = StarknetBlockId::Tag(BlockTag::Latest);
         let nonce = self.starknet_provider.get_nonce(block_id, *DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS).await?;
 
-        let tx = BroadcastedInvokeTransactionV1 {
+        let tx = BroadcastedInvokeTransaction {
             max_fee: FieldElement::ZERO,
             signature: vec![],
             sender_address: *DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS,
@@ -669,10 +669,9 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
     /// Submits a Kakarot transaction to the Starknet provider.
     async fn submit_starknet_transaction(
         &self,
-        request: BroadcastedInvokeTransactionV1,
+        request: BroadcastedInvokeTransaction,
     ) -> Result<H256, EthApiError<P::Error>> {
-        let transaction_result =
-            self.starknet_provider.add_invoke_transaction(&BroadcastedInvokeTransaction::V1(request)).await?;
+        let transaction_result = self.starknet_provider.add_invoke_transaction(&request).await?;
         let waiter =
             TransactionWaiter::new(self.starknet_provider(), transaction_result.transaction_hash, 1000, 15_000);
         waiter.poll().await?;
@@ -731,7 +730,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
     /// a SequencerGatewayProvider on testnets and mainnet)
     async fn simulate_transaction(
         &self,
-        request: BroadcastedInvokeTransactionV1,
+        request: BroadcastedInvokeTransaction,
         block_number: u64,
         skip_validate: bool,
     ) -> Result<TransactionSimulationInfo, EthApiError<P::Error>> {

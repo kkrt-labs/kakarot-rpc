@@ -6,7 +6,7 @@ use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
 use kakarot_test_utils::execution_helpers::execute_eth_transfer_tx;
 use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
 use rstest::*;
-use starknet::core::types::{FieldElement, MaybePendingTransactionReceipt, TransactionReceipt, TransactionStatus};
+use starknet::core::types::{ExecutionResult, FieldElement, MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::providers::Provider;
 
 #[rstest]
@@ -25,7 +25,7 @@ async fn test_wait_for_confirmation_on_l2(kakarot_test_env_ctx: KakarotTestEnvir
 
     match transaction_receipt {
         MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
-            assert_eq!(TransactionStatus::AcceptedOnL2, receipt.status)
+            assert!(matches!(receipt.execution_result, ExecutionResult::Succeeded))
         }
         _ => panic!(
             "Expected MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke), got {:?}",

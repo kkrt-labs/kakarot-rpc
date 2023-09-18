@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use reth_primitives::{Bloom, H256, U128, U256, U64, U8};
 use reth_rpc_types::TransactionReceipt as EthTransactionReceipt;
 use starknet::core::types::{
-    InvokeTransactionReceipt, MaybePendingTransactionReceipt, TransactionReceipt, TransactionStatus,
+    ExecutionResult, InvokeTransactionReceipt, MaybePendingTransactionReceipt, TransactionReceipt,
 };
 use starknet::providers::Provider;
 
@@ -44,7 +44,7 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
             MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
                 TransactionReceipt::Invoke(InvokeTransactionReceipt {
                     transaction_hash,
-                    status,
+                    execution_result,
                     block_hash,
                     block_number,
                     events,
@@ -62,7 +62,7 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
                     let block_number: Felt252Wrapper = block_number.into();
                     let block_number: Option<U256> = Some(block_number.into());
 
-                    let eth_tx = starknet_tx.to_eth_transaction(client, None, None, None).await?;
+                    let eth_tx = starknet_tx.to_eth_transaction(client, block_hash, block_number, None).await?;
                     let from = eth_tx.from;
                     let to = eth_tx.to;
                     let contract_address = match to {
@@ -89,9 +89,9 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
                         }
                     };
 
-                    let status_code = match status {
-                        TransactionStatus::Rejected | TransactionStatus::Pending => Some(U64::from(0)),
-                        TransactionStatus::AcceptedOnL1 | TransactionStatus::AcceptedOnL2 => Some(U64::from(1)),
+                    let status_code = match execution_result {
+                        ExecutionResult::Succeeded => Some(U64::from(1)),
+                        ExecutionResult::Reverted { .. } => Some(U64::from(0)),
                     };
 
                     let logs = events
