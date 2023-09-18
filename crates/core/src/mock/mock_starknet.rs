@@ -257,7 +257,7 @@ fn mock_account<P: Provider + Send + Sync>(provider: P) -> SingleOwnerAccount<P,
         local_wallet,
         starknet_account_public_address,
         chain_id,
-        ExecutionEncoding::Legacy,
+        ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
     )
 }
 

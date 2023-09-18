@@ -237,7 +237,7 @@ async fn deploy_evm_contract<T: Tokenize>(
         LocalWallet::from_signing_key(signing_key),
         eoa_account_starknet_address,
         chain_id::TESTNET,
-        ExecutionEncoding::Legacy,
+        ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
     );
 
     let contract = get_contract(contract_name);
@@ -804,7 +804,7 @@ impl KakarotTestEnvironmentContext {
             local_wallet,
             deployer_account.address,
             chain_id,
-            ExecutionEncoding::Legacy,
+            ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
         );
 
         // Create a Kakarot client
@@ -990,6 +990,6 @@ pub async fn deploy_deployer_account(
         local_wallet,
         deployer_account_address,
         account.chain_id(),
-        ExecutionEncoding::Legacy,
+        ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
     )
 }

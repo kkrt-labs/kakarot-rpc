@@ -212,6 +212,6 @@ pub async fn get_starknet_account_from_env<P: Provider + Send + Sync + 'static>(
         local_wallet,
         starknet_account_address,
         chain_id,
-        ExecutionEncoding::Legacy,
+        ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
     ))
 }
