@@ -734,7 +734,7 @@ mod tests {
           "0x076e91a117d68549b7c7be395f1bd01596372f2ac631bd6ce6202430654434e",
           "0x04ef32bc4fd31910b365bff935637cc2b4a084c73a9bbd91e6f5e4fd6062deb0"
         ],
-        "transaction_hash": "0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c",
+        "transaction_hash": "0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9",
         "type": "INVOKE",
         "version": "0x1"
         })
@@ -924,13 +924,13 @@ mod tests {
     #[tokio::test]
     async fn test_transaction_receipt_invoke_is_ok() {
         let kakarot_rpc = setup_mock_eth_rpc().await;
-        let hash = H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap();
+        let hash = H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap();
         let transaction_receipt = kakarot_rpc.transaction_receipt(hash).await.unwrap().unwrap();
 
         assert_eq!(
             transaction_receipt.transaction_hash,
             Some(H256::from_slice(
-                &FieldElement::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c")
+                &FieldElement::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9")
                     .unwrap()
                     .to_bytes_be()
             ))

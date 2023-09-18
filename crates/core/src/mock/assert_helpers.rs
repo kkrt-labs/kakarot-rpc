@@ -134,7 +134,7 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
             match invoke_tx {
                 InvokeTransaction::V0(v0) => {
                     assert_eq!(ether_tx.hash, H256::from_slice(&v0.transaction_hash.to_bytes_be()));
-                    let tx_nonce: Felt252Wrapper = v0.nonce.into();
+                    let tx_nonce = Felt252Wrapper::ZERO;
                     assert_eq!(ether_tx.nonce, tx_nonce.into());
                     // TODO: `ether_tx.from` is an Ethereum address, `contract_address` represents a Starknet address
                     // that is able to interact with Kakarot, we'd need to use get_evm_address() to

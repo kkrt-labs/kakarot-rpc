@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use eyre::Result;
-use starknet::accounts::SingleOwnerAccount;
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
 use starknet::providers::{JsonRpcClient, Provider, SequencerGatewayProvider};
@@ -144,15 +144,17 @@ impl JsonRpcClientBuilder<HttpTransport> {
     /// # Example
     ///
     /// ```rust
-    /// use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, Network, StarknetConfig};
+    /// use kakarot_rpc_core::client::config::{JsonRpcClientBuilder, KakarotRpcConfig, Network};
     /// use starknet::core::types::FieldElement;
     /// use starknet::providers::jsonrpc::HttpTransport;
     /// use starknet::providers::JsonRpcClient;
     /// use url::Url;
     ///
     /// let url = "http://0.0.0.0:1234/rpc";
-    /// let config = StarknetConfig::new(
+    /// let config = KakarotRpcConfig::new(
     ///     Network::JsonRpcProvider(Url::parse(url).unwrap()),
+    ///     FieldElement::default(),
+    ///     FieldElement::default(),
     ///     FieldElement::default(),
     ///     FieldElement::default(),
     /// );
@@ -205,5 +207,11 @@ pub async fn get_starknet_account_from_env<P: Provider + Send + Sync + 'static>(
     let chain_id = provider.chain_id().await?;
 
     let local_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(starknet_account_private_key));
-    Ok(SingleOwnerAccount::new(provider.clone(), local_wallet, starknet_account_address, chain_id))
+    Ok(SingleOwnerAccount::new(
+        provider.clone(),
+        local_wallet,
+        starknet_account_address,
+        chain_id,
+        ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
+    ))
 }

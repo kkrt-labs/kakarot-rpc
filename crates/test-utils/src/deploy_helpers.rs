@@ -21,7 +21,7 @@ use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use katana_core::db::serde::state::SerializableState;
 use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256};
 use serde::{Deserialize, Serialize};
-use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
+use starknet::accounts::{Account, Call, ConnectedAccount, ExecutionEncoding, SingleOwnerAccount};
 use starknet::contract::ContractFactory;
 use starknet::core::chain_id;
 use starknet::core::types::contract::legacy::LegacyContractClass;
@@ -237,6 +237,7 @@ async fn deploy_evm_contract<T: Tokenize>(
         LocalWallet::from_signing_key(signing_key),
         eoa_account_starknet_address,
         chain_id::TESTNET,
+        ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
     );
 
     let contract = get_contract(contract_name);
@@ -709,8 +710,13 @@ impl KakarotTestEnvironmentContext {
                 .expect("Failed to fetch Deployer Account");
         let local_wallet = LocalWallet::from_signing_key(SigningKey::from_secret_scalar(deployer_account.private_key));
         let chain_id = starknet_provider.chain_id().await.unwrap();
-        let deployer_account =
-            SingleOwnerAccount::new(starknet_provider.clone(), local_wallet, deployer_account.address, chain_id);
+        let deployer_account = SingleOwnerAccount::new(
+            starknet_provider.clone(),
+            local_wallet,
+            deployer_account.address,
+            chain_id,
+            ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
+        );
 
         // Create a Kakarot client
         let kakarot_client = KakarotClient::new(
@@ -959,5 +965,11 @@ pub async fn deploy_deployer_account(
         .await
         .unwrap();
 
-    SingleOwnerAccount::new(starknet_provider, local_wallet, deployer_account_address, account.chain_id())
+    SingleOwnerAccount::new(
+        starknet_provider,
+        local_wallet,
+        deployer_account_address,
+        account.chain_id(),
+        ExecutionEncoding::Legacy, // TODO: change to ExecutionEncoding::New when using v1 accounts
+    )
 }
