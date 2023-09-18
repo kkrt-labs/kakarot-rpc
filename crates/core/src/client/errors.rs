@@ -92,16 +92,18 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
     fn from(error: EthApiError<E>) -> Self {
         match error {
             EthApiError::RequestError(err_provider) => match err_provider {
-                ProviderError::StarknetError(err) => match err.code {
+                ProviderError::StarknetError(err_with_msg) => match err_with_msg.code {
                     MaybeUnknownErrorCode::Known(err) => match err {
                         StarknetError::BlockNotFound
                         | StarknetError::ClassHashNotFound
                         | StarknetError::ContractNotFound
                         | StarknetError::NoBlocks
                         | StarknetError::TransactionHashNotFound => {
-                            rpc_err(EthRpcErrorCode::ResourceNotFound, err.to_string())
+                            rpc_err(EthRpcErrorCode::ResourceNotFound, format!("{err}: {}", err_with_msg.message))
                         }
-                        StarknetError::ContractError => rpc_err(EthRpcErrorCode::ExecutionError, err.to_string()),
+                        StarknetError::ContractError => {
+                            rpc_err(EthRpcErrorCode::ExecutionError, format!("{err}: {}", err_with_msg.message))
+                        }
                         StarknetError::InvalidTransactionNonce
                         | StarknetError::InvalidContinuationToken
                         | StarknetError::InvalidTransactionIndex
@@ -111,7 +113,9 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
                         | StarknetError::InsufficientMaxFee
                         | StarknetError::ClassAlreadyDeclared
                         | StarknetError::UnsupportedTxVersion
-                        | StarknetError::CompilationFailed => rpc_err(EthRpcErrorCode::InvalidInput, err.to_string()),
+                        | StarknetError::CompilationFailed => {
+                            rpc_err(EthRpcErrorCode::InvalidInput, format!("{err}: {}", err_with_msg.message))
+                        }
                         StarknetError::FailedToReceiveTransaction
                         | StarknetError::DuplicateTx
                         | StarknetError::NonAccount
@@ -120,11 +124,11 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
                         | StarknetError::ContractClassSizeIsTooLarge
                         | StarknetError::CompiledClassHashMismatch
                         | StarknetError::UnexpectedError => {
-                            rpc_err(EthRpcErrorCode::TransactionRejected, err.to_string())
+                            rpc_err(EthRpcErrorCode::TransactionRejected, format!("{err}: {}", err_with_msg.message))
                         }
                     },
                     MaybeUnknownErrorCode::Unknown(code) => {
-                        rpc_err(EthRpcErrorCode::Unknown, format!("got code {} with: {}", code, err.message))
+                        rpc_err(EthRpcErrorCode::Unknown, format!("got code {} with: {}", code, err_with_msg.message))
                     }
                 },
                 ProviderError::ArrayLengthMismatch => rpc_err(EthRpcErrorCode::InvalidParams, err_provider.to_string()),
