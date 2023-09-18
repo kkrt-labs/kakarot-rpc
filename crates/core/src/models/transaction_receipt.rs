@@ -62,7 +62,7 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
                     let block_number: Felt252Wrapper = block_number.into();
                     let block_number: Option<U256> = Some(block_number.into());
 
-                    let eth_tx = starknet_tx.to_eth_transaction(client, None, None, None).await?;
+                    let eth_tx = starknet_tx.to_eth_transaction(client, block_hash, block_number, None).await?;
                     let from = eth_tx.from;
                     let to = eth_tx.to;
                     let contract_address = match to {
