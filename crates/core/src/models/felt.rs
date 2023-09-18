@@ -9,6 +9,7 @@ use super::ConversionError;
 pub struct Felt252Wrapper(FieldElement);
 
 impl Felt252Wrapper {
+    pub const ZERO: Felt252Wrapper = Self(FieldElement::ZERO);
     /// Troncate the first 12 bytes of the `FieldElement` and return the last 20 bytes as an
     /// Ethereum address. This is used to convert Starknet addresses to Ethereum addresses in
     /// cases where the Starknet address does not represent a Kakarot address, i.e. it does not have

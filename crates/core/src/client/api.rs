@@ -9,7 +9,7 @@ use reth_rpc_types::{
 };
 use starknet::accounts::SingleOwnerAccount;
 use starknet::core::types::{
-    BlockId as StarknetBlockId, BroadcastedInvokeTransactionV1, EmittedEvent, EventFilterWithPage, FieldElement,
+    BlockId as StarknetBlockId, BroadcastedInvokeTransaction, EmittedEvent, EventFilterWithPage, FieldElement,
 };
 use starknet::providers::sequencer::models::TransactionSimulationInfo;
 use starknet::providers::Provider;
@@ -102,7 +102,7 @@ pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
 
     async fn submit_starknet_transaction(
         &self,
-        request: BroadcastedInvokeTransactionV1,
+        request: BroadcastedInvokeTransaction,
     ) -> Result<H256, EthApiError<P::Error>>;
 
     async fn compute_starknet_address(
@@ -132,7 +132,7 @@ pub trait KakarotStarknetApi<P: Provider + Send + Sync>: Send + Sync {
 
     async fn simulate_transaction(
         &self,
-        request: BroadcastedInvokeTransactionV1,
+        request: BroadcastedInvokeTransaction,
         block_number: u64,
         skip_validate: bool,
     ) -> Result<TransactionSimulationInfo, EthApiError<P::Error>>;

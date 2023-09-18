@@ -18,8 +18,8 @@ mod tests {
     use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
     use rstest::*;
     use starknet::core::types::{
-        BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingTransactionReceipt, TransactionReceipt,
-        TransactionStatus,
+        BlockId as StarknetBlockId, BlockTag, ExecutionResult, FieldElement, MaybePendingTransactionReceipt,
+        TransactionReceipt,
     };
     use starknet::providers::Provider;
     use tracing_subscriber::{filter, FmtSubscriber};
@@ -245,7 +245,7 @@ mod tests {
 
         match transaction_receipt {
             MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
-                assert_eq!(TransactionStatus::AcceptedOnL2, receipt.status)
+                assert!(matches!(receipt.execution_result, ExecutionResult::Succeeded));
             }
             _ => panic!(
                 "Expected MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke), got {:?}",

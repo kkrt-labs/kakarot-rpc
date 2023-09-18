@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, H256, U256, U64};
 use reth_rpc_types::{CallInput, CallRequest, Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransactionV1};
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::sequencer::models::BlockId as SequencerBlockId;
 use starknet_crypto::FieldElement;
@@ -108,7 +108,7 @@ async fn test_transaction_by_hash() {
     // When
     let tx = match client
         .transaction_by_hash(
-            H256::from_str("0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c").unwrap(),
+            H256::from_str("0x0449aa33ad836b65b10fa60082de99e24ac876ee2fd93e723a99190a530af0a9").unwrap(),
         )
         .await
         .unwrap()
@@ -141,7 +141,7 @@ async fn test_simulate_transaction() {
         FieldElement::ZERO,        // calldata length
     ];
 
-    let tx = BroadcastedInvokeTransactionV1 {
+    let tx = BroadcastedInvokeTransaction {
         sender_address: *ACCOUNT_ADDRESS,
         calldata,
         max_fee: FieldElement::ZERO,

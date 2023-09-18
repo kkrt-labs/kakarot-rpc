@@ -102,15 +102,24 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
                             rpc_err(EthRpcErrorCode::ResourceNotFound, err.to_string())
                         }
                         StarknetError::ContractError => rpc_err(EthRpcErrorCode::ExecutionError, err.to_string()),
-                        StarknetError::InvalidContractClass
+                        StarknetError::InvalidTransactionNonce
                         | StarknetError::InvalidContinuationToken
                         | StarknetError::InvalidTransactionIndex
                         | StarknetError::PageSizeTooBig
                         | StarknetError::TooManyKeysInFilter
-                        | StarknetError::ClassAlreadyDeclared => {
-                            rpc_err(EthRpcErrorCode::InvalidInput, err.to_string())
-                        }
-                        StarknetError::FailedToReceiveTransaction => {
+                        | StarknetError::InsufficientAccountBalance
+                        | StarknetError::InsufficientMaxFee
+                        | StarknetError::ClassAlreadyDeclared
+                        | StarknetError::UnsupportedTxVersion
+                        | StarknetError::CompilationFailed => rpc_err(EthRpcErrorCode::InvalidInput, err.to_string()),
+                        StarknetError::FailedToReceiveTransaction
+                        | StarknetError::DuplicateTx
+                        | StarknetError::NonAccount
+                        | StarknetError::ValidationFailure
+                        | StarknetError::UnsupportedContractClassVersion
+                        | StarknetError::ContractClassSizeIsTooLarge
+                        | StarknetError::CompiledClassHashMismatch
+                        | StarknetError::UnexpectedError => {
                             rpc_err(EthRpcErrorCode::TransactionRejected, err.to_string())
                         }
                     },

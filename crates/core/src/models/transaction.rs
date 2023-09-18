@@ -44,7 +44,6 @@ macro_rules! get_invoke_transaction_field {
 
 impl StarknetTransaction {
     get_invoke_transaction_field!((transaction_hash, transaction_hash), Felt252Wrapper);
-    get_invoke_transaction_field!((nonce, nonce), Felt252Wrapper);
     get_invoke_transaction_field!((calldata, calldata), Vec<FieldElement>);
     get_invoke_transaction_field!((contract_address, sender_address), Felt252Wrapper);
 }
@@ -81,7 +80,14 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
         let hash: H256 = self.transaction_hash()?.into();
 
-        let nonce: U256 = self.nonce()?.into();
+        let nonce: U256 = match &self.0 {
+            Transaction::Invoke(invoke_tx) => match invoke_tx {
+                InvokeTransaction::V0(_) => Felt252Wrapper::ZERO,
+                InvokeTransaction::V1(v1) => v1.nonce.into(),
+            },
+            _ => return Err(EthApiError::KakarotDataFilteringError("Transaction".into())),
+        }
+        .into();
 
         let from = client.get_evm_address(&sender_address, &starknet_block_latest).await?;
 

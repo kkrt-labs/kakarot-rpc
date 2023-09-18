@@ -5,7 +5,7 @@ use dojo_test_utils::rpc::MockJsonRpcTransport;
 use foundry_config::find_git_root_path;
 use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
-use starknet::accounts::SingleOwnerAccount;
+use starknet::accounts::{ExecutionEncoding, SingleOwnerAccount};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 use starknet::providers::{JsonRpcClient, Provider, SequencerGatewayProvider};
 use starknet::signers::{LocalWallet, SigningKey};
@@ -252,7 +252,13 @@ fn mock_account<P: Provider + Send + Sync>(provider: P) -> SingleOwnerAccount<P,
     // Dummy chain id
     let chain_id = FieldElement::from(42_u64);
 
-    SingleOwnerAccount::new(provider, local_wallet, starknet_account_public_address, chain_id)
+    SingleOwnerAccount::new(
+        provider,
+        local_wallet,
+        starknet_account_public_address,
+        chain_id,
+        ExecutionEncoding::Legacy,
+    )
 }
 
 #[cfg(test)]
