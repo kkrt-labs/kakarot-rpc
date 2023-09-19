@@ -865,7 +865,7 @@ impl KakarotTestEnvironmentContext {
 /// Kakarot based applications.
 ///
 /// Returns a `TestSequencer` configured for Kakarot.
-pub async fn construct_kakarot_test_sequencer(with_dumped_state: bool) -> TestSequencer {
+async fn construct_kakarot_test_sequencer(with_dumped_state: bool) -> TestSequencer {
     TestSequencer::start(
         SequencerConfig { no_mining: false, block_time: None },
         kakarot_starknet_config(with_dumped_state),
