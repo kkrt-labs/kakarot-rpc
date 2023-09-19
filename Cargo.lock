@@ -4876,6 +4876,7 @@ name = "kakarot-test-utils"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "ctor",
  "dojo-test-utils",
  "dotenv",
  "ethers",
@@ -4898,6 +4899,8 @@ dependencies = [
  "starknet-crypto 0.6.0",
  "starknet_api",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "url",
 ]
 

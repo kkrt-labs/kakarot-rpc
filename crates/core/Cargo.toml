@@ -48,11 +48,11 @@ walkdir = "2.3.3"
 
 [dev-dependencies]
 cargo-husky = { workspace = true }
-ctor = "0.2.4"
+ctor = { workspace = true }
 dojo-test-utils = { workspace = true }
 starknet-crypto = { workspace = true }
 toml = "0.7.5"
-tracing = "0.1.37"
-tracing-subscriber = "0.3.17"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 kakarot-test-utils = { path = "../test-utils" }
 kakarot-rpc-core = { path = "." }
