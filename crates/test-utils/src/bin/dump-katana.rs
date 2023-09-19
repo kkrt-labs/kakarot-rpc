@@ -1,28 +1,16 @@
 use std::collections::HashMap;
 
-use ethers::abi::Token;
 use git2::{Repository, SubmoduleIgnore};
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_test_utils::constants::STARKNET_DEPLOYER_ACCOUNT_PRIVATE_KEY;
-use kakarot_test_utils::deploy_helpers::{
-    ContractDeploymentArgs, DeployerAccount, KakarotTestEnvironmentContext, TestContext,
-};
+use kakarot_test_utils::deploy_helpers::{DeployerAccount, KakarotTestEnvironmentContext};
 use starknet::accounts::Account;
 
 #[tokio::main]
 async fn main() {
     // Deploy all kakarot contracts + EVM contracts
-    let mut test_context = KakarotTestEnvironmentContext::new(TestContext::PlainOpcodes).await;
-    test_context = test_context
-        .deploy_evm_contract(ContractDeploymentArgs {
-            name: "ERC20".into(),
-            constructor_args: (
-                Token::String("Test".into()),               // name
-                Token::String("TT".into()),                 // symbol
-                Token::Uint(ethers::types::U256::from(18)), // decimals
-            ),
-        })
-        .await;
+    let with_dumped_state = false;
+    let test_context = KakarotTestEnvironmentContext::new(with_dumped_state).await;
 
     // Get a serializable state for the sequencer
     let sequencer = test_context.sequencer();
