@@ -309,7 +309,7 @@ mod tests {
         let hive_genesis = HiveGenesisConfig::from_file("./src/hive_utils/test_data/hive_genesis.json").unwrap();
         let madara_loader =
             serde_json::from_str::<GenesisLoader>(std::include_str!("../test_data/madara_genesis.json")).unwrap();
-        let combined_genesis_path = Path::new("./src/test_data/combined_genesis.json");
+        let combined_genesis_path = Path::new("./src/hive_utils/test_data/combined_genesis.json");
         let compiled_path = Path::new("./cairo-contracts/build");
 
         // When
