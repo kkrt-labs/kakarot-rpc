@@ -226,7 +226,7 @@ pub async fn serialize_hive_to_madara_genesis_config(
     });
 
     let combined_genesis_file = File::options()
-        .create_new(true)
+        .create(true)
         .write(true)
         .append(false)
         .open(combined_genesis_path)

@@ -29,7 +29,7 @@ async fn main() {
 
     let katana_dump_path = String::from(".katana/dump.json");
     let katana_dump_file = File::options()
-        .create_new(true)
+        .create(true)
         .read(true)
         .write(true)
         .append(false)
