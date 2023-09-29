@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fs::File;
 
 use git2::{Repository, SubmoduleIgnore};
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
@@ -23,11 +24,19 @@ async fn main() {
         .dump_state()
         .expect("Failed to call dump_state on Katana state");
 
-    let state = serde_json::to_string(&dump_state).expect("Failed to serialize state");
-
     // Dump the state
     std::fs::create_dir_all(".katana/").expect("Failed to create Kakata dump dir");
-    std::fs::write(".katana/dump.json", state).expect("Failed to write dump to .katana/dump.json");
+
+    let katana_dump_path = String::from(".katana/dump.json");
+    let katana_dump_file = File::options()
+        .create(true)
+        .read(true)
+        .write(true)
+        .append(false)
+        .open(&katana_dump_path)
+        .unwrap_or_else(|_| panic!("Failed to open file {}", &katana_dump_path));
+    serde_json::to_writer_pretty(katana_dump_file, &dump_state)
+        .unwrap_or_else(|_| panic!("Failed to write to the file {}", katana_dump_path));
 
     let deployer_account = DeployerAccount {
         address: test_context.client().deployer_account().address(),
