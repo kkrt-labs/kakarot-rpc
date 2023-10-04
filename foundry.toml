@@ -1,7 +1,8 @@
 [profile.default]
-out = 'lib/kakarot/tests/integration/solidity_contracts/build'
+out = 'lib/kakarot/solidity_contracts/build'
+src = "lib/kakarot/solidity_contracts/src"
+tests = "lib/kakarot/solidity_contracts/tests"
 libs = ['lib']
-src = "lib/kakarot/tests/integration/solidity_contracts"
 eth_rpc_url = "localhost"
 legacy = true
 
