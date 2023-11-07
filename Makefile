@@ -24,18 +24,9 @@ setup: pull-kakarot build-kakarot
 devnet:
 	docker run --rm -it -p 5050:5050 -v $(PWD)/deployments:/app/kakarot/deployments -e STARKNET_NETWORK=katana ghcr.io/kkrt-labs/kakarot/katana:latest
 
-# build
-build:
-	cargo build --all --release
-
-# run
-run:
-	cargo run -p kakarot-rpc
-
 run-dev:
 	KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run -p kakarot-rpc
 
-#run-release
 run-release:
 	cargo run --release -p kakarot-rpc
 
