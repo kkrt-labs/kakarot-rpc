@@ -24,13 +24,13 @@ pub trait EvmContract {
         Ok(serde_json::from_str(&compiled_solidity_file_content)?)
     }
 
-    fn create_transaction<T: Tokenize>(
+    fn prepare_create_transaction<T: Tokenize>(
         contract_bytecode: &CompactContractBytecode,
         constructor_args: T,
         nonce: u64,
     ) -> Result<Transaction, eyre::Error>;
 
-    fn call_transaction<T: Tokenize>(
+    fn prepare_call_transaction<T: Tokenize>(
         &self,
         selector: &str,
         constructor_args: T,
@@ -53,7 +53,7 @@ impl KakarotEvmContract {
 }
 
 impl EvmContract for KakarotEvmContract {
-    fn create_transaction<T: Tokenize>(
+    fn prepare_create_transaction<T: Tokenize>(
         contract_bytecode: &CompactContractBytecode,
         constructor_args: T,
         nonce: u64,
@@ -87,7 +87,7 @@ impl EvmContract for KakarotEvmContract {
         }))
     }
 
-    fn call_transaction<T: Tokenize>(
+    fn prepare_call_transaction<T: Tokenize>(
         &self,
         selector: &str,
         args: T,

@@ -90,7 +90,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEOA<P> {
 
         let bytecode = <KakarotEvmContract as EvmContract>::load_contract_bytecode(contract_name)?;
 
-        let tx = <KakarotEvmContract as EvmContract>::create_transaction(&bytecode, constructor_args, nonce)?;
+        let tx = <KakarotEvmContract as EvmContract>::prepare_create_transaction(&bytecode, constructor_args, nonce)?;
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
         let tx_hash: Felt252Wrapper = tx_hash.try_into()?;
@@ -123,7 +123,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEOA<P> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
 
-        let tx = contract.call_transaction(function, args, nonce, value)?;
+        let tx = contract.prepare_call_transaction(function, args, nonce, value)?;
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
         let tx_hash: Felt252Wrapper = tx_hash.try_into()?;
