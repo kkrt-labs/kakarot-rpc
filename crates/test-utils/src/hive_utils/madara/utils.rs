@@ -155,7 +155,6 @@ pub fn genesis_set_storage_kakarot_contract_account(
 mod tests {
     use std::collections::HashMap;
     use std::str::FromStr;
-    use std::sync::Arc;
 
     use ctor::ctor;
     use kakarot_rpc_core::client::api::KakarotStarknetApi;
@@ -174,8 +173,9 @@ mod tests {
     use tracing_subscriber::{filter, FmtSubscriber};
 
     use super::*;
-    use crate::deploy_helpers::KakarotTestEnvironmentContext;
-    use crate::fixtures::kakarot_test_env_ctx;
+    use crate::execution::contract::KakarotEvmContract;
+    use crate::fixtures::{counter, katana};
+    use crate::sequencer::Katana;
 
     #[ctor]
     fn setup() {
@@ -248,13 +248,14 @@ mod tests {
     }
 
     #[rstest]
+    #[awt]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_counter_bytecode(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_counter_bytecode(#[future] counter: (Katana, KakarotEvmContract)) {
         // Given
-        let test_environment = Arc::new(kakarot_test_env_ctx);
-        let starknet_client = test_environment.client().starknet_provider();
-        let counter = test_environment.evm_contract("Counter");
-        let counter_contract = ContractAccount::new(counter.addresses.starknet_address, &starknet_client);
+        let katana = counter.0;
+        let counter = counter.1;
+        let starknet_client = katana.client().starknet_provider();
+        let counter_contract = ContractAccount::new(counter.evm_address, &starknet_client);
 
         // When
         let deployed_evm_bytecode = counter_contract.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
@@ -264,11 +265,8 @@ mod tests {
         let counter_genesis_address = FieldElement::from_str("0x1234").unwrap();
         let counter_genesis_storage = genesis_set_bytecode(&deployed_evm_bytecode, counter_genesis_address);
 
-        // Create an atomic reference to the test environment to avoid dropping it
-        let env = Arc::clone(&test_environment);
-
         // Get lock on the Starknet sequencer
-        let mut starknet = env.sequencer().sequencer.backend.state.write().await;
+        let mut starknet = katana.sequencer().sequencer.backend.state.write().await;
         let mut counter_storage = HashMap::new();
 
         // Set the counter bytecode length into the contract
@@ -284,7 +282,7 @@ mod tests {
         });
 
         // Deploy the contract account at genesis address
-        let contract_account_class_hash = env.kakarot().contract_account_class_hash;
+        let contract_account_class_hash = katana.client().contract_account_class_hash();
         let counter_address =
             StarknetContractAddress(Into::<StarkFelt>::into(counter_genesis_address).try_into().unwrap());
 
@@ -390,11 +388,9 @@ mod tests {
     }
 
     #[rstest]
+    #[awt]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_kakarot_contract_account_storage(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
-        // Given
-        let test_environment = Arc::new(kakarot_test_env_ctx);
-
+    async fn test_kakarot_contract_account_storage(#[future] katana: Katana) {
         // When
         // Use genesis_set_storage_kakarot_contract_account define the storage data
         // to be stored into the contract account
@@ -406,11 +402,8 @@ mod tests {
         let genesis_storage_data =
             genesis_set_storage_kakarot_contract_account(genesis_address, expected_key, expected_value);
 
-        // Create an atomic reference to the test environment to avoid dropping it
-        let env = Arc::clone(&test_environment);
-
         // Get lock on the Starknet sequencer
-        let mut starknet = env.sequencer().sequencer.backend.state.write().await;
+        let mut starknet = katana.sequencer().sequencer.backend.state.write().await;
         let mut storage = HashMap::new();
 
         // Prepare the record to be inserted into the storage
@@ -421,7 +414,7 @@ mod tests {
         });
 
         // Set the storage record for the contract
-        let contract_account_class_hash = env.kakarot().contract_account_class_hash;
+        let contract_account_class_hash = katana.client().contract_account_class_hash();
         {
             let genesis_address = StarknetContractAddress(Into::<StarkFelt>::into(genesis_address).try_into().unwrap());
 
@@ -435,7 +428,7 @@ mod tests {
         drop(starknet);
 
         // Deploy the contract account with the set genesis storage and retrieve the storage on the contract
-        let starknet_client = test_environment.client().starknet_provider();
+        let starknet_client = katana.client().starknet_provider();
         let genesis_contract = ContractAccount::new(genesis_address, &starknet_client);
         let [key_low, key_high] = split_u256_into_field_elements(expected_key);
         let actual_value =

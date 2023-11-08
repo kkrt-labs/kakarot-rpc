@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use reth_primitives::{H256, U256};
 use reth_rpc_types::{Log, RichBlock, Transaction as EthTransaction, TransactionReceipt};
-use starknet::core::types::EventFilter;
+use starknet::core::types::{BroadcastedInvokeTransaction, EventFilter};
 use starknet::providers::Provider;
 
 use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
@@ -41,6 +41,14 @@ pub trait ConvertibleStarknetTransaction {
         block_number: Option<U256>,
         transaction_index: Option<U256>,
     ) -> Result<EthTransaction, EthApiError<P::Error>>;
+}
+
+#[async_trait]
+pub trait ConvertibleSignedTransaction {
+    async fn to_broadcasted_invoke_transaction<P: Provider + Send + Sync>(
+        &self,
+        client: &dyn KakarotEthApi<P>,
+    ) -> Result<BroadcastedInvokeTransaction, EthApiError<P::Error>>;
 }
 
 #[async_trait]

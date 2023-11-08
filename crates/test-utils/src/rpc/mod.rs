@@ -11,7 +11,7 @@ use kakarot_rpc_core::client::KakarotClient;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::deploy_helpers::KakarotTestEnvironmentContext;
+use crate::sequencer::Katana;
 
 /// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
 /// and starting the Kakarot RPC server.
@@ -59,24 +59,20 @@ use crate::deploy_helpers::KakarotTestEnvironmentContext;
 ///
 /// }
 /// ```
-pub async fn start_kakarot_rpc_server(
-    kakarot_test_env: &KakarotTestEnvironmentContext,
-) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    let sequencer = kakarot_test_env.sequencer();
-    let kakarot = kakarot_test_env.kakarot();
+pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
+    let sequencer = katana.sequencer();
+    let client = katana.client();
 
     let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
     let starknet_config = KakarotRpcConfig::new(
         Network::JsonRpcProvider(sequencer.url()),
-        kakarot.kakarot_address,
-        kakarot.proxy_class_hash,
-        kakarot.externally_owned_account_class_hash,
-        kakarot.contract_account_class_hash,
+        client.kakarot_address(),
+        client.proxy_account_class_hash(),
+        client.externally_owned_account_class_hash(),
+        client.contract_account_class_hash(),
     );
 
-    let deployer_account = kakarot_test_env.client().deployer_account().clone();
-
-    let kakarot_client = Arc::new(KakarotClient::new(starknet_config, provider, deployer_account));
+    let kakarot_client = Arc::new(KakarotClient::new(starknet_config, provider));
 
     // Create and run Kakarot RPC module.
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(kakarot_client).rpc_module()?;

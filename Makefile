@@ -44,8 +44,18 @@ madara-rpc-up:
 madara-rpc-down:
 	docker compose down --remove-orphans
 
-dump-katana:
-	cargo run --features dump --bin dump-katana
+install-katana:
+	cargo install --git https://github.com/dojoengine/dojo --locked --rev b924dac katana
+
+run-katana: install-katana
+	rm -fr .katana/ && mkdir .katana
+	katana --dump-state .katana/dump.bin & echo $$! > .katana/pid
+
+kill-katana:
+	kill -2 `cat .katana/pid` && rm -fr .katana/pid
+
+dump-katana: run-katana build-and-deploy-kakarot kill-katana
+	cp -R lib/kakarot/deployments/katana/ deployments/katana/
 
 dump-genesis: build-kakarot
 	cargo run --bin dump-genesis

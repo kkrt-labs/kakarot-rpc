@@ -6,24 +6,24 @@ use starknet::core::types::{
 };
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 
-use super::felt::Felt252Wrapper;
-use super::ConversionError;
 use crate::client::api::KakarotEthApi;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
 use crate::models::call::Calls;
 use crate::models::convertible::ConvertibleStarknetTransaction;
+use crate::models::felt::Felt252Wrapper;
+use crate::models::ConversionError;
 
-pub struct StarknetTransaction(Transaction);
+pub struct StarknetBlockTransaction(Transaction);
 
-impl From<Transaction> for StarknetTransaction {
+impl From<Transaction> for StarknetBlockTransaction {
     fn from(tx: Transaction) -> Self {
         Self(tx)
     }
 }
 
-impl From<StarknetTransaction> for Transaction {
-    fn from(tx: StarknetTransaction) -> Self {
+impl From<StarknetBlockTransaction> for Transaction {
+    fn from(tx: StarknetBlockTransaction) -> Self {
         tx.0
     }
 }
@@ -44,7 +44,7 @@ macro_rules! get_invoke_transaction_field {
     };
 }
 
-impl StarknetTransaction {
+impl StarknetBlockTransaction {
     get_invoke_transaction_field!((transaction_hash, transaction_hash), Felt252Wrapper);
     get_invoke_transaction_field!((calldata, calldata), Vec<FieldElement>);
     get_invoke_transaction_field!((contract_address, sender_address), Felt252Wrapper);
@@ -65,7 +65,7 @@ impl From<StarknetTransactions> for Vec<Transaction> {
 }
 
 #[async_trait]
-impl ConvertibleStarknetTransaction for StarknetTransaction {
+impl ConvertibleStarknetTransaction for StarknetBlockTransaction {
     async fn to_eth_transaction<P: Provider + Send + Sync>(
         &self,
         client: &dyn KakarotEthApi<P>,
@@ -126,7 +126,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             block_number,
             transaction_index,
             from,
-            to,                     // TODO fetch the to
+            to,
             value: U256::from(100), // TODO fetch the value
             gas_price: None,        // TODO fetch the gas price
             gas: U256::from(100),   // TODO fetch the gas amount
@@ -141,7 +141,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
     }
 }
 
-impl StarknetTransaction {
+impl StarknetBlockTransaction {
     /// Checks if the transaction is a Kakarot transaction.
     async fn is_kakarot_tx<P: Provider + Send + Sync>(
         &self,
@@ -167,8 +167,8 @@ mod tests {
     async fn test_is_kakarot_tx() {
         // Given
         let starknet_transaction: Transaction =
-            serde_json::from_str(include_str!("test_data/conversion/starknet/transaction.json")).unwrap();
-        let starknet_transaction: StarknetTransaction = starknet_transaction.into();
+            serde_json::from_str(include_str!("../test_data/conversion/starknet/transaction.json")).unwrap();
+        let starknet_transaction: StarknetBlockTransaction = starknet_transaction.into();
 
         let fixtures = fixtures(vec![AvailableFixtures::GetClassHashAt(
             ABDEL_STARKNET_ADDRESS_HEX.into(),
@@ -187,8 +187,8 @@ mod tests {
     async fn test_to_eth_transaction() {
         // Given
         let starknet_transaction: Transaction =
-            serde_json::from_str(include_str!("test_data/conversion/starknet/transaction.json")).unwrap();
-        let starknet_transaction: StarknetTransaction = starknet_transaction.into();
+            serde_json::from_str(include_str!("../test_data/conversion/starknet/transaction.json")).unwrap();
+        let starknet_transaction: StarknetBlockTransaction = starknet_transaction.into();
 
         let fixtures = fixtures(vec![
             AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),
@@ -202,7 +202,7 @@ mod tests {
 
         // Then
         let expected: EthTransaction =
-            serde_json::from_str(include_str!("test_data/conversion/eth/transaction.json")).unwrap();
+            serde_json::from_str(include_str!("../test_data/conversion/eth/transaction.json")).unwrap();
         assert_eq!(expected, eth_transaction);
     }
 }

@@ -4,10 +4,9 @@ mod tests {
     use std::sync::Arc;
 
     use kakarot_rpc_core::client::api::KakarotStarknetApi;
-    use kakarot_test_utils::deploy_helpers::{
-        get_contract, get_contract_deployed_bytecode, KakarotTestEnvironmentContext,
-    };
-    use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
+    use kakarot_test_utils::execution::contract::KakarotEvmContract;
+    use kakarot_test_utils::fixtures::counter;
+    use kakarot_test_utils::sequencer::Katana;
     use reth_primitives::U256;
     use rstest::*;
     use starknet::core::types::{BlockId, BlockTag};
@@ -50,17 +49,19 @@ mod tests {
     }
 
     #[rstest]
+    #[awt]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_bytecode(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
+    async fn test_bytecode(#[future] counter: (Katana, KakarotEvmContract)) {
         // Given
-        let contract_name = "Counter";
-        let counter_starknet_address = kakarot_test_env_ctx.evm_contract(contract_name).addresses.starknet_address;
-        let counter_contract = get_contract(contract_name);
-        let expected_bytecode = get_contract_deployed_bytecode(counter_contract);
+        let katana = counter.0;
+        let counter = counter.1;
+        let expected_bytecode =
+            counter.bytecode.deployed_bytecode.expect("Missing deployed bytecode").bytecode.expect("Missing bytecode");
+        let expected_bytecode = expected_bytecode.object.as_bytes().expect("Failed to convert bytecode to bytes");
 
         let starknet_block_id = BlockId::Tag(BlockTag::Latest);
-        let starknet_provider = kakarot_test_env_ctx.client().starknet_provider();
-        let counter_contract_account = KakarotAccount::new(counter_starknet_address, starknet_provider.as_ref());
+        let starknet_provider = katana.client().starknet_provider();
+        let counter_contract_account = KakarotAccount::new(counter.starknet_address, starknet_provider.as_ref());
 
         // When
         let actual_bytecode = counter_contract_account.bytecode(&starknet_block_id).await.unwrap();

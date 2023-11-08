@@ -11,7 +11,7 @@ use super::convertible::{
 };
 use super::event::StarknetEvent;
 use super::felt::Felt252Wrapper;
-use super::transaction::StarknetTransaction;
+use super::transaction::block_tx::StarknetBlockTransaction;
 use crate::client::api::KakarotStarknetApi;
 use crate::client::constants::selectors::EVM_CONTRACT_DEPLOYED;
 use crate::client::errors::EthApiError;
@@ -50,7 +50,7 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
                     events,
                     ..
                 }) => {
-                    let starknet_tx: StarknetTransaction =
+                    let starknet_tx: StarknetBlockTransaction =
                         client.starknet_provider().get_transaction_by_hash(transaction_hash).await?.into();
 
                     let transaction_hash: Felt252Wrapper = transaction_hash.into();
