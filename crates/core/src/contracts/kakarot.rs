@@ -102,9 +102,9 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
 
         let result: Result<FieldElement, EthApiError<P::Error>> = match result {
             Ok(invoke_result) => {
-                let waiter =
-                    TransactionWaiter::new(self.provider.clone(), invoke_result.transaction_hash, 1000, 15_000);
-                waiter.poll().await?;
+                TransactionWaiter::new(self.provider.clone(), invoke_result.transaction_hash, 1000, 15_000)
+                    .poll()
+                    .await?;
                 Ok(invoke_result.transaction_hash)
             }
             Err(error) => match error {

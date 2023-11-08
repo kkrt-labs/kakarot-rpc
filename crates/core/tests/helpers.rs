@@ -1,4 +1,3 @@
-use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::client::constants::DEPLOY_FEE;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use kakarot_test_utils::constants::EOA_RECEIVER_ADDRESS;

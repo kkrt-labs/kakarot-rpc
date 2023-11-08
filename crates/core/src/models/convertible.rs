@@ -4,19 +4,18 @@ use reth_rpc_types::{Log, RichBlock, Transaction as EthTransaction, TransactionR
 use starknet::core::types::EventFilter;
 use starknet::providers::Provider;
 
-use crate::client::api::{KakarotEthApi, KakarotStarknetApi};
 use crate::client::errors::EthApiError;
 use crate::client::KakarotClient;
 
 #[async_trait]
 pub trait ConvertibleStarknetBlock {
-    async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &dyn KakarotEthApi<P>) -> RichBlock;
+    async fn to_eth_block<P: Provider + Send + Sync + 'static>(&self, client: &KakarotClient<P>) -> RichBlock;
 }
 
 pub trait ConvertibleStarknetEvent {
     fn to_eth_log<P: Provider + Send + Sync + 'static>(
         self,
-        client: &dyn KakarotStarknetApi<P>,
+        client: &KakarotClient<P>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_hash: Option<H256>,
@@ -34,9 +33,9 @@ pub trait ConvertibleEthEventFilter {
 
 #[async_trait]
 pub trait ConvertibleStarknetTransaction {
-    async fn to_eth_transaction<P: Provider + Send + Sync>(
+    async fn to_eth_transaction<P: Provider + Send + Sync + 'static>(
         &self,
-        client: &dyn KakarotEthApi<P>,
+        client: &KakarotClient<P>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,

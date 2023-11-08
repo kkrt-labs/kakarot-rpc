@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
 use ethers::abi::Token;
-use ethers::signers::{LocalWallet, Signer};
-use kakarot_rpc_core::client::api::KakarotEthApi;
 use kakarot_rpc_core::client::waiter::TransactionWaiter;
-use reth_primitives::{Address, BlockId, H256};
+use reth_primitives::{Address, H256};
 use starknet::accounts::{Account, Call, ConnectedAccount, SingleOwnerAccount};
 use starknet::core::types::InvokeTransactionResult;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet::signers::LocalWallet as StarknetLocalWallet;
 
-use super::deploy_helpers::{create_eth_transfer_tx, create_raw_ethereum_tx, KakarotTestEnvironmentContext};
+use super::deploy_helpers::KakarotTestEnvironmentContext;
 
 pub async fn execute_and_wait_for_tx(
     account: &SingleOwnerAccount<JsonRpcClient<HttpTransport>, StarknetLocalWallet>,
@@ -26,42 +24,19 @@ pub async fn execute_and_wait_for_tx(
 }
 
 pub async fn execute_eth_tx(
-    env: &KakarotTestEnvironmentContext,
-    contract: &str,
-    selector: &str,
-    args: Vec<Token>,
+    _env: &KakarotTestEnvironmentContext,
+    _contract: &str,
+    _selector: &str,
+    _args: Vec<Token>,
 ) -> H256 {
-    let (client, kakarot, contract, contract_eth_address) = env.resources_with_contract(contract);
-
-    // When
-    let nonce = client
-        .nonce(kakarot.eoa_addresses.eth_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest))
-        .await
-        .unwrap();
-
-    // Encode input, otherwise throw error
-    let data = contract.abi.function(selector).unwrap().encode_input(&args).expect("Encoding error");
-
-    let tx = create_raw_ethereum_tx(kakarot.eoa_private_key, contract_eth_address, data, nonce.try_into().unwrap());
-
-    client.send_transaction(tx).await.unwrap()
+    todo!();
 }
 
 pub async fn execute_eth_transfer_tx(
-    env: &KakarotTestEnvironmentContext,
-    eoa_secret_key: H256,
-    to: Address,
-    value: u128,
+    _env: &KakarotTestEnvironmentContext,
+    _eoa_secret_key: H256,
+    _to: Address,
+    _value: u128,
 ) -> H256 {
-    let (client, _) = env.resources();
-
-    let eoa = LocalWallet::from_bytes(eoa_secret_key.as_bytes()).unwrap();
-    let eoa_address: Address = eoa.address().into();
-
-    // When
-    let nonce = client.nonce(eoa_address, BlockId::Number(reth_primitives::BlockNumberOrTag::Latest)).await.unwrap();
-
-    let tx = create_eth_transfer_tx(eoa_secret_key, to, value, nonce.try_into().unwrap());
-
-    client.send_transaction(tx).await.unwrap()
+    todo!();
 }

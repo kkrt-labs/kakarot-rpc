@@ -3,7 +3,6 @@ mod tests {
 
     use std::sync::Arc;
 
-    use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_test_utils::deploy_helpers::{
         get_contract, get_contract_deployed_bytecode, KakarotTestEnvironmentContext,
     };
@@ -23,7 +22,7 @@ mod tests {
         // Given
         let fixtures = fixtures(vec![AvailableFixtures::GetNonce]);
         let starknet_provider = Arc::new(mock_starknet_provider(Some(fixtures)));
-        let contract_account = ContractAccount::new(*ABDEL_STARKNET_ADDRESS, &starknet_provider);
+        let contract_account = ContractAccount::new(*ABDEL_STARKNET_ADDRESS, starknet_provider);
 
         // When
         let nonce = contract_account.nonce(&BlockId::Tag(BlockTag::Latest)).await.unwrap();
@@ -37,7 +36,7 @@ mod tests {
         // Given
         let fixtures = fixtures(vec![AvailableFixtures::GetImplementation]);
         let starknet_provider = Arc::new(mock_starknet_provider(Some(fixtures)));
-        let account = KakarotAccount::new(*ABDEL_STARKNET_ADDRESS, &starknet_provider);
+        let account = KakarotAccount::new(*ABDEL_STARKNET_ADDRESS, starknet_provider);
 
         // When
         let implementation = account.implementation(&BlockId::Tag(BlockTag::Latest)).await.unwrap();
@@ -60,7 +59,7 @@ mod tests {
 
         let starknet_block_id = BlockId::Tag(BlockTag::Latest);
         let starknet_provider = kakarot_test_env_ctx.client().starknet_provider();
-        let counter_contract_account = KakarotAccount::new(counter_starknet_address, starknet_provider.as_ref());
+        let counter_contract_account = KakarotAccount::new(counter_starknet_address, starknet_provider);
 
         // When
         let actual_bytecode = counter_contract_account.bytecode(&starknet_block_id).await.unwrap();

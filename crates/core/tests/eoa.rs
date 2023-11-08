@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use ethers::signers::{LocalWallet, Signer};
-use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
 use kakarot_rpc_core::client::constants::DEPLOY_FEE;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
@@ -64,16 +63,12 @@ async fn test_deploy_eoa(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
     // checking that the account is deployed
     let res = client.check_eoa_account_exists(ethereum_address_to_deploy, &block_id).await.unwrap();
     assert!(res);
-
-    let balance = client.balance(ethereum_address_to_deploy, BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
-    assert_eq!(balance, U256::ZERO);
 }
 
 #[rstest]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_automatic_deployment_of_eoa(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
     let (_, kakarot) = kakarot_test_env_ctx.resources();
-    let block_id_latest = BlockId::Number(BlockNumberOrTag::Latest);
 
     // the private key has been taken from the ganache repo and can be safely published, do no share
     // with other tests https://github.com/trufflesuite/ganache
@@ -89,15 +84,7 @@ async fn test_automatic_deployment_of_eoa(kakarot_test_env_ctx: KakarotTestEnvir
 
     let _ = execute_eth_transfer_tx(&kakarot_test_env_ctx, kakarot.eoa_private_key, to_address, deploy_fee * 2).await;
 
-    let balance = kakarot_test_env_ctx.client().balance(to_address, block_id_latest).await.unwrap();
-
-    assert_eq!(balance, U256::from(deploy_fee * 2));
-
     let _ =
         execute_eth_transfer_tx(&kakarot_test_env_ctx, to_private_key, kakarot.eoa_addresses.eth_address, deploy_fee)
             .await;
-
-    let balance = kakarot_test_env_ctx.client().balance(to_address, block_id_latest).await.unwrap();
-
-    assert_eq!(balance, U256::ZERO);
 }

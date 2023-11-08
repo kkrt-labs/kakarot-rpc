@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ethers::abi::AbiEncode;
 use ethers::prelude::abigen;
 use ethers::types::Address;
@@ -24,13 +26,13 @@ abigen!(
 );
 
 /// Abstraction for a Kakarot ERC20 contract.
-pub struct EthereumErc20<'a, P> {
+pub struct EthereumErc20<P> {
     pub address: FieldElement,
-    kakarot_contract: &'a KakarotContract<P>,
+    kakarot_contract: Arc<KakarotContract<P>>,
 }
 
-impl<'a, P: Provider + Send + Sync + 'static> EthereumErc20<'a, P> {
-    pub fn new(address: FieldElement, kakarot_contract: &'a KakarotContract<P>) -> Self {
+impl<P: Provider + Send + Sync + 'static> EthereumErc20<P> {
+    pub fn new(address: FieldElement, kakarot_contract: Arc<KakarotContract<P>>) -> Self {
         Self { address, kakarot_contract }
     }
 

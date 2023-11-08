@@ -11,7 +11,6 @@ use ethers::signers::{LocalWallet as EthersLocalWallet, Signer};
 use ethers::types::Address as EthersAddress;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::utils::{find_project_root_path, load_config};
-use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::client::config::{KakarotRpcConfig, Network};
 use kakarot_rpc_core::client::constants::{CHAIN_ID, DEPLOY_FEE, STARKNET_NATIVE_TOKEN};
 use kakarot_rpc_core::client::waiter::TransactionWaiter;

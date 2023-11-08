@@ -158,7 +158,6 @@ mod tests {
     use std::sync::Arc;
 
     use ctor::ctor;
-    use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
     use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
     use kakarot_rpc_core::contracts::account::Account;
@@ -254,7 +253,7 @@ mod tests {
         let test_environment = Arc::new(kakarot_test_env_ctx);
         let starknet_client = test_environment.client().starknet_provider();
         let counter = test_environment.evm_contract("Counter");
-        let counter_contract = ContractAccount::new(counter.addresses.starknet_address, &starknet_client);
+        let counter_contract = ContractAccount::new(counter.addresses.starknet_address, starknet_client.clone());
 
         // When
         let deployed_evm_bytecode = counter_contract.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
@@ -297,7 +296,7 @@ mod tests {
         drop(starknet);
 
         // Create a new counter contract pointing to the genesis initialized storage
-        let counter_genesis = ContractAccount::new(counter_genesis_address, &starknet_client);
+        let counter_genesis = ContractAccount::new(counter_genesis_address, starknet_client.clone());
         let evm_bytecode_actual = counter_genesis.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Then
@@ -436,7 +435,7 @@ mod tests {
 
         // Deploy the contract account with the set genesis storage and retrieve the storage on the contract
         let starknet_client = test_environment.client().starknet_provider();
-        let genesis_contract = ContractAccount::new(genesis_address, &starknet_client);
+        let genesis_contract = ContractAccount::new(genesis_address, starknet_client);
         let [key_low, key_high] = split_u256_into_field_elements(expected_key);
         let actual_value =
             genesis_contract.storage(&key_low, &key_high, &StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();

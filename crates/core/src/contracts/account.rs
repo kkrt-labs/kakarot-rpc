@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use reth_primitives::{Address, Bytes};
 use starknet::core::types::{BlockId, FunctionCall, StarknetError};
@@ -10,9 +12,9 @@ use crate::client::helpers::{vec_felt_to_bytes, DataDecodingError};
 use crate::models::felt::Felt252Wrapper;
 
 #[async_trait]
-pub trait Account<'a, P: Provider + Send + Sync + 'a> {
-    fn new(starknet_address: FieldElement, provider: &'a P) -> Self;
-    fn provider(&self) -> &'a P;
+pub trait Account<P: Provider + Send + Sync> {
+    fn new(starknet_address: FieldElement, provider: Arc<P>) -> Self;
+    fn provider(&self) -> Arc<P>;
     fn starknet_address(&self) -> FieldElement;
     async fn get_evm_address(&self, starknet_block_id: &BlockId) -> Result<Address, EthApiError<P::Error>> {
         let request = FunctionCall {
@@ -76,18 +78,18 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
     }
 }
 
-pub struct KakarotAccount<'a, P> {
+pub struct KakarotAccount<P> {
     pub starknet_address: FieldElement,
-    provider: &'a P,
+    provider: Arc<P>,
 }
 
-impl<'a, P: Provider + Send + Sync> Account<'a, P> for KakarotAccount<'a, P> {
-    fn new(starknet_address: FieldElement, provider: &'a P) -> Self {
+impl<P: Provider + Send + Sync + 'static> Account<P> for KakarotAccount<P> {
+    fn new(starknet_address: FieldElement, provider: Arc<P>) -> Self {
         Self { starknet_address, provider }
     }
 
-    fn provider(&self) -> &'a P {
-        self.provider
+    fn provider(&self) -> Arc<P> {
+        self.provider.clone()
     }
 
     fn starknet_address(&self) -> FieldElement {

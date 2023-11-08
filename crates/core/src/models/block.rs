@@ -10,10 +10,10 @@ use starknet::providers::Provider;
 use super::convertible::ConvertibleStarknetBlock;
 use super::felt::Felt252Wrapper;
 use super::ConversionError;
-use crate::client::api::KakarotEthApi;
 use crate::client::constants::{
     DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY,
 };
+use crate::client::KakarotClient;
 
 pub struct EthBlockId(EthereumBlockId);
 
@@ -149,7 +149,7 @@ impl BlockWithTxs {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxHashes {
-    async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &dyn KakarotEthApi<P>) -> RichBlock {
+    async fn to_eth_block<P: Provider + Send + Sync + 'static>(&self, client: &KakarotClient<P>) -> RichBlock {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -227,7 +227,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
 
 #[async_trait]
 impl ConvertibleStarknetBlock for BlockWithTxs {
-    async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &dyn KakarotEthApi<P>) -> RichBlock {
+    async fn to_eth_block<P: Provider + Send + Sync + 'static>(&self, client: &KakarotClient<P>) -> RichBlock {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 

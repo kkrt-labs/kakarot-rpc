@@ -7,7 +7,6 @@ use starknet_crypto::FieldElement;
 use super::block::EthBlockNumberOrTag;
 use super::convertible::ConvertibleEthEventFilter;
 use super::felt::Felt252Wrapper;
-use crate::client::api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
 use crate::client::helpers::split_u256_into_field_elements;
 use crate::client::KakarotClient;

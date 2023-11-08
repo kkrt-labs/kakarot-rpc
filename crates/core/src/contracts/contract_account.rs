@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use reth_primitives::U256;
 use starknet::core::types::{BlockId, FunctionCall};
 use starknet::providers::Provider;
@@ -10,18 +12,18 @@ use crate::client::helpers::DataDecodingError;
 use crate::models::felt::Felt252Wrapper;
 
 /// Abstraction for a Kakarot contract account.
-pub struct ContractAccount<'a, P> {
+pub struct ContractAccount<P> {
     pub address: FieldElement,
-    provider: &'a P,
+    provider: Arc<P>,
 }
 
-impl<'a, P: Provider + Send + Sync> Account<'a, P> for ContractAccount<'a, P> {
-    fn new(address: FieldElement, provider: &'a P) -> Self {
+impl<P: Provider + Send + Sync> Account<P> for ContractAccount<P> {
+    fn new(address: FieldElement, provider: Arc<P>) -> Self {
         Self { address, provider }
     }
 
-    fn provider(&self) -> &'a P {
-        self.provider
+    fn provider(&self) -> Arc<P> {
+        self.provider.clone()
     }
 
     fn starknet_address(&self) -> FieldElement {
@@ -29,7 +31,7 @@ impl<'a, P: Provider + Send + Sync> Account<'a, P> for ContractAccount<'a, P> {
     }
 }
 
-impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
+impl<'a, P: Provider + Send + Sync> ContractAccount<P> {
     /// Returns the value stored at the given key in the evm contract storage. Not to be confused
     /// with the Starknet contract storage.
     pub async fn storage(
