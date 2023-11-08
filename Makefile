@@ -1,6 +1,6 @@
 HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
-STARKNET_NETWORK?=madara
+STARKNET_NETWORK?=katana
 
 -include .env
 export

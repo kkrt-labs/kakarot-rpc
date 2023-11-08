@@ -39,13 +39,6 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
-      # Load lib submodules
-      - name: Load submodules
-        id: cached-submodules
-        uses: actions/cache/restore@v3
-        with:
-          path: ./lib/
-          key: ${{ runner.os }}-submodules
       - name: Generate the Katana dumped state
         run: ./scripts/make_with_env.sh dump-katana
       - name: Save dump as artifact
