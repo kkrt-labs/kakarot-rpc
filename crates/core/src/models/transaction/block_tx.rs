@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use reth_primitives::{TransactionSigned, H256, U256};
+use reth_primitives::{TransactionSigned, H256, U128, U256, U64};
 use reth_rpc_types::{Signature, Transaction as EthTransaction};
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, FieldElement, InvokeTransaction, StarknetError, Transaction,
@@ -114,6 +114,9 @@ impl ConvertibleStarknetTransaction for StarknetBlockTransaction {
         let input = tx.input().to_owned();
         let signature = tx.signature;
         let to = tx.to();
+        let value = U256::from(tx.value());
+        let max_fee_per_gas = Some(U128::from(tx.max_fee_per_gas()));
+        let transaction_type = Some(U64::from(Into::<u8>::into(tx.tx_type())));
 
         let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
         let signature =
@@ -127,16 +130,16 @@ impl ConvertibleStarknetTransaction for StarknetBlockTransaction {
             transaction_index,
             from,
             to,
-            value: U256::from(100), // TODO fetch the value
-            gas_price: None,        // TODO fetch the gas price
-            gas: U256::from(100),   // TODO fetch the gas amount
-            max_fee_per_gas: None,  // TODO fetch the max_fee_per_gas
+            value,
+            gas_price: None,      // TODO fetch the gas price
+            gas: U256::from(100), // TODO fetch the gas amount
+            max_fee_per_gas,
             max_priority_fee_per_gas,
             input,
             signature,
             chain_id: Some(CHAIN_ID.into()),
-            access_list: None,      // TODO fetch the access list
-            transaction_type: None, // TODO fetch the transaction type
+            access_list: None, // TODO fetch the access list
+            transaction_type,
         })
     }
 }
