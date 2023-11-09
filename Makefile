@@ -1,9 +1,11 @@
 HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
 
-STARKNET_NETWORK?=katana
-
 -include .env
 export
+
+ifndef STARKNET_NETWORK
+override STARKNET_NETWORK = katana
+endif
 
 pull-kakarot: .gitmodules
 	git submodule update --init --recursive
