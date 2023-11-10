@@ -31,7 +31,6 @@ jobs:
         with:
           version: nightly
       - name: Pull kakarot submodule and setup
-        if: steps.cached-submodules.outputs.cache-hit != 'true'
         run: make setup && make build-kakarot
       - name: Generate the Katana dumped state
         run: ./scripts/make_with_env.sh dump-katana
@@ -41,3 +40,8 @@ jobs:
         with:
           path: ./lib/
           key: ${{ runner.os }}-submodules
+      - name: Save dump as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dump-katana
+          path: ./.katana/
