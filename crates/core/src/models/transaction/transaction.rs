@@ -1,18 +1,18 @@
 use async_trait::async_trait;
-use reth_primitives::{TransactionSigned, H256, U256};
+use reth_primitives::{TransactionSigned, H256, U128, U256, U64};
 use reth_rpc_types::{Signature, Transaction as EthTransaction};
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, FieldElement, InvokeTransaction, StarknetError, Transaction,
 };
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 
-use super::felt::Felt252Wrapper;
-use super::ConversionError;
 use crate::client::api::KakarotEthApi;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
 use crate::models::call::Calls;
 use crate::models::convertible::ConvertibleStarknetTransaction;
+use crate::models::felt::Felt252Wrapper;
+use crate::models::ConversionError;
 
 pub struct StarknetTransaction(Transaction);
 
@@ -114,6 +114,9 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         let input = tx.input().to_owned();
         let signature = tx.signature;
         let to = tx.to();
+        let value = U256::from(tx.value());
+        let max_fee_per_gas = Some(U128::from(tx.max_fee_per_gas()));
+        let transaction_type = Some(U64::from(Into::<u8>::into(tx.tx_type())));
 
         let v = if signature.odd_y_parity { 1 } else { 0 } + 35 + 2 * CHAIN_ID;
         let signature =
@@ -126,17 +129,17 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             block_number,
             transaction_index,
             from,
-            to,                     // TODO fetch the to
-            value: U256::from(100), // TODO fetch the value
-            gas_price: None,        // TODO fetch the gas price
-            gas: U256::from(100),   // TODO fetch the gas amount
-            max_fee_per_gas: None,  // TODO fetch the max_fee_per_gas
+            to,
+            value,
+            gas_price: None,      // TODO fetch the gas price
+            gas: U256::from(100), // TODO fetch the gas amount
+            max_fee_per_gas,
             max_priority_fee_per_gas,
             input,
             signature,
             chain_id: Some(CHAIN_ID.into()),
-            access_list: None,      // TODO fetch the access list
-            transaction_type: None, // TODO fetch the transaction type
+            access_list: None, // TODO fetch the access list
+            transaction_type,
         })
     }
 }
@@ -167,7 +170,7 @@ mod tests {
     async fn test_is_kakarot_tx() {
         // Given
         let starknet_transaction: Transaction =
-            serde_json::from_str(include_str!("test_data/conversion/starknet/transaction.json")).unwrap();
+            serde_json::from_str(include_str!("../test_data/conversion/starknet/transaction.json")).unwrap();
         let starknet_transaction: StarknetTransaction = starknet_transaction.into();
 
         let fixtures = fixtures(vec![AvailableFixtures::GetClassHashAt(
@@ -187,7 +190,7 @@ mod tests {
     async fn test_to_eth_transaction() {
         // Given
         let starknet_transaction: Transaction =
-            serde_json::from_str(include_str!("test_data/conversion/starknet/transaction.json")).unwrap();
+            serde_json::from_str(include_str!("../test_data/conversion/starknet/transaction.json")).unwrap();
         let starknet_transaction: StarknetTransaction = starknet_transaction.into();
 
         let fixtures = fixtures(vec![
@@ -202,7 +205,7 @@ mod tests {
 
         // Then
         let expected: EthTransaction =
-            serde_json::from_str(include_str!("test_data/conversion/eth/transaction.json")).unwrap();
+            serde_json::from_str(include_str!("../test_data/conversion/eth/transaction.json")).unwrap();
         assert_eq!(expected, eth_transaction);
     }
 }

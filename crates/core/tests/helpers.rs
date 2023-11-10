@@ -1,22 +1,24 @@
 use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::client::constants::DEPLOY_FEE;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
-use kakarot_test_utils::constants::EOA_RECEIVER_ADDRESS;
-use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
-use kakarot_test_utils::execution_helpers::execute_eth_transfer_tx;
-use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
+use kakarot_test_utils::fixtures::katana;
+use kakarot_test_utils::sequencer::Katana;
+use reth_primitives::Address;
 use rstest::*;
 use starknet::core::types::{ExecutionResult, FieldElement, MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::providers::Provider;
 
 #[rstest]
+#[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_wait_for_confirmation_on_l2(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
-    let (client, kakarot) = kakarot_test_env_ctx.resources();
+async fn test_wait_for_confirmation_on_l2(#[future] katana: Katana) {
+    // Given
+    let client = katana.client();
+    let eoa = katana.eoa();
     let amount = Felt252Wrapper::from(*DEPLOY_FEE).try_into().unwrap();
+    let to = Address::from(123);
 
-    let transaction_hash =
-        execute_eth_transfer_tx(&kakarot_test_env_ctx, kakarot.eoa_private_key, *EOA_RECEIVER_ADDRESS, amount).await;
+    let transaction_hash = eoa.transfer(to, amount).await.expect("Failed to transfer funds");
     let transaction_hash: FieldElement = Felt252Wrapper::try_from(transaction_hash).unwrap().into();
 
     let _ = client.wait_for_confirmation_on_l2(transaction_hash).await;

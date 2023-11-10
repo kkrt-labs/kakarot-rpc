@@ -5,7 +5,7 @@ use starknet::core::types::FieldElement;
 
 use super::ConversionError;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);
 
 impl Felt252Wrapper {

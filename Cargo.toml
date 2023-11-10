@@ -29,11 +29,11 @@ starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "
 # Ethereum dependencies
 ethers = "2.0.9"
 ethers-solc = "2.0.9"
+jsonrpsee = { version = "0.18.2", features = ["full"] }
 reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
 reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
-jsonrpsee = { version = "0.18.2", features = ["full"] }
 
 # Serde
 serde = { version = "1.0.188", features = ["derive"] }
@@ -41,23 +41,24 @@ serde_json = "1.0"
 serde_with = "2.3.1"
 
 # Others
-eyre = "0.6.8"
 async-trait = "0.1.58"
-pin-project = "1.1.2"
-lazy_static = "1.4.0"
+ctor = "0.2.4"
+eyre = "0.6.8"
 dotenv = "0.15.0"
-ruint = "1.9.0"
-url = "2.3.1"
-tokio = { version = "1.21.2", features = ["macros"] }
-rstest = "0.18.1"
 git2 = "0.18.0"
+lazy_static = "1.4.0"
+pin-project = "1.1.2"
+ruint = "1.9.0"
+rstest = "0.18.1"
+tokio = { version = "1.21.2", features = ["macros"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
-ctor = "0.2.4"
+url = "2.3.1"
 
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
+# When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
 katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "b924dac" }
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "b924dac" }
 cargo-husky = { version = "1.5.0", default-features = false, features = [

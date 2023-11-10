@@ -1,23 +1,25 @@
 use std::collections::HashMap;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Error as IoError;
 use std::path::Path;
 
 use eyre::Result;
+use foundry_config::find_project_root_path;
 use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Bytes, H256, U256, U64};
 use serde::{Deserialize, Serialize};
+use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::FieldElement;
 
-use crate::deploy_helpers::compute_kakarot_contracts_class_hash;
 use crate::hive_utils::kakarot::compute_starknet_address;
 use crate::hive_utils::madara::utils::{
     genesis_approve_kakarot, genesis_fund_starknet_address, genesis_set_bytecode,
     genesis_set_storage_kakarot_contract_account, genesis_set_storage_starknet_contract,
 };
 use crate::hive_utils::types::{ClassHash, ContractAddress, ContractStorageKey, Felt, StorageValue};
+use crate::root_project_path;
 
 #[derive(Deserialize, Serialize)]
 pub struct GenesisLoader {
@@ -63,6 +65,43 @@ lazy_static! {
     pub static ref DEPLOYER_ACCOUNT_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9003").unwrap(); // Safe unwrap, 0x9003
 }
 
+fn kakarot_contracts_class_hashes() -> Vec<(String, FieldElement)> {
+    dotenv::dotenv().ok();
+    let compiled_kakarot_path = root_project_path!(std::env::var("COMPILED_KAKAROT_PATH").expect(
+        "Expected a COMPILED_KAKAROT_PATH environment variable, set up your .env file or use \
+         `./scripts/make_with_env.sh test`"
+    ));
+
+    let paths = walkdir::WalkDir::new(compiled_kakarot_path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|f| f.file_type().is_file() && f.path().extension().is_some_and(|ext| ext == "json"))
+        .map(|e| e.into_path())
+        .collect::<Vec<_>>();
+
+    // Deserialize each contract file into a `LegacyContractClass` object.
+    // Compute the class hash of each contract.
+    paths
+        .into_iter()
+        .map(|path| {
+            let contract_class =
+                fs::read_to_string(path.clone()).unwrap_or_else(|_| panic!("Failed to read file: {}", path.display()));
+            let contract_class: LegacyContractClass = serde_json::from_str(&contract_class)
+                .unwrap_or_else(|_| panic!("Failed to deserialize contract from file: {}", path.display()));
+
+            let filename = path
+                .file_stem()
+                .expect("File has no stem")
+                .to_str()
+                .expect("Cannot convert filename to string")
+                .to_owned();
+
+            // Compute the class hash
+            (filename, contract_class.class_hash().expect("Failed to compute class hash"))
+        })
+        .collect()
+}
+
 /// Convert Hive Genesis Config to Madara Genesis Config
 ///
 /// This function will:
@@ -77,8 +116,8 @@ pub async fn serialize_hive_to_madara_genesis_config(
     combined_genesis_path: &Path,
     compiled_path: &Path,
 ) -> Result<(), IoError> {
-    // Compute the class hash of Kakarot contracts
-    let class_hashes = compute_kakarot_contracts_class_hash();
+    // Load the class hashes
+    let class_hashes = kakarot_contracts_class_hashes();
 
     // { contract : class_hash }
     let mut kakarot_contracts = HashMap::<String, FieldElement>::new();

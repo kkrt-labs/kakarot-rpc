@@ -6,14 +6,9 @@ on:
     branches: [main]
 
 jobs:
-  submodules:
-    name: Set up submodules
-    uses: ./.github/workflows/submodules.yml
-
   dump:
     name: Dump katana state
     uses: ./.github/workflows/dump.yml
-    needs: submodules
 
   spell_check:
     name: Spell check

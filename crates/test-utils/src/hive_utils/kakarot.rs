@@ -26,33 +26,37 @@ pub fn compute_starknet_address(
 
 #[cfg(test)]
 mod tests {
-    use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
+    use kakarot_rpc_core::client::api::KakarotStarknetApi;
+    use kakarot_rpc_core::mock::constants::ABDEL_ETHEREUM_ADDRESS;
+    use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use rstest::*;
     use starknet::core::types::{BlockId, BlockTag};
 
     use super::compute_starknet_address;
-    use crate::deploy_helpers::KakarotTestEnvironmentContext;
-    use crate::fixtures::kakarot_test_env_ctx;
+    use crate::fixtures::katana;
+    use crate::sequencer::Katana;
 
     /// This test is done against the Kakarot system deployed on the Starknet test sequencer.
     /// It tests the compute_starknet_address function by comparing the result of the computation
     /// with the result when called on the deployed Kakarot contract.
     #[rstest]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_compute_starknet_address(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
-        let deployed_kakarot = kakarot_test_env_ctx.kakarot();
-        let kakarot_contract = kakarot_test_env_ctx.kakarot_contract();
+    #[awt]
+    async fn test_compute_starknet_address(#[future] katana: Katana) {
+        let client = katana.client();
+        let kakarot_address = client.kakarot_address();
+        let proxy_class_hash = client.proxy_account_class_hash();
 
         // Define the EVM address to be used for calculating the Starknet address
-        let evm_address = *ACCOUNT_ADDRESS;
+        let evm_address = *ABDEL_ETHEREUM_ADDRESS;
+        let evm_address_felt: Felt252Wrapper = evm_address.into();
 
         // Calculate the Starknet address
-        let starknet_address =
-            compute_starknet_address(deployed_kakarot.kakarot_address, deployed_kakarot.proxy_class_hash, evm_address);
+        let starknet_address = compute_starknet_address(kakarot_address, proxy_class_hash, evm_address_felt.into());
 
         // Calculate the expected Starknet address
         let expected_starknet_address =
-            kakarot_contract.compute_starknet_address(&evm_address, &BlockId::Tag(BlockTag::Latest)).await.unwrap();
+            client.compute_starknet_address(evm_address, &BlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Assert that the calculated Starknet address matches the expected Starknet address
         assert_eq!(starknet_address, expected_starknet_address, "Starknet address does not match");

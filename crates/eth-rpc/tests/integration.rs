@@ -2,23 +2,20 @@
 mod integration_tests {
     use std::str::FromStr;
 
-    use dotenv::dotenv;
     use ethers::prelude::{Block as EthersBlock, Http as EthersHttp, H256 as EthersH256};
-    use kakarot_test_utils::deploy_helpers::KakarotTestEnvironmentContext;
-    use kakarot_test_utils::fixtures::kakarot_test_env_ctx;
-    use kakarot_test_utils::rpc_helpers::start_kakarot_rpc_server;
+    use kakarot_test_utils::fixtures::katana;
+    use kakarot_test_utils::rpc::start_kakarot_rpc_server;
+    use kakarot_test_utils::sequencer::Katana;
     use reth_primitives::U64;
     use rstest::*;
 
     #[rstest]
+    #[awt]
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_get_block_rpc(kakarot_test_env_ctx: KakarotTestEnvironmentContext) {
-        // Load env
-        dotenv().ok();
-
+    async fn test_get_block_rpc(#[future] katana: Katana) {
         // Start the Kakarot RPC server
         let (server_addr, server_handle) =
-            start_kakarot_rpc_server(&kakarot_test_env_ctx).await.expect("Error setting up Kakarot RPC server");
+            start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
         // Run the test
         let provider = EthersHttp::from_str(format!("http://localhost:{}", server_addr.port()).as_ref()).unwrap();

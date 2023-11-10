@@ -15,46 +15,41 @@ license.workspace = true
 kakarot-rpc-core={ path = "../core" }
 kakarot-rpc= { path = "../eth-rpc" }
 
-# rpc
-jsonrpsee = { workspace = true }
-
-dojo-test-utils = { workspace = true }
-eyre = { workspace = true }
-katana-core = { workspace = true }
-reth-primitives = { workspace = true }
-starknet = { workspace = true }
-starknet_api = { workspace = true }
-starknet-crypto = { workspace = true }
-url = { workspace = true }
-
-lazy_static = { workspace = true }
-tokio = { workspace = true }
-
-bytes = "1"
-dotenv = { workspace = true }
+# Eth
 ethers = { workspace = true }
 ethers-solc = { workspace = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
-rstest = { workspace = true }
-git2 = { workspace = true, optional = true }
+reth-primitives = { workspace = true }
 
+# Starknet
+dojo-test-utils = { workspace = true }
+katana-core = { workspace = true }
+starknet = { workspace = true }
+starknet_api = { workspace = true }
+starknet-crypto = { workspace = true }
+
+# Other
+async-trait = { workspace = true }
+bytes = "1"
+dotenv = { workspace = true }
+eyre = { workspace = true }
 futures = "0.3.26"
+git2 = { workspace = true, optional = true }
+jsonrpsee = { workspace = true }
+lazy_static = { workspace = true }
+rstest = { workspace = true }
+url = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true, features = ["preserve_order"] }
 serde_with = { workspace = true }
+tokio = { workspace = true }
+walkdir = "2.4.0"
 
-# testing
+
+# Testing
 ctor = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-
-[features]
-dump = ["git2"]
-
-[[bin]]
-name = "dump-katana"
-path = "src/bin/dump-katana.rs"
-required-features = ["dump"]
 
 [[bin]]
 name = "dump-genesis"

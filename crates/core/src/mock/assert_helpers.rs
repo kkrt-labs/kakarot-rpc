@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use reth_primitives::{Bloom, Bytes, H160, H256, U128, U256};
+use reth_primitives::{Bloom, Bytes, H160, H256, U128, U256, U64};
 use reth_rpc_types::{Block, BlockTransactions, Rich, Signature, Transaction};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::{FieldElement, InvokeTransaction, Transaction as StarknetTransaction};
@@ -115,10 +115,10 @@ pub fn assert_block_header(block: &Rich<Block>, starknet_res: String, hydrated: 
 pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransaction) {
     assert_eq!(ether_tx.chain_id, Some(CHAIN_ID.into()));
     assert_eq!(ether_tx.access_list, None);
-    assert_eq!(ether_tx.transaction_type, None);
+    assert_eq!(ether_tx.transaction_type, Some(U64::from(2)));
 
     assert_eq!(ether_tx.to, None);
-    assert_eq!(ether_tx.value, U256::from(100));
+    assert_eq!(ether_tx.value, U256::from(0));
     assert_eq!(ether_tx.gas, U256::from(100));
     assert_eq!(ether_tx.gas_price, None);
     let index = match ether_tx.transaction_index {
@@ -126,7 +126,7 @@ pub fn assert_transaction(ether_tx: Transaction, starknet_tx: StarknetTransactio
         _ => None,
     };
     assert_eq!(ether_tx.transaction_index, index);
-    assert_eq!(ether_tx.max_fee_per_gas, None);
+    assert_eq!(ether_tx.max_fee_per_gas, Some(U128::from(0xdead)));
     assert_eq!(ether_tx.max_priority_fee_per_gas, Some(U128::ZERO));
 
     match starknet_tx {

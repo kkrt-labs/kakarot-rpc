@@ -1,11 +1,38 @@
-use futures::executor::block_on;
+use ethers::abi::Token;
 use rstest::*;
 
-use crate::deploy_helpers::KakarotTestEnvironmentContext;
+use crate::execution::contract::KakarotEvmContract;
+use crate::sequencer::Katana;
 
 #[fixture]
-pub fn kakarot_test_env_ctx() -> KakarotTestEnvironmentContext {
-    // Create a new test environment with dumped state
-    let with_dumped_state = true;
-    block_on(async { KakarotTestEnvironmentContext::new(with_dumped_state).await })
+#[awt]
+pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana.eoa();
+    let contract = eoa.deploy_evm_contract("Counter", ()).await.expect("Failed to deploy Counter contract");
+    (katana, contract)
+}
+
+#[fixture]
+#[awt]
+pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana.eoa();
+    let contract = eoa
+        .deploy_evm_contract(
+            "ERC20",
+            (
+                Token::String("Test".into()),               // name
+                Token::String("TT".into()),                 // symbol
+                Token::Uint(ethers::types::U256::from(18)), // decimals
+            ),
+        )
+        .await
+        .expect("Failed to deploy ERC20 contract");
+    (katana, contract)
+}
+
+/// This fixture creates a new test environment on Katana.
+#[fixture]
+pub async fn katana() -> Katana {
+    // Create a new test environment on Katana
+    Katana::new().await
 }

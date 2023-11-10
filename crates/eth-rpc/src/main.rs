@@ -6,7 +6,7 @@ use kakarot_rpc::config::RPCConfig;
 use kakarot_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::run_server;
 use kakarot_rpc_core::client::config::{
-    get_starknet_account_from_env, JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder,
+    JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder,
 };
 use kakarot_rpc_core::client::KakarotClient;
 use starknet::providers::jsonrpc::HttpTransport;
@@ -45,14 +45,12 @@ async fn main() -> Result<()> {
     let kakarot_rpc_module = match starknet_provider {
         StarknetProvider::JsonRpcClient(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
-            let starknet_account = get_starknet_account_from_env(starknet_provider.clone()).await?;
-            let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider, starknet_account));
+            let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider));
             KakarotRpcModuleBuilder::new(kakarot_client).rpc_module()
         }
         StarknetProvider::SequencerGatewayProvider(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
-            let starknet_account = get_starknet_account_from_env(starknet_provider.clone()).await?;
-            let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider, starknet_account));
+            let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider));
             KakarotRpcModuleBuilder::new(kakarot_client).rpc_module()
         }
     }?;
