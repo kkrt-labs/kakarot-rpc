@@ -54,8 +54,8 @@ use crate::models::convertible::{
 use crate::models::event::StarknetEvent;
 use crate::models::event_filter::EthEventFilter;
 use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::block_tx::{StarknetBlockTransaction, StarknetTransactions};
-use crate::models::transaction::signed_tx::StarknetSignedTransaction;
+use crate::models::transaction::transaction::{StarknetTransaction, StarknetTransactions};
+use crate::models::transaction::transaction_signed::StarknetTransactionSigned;
 use crate::models::transaction_receipt::StarknetTransactionReceipt as TransactionReceiptWrapper;
 use crate::models::ConversionError;
 
@@ -266,7 +266,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         let index: u64 = usize::from(tx_index) as u64;
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
 
-        let starknet_tx: StarknetBlockTransaction =
+        let starknet_tx: StarknetTransaction =
             self.starknet_provider.get_transaction_by_block_id_and_index(starknet_block_id, index).await?.into();
 
         let tx_hash: FieldElement = starknet_tx.transaction_hash()?.into();
@@ -289,7 +289,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
         let hash: Felt252Wrapper = hash.try_into()?;
         let hash: FieldElement = hash.into();
 
-        let transaction: StarknetBlockTransaction = match self.starknet_provider.get_transaction_by_hash(hash).await {
+        let transaction: StarknetTransaction = match self.starknet_provider.get_transaction_by_hash(hash).await {
             Err(_) => return Ok(None),
             Ok(transaction) => transaction.into(),
         };
@@ -421,7 +421,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthApi<P> for KakarotClient<P> 
 
     /// Sends raw Ethereum transaction bytes to Kakarot
     async fn send_transaction(&self, bytes: Bytes) -> Result<H256, EthApiError<P::Error>> {
-        let transaction: StarknetSignedTransaction = bytes.into();
+        let transaction: StarknetTransactionSigned = bytes.into();
 
         let invoke_transaction = transaction.to_broadcasted_invoke_transaction(self).await?;
 
@@ -664,7 +664,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotStarknetApi<P> for KakarotClien
         block_number: Option<U256>,
     ) -> BlockTransactions {
         let handles = Into::<Vec<TransactionType>>::into(initial_transactions).into_iter().map(|tx| async move {
-            let tx = Into::<StarknetBlockTransaction>::into(tx);
+            let tx = Into::<StarknetTransaction>::into(tx);
             tx.to_eth_transaction(self, block_hash, block_number, None).await
         });
         let transactions_vec = join_all(handles).await.into_iter().filter_map(|transaction| transaction.ok()).collect();

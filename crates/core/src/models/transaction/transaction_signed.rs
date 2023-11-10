@@ -11,16 +11,16 @@ use crate::client::errors::EthApiError;
 use crate::client::helpers::{bytes_to_felt_vec, raw_kakarot_calldata, DataDecodingError};
 use crate::models::convertible::ConvertibleSignedTransaction;
 
-pub struct StarknetSignedTransaction(Bytes);
+pub struct StarknetTransactionSigned(Bytes);
 
-impl From<Bytes> for StarknetSignedTransaction {
+impl From<Bytes> for StarknetTransactionSigned {
     fn from(tx: Bytes) -> Self {
         Self(tx)
     }
 }
 
 #[async_trait]
-impl ConvertibleSignedTransaction for StarknetSignedTransaction {
+impl ConvertibleSignedTransaction for StarknetTransactionSigned {
     async fn to_broadcasted_invoke_transaction<P: Provider + Send + Sync>(
         &self,
         client: &dyn KakarotEthApi<P>,

@@ -14,16 +14,16 @@ use crate::models::convertible::ConvertibleStarknetTransaction;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::ConversionError;
 
-pub struct StarknetBlockTransaction(Transaction);
+pub struct StarknetTransaction(Transaction);
 
-impl From<Transaction> for StarknetBlockTransaction {
+impl From<Transaction> for StarknetTransaction {
     fn from(tx: Transaction) -> Self {
         Self(tx)
     }
 }
 
-impl From<StarknetBlockTransaction> for Transaction {
-    fn from(tx: StarknetBlockTransaction) -> Self {
+impl From<StarknetTransaction> for Transaction {
+    fn from(tx: StarknetTransaction) -> Self {
         tx.0
     }
 }
@@ -44,7 +44,7 @@ macro_rules! get_invoke_transaction_field {
     };
 }
 
-impl StarknetBlockTransaction {
+impl StarknetTransaction {
     get_invoke_transaction_field!((transaction_hash, transaction_hash), Felt252Wrapper);
     get_invoke_transaction_field!((calldata, calldata), Vec<FieldElement>);
     get_invoke_transaction_field!((contract_address, sender_address), Felt252Wrapper);
@@ -65,7 +65,7 @@ impl From<StarknetTransactions> for Vec<Transaction> {
 }
 
 #[async_trait]
-impl ConvertibleStarknetTransaction for StarknetBlockTransaction {
+impl ConvertibleStarknetTransaction for StarknetTransaction {
     async fn to_eth_transaction<P: Provider + Send + Sync>(
         &self,
         client: &dyn KakarotEthApi<P>,
@@ -144,7 +144,7 @@ impl ConvertibleStarknetTransaction for StarknetBlockTransaction {
     }
 }
 
-impl StarknetBlockTransaction {
+impl StarknetTransaction {
     /// Checks if the transaction is a Kakarot transaction.
     async fn is_kakarot_tx<P: Provider + Send + Sync>(
         &self,
@@ -171,7 +171,7 @@ mod tests {
         // Given
         let starknet_transaction: Transaction =
             serde_json::from_str(include_str!("../test_data/conversion/starknet/transaction.json")).unwrap();
-        let starknet_transaction: StarknetBlockTransaction = starknet_transaction.into();
+        let starknet_transaction: StarknetTransaction = starknet_transaction.into();
 
         let fixtures = fixtures(vec![AvailableFixtures::GetClassHashAt(
             ABDEL_STARKNET_ADDRESS_HEX.into(),
@@ -191,7 +191,7 @@ mod tests {
         // Given
         let starknet_transaction: Transaction =
             serde_json::from_str(include_str!("../test_data/conversion/starknet/transaction.json")).unwrap();
-        let starknet_transaction: StarknetBlockTransaction = starknet_transaction.into();
+        let starknet_transaction: StarknetTransaction = starknet_transaction.into();
 
         let fixtures = fixtures(vec![
             AvailableFixtures::GetClassHashAt(ABDEL_STARKNET_ADDRESS_HEX.into(), PROXY_ACCOUNT_CLASS_HASH_HEX.into()),

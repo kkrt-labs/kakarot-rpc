@@ -1,2 +1,3 @@
-pub mod block_tx;
-pub mod signed_tx;
+#[allow(clippy::module_inception)]
+pub mod transaction;
+pub mod transaction_signed;

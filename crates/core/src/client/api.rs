@@ -15,7 +15,7 @@ use starknet::providers::Provider;
 
 use super::errors::EthApiError;
 use crate::models::balance::TokenBalances;
-use crate::models::transaction::block_tx::StarknetTransactions;
+use crate::models::transaction::transaction::StarknetTransactions;
 
 #[async_trait]
 pub trait KakarotEthApi<P: Provider + Send + Sync>: KakarotStarknetApi<P> + Send + Sync {
