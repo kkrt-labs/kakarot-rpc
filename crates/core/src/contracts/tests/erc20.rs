@@ -3,7 +3,6 @@ use starknet::core::types::BlockId;
 use starknet::providers::SequencerGatewayProvider;
 use starknet_crypto::FieldElement;
 
-use crate::client::api::KakarotStarknetApi;
 use crate::client::constants::{DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS, STARKNET_NATIVE_TOKEN};
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::mock::mock_starknet::init_testnet_client;

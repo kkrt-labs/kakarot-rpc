@@ -7,9 +7,9 @@ use starknet::core::types::Event;
 use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
-use crate::client::api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
 use crate::client::helpers::vec_felt_to_bytes;
+use crate::client::KakarotClient;
 use crate::models::convertible::ConvertibleStarknetEvent;
 
 #[derive(Debug, Clone)]
@@ -30,7 +30,7 @@ impl From<Event> for StarknetEvent {
 impl ConvertibleStarknetEvent for StarknetEvent {
     fn to_eth_log<P: Provider + Send + Sync + 'static>(
         self,
-        client: &dyn KakarotStarknetApi<P>,
+        client: &KakarotClient<P>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_hash: Option<H256>,

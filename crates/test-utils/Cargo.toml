@@ -12,8 +12,8 @@ license.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-kakarot-rpc-core={ path = "../core" }
-kakarot-rpc= { path = "../eth-rpc" }
+kakarot-rpc-core = { path = "../core" }
+kakarot-rpc = { path = "../eth-rpc" }
 
 # Eth
 ethers = { workspace = true }

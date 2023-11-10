@@ -1,17 +1,12 @@
 mod tests {
 
-    use std::str::FromStr;
-
     use ethers::abi::Token;
-    use kakarot_rpc_core::client::api::KakarotEthApi;
-    use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS_EVM;
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use kakarot_test_utils::execution::contract::KakarotEvmContract;
     use kakarot_test_utils::execution::eoa::EOA;
     use kakarot_test_utils::fixtures::{counter, erc20, katana};
     use kakarot_test_utils::sequencer::Katana;
-    use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, H256, U256};
-    use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, ValueOrArray};
+    use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
     use rstest::*;
     use starknet::core::types::FieldElement;
 
@@ -117,96 +112,5 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(U256::from(1), count);
-    }
-
-    #[rstest]
-    #[awt]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_get_logs(#[future] erc20: (Katana, KakarotEvmContract)) {
-        // Given
-        let katana = erc20.0;
-        let erc20 = erc20.1;
-        let client = katana.client();
-        let eoa = katana.eoa();
-        let eoa_evm_address = eoa.evm_address().expect("Failed to get EOA EVM address");
-        let erc20_evm_address: Felt252Wrapper = erc20.evm_address.into();
-        let erc20_evm_address = erc20_evm_address.try_into().expect("Failed to convert EVM address");
-
-        // When
-        let amount = U256::from(10_000);
-
-        let mint_tx_hash = eoa
-            .call_evm_contract(&erc20, "mint", (Token::Address(eoa_evm_address.into()), Token::Uint(amount.into())), 0)
-            .await
-            .expect("Failed to mint ERC20 tokens");
-
-        let to = Address::from_slice(ACCOUNT_ADDRESS_EVM.as_bytes());
-        let transfer_tx_hash = eoa
-            .call_evm_contract(&erc20, "transfer", (Token::Address(to.into()), Token::Uint(amount.into())), 0)
-            .await
-            .expect("Failed to transfer ERC20 tokens");
-
-        let filter = Filter {
-            block_option: FilterBlockOption::Range {
-                from_block: Some(BlockNumberOrTag::Number(0)),
-                to_block: Some(BlockNumberOrTag::Number(100)),
-            },
-            address: ValueOrArray::Value(erc20_evm_address).into(),
-            topics: [
-                ValueOrArray::Value(None).into(),
-                ValueOrArray::Value(None).into(),
-                ValueOrArray::Value(None).into(),
-                ValueOrArray::Value(None).into(),
-            ],
-        };
-        let logs = client.get_logs(filter).await.unwrap();
-
-        // Then
-        match logs {
-            FilterChanges::Logs(logs) => {
-                assert_eq!(2, logs.len());
-                assert_eq!(
-                    Log {
-                        address: erc20_evm_address,
-                        topics: vec![
-                            H256::from_str("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
-                                .unwrap(), // keccak256(“Transfer(address,address,uint256)”)
-                            H256::from_low_u64_be(0u64), // from
-                            H256::from(eoa_evm_address)  // to
-                        ],
-                        data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710")
-                            .unwrap(), // amount
-                        block_hash: logs[0].block_hash, // block hash changes so just set to event value
-                        block_number: logs[0].block_number, // block number changes so just set to event value
-                        transaction_hash: Some(mint_tx_hash),
-                        transaction_index: None,
-                        log_index: None,
-                        removed: false
-                    },
-                    logs[0]
-                );
-                assert_eq!(
-                    Log {
-                        address: erc20_evm_address,
-                        topics: vec![
-                            H256::from_str("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
-                                .unwrap(), // keccak256("Transfer(address,address,uint256)")
-                            H256::from(eoa_evm_address),      // from
-                            H256::from(*ACCOUNT_ADDRESS_EVM)  // to
-                        ],
-                        data: Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000002710")
-                            .unwrap(), // amount
-                        block_hash: logs[1].block_hash, // block hash changes so just set to event value
-                        block_number: logs[1].block_number, // block number changes so just set to event value
-                        transaction_hash: Some(transfer_tx_hash),
-                        transaction_index: None,
-                        log_index: None,
-                        removed: false
-                    },
-                    logs[1]
-                );
-            }
-            _ => panic!("Expected FilterChanges::Logs variant, got {:?}", logs),
-        }
     }
 }

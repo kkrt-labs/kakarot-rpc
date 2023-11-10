@@ -157,7 +157,6 @@ mod tests {
     use std::str::FromStr;
 
     use ctor::ctor;
-    use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
     use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
     use kakarot_rpc_core::contracts::account::Account;
