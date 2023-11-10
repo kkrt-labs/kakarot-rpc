@@ -46,3 +46,9 @@ jobs:
         with:
           name: dump-katana
           path: ./.katana/
+      - name: Save submodules
+        id: cached-submodules
+        uses: actions/cache/save@v3
+        with:
+          path: ./lib/
+          key: ${{ runner.os }}-submodules
