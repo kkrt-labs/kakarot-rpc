@@ -7,20 +7,17 @@ ifndef STARKNET_NETWORK
 override STARKNET_NETWORK = katana
 endif
 
-pull-kakarot: .gitmodules
+setup: .gitmodules
 	git submodule update --init --recursive
 	cd lib/kakarot && make setup
 
-build-kakarot: pull-kakarot
+build-kakarot:
 	cd lib/kakarot && make build && make build-sol
-
-build-and-deploy-kakarot:
-	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) make deploy
 
 deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py
 
-setup: pull-kakarot build-kakarot
+build-and-deploy-kakarot: build-kakarot deploy-kakarot
 
 # run devnet
 devnet:
@@ -28,9 +25,6 @@ devnet:
 
 run-dev:
 	KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run -p kakarot-rpc
-
-run-release:
-	cargo run --release -p kakarot-rpc
 
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
@@ -56,8 +50,7 @@ run-katana: install-katana
 kill-katana:
 	kill -2 `cat .katana/pid` && rm -fr .katana/pid
 
-dump-katana: run-katana build-and-deploy-kakarot kill-katana
-	cp -R lib/kakarot/deployments/katana/ deployments/katana/
+dump-katana: run-katana deploy-kakarot kill-katana
 
 dump-genesis: build-kakarot
 	cargo run --bin dump-genesis
@@ -71,4 +64,4 @@ test-coverage:
 test-examples:
 	hurl $(HURL_FILES)
 
-.PHONY: install run devnet test
+.PHONY: devnet test

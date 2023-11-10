@@ -63,7 +63,7 @@ impl Katana {
     /// Initializes the Katana test environment.
     async fn initialize(sequencer: TestSequencer, starknet_provider: Arc<JsonRpcClient<HttpTransport>>) -> Self {
         // Load deployments
-        let deployments_path = root_project_path!("deployments/katana/deployments.json");
+        let deployments_path = root_project_path!("lib/kakarot/deployments/katana/deployments.json");
         let deployments = std::fs::read_to_string(deployments_path).expect("Failed to read deployment file");
         let deployments: HashMap<&str, serde_json::Value> =
             serde_json::from_str(&deployments).expect("Failed to deserialize deployments");
@@ -72,7 +72,7 @@ impl Katana {
         let kakarot_address = FieldElement::from_hex_be(kakarot_address).expect("Failed to parse Kakarot address");
 
         // Load declarations
-        let declaration_path = root_project_path!("deployments/katana/declarations.json");
+        let declaration_path = root_project_path!("lib/kakarot/deployments/katana/declarations.json");
         let declarations = std::fs::read_to_string(declaration_path).expect("Failed to read declaration file");
         let declarations: HashMap<&str, FieldElement> =
             serde_json::from_str(&declarations).expect("Failed to deserialize declarations");

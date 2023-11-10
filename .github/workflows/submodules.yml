@@ -32,7 +32,7 @@ jobs:
           version: nightly
       - name: pull kakarot submodule and setup
         if: steps.cached-submodules.outputs.cache-hit != 'true'
-        run: make setup
+        run: make setup && make build-kakarot
       - name: Save submodules
         id: cached-submodules
         uses: actions/cache/save@v3
