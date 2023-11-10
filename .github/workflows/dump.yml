@@ -10,8 +10,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Load cached submodules
-        id: cached-submodules
-        uses: actions/cache@v3
+        id: restore-cached-submodules
+        uses: actions/cache/restore@v3
         with:
           path: ./lib/
           key: ${{ runner.os }}-submodules
@@ -47,7 +47,7 @@ jobs:
           name: dump-katana
           path: ./.katana/
       - name: Save submodules
-        id: cached-submodules
+        id: save-cached-submodules
         uses: actions/cache/save@v3
         with:
           path: ./lib/
