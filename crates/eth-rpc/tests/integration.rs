@@ -22,10 +22,10 @@ mod integration_tests {
 
     abigen!(ERC20, "tests/contracts/ERC20/IERC20.json");
 
-    // ⚠️ Only one test with a Katana fixture can run at a time.
-    // When trying to run two tests with a Katana fixture, the second test will fail with:
-    // `thread 'test_erc20' panicked at 'Failed to start the server: Os { code: 98, kind:
-    // AddrInUse, message: "Address already in use" }'`
+    // ⚠️ Only one test with `start_kakarot_rpc_server`
+    // When trying to run two tests with a server originating from `start_kakarot_rpc_server`, the
+    // second test will fail with: `thread 'test_erc20' panicked at 'Failed to start the server: Os
+    // { code: 98, kind: AddrInUse, message: "Address already in use" }'`
     #[rstest]
     #[awt]
     #[tokio::test(flavor = "multi_thread")]
@@ -67,7 +67,7 @@ mod integration_tests {
         assert_eq!(balance, 0u64.into());
 
         // Mint some tokens
-        let tx: TransactionReceipt = token.mint(100u64.into()).send().await.unwrap().await.unwrap().unwrap();
+        let tx_receipt: TransactionReceipt = token.mint(100u64.into()).send().await.unwrap().await.unwrap().unwrap();
         let block_number: U64 = client.get_block_number().await.unwrap();
 
         // Assert balance is now 100
@@ -75,21 +75,61 @@ mod integration_tests {
         assert_eq!(balance, 100u64.into());
 
         // Assert on the transaction receipt
-        assert_eq!(tx.status, Some(1u64.into()));
-        assert_eq!(tx.transaction_index, 0.into());
-        assert_eq!(tx.block_number, Some(block_number));
-        assert_eq!(tx.from, katana.eoa().evm_address().unwrap().into());
-        assert_eq!(tx.to, Some(contract.address()));
-        assert_eq!(tx.logs.len(), 1);
-        assert_eq!(tx.logs[0].topics.len(), 3);
-        assert_eq!(tx.logs[0].topics[0], H256::from_slice(&keccak256("Transfer(address,address,uint256)")));
-        assert_eq!(tx.logs[0].topics[1], H256::zero());
-        assert_eq!(tx.logs[0].topics[2], H160::from(katana.eoa().evm_address().unwrap().as_fixed_bytes()).into());
+        assert_eq!(tx_receipt.status, Some(1u64.into()));
+        assert_eq!(tx_receipt.transaction_index, 0.into());
+        assert_eq!(tx_receipt.block_number, Some(block_number));
+        assert_eq!(tx_receipt.from, katana.eoa().evm_address().unwrap().into());
+        assert_eq!(tx_receipt.to, Some(contract.address()));
+        // Assert on the logs
+        assert_eq!(tx_receipt.logs.len(), 1);
+        assert_eq!(tx_receipt.logs[0].topics.len(), 3);
+        assert_eq!(tx_receipt.logs[0].topics[0], H256::from_slice(&keccak256("Transfer(address,address,uint256)")));
+        assert_eq!(tx_receipt.logs[0].topics[1], H256::zero());
         assert_eq!(
-            tx.logs[0].data,
+            tx_receipt.logs[0].topics[2],
+            H160::from(katana.eoa().evm_address().unwrap().as_fixed_bytes()).into()
+        );
+        assert_eq!(
+            tx_receipt.logs[0].data,
             ethers::types::Bytes::from_hex("0x0000000000000000000000000000000000000000000000000000000000000064")
                 .unwrap()
         );
+
+        // eth_getTransactionByHash
+        let tx = client.get_transaction(tx_receipt.transaction_hash).await.unwrap().unwrap();
+        assert_eq!(tx.block_number, Some(block_number));
+        assert_eq!(tx.from, katana.eoa().evm_address().unwrap().into());
+        assert_eq!(tx.to, Some(contract.address()));
+        assert_eq!(tx.value, 0u64.into());
+        assert_eq!(tx.gas, 100.into());
+        // Gas Price is None in TxType == 2, i.e. EIP1559
+        assert_eq!(tx.gas_price, None);
+        assert_eq!(tx.transaction_type, Some(2.into()));
+        // TODO: Fix inconsistent max_fee_per_gas and max_priority_fee_per_gas
+        assert_eq!(tx.max_fee_per_gas, Some(3000000002_u64.into()));
+        assert_eq!(tx.max_priority_fee_per_gas, Some(0.into()));
+        // ⚠️ Do not use Transaction::hash() to compare hashes
+        // As it computes the keccak256 of the RLP encoding of the transaction
+        // This is not the same as the transaction hash returned by the RPC (Starknet transaction hash)
+        assert_eq!(tx.hash, tx_receipt.transaction_hash);
+
+        // eth_getBlockByNumber
+        let block = client.get_block(BlockId::Number(BlockNumber::Number(block_number))).await.unwrap().unwrap();
+        assert_eq!(&block.number.unwrap(), &block_number);
+        // Check that our transaction is inside the block
+        assert_eq!(block.transactions.len(), 1);
+        assert_eq!(block.transactions[0], tx_receipt.transaction_hash);
+
+        // eth_syncing
+        // TODO: Fix eth_syncing
+        // let syncing = client.syncing().await.unwrap();
+        // assert_eq!(syncing, SyncingStatus::IsFalse);
+        // returns an error `MiddlewareError(JsonRpcClientError(JsonRpcError(JsonRpcError {
+        // code: 0, message: "got code -32601 with: Method not found", data: None })))`
+
+        // eth_gasPrice
+        let gas_price = client.get_gas_price().await.unwrap();
+        assert_eq!(gas_price, 1u64.into());
 
         // Stop the server
         server_handle.stop().expect("Failed to stop the server");
