@@ -29,6 +29,10 @@ impl<P: Provider + Send + Sync> KakarotEthRpc<P> {
 
 #[async_trait]
 impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
+    async fn health(&self) -> Result<bool> {
+        Ok(true)
+    }
+    
     async fn block_number(&self) -> Result<U64> {
         let block_number = self.kakarot_client.block_number().await?;
         Ok(block_number)
