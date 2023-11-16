@@ -9,6 +9,11 @@ use reth_rpc_types::{
 #[rpc(server, namespace = "eth")]
 #[async_trait]
 pub trait EthApi {
+    /// Returns true if RPC_URL is online
+    #[method(name = "health")]
+    async fn health(&self) -> Result<bool>;
+
+    /// Returns the latest block number
     #[method(name = "blockNumber")]
     async fn block_number(&self) -> Result<U64>;
 

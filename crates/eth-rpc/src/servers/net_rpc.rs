@@ -30,4 +30,8 @@ impl NetApiServer for NetRpc {
         // Kakarot RPC currently does not support peer-to-peer connections
         Ok(false)
     }
+
+    fn health(&self) -> Result<bool> {
+        Ok(true)
+    }
 }
