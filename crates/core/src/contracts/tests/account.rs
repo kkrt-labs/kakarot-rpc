@@ -3,7 +3,6 @@ mod tests {
 
     use std::sync::Arc;
 
-    use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_test_utils::execution::contract::KakarotEvmContract;
     use kakarot_test_utils::fixtures::counter;
     use kakarot_test_utils::sequencer::Katana;

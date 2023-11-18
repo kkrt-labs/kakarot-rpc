@@ -26,7 +26,6 @@ pub fn compute_starknet_address(
 
 #[cfg(test)]
 mod tests {
-    use kakarot_rpc_core::client::api::KakarotStarknetApi;
     use kakarot_rpc_core::mock::constants::ABDEL_ETHEREUM_ADDRESS;
     use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use rstest::*;
@@ -56,7 +55,7 @@ mod tests {
 
         // Calculate the expected Starknet address
         let expected_starknet_address =
-            client.compute_starknet_address(evm_address, &BlockId::Tag(BlockTag::Latest)).await.unwrap();
+            client.compute_starknet_address(&evm_address, &BlockId::Tag(BlockTag::Latest)).await.unwrap();
 
         // Assert that the calculated Starknet address matches the expected Starknet address
         assert_eq!(starknet_address, expected_starknet_address, "Starknet address does not match");

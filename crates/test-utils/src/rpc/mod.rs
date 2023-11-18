@@ -5,7 +5,6 @@ use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::config::RPCConfig;
 use kakarot_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::run_server;
-use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::client::config::{KakarotRpcConfig, Network};
 use kakarot_rpc_core::client::KakarotClient;
 use starknet::providers::jsonrpc::HttpTransport;

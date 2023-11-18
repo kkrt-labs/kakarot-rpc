@@ -12,7 +12,6 @@ use super::convertible::{
 use super::event::StarknetEvent;
 use super::felt::Felt252Wrapper;
 use super::transaction::transaction::StarknetTransaction;
-use crate::client::api::KakarotStarknetApi;
 use crate::client::constants::selectors::EVM_CONTRACT_DEPLOYED;
 use crate::client::errors::EthApiError;
 use crate::client::helpers::DataDecodingError;

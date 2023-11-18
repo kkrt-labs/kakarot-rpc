@@ -6,9 +6,9 @@ use starknet::core::types::{
 };
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 
-use crate::client::api::KakarotEthApi;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
+use crate::client::KakarotClient;
 use crate::models::call::Calls;
 use crate::models::convertible::ConvertibleStarknetTransaction;
 use crate::models::felt::Felt252Wrapper;
@@ -66,9 +66,9 @@ impl From<StarknetTransactions> for Vec<Transaction> {
 
 #[async_trait]
 impl ConvertibleStarknetTransaction for StarknetTransaction {
-    async fn to_eth_transaction<P: Provider + Send + Sync>(
+    async fn to_eth_transaction<P: Provider + Send + Sync + 'static>(
         &self,
-        client: &dyn KakarotEthApi<P>,
+        client: &KakarotClient<P>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,
@@ -146,9 +146,9 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
 impl StarknetTransaction {
     /// Checks if the transaction is a Kakarot transaction.
-    async fn is_kakarot_tx<P: Provider + Send + Sync>(
+    async fn is_kakarot_tx<P: Provider + Send + Sync + 'static>(
         &self,
-        client: &dyn KakarotEthApi<P>,
+        client: &KakarotClient<P>,
     ) -> Result<bool, EthApiError<P::Error>> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
