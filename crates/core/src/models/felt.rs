@@ -9,7 +9,7 @@ use super::ConversionError;
 pub struct Felt252Wrapper(FieldElement);
 
 impl Felt252Wrapper {
-    pub const ZERO: Felt252Wrapper = Self(FieldElement::ZERO);
+    pub const ZERO: Self = Self(FieldElement::ZERO);
     /// Troncate the first 12 bytes of the `FieldElement` and return the last 20 bytes as an
     /// Ethereum address. This is used to convert Starknet addresses to Ethereum addresses in
     /// cases where the Starknet address does not represent a Kakarot address, i.e. it does not have
@@ -51,7 +51,7 @@ impl TryFrom<Felt252Wrapper> for u64 {
     type Error = ConversionError<()>;
 
     fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
-        u64::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
+        Self::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
     }
 }
 
@@ -59,7 +59,7 @@ impl TryFrom<Felt252Wrapper> for u128 {
     type Error = ConversionError<()>;
 
     fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
-        u128::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
+        Self::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
     }
 }
 
@@ -82,7 +82,7 @@ impl TryFrom<Felt252Wrapper> for Address {
             return Err(ConversionError::ToEthereumAddressError);
         }
 
-        Ok(Address::from_slice(&bytes[12..]))
+        Ok(Self::from_slice(&bytes[12..]))
     }
 }
 
@@ -98,7 +98,7 @@ impl TryFrom<H256> for Felt252Wrapper {
 impl From<Felt252Wrapper> for H256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
-        H256::from_slice(&felt.to_bytes_be())
+        Self::from_slice(&felt.to_bytes_be())
     }
 }
 
@@ -114,14 +114,14 @@ impl TryFrom<U256> for Felt252Wrapper {
 impl From<Felt252Wrapper> for U256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
-        U256::from_be_bytes(felt.to_bytes_be())
+        Self::from_be_bytes(felt.to_bytes_be())
     }
 }
 
 impl From<Felt252Wrapper> for Bytes {
     fn from(felt: Felt252Wrapper) -> Self {
         let bytes = felt.0.to_bytes_be();
-        Bytes::from(bytes)
+        Self::from(bytes)
     }
 }
 

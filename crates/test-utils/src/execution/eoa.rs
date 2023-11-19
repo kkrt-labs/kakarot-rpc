@@ -60,7 +60,7 @@ pub struct KakarotEOA<P: Provider + Send + Sync> {
 }
 
 impl<P: Provider + Send + Sync> KakarotEOA<P> {
-    pub fn new(private_key: H256, client: KakarotClient<P>) -> Self {
+    pub const fn new(private_key: H256, client: KakarotClient<P>) -> Self {
         Self { private_key, client }
     }
 }

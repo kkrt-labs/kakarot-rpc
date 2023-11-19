@@ -18,7 +18,7 @@ use crate::client::KakarotClient;
 pub struct EthBlockId(EthereumBlockId);
 
 impl EthBlockId {
-    pub fn new(block_id: EthereumBlockId) -> Self {
+    pub const fn new(block_id: EthereumBlockId) -> Self {
         Self(block_id)
     }
 }
@@ -29,7 +29,7 @@ impl TryFrom<EthBlockId> for StarknetBlockId {
         match eth_block_id.0 {
             EthereumBlockId::Hash(hash) => {
                 let hash: Felt252Wrapper = hash.block_hash.try_into()?;
-                Ok(StarknetBlockId::Hash(hash.into()))
+                Ok(Self::Hash(hash.into()))
             }
             EthereumBlockId::Number(block_number_or_tag) => {
                 let block_number_or_tag: EthBlockNumberOrTag = block_number_or_tag.into();
@@ -64,11 +64,11 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
         let block_number_or_tag = block_number_or_tag.into();
         match block_number_or_tag {
             BlockNumberOrTag::Safe | BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized => {
-                StarknetBlockId::Tag(BlockTag::Latest)
+                Self::Tag(BlockTag::Latest)
             }
-            BlockNumberOrTag::Earliest => StarknetBlockId::Number(EARLIEST_BLOCK_NUMBER),
-            BlockNumberOrTag::Pending => StarknetBlockId::Tag(BlockTag::Pending),
-            BlockNumberOrTag::Number(number) => StarknetBlockId::Number(number),
+            BlockNumberOrTag::Earliest => Self::Number(EARLIEST_BLOCK_NUMBER),
+            BlockNumberOrTag::Pending => Self::Tag(BlockTag::Pending),
+            BlockNumberOrTag::Number(number) => Self::Number(number),
         }
     }
 }
@@ -110,7 +110,7 @@ macro_rules! implement_starknet_block_getters_not_pending {
 pub struct BlockWithTxHashes(MaybePendingBlockWithTxHashes);
 
 impl BlockWithTxHashes {
-    pub fn new(block: MaybePendingBlockWithTxHashes) -> Self {
+    pub const fn new(block: MaybePendingBlockWithTxHashes) -> Self {
         Self(block)
     }
 
@@ -130,7 +130,7 @@ impl BlockWithTxHashes {
 pub struct BlockWithTxs(MaybePendingBlockWithTxs);
 
 impl BlockWithTxs {
-    pub fn new(block: MaybePendingBlockWithTxs) -> Self {
+    pub const fn new(block: MaybePendingBlockWithTxs) -> Self {
         Self(block)
     }
 

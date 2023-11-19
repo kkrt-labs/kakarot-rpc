@@ -10,7 +10,7 @@ use crate::api::net_api::NetApiServer;
 pub struct NetRpc {}
 
 impl NetRpc {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {}
     }
 }

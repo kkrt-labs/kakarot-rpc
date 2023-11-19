@@ -149,7 +149,7 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
 
 impl<E: std::error::Error> From<EthApiError<E>> for jsonrpsee::core::Error {
     fn from(err: EthApiError<E>) -> Self {
-        jsonrpsee::core::Error::Call(err.into())
+        Self::Call(err.into())
     }
 }
 

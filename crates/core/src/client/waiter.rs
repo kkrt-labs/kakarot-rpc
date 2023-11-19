@@ -43,8 +43,8 @@ impl<P: Provider> TransactionWaiter<P> {
                 })));
             }
 
-            let receipt = self.provider.get_transaction_receipt(self.transaction_hash).await;
-            match receipt {
+            let receipt = self.provider.get_transaction_receipt(self.transaction_hash);
+            match receipt.await {
                 Ok(receipt) => match receipt {
                     MaybePendingTransactionReceipt::Receipt(receipt) => match receipt.execution_result() {
                         ExecutionResult::Succeeded => {

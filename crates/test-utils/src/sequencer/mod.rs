@@ -103,15 +103,15 @@ impl Katana {
         Self { sequencer, eoa }
     }
 
-    pub fn eoa(&self) -> &KakarotEOA<JsonRpcClient<HttpTransport>> {
+    pub const fn eoa(&self) -> &KakarotEOA<JsonRpcClient<HttpTransport>> {
         &self.eoa
     }
 
-    pub fn client(&self) -> &KakarotClient<JsonRpcClient<HttpTransport>> {
+    pub const fn client(&self) -> &KakarotClient<JsonRpcClient<HttpTransport>> {
         &self.eoa.client
     }
 
-    pub fn sequencer(&self) -> &TestSequencer {
+    pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
     }
 }

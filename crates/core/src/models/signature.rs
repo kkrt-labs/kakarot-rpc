@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use super::felt::Felt252Wrapper;
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum StarknetSignatureError {
     #[error("missing Starknet signature param {0}")]
     MissingSignatureParamsError(String),
@@ -23,12 +23,15 @@ impl TryFrom<StarknetSignature> for EthSignature {
 
     fn try_from(value: StarknetSignature) -> Result<Self, Self::Error> {
         let r: Felt252Wrapper =
-            (*value.0.get(0).ok_or(StarknetSignatureError::MissingSignatureParamsError("r".to_string()))?).into();
+            (*value.0.get(0).ok_or_else(|| StarknetSignatureError::MissingSignatureParamsError("r".to_string()))?)
+                .into();
         let s: Felt252Wrapper =
-            (*value.0.get(1).ok_or(StarknetSignatureError::MissingSignatureParamsError("s".to_string()))?).into();
+            (*value.0.get(1).ok_or_else(|| StarknetSignatureError::MissingSignatureParamsError("s".to_string()))?)
+                .into();
         let v: Felt252Wrapper =
-            (*value.0.get(2).ok_or(StarknetSignatureError::MissingSignatureParamsError("v".to_string()))?).into();
-        Ok(EthSignature { r: r.into(), s: s.into(), v: v.into(), y_parity: None })
+            (*value.0.get(2).ok_or_else(|| StarknetSignatureError::MissingSignatureParamsError("v".to_string()))?)
+                .into();
+        Ok(Self { r: r.into(), s: s.into(), v: v.into(), y_parity: None })
     }
 }
 

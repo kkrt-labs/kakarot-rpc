@@ -79,7 +79,7 @@ impl TryFrom<Vec<FieldElement>> for Calls {
             offset += calldata_len;
             calls.push(call);
         }
-        Ok(Calls(calls))
+        Ok(Self(calls))
     }
 }
 
@@ -98,8 +98,7 @@ impl TryFrom<&Calls> for TransactionSigned {
             .iter()
             .filter_map(|x| u8::try_from(*x).ok())
             .collect::<Vec<u8>>();
-        TransactionSigned::decode(&mut call.as_slice())
-            .map_err(|e| DataDecodingError::SignatureDecodingError(e.to_string()))
+        Self::decode(&mut call.as_slice()).map_err(|e| DataDecodingError::SignatureDecodingError(e.to_string()))
     }
 }
 
