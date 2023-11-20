@@ -46,6 +46,5 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --all-features --all-targets -- -D warnings
+      - run: >
+          scripts/clippy.sh

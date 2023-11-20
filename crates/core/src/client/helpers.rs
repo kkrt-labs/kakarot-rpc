@@ -28,7 +28,7 @@ struct InvalidFieldElementError;
 impl std::error::Error for InvalidFieldElementError {}
 
 impl std::fmt::Display for InvalidFieldElementError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Invalid FieldElement")
     }
 }
