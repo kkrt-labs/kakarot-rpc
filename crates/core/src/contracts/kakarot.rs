@@ -41,7 +41,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
         &self,
         eth_address: &FieldElement,
         block_id: &BlockId,
-    ) -> Result<FieldElement, EthApiError<P::Error>> {
+    ) -> Result<FieldElement, EthApiError> {
         // Prepare the calldata for the compute_starknet_address function call
         let calldata = vec![*eth_address];
         let request =
@@ -66,7 +66,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
         to: &FieldElement,
         mut eth_calldata: Vec<FieldElement>,
         block_id: &BlockId,
-    ) -> Result<Bytes, EthApiError<P::Error>> {
+    ) -> Result<Bytes, EthApiError> {
         let mut calldata =
             vec![*origin, *to, FieldElement::MAX, FieldElement::ZERO, FieldElement::ZERO, eth_calldata.len().into()];
 
@@ -90,7 +90,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
         &self,
         ethereum_address: FieldElement,
         deployer_account: &SingleOwnerAccount<Arc<P>, LocalWallet>,
-    ) -> Result<FieldElement, EthApiError<P::Error>> {
+    ) -> Result<FieldElement, EthApiError> {
         let result = deployer_account
             .execute(vec![Call {
                 calldata: vec![ethereum_address],
@@ -100,7 +100,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
             .send()
             .await;
 
-        let result: Result<FieldElement, EthApiError<P::Error>> = match result {
+        let result: Result<FieldElement, EthApiError> = match result {
             Ok(invoke_result) => {
                 let waiter =
                     TransactionWaiter::new(self.provider.clone(), invoke_result.transaction_hash, 1000, 15_000);

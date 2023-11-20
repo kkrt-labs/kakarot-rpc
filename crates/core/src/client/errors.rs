@@ -46,10 +46,10 @@ pub enum ConfigError {
 
 /// Error that can accure when interacting with the Kakarot ETH API.
 #[derive(Debug, Error)]
-pub enum EthApiError<E: std::error::Error> {
+pub enum EthApiError {
     /// Request to the Starknet provider failed.
     #[error(transparent)]
-    RequestError(#[from] ProviderError<E>),
+    RequestError(#[from] ProviderError),
     /// Conversion between Starknet types and ETH failed.
     #[error("conversion error: {0}")]
     ConversionError(String),
@@ -76,20 +76,20 @@ pub enum EthApiError<E: std::error::Error> {
     Other(#[from] anyhow::Error),
 }
 
-impl<T, E: std::error::Error> From<ConversionError<T>> for EthApiError<E> {
+impl<T> From<ConversionError<T>> for EthApiError {
     fn from(err: ConversionError<T>) -> Self {
         Self::ConversionError(err.to_string())
     }
 }
 
-impl<E: std::error::Error> From<FromByteSliceError> for EthApiError<E> {
+impl From<FromByteSliceError> for EthApiError {
     fn from(err: FromByteSliceError) -> Self {
         Self::ConversionError(format!("Failed to convert from byte slice: {}", err))
     }
 }
 
-impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
-    fn from(error: EthApiError<E>) -> Self {
+impl From<EthApiError> for ErrorObject<'static> {
+    fn from(error: EthApiError) -> Self {
         match error {
             EthApiError::RequestError(err_provider) => match err_provider {
                 ProviderError::StarknetError(err_with_msg) => match err_with_msg.code {
@@ -98,7 +98,10 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
                         | StarknetError::ClassHashNotFound
                         | StarknetError::ContractNotFound
                         | StarknetError::NoBlocks
-                        | StarknetError::TransactionHashNotFound => {
+                        | StarknetError::TransactionHashNotFound
+                        | StarknetError::InvalidBlockHash
+                        | StarknetError::InvalidTransactionHash
+                        | StarknetError::NoTraceAvailable => {
                             rpc_err(EthRpcErrorCode::ResourceNotFound, format!("{err}: {}", err_with_msg.message))
                         }
                         StarknetError::ContractError => {
@@ -147,8 +150,8 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
     }
 }
 
-impl<E: std::error::Error> From<EthApiError<E>> for jsonrpsee::core::Error {
-    fn from(err: EthApiError<E>) -> Self {
+impl From<EthApiError> for jsonrpsee::core::Error {
+    fn from(err: EthApiError) -> Self {
         Self::Call(err.into())
     }
 }

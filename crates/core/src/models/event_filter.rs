@@ -29,7 +29,7 @@ impl ConvertibleEthEventFilter for EthEventFilter {
     fn to_starknet_event_filter<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
-    ) -> Result<EventFilter, EthApiError<P::Error>> {
+    ) -> Result<EventFilter, EthApiError> {
         let filter: Filter = self.into();
         let block_hash = filter.get_block_hash();
 

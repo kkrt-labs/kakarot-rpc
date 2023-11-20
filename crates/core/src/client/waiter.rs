@@ -32,7 +32,7 @@ impl<P: Provider> TransactionWaiter<P> {
         self
     }
 
-    pub async fn poll(&self) -> Result<(), EthApiError<P::Error>> {
+    pub async fn poll(&self) -> Result<(), EthApiError> {
         let started_at = Instant::now();
         loop {
             let elapsed = started_at.elapsed();

@@ -41,7 +41,7 @@ madara-rpc-down:
 	docker compose down --remove-orphans
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --rev b924dac katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --rev be16762 katana
 
 run-katana: install-katana
 	rm -fr .katana/ && mkdir .katana

@@ -21,14 +21,14 @@ pub trait ConvertibleStarknetEvent {
         transaction_hash: Option<H256>,
         log_index: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<Log, EthApiError<P::Error>>;
+    ) -> Result<Log, EthApiError>;
 }
 
 pub trait ConvertibleEthEventFilter {
     fn to_starknet_event_filter<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
-    ) -> Result<EventFilter, EthApiError<P::Error>>;
+    ) -> Result<EventFilter, EthApiError>;
 }
 
 #[async_trait]
@@ -39,7 +39,7 @@ pub trait ConvertibleStarknetTransaction {
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<EthTransaction, EthApiError<P::Error>>;
+    ) -> Result<EthTransaction, EthApiError>;
 }
 
 #[async_trait]
@@ -47,7 +47,7 @@ pub trait ConvertibleSignedTransaction {
     async fn to_broadcasted_invoke_transaction<P: Provider + Send + Sync + 'static>(
         &self,
         client: &KakarotClient<P>,
-    ) -> Result<BroadcastedInvokeTransaction, EthApiError<P::Error>>;
+    ) -> Result<BroadcastedInvokeTransaction, EthApiError>;
 }
 
 #[async_trait]
@@ -55,5 +55,5 @@ pub trait ConvertibleStarknetTransactionReceipt {
     async fn to_eth_transaction_receipt<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
-    ) -> Result<Option<TransactionReceipt>, EthApiError<P::Error>>;
+    ) -> Result<Option<TransactionReceipt>, EthApiError>;
 }

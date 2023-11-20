@@ -72,7 +72,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<EthTransaction, EthApiError<P::Error>> {
+    ) -> Result<EthTransaction, EthApiError> {
         if !self.is_kakarot_tx(client).await? {
             return Err(EthApiError::KakarotDataFilteringError("Transaction".into()));
         }
@@ -103,7 +103,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             },
             _ => return Err(EthApiError::KakarotDataFilteringError("Transaction".into())),
         };
-        let nonce: U256 = nonce.into();
+        let nonce: U64 = u64::try_from(nonce).expect("INVARIANT: nonce should be a u64").into();
 
         let from = client.get_evm_address(&sender_address, &starknet_block_latest).await?;
 
@@ -140,6 +140,8 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             chain_id: Some(CHAIN_ID.into()),
             access_list: None, // TODO fetch the access list
             transaction_type,
+            max_fee_per_blob_gas: None,
+            blob_versioned_hashes: Vec::new(),
         })
     }
 }
@@ -149,7 +151,7 @@ impl StarknetTransaction {
     async fn is_kakarot_tx<P: Provider + Send + Sync + 'static>(
         &self,
         client: &KakarotClient<P>,
-    ) -> Result<bool, EthApiError<P::Error>> {
+    ) -> Result<bool, EthApiError> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 

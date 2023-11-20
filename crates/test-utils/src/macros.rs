@@ -24,5 +24,7 @@
 /// cannot be represented as a UTF-8 string.
 #[macro_export]
 macro_rules! root_project_path {
-    ($relative_path:expr) => {{ find_project_root_path(None).expect("Failed to find project root").join(Path::new(&$relative_path)) }};
+    ($relative_path:expr) => {{
+        find_project_root_path(None).expect("Failed to find project root").join(Path::new(&$relative_path))
+    }};
 }

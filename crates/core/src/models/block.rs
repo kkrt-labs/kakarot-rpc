@@ -76,13 +76,13 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
 /// Implement getters for fields that are present in Starknet Blocks, both in pending and validated
 /// state. For example, `parent_hash` is present in both `PendingBlock` and `Block`.
 macro_rules! implement_starknet_block_getters {
-    ($(($enum:ty, $field:ident, $field_type:ty)),*) => {
+    ($(($enum:ident, $field:ident, $field_type:ty)),*) => {
         $(pub fn $field(&self) -> $field_type {
             match &self.0 {
-                <$enum>::PendingBlock(pending_block_with_tx_hashes) => {
+                $enum::PendingBlock(pending_block_with_tx_hashes) => {
                     pending_block_with_tx_hashes.$field.clone()
                 }
-                <$enum>::Block(block_with_tx_hashes) => {
+                $enum::Block(block_with_tx_hashes) => {
                     block_with_tx_hashes.$field.clone()
                 }
             }
@@ -93,13 +93,13 @@ macro_rules! implement_starknet_block_getters {
 /// Implement getters for fields that are only present in Starknet Blocks that are not pending.
 /// For example, `block_hash` is only present in `Block` and not in `PendingBlock`.
 macro_rules! implement_starknet_block_getters_not_pending {
-    ($(($enum:ty, $field:ident, $field_type:ty)),*) => {
+    ($(($enum:ident, $field:ident, $field_type:ty)),*) => {
         $(pub fn $field(&self) -> Option<$field_type> {
             match &self.0 {
-                <$enum>::PendingBlock(_) => {
+                $enum::PendingBlock(_) => {
                     None
                 }
-                <$enum>::Block(block_with_txs) => {
+                $enum::Block(block_with_txs) => {
                     Some(block_with_txs.$field.clone())
                 }
             }
@@ -212,6 +212,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
             withdrawals_root: Some(H256::zero()),
             blob_gas_used: None,
             excess_blob_gas: None,
+            parent_beacon_block_root: None,
         };
         let block = Block {
             header,
@@ -288,6 +289,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
             withdrawals_root: Some(H256::zero()),
             blob_gas_used: None,
             excess_blob_gas: None,
+            parent_beacon_block_root: None,
         };
         let block = Block {
             header,

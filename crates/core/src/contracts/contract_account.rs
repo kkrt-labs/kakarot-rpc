@@ -37,7 +37,7 @@ impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
         key_low: &FieldElement,
         key_high: &FieldElement,
         block_id: &BlockId,
-    ) -> Result<U256, EthApiError<P::Error>> {
+    ) -> Result<U256, EthApiError> {
         // Prepare the calldata for the storage function call
         let calldata = vec![*key_low, *key_high];
         let request = FunctionCall { contract_address: self.address, entry_point_selector: STORAGE, calldata };
@@ -64,7 +64,7 @@ impl<'a, P: Provider + Send + Sync> ContractAccount<'a, P> {
     /// EOA nonce is handled by Starknet protocol.
     /// Contract Account nonce is handled by Kakarot through a dedicated storage, this function
     /// returns that storage value.
-    pub async fn nonce(&self, block_id: &BlockId) -> Result<U256, EthApiError<P::Error>> {
+    pub async fn nonce(&self, block_id: &BlockId) -> Result<U256, EthApiError> {
         // Prepare the calldata for the get_nonce function call
         let calldata = vec![];
         let request = FunctionCall { contract_address: self.address, entry_point_selector: GET_NONCE, calldata };
