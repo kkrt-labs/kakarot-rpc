@@ -16,7 +16,7 @@ use crate::models::convertible::ConvertibleStarknetEvent;
 pub struct StarknetEvent(Event);
 
 impl StarknetEvent {
-    pub fn new(sn_event: Event) -> Self {
+    pub const fn new(sn_event: Event) -> Self {
         Self(sn_event)
     }
 }

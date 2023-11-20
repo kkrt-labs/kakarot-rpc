@@ -33,7 +33,7 @@ pub struct FutureTokenBalance<P: Provider, F: Future<Output = BalanceOfResult<P>
 }
 
 impl<P: Provider, F: Future<Output = BalanceOfResult<P>>> FutureTokenBalance<P, F> {
-    pub fn new(balance: F, token_address: Address) -> Self {
+    pub const fn new(balance: F, token_address: Address) -> Self {
         Self { balance, token_address, _phantom: PhantomData }
     }
 }

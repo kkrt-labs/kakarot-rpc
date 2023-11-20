@@ -33,23 +33,23 @@ pub enum Network {
 impl Network {
     pub fn gateway_url(&self) -> Result<Url, ConfigError> {
         match self {
-            Network::MainnetGateway => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/")?),
-            Network::Goerli1Gateway => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/")?),
-            Network::Goerli2Gateway => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/")?),
+            Self::MainnetGateway => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/")?),
+            Self::Goerli1Gateway => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/")?),
+            Self::Goerli2Gateway => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/")?),
             _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for gateway url", self))),
         }
     }
 
     pub fn provider_url(&self) -> Result<Url, ConfigError> {
         match self {
-            Network::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
-            Network::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
-            Network::Sharingan => Ok(Url::parse(
+            Self::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
+            Self::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
+            Self::Sharingan => Ok(Url::parse(
                 std::env::var("SHARINGAN_RPC_URL")
                     .map_err(|_| ConfigError::EnvironmentVariableMissing("SHARINGAN_RPC_URL".to_string()))?
                     .as_str(),
             )?),
-            Network::JsonRpcProvider(url) => Ok(url.clone()),
+            Self::JsonRpcProvider(url) => Ok(url.clone()),
             _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for provider url", self))),
         }
     }
@@ -71,14 +71,14 @@ pub struct KakarotRpcConfig {
 }
 
 impl KakarotRpcConfig {
-    pub fn new(
+    pub const fn new(
         network: Network,
         kakarot_address: FieldElement,
         proxy_account_class_hash: FieldElement,
         externally_owned_account_class_hash: FieldElement,
         contract_account_class_hash: FieldElement,
     ) -> Self {
-        KakarotRpcConfig {
+        Self {
             network,
             kakarot_address,
             proxy_account_class_hash,
@@ -109,7 +109,7 @@ impl KakarotRpcConfig {
         let externally_owned_account_class_hash = field_element_from_env("EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH")?;
         let contract_account_class_hash = field_element_from_env("CONTRACT_ACCOUNT_CLASS_HASH")?;
 
-        Ok(KakarotRpcConfig::new(
+        Ok(Self::new(
             network,
             kakarot_address,
             proxy_account_class_hash,
@@ -128,6 +128,8 @@ impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
         Self(JsonRpcClient::new(transport))
     }
 
+    // This clippy lint is false positive, trying to make this function `const` but it doesn't work.
+    #[allow(clippy::missing_const_for_fn)]
     /// Build the `JsonRpcClient`.
     pub fn build(self) -> JsonRpcClient<T> {
         self.0
@@ -178,6 +180,8 @@ impl SequencerGatewayProviderBuilder {
         }
     }
 
+    // This clippy lint is false positive, trying to make this function `const` but it doesn't work.
+    #[allow(clippy::missing_const_for_fn)]
     /// Build the `SequencerGatewayProvider`.
     pub fn build(self) -> SequencerGatewayProvider {
         self.0

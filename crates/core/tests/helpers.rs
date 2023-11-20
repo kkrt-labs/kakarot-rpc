@@ -26,7 +26,7 @@ async fn test_wait_for_confirmation_on_l2(#[future] katana: Katana) {
 
     match transaction_receipt {
         MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
-            assert!(matches!(receipt.execution_result, ExecutionResult::Succeeded))
+            assert!(matches!(receipt.execution_result, ExecutionResult::Succeeded));
         }
         _ => panic!(
             "Expected MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke), got {:?}",

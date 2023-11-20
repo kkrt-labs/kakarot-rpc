@@ -268,7 +268,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
     }
 
     /// Returns the max_priority_fee_per_gas of Kakarot
-    pub fn max_priority_fee_per_gas(&self) -> U128 {
+    pub const fn max_priority_fee_per_gas(&self) -> U128 {
         MAX_PRIORITY_FEE_PER_GAS
     }
 
@@ -310,7 +310,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
             }
         };
 
-        let chain_id = request.chain_id.unwrap_or(CHAIN_ID.into());
+        let chain_id = request.chain_id.unwrap_or_else(|| CHAIN_ID.into());
 
         let from = request.from.ok_or_else(|| EthApiError::MissingParameterError("from for estimate_gas".into()))?;
         let nonce = self.nonce(from, block_id).await?.try_into().map_err(ConversionError::<u64>::from)?;
@@ -400,22 +400,22 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         Ok(U256::from(fee_estimate.gas_price))
     }
     /// Returns the Kakarot contract address.
-    pub fn kakarot_address(&self) -> FieldElement {
+    pub const fn kakarot_address(&self) -> FieldElement {
         self.kakarot_contract.address
     }
 
     /// Returns the Kakarot externally owned account class hash.
-    pub fn externally_owned_account_class_hash(&self) -> FieldElement {
+    pub const fn externally_owned_account_class_hash(&self) -> FieldElement {
         self.kakarot_contract.externally_owned_account_class_hash
     }
 
     /// Returns the Kakarot contract account class hash.
-    pub fn contract_account_class_hash(&self) -> FieldElement {
+    pub const fn contract_account_class_hash(&self) -> FieldElement {
         self.kakarot_contract.contract_account_class_hash
     }
 
     /// Returns the Kakarot proxy account class hash.
-    pub fn proxy_account_class_hash(&self) -> FieldElement {
+    pub const fn proxy_account_class_hash(&self) -> FieldElement {
         self.kakarot_contract.proxy_account_class_hash
     }
 

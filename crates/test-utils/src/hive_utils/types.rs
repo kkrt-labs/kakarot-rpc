@@ -5,7 +5,7 @@ use starknet::core::types::FieldElement;
 
 /// A wrapper around a `FieldElement` that serializes it as a hex string.
 #[serde_as]
-#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Felt(#[serde_as(as = "UfeHex")] pub FieldElement);
 
 /// [`Felt`] from [`FieldElement`].

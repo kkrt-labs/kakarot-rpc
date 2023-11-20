@@ -47,7 +47,11 @@ pub struct KakarotEvmContract {
 }
 
 impl KakarotEvmContract {
-    pub fn new(bytecode: CompactContractBytecode, starknet_address: FieldElement, evm_address: FieldElement) -> Self {
+    pub const fn new(
+        bytecode: CompactContractBytecode,
+        starknet_address: FieldElement,
+        evm_address: FieldElement,
+    ) -> Self {
         Self { bytecode, starknet_address, evm_address }
     }
 }

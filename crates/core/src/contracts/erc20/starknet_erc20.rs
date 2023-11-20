@@ -15,7 +15,7 @@ pub struct StarknetErc20<'a, P> {
 }
 
 impl<'a, P: Provider + Send + Sync> StarknetErc20<'a, P> {
-    pub fn new(provider: &'a P, address: FieldElement) -> Self {
+    pub const fn new(provider: &'a P, address: FieldElement) -> Self {
         Self { provider, address }
     }
 
