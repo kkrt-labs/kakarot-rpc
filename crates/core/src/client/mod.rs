@@ -178,7 +178,16 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
             contract_account.nonce(&starknet_block_id).await
         } else {
             // Get the nonce of the EOA
-            let nonce = self.starknet_provider.get_nonce(starknet_block_id, starknet_address).await?;
+            let nonce = self.starknet_provider.get_nonce(starknet_block_id, starknet_address).await;
+            let nonce = match nonce {
+                Ok(nonce) => nonce,
+                // In EVM, if the contract does not exist, its nonce is zero
+                Err(ProviderError::StarknetError(StarknetErrorWithMessage {
+                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
+                    ..
+                })) => FieldElement::ZERO,
+                Err(err) => return Err(EthApiError::RequestError(err)),
+            };
             Ok(Felt252Wrapper::from(nonce).into())
         }
     }
