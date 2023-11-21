@@ -103,7 +103,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             },
             _ => return Err(EthApiError::KakarotDataFilteringError("Transaction".into())),
         };
-        let nonce: U64 = u64::try_from(nonce).expect("INVARIANT: nonce should be a u64").into();
+        let nonce: U64 = u64::try_from(nonce)?.into();
 
         let from = client.get_evm_address(&sender_address, &starknet_block_latest).await?;
 
