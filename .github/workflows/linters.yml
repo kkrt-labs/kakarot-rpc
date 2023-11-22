@@ -14,6 +14,8 @@ jobs:
           toolchain: 1.73.0
           profile: minimal
           override: true
+      - name: Build Cairo Contracts for Abigen
+        run: make setup
       - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1
         with:
@@ -31,6 +33,8 @@ jobs:
           override: true
           components: rustfmt
       - uses: Swatinem/rust-cache@v2
+      - name: Build Cairo Contracts for Abigen
+        run: make setup
       - uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -48,6 +52,8 @@ jobs:
           override: true
           components: clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Build Cairo Contracts for Abigen
+        run: make setup
       - uses: actions-rs/cargo@v1
         with:
           command: clippy

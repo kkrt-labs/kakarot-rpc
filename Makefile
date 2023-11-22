@@ -8,20 +8,13 @@ override STARKNET_NETWORK = katana
 endif
 
 setup: .gitmodules
+	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
-	cd lib/kakarot && make setup
-
-build-kakarot:
-	cd lib/kakarot && make build && make build-sol
+	cd lib/kakarot && make setup && make build && make build-sol
+	./scripts/extract_abi.sh
 
 deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py
-
-build-and-deploy-kakarot: build-kakarot deploy-kakarot
-
-# run devnet
-devnet:
-	docker run --rm -it -p 5050:5050 -v $(PWD)/deployments:/app/kakarot/deployments -e STARKNET_NETWORK=katana ghcr.io/kkrt-labs/kakarot/katana:latest
 
 run-dev:
 	KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run -p kakarot-rpc

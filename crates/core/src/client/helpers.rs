@@ -1,5 +1,5 @@
 use eyre::Result;
-use reth_primitives::{Bytes, U128, U256};
+use reth_primitives::{U128, U256};
 use reth_rlp::DecodeError;
 use starknet::core::types::{
     FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, ValueOutOfRangeError,
@@ -67,16 +67,6 @@ pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FieldE
     Ok(return_data.to_vec())
 }
 
-#[must_use]
-pub fn vec_felt_to_bytes(vec_felt: Vec<FieldElement>) -> Bytes {
-    let bytes: Vec<u8> = vec_felt.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect();
-    Bytes::from(bytes)
-}
-
-pub fn bytes_to_felt_vec(bytes: &Bytes) -> Vec<FieldElement> {
-    bytes.to_vec().into_iter().map(FieldElement::from).collect()
-}
-
 /// Constructs the calldata for a raw Starknet invoke transaction call
 pub fn raw_kakarot_calldata(kakarot_address: FieldElement, mut calldata: Vec<FieldElement>) -> Vec<FieldElement> {
     let mut execute_calldata: Vec<FieldElement> = vec![
@@ -108,43 +98,6 @@ mod tests {
     use rstest::*;
 
     use super::*;
-
-    #[test]
-    fn test_bytes_to_felt_vec() {
-        let bytes = Bytes::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-        let felt_vec = bytes_to_felt_vec(&bytes);
-        assert_eq!(felt_vec.len(), 10);
-        assert_eq!(
-            felt_vec,
-            vec![
-                FieldElement::from(1_u64),
-                FieldElement::from(2_u64),
-                FieldElement::from(3_u64),
-                FieldElement::from(4_u64),
-                FieldElement::from(5_u64),
-                FieldElement::from(6_u64),
-                FieldElement::from(7_u64),
-                FieldElement::from(8_u64),
-                FieldElement::from(9_u64),
-                FieldElement::from(10_u64)
-            ]
-        );
-    }
-
-    #[test]
-    fn test_vec_felt_to_bytes() {
-        // Given
-        let bytecode: Vec<FieldElement> =
-            serde_json::from_str(include_str!("../models/test_data/bytecode/starknet/counter.json")).unwrap();
-
-        // When
-        let bytes = vec_felt_to_bytes(bytecode);
-
-        // Then
-        let expected: Bytes =
-            serde_json::from_str(include_str!("../models/test_data/bytecode/eth/counter.json")).unwrap();
-        assert_eq!(expected, bytes);
-    }
 
     #[rstest]
     #[test]

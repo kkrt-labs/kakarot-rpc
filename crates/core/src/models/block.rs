@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, Bloom, Bytes, H256, H64, U256};
+use reth_primitives::{Address, BlockId as EthereumBlockId, BlockNumberOrTag, Bloom, Bytes, H256, H64, U256};
 use reth_rpc_types::{Block, BlockTransactions, Header, RichBlock};
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
@@ -175,7 +175,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
         let mix_hash = *MIX_HASH;
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
-        let sequencer = Felt252Wrapper::from(self.sequencer_address()).truncate_to_ethereum_address();
+        let sequencer = Address::from_slice(&self.sequencer_address().to_bytes_be()[12..]);
         let timestamp = U256::from(self.timestamp());
 
         let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
@@ -255,7 +255,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
 
-        let sequencer = Felt252Wrapper::from(self.sequencer_address()).truncate_to_ethereum_address();
+        let sequencer = Address::from_slice(&self.sequencer_address().to_bytes_be()[12..]);
 
         let timestamp = U256::from(self.timestamp());
 

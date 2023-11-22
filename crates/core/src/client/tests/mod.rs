@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use reth_primitives::{BlockId, BlockNumberOrTag, Bytes, U256, U64};
 use reth_rpc_types::{CallInput, CallRequest};
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 use starknet::providers::jsonrpc::JsonRpcMethod;
 
 use crate::client::constants::CHAIN_ID;
@@ -36,8 +35,7 @@ async fn test_get_evm_address() {
     let client = init_mock_client(Some(fixtures));
 
     // When
-    let evm_address =
-        client.get_evm_address(&ABDEL_STARKNET_ADDRESS, &StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
+    let evm_address = client.get_evm_address(&ABDEL_STARKNET_ADDRESS).await.unwrap();
 
     // Then
     assert_eq!(*ABDEL_ETHEREUM_ADDRESS, evm_address);

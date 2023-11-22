@@ -30,9 +30,11 @@ jobs:
         with:
           path: ./lib/
           key: ${{ runner.os }}-submodules
+      - name: Build Cairo Contracts for Abigen
+        run: make setup
       # Create dump
       - name: Create dump
-        run: make build-kakarot && make dump-katana
+        run: make && make dump-katana
       - name: Generate code coverage
         run: ./scripts/make_with_env.sh test-coverage
       - name: Upload coverage to Codecov

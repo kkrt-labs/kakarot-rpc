@@ -3,9 +3,7 @@ use std::sync::Arc;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT, TX_ORIGIN_ZERO};
 use kakarot_rpc_core::client::errors::{rpc_err, EthApiError, EthRpcErrorCode};
-use kakarot_rpc_core::client::KakarotClient;
-use kakarot_rpc_core::contracts::account::Account;
-use kakarot_rpc_core::contracts::contract_account::ContractAccount;
+use kakarot_rpc_core::client::{ContractAccountReader, KakarotClient};
 use kakarot_rpc_core::models::block::EthBlockId;
 use kakarot_rpc_core::models::convertible::{
     ConvertibleEthEventFilter, ConvertibleStarknetEvent, ConvertibleStarknetTransaction,
@@ -219,12 +217,12 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         let starknet_contract_address =
             self.kakarot_client.compute_starknet_address(&address, &starknet_block_id).await?;
 
-        let binding = self.kakarot_client.starknet_provider();
-        let contract_account = ContractAccount::new(starknet_contract_address, &binding);
-        let bytecode = contract_account.bytecode(&starknet_block_id).await?;
+        let provider = self.kakarot_client.starknet_provider();
 
-        // Convert the result of the function call to a vector of bytes
-        Ok(bytecode)
+        // Get the nonce of the contract account -> a storage variable
+        let contract_account = ContractAccountReader::new(starknet_contract_address, &provider);
+        let (_, bytecode) = contract_account.bytecode().call().await.expect("TODO: replace by err handling");
+        Ok(Bytes::from(bytecode.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>()))
     }
 
     async fn get_logs(&self, filter: Filter) -> Result<FilterChanges> {
