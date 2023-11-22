@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
 
+jobs:
   spell_check:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
