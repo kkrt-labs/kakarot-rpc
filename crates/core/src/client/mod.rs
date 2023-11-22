@@ -48,8 +48,8 @@ use crate::models::ConversionError;
 use starknet_abigen_macros::abigen_legacy;
 use starknet_abigen_parser;
 
-abigen_legacy!(ContractAccount, "artifacts/contract_account.json");
-abigen_legacy!(Proxy, "artifacts/proxy.json");
+abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
+abigen_legacy!(Proxy, "./artifacts/proxy.json");
 
 pub struct KakarotClient<P: Provider + Send + Sync> {
     starknet_provider: Arc<P>,

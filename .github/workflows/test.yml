@@ -30,6 +30,11 @@ jobs:
         with:
           path: ./lib/
           key: ${{ runner.os }}-submodules
+      # Install Foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
       # Install Python
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
@@ -58,9 +63,9 @@ jobs:
         run: make setup
       # Create dump
       - name: Create dump
-        run: make dump-katana
+        run: ./scripts/make_with_env.sh && make dump-katana
       - name: Generate code coverage
-        run: ./scripts/make_with_env.sh test-coverage
+        run: make test-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

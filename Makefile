@@ -10,11 +10,11 @@ endif
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
-	cd lib/kakarot && make setup && make build && make build-sol
+	cd lib/kakarot && make setup && make build && make build-sol && cd ..
 	./scripts/extract_abi.sh
 
 deploy-kakarot:
-	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py
+	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py && cd ..
 
 run-dev:
 	KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run -p kakarot-rpc

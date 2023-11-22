@@ -55,7 +55,7 @@ jobs:
       # Python Setup and dependencies installation
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.9.13'
+          python-version: "3.9.13"
       - name: Load cached Poetry installation
         id: cached-poetry
         uses: actions/cache@v3
@@ -78,8 +78,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: .venv
-          key:
-            venv-${{ runner.os }}-${{ hashFiles('./lib/kakarot/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ hashFiles('./lib/kakarot/poetry.lock') }}
 
       # benchmark rpc
       - name: install benchmark projects
@@ -95,9 +94,9 @@ jobs:
       - name: Compare result
         uses: benchmark-action/github-action-benchmark@v1
         with:
-          tool: 'customBiggerIsBetter'
+          tool: "customBiggerIsBetter"
           output-file-path: ./benchmarking/reports/metrics.json
-          alert-threshold: '120%'
+          alert-threshold: "120%"
           github-token: ${{ secrets.GITHUB_TOKEN }}
           fail-on-alert: true
           summary-always: ${{ github.ref == 'refs/heads/main' }}
