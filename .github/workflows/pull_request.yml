@@ -8,18 +8,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-kakarot:
-    name: Build Kakarot and Generate Cairo Abi
-    uses: ./.github/workflows/build_abi.yml
-
   spell_check:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
-
-  linters:
-    name: Linters
-    uses: ./.github/workflows/linters.yml
-    needs: build-kakarot
 
   tests:
     name: Rust tests
