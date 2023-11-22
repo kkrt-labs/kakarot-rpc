@@ -24,7 +24,7 @@ impl ConvertibleSignedTransaction for StarknetTransactionSigned {
     async fn to_broadcasted_invoke_transaction<P: Provider + Send + Sync + 'static>(
         &self,
         client: &KakarotClient<P>,
-    ) -> Result<BroadcastedInvokeTransaction, EthApiError<P::Error>> {
+    ) -> Result<BroadcastedInvokeTransaction, EthApiError> {
         let mut data = self.0.as_ref();
 
         let transaction = TransactionSigned::decode(&mut data).map_err(DataDecodingError::TransactionDecodingError)?;

@@ -36,7 +36,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
         transaction_hash: Option<H256>,
         log_index: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<Log, EthApiError<P::Error>> {
+    ) -> Result<Log, EthApiError> {
         // If event `from_address` does not equal kakarot address, return early
         if self.0.from_address != client.kakarot_address() {
             return Err(EthApiError::KakarotDataFilteringError("Event".into()));

@@ -14,7 +14,7 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
     fn new(starknet_address: FieldElement, provider: &'a P) -> Self;
     fn provider(&self) -> &'a P;
     fn starknet_address(&self) -> FieldElement;
-    async fn get_evm_address(&self, starknet_block_id: &BlockId) -> Result<Address, EthApiError<P::Error>> {
+    async fn get_evm_address(&self, starknet_block_id: &BlockId) -> Result<Address, EthApiError> {
         let request = FunctionCall {
             contract_address: self.starknet_address(),
             entry_point_selector: GET_EVM_ADDRESS,
@@ -31,7 +31,7 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
     }
 
     /// Returns the evm bytecode of the contract.
-    async fn bytecode(&self, block_id: &BlockId) -> Result<Bytes, EthApiError<P::Error>> {
+    async fn bytecode(&self, block_id: &BlockId) -> Result<Bytes, EthApiError> {
         // Prepare the calldata for the bytecode function call
         let calldata = vec![];
         let request =
@@ -56,7 +56,7 @@ pub trait Account<'a, P: Provider + Send + Sync + 'a> {
     }
 
     /// Returns the class hash of account implementation of the contract.
-    async fn implementation(&self, block_id: &BlockId) -> Result<FieldElement, EthApiError<P::Error>> {
+    async fn implementation(&self, block_id: &BlockId) -> Result<FieldElement, EthApiError> {
         // Prepare the calldata for the get_implementation function call
         let calldata = vec![];
         let request = FunctionCall {

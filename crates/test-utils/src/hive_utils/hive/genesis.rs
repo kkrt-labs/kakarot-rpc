@@ -335,9 +335,10 @@ mod tests {
         }));
 
         // Verify the code field for each account, if exists, is not empty
-        assert!(
-            genesis.alloc.values().all(|account_info| account_info.code.as_ref().map_or(true, |code| !code.is_empty()))
-        );
+        assert!(genesis
+            .alloc
+            .values()
+            .all(|account_info| account_info.code.as_ref().map_or(true, |code| !code.is_empty())));
     }
 
     #[tokio::test]

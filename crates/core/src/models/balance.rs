@@ -22,23 +22,23 @@ pub struct TokenBalances {
     pub token_balances: Vec<TokenBalance>,
 }
 
-type BalanceOfResult<P> = Result<U256, EthApiError<<P as Provider>::Error>>;
+type BalanceOfResult = Result<U256, EthApiError>;
 
 #[pin_project::pin_project]
-pub struct FutureTokenBalance<P: Provider, F: Future<Output = BalanceOfResult<P>>> {
+pub struct FutureTokenBalance<P: Provider, F: Future<Output = BalanceOfResult>> {
     #[pin]
     pub balance: F,
     pub token_address: Address,
     _phantom: PhantomData<P>,
 }
 
-impl<P: Provider, F: Future<Output = BalanceOfResult<P>>> FutureTokenBalance<P, F> {
+impl<P: Provider, F: Future<Output = BalanceOfResult>> FutureTokenBalance<P, F> {
     pub const fn new(balance: F, token_address: Address) -> Self {
         Self { balance, token_address, _phantom: PhantomData }
     }
 }
 
-impl<P: Provider, F: Future<Output = BalanceOfResult<P>>> Future for FutureTokenBalance<P, F> {
+impl<P: Provider, F: Future<Output = BalanceOfResult>> Future for FutureTokenBalance<P, F> {
     type Output = TokenBalance;
 
     fn poll(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
