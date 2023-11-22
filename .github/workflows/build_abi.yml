@@ -1,35 +1,26 @@
-name: test
-
+# trunk-ignore-all(checkov/CKV2_GHA_1)
 on:
+  # trunk-ignore(yamllint/empty-values)
   workflow_call:
 
 jobs:
-  test:
+  build:
+    # trunk-ignore(actionlint/runner-label)
     runs-on: ubuntu-latest-16-cores
-    timeout-minutes: 30
+    timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup rust env
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          components: llvm-tools-preview
-          override: true
-          toolchain: 1.73.0
-      - name: Retrieve cached dependencies
-        uses: Swatinem/rust-cache@v2
-      - name: Setup coverage env
-        uses: taiki-e/install-action@cargo-llvm-cov
-      # nextest setup
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - uses: taiki-e/install-action@nextest
-      # Load lib submodules
+      # Load submodules
       - name: Load submodules
         id: cached-submodules
         uses: actions/cache/restore@v3
         with:
           path: ./lib/
           key: ${{ runner.os }}-submodules
+      # Install Foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
       # Install Python
       - name: Set up Python 3.9
         uses: actions/setup-python@v4
@@ -54,15 +45,21 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      # Make Setup
       - name: Setup the Kakarot submodule
         run: make setup
-      # Create dump
-      - name: Create dump
-        run: make dump-katana
-      - name: Generate code coverage
-        run: ./scripts/make_with_env.sh test-coverage
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+      # Store artifacts of the build of both Kakarot and the contract ABIs
+      - name: Upload Contract Builds
+        uses: actions/upload-artifact@v3
         with:
-          files: lcov.info
-          fail_ci_if_error: false
+          name: kakarot-build
+          path: ./lib/kakarot/build/**/*.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Upload ABIs
+        uses: actions/upload-artifact@v3
+        with:
+          name: contract-abis
+          path: /artifacts/**/*.json
+          if-no-files-found: error
+          retention-days: 1

@@ -8,6 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      - name: Download ABI artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: contract-abis
+          path: /artifacts/**/*.json
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
@@ -25,6 +30,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - name: Download ABI artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: contract-abis
+          path: /artifacts/**/*.json
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
@@ -44,6 +54,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # Download ABI from artifacts for Abigen
+      - name: Download ABI artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: contract-abis
+          path: /artifacts/**/*.json
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
@@ -52,8 +68,6 @@ jobs:
           override: true
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Build Cairo Contracts for Abigen
-        run: make setup
       - uses: actions-rs/cargo@v1
         with:
           command: clippy

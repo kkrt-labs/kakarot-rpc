@@ -5,7 +5,7 @@ set -o pipefail
 src_dir="./lib/kakarot/build"
 
 # Directory to write the new JSON files to
-dest_dir="./crates/core/src/client/artifacts"
+dest_dir="./artifacts"
 
 # Ensure the destination directory exists
 rm -rf "${dest_dir}"
