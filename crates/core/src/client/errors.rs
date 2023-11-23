@@ -6,6 +6,8 @@ use thiserror::Error;
 use super::helpers::DataDecodingError;
 use crate::models::ConversionError;
 
+use starknet_abigen_parser::cairo_types::Error as AbigenError;
+
 /// List of JSON-RPC error codes from ETH rpc spec.
 /// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md
 #[derive(Debug, Copy, PartialEq, Eq, Clone)]
@@ -50,6 +52,9 @@ pub enum EthApiError {
     /// Request to the Starknet provider failed.
     #[error(transparent)]
     RequestError(#[from] ProviderError),
+    /// Contract call with abigen failed.
+    #[error(transparent)]
+    AbigenError(#[from] AbigenError),
     /// Conversion between Starknet types and ETH failed.
     #[error("conversion error: {0}")]
     ConversionError(String),
@@ -138,6 +143,7 @@ impl From<EthApiError> for ErrorObject<'static> {
                 ProviderError::RateLimited => rpc_err(EthRpcErrorCode::RequestLimitExceeded, err_provider.to_string()),
                 ProviderError::Other(_) => rpc_err(EthRpcErrorCode::InternalError, err_provider.to_string()),
             },
+            EthApiError::AbigenError(err) => rpc_err(EthRpcErrorCode::InternalError, err.to_string()),
             EthApiError::ConversionError(err) => rpc_err(EthRpcErrorCode::InternalError, err),
             EthApiError::DataDecodingError(err) => rpc_err(EthRpcErrorCode::InternalError, err.to_string()),
             EthApiError::KakarotDataFilteringError(err) => rpc_err(EthRpcErrorCode::InternalError, err),

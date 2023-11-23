@@ -70,7 +70,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
             })
             .collect::<Result<_, _>>()?;
 
-        let data: Bytes =
+        let data =
             Bytes::from(self.0.data.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>());
 
         Ok(Log {

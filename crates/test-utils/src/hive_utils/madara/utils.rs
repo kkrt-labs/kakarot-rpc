@@ -260,8 +260,7 @@ mod tests {
         let counter_contract = ContractAccountReader::new(counter.evm_address, &starknet_client);
 
         // When
-        let (deployed_evm_bytecode_len, deployed_evm_bytecode) =
-            counter_contract.bytecode().call().await.expect("TODO: replace by err handling");
+        let (deployed_evm_bytecode_len, deployed_evm_bytecode) = counter_contract.bytecode().call().await.unwrap();
         let deployed_evm_bytecode = Bytes::from(
             deployed_evm_bytecode.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>(),
         );
@@ -301,7 +300,7 @@ mod tests {
 
         // Create a new counter contract pointing to the genesis initialized storage
         let counter_genesis = ContractAccountReader::new(counter.evm_address, &starknet_client);
-        let (_, genesis_evm_bytecode) = counter_genesis.bytecode().call().await.expect("TODO: replace by err handling");
+        let (_, genesis_evm_bytecode) = counter_genesis.bytecode().call().await.unwrap();
         let genesis_evm_bytecode = Bytes::from(
             genesis_evm_bytecode.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>(),
         );
@@ -439,11 +438,7 @@ mod tests {
         let starknet_client = katana.client().starknet_provider();
         let [key_low, key_high] = split_u256_into_field_elements(expected_key);
         let genesis_contract = ContractAccountReader::new(genesis_address, &starknet_client);
-        let storage = genesis_contract
-            .storage(&CairoUint256 { low: key_low, high: key_high })
-            .call()
-            .await
-            .expect("TODO: replace by err handling");
+        let storage = genesis_contract.storage(&CairoUint256 { low: key_low, high: key_high }).call().await.unwrap();
 
         // TODO: replace by From<Uint256> for U256
         let low = storage.low;
