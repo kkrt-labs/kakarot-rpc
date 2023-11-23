@@ -4,7 +4,7 @@ use starknet::providers::{MaybeUnknownErrorCode, ProviderError};
 use thiserror::Error;
 
 use super::helpers::DataDecodingError;
-use crate::models::ConversionError;
+use crate::models::errors::ConversionError;
 
 use starknet_abigen_parser::cairo_types::Error as AbigenError;
 

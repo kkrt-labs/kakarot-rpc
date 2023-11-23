@@ -9,11 +9,11 @@ use starknet::providers::Provider;
 
 use super::convertible::ConvertibleStarknetBlock;
 use super::felt::Felt252Wrapper;
-use super::ConversionError;
 use crate::client::constants::{
     DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY,
 };
 use crate::client::KakarotClient;
+use crate::models::errors::ConversionError;
 
 pub struct EthBlockId(EthereumBlockId);
 

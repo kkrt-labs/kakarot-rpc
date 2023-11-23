@@ -282,20 +282,8 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     }
 
     async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
-        // unwrap option or return jsonrpc error
-        let to = request.to.ok_or_else(|| {
-            rpc_err(EthRpcErrorCode::InternalError, "CallRequest `to` field is None. Cannot process a Kakarot call")
-        })?;
-
-        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
-        let origin = request.from.unwrap_or(*TX_ORIGIN_ZERO);
-
-        let calldata = request.input.data.ok_or_else(|| {
-            rpc_err(EthRpcErrorCode::InternalError, "CallRequest `data` field is None. Cannot process a Kakarot call")
-        })?;
-
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let result = self.kakarot_client.call(origin, to, Bytes::from(calldata.0), block_id).await?;
+        let result = self.kakarot_client.call(request, block_id).await?;
 
         Ok(result)
     }
