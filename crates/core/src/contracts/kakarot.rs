@@ -9,7 +9,7 @@ use starknet_crypto::FieldElement;
 
 use crate::client::constants::selectors::{COMPUTE_STARKNET_ADDRESS, DEPLOY_EXTERNALLY_OWNED_ACCOUNT, ETH_CALL};
 use crate::client::errors::EthApiError;
-use crate::client::helpers::{decode_eth_call_return, vec_felt_to_bytes, DataDecodingError};
+use crate::client::helpers::{decode_eth_call_return, DataDecodingError};
 use crate::client::waiter::TransactionWaiter;
 
 pub struct KakarotContract<P> {
@@ -82,7 +82,8 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
         // params
         let return_data = decode_eth_call_return(&result)?;
 
-        let result = vec_felt_to_bytes(return_data);
+        let result =
+            Bytes::from(return_data.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>());
         Ok(result)
     }
 

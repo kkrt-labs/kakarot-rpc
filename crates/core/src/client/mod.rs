@@ -31,10 +31,8 @@ use self::constants::{
     DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS, ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN,
 };
 use self::errors::EthApiError;
-use self::helpers::{bytes_to_felt_vec, raw_kakarot_calldata};
+use self::helpers::raw_kakarot_calldata;
 use self::waiter::TransactionWaiter;
-use crate::contracts::account::{Account, KakarotAccount};
-use crate::contracts::contract_account::ContractAccount;
 use crate::contracts::erc20::ethereum_erc20::EthereumErc20;
 use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot::KakarotContract;
@@ -47,6 +45,11 @@ use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::transaction::{StarknetTransaction, StarknetTransactions};
 use crate::models::transaction::transaction_signed::StarknetTransactionSigned;
 use crate::models::ConversionError;
+use starknet_abigen_macros::abigen_legacy;
+use starknet_abigen_parser;
+
+abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
+abigen_legacy!(Proxy, "./artifacts/proxy.json");
 
 pub struct KakarotClient<P: Provider + Send + Sync> {
     starknet_provider: Arc<P>,
@@ -92,7 +95,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
 
         let origin: FieldElement = Felt252Wrapper::from(origin).into();
 
-        let calldata = bytes_to_felt_vec(&calldata);
+        let calldata = calldata.to_vec().into_iter().map(FieldElement::from).collect();
 
         let result = self.kakarot_contract.eth_call(&origin, &to, calldata, &starknet_block_id).await?;
 
@@ -159,25 +162,22 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
         let starknet_address = self.compute_starknet_address(&ethereum_address, &starknet_block_id).await?;
 
-        // Get the implementation of the account
-        let account = KakarotAccount::new(starknet_address, &self.starknet_provider);
-        let class_hash = match account.implementation(&starknet_block_id).await {
+        let proxy = ProxyReader::new(starknet_address, &self.starknet_provider);
+
+        let class_hash = match proxy.get_implementation().call().await {
             Ok(class_hash) => class_hash,
-            Err(err) => match err {
-                EthApiError::RequestError(ProviderError::StarknetError(StarknetErrorWithMessage {
-                    code: MaybeUnknownErrorCode::Known(StarknetError::ContractNotFound),
-                    ..
-                })) => return Ok(U256::from(0)), // Return 0 if the account doesn't exist
-                _ => return Err(err), // Propagate the error
-            },
+            // TODO: replace by proper error handling
+            // if the contract doesn't exist, we return 0
+            Err(_) => FieldElement::ZERO,
         };
 
         if class_hash == self.kakarot_contract.contract_account_class_hash {
-            // Get the nonce of the contract account
-            let contract_account = ContractAccount::new(starknet_address, &self.starknet_provider);
-            contract_account.nonce(&starknet_block_id).await
+            // Get the nonce of the contract account -> a storage variable
+            let contract_account = ContractAccountReader::new(starknet_address, &self.starknet_provider);
+            let nonce = contract_account.get_nonce().call().await?;
+            Ok(Felt252Wrapper::from(nonce).into())
         } else {
-            // Get the nonce of the EOA
+            // Get the nonce of the EOA -> the protocol level nonce
             let nonce = self.starknet_provider.get_nonce(starknet_block_id, starknet_address).await;
             let nonce = match nonce {
                 Ok(nonce) => nonce,
@@ -222,11 +222,16 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         let key_high: U256 = index >> 128;
         let key_high: Felt252Wrapper = key_high.try_into()?;
 
-        let provider = self.starknet_provider();
-        let contract_account = ContractAccount::new(starknet_contract_address, &provider);
-        let storage_value = contract_account.storage(&key_low.into(), &key_high.into(), &starknet_block_id).await?;
+        let contract_account = ContractAccountReader::new(starknet_contract_address, &self.starknet_provider);
+        let storage = contract_account.storage(&Uint256 { low: key_low.into(), high: key_high.into() }).call().await?;
 
-        Ok(storage_value)
+        // TODO: replace by From<Uint256> for U256
+        let low = storage.low;
+        let high = storage.high;
+        let result =
+            Into::<U256>::into(Felt252Wrapper::from(low)) + (Into::<U256>::into(Felt252Wrapper::from(high)) << 128);
+
+        Ok(result)
     }
 
     /// Returns token balances for a specific address given a list of contracts addresses.
@@ -449,13 +454,11 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
 
     /// Returns the EVM address associated with a given Starknet address for a given block id
     /// by calling the `get_evm_address` function on the Kakarot contract.
-    pub async fn get_evm_address(
-        &self,
-        starknet_address: &FieldElement,
-        starknet_block_id: &StarknetBlockId,
-    ) -> Result<Address, EthApiError> {
-        let kakarot_account = KakarotAccount::new(*starknet_address, &self.starknet_provider);
-        kakarot_account.get_evm_address(starknet_block_id).await
+    pub async fn get_evm_address(&self, starknet_address: &FieldElement) -> Result<Address, EthApiError> {
+        let contract_account = ContractAccountReader::new(*starknet_address, &self.starknet_provider);
+        let evm_address = contract_account.get_evm_address().call().await?;
+        let evm_address = Felt252Wrapper::from(evm_address).try_into()?;
+        Ok(evm_address)
     }
 
     /// Returns the EVM address associated with a given Starknet address for a given block id

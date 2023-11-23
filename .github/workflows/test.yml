@@ -13,7 +13,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          components: llvm-tools-preview
+          components: llvm-tools-preview, rustfmt, clippy
           override: true
           toolchain: 1.73.0
       - name: Retrieve cached dependencies
@@ -21,7 +21,6 @@ jobs:
       - name: Setup coverage env
         uses: taiki-e/install-action@cargo-llvm-cov
       # nextest setup
-      - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: taiki-e/install-action@nextest
       # Load lib submodules
       - name: Load submodules
@@ -30,11 +29,48 @@ jobs:
         with:
           path: ./lib/
           key: ${{ runner.os }}-submodules
+      # Install Foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      # Install Python
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+      - name: Install Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Setup the Kakarot submodule
+        run: make setup
+      # Lint
+      - name: Lint
+        run: |
+          cargo check &&
+          cargo fmt --all -- --check &&
+          cargo clippy --workspace --all-features --all-targets -- -D warnings
       # Create dump
       - name: Create dump
-        run: make build-kakarot && make dump-katana
+        run: ./scripts/make_with_env.sh && make dump-katana
       - name: Generate code coverage
-        run: ./scripts/make_with_env.sh test-coverage
+        run: make test-coverage
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:

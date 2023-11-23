@@ -77,7 +77,6 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             return Err(EthApiError::KakarotDataFilteringError("Transaction".into()));
         }
 
-        let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 
         let hash: H256 = self.transaction_hash()?.into();
@@ -105,7 +104,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
         };
         let nonce: U64 = u64::try_from(nonce)?.into();
 
-        let from = client.get_evm_address(&sender_address, &starknet_block_latest).await?;
+        let from = client.get_evm_address(&sender_address).await?;
 
         let max_priority_fee_per_gas = Some(client.max_priority_fee_per_gas());
 

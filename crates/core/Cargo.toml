@@ -27,6 +27,10 @@ starknet-crypto = { workspace = true }
 thiserror = "1.0.38"
 url = { workspace = true }
 
+starknet-abigen-parser = { workspace = true }
+starknet-abigen-macros = { workspace = true }
+
+
 futures = "0.3.26"
 num-bigint = "0.4.3"
 serde = { version = "1.0" }
