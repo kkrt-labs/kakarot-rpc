@@ -19,11 +19,7 @@ impl<'a, P: Provider + Send + Sync> StarknetErc20<'a, P> {
         Self { provider, address }
     }
 
-    pub async fn balance_of(
-        &self,
-        starknet_address: &FieldElement,
-        block_id: &BlockId,
-    ) -> Result<U256, EthApiError<P::Error>> {
+    pub async fn balance_of(&self, starknet_address: &FieldElement, block_id: &BlockId) -> Result<U256, EthApiError> {
         // Prepare the calldata for the bytecode function call
         let calldata = vec![*starknet_address];
         let request = FunctionCall { contract_address: self.address, entry_point_selector: BALANCE_OF, calldata };

@@ -22,18 +22,21 @@ license = "MIT"
 
 [workspace.dependencies]
 # Starknet dependencies
-starknet = "0.6.0"
-starknet-crypto = "0.6.0"
+starknet = "0.7.0"
+starknet-crypto = "0.6.1"
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
+
+starknet-abigen-parser = { git = "https://github.com/glihm/starknet-abigen-rs", tag = "v0.1.4-beta1" }
+starknet-abigen-macros = { git = "https://github.com/glihm/starknet-abigen-rs", tag = "v0.1.4-beta1" }
 
 # Ethereum dependencies
 ethers = "2.0.9"
 ethers-solc = "2.0.9"
 jsonrpsee = { version = "0.18.2", features = ["full"] }
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
-reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.7" }
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10" }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10" }
 
 # Serde
 serde = { version = "1.0.188", features = ["derive"] }
@@ -59,8 +62,8 @@ url = "2.3.1"
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "b924dac" }
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "b924dac" }
+katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
 cargo-husky = { version = "1.5.0", default-features = false, features = [
   "precommit-hook",
   "run-for-all",
@@ -69,7 +72,7 @@ cargo-husky = { version = "1.5.0", default-features = false, features = [
 ] }
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "c794d1b" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "3357e69" }
 
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }

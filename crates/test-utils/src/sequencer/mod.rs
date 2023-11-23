@@ -3,6 +3,7 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::execution::eoa::EOA;
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
 use ethers::types::H256;
 use foundry_config::utils::find_project_root_path;
@@ -48,8 +49,8 @@ async fn katana_sequencer() -> TestSequencer {
 }
 
 pub struct Katana {
-    sequencer: TestSequencer,
-    eoa: KakarotEOA<JsonRpcClient<HttpTransport>>,
+    pub sequencer: TestSequencer,
+    pub eoa: KakarotEOA<JsonRpcClient<HttpTransport>>,
 }
 
 impl Katana {
@@ -107,8 +108,8 @@ impl Katana {
         &self.eoa
     }
 
-    pub const fn client(&self) -> &KakarotClient<JsonRpcClient<HttpTransport>> {
-        &self.eoa.client
+    pub fn client(&self) -> &KakarotClient<JsonRpcClient<HttpTransport>> {
+        self.eoa.client()
     }
 
     pub const fn sequencer(&self) -> &TestSequencer {

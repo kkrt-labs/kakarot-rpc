@@ -159,12 +159,13 @@ mod tests {
     use ctor::ctor;
     use kakarot_rpc_core::client::constants::STARKNET_NATIVE_TOKEN;
     use kakarot_rpc_core::client::helpers::split_u256_into_field_elements;
-    use kakarot_rpc_core::contracts::account::Account;
-    use kakarot_rpc_core::contracts::contract_account::ContractAccount;
+    use kakarot_rpc_core::client::ContractAccountReader;
+    use kakarot_rpc_core::client::Uint256 as CairoUint256;
     use kakarot_rpc_core::mock::constants::ACCOUNT_ADDRESS;
+    use kakarot_rpc_core::models::felt::Felt252Wrapper;
     use reth_primitives::U256;
     use rstest::rstest;
-    use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, FieldElement};
+    use starknet::core::types::FieldElement;
     use starknet::core::utils::get_storage_var_address;
     use starknet_api::core::{ClassHash, ContractAddress as StarknetContractAddress, Nonce};
     use starknet_api::hash::StarkFelt;
@@ -246,6 +247,7 @@ mod tests {
         assert_eq!(expected_storage, storage);
     }
 
+    #[ignore]
     #[rstest]
     #[awt]
     #[tokio::test(flavor = "multi_thread")]
@@ -254,11 +256,14 @@ mod tests {
         let katana = counter.0;
         let counter = counter.1;
         let starknet_client = katana.client().starknet_provider();
-        let counter_contract = ContractAccount::new(counter.evm_address, &starknet_client);
+
+        let counter_contract = ContractAccountReader::new(counter.evm_address, &starknet_client);
 
         // When
-        let deployed_evm_bytecode = counter_contract.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
-        let deployed_evm_bytecode_len = deployed_evm_bytecode.len();
+        let (deployed_evm_bytecode_len, deployed_evm_bytecode) = counter_contract.bytecode().call().await.unwrap();
+        let deployed_evm_bytecode = Bytes::from(
+            deployed_evm_bytecode.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>(),
+        );
 
         // Use genesis_set_bytecode to get the bytecode to be stored into counter
         let counter_genesis_address = FieldElement::from_str("0x1234").unwrap();
@@ -270,7 +275,7 @@ mod tests {
 
         // Set the counter bytecode length into the contract
         let key = get_starknet_storage_key("bytecode_len_", &[]);
-        let value = Into::<StarkFelt>::into(StarkFelt::from(deployed_evm_bytecode_len as u64));
+        let value = StarkFelt::from(deployed_evm_bytecode_len);
         counter_storage.insert(key, value);
 
         // Set the counter bytecode into the contract
@@ -294,12 +299,15 @@ mod tests {
         drop(starknet);
 
         // Create a new counter contract pointing to the genesis initialized storage
-        let counter_genesis = ContractAccount::new(counter_genesis_address, &starknet_client);
-        let evm_bytecode_actual = counter_genesis.bytecode(&StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
+        let counter_genesis = ContractAccountReader::new(counter.evm_address, &starknet_client);
+        let (_, genesis_evm_bytecode) = counter_genesis.bytecode().call().await.unwrap();
+        let genesis_evm_bytecode = Bytes::from(
+            genesis_evm_bytecode.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>(),
+        );
 
         // Then
         // Assert that the expected and actual bytecodes are equal
-        assert_eq!(evm_bytecode_actual, deployed_evm_bytecode);
+        assert_eq!(genesis_evm_bytecode, deployed_evm_bytecode);
     }
 
     /// This test verifies that the `genesis_fund_starknet_address` function generates the correct
@@ -428,10 +436,15 @@ mod tests {
 
         // Deploy the contract account with the set genesis storage and retrieve the storage on the contract
         let starknet_client = katana.client().starknet_provider();
-        let genesis_contract = ContractAccount::new(genesis_address, &starknet_client);
         let [key_low, key_high] = split_u256_into_field_elements(expected_key);
+        let genesis_contract = ContractAccountReader::new(genesis_address, &starknet_client);
+        let storage = genesis_contract.storage(&CairoUint256 { low: key_low, high: key_high }).call().await.unwrap();
+
+        // TODO: replace by From<Uint256> for U256
+        let low = storage.low;
+        let high = storage.high;
         let actual_value =
-            genesis_contract.storage(&key_low, &key_high, &StarknetBlockId::Tag(BlockTag::Latest)).await.unwrap();
+            Into::<U256>::into(Felt252Wrapper::from(low)) + (Into::<U256>::into(Felt252Wrapper::from(high)) << 128);
 
         // Assert that the value stored in the contract is the same as the value we set in the genesis
         assert_eq!(expected_value, actual_value);

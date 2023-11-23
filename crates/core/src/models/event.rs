@@ -5,10 +5,10 @@ use reth_primitives::{Address, Bytes, H256, U256};
 use reth_rpc_types::Log;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
+use starknet_crypto::FieldElement;
 
 use super::felt::Felt252Wrapper;
 use crate::client::errors::EthApiError;
-use crate::client::helpers::vec_felt_to_bytes;
 use crate::client::KakarotClient;
 use crate::models::convertible::ConvertibleStarknetEvent;
 
@@ -36,7 +36,7 @@ impl ConvertibleStarknetEvent for StarknetEvent {
         transaction_hash: Option<H256>,
         log_index: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<Log, EthApiError<P::Error>> {
+    ) -> Result<Log, EthApiError> {
         // If event `from_address` does not equal kakarot address, return early
         if self.0.from_address != client.kakarot_address() {
             return Err(EthApiError::KakarotDataFilteringError("Event".into()));
@@ -70,7 +70,8 @@ impl ConvertibleStarknetEvent for StarknetEvent {
             })
             .collect::<Result<_, _>>()?;
 
-        let data: Bytes = vec_felt_to_bytes(self.0.data);
+        let data =
+            Bytes::from(self.0.data.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>());
 
         Ok(Log {
             address,

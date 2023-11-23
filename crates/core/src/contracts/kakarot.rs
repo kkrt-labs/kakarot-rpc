@@ -9,7 +9,7 @@ use starknet_crypto::FieldElement;
 
 use crate::client::constants::selectors::{COMPUTE_STARKNET_ADDRESS, DEPLOY_EXTERNALLY_OWNED_ACCOUNT, ETH_CALL};
 use crate::client::errors::EthApiError;
-use crate::client::helpers::{decode_eth_call_return, vec_felt_to_bytes, DataDecodingError};
+use crate::client::helpers::{decode_eth_call_return, DataDecodingError};
 use crate::client::waiter::TransactionWaiter;
 
 pub struct KakarotContract<P> {
@@ -41,7 +41,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
         &self,
         eth_address: &FieldElement,
         block_id: &BlockId,
-    ) -> Result<FieldElement, EthApiError<P::Error>> {
+    ) -> Result<FieldElement, EthApiError> {
         // Prepare the calldata for the compute_starknet_address function call
         let calldata = vec![*eth_address];
         let request =
@@ -66,7 +66,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
         to: &FieldElement,
         mut eth_calldata: Vec<FieldElement>,
         block_id: &BlockId,
-    ) -> Result<Bytes, EthApiError<P::Error>> {
+    ) -> Result<Bytes, EthApiError> {
         let mut calldata =
             vec![*origin, *to, FieldElement::MAX, FieldElement::ZERO, FieldElement::ZERO, eth_calldata.len().into()];
 
@@ -82,7 +82,8 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
         // params
         let return_data = decode_eth_call_return(&result)?;
 
-        let result = vec_felt_to_bytes(return_data);
+        let result =
+            Bytes::from(return_data.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>());
         Ok(result)
     }
 
@@ -90,7 +91,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
         &self,
         ethereum_address: FieldElement,
         deployer_account: &SingleOwnerAccount<Arc<P>, LocalWallet>,
-    ) -> Result<FieldElement, EthApiError<P::Error>> {
+    ) -> Result<FieldElement, EthApiError> {
         let result = deployer_account
             .execute(vec![Call {
                 calldata: vec![ethereum_address],
@@ -100,7 +101,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotContract<P> {
             .send()
             .await;
 
-        let result: Result<FieldElement, EthApiError<P::Error>> = match result {
+        let result: Result<FieldElement, EthApiError> = match result {
             Ok(invoke_result) => {
                 let waiter =
                     TransactionWaiter::new(self.provider.clone(), invoke_result.transaction_hash, 1000, 15_000);

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, Bloom, Bytes, H256, H64, U256};
+use reth_primitives::{Address, BlockId as EthereumBlockId, BlockNumberOrTag, Bloom, Bytes, H256, H64, U256};
 use reth_rpc_types::{Block, BlockTransactions, Header, RichBlock};
 use starknet::core::types::{
     BlockId as StarknetBlockId, BlockTag, FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
@@ -76,13 +76,13 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
 /// Implement getters for fields that are present in Starknet Blocks, both in pending and validated
 /// state. For example, `parent_hash` is present in both `PendingBlock` and `Block`.
 macro_rules! implement_starknet_block_getters {
-    ($(($enum:ty, $field:ident, $field_type:ty)),*) => {
+    ($(($enum:ident, $field:ident, $field_type:ty)),*) => {
         $(pub fn $field(&self) -> $field_type {
             match &self.0 {
-                <$enum>::PendingBlock(pending_block_with_tx_hashes) => {
+                $enum::PendingBlock(pending_block_with_tx_hashes) => {
                     pending_block_with_tx_hashes.$field.clone()
                 }
-                <$enum>::Block(block_with_tx_hashes) => {
+                $enum::Block(block_with_tx_hashes) => {
                     block_with_tx_hashes.$field.clone()
                 }
             }
@@ -93,13 +93,13 @@ macro_rules! implement_starknet_block_getters {
 /// Implement getters for fields that are only present in Starknet Blocks that are not pending.
 /// For example, `block_hash` is only present in `Block` and not in `PendingBlock`.
 macro_rules! implement_starknet_block_getters_not_pending {
-    ($(($enum:ty, $field:ident, $field_type:ty)),*) => {
+    ($(($enum:ident, $field:ident, $field_type:ty)),*) => {
         $(pub fn $field(&self) -> Option<$field_type> {
             match &self.0 {
-                <$enum>::PendingBlock(_) => {
+                $enum::PendingBlock(_) => {
                     None
                 }
-                <$enum>::Block(block_with_txs) => {
+                $enum::Block(block_with_txs) => {
                     Some(block_with_txs.$field.clone())
                 }
             }
@@ -175,7 +175,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
         let mix_hash = *MIX_HASH;
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
-        let sequencer = Felt252Wrapper::from(self.sequencer_address()).truncate_to_ethereum_address();
+        let sequencer = Address::from_slice(&self.sequencer_address().to_bytes_be()[12..]);
         let timestamp = U256::from(self.timestamp());
 
         let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
@@ -212,6 +212,7 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
             withdrawals_root: Some(H256::zero()),
             blob_gas_used: None,
             excess_blob_gas: None,
+            parent_beacon_block_root: None,
         };
         let block = Block {
             header,
@@ -254,7 +255,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
 
         let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
 
-        let sequencer = Felt252Wrapper::from(self.sequencer_address()).truncate_to_ethereum_address();
+        let sequencer = Address::from_slice(&self.sequencer_address().to_bytes_be()[12..]);
 
         let timestamp = U256::from(self.timestamp());
 
@@ -288,6 +289,7 @@ impl ConvertibleStarknetBlock for BlockWithTxs {
             withdrawals_root: Some(H256::zero()),
             blob_gas_used: None,
             excess_blob_gas: None,
+            parent_beacon_block_root: None,
         };
         let block = Block {
             header,
