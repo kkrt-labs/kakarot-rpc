@@ -10,14 +10,14 @@ use super::errors::EthApiError;
 
 /// A helper struct for waiting for a transaction to be mined.
 /// Inspired by https://github.com/dojoengine/dojo/blob/main/crates/dojo-world/src/utils.rs
-pub struct TransactionWaiter<P: Provider> {
+pub struct TransactionWaiter<P: Provider + Send + Sync> {
     provider: Arc<P>,
     transaction_hash: FieldElement,
     interval: Duration,
     timeout: Duration,
 }
 
-impl<P: Provider> TransactionWaiter<P> {
+impl<P: Provider + Send + Sync> TransactionWaiter<P> {
     pub fn new(provider: Arc<P>, transaction_hash: FieldElement, interval_millis: u64, timeout_millis: u64) -> Self {
         Self {
             provider,
