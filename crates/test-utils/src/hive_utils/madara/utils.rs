@@ -438,7 +438,11 @@ mod tests {
         let starknet_client = katana.client().starknet_provider();
         let [key_low, key_high] = split_u256_into_field_elements(expected_key);
         let genesis_contract = ContractAccountReader::new(genesis_address, &starknet_client);
-        let storage = genesis_contract.storage(&CairoUint256 { low: key_low, high: key_high }).call().await.unwrap();
+
+        // Convert a Uint256 to a Starknet storage key
+        let storage_address = get_storage_var_address("storage_", &[key_low, key_high]).unwrap();
+
+        let storage: CairoUint256 = genesis_contract.storage(&storage_address).call().await.unwrap();
 
         // TODO: replace by From<Uint256> for U256
         let low = storage.low;

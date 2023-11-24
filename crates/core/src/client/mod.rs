@@ -5,8 +5,8 @@ pub mod helpers;
 #[cfg(test)]
 pub mod tests;
 
-use std::sync::Arc;
-
+use crate::client::Uint256 as CairoUint256;
+use anyhow::anyhow;
 use eyre::Result;
 use futures::future::join_all;
 use reqwest::Client;
@@ -20,9 +20,11 @@ use starknet::core::types::{
     FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
     StarknetError, Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
 };
+use starknet::core::utils::get_storage_var_address;
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
+use std::sync::Arc;
 
 use self::config::{KakarotRpcConfig, Network};
 use self::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS, MINIMUM_GAS_FEE};
@@ -114,13 +116,20 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         let value: Felt252Wrapper = request.value.unwrap_or_default().try_into()?;
         let value: FieldElement = value.into();
 
-        let (_, return_data) = self
+        let (_, return_data, success) = self
             .kakarot_contract
             .reader
             .eth_call(&origin, &to, &gas_limit, &gas_price, &value, &calldata.len().into(), &CairoArrayLegacy(calldata))
             .block_id(starknet_block_id)
             .call()
             .await?;
+
+        if success == FieldElement::ZERO {
+            let revert_reason =
+                return_data.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>();
+            let revert_reason = String::from_utf8(revert_reason).unwrap_or_else(|_| "Unknown".into());
+            return Err(EthApiError::Other(anyhow!("Revert reason: {}", revert_reason)));
+        }
 
         Ok(Bytes::from(
             return_data.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>(),
@@ -250,7 +259,12 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         let key_high: Felt252Wrapper = key_high.try_into()?;
 
         let contract_account = ContractAccountReader::new(starknet_contract_address, &self.starknet_provider);
-        let storage = contract_account.storage(&Uint256 { low: key_low.into(), high: key_high.into() }).call().await?;
+
+        // Convert a Uint256 to a Starknet storage key
+        let storage_address = get_storage_var_address("storage_", &[key_low.into(), key_high.into()])
+            .map_err(|e| EthApiError::ConversionError(e.to_string()))?;
+
+        let storage: CairoUint256 = contract_account.storage(&storage_address).call().await?;
 
         // TODO: replace by From<Uint256> for U256
         let low = storage.low;

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::anyhow;
 use ethers::abi::AbiEncode;
 use ethers::prelude::abigen;
 use ethers::types::Address;
@@ -55,7 +56,7 @@ impl<P: Provider + Send + Sync + 'static> EthereumErc20<P> {
         let gas_price = felt!("0x1");
         let value = FieldElement::ZERO;
 
-        let (_, return_data) = kakarot_reader
+        let (_, return_data, success) = kakarot_reader
             .eth_call(
                 &origin.into(),
                 &self.address,
@@ -68,6 +69,13 @@ impl<P: Provider + Send + Sync + 'static> EthereumErc20<P> {
             .block_id(block_id)
             .call()
             .await?;
+
+        if success == FieldElement::ZERO {
+            let revert_reason =
+                return_data.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>();
+            let revert_reason = String::from_utf8(revert_reason).unwrap_or_else(|_| "Unknown".into());
+            return Err(EthApiError::Other(anyhow!("Revert reason: {}", revert_reason)));
+        }
 
         let balance = return_data.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>();
 

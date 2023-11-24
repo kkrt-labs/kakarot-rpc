@@ -44,6 +44,7 @@ serde_json = "1.0"
 serde_with = "2.3.1"
 
 # Others
+anyhow = "1.0.68"
 async-trait = "0.1.58"
 ctor = "0.2.4"
 eyre = "0.6.8"
