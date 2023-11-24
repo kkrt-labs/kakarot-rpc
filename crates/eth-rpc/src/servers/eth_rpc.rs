@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT, TX_ORIGIN_ZERO};
-use kakarot_rpc_core::client::errors::{rpc_err, EthApiError, EthRpcErrorCode};
+use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT};
+use kakarot_rpc_core::client::errors::EthApiError;
 use kakarot_rpc_core::client::{ContractAccountReader, KakarotClient};
 use kakarot_rpc_core::models::block::EthBlockId;
 use kakarot_rpc_core::models::convertible::{
@@ -29,7 +29,7 @@ use starknet::providers::Provider;
 use crate::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
-pub struct KakarotEthRpc<P: Provider + Send + Sync> {
+pub struct KakarotEthRpc<P: Provider + Send + Sync + 'static> {
     pub kakarot_client: Arc<KakarotClient<P>>,
 }
 

@@ -54,7 +54,7 @@ pub trait EOA<P: Provider + Send + Sync + 'static> {
     }
 }
 
-pub struct KakarotEOA<P: Provider + Send + Sync> {
+pub struct KakarotEOA<P: Provider + Send + Sync + 'static> {
     pub private_key: H256,
     pub client: KakarotClient<P>,
 }
