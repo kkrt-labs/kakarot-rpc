@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT, TX_ORIGIN_ZERO};
-use kakarot_rpc_core::client::errors::{rpc_err, EthApiError, EthRpcErrorCode};
+use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT};
+use kakarot_rpc_core::client::errors::EthApiError;
 use kakarot_rpc_core::client::{ContractAccountReader, KakarotClient};
 use kakarot_rpc_core::models::block::EthBlockId;
 use kakarot_rpc_core::models::convertible::{

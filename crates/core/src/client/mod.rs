@@ -117,15 +117,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         let (_, return_data) = self
             .kakarot_contract
             .reader
-            .eth_call(
-                &origin.into(),
-                &to,
-                &gas_limit,
-                &gas_price,
-                &value,
-                &calldata.len().into(),
-                &CairoArrayLegacy(calldata),
-            )
+            .eth_call(&origin, &to, &gas_limit, &gas_price, &value, &calldata.len().into(), &CairoArrayLegacy(calldata))
             .block_id(starknet_block_id)
             .call()
             .await?;
