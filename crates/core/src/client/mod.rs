@@ -53,13 +53,13 @@ use crate::contracts::kakarot_contract::KakarotCoreReader;
 abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
 abigen_legacy!(Proxy, "./artifacts/proxy.json");
 
-pub struct KakarotClient<'a, P: Provider + Send + Sync + 'static> {
+pub struct KakarotClient<P: Provider + Send + Sync + 'static> {
     starknet_provider: Arc<P>,
-    kakarot_contract: KakarotContract<'a, P>,
+    kakarot_contract: KakarotContract<P>,
     network: Network,
 }
 
-impl<'a, P: Provider + Send + Sync + 'static> KakarotClient<'a, P> {
+impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
     /// Create a new `KakarotClient`.
     pub fn new(starknet_config: KakarotRpcConfig, starknet_provider: Arc<P>) -> Self {
         let KakarotRpcConfig {
@@ -71,7 +71,7 @@ impl<'a, P: Provider + Send + Sync + 'static> KakarotClient<'a, P> {
         } = starknet_config;
 
         let provider = starknet_provider.clone();
-        let contract_reader = KakarotCoreReader::new(kakarot_address, &provider);
+        let contract_reader = KakarotCoreReader::new(kakarot_address, provider.clone());
 
         let kakarot_contract = KakarotContract::new(
             proxy_account_class_hash,

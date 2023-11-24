@@ -7542,7 +7542,7 @@ dependencies = [
 [[package]]
 name = "starknet-abigen-macros"
 version = "0.1.0"
-source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta1#b3f8d4f695c078900d8e9bfeda3748619bea4ce6"
+source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta2#a9c051307ce1bac88a2e777b032673d113a03389"
 dependencies = [
  "anyhow",
  "proc-macro2",
@@ -7556,7 +7556,7 @@ dependencies = [
 [[package]]
 name = "starknet-abigen-parser"
 version = "0.1.0"
-source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta1#b3f8d4f695c078900d8e9bfeda3748619bea4ce6"
+source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta2#a9c051307ce1bac88a2e777b032673d113a03389"
 dependencies = [
  "starknet",
  "thiserror",

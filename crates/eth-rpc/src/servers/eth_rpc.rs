@@ -29,7 +29,7 @@ use starknet::providers::Provider;
 use crate::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
-pub struct KakarotEthRpc<P: Provider + Send + Sync> {
+pub struct KakarotEthRpc<P: Provider + Send + Sync + 'static> {
     pub kakarot_client: Arc<KakarotClient<P>>,
 }
 

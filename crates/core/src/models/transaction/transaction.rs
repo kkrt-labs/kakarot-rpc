@@ -152,7 +152,7 @@ impl StarknetTransaction {
     /// Checks if the transaction is a Kakarot transaction.
     async fn is_kakarot_tx<P: Provider + Send + Sync + 'static>(
         &self,
-        client: &KakarotClient<'_, P>,
+        client: &KakarotClient<P>,
     ) -> Result<bool, EthApiError> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();

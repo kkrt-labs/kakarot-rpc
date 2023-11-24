@@ -208,7 +208,7 @@ pub fn mock_starknet_provider(fixtures: Option<Vec<StarknetRpcFixture>>) -> Json
     JsonRpcClient::new(transport)
 }
 
-pub fn init_testnet_client() -> KakarotClient<'static, SequencerGatewayProvider> {
+pub fn init_testnet_client() -> KakarotClient<SequencerGatewayProvider> {
     let kakarot_address = FieldElement::from_hex_be(KAKAROT_TESTNET_ADDRESS).unwrap();
     let config = KakarotRpcConfig::new(
         Network::Goerli1Gateway,
@@ -225,7 +225,7 @@ pub fn init_testnet_client() -> KakarotClient<'static, SequencerGatewayProvider>
 
 pub fn init_mock_client(
     fixtures: Option<Vec<StarknetRpcFixture>>,
-) -> KakarotClient<'static, JsonRpcClient<MockJsonRpcTransport>> {
+) -> KakarotClient<JsonRpcClient<MockJsonRpcTransport>> {
     let starknet_provider = Arc::new(mock_starknet_provider(fixtures));
 
     let config = KakarotRpcConfig::new(
