@@ -17,7 +17,7 @@ mod integration_tests {
     use kakarot_test_utils::fixtures::katana;
     use kakarot_test_utils::rpc::start_kakarot_rpc_server;
     use kakarot_test_utils::sequencer::Katana;
-    use reth_primitives::U64;
+    use reth_primitives::{U256, U64};
     use rstest::*;
 
     abigen!(ERC20, "tests/contracts/ERC20/IERC20.json");
@@ -63,7 +63,12 @@ mod integration_tests {
         let token = ERC20::new(contract.address(), client.clone());
 
         // Assert initial balance is 0
-        let balance = token.balance_of(katana.eoa().evm_address().unwrap().into()).call().await.unwrap();
+        let balance = token
+            .balance_of(katana.eoa().evm_address().unwrap().into())
+            .gas(U256::from(0xffffffffffffffffffffffffffffffff_u128))
+            .call()
+            .await
+            .unwrap();
         assert_eq!(balance, 0u64.into());
 
         // Mint some tokens
@@ -71,7 +76,12 @@ mod integration_tests {
         let block_number: U64 = client.get_block_number().await.unwrap();
 
         // Assert balance is now 100
-        let balance = token.balance_of(katana.eoa().evm_address().unwrap().into()).call().await.unwrap();
+        let balance = token
+            .balance_of(katana.eoa().evm_address().unwrap().into())
+            .gas(U256::from(0xffffffffffffffffffffffffffffffff_u128))
+            .call()
+            .await
+            .unwrap();
         assert_eq!(balance, 100u64.into());
 
         // Assert on the transaction receipt

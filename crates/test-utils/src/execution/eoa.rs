@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use bytes::BytesMut;
 use ethers::abi::Tokenize;
@@ -15,8 +13,10 @@ use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, MaybePendingTr
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
+use std::sync::Arc;
 
 use super::contract::KakarotEvmContract;
+use super::watch_tx;
 use crate::execution::contract::EvmContract;
 
 #[async_trait]
@@ -92,9 +92,17 @@ impl<P: Provider + Send + Sync + 'static> KakarotEOA<P> {
         let tx = <KakarotEvmContract as EvmContract>::prepare_create_transaction(&bytecode, constructor_args, nonce)?;
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
-        let tx_hash: Felt252Wrapper = tx_hash.try_into()?;
+        let tx_hash: Felt252Wrapper = tx_hash.try_into().expect("Tx Hash should fit into Felt252Wrapper");
 
-        let maybe_receipt = self.provider().get_transaction_receipt(FieldElement::from(tx_hash)).await?;
+        watch_tx(self.provider(), tx_hash.clone().into(), std::time::Duration::from_millis(100))
+            .await
+            .expect("Tx polling failed");
+
+        let maybe_receipt = self
+            .provider()
+            .get_transaction_receipt(FieldElement::from(tx_hash.clone()))
+            .await
+            .expect("Failed to get transaction receipt after retries");
 
         let receipt = match maybe_receipt {
             MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => receipt,
@@ -126,6 +134,10 @@ impl<P: Provider + Send + Sync + 'static> KakarotEOA<P> {
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
         let tx_hash: Felt252Wrapper = tx_hash.try_into()?;
+
+        watch_tx(self.provider(), tx_hash.clone().into(), std::time::Duration::from_millis(100))
+            .await
+            .expect("Tx polling failed");
 
         Ok(tx_hash.into())
     }
