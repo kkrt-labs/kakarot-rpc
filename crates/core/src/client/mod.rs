@@ -126,8 +126,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
 
         if success == FieldElement::ZERO {
             let revert_reason =
-                return_data.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>();
-            let revert_reason = String::from_utf8(revert_reason).unwrap_or_else(|_| "Unknown".into());
+                return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
             return Err(EthApiError::Other(anyhow!("Revert reason: {}", revert_reason)));
         }
 
