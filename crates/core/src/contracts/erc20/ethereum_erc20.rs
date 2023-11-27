@@ -43,7 +43,7 @@ impl<P: Provider + Send + Sync + 'static> EthereumErc20<P> {
     pub async fn balance_of(self, evm_address: Address, block_id: BlockId) -> Result<U256, EthApiError> {
         // Prepare the calldata for the bytecode function call
         let calldata = IERC20Calls::BalanceOf(BalanceOfCall { account: evm_address }).encode();
-        let calldata: Vec<FieldElement> = calldata.into_iter().map(FieldElement::from).collect();
+        let calldata: Vec<_> = calldata.into_iter().map(FieldElement::from).collect();
 
         let block_id = EthBlockId::new(block_id);
         let block_id: StarknetBlockId = block_id.try_into()?;
