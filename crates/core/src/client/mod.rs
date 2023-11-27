@@ -6,7 +6,6 @@ pub mod helpers;
 pub mod tests;
 
 use crate::client::Uint256 as CairoUint256;
-use anyhow::anyhow;
 use eyre::Result;
 use futures::future::join_all;
 use reqwest::Client;
@@ -127,7 +126,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         if success == FieldElement::ZERO {
             let revert_reason =
                 return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
-            return Err(EthApiError::Other(anyhow!("Revert reason: {}", revert_reason)));
+            return Err(EthApiError::EVMExecutionError(revert_reason));
         }
 
         Ok(Bytes::from(

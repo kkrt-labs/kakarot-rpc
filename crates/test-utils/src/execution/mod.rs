@@ -5,6 +5,7 @@ use starknet::{
     core::types::{ExecutionResult, FieldElement, StarknetError},
     providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage},
 };
+use tracing::info;
 
 pub mod contract;
 pub mod eoa;
@@ -30,7 +31,7 @@ where
                 code: MaybeUnknownErrorCode::Known(StarknetError::TransactionHashNotFound),
                 ..
             })) => {
-                eprintln!("Transaction not confirmed yet...");
+                info!("Transaction not confirmed yet...");
             }
             // Some nodes are still serving error code `25` for tx hash not found. This is
             // technically a bug on the node's side, but we maximize compatibility here by also
@@ -39,7 +40,7 @@ where
                 code: MaybeUnknownErrorCode::Known(StarknetError::InvalidTransactionHash),
                 ..
             })) => {
-                eprintln!("Transaction not confirmed yet...");
+                info!("Transaction not confirmed yet...");
             }
             Err(err) => return Err(err.into()),
         }
