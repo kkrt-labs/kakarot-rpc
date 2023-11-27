@@ -35,7 +35,7 @@ impl NetApiServer for NetRpc {
     }
 
     fn health(&self) -> Result<bool, io::Error> {
-        // call `starknet_blockNumber` function to check if it resolves
+        // Calls `starknet_blockNumber` method to check if it resolves
         match self.kakarot_client.starknet_blockNumber() {
             Ok(_) => Ok(true),
             Err(_) => Err(io::Error::new(io::ErrorKind::NotFound, "Kakarot RPC currently unreacheable")),

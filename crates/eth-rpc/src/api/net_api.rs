@@ -20,7 +20,8 @@ pub trait NetApi {
     #[method(name = "listening")]
     fn listening(&self) -> Result<bool>;
 
-    /// Returns true if RPC_URL is online
+    /// Returns true if RPC_URL is online.
+    /// Otherwise not found error.
     #[method(name = "health")]
     fn health(&self) -> Result<bool, io::Error>;
 }
