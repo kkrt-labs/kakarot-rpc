@@ -22,5 +22,5 @@ pub trait NetApi {
 
     /// Returns true if RPC_URL is online
     #[method(name = "health")]
-    fn health(&self) -> Result<bool>;
+    fn health(&self) -> Result<bool, io::Error>;
 }
