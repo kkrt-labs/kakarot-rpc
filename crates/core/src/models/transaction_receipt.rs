@@ -12,7 +12,6 @@ use super::convertible::{
 use super::event::StarknetEvent;
 use super::felt::Felt252Wrapper;
 use super::transaction::transaction::StarknetTransaction;
-use crate::client::api::KakarotStarknetApi;
 use crate::client::constants::selectors::EVM_CONTRACT_DEPLOYED;
 use crate::client::errors::EthApiError;
 use crate::client::helpers::DataDecodingError;
@@ -37,7 +36,7 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
     async fn to_eth_transaction_receipt<P: Provider + Send + Sync + 'static>(
         self,
         client: &KakarotClient<P>,
-    ) -> Result<Option<EthTransactionReceipt>, EthApiError<P::Error>> {
+    ) -> Result<Option<EthTransactionReceipt>, EthApiError> {
         let starknet_tx_receipt: MaybePendingTransactionReceipt = self.into();
 
         let res_receipt = match starknet_tx_receipt {
@@ -120,6 +119,8 @@ impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
                         status_code,
                         effective_gas_price: U128::from(1_000_000), // TODO: Fetch real data
                         transaction_type: U8::from(0),              // TODO: Fetch real data
+                        blob_gas_price: None,
+                        blob_gas_used: None,
                     }
                 }
                 // L1Handler, Declare, Deploy and DeployAccount transactions unsupported for now in

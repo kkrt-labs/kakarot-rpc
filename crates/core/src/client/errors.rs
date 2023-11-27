@@ -6,6 +6,8 @@ use thiserror::Error;
 use super::helpers::DataDecodingError;
 use crate::models::ConversionError;
 
+use starknet_abigen_parser::cairo_types::Error as AbigenError;
+
 /// List of JSON-RPC error codes from ETH rpc spec.
 /// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md
 #[derive(Debug, Copy, PartialEq, Eq, Clone)]
@@ -46,10 +48,13 @@ pub enum ConfigError {
 
 /// Error that can accure when interacting with the Kakarot ETH API.
 #[derive(Debug, Error)]
-pub enum EthApiError<E: std::error::Error> {
+pub enum EthApiError {
     /// Request to the Starknet provider failed.
     #[error(transparent)]
-    RequestError(#[from] ProviderError<E>),
+    RequestError(#[from] ProviderError),
+    /// Contract call with abigen failed.
+    #[error(transparent)]
+    AbigenError(#[from] AbigenError),
     /// Conversion between Starknet types and ETH failed.
     #[error("conversion error: {0}")]
     ConversionError(String),
@@ -76,20 +81,20 @@ pub enum EthApiError<E: std::error::Error> {
     Other(#[from] anyhow::Error),
 }
 
-impl<T, E: std::error::Error> From<ConversionError<T>> for EthApiError<E> {
+impl<T> From<ConversionError<T>> for EthApiError {
     fn from(err: ConversionError<T>) -> Self {
         Self::ConversionError(err.to_string())
     }
 }
 
-impl<E: std::error::Error> From<FromByteSliceError> for EthApiError<E> {
+impl From<FromByteSliceError> for EthApiError {
     fn from(err: FromByteSliceError) -> Self {
         Self::ConversionError(format!("Failed to convert from byte slice: {}", err))
     }
 }
 
-impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
-    fn from(error: EthApiError<E>) -> Self {
+impl From<EthApiError> for ErrorObject<'static> {
+    fn from(error: EthApiError) -> Self {
         match error {
             EthApiError::RequestError(err_provider) => match err_provider {
                 ProviderError::StarknetError(err_with_msg) => match err_with_msg.code {
@@ -98,7 +103,10 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
                         | StarknetError::ClassHashNotFound
                         | StarknetError::ContractNotFound
                         | StarknetError::NoBlocks
-                        | StarknetError::TransactionHashNotFound => {
+                        | StarknetError::TransactionHashNotFound
+                        | StarknetError::InvalidBlockHash
+                        | StarknetError::InvalidTransactionHash
+                        | StarknetError::NoTraceAvailable => {
                             rpc_err(EthRpcErrorCode::ResourceNotFound, format!("{err}: {}", err_with_msg.message))
                         }
                         StarknetError::ContractError => {
@@ -135,6 +143,7 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
                 ProviderError::RateLimited => rpc_err(EthRpcErrorCode::RequestLimitExceeded, err_provider.to_string()),
                 ProviderError::Other(_) => rpc_err(EthRpcErrorCode::InternalError, err_provider.to_string()),
             },
+            EthApiError::AbigenError(err) => rpc_err(EthRpcErrorCode::InternalError, err.to_string()),
             EthApiError::ConversionError(err) => rpc_err(EthRpcErrorCode::InternalError, err),
             EthApiError::DataDecodingError(err) => rpc_err(EthRpcErrorCode::InternalError, err.to_string()),
             EthApiError::KakarotDataFilteringError(err) => rpc_err(EthRpcErrorCode::InternalError, err),
@@ -147,9 +156,9 @@ impl<E: std::error::Error> From<EthApiError<E>> for ErrorObject<'static> {
     }
 }
 
-impl<E: std::error::Error> From<EthApiError<E>> for jsonrpsee::core::Error {
-    fn from(err: EthApiError<E>) -> Self {
-        jsonrpsee::core::Error::Call(err.into())
+impl From<EthApiError> for jsonrpsee::core::Error {
+    fn from(err: EthApiError) -> Self {
+        Self::Call(err.into())
     }
 }
 

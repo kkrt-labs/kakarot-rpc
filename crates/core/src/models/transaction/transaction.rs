@@ -6,9 +6,9 @@ use starknet::core::types::{
 };
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 
-use crate::client::api::KakarotEthApi;
 use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
+use crate::client::KakarotClient;
 use crate::models::call::Calls;
 use crate::models::convertible::ConvertibleStarknetTransaction;
 use crate::models::felt::Felt252Wrapper;
@@ -66,18 +66,17 @@ impl From<StarknetTransactions> for Vec<Transaction> {
 
 #[async_trait]
 impl ConvertibleStarknetTransaction for StarknetTransaction {
-    async fn to_eth_transaction<P: Provider + Send + Sync>(
+    async fn to_eth_transaction<P: Provider + Send + Sync + 'static>(
         &self,
-        client: &dyn KakarotEthApi<P>,
+        client: &KakarotClient<P>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<EthTransaction, EthApiError<P::Error>> {
+    ) -> Result<EthTransaction, EthApiError> {
         if !self.is_kakarot_tx(client).await? {
             return Err(EthApiError::KakarotDataFilteringError("Transaction".into()));
         }
 
-        let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 
         let hash: H256 = self.transaction_hash()?.into();
@@ -103,9 +102,9 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             },
             _ => return Err(EthApiError::KakarotDataFilteringError("Transaction".into())),
         };
-        let nonce: U256 = nonce.into();
+        let nonce: U64 = u64::try_from(nonce)?.into();
 
-        let from = client.get_evm_address(&sender_address, &starknet_block_latest).await?;
+        let from = client.get_evm_address(&sender_address).await?;
 
         let max_priority_fee_per_gas = Some(client.max_priority_fee_per_gas());
 
@@ -140,16 +139,18 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
             chain_id: Some(CHAIN_ID.into()),
             access_list: None, // TODO fetch the access list
             transaction_type,
+            max_fee_per_blob_gas: None,
+            blob_versioned_hashes: Vec::new(),
         })
     }
 }
 
 impl StarknetTransaction {
     /// Checks if the transaction is a Kakarot transaction.
-    async fn is_kakarot_tx<P: Provider + Send + Sync>(
+    async fn is_kakarot_tx<P: Provider + Send + Sync + 'static>(
         &self,
-        client: &dyn KakarotEthApi<P>,
-    ) -> Result<bool, EthApiError<P::Error>> {
+        client: &KakarotClient<P>,
+    ) -> Result<bool, EthApiError> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 

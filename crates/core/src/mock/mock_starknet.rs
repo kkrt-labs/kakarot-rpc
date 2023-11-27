@@ -44,8 +44,8 @@ impl From<AvailableFixtures> for JsonRpcMethod {
             AvailableFixtures::ComputeStarknetAddress
             | AvailableFixtures::GetImplementation
             | AvailableFixtures::GetEvmAddress
-            | AvailableFixtures::GetNonce => JsonRpcMethod::Call,
-            AvailableFixtures::GetClassHashAt(_, _) => JsonRpcMethod::GetClassHashAt,
+            | AvailableFixtures::GetNonce => Self::Call,
+            AvailableFixtures::GetClassHashAt(_, _) => Self::GetClassHashAt,
         }
     }
 }
@@ -56,12 +56,12 @@ impl Serialize for AvailableFixtures {
         S: Serializer,
     {
         match self {
-            AvailableFixtures::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
-            AvailableFixtures::GetEvmAddress => serializer.serialize_str("account_getEvmAddress"),
-            AvailableFixtures::GetImplementation => serializer.serialize_str("account_getImplementation"),
-            AvailableFixtures::GetNonce => serializer.serialize_str("account_getNonce"),
-            AvailableFixtures::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
-            AvailableFixtures::Other(method) => method.serialize(serializer),
+            Self::ComputeStarknetAddress => serializer.serialize_str("kakarot_computeStarknetAddress"),
+            Self::GetEvmAddress => serializer.serialize_str("account_getEvmAddress"),
+            Self::GetImplementation => serializer.serialize_str("account_getImplementation"),
+            Self::GetNonce => serializer.serialize_str("account_getNonce"),
+            Self::GetClassHashAt(_, _) => serializer.serialize_str("starknet_getClassHashAt"),
+            Self::Other(method) => method.serialize(serializer),
         }
     }
 }
@@ -87,7 +87,7 @@ pub struct StarknetRpcFixtureBuilder {
 
 impl StarknetRpcFixtureBuilder {
     /// Returns a new `StarknetRpcFixtureBuilder`.
-    pub fn new(method: AvailableFixtures) -> Self {
+    pub const fn new(method: AvailableFixtures) -> Self {
         Self {
             method,
             fixture: StarknetRpcFixture {

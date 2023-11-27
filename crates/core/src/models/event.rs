@@ -5,18 +5,18 @@ use reth_primitives::{Address, Bytes, H256, U256};
 use reth_rpc_types::Log;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
+use starknet_crypto::FieldElement;
 
 use super::felt::Felt252Wrapper;
-use crate::client::api::KakarotStarknetApi;
 use crate::client::errors::EthApiError;
-use crate::client::helpers::vec_felt_to_bytes;
+use crate::client::KakarotClient;
 use crate::models::convertible::ConvertibleStarknetEvent;
 
 #[derive(Debug, Clone)]
 pub struct StarknetEvent(Event);
 
 impl StarknetEvent {
-    pub fn new(sn_event: Event) -> Self {
+    pub const fn new(sn_event: Event) -> Self {
         Self(sn_event)
     }
 }
@@ -30,13 +30,13 @@ impl From<Event> for StarknetEvent {
 impl ConvertibleStarknetEvent for StarknetEvent {
     fn to_eth_log<P: Provider + Send + Sync + 'static>(
         self,
-        client: &dyn KakarotStarknetApi<P>,
+        client: &KakarotClient<P>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
         transaction_hash: Option<H256>,
         log_index: Option<U256>,
         transaction_index: Option<U256>,
-    ) -> Result<Log, EthApiError<P::Error>> {
+    ) -> Result<Log, EthApiError> {
         // If event `from_address` does not equal kakarot address, return early
         if self.0.from_address != client.kakarot_address() {
             return Err(EthApiError::KakarotDataFilteringError("Event".into()));
@@ -70,7 +70,8 @@ impl ConvertibleStarknetEvent for StarknetEvent {
             })
             .collect::<Result<_, _>>()?;
 
-        let data: Bytes = vec_felt_to_bytes(self.0.data);
+        let data =
+            Bytes::from(self.0.data.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>());
 
         Ok(Log {
             address,

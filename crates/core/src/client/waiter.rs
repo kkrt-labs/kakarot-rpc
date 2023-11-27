@@ -32,7 +32,7 @@ impl<P: Provider> TransactionWaiter<P> {
         self
     }
 
-    pub async fn poll(&self) -> Result<(), EthApiError<P::Error>> {
+    pub async fn poll(&self) -> Result<(), EthApiError> {
         let started_at = Instant::now();
         loop {
             let elapsed = started_at.elapsed();
@@ -43,8 +43,8 @@ impl<P: Provider> TransactionWaiter<P> {
                 })));
             }
 
-            let receipt = self.provider.get_transaction_receipt(self.transaction_hash).await;
-            match receipt {
+            let receipt = self.provider.get_transaction_receipt(self.transaction_hash);
+            match receipt.await {
                 Ok(receipt) => match receipt {
                     MaybePendingTransactionReceipt::Receipt(receipt) => match receipt.execution_result() {
                         ExecutionResult::Succeeded => {

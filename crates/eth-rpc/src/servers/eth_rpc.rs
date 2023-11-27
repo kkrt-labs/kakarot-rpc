@@ -1,28 +1,40 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use kakarot_rpc_core::client::api::KakarotEthApi;
-use kakarot_rpc_core::client::constants::{CHAIN_ID, TX_ORIGIN_ZERO};
+use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT, TX_ORIGIN_ZERO};
 use kakarot_rpc_core::client::errors::{rpc_err, EthApiError, EthRpcErrorCode};
+use kakarot_rpc_core::client::{ContractAccountReader, KakarotClient};
 use kakarot_rpc_core::models::block::EthBlockId;
+use kakarot_rpc_core::models::convertible::{
+    ConvertibleEthEventFilter, ConvertibleStarknetEvent, ConvertibleStarknetTransaction,
+    ConvertibleStarknetTransactionReceipt,
+};
+use kakarot_rpc_core::models::event::StarknetEvent;
+use kakarot_rpc_core::models::event_filter::EthEventFilter;
+use kakarot_rpc_core::models::felt::Felt252Wrapper;
+use kakarot_rpc_core::models::transaction::transaction::StarknetTransaction;
+use kakarot_rpc_core::models::transaction_receipt::StarknetTransactionReceipt as TransactionReceiptWrapper;
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
-    Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncInfo,
+    SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
-use starknet::core::types::BlockId as StarknetBlockId;
+use starknet::core::types::{
+    BlockId as StarknetBlockId, Event, EventFilterWithPage, FieldElement, MaybePendingTransactionReceipt,
+    ResultPageRequest, SyncStatusType, TransactionReceipt as StarknetTransactionReceipt,
+};
 use starknet::providers::Provider;
 
 use crate::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 pub struct KakarotEthRpc<P: Provider + Send + Sync> {
-    pub kakarot_client: Arc<dyn KakarotEthApi<P>>,
+    pub kakarot_client: Arc<KakarotClient<P>>,
 }
 
 impl<P: Provider + Send + Sync> KakarotEthRpc<P> {
-    pub fn new(kakarot_client: Arc<dyn KakarotEthApi<P>>) -> Self {
+    pub fn new(kakarot_client: Arc<KakarotClient<P>>) -> Self {
         Self { kakarot_client }
     }
 }
@@ -34,17 +46,38 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     }
     
     async fn block_number(&self) -> Result<U64> {
-        let block_number = self.kakarot_client.block_number().await?;
-        Ok(block_number)
+        let block_number = self.kakarot_client.starknet_provider().block_number().await.map_err(EthApiError::from)?;
+        Ok(block_number.into())
     }
 
     async fn syncing(&self) -> Result<SyncStatus> {
-        let status = self.kakarot_client.syncing().await?;
-        Ok(status)
+        let status = self.kakarot_client.starknet_provider().syncing().await.map_err(EthApiError::from)?;
+
+        match status {
+            SyncStatusType::NotSyncing => Ok(SyncStatus::None),
+
+            SyncStatusType::Syncing(data) => {
+                let starting_block: U256 = U256::from(data.starting_block_num);
+                let current_block: U256 = U256::from(data.current_block_num);
+                let highest_block: U256 = U256::from(data.highest_block_num);
+                let warp_chunks_amount: Option<U256> = None;
+                let warp_chunks_processed: Option<U256> = None;
+
+                let status_info = SyncInfo {
+                    starting_block,
+                    current_block,
+                    highest_block,
+                    warp_chunks_amount,
+                    warp_chunks_processed,
+                };
+
+                Ok(SyncStatus::Info(status_info))
+            }
+        }
     }
 
     async fn coinbase(&self) -> Result<Address> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_coinbase".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_coinbase".to_string()).into())
     }
 
     async fn accounts(&self) -> Result<Vec<Address>> {
@@ -57,38 +90,40 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
 
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {
         let block_id = EthBlockId::new(BlockId::Hash(hash.into()));
-        let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::<P::Error>::from)?;
+        let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::from)?;
         let block = self.kakarot_client.get_eth_block_from_starknet_block(starknet_block_id, full).await?;
         Ok(Some(block))
     }
 
     async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
         let block_id = EthBlockId::new(BlockId::Number(number));
-        let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::<P::Error>::from)?;
+        let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::from)?;
         let block = self.kakarot_client.get_eth_block_from_starknet_block(starknet_block_id, full).await?;
         Ok(Some(block))
     }
 
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64> {
-        let transaction_count = self.kakarot_client.block_transaction_count_by_hash(hash).await?;
-        Ok(transaction_count)
+        let block_id = BlockId::Hash(hash.into());
+        let count = self.kakarot_client.get_transaction_count_by_block(block_id).await.map_err(EthApiError::from)?;
+        Ok(count)
     }
 
     async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64> {
-        let transaction_count = self.kakarot_client.block_transaction_count_by_number(number).await?;
-        Ok(transaction_count)
+        let block_id = BlockId::Number(number);
+        let count = self.kakarot_client.get_transaction_count_by_block(block_id).await.map_err(EthApiError::from)?;
+        Ok(count)
     }
 
     async fn block_uncles_count_by_block_hash(&self, _hash: H256) -> Result<U256> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_getUncleCountByBlockHash".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_getUncleCountByBlockHash".to_string()).into())
     }
 
     async fn block_uncles_count_by_block_number(&self, _number: BlockNumberOrTag) -> Result<U256> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_getUncleCountByBlockNumber".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_getUncleCountByBlockNumber".to_string()).into())
     }
 
     async fn uncle_by_block_hash_and_index(&self, _hash: H256, _index: Index) -> Result<Option<RichBlock>> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_getUncleByBlockHashAndIndex".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_getUncleByBlockHashAndIndex".to_string()).into())
     }
 
     async fn uncle_by_block_number_and_index(
@@ -96,12 +131,33 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         _number: BlockNumberOrTag,
         _index: Index,
     ) -> Result<Option<RichBlock>> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_getUncleByBlockNumberAndIndex".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_getUncleByBlockNumberAndIndex".to_string()).into())
     }
 
-    async fn transaction_by_hash(&self, _hash: H256) -> Result<Option<EtherTransaction>> {
-        let ether_tx = self.kakarot_client.transaction_by_hash(_hash).await?;
-        Ok(ether_tx)
+    async fn transaction_by_hash(&self, hash: H256) -> Result<Option<EtherTransaction>> {
+        let hash: Felt252Wrapper = hash.try_into().map_err(EthApiError::from)?;
+        let hash: FieldElement = hash.into();
+
+        let transaction: StarknetTransaction =
+            match self.kakarot_client.starknet_provider().get_transaction_by_hash(hash).await {
+                Err(_) => return Ok(None),
+                Ok(transaction) => transaction.into(),
+            };
+
+        let tx_receipt = match self.kakarot_client.starknet_provider().get_transaction_receipt(hash).await {
+            Err(_) => return Ok(None),
+            Ok(receipt) => receipt,
+        };
+
+        let (block_hash, block_num) = match tx_receipt {
+            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
+                let block_hash: Felt252Wrapper = tr.block_hash.into();
+                (Some(block_hash.into()), Some(U256::from(tr.block_number)))
+            }
+            _ => (None, None), // skip all transactions other than Invoke, covers the pending case
+        };
+        let eth_transaction = transaction.to_eth_transaction(&self.kakarot_client, block_hash, block_num, None).await?;
+        Ok(Some(eth_transaction))
     }
 
     async fn transaction_by_block_hash_and_index(&self, hash: H256, index: Index) -> Result<Option<EtherTransaction>> {
@@ -121,8 +177,21 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     }
 
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>> {
-        let receipt = self.kakarot_client.transaction_receipt(hash).await?;
-        Ok(receipt)
+        // TODO: Error when trying to transform 32 bytes hash to FieldElement
+        let transaction_hash: Felt252Wrapper = hash.try_into().map_err(EthApiError::from)?;
+        let starknet_tx_receipt: TransactionReceiptWrapper = match self
+            .kakarot_client
+            .starknet_provider()
+            .get_transaction_receipt::<FieldElement>(transaction_hash.into())
+            .await
+        {
+            Err(_) => return Ok(None),
+            Ok(receipt) => receipt,
+        }
+        .into();
+
+        let res_receipt = starknet_tx_receipt.to_eth_transaction_receipt(&self.kakarot_client).await?;
+        Ok(res_receipt)
     }
 
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
@@ -147,13 +216,73 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
 
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes> {
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let code = self.kakarot_client.get_code(address, block_id).await?;
-        Ok(code)
+        let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into().map_err(EthApiError::from)?;
+
+        let starknet_contract_address =
+            self.kakarot_client.compute_starknet_address(&address, &starknet_block_id).await?;
+
+        let provider = self.kakarot_client.starknet_provider();
+
+        // Get the nonce of the contract account -> a storage variable
+        let contract_account = ContractAccountReader::new(starknet_contract_address, &provider);
+        let (_, bytecode) = contract_account.bytecode().call().await.map_err(EthApiError::from)?;
+        Ok(Bytes::from(bytecode.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>()))
     }
 
     async fn get_logs(&self, filter: Filter) -> Result<FilterChanges> {
-        let logs = self.kakarot_client.get_logs(filter).await?;
-        Ok(logs)
+        // Check the block range
+        let current_block: u64 =
+            self.kakarot_client.starknet_provider().block_number().await.map_err(EthApiError::from)?;
+        let from_block = filter.get_from_block();
+        let to_block = filter.get_to_block();
+
+        let filter = match (from_block, to_block) {
+            (Some(from), _) if from > current_block => return Ok(FilterChanges::Empty),
+            (_, Some(to)) if to > current_block => filter.to_block(current_block),
+            (Some(from), Some(to)) if to < from => return Ok(FilterChanges::Empty),
+            _ => filter,
+        };
+
+        // Convert the eth log filter to a starknet event filter
+        let filter: EthEventFilter = filter.into();
+        let event_filter = filter.to_starknet_event_filter(&self.kakarot_client.clone())?;
+
+        // Filter events
+        let events = self
+            .kakarot_client
+            .filter_events(EventFilterWithPage {
+                event_filter,
+                result_page_request: ResultPageRequest { continuation_token: None, chunk_size: CHUNK_SIZE_LIMIT },
+            })
+            .await?;
+
+        // Convert events to eth logs
+        let logs = events
+            .into_iter()
+            .filter_map(|emitted| {
+                let event: StarknetEvent =
+                    Event { from_address: emitted.from_address, keys: emitted.keys, data: emitted.data }.into();
+                let block_hash = {
+                    let felt: Felt252Wrapper = emitted.block_hash.into();
+                    felt.into()
+                };
+                let transaction_hash = {
+                    let felt: Felt252Wrapper = emitted.transaction_hash.into();
+                    felt.into()
+                };
+                event
+                    .to_eth_log(
+                        &self.kakarot_client.clone(),
+                        Some(block_hash),
+                        Some(U256::from(emitted.block_number)),
+                        Some(transaction_hash),
+                        None,
+                        None,
+                    )
+                    .ok()
+            })
+            .collect::<Vec<_>>();
+        Ok(FilterChanges::Logs(logs))
     }
 
     async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
@@ -180,7 +309,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         _request: CallRequest,
         _block_id: Option<BlockId>,
     ) -> Result<AccessListWithGasUsed> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_createAccessList".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_createAccessList".to_string()).into())
     }
 
     async fn estimate_gas(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<U256> {
@@ -211,27 +340,27 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     }
 
     async fn mining(&self) -> Result<bool> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_mining".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_mining".to_string()).into())
     }
 
     async fn hashrate(&self) -> Result<U256> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_hashrate".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_hashrate".to_string()).into())
     }
 
     async fn get_work(&self) -> Result<Work> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_getWork".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_getWork".to_string()).into())
     }
 
     async fn submit_hashrate(&self, _hashrate: U256, _id: H256) -> Result<bool> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_submitHashrate".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_submitHashrate".to_string()).into())
     }
 
     async fn submit_work(&self, _nonce: H64, _pow_hash: H256, _mix_digest: H256) -> Result<bool> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_submitWork".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_submitWork".to_string()).into())
     }
 
     async fn send_transaction(&self, _request: TransactionRequest) -> Result<H256> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_sendTransaction".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_sendTransaction".to_string()).into())
     }
 
     async fn send_raw_transaction(&self, bytes: Bytes) -> Result<H256> {
@@ -240,15 +369,15 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_sign".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_sign".to_string()).into())
     }
 
     async fn sign_transaction(&self, _transaction: CallRequest) -> Result<Bytes> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_signTransaction".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_signTransaction".to_string()).into())
     }
 
     async fn sign_typed_data(&self, _address: Address, _data: Value) -> Result<Bytes> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_signTypedData".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_signTypedData".to_string()).into())
     }
 
     async fn get_proof(
@@ -257,30 +386,30 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         _keys: Vec<H256>,
         _block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_getProof".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_getProof".to_string()).into())
     }
 
     async fn new_filter(&self, _filter: Filter) -> Result<U64> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_newFilter".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_newFilter".to_string()).into())
     }
 
     async fn new_block_filter(&self) -> Result<U64> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_newBlockFilter".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_newBlockFilter".to_string()).into())
     }
 
     async fn new_pending_transaction_filter(&self) -> Result<U64> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_newPendingTransactionFilter".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_newPendingTransactionFilter".to_string()).into())
     }
 
     async fn uninstall_filter(&self, _id: U64) -> Result<bool> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_uninstallFilter".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_uninstallFilter".to_string()).into())
     }
 
     async fn get_filter_changes(&self, _id: U64) -> Result<FilterChanges> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_getFilterChanges".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_getFilterChanges".to_string()).into())
     }
 
     async fn get_filter_logs(&self, _id: U64) -> Result<FilterChanges> {
-        Err(EthApiError::<P::Error>::MethodNotSupported("eth_getFilterLogs".to_string()).into())
+        Err(EthApiError::MethodNotSupported("eth_getFilterLogs".to_string()).into())
     }
 }

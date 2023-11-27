@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use bytes::BytesMut;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
-use kakarot_rpc_core::client::api::{KakarotEthApi, KakarotStarknetApi};
 use kakarot_rpc_core::client::constants::CHAIN_ID;
 use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
@@ -24,7 +23,7 @@ use crate::execution::contract::EvmContract;
 pub trait EOA<P: Provider + Send + Sync + 'static> {
     async fn starknet_address(&self) -> Result<FieldElement, eyre::Error> {
         let client = self.client();
-        Ok(client.compute_starknet_address(self.evm_address()?, &StarknetBlockId::Tag(BlockTag::Latest)).await?)
+        Ok(client.compute_starknet_address(&self.evm_address()?, &StarknetBlockId::Tag(BlockTag::Latest)).await?)
     }
     fn evm_address(&self) -> Result<Address, eyre::Error> {
         let wallet = LocalWallet::from_bytes(self.private_key().as_bytes())?;
@@ -32,7 +31,7 @@ pub trait EOA<P: Provider + Send + Sync + 'static> {
     }
     fn private_key(&self) -> H256;
     fn provider(&self) -> Arc<P>;
-    fn client(&self) -> &dyn KakarotEthApi<P>;
+    fn client(&self) -> &KakarotClient<P>;
 
     async fn nonce(&self) -> Result<U256, eyre::Error> {
         let client = self.client();
@@ -61,7 +60,7 @@ pub struct KakarotEOA<P: Provider + Send + Sync> {
 }
 
 impl<P: Provider + Send + Sync> KakarotEOA<P> {
-    pub fn new(private_key: H256, client: KakarotClient<P>) -> Self {
+    pub const fn new(private_key: H256, client: KakarotClient<P>) -> Self {
         Self { private_key, client }
     }
 }
@@ -74,7 +73,7 @@ impl<P: Provider + Send + Sync + 'static> EOA<P> for KakarotEOA<P> {
     fn provider(&self) -> Arc<P> {
         self.client.starknet_provider()
     }
-    fn client(&self) -> &dyn KakarotEthApi<P> {
+    fn client(&self) -> &KakarotClient<P> {
         &self.client
     }
 }

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use kakarot_rpc_core::client::api::KakarotEthApi;
+use kakarot_rpc_core::client::KakarotClient;
 use kakarot_rpc_core::models::balance::TokenBalances;
 use reth_primitives::Address;
 use starknet::providers::Provider;
@@ -9,12 +9,12 @@ use starknet::providers::Provider;
 use crate::api::alchemy_api::AlchemyApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
-pub struct AlchemyRpc<P: Provider + Send + Sync> {
-    pub kakarot_client: Arc<dyn KakarotEthApi<P>>,
+pub struct AlchemyRpc<P: Provider + Send + Sync + 'static> {
+    pub kakarot_client: Arc<KakarotClient<P>>,
 }
 
-impl<P: Provider + Send + Sync> AlchemyRpc<P> {
-    pub fn new(kakarot_client: Arc<dyn KakarotEthApi<P>>) -> Self {
+impl<P: Provider + Send + Sync + 'static> AlchemyRpc<P> {
+    pub fn new(kakarot_client: Arc<KakarotClient<P>>) -> Self {
         Self { kakarot_client }
     }
 }

@@ -9,7 +9,7 @@ use crate::api::web3_api::Web3ApiServer;
 pub struct Web3Rpc {}
 
 impl Web3Rpc {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {}
     }
 }

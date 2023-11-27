@@ -30,11 +30,11 @@ pub struct EthereumErc20<'a, P> {
 }
 
 impl<'a, P: Provider + Send + Sync + 'static> EthereumErc20<'a, P> {
-    pub fn new(address: FieldElement, kakarot_contract: &'a KakarotContract<P>) -> Self {
+    pub const fn new(address: FieldElement, kakarot_contract: &'a KakarotContract<P>) -> Self {
         Self { address, kakarot_contract }
     }
 
-    pub async fn balance_of(self, evm_address: Address, block_id: BlockId) -> Result<U256, EthApiError<P::Error>> {
+    pub async fn balance_of(self, evm_address: Address, block_id: BlockId) -> Result<U256, EthApiError> {
         // Prepare the calldata for the bytecode function call
         let calldata = IERC20Calls::BalanceOf(BalanceOfCall { account: evm_address }).encode();
         let calldata = calldata.into_iter().map(FieldElement::from).collect();

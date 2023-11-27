@@ -1,4 +1,3 @@
-use kakarot_rpc_core::client::api::KakarotStarknetApi;
 use kakarot_rpc_core::client::constants::DEPLOY_FEE;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
 use kakarot_test_utils::fixtures::katana;
@@ -27,7 +26,7 @@ async fn test_wait_for_confirmation_on_l2(#[future] katana: Katana) {
 
     match transaction_receipt {
         MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => {
-            assert!(matches!(receipt.execution_result, ExecutionResult::Succeeded))
+            assert!(matches!(receipt.execution_result, ExecutionResult::Succeeded));
         }
         _ => panic!(
             "Expected MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke), got {:?}",

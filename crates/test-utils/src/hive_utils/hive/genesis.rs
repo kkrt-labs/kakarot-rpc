@@ -76,13 +76,11 @@ fn kakarot_contracts_class_hashes() -> Vec<(String, FieldElement)> {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|f| f.file_type().is_file() && f.path().extension().is_some_and(|ext| ext == "json"))
-        .map(|e| e.into_path())
-        .collect::<Vec<_>>();
+        .map(|e| e.into_path());
 
     // Deserialize each contract file into a `LegacyContractClass` object.
     // Compute the class hash of each contract.
     paths
-        .into_iter()
         .map(|path| {
             let contract_class =
                 fs::read_to_string(path.clone()).unwrap_or_else(|_| panic!("Failed to read file: {}", path.display()));
@@ -337,9 +335,10 @@ mod tests {
         }));
 
         // Verify the code field for each account, if exists, is not empty
-        assert!(
-            genesis.alloc.values().all(|account_info| account_info.code.as_ref().map_or(true, |code| !code.is_empty()))
-        );
+        assert!(genesis
+            .alloc
+            .values()
+            .all(|account_info| account_info.code.as_ref().map_or(true, |code| !code.is_empty())));
     }
 
     #[tokio::test]

@@ -5,11 +5,11 @@ on:
   push:
     branches: [main]
 
-jobs:
-  dump:
-    name: Dump katana state
-    uses: ./.github/workflows/dump.yml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
   spell_check:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
