@@ -20,7 +20,7 @@ pub trait NetApi {
     #[method(name = "listening")]
     fn listening(&self) -> Result<bool>;
 
-    /// Returns true if RPC_URL is online.
+    /// Returns true if Kakarot RPC_URL is reachable.
     /// Otherwise not found error.
     #[method(name = "health")]
     fn health(&self) -> Result<bool, io::Error>;
