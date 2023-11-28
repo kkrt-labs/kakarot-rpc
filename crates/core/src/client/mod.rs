@@ -97,7 +97,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         let to = to.into();
 
         // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
-        let origin = request.from.unwrap_or(Address::zero());
+        let origin = request.from.unwrap_or_default();
         let origin: FieldElement = Felt252Wrapper::from(origin).into();
 
         let calldata = request
