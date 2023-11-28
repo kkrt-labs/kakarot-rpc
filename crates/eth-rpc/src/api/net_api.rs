@@ -23,5 +23,5 @@ pub trait NetApi {
     /// Returns true if Kakarot RPC_URL is reachable.
     /// Otherwise not found error.
     #[method(name = "health")]
-    fn health(&self) -> Result<bool, io::Error>;
+    fn health(&self) -> Result<bool>;
 }
