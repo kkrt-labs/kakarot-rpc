@@ -76,6 +76,8 @@ async fn test_fee_history_should_return_oldest_block_0() {
 }
 
 #[tokio::test]
+// Ignore until #649 is fixed
+#[ignore]
 async fn test_estimate_gas() {
     // Given
     let client = init_testnet_client();
@@ -97,6 +99,8 @@ async fn test_estimate_gas() {
 }
 
 #[tokio::test]
+// Ignore until #649 is fixed and test runs against Madara
+#[ignore]
 async fn test_gas_price() {
     // Given
     let client = init_testnet_client();

@@ -4,7 +4,7 @@ use starknet::providers::{MaybeUnknownErrorCode, ProviderError};
 use thiserror::Error;
 
 use super::helpers::DataDecodingError;
-use crate::models::ConversionError;
+use crate::models::errors::ConversionError;
 
 use starknet_abigen_parser::cairo_types::Error as AbigenError;
 
@@ -76,6 +76,9 @@ pub enum EthApiError {
     /// Method not supported error.
     #[error("Method not supported: {0}")]
     MethodNotSupported(String),
+    /// Execution Error
+    #[error("Kakarot Execution Error, Reverted With: {0}")]
+    EVMExecutionError(String),
     /// Other error.
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -151,6 +154,7 @@ impl From<EthApiError> for ErrorObject<'static> {
             EthApiError::MissingParameterError(err) => rpc_err(EthRpcErrorCode::InvalidParams, err),
             EthApiError::ConfigError(err) => rpc_err(EthRpcErrorCode::InternalError, err.to_string()),
             EthApiError::MethodNotSupported(err) => rpc_err(EthRpcErrorCode::MethodNotSupported, err),
+            EthApiError::EVMExecutionError(err) => rpc_err(EthRpcErrorCode::ExecutionError, err),
             EthApiError::Other(err) => rpc_err(EthRpcErrorCode::InternalError, err.to_string()),
         }
     }

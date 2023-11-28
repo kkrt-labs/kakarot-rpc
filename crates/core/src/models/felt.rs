@@ -3,7 +3,7 @@ use std::ops::Mul;
 use reth_primitives::{Address, Bytes, H256, U256};
 use starknet::core::types::FieldElement;
 
-use super::ConversionError;
+use crate::models::errors::ConversionError;
 
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);

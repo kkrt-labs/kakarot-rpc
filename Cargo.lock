@@ -4982,6 +4982,7 @@ dependencies = [
 name = "kakarot-test-utils"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "bytes",
  "ctor",
@@ -7542,7 +7543,7 @@ dependencies = [
 [[package]]
 name = "starknet-abigen-macros"
 version = "0.1.0"
-source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta1#b3f8d4f695c078900d8e9bfeda3748619bea4ce6"
+source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta3#580a8d763fa304abc1914dda2f9d24fe119575e6"
 dependencies = [
  "anyhow",
  "proc-macro2",
@@ -7556,7 +7557,7 @@ dependencies = [
 [[package]]
 name = "starknet-abigen-parser"
 version = "0.1.0"
-source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta1#b3f8d4f695c078900d8e9bfeda3748619bea4ce6"
+source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta3#580a8d763fa304abc1914dda2f9d24fe119575e6"
 dependencies = [
  "starknet",
  "thiserror",

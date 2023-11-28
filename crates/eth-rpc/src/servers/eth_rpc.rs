@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT, TX_ORIGIN_ZERO};
-use kakarot_rpc_core::client::errors::{rpc_err, EthApiError, EthRpcErrorCode};
+use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT};
+use kakarot_rpc_core::client::errors::EthApiError;
 use kakarot_rpc_core::client::{ContractAccountReader, KakarotClient};
 use kakarot_rpc_core::models::block::EthBlockId;
 use kakarot_rpc_core::models::convertible::{
@@ -29,7 +29,7 @@ use starknet::providers::Provider;
 use crate::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
-pub struct KakarotEthRpc<P: Provider + Send + Sync> {
+pub struct KakarotEthRpc<P: Provider + Send + Sync + 'static> {
     pub kakarot_client: Arc<KakarotClient<P>>,
 }
 
@@ -282,20 +282,8 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     }
 
     async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
-        // unwrap option or return jsonrpc error
-        let to = request.to.ok_or_else(|| {
-            rpc_err(EthRpcErrorCode::InternalError, "CallRequest `to` field is None. Cannot process a Kakarot call")
-        })?;
-
-        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
-        let origin = request.from.unwrap_or(*TX_ORIGIN_ZERO);
-
-        let calldata = request.input.data.ok_or_else(|| {
-            rpc_err(EthRpcErrorCode::InternalError, "CallRequest `data` field is None. Cannot process a Kakarot call")
-        })?;
-
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let result = self.kakarot_client.call(origin, to, Bytes::from(calldata.0), block_id).await?;
+        let result = self.kakarot_client.call(request, block_id).await?;
 
         Ok(result)
     }

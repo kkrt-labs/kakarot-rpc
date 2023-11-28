@@ -7,7 +7,7 @@ use starknet_crypto::FieldElement;
 
 use crate::client::constants::MAX_FEE;
 use crate::client::errors::EthApiError;
-use crate::client::helpers::{raw_kakarot_calldata, DataDecodingError};
+use crate::client::helpers::{prepare_kakarot_eth_send_transaction, DataDecodingError};
 use crate::client::KakarotClient;
 use crate::models::convertible::ConvertibleSignedTransaction;
 
@@ -39,7 +39,7 @@ impl ConvertibleSignedTransaction for StarknetTransactionSigned {
 
         let nonce = FieldElement::from(transaction.nonce());
 
-        let calldata = raw_kakarot_calldata(
+        let calldata = prepare_kakarot_eth_send_transaction(
             client.kakarot_address(),
             self.0.to_vec().into_iter().map(FieldElement::from).collect(),
         );

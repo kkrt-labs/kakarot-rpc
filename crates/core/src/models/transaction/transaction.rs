@@ -11,8 +11,8 @@ use crate::client::errors::EthApiError;
 use crate::client::KakarotClient;
 use crate::models::call::Calls;
 use crate::models::convertible::ConvertibleStarknetTransaction;
+use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
-use crate::models::ConversionError;
 
 pub struct StarknetTransaction(Transaction);
 
@@ -45,9 +45,12 @@ macro_rules! get_invoke_transaction_field {
 }
 
 impl StarknetTransaction {
-    get_invoke_transaction_field!((transaction_hash, transaction_hash), Felt252Wrapper);
     get_invoke_transaction_field!((calldata, calldata), Vec<FieldElement>);
     get_invoke_transaction_field!((contract_address, sender_address), Felt252Wrapper);
+
+    pub fn transaction_hash(&self) -> H256 {
+        H256::from_slice(&self.0.transaction_hash().to_bytes_be())
+    }
 }
 
 pub struct StarknetTransactions(Vec<Transaction>);
@@ -79,7 +82,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
         let sender_address: FieldElement = self.sender_address()?.into();
 
-        let hash: H256 = self.transaction_hash()?.into();
+        let hash = self.transaction_hash();
 
         let starknet_block_id = match block_hash {
             Some(block_hash) => StarknetBlockId::Hash(TryInto::<Felt252Wrapper>::try_into(block_hash)?.into()),

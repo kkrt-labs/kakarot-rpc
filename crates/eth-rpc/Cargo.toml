@@ -20,7 +20,7 @@ async-trait = { workspace = true }
 tokio = { workspace = true }
 
 # misc
-anyhow = "1.0.68"
+anyhow = { workspace = true }
 dojo-test-utils = { workspace = true }
 dotenv = { workspace = true }
 hex = "0.4"
