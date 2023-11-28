@@ -2,7 +2,6 @@ use jsonrpsee::core::{async_trait, RpcResult as Result};
 use kakarot_rpc_core::client::constants::CHAIN_ID;
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
-use std::io;
 
 use crate::api::net_api::NetApiServer;
 
@@ -34,11 +33,10 @@ impl NetApiServer for NetRpc {
         Ok(false)
     }
 
-    fn health(&self) -> Result<bool, io::Error> {
-        // Calls `starknet_blockNumber` method to check if it resolves
-        match self.kakarot_client.starknet_blockNumber() {
-            Ok(_) => Ok(true),
-            Err(_) => Err(io::Error::new(io::ErrorKind::NotFound, "Kakarot RPC currently unreacheable")),
-        }
+    fn health(&self) -> Result<bool> {
+        // Calls starknet block_number method to check if it resolves
+        self.kakarot_client.starknet_provider().block_number().await.map_err(EthApiError::from)?;
+
+        Ok(true)
     }
 }
