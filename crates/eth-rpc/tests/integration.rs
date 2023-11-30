@@ -34,7 +34,7 @@ mod integration_tests {
             start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
         let reqwest_client = reqwest::Client::new();
-        let res = reqwest_client
+        let _res = reqwest_client
             .post(format!("http://localhost:{}/net_health", server_addr.port()))
             .send()
             .await
