@@ -32,6 +32,10 @@ mod integration_tests {
     async fn test_erc20(#[future] katana: Katana) {
         let (server_addr, server_handle) =
             start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+        let reqwest_client = reqwest::Client::new();
+        let res = reqwest_client.post(format!("http://localhost:{}/net_health", server_addr.port()));
+
         let wallet: LocalWallet = SigningKey::from_slice(katana.eoa().private_key().as_ref())
             .expect("EOA Private Key should be used to init a LocalWallet")
             .into();
