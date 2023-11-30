@@ -18,9 +18,6 @@ pub struct NetRpc<P: Provider + Send + Sync + 'static> {
 impl<P: Provider + Send + Sync> NetRpc<P> {
     pub fn new(kakarot_client: Arc<KakarotClient<P>>) -> Self {
         Self { kakarot_client }
-impl<P: Provider + Send + Sync> NetRpc<P> {
-    pub fn new(kakarot_client: Arc<KakarotClient<P>>) -> Self {
-        Self { kakarot_client }
     }
 }
 
