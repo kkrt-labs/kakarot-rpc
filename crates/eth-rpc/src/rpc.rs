@@ -33,9 +33,9 @@ pub struct KakarotRpcModuleBuilder<P: Provider + Send + Sync + 'static> {
 impl<P: Provider + Send + Sync + 'static> KakarotRpcModuleBuilder<P> {
     pub fn new(kakarot_client: Arc<KakarotClient<P>>) -> Self {
         let eth_rpc_module = KakarotEthRpc::new(kakarot_client.clone()).into_rpc();
-        let alchemy_rpc_module = AlchemyRpc::new(kakarot_client).into_rpc();
+        let alchemy_rpc_module = AlchemyRpc::new(kakarot_client.clone()).into_rpc();
         let web3_rpc_module = Web3Rpc::default().into_rpc();
-        let net_rpc_module = NetRpc::new(kakarot_client).into_rpc();
+        let net_rpc_module = NetRpc::new(kakarot_client.clone()).into_rpc();
 
         let mut modules: HashMap<KakarotRpcModule, Methods> = HashMap::new();
 

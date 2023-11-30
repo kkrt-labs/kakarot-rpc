@@ -1,13 +1,17 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use kakarot_rpc_core::client::constants::CHAIN_ID;
+use kakarot_rpc_core::client::errors::EthApiError;
+use kakarot_rpc_core::client::KakarotClient;
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
+
+use starknet::providers::Provider;
+use std::sync::Arc;
 
 use crate::api::net_api::NetApiServer;
 
 /// The RPC module for the implementing Net api
-#[derive(Default)]
-pub struct NetRpc<P: Provider + Send + Sync> {
+pub struct NetRpc<P: Provider + Send + Sync + 'static> {
     pub kakarot_client: Arc<KakarotClient<P>>,
 }
 
@@ -18,7 +22,7 @@ impl<P: Provider + Send + Sync> NetRpc<P> {
 }
 
 #[async_trait]
-impl NetApiServer for NetRpc {
+impl<P: Provider + Send + Sync + 'static> NetApiServer for NetRpc<P> {
     fn version(&self) -> Result<U64> {
         Ok(CHAIN_ID.into())
     }
@@ -33,7 +37,7 @@ impl NetApiServer for NetRpc {
         Ok(false)
     }
 
-    fn health(&self) -> Result<bool> {
+    async fn health(&self) -> Result<bool> {
         // Calls starknet block_number method to check if it resolves
         self.kakarot_client.starknet_provider().block_number().await.map_err(EthApiError::from)?;
 
