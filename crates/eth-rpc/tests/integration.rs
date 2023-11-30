@@ -34,7 +34,11 @@ mod integration_tests {
             start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
         let reqwest_client = reqwest::Client::new();
-        let res = reqwest_client.post(format!("http://localhost:{}/net_health", server_addr.port()));
+        let res = reqwest_client
+            .post(format!("http://localhost:{}/net_health", server_addr.port()))
+            .send()
+            .await
+            .expect("net_health: health check failed");
 
         let wallet: LocalWallet = SigningKey::from_slice(katana.eoa().private_key().as_ref())
             .expect("EOA Private Key should be used to init a LocalWallet")
