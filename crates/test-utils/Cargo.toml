@@ -29,6 +29,7 @@ starknet_api = { workspace = true }
 starknet-crypto = { workspace = true }
 
 # Other
+anyhow = { workspace = true }
 async-trait = { workspace = true }
 bytes = "1"
 dotenv = { workspace = true }

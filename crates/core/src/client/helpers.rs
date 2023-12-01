@@ -8,7 +8,7 @@ use thiserror::Error;
 
 use crate::client::constants::selectors::ETH_SEND_TRANSACTION;
 use crate::client::errors::EthApiError;
-use crate::models::ConversionError;
+use crate::models::errors::ConversionError;
 
 #[derive(Debug, Error)]
 pub enum DataDecodingError {
@@ -68,7 +68,10 @@ pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FieldE
 }
 
 /// Constructs the calldata for a raw Starknet invoke transaction call
-pub fn raw_kakarot_calldata(kakarot_address: FieldElement, mut calldata: Vec<FieldElement>) -> Vec<FieldElement> {
+pub fn prepare_kakarot_eth_send_transaction(
+    kakarot_address: FieldElement,
+    mut calldata: Vec<FieldElement>,
+) -> Vec<FieldElement> {
     let mut execute_calldata: Vec<FieldElement> = vec![
         FieldElement::ONE,                  // call array length
         kakarot_address,                    // contract address

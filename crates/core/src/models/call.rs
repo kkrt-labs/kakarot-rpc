@@ -5,8 +5,8 @@ use reth_rlp::Decodable;
 use starknet::accounts::Call as StarknetCall;
 use starknet_crypto::FieldElement;
 
-use super::ConversionError;
-use crate::models::DataDecodingError;
+use crate::client::helpers::DataDecodingError;
+use crate::models::errors::ConversionError;
 
 #[derive(Clone)]
 pub struct Call(StarknetCall);
