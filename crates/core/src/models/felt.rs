@@ -55,6 +55,7 @@ impl TryFrom<Felt252Wrapper> for u128 {
     }
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
         let felt = FieldElement::from_byte_slice_be(&address.0).unwrap(); // safe unwrap since H160 is 20 bytes

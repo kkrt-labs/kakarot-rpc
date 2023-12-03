@@ -58,11 +58,11 @@ impl Katana {
         let sequencer = katana_sequencer().await;
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-        Self::initialize(sequencer, starknet_provider).await
+        Self::initialize(sequencer, starknet_provider)
     }
 
     /// Initializes the Katana test environment.
-    async fn initialize(sequencer: TestSequencer, starknet_provider: Arc<JsonRpcClient<HttpTransport>>) -> Self {
+    fn initialize(sequencer: TestSequencer, starknet_provider: Arc<JsonRpcClient<HttpTransport>>) -> Self {
         // Load deployments
         let deployments_path = root_project_path!("lib/kakarot/deployments/katana/deployments.json");
         let deployments = std::fs::read_to_string(deployments_path).expect("Failed to read deployment file");
