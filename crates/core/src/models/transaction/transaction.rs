@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use reth_primitives::{TransactionSigned, H256, U128, U256, U64};
 use reth_rpc_types::{Signature, Transaction as EthTransaction};
 use starknet::core::types::{
@@ -10,7 +9,6 @@ use crate::client::constants::{self, CHAIN_ID};
 use crate::client::errors::EthApiError;
 use crate::client::KakarotClient;
 use crate::models::call::Calls;
-use crate::models::convertible::ConvertibleStarknetTransaction;
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
 
@@ -30,7 +28,7 @@ impl From<StarknetTransaction> for Transaction {
 
 macro_rules! get_invoke_transaction_field {
     (($field_v0:ident, $field_v1:ident), $type:ty) => {
-        pub fn $field_v1(&self) -> Result<$type, ConversionError<()>> {
+        pub fn $field_v1(&self) -> Result<$type, ConversionError> {
             match &self.0 {
                 Transaction::Invoke(tx) => match tx {
                     InvokeTransaction::V0(tx) => Ok(tx.$field_v0.clone().into()),
@@ -67,9 +65,8 @@ impl From<StarknetTransactions> for Vec<Transaction> {
     }
 }
 
-#[async_trait]
-impl ConvertibleStarknetTransaction for StarknetTransaction {
-    async fn to_eth_transaction<P: Provider + Send + Sync + 'static>(
+impl StarknetTransaction {
+    pub async fn to_eth_transaction<P: Provider + Send + Sync>(
         &self,
         client: &KakarotClient<P>,
         block_hash: Option<H256>,
@@ -150,10 +147,7 @@ impl ConvertibleStarknetTransaction for StarknetTransaction {
 
 impl StarknetTransaction {
     /// Checks if the transaction is a Kakarot transaction.
-    async fn is_kakarot_tx<P: Provider + Send + Sync + 'static>(
-        &self,
-        client: &KakarotClient<P>,
-    ) -> Result<bool, EthApiError> {
+    async fn is_kakarot_tx<P: Provider + Send + Sync>(&self, client: &KakarotClient<P>) -> Result<bool, EthApiError> {
         let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
         let sender_address: FieldElement = self.sender_address()?.into();
 

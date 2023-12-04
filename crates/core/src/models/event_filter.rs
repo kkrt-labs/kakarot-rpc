@@ -5,7 +5,6 @@ use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
 use super::block::EthBlockNumberOrTag;
-use super::convertible::ConvertibleEthEventFilter;
 use super::felt::Felt252Wrapper;
 use crate::client::errors::EthApiError;
 use crate::client::helpers::split_u256_into_field_elements;
@@ -25,8 +24,8 @@ impl From<EthEventFilter> for Filter {
     }
 }
 
-impl ConvertibleEthEventFilter for EthEventFilter {
-    fn to_starknet_event_filter<P: Provider + Send + Sync + 'static>(
+impl EthEventFilter {
+    pub fn to_starknet_event_filter<P: Provider + Send + Sync>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<EventFilter, EthApiError> {

@@ -10,7 +10,6 @@ use starknet_crypto::FieldElement;
 use super::felt::Felt252Wrapper;
 use crate::client::errors::EthApiError;
 use crate::client::KakarotClient;
-use crate::models::convertible::ConvertibleStarknetEvent;
 
 #[derive(Debug, Clone)]
 pub struct StarknetEvent(Event);
@@ -27,8 +26,8 @@ impl From<Event> for StarknetEvent {
     }
 }
 
-impl ConvertibleStarknetEvent for StarknetEvent {
-    fn to_eth_log<P: Provider + Send + Sync + 'static>(
+impl StarknetEvent {
+    pub fn to_eth_log<P: Provider + Send + Sync>(
         self,
         client: &KakarotClient<P>,
         block_hash: Option<H256>,

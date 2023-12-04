@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use reth_primitives::{Bloom, H256, U128, U256, U64, U8};
 use reth_rpc_types::TransactionReceipt as EthTransactionReceipt;
 use starknet::core::types::{
@@ -6,9 +5,6 @@ use starknet::core::types::{
 };
 use starknet::providers::Provider;
 
-use super::convertible::{
-    ConvertibleStarknetEvent, ConvertibleStarknetTransaction, ConvertibleStarknetTransactionReceipt,
-};
 use super::event::StarknetEvent;
 use super::felt::Felt252Wrapper;
 use super::transaction::transaction::StarknetTransaction;
@@ -31,9 +27,8 @@ impl From<StarknetTransactionReceipt> for MaybePendingTransactionReceipt {
     }
 }
 
-#[async_trait]
-impl ConvertibleStarknetTransactionReceipt for StarknetTransactionReceipt {
-    async fn to_eth_transaction_receipt<P: Provider + Send + Sync + 'static>(
+impl StarknetTransactionReceipt {
+    pub async fn to_eth_transaction_receipt<P: Provider + Send + Sync>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<Option<EthTransactionReceipt>, EthApiError> {

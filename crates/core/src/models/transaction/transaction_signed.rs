@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use reth_primitives::{Bytes, TransactionSigned};
 use reth_rlp::Decodable as _;
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction};
@@ -9,7 +8,6 @@ use crate::client::constants::MAX_FEE;
 use crate::client::errors::EthApiError;
 use crate::client::helpers::{prepare_kakarot_eth_send_transaction, DataDecodingError};
 use crate::client::KakarotClient;
-use crate::models::convertible::ConvertibleSignedTransaction;
 
 pub struct StarknetTransactionSigned(Bytes);
 
@@ -19,9 +17,8 @@ impl From<Bytes> for StarknetTransactionSigned {
     }
 }
 
-#[async_trait]
-impl ConvertibleSignedTransaction for StarknetTransactionSigned {
-    async fn to_broadcasted_invoke_transaction<P: Provider + Send + Sync + 'static>(
+impl StarknetTransactionSigned {
+    pub async fn to_broadcasted_invoke_transaction<P: Provider + Send + Sync>(
         &self,
         client: &KakarotClient<P>,
     ) -> Result<BroadcastedInvokeTransaction, EthApiError> {
