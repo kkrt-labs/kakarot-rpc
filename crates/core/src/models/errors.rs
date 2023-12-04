@@ -6,7 +6,7 @@ use crate::client::helpers::DataDecodingError;
 
 #[derive(Debug, Error)]
 /// Conversion error
-pub enum ConversionError<T> {
+pub enum ConversionError {
     /// Ethereum to Starknet transaction conversion error
     #[error("transaction conversion error: {0}")]
     TransactionConversionError(String),
@@ -26,9 +26,15 @@ pub enum ConversionError<T> {
     #[error("value out of range: {0}")]
     ValueOutOfRange(String),
     /// Uint conversion error
-    #[error(transparent)]
-    UintConversionError(#[from] FromUintError<T>),
+    #[error("Uint conversion error: {0}")]
+    UintConversionError(String),
     /// Other conversion error
     #[error("failed to convert value: {0}")]
     Other(String),
+}
+
+impl<T> From<FromUintError<T>> for ConversionError {
+    fn from(err: FromUintError<T>) -> Self {
+        Self::UintConversionError(err.to_string())
+    }
 }
