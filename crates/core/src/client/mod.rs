@@ -38,9 +38,6 @@ use crate::contracts::erc20::starknet_erc20::StarknetErc20;
 use crate::contracts::kakarot_contract::KakarotContract;
 use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
-use crate::models::convertible::{
-    ConvertibleSignedTransaction, ConvertibleStarknetBlock, ConvertibleStarknetTransaction,
-};
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::transaction::{StarknetTransaction, StarknetTransactions};
@@ -54,13 +51,13 @@ use crate::contracts::kakarot_contract::KakarotCoreReader;
 abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
 abigen_legacy!(Proxy, "./artifacts/proxy.json");
 
-pub struct KakarotClient<P: Provider + Send + Sync + 'static> {
+pub struct KakarotClient<P: Provider + Send + Sync> {
     starknet_provider: Arc<P>,
     kakarot_contract: KakarotContract<P>,
     network: Network,
 }
 
-impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
+impl<P: Provider + Send + Sync> KakarotClient<P> {
     /// Create a new `KakarotClient`.
     pub fn new(starknet_config: KakarotRpcConfig, starknet_provider: Arc<P>) -> Self {
         let KakarotRpcConfig {
@@ -326,7 +323,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory, EthApiError> {
         let block_count_usize =
-            usize::try_from(block_count).map_err(|e| ConversionError::<()>::ValueOutOfRange(e.to_string()))?;
+            usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
 
         let base_fee = self.base_fee_per_gas();
 
@@ -359,23 +356,23 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         let chain_id = request.chain_id.unwrap_or_else(|| CHAIN_ID.into());
 
         let from = request.from.ok_or_else(|| EthApiError::MissingParameterError("from for estimate_gas".into()))?;
-        let nonce = self.nonce(from, block_id).await?.try_into().map_err(ConversionError::<u64>::from)?;
+        let nonce = self.nonce(from, block_id).await?.try_into().map_err(ConversionError::from)?;
 
-        let gas_limit = request.gas.unwrap_or(U256::ZERO).try_into().map_err(ConversionError::<u64>::from)?;
+        let gas_limit = request.gas.unwrap_or(U256::ZERO).try_into().map_err(ConversionError::from)?;
         let max_fee_per_gas = request
             .max_fee_per_gas
             .unwrap_or_else(|| U256::from(BASE_FEE_PER_GAS))
             .try_into()
-            .map_err(ConversionError::<u128>::from)?;
+            .map_err(ConversionError::from)?;
         let max_priority_fee_per_gas = request
             .max_priority_fee_per_gas
             .unwrap_or_else(|| U256::from(self.max_priority_fee_per_gas()))
             .try_into()
-            .map_err(ConversionError::<u128>::from)?;
+            .map_err(ConversionError::from)?;
 
         let to = request.to.map_or(TransactionKind::Create, TransactionKind::Call);
 
-        let value = request.value.unwrap_or(U256::ZERO).try_into().map_err(ConversionError::<u128>::from)?;
+        let value = request.value.unwrap_or(U256::ZERO).try_into().map_err(ConversionError::from)?;
 
         let data = request.input.data.unwrap_or_default();
 
@@ -569,7 +566,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotClient<P> {
         // if the url is invalid, return an empty simulation (allows to call simulate_transaction on Kakana,
         // Madara, etc.)
         if url.is_err() {
-            let gas_usage = (*ESTIMATE_GAS).try_into().map_err(ConversionError::UintConversionError)?;
+            let gas_usage = (*ESTIMATE_GAS).try_into().map_err(ConversionError::from)?;
             let gas_price: Felt252Wrapper = (*MAX_FEE).into();
             let overall_fee = Felt252Wrapper::from(gas_usage) * gas_price.clone();
             return Ok(TransactionSimulationInfo {

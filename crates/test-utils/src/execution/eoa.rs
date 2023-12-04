@@ -20,7 +20,7 @@ use super::watch_tx;
 use crate::execution::contract::EvmContract;
 
 #[async_trait]
-pub trait EOA<P: Provider + Send + Sync + 'static> {
+pub trait EOA<P: Provider + Send + Sync> {
     async fn starknet_address(&self) -> Result<FieldElement, eyre::Error> {
         let client = self.client();
         Ok(client.compute_starknet_address(&self.evm_address()?, &StarknetBlockId::Tag(BlockTag::Latest)).await?)
@@ -54,7 +54,7 @@ pub trait EOA<P: Provider + Send + Sync + 'static> {
     }
 }
 
-pub struct KakarotEOA<P: Provider + Send + Sync + 'static> {
+pub struct KakarotEOA<P: Provider + Send + Sync> {
     pub private_key: H256,
     pub client: KakarotClient<P>,
 }
@@ -66,7 +66,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 }
 
 #[async_trait]
-impl<P: Provider + Send + Sync + 'static> EOA<P> for KakarotEOA<P> {
+impl<P: Provider + Send + Sync> EOA<P> for KakarotEOA<P> {
     fn private_key(&self) -> H256 {
         self.private_key
     }
@@ -78,8 +78,8 @@ impl<P: Provider + Send + Sync + 'static> EOA<P> for KakarotEOA<P> {
     }
 }
 
-impl<P: Provider + Send + Sync + 'static> KakarotEOA<P> {
-    pub async fn deploy_evm_contract<T: Tokenize + Send + Sync>(
+impl<P: Provider + Send + Sync> KakarotEOA<P> {
+    pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
         contract_name: &str,
         constructor_args: T,

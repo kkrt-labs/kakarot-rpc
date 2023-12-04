@@ -35,7 +35,7 @@ pub struct EthereumErc20<P> {
     pub kakarot_address: FieldElement,
 }
 
-impl<P: Provider + Send + Sync + 'static> EthereumErc20<P> {
+impl<P: Provider + Send + Sync> EthereumErc20<P> {
     pub const fn new(address: FieldElement, provider: Arc<P>, kakarot_address: FieldElement) -> Self {
         Self { address, provider, kakarot_address }
     }
