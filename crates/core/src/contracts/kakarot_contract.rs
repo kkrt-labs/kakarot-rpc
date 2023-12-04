@@ -16,7 +16,7 @@ pub struct KakarotContract<P: Provider + Send + Sync> {
 }
 
 impl<P: Provider + Send + Sync> KakarotContract<P> {
-    pub fn new(
+    pub const fn new(
         proxy_account_class_hash: FieldElement,
         externally_owned_account_class_hash: FieldElement,
         contract_account_class_hash: FieldElement,

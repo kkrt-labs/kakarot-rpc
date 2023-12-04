@@ -69,7 +69,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         } = starknet_config;
 
         let provider = starknet_provider.clone();
-        let contract_reader = KakarotCoreReader::new(kakarot_address, provider.clone());
+        let contract_reader = KakarotCoreReader::new(kakarot_address, provider);
 
         let kakarot_contract = KakarotContract::new(
             proxy_account_class_hash,
@@ -195,12 +195,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
 
         let proxy = ProxyReader::new(starknet_address, &self.starknet_provider);
 
-        let class_hash = match proxy.get_implementation().call().await {
-            Ok(class_hash) => class_hash,
-            // TODO: replace by proper error handling
-            // if the contract doesn't exist, we return 0
-            Err(_) => FieldElement::ZERO,
-        };
+        let class_hash = proxy.get_implementation().call().await.map_or(FieldElement::ZERO, |class_hash| class_hash);
 
         if class_hash == self.kakarot_contract.contract_account_class_hash {
             // Get the nonce of the contract account -> a storage variable

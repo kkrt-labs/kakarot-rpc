@@ -120,7 +120,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         Ok(KakarotEvmContract::new(bytecode, event.data[1], event.data[0]))
     }
 
-    pub async fn call_evm_contract<T: Tokenize + Send + Sync>(
+    pub async fn call_evm_contract<T: Tokenize>(
         &self,
         contract: &KakarotEvmContract,
         function: &str,
