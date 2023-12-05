@@ -19,4 +19,9 @@ pub trait NetApi {
     /// Otherwise false.
     #[method(name = "listening")]
     fn listening(&self) -> Result<bool>;
+
+    /// Returns true if Kakarot RPC_URL is reachable.
+    /// Otherwise throw an EthApiError.
+    #[method(name = "health")]
+    async fn health(&self) -> Result<bool>;
 }
