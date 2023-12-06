@@ -26,7 +26,7 @@ struct InvalidFieldElementError;
 impl std::error::Error for InvalidFieldElementError {}
 
 impl std::fmt::Display for InvalidFieldElementError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "Invalid FieldElement")
     }
 }
@@ -47,7 +47,7 @@ pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FieldE
         actual: 0,
     })?;
     let return_data_len: u64 =
-        return_data_len.try_into().map_err(|e: ValueOutOfRangeError| ConversionError::<()>::Other(e.to_string()))?;
+        return_data_len.try_into().map_err(|e: ValueOutOfRangeError| ConversionError::Other(e.to_string()))?;
 
     let return_data = call_result.get(1..).ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
         entrypoint: "eth_call or eth_send_transaction".into(),

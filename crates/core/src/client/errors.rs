@@ -84,8 +84,8 @@ pub enum EthApiError {
     Other(#[from] anyhow::Error),
 }
 
-impl<T> From<ConversionError<T>> for EthApiError {
-    fn from(err: ConversionError<T>) -> Self {
+impl From<ConversionError> for EthApiError {
+    fn from(err: ConversionError) -> Self {
         Self::ConversionError(err.to_string())
     }
 }

@@ -5,10 +5,6 @@ use kakarot_rpc_core::client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT};
 use kakarot_rpc_core::client::errors::EthApiError;
 use kakarot_rpc_core::client::{ContractAccountReader, KakarotClient};
 use kakarot_rpc_core::models::block::EthBlockId;
-use kakarot_rpc_core::models::convertible::{
-    ConvertibleEthEventFilter, ConvertibleStarknetEvent, ConvertibleStarknetTransaction,
-    ConvertibleStarknetTransactionReceipt,
-};
 use kakarot_rpc_core::models::event::StarknetEvent;
 use kakarot_rpc_core::models::event_filter::EthEventFilter;
 use kakarot_rpc_core::models::felt::Felt252Wrapper;
@@ -33,7 +29,7 @@ pub struct KakarotEthRpc<P: Provider + Send + Sync + 'static> {
     pub kakarot_client: Arc<KakarotClient<P>>,
 }
 
-impl<P: Provider + Send + Sync> KakarotEthRpc<P> {
+impl<P: Provider + Send + Sync + 'static> KakarotEthRpc<P> {
     pub fn new(kakarot_client: Arc<KakarotClient<P>>) -> Self {
         Self { kakarot_client }
     }

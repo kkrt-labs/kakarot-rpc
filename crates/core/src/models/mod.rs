@@ -1,7 +1,6 @@
 pub mod balance;
 pub mod block;
 pub mod call;
-pub mod convertible;
 pub mod errors;
 pub mod event;
 pub mod event_filter;

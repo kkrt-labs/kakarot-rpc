@@ -25,7 +25,7 @@ pub enum KakarotRpcModule {
     Net,
 }
 
-pub struct KakarotRpcModuleBuilder<P: Provider + Send + Sync + 'static> {
+pub struct KakarotRpcModuleBuilder<P: Provider + Send + Sync> {
     modules: HashMap<KakarotRpcModule, Methods>,
     _phantom: PhantomData<P>,
 }

@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use reth_primitives::{Address, BlockId as EthereumBlockId, BlockNumberOrTag, Bloom, Bytes, H256, H64, U256};
 use reth_rpc_types::{Block, BlockTransactions, Header, RichBlock};
 use starknet::core::types::{
@@ -7,7 +6,6 @@ use starknet::core::types::{
 };
 use starknet::providers::Provider;
 
-use super::convertible::ConvertibleStarknetBlock;
 use super::felt::Felt252Wrapper;
 use crate::client::constants::{
     DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY,
@@ -24,7 +22,7 @@ impl EthBlockId {
 }
 
 impl TryFrom<EthBlockId> for StarknetBlockId {
-    type Error = ConversionError<()>;
+    type Error = ConversionError;
     fn try_from(eth_block_id: EthBlockId) -> Result<Self, Self::Error> {
         match eth_block_id.0 {
             EthereumBlockId::Hash(hash) => {
@@ -147,9 +145,8 @@ impl BlockWithTxs {
     );
 }
 
-#[async_trait]
-impl ConvertibleStarknetBlock for BlockWithTxHashes {
-    async fn to_eth_block<P: Provider + Send + Sync + 'static>(&self, client: &KakarotClient<P>) -> RichBlock {
+impl BlockWithTxHashes {
+    pub async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &KakarotClient<P>) -> RichBlock {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -226,9 +223,8 @@ impl ConvertibleStarknetBlock for BlockWithTxHashes {
     }
 }
 
-#[async_trait]
-impl ConvertibleStarknetBlock for BlockWithTxs {
-    async fn to_eth_block<P: Provider + Send + Sync + 'static>(&self, client: &KakarotClient<P>) -> RichBlock {
+impl BlockWithTxs {
+    pub async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &KakarotClient<P>) -> RichBlock {
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
