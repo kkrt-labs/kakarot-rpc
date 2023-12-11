@@ -69,8 +69,8 @@ impl StarknetTransaction {
     pub async fn to_eth_transaction<P: Provider + Send + Sync>(
         &self,
         client: &KakarotClient<P>,
-        block_hash: Option<H256>,
-        block_number: Option<U256>,
+        block_hash: H256,
+        block_number: U256,
         transaction_index: Option<U256>,
     ) -> Result<EthTransaction, EthApiError> {
         if !self.is_kakarot_tx(client).await? {
@@ -81,18 +81,8 @@ impl StarknetTransaction {
 
         let hash = self.transaction_hash();
 
-        let starknet_block_id = match block_hash {
-            Some(block_hash) => StarknetBlockId::Hash(TryInto::<Felt252Wrapper>::try_into(block_hash)?.into()),
-            None => match block_number {
-                Some(block_number) => StarknetBlockId::Number(block_number.as_limbs()[0]),
-                None => {
-                    return Err(EthApiError::RequestError(ProviderError::StarknetError(StarknetErrorWithMessage {
-                        code: MaybeUnknownErrorCode::Known(StarknetError::BlockNotFound),
-                        message: "Block hash or block number must be provided".into(),
-                    })));
-                }
-            },
-        };
+        let starknet_block_id = StarknetBlockId::Hash(TryInto::<Felt252Wrapper>::try_into(block_hash)?.into());
+
         let nonce: Felt252Wrapper = match &self.0 {
             Transaction::Invoke(invoke_tx) => match invoke_tx {
                 InvokeTransaction::V0(_) => {
@@ -124,8 +114,8 @@ impl StarknetTransaction {
         Ok(EthTransaction {
             hash,
             nonce,
-            block_hash,
-            block_number,
+            block_hash: Some(block_hash),
+            block_number: Some(block_number),
             transaction_index,
             from,
             to,

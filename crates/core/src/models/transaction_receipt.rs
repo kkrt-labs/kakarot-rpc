@@ -51,12 +51,12 @@ impl StarknetTransactionReceipt {
                     let transaction_hash: Option<H256> = Some(transaction_hash.into());
 
                     let block_hash: Felt252Wrapper = block_hash.into();
-                    let block_hash: Option<H256> = Some(block_hash.into());
 
                     let block_number: Felt252Wrapper = block_number.into();
-                    let block_number: Option<U256> = Some(block_number.into());
 
-                    let eth_tx = starknet_tx.to_eth_transaction(client, block_hash, block_number, None).await?;
+                    let eth_tx = starknet_tx
+                        .to_eth_transaction(client, block_hash.clone().into(), block_number.clone().into(), None)
+                        .await?;
                     let from = eth_tx.from;
                     let to = eth_tx.to;
                     let contract_address = match to {
@@ -92,7 +92,16 @@ impl StarknetTransactionReceipt {
                         .into_iter()
                         .map(StarknetEvent::new)
                         .filter_map(|event| {
-                            event.to_eth_log(client, block_hash, block_number, transaction_hash, None, None).ok()
+                            event
+                                .to_eth_log(
+                                    client,
+                                    block_hash.clone().into(),
+                                    block_number.clone().into(),
+                                    transaction_hash,
+                                    None,
+                                    None,
+                                )
+                                .ok()
                         })
                         .collect();
 
@@ -101,8 +110,8 @@ impl StarknetTransactionReceipt {
                         // TODO: transition this hardcoded default out of nearing-demo-day hack and seeing how to
                         // properly source/translate this value
                         transaction_index: U64::from(0), // TODO: Fetch real data
-                        block_hash,
-                        block_number,
+                        block_hash: Some(block_hash.into()),
+                        block_number: Some(block_number.into()),
                         from,
                         to,
                         cumulative_gas_used: U256::from(1_000_000), // TODO: Fetch real data

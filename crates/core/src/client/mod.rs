@@ -516,8 +516,8 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     pub async fn filter_starknet_into_eth_txs(
         &self,
         initial_transactions: StarknetTransactions,
-        block_hash: Option<H256>,
-        block_number: Option<U256>,
+        block_hash: H256,
+        block_number: U256,
     ) -> BlockTransactions {
         let handles = Into::<Vec<TransactionType>>::into(initial_transactions).into_iter().map(|tx| async move {
             let tx = Into::<StarknetTransaction>::into(tx);
