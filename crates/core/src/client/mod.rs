@@ -142,10 +142,13 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
                 let block_hash: Felt252Wrapper = block_with_txs.block_hash.into();
-                let block_hash = Some(block_hash.into());
                 let block_number: Felt252Wrapper = block_with_txs.block_number.into();
-                let block_number = Some(block_number.into());
-                self.filter_starknet_into_eth_txs(block_with_txs.transactions.into(), block_hash, block_number).await
+                self.filter_starknet_into_eth_txs(
+                    block_with_txs.transactions.into(),
+                    block_hash.into(),
+                    block_number.into(),
+                )
+                .await
             }
         };
         let len = match block_transactions {
@@ -174,9 +177,9 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
                 let block_hash: Felt252Wrapper = tr.block_hash.into();
-                (Some(block_hash.into()), Some(U256::from(tr.block_number)))
+                (block_hash.into(), U256::from(tr.block_number))
             }
-            _ => (None, None), // skip all transactions other than Invoke, covers the pending case
+            _ => (Default::default(), Default::default()), // skip all transactions other than Invoke, covers the pending case
         };
 
         let eth_tx = StarknetTransaction::from(starknet_tx)

@@ -258,7 +258,8 @@ impl BlockWithTxs {
         let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
         let number = self.block_number().map(U256::from);
 
-        let transactions = client.filter_starknet_into_eth_txs(self.transactions().into(), hash, number).await;
+        let transactions =
+            client.filter_starknet_into_eth_txs(self.transactions().into(), hash.unwrap(), number.unwrap()).await;
         let header = Header {
             // PendingBlockWithTxs doesn't have a block hash
             hash,
