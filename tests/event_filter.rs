@@ -3,22 +3,11 @@ mod test_utils;
 use kakarot_rpc::models::event_filter::EthEventFilter;
 use reth_rpc_types::Filter;
 use rstest::*;
-use serde_json::Value;
-use starknet::core::types::{EventFilter, FieldElement};
+use starknet::core::types::EventFilter;
 use test_utils::fixtures::katana;
 use test_utils::sequencer::Katana;
 
-lazy_static::lazy_static! {
-    pub static ref KAKAROT_ADDRESS: FieldElement = {
-        let deployments = include_str!("../lib/kakarot/deployments/katana/deployments.json");
-
-    // Step 2: Parse the JSON
-    let object: Value = serde_json::from_str(deployments).unwrap();
-
-    // Step 3: Access the desired data
-    object.get("kakarot").unwrap().get("address").unwrap().as_str().unwrap().parse().unwrap()
-    };
-}
+use crate::test_utils::constants::KAKAROT_ADDRESS;
 
 fn assert_eq_event_filter(lhs: EventFilter, rhs: EventFilter) {
     assert_eq!(lhs.from_block, rhs.from_block);

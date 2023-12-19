@@ -7,12 +7,15 @@ use starknet::core::types::Event;
 use test_utils::fixtures::katana;
 use test_utils::sequencer::Katana;
 
+use crate::test_utils::constants::KAKAROT_ADDRESS;
+
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_to_eth_log_log3(#[future] katana: Katana) {
     // Given
-    let event: Event = serde_json::from_str(include_str!("test_data/conversion/starknet/event_log3.json")).unwrap();
+    let mut event: Event = serde_json::from_str(include_str!("test_data/conversion/starknet/event_log3.json")).unwrap();
+    event.from_address = *KAKAROT_ADDRESS;
     let starknet_event = StarknetEvent::new(event);
 
     let client = katana.client();
@@ -30,8 +33,10 @@ async fn test_to_eth_log_log3(#[future] katana: Katana) {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_to_eth_log_log4(#[future] katana: Katana) {
     // Given
-    let event: Event = serde_json::from_str(include_str!("test_data/conversion/starknet/event_log4.json")).unwrap();
+    let mut event: Event = serde_json::from_str(include_str!("test_data/conversion/starknet/event_log4.json")).unwrap();
+    event.from_address = *KAKAROT_ADDRESS;
     let starknet_event = StarknetEvent::new(event);
+
     let client = katana.client();
 
     // When
@@ -48,8 +53,10 @@ async fn test_to_eth_log_log4(#[future] katana: Katana) {
 #[should_panic(expected = "KakarotDataFilteringError(\"Event\")")]
 async fn test_to_eth_log_should_fail_on_from_address_not_kakarot_address(#[future] katana: Katana) {
     // Given
-    let event: Event =
+    let mut event: Event =
         serde_json::from_str(include_str!("test_data/conversion/starknet/event_invalid_from_address.json")).unwrap();
+    event.from_address = *KAKAROT_ADDRESS;
+
     let starknet_event = StarknetEvent::new(event);
 
     let client = katana.client();
@@ -65,8 +72,10 @@ async fn test_to_eth_log_should_fail_on_from_address_not_kakarot_address(#[futur
                                exceeds the maximum size of an Ethereum address\")")]
 async fn test_to_eth_log_should_fail_on_key_not_convertible_to_eth_address(#[future] katana: Katana) {
     // Given
-    let event: Event =
+    let mut event: Event =
         serde_json::from_str(include_str!("test_data/conversion/starknet/event_invalid_key.json")).unwrap();
+    event.from_address = *KAKAROT_ADDRESS;
+
     let starknet_event = StarknetEvent::new(event);
 
     let client = katana.client();
@@ -80,7 +89,8 @@ async fn test_to_eth_log_should_fail_on_key_not_convertible_to_eth_address(#[fut
 #[tokio::test(flavor = "multi_thread")]
 async fn test_to_eth_log_with_optional_parameters(#[future] katana: Katana) {
     // Given
-    let event: Event = serde_json::from_str(include_str!("test_data/conversion/starknet/event_log3.json")).unwrap();
+    let mut event: Event = serde_json::from_str(include_str!("test_data/conversion/starknet/event_log3.json")).unwrap();
+    event.from_address = *KAKAROT_ADDRESS;
     let starknet_event = StarknetEvent::new(event);
 
     let client = katana.client();
