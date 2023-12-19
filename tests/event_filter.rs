@@ -42,8 +42,10 @@ async fn test_to_starknet_event_filter_with_block_hash(#[future] katana: Katana)
     let starknet_event_filter = eth_event_filter.to_starknet_event_filter(client).unwrap();
 
     // Then
-    let expected: EventFilter =
+    let mut expected: EventFilter =
         serde_json::from_str(include_str!("test_data/conversion/starknet/event_filter_block_hash.json")).unwrap();
+    // Workaround for the fact that the Kakarot contract address is not deterministic
+    expected.address = Some(*KAKAROT_ADDRESS);
     assert_eq_event_filter(expected, starknet_event_filter);
 }
 
@@ -62,8 +64,10 @@ async fn test_to_starknet_event_filter_with_from_to(#[future] katana: Katana) {
     let starknet_event_filter = eth_event_filter.to_starknet_event_filter(client).unwrap();
 
     // Then
-    let expected: EventFilter =
+    let mut expected: EventFilter =
         serde_json::from_str(include_str!("test_data/conversion/starknet/event_filter_from_to.json")).unwrap();
+    // Workaround for the fact that the Kakarot contract address is not deterministic
+    expected.address = Some(*KAKAROT_ADDRESS);
     assert_eq_event_filter(expected, starknet_event_filter);
 }
 
@@ -82,8 +86,10 @@ async fn test_to_starknet_event_filter_without_topics(#[future] katana: Katana) 
     let starknet_event_filter = eth_event_filter.to_starknet_event_filter(client).unwrap();
 
     // Then
-    let expected: EventFilter =
+    let mut expected: EventFilter =
         serde_json::from_str(include_str!("test_data/conversion/starknet/event_filter_without_topics.json")).unwrap();
+    // Workaround for the fact that the Kakarot contract address is not deterministic
+    expected.address = Some(*KAKAROT_ADDRESS);
     assert_eq_event_filter(expected, starknet_event_filter);
 }
 
@@ -102,8 +108,10 @@ async fn test_to_starknet_event_filter_without_address(#[future] katana: Katana)
     let starknet_event_filter = eth_event_filter.to_starknet_event_filter(client).unwrap();
 
     // Then
-    let expected: EventFilter =
+    let mut expected: EventFilter =
         serde_json::from_str(include_str!("test_data/conversion/starknet/event_filter_without_address.json")).unwrap();
+    // Workaround for the fact that the Kakarot contract address is not deterministic
+    expected.address = Some(*KAKAROT_ADDRESS);
     assert_eq_event_filter(expected, starknet_event_filter);
 }
 
@@ -123,8 +131,10 @@ async fn test_to_starknet_event_filter_without_topics_or_address(#[future] katan
     let starknet_event_filter = eth_event_filter.to_starknet_event_filter(client).unwrap();
 
     // Then
-    let expected: EventFilter =
+    let mut expected: EventFilter =
         serde_json::from_str(include_str!("test_data/conversion/starknet/event_filter_without_topics_or_address.json"))
             .unwrap();
+    // Workaround for the fact that the Kakarot contract address is not deterministic
+    expected.address = Some(*KAKAROT_ADDRESS);
     assert_eq_event_filter(expected, starknet_event_filter);
 }
