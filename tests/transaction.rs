@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod test_utils;
 
 use kakarot_rpc::models::felt::Felt252Wrapper;
@@ -10,6 +11,8 @@ use test_utils::evm_contract::KakarotEvmContract;
 use test_utils::fixtures::counter;
 use test_utils::sequencer::Katana;
 
+use crate::test_utils::eoa::KakarotEOA;
+
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
@@ -19,7 +22,8 @@ async fn test_is_kakarot_tx(#[future] counter: (Katana, KakarotEvmContract)) {
     let counter = counter.1;
     let client = katana.client();
     let eoa = katana.eoa();
-    let starknet_tx_hash = eoa.call_evm_contract(&counter, "inc", (), 0).await.expect("Failed to increment counter");
+    let starknet_tx_hash =
+        KakarotEOA::call_evm_contract(eoa, &counter, "inc", (), 0).await.expect("Failed to increment counter");
 
     // Query transaction
     let tx = client

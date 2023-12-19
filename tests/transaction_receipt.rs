@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod test_utils;
 
 use crate::test_utils::evm_contract::KakarotEvmContract;

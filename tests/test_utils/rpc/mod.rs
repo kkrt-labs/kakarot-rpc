@@ -58,6 +58,10 @@ use super::sequencer::Katana;
 ///
 /// }
 /// ```
+///
+/// allow(dead_code) is used because this function is used in tests,
+/// and each test is compiled separately, so the compiler thinks this function is unused
+#[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
     let sequencer = katana.sequencer();
     let client = katana.client();

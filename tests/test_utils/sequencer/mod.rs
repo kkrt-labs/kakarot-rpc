@@ -111,6 +111,9 @@ impl Katana {
         self.eoa.client()
     }
 
+    /// allow(dead_code) is used because this function is used in tests,
+    /// and each test is compiled separately, so the compiler thinks this function is unused
+    #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
     }

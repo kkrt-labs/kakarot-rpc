@@ -121,6 +121,13 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         Ok(KakarotEvmContract::new(bytecode, event.data[1], event.data[0]))
     }
 
+    /// Calls a KakarotEvmContract function and returns the Starknet transaction hash
+    /// The transaction is signed and sent by the EOA
+    /// The transaction is waited for until it is confirmed
+    ///
+    /// allow(dead_code) is used because this function is used in tests,
+    /// and each test is compiled separately, so the compiler thinks this function is unused
+    #[allow(dead_code)]
     pub async fn call_evm_contract<T: Tokenize>(
         &self,
         contract: &KakarotEvmContract,
@@ -145,6 +152,12 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         Ok(starknet_tx_hash)
     }
 
+    /// Transfers value to the given address
+    /// The transaction is signed and sent by the EOA
+    ///
+    /// allow(dead_code) is used because this function is used in tests,
+    /// and each test is compiled separately, so the compiler thinks this function is unused
+    #[allow(dead_code)]
     pub async fn transfer(&self, to: Address, value: u128) -> Result<H256, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;

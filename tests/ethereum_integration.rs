@@ -1,7 +1,7 @@
+mod test_utils;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Duration;
-mod test_utils;
 
 use ethers::contract::ContractFactory;
 use ethers::core::k256::ecdsa::SigningKey;

@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod test_utils;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use rstest::*;
