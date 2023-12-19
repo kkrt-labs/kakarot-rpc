@@ -45,6 +45,7 @@ async fn test_to_eth_block_with_tx_hashes(#[future] counter: (Katana, KakarotEvm
 
     let eth_block = block.to_eth_block(client).await.inner;
 
+    // TODO: Check that the block is valid
     assert_eq!(&eth_block.header.number.unwrap(), &U256::from(block_number));
     let tx_hashes = match eth_block.transactions {
         BlockTransactions::Hashes(tx_hashes) => tx_hashes,
@@ -90,6 +91,7 @@ async fn test_to_eth_block_with_txs(#[future] counter: (Katana, KakarotEvmContra
 
     let eth_block = block.to_eth_block(client).await.inner;
 
+    // TODO: Check that the block is valid
     assert_eq!(&eth_block.header.number.unwrap(), &U256::from(block_number));
     let txs = match eth_block.transactions {
         BlockTransactions::Full(txs) => txs,
