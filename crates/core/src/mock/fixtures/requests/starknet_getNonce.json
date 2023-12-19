@@ -1,6 +1,0 @@
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "starknet_getNonce",
-  "params": ["latest", "0xabde1"]
-}

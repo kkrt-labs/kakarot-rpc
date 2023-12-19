@@ -14,9 +14,10 @@ runtimes:
     - node@18.12.1
     - python@3.10.8
 lint:
+  disabled:
+    - checkov
   enabled:
     - actionlint@1.6.26
-    - checkov@3.1.9
     - clippy@1.65.0
     - git-diff-check
     - hadolint@2.12.0
