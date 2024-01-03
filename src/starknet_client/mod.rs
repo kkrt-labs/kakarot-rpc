@@ -329,8 +329,12 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory, EthApiError> {
-        let block_count_usize = usize::try_from(block_count + U256::from(1))
-            .map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
+        if block_count == U256::ZERO {
+            return Ok(FeeHistory::default());
+        }
+
+        let block_count_usize =
+            usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
 
         let base_fee = self.base_fee_per_gas();
 
@@ -343,11 +347,15 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             _ => self.starknet_provider().block_number().await?,
         };
 
-        let gas_used_ratio: Vec<f64> = vec![0.9; block_count_usize];
+        let gas_used_ratio: Vec<f64> = vec![1.0; block_count_usize];
         let newest_block = U256::from(newest_block);
-        let oldest_block: U256 = if newest_block >= block_count { newest_block - block_count } else { U256::from(0) };
+        let oldest_block: U256 = if newest_block >= block_count - U256::from(1) {
+            newest_block + U256::from(1) - block_count
+        } else {
+            U256::ZERO
+        };
 
-        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: Some(vec![vec![]]) })
+        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: None })
     }
 
     /// Returns the estimated gas for a transaction

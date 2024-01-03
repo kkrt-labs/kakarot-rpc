@@ -112,8 +112,8 @@ impl StarknetTransaction {
 
         let calls: Calls = self.calldata()?.try_into()?;
 
-        if calls.len() > 1 {
-            return Err(EthApiError::ConversionError("Multi-call is not yet supported".to_string()));
+        if calls.len() != 1 {
+            return Err(EthApiError::ConversionError("Call length is {calls.len()}, expected 1".to_string()));
         }
 
         let call =
