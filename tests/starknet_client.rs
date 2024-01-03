@@ -51,13 +51,13 @@ async fn test_fee_history(#[future] katana: Katana) {
     let client = katana.client();
 
     let newest_block = client.starknet_provider().block_number().await.unwrap();
-    let block_count = newest_block;
+    let block_count = newest_block + 1;
 
     // Check fee history
     let fee_history =
         client.fee_history(U256::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
-    assert_eq!(fee_history.base_fee_per_gas.len(), (block_count + 1) as usize);
-    assert_eq!(fee_history.gas_used_ratio.len(), (block_count + 1) as usize);
+    assert_eq!(fee_history.base_fee_per_gas.len(), block_count as usize);
+    assert_eq!(fee_history.gas_used_ratio.len(), block_count as usize);
     assert_eq!(fee_history.oldest_block, U256::ZERO);
 }
 

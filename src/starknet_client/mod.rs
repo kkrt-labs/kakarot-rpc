@@ -349,7 +349,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
 
         let gas_used_ratio: Vec<f64> = vec![1.0; block_count_usize];
         let newest_block = U256::from(newest_block);
-        let oldest_block: U256 = if newest_block >= block_count - U256::from(1) {
+        let oldest_block: U256 = if newest_block + U256::from(1) >= block_count {
             newest_block + U256::from(1) - block_count
         } else {
             U256::ZERO
