@@ -355,7 +355,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             U256::ZERO
         };
 
-        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: None })
+        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: Some(vec![]) })
     }
 
     /// Returns the estimated gas for a transaction
