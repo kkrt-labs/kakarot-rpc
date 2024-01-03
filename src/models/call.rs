@@ -88,7 +88,7 @@ impl TryFrom<Call> for Transaction {
     type Error = DataDecodingError;
 
     fn try_from(value: Call) -> std::result::Result<Self, Self::Error> {
-        let call = value.0.calldata.iter().filter_map(|x| u8::try_from(*x).ok()).collect::<Vec<u8>>();
+        let call = value.0.calldata.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<u8>>();
 
         let maybe_tx_type = call
             .first()
