@@ -68,7 +68,6 @@ impl HiveGenesisConfig {
 // Define constant addresses for Kakarot contracts
 lazy_static! {
     pub static ref KAKAROT_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9001").unwrap(); // Safe unwrap, 0x9001
-    pub static ref BLOCKHASH_REGISTRY_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9002").unwrap(); // Safe unwrap, 0x9002
     pub static ref DEPLOYER_ACCOUNT_ADDRESS: FieldElement = FieldElement::from_hex_be("0x9003").unwrap(); // Safe unwrap, 0x9003
 }
 
@@ -157,10 +156,6 @@ pub async fn serialize_hive_to_madara_genesis_config(
         Felt(*kakarot_contracts.get("kakarot").expect("Failed to get kakarot class hash")),
     ));
     madara_loader.contracts.push((
-        Felt(*BLOCKHASH_REGISTRY_ADDRESS),
-        Felt(*kakarot_contracts.get("blockhash_registry").expect("Failed to get blockhash_registry class hash")),
-    ));
-    madara_loader.contracts.push((
         Felt(*DEPLOYER_ACCOUNT_ADDRESS),
         Felt(*kakarot_contracts.get("OpenzeppelinAccount").expect("Failed to get deployer account class hash")),
     ));
@@ -172,7 +167,6 @@ pub async fn serialize_hive_to_madara_genesis_config(
         ("contract_account_class_hash", contract_account_class_hash),
         ("externally_owned_account", eoa_class_hash),
         ("account_proxy_class_hash", account_proxy_class_hash),
-        ("blockhash_registry_address", *BLOCKHASH_REGISTRY_ADDRESS),
         // TODO: Use DEPLOY_FEE constant https://github.com/kkrt-labs/kakarot-rpc/pull/431/files#diff-88f745498d0aaf0b185085d99a74f0feaf253f047babc85770847931e7f726c3R125
         ("deploy_fee", FieldElement::from(100000_u64)),
     ];

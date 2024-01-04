@@ -21,17 +21,17 @@ lint:
     - clippy@1.65.0
     - git-diff-check
     - hadolint@2.12.0
-    - markdownlint@0.37.0
-    - osv-scanner@1.4.3
+    - markdownlint@0.38.0
+    - osv-scanner@1.5.0
     - oxipng@9.0.0
-    - prettier@3.1.0
+    - prettier@3.1.1
     - rustfmt@1.65.0
     - shellcheck@0.9.0
     - shfmt@3.6.0
     - taplo@0.8.1
-    - terrascan@1.18.5
-    - trivy@0.47.0
-    - trufflehog@3.63.2-rc0
+    - terrascan@1.18.11
+    - trivy@0.48.1
+    - trufflehog@3.63.7
     - yamllint@1.33.0
 actions:
   disabled:

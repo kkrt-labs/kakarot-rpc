@@ -397,7 +397,7 @@ async fn test_madara_genesis() {
     // Then
     let loader: GenesisLoader = serde_json::from_reader(&combined_genesis_file)
         .unwrap_or_else(|_| panic!("Failed to read from file at path {:?}", &combined_genesis_path));
-    assert_eq!(9 + 3 + 7, loader.contracts.len()); // 9 original + 3 Kakarot contracts + 7 hive
+    assert_eq!(9 + 2 + 7, loader.contracts.len()); // 9 original + 2 Kakarot contracts + 7 hive
 
     // After
     std::fs::remove_file(combined_genesis_path)
