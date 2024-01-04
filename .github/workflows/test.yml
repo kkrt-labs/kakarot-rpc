@@ -15,7 +15,7 @@ jobs:
           profile: minimal
           components: llvm-tools-preview, rustfmt, clippy
           override: true
-          toolchain: 1.73.0
+          toolchain: 1.74.0
       - name: Retrieve cached dependencies
         uses: Swatinem/rust-cache@v2
       - name: Setup coverage env
@@ -60,15 +60,14 @@ jobs:
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
       - name: Setup the Kakarot submodule
         run: make setup
-      # Lint
+      # Create dump
+      - name: Create dump
+        run: ./scripts/make_with_env.sh && make dump-katana
       - name: Lint
         run: |
           cargo check &&
           cargo fmt --all -- --check &&
           cargo clippy --workspace --all-features --all-targets -- -D warnings
-      # Create dump
-      - name: Create dump
-        run: ./scripts/make_with_env.sh && make dump-katana
       - name: Generate code coverage
         run: make test-coverage
       - name: Upload coverage to Codecov

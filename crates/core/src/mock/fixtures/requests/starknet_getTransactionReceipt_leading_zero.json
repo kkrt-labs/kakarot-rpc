@@ -1,8 +1,0 @@
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "starknet_getTransactionReceipt",
-  "params": [
-    "0x03204b4c0e379c3a5ccb80d08661d5a538e95e2960581c9faf7ebcf8ff5a7d3c"
-  ]
-}

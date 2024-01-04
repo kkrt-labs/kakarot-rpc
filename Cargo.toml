@@ -1,8 +1,5 @@
-[workspace]
-members = ["crates/eth-rpc", "crates/core", "crates/test-utils"]
-resolver = "2"
-
-[workspace.package]
+[package]
+name = "kakarot-rpc"
 version = "0.1.0"
 edition = "2021"
 authors = [
@@ -20,7 +17,7 @@ repository = "https://github.com/kkrt-labs/kakarot-rpc"
 readme = "./README.md"
 license = "MIT"
 
-[workspace.dependencies]
+[dependencies]
 # Starknet dependencies
 starknet = "0.7.0"
 starknet-crypto = "0.6.1"
@@ -59,18 +56,28 @@ tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
 url = "2.3.1"
 
+env_logger = "0.10.0"
+hex = "0.4"
+log = "0.4.17"
+reqwest = "0.11.13"
+thiserror = "1.0.38"
+
+tower = "0.4.12"
+tower-http = "0.4.4"
+futures = "0.3.26"
+num-bigint = "0.4.3"
+
+bytes = "1"
+foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
+walkdir = "2.3.3"
+
+
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
 katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
-cargo-husky = { version = "1.5.0", default-features = false, features = [
-  "precommit-hook",
-  "run-for-all",
-  "run-cargo-clippy",
-  "run-cargo-fmt",
-] }
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "3357e69" }
@@ -78,3 +85,14 @@ blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "3357e69"
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
+
+[dev-dependencies]
+toml = "0.7.5"
+cargo-husky = { version = "1.5.0", default-features = false, features = [
+  "precommit-hook",
+  "run-for-all",
+  "run-cargo-clippy",
+  "run-cargo-fmt",
+] }
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
+rstest = "0.18.1"

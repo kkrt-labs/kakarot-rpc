@@ -1,6 +1,0 @@
-{
-  "jsonrpc": "2.0",
-  "method": "starknet_blockNumber",
-  "id": 0,
-  "params": []
-}
