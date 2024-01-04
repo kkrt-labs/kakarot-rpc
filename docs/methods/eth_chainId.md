@@ -27,6 +27,3 @@ This method interacts with the Kakarot contract to grab `chain_id` value from en
 ### Kakarot methods
 
 ### Starknet methods
-or any other Starknet
-contract. The method returns a constant variable name `CHAIN_ID` that is equal
-to the ASCII representation of KKRT.
