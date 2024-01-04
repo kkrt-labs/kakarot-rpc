@@ -6,7 +6,7 @@ use crate::models::event_filter::EthEventFilter;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::transaction::StarknetTransaction;
 use crate::models::transaction_receipt::StarknetTransactionReceipt as TransactionReceiptWrapper;
-use crate::starknet_client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT};
+use crate::starknet_client::constants::CHUNK_SIZE_LIMIT;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::{ContractAccountReader, KakarotClient};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
@@ -77,7 +77,11 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     }
 
     async fn chain_id(&self) -> Result<Option<U64>> {
-        Ok(Some(CHAIN_ID.into()))
+        let chain_id_as_field = self.kakarot_client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
+        let chain_id_as_u64 = u64::try_from(chain_id_as_field).ok().unwrap();
+        let chain_id_as_u64_struct = U64([chain_id_as_u64]);
+
+        Ok(Some(chain_id_as_u64_struct))
     }
 
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {

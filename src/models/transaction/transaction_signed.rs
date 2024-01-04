@@ -4,7 +4,7 @@ use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInv
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
-use crate::starknet_client::constants::{CHAIN_ID, MAX_FEE};
+use crate::starknet_client::constants::MAX_FEE;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::{
     prepare_kakarot_eth_send_transaction, split_u256_into_field_elements, DataDecodingError,
@@ -56,15 +56,10 @@ impl StarknetTransactionSigned {
         // In case of a Legacy Transaction, it is v := {0, 1} + chain_id * 2 + 35
         // Else, it is odd_y_parity
         if let TransactionType::Legacy(_) = transaction.transaction {
-            let chain_id = CHAIN_ID;
-            // TODO(elias): replace by dynamic chain_id when Kakarot supports it
-            // let chain_id: u64 = client
-            //     .starknet_provider()
-            //     .chain_id()
-            //     .await?
-            //     .try_into()
-            //     .map_err(|e: ValueOutOfRangeError| ConversionError::ValueOutOfRange(e.to_string()))?;
-            signature.push(transaction.signature().v(Some(chain_id)).into());
+            let chain_id_as_field = client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
+            let chain_id_as_u64 = u64::try_from(chain_id_as_field).ok().unwrap();
+
+            signature.push(transaction.signature().v(Some(chain_id_as_u64)).into());
         } else {
             signature.push((transaction.signature().odd_y_parity as u64).into());
         }

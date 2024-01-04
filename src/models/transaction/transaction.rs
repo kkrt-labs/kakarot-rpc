@@ -9,7 +9,7 @@ use crate::models::call::{Call, Calls};
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::signature::StarknetSignature;
-use crate::starknet_client::constants::{self, CHAIN_ID};
+use crate::starknet_client::constants;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::KakarotClient;
 
@@ -131,6 +131,10 @@ impl StarknetTransaction {
 
         let signature = Some(signature);
 
+        let chain_id_as_field = client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
+        let chain_id_as_u64 = u64::try_from(chain_id_as_field).ok().unwrap();
+        let chain_id_as_u64_struct = U64([chain_id_as_u64]);
+
         Ok(EthTransaction {
             hash,
             nonce,
@@ -146,7 +150,7 @@ impl StarknetTransaction {
             max_priority_fee_per_gas,
             input,
             signature,
-            chain_id: Some(CHAIN_ID.into()),
+            chain_id: Some(chain_id_as_u64_struct),
             access_list: None, // TODO fetch the access list
             transaction_type,
             max_fee_per_blob_gas: None,

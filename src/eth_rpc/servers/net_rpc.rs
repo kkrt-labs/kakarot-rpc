@@ -1,4 +1,3 @@
-use crate::starknet_client::constants::CHAIN_ID;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::KakarotClient;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
@@ -23,8 +22,12 @@ impl<P: Provider + Send + Sync> NetRpc<P> {
 
 #[async_trait]
 impl<P: Provider + Send + Sync + 'static> NetApiServer for NetRpc<P> {
-    fn version(&self) -> Result<U64> {
-        Ok(CHAIN_ID.into())
+    async fn version(&self) -> Result<U64> {
+        let chain_id_as_field = self.kakarot_client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
+        let chain_id_as_u64 = u64::try_from(chain_id_as_field).ok().unwrap();
+        let chain_id_as_u64_struct = U64([chain_id_as_u64]);
+
+        Ok(chain_id_as_u64_struct)
     }
 
     fn peer_count(&self) -> Result<PeerCount> {
