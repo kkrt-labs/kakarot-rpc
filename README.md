@@ -105,7 +105,7 @@ make build
 Copy the `.env.example` file to a `.env` file and populate each variable
 
 ```console
-cp examples/.env.example .env
+cp .env.example .env
 ```
 
 Meanwhile you can just use unit tests to dev.
