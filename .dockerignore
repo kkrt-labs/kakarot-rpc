@@ -1,7 +1,6 @@
 docker-data/*
 docs/*
 rpc-call-examples/*
-.git/*
 .github/*
 .vscode/*
 .env.example
