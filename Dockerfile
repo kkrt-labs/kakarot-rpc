@@ -54,7 +54,6 @@ RUN build_platform() { \
         # Build the Rust application for the specified target
         BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
           --target=$ARCH \
-          --config target.$ARCH.linker=\"$LINKER\"; \
         # Copy the built binary to a common release directory
         cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
     } \

@@ -43,32 +43,32 @@ serde_with = "2.3.1"
 # Others
 anyhow = "1.0.68"
 async-trait = "0.1.58"
+bytes = "1"
 ctor = "0.2.4"
 dotenv = "0.15.0"
+env_logger = "0.10.0"
 eyre = "0.6.8"
+
+foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
+futures = "0.3.26"
 git2 = "0.18.0"
+hex = "0.4"
 lazy_static = "1.4.0"
+log = "0.4.17"
+num-bigint = "0.4.3"
+openssl = { version = "0", features = ["vendored"] }
 pin-project = "1.1.2"
+reqwest = "0.11.13"
 ruint = "1.9.0"
 rstest = "0.18.1"
+
+thiserror = "1.0.38"
 tokio = { version = "1.21.2", features = ["macros"] }
+tower = "0.4.12"
+tower-http = "0.4.4"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
 url = "2.3.1"
-
-env_logger = "0.10.0"
-hex = "0.4"
-log = "0.4.17"
-reqwest = "0.11.13"
-thiserror = "1.0.38"
-
-tower = "0.4.12"
-tower-http = "0.4.4"
-futures = "0.3.26"
-num-bigint = "0.4.3"
-
-bytes = "1"
-foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
 walkdir = "2.3.3"
 
 
