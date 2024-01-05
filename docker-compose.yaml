@@ -1,17 +1,17 @@
-version: '3.2'
+version: "3.2"
 
 services:
   starknet:
-    image: ghcr.io/keep-starknet-strange/madara:v0.1.0.experimental.3
+    image: public.ecr.aws/o5q6k5w4/madara:latest
     ports:
-      - '9615:9615'
-      - '9944:9944'
-      - '30333:30333'
-    command:
-      - '--rpc-external'
-      - '--rpc-methods=unsafe'
-      - '--rpc-cors=all'
-      - '--dev'
+      - "9615:9615"
+      - "9944:9944"
+      - "30333:30333"
+    entrypoint: [/bin/bash, -c]
+    command: >
+      "/madara-bin --rpc-external --rpc-methods=unsafe --rpc-cors=all --chain=dev --base-path=/home/madara --alice --force-authoring"
+    volumes:
+      - ./madara:/home/madara
     networks:
       - internal
 
@@ -37,16 +37,16 @@ services:
     image: apteno/alpine-jq:2023-07-24
     # Parse deployments and save the result to .env file
     entrypoint:
-      - '/bin/sh'
-      - '-c'
+      - "/bin/sh"
+      - "-c"
       # First line overrides an existing .env, if any.
       # This is to make sure that it is clean even though docker volume was not cleaned.
       - |
-        echo "KAKAROT_ADDRESS=$(jq -r '.kakarot.address' /deployments/custom-rpc/deployments.json)" > /deployments/.env;
-        echo "DEPLOYER_ACCOUNT_ADDRESS=$(jq -r '.deployer_account.address' /deployments/custom-rpc/deployments.json)" >> /deployments/.env;
-        echo "PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.proxy' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
-        echo "EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(jq -r '.externally_owned_account' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
-        echo "CONTRACT_ACCOUNT_CLASS_HASH=$(jq -r '.contract_account' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
+        echo "KAKAROT_ADDRESS=$$(jq -r '.kakarot.address' /deployments/custom-rpc/deployments.json)" > /deployments/.env;
+        echo "DEPLOYER_ACCOUNT_ADDRESS=$$(jq -r '.deployer_account.address' /deployments/custom-rpc/deployments.json)" >> /deployments/.env;
+        echo "PROXY_ACCOUNT_CLASS_HASH=$$(jq -r '.proxy' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
+        echo "EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$$(jq -r '.externally_owned_account' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
+        echo "CONTRACT_ACCOUNT_CLASS_HASH=$$(jq -r '.contract_account' /deployments/custom-rpc/declarations.json)" >> /deployments/.env
     volumes:
       - deployments:/deployments
     depends_on:
@@ -60,7 +60,7 @@ services:
     environment:
       - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:9944
-      - RUST_LOG=trace
+      - RUST_LOG=info
       - DEPLOYER_ACCOUNT_PRIVATE_KEY=0x0288a51c164874bb6a1ca7bd1cb71823c234a86d0f7b150d70fa8f06de645396
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
