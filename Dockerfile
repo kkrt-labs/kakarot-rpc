@@ -1,3 +1,24 @@
+FROM python:3.9.13 as compiler
+# install poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
+ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin"
+RUN poetry config virtualenvs.create false
+
+WORKDIR /usr/src/compiler
+
+# Install dependencies
+RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
+    && chmod +x foundry.sh \
+    && ./foundry.sh \
+    && foundryup \
+    && apt-get update && apt-get install -y jq
+
+COPY .git ./.git
+COPY .gitmodules .gitmodules
+COPY Makefile Makefile
+COPY scripts scripts
+RUN make setup
+
 # Define ARG for build platform
 FROM --platform=$BUILDPLATFORM rust:1.64 as builder
 
@@ -7,6 +28,8 @@ ARG TARGETPLATFORM
 
 # Set working directory
 WORKDIR /usr/src/rpc
+
+COPY --from=compiler /usr/src/compiler/artifacts /usr/src/rpc/artifacts
 
 # Copy source code
 COPY . .
@@ -30,8 +53,7 @@ RUN build_platform() { \
         echo "Using BINDGEN_EXTRA_CLANG_ARGS: $BINDGEN_EXTRA_CLANG_ARGS"; \
         # Build the Rust application for the specified target
         BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
-          --target=$ARCH \
-          --config target.$ARCH.linker=\"$LINKER\"; \
+          --target=$ARCH; \
         # Copy the built binary to a common release directory
         cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
     } \
