@@ -192,9 +192,9 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         let tx_receipt = self.starknet_provider.get_transaction_receipt(tx_hash).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                (Some(into_via_wrapper!(tr.block_hash)), Some(U256::from(tr.block_number)))
+                (into_via_wrapper!(tr.block_hash), U256::from(tr.block_number))
             }
-            _ => (None, None), // skip all transactions other than Invoke, covers the pending case
+            _ => (Default::default(), Default::default()),// skip all transactions other than Invoke, covers the pending case
         };
 
         debug!("starknet transaction: {:?}", starknet_tx);
@@ -544,8 +544,8 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     pub async fn filter_starknet_into_eth_txs(
         &self,
         transactions: Vec<TransactionType>,
-        block_hash: Option<H256>,
-        block_number: Option<U256>,
+        block_hash: H256,
+        block_number: U256,
     ) -> BlockTransactions {
         debug!("starknet transactions: {:?}", transactions);
         let handles = transactions.into_iter().map(|tx| async move {

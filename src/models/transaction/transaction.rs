@@ -56,26 +56,16 @@ impl StarknetTransaction {
     pub async fn to_eth_transaction<P: Provider + Send + Sync>(
         &self,
         client: &KakarotClient<P>,
-        block_hash: Option<H256>,
-        block_number: Option<U256>,
+        block_hash: H256,
+        block_number: U256,
         transaction_index: Option<U256>,
     ) -> Result<EthTransaction, EthApiError> {
         let sender_address: FieldElement = self.sender_address()?.into();
 
         let hash = self.transaction_hash();
 
-        let starknet_block_id = match block_hash {
-            Some(block_hash) => StarknetBlockId::Hash(into_via_try_wrapper!(block_hash)),
-            None => match block_number {
-                Some(block_number) => StarknetBlockId::Number(TryInto::<u64>::try_into(block_number)?),
-                None => {
-                    return Err(EthApiError::RequestError(ProviderError::StarknetError(StarknetErrorWithMessage {
-                        code: MaybeUnknownErrorCode::Known(StarknetError::BlockNotFound),
-                        message: "Block hash or block number must be provided".into(),
-                    })));
-                }
-            },
-        };
+        let starknet_block_id = StarknetBlockId::Hash(into_via_try_wrapper!(block_hash));
+        
         let nonce: Felt252Wrapper = match &self.0 {
             Transaction::Invoke(invoke_tx) => match invoke_tx {
                 InvokeTransaction::V0(_) => {
@@ -115,8 +105,8 @@ impl StarknetTransaction {
         Ok(EthTransaction {
             hash,
             nonce,
-            block_hash,
-            block_number,
+            block_hash: Some(block_hash),
+            block_number: Some(block_number),
             transaction_index,
             from,
             to,
