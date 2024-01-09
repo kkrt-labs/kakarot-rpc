@@ -5,6 +5,7 @@ services:
     image: greged93/katana
     command:
       - "katana"
+      - "--disable-fee"
       - "--validate-max-steps"
       - "16777216"
       - "--invoke-max-steps"
