@@ -21,10 +21,7 @@ run-dev:
 
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
-	docker compose -f docker-compose.yaml -f docker-compose.katana.yaml up -d --force-recreate --pull always
-
-katana-rpc-down:
-	docker compose -f docker-compose.yaml -f docker-compose.katana.yaml down --remove-orphans
+	docker compose -f docker-compose.katana.yaml up  --force-recreate
 
 # Run Madara, Deploy Kakarot, Run Kakarot RPC
 madara-rpc-up:
