@@ -17,7 +17,7 @@ deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py && cd ..
 
 run-dev:
-	PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.proxy' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.contract_account' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.externally_owned_account' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run
+	PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.proxy' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.contract_account' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.externally_owned_account' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run --bin kakarot-rpc
 
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
@@ -38,7 +38,7 @@ install-katana:
 
 run-katana: install-katana
 	rm -fr .katana/ && mkdir .katana
-	katana --dump-state .katana/dump.bin & echo $$! > .katana/pid
+	katana --disable-fee --dump-state .katana/dump.bin & echo $$! > .katana/pid
 
 kill-katana:
 	kill -2 `cat .katana/pid` && rm -fr .katana/pid
@@ -54,7 +54,13 @@ test: dump-katana
 test-coverage:
 	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
-test-examples:
-	hurl $(HURL_FILES)
+# Make sure to have a Kakarot RPC running and the correct port set in your .env and an underlying Starknet client running.
+# Use benchmark-madara if the underlying Starknet node is Madara
+benchmark-madara:
+	cd benchmarks && bun i && bun run benchmark-madara
+# Use benchmark-katana if the underlying Starknet node is Katana
+benchmark-katana:
+	cd benchmarks && bun i && bun run benchmark-katana
+
 
 .PHONY: devnet test

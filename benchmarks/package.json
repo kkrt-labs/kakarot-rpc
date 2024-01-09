@@ -1,0 +1,18 @@
+{
+  "name": "benchmarks",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "ethers": "^6.9.2"
+  },
+  "scripts": {
+    "benchmark-katana": "INTER_TRANSACTION_MS_DELAY=50 bun run index.ts",
+    "benchmark-madara": "INTER_TRANSACTION_MS_DELAY=500 bun run index.ts"
+  }
+}
