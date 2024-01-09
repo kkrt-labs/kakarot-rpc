@@ -1,6 +1,0 @@
-# node modules
-node_modules
-
-# reports dir, keeps benchmark reports
-reports/*
-!reports/.gitkeep
