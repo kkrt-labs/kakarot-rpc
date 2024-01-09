@@ -59,27 +59,35 @@ impl StarknetTransactionReceipt {
                     let eth_tx = starknet_tx.to_eth_transaction(client, block_hash, block_number, None).await?;
                     let from = eth_tx.from;
                     let to = eth_tx.to;
-                    let contract_address = match to {
-                        // If to is Some, means contract_address should be None as it is a normal transaction
-                        Some(_) => None,
-                        // If to is None, is a contract creation transaction so contract_address should be Some
-                        None => {
-                            let event = events
-                                .iter()
-                                .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED))
-                                .ok_or(EthApiError::Other(anyhow::anyhow!(
+                    let contract_address = match execution_result {
+                        ExecutionResult::Succeeded => {
+                            match to {
+                                // If to is Some, means contract_address should be None as it is a normal transaction
+                                Some(_) => None,
+                                // If to is None, is a contract creation transaction so contract_address should be Some
+                                None => {
+                                    let event = events
+                                        .iter()
+                                        .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED))
+                                        .ok_or(EthApiError::Other(anyhow::anyhow!(
                                     "Kakarot Core: No contract deployment event found in Kakarot transaction receipt"
                                 )))?;
 
-                            let evm_address =
-                                event.data.first().ok_or(DataDecodingError::InvalidReturnArrayLength {
-                                    entrypoint: "deployment".into(),
-                                    expected: 1,
-                                    actual: 0,
-                                })?;
+                                    let evm_address =
+                                        event.data.first().ok_or(DataDecodingError::InvalidReturnArrayLength {
+                                            entrypoint: "deployment".into(),
+                                            expected: 1,
+                                            actual: 0,
+                                        })?;
 
-                            let evm_address = Felt252Wrapper::from(*evm_address);
-                            Some(evm_address.try_into()?)
+                                    let evm_address = Felt252Wrapper::from(*evm_address);
+                                    Some(evm_address.try_into()?)
+                                }
+                            }
+                        }
+                        ExecutionResult::Reverted { ref reason } => {
+                            tracing::error!("Transaction reverted with {reason}");
+                            None
                         }
                     };
 
