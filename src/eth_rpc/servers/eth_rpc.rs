@@ -84,7 +84,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(Some(CHAIN_ID.into()))
     }
 
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, fields(hash = %hash))]
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {
         let block_id = EthBlockId::new(BlockId::Hash(hash.into()));
         let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::from)?;
@@ -92,7 +92,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(Some(block))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(number = %number))]
+    #[tracing::instrument(skip_all, ret, fields(number = %number, full = full))]
     async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
         let block_id = EthBlockId::new(BlockId::Number(number));
         let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::from)?;
@@ -107,7 +107,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(count)
     }
 
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, fields(number = %number))]
     async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64> {
         let block_id = BlockId::Number(number);
         let count = self.kakarot_client.get_transaction_count_by_block(block_id).await.map_err(EthApiError::from)?;
@@ -365,7 +365,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Err(EthApiError::MethodNotSupported("eth_sendTransaction".to_string()).into())
     }
 
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, fields(bytes = %bytes))]
     async fn send_raw_transaction(&self, bytes: Bytes) -> Result<H256> {
         let transaction_hash = self.kakarot_client.send_transaction(bytes).await?;
         Ok(transaction_hash)
