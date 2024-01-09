@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   starknet:
-    image: greged93/katana
+    image: greged93/katana:v0.4.4
     command:
       - "katana"
       - "--disable-fee"

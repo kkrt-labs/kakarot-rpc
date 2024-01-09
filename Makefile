@@ -25,9 +25,9 @@ katana-rpc-up:
 
 # Run Madara, Deploy Kakarot, Run Kakarot RPC
 madara-rpc-up:
-	docker compose up -d --force-recreate --pull always
+	docker compose up -d --force-recreate
 
-madara-rpc-down:
+docker-down:
 	docker compose down --remove-orphans
 
 install-katana:

@@ -1,4 +1,4 @@
-FROM ghcr.io/dojoengine/dojo:latest as dojo
+FROM ghcr.io/dojoengine/dojo:v0.4.4 as dojo
 
 RUN apt-get update && apt-get install -y curl
 
