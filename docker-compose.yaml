@@ -2,16 +2,16 @@ version: "3.2"
 
 services:
   starknet:
-    image: public.ecr.aws/o5q6k5w4/madara:latest
+    image: greged93/madara:latest
     ports:
       - "9615:9615"
       - "9944:9944"
       - "30333:30333"
     entrypoint: [/bin/bash, -c]
     command: >
-      "/madara-bin --rpc-external --rpc-methods=unsafe --rpc-cors=all --chain=dev --base-path=/home/madara --alice --force-authoring"
+      "/madara-bin setup --from-remote --base-path=/home/madara --chain=dev && /madara-bin --rpc-external --rpc-methods=unsafe --rpc-cors=all --chain=dev --base-path=/home/madara --alice --force-authoring"
     volumes:
-      - ./madara:/home/madara
+      - madara:/home/madara
     networks:
       - internal
 
@@ -60,7 +60,7 @@ services:
     environment:
       - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:9944
-      - RUST_LOG=info
+      - RUST_LOG=kakarot_rpc=info
       - DEPLOYER_ACCOUNT_PRIVATE_KEY=0x0288a51c164874bb6a1ca7bd1cb71823c234a86d0f7b150d70fa8f06de645396
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
@@ -77,3 +77,4 @@ networks:
 
 volumes:
   deployments:
+  madara:
