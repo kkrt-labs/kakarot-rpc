@@ -87,7 +87,6 @@ cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7e
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
 
 [dev-dependencies]
-toml = "0.7.5"
 cargo-husky = { version = "1.5.0", default-features = false, features = [
   "precommit-hook",
   "run-for-all",
@@ -95,4 +94,5 @@ cargo-husky = { version = "1.5.0", default-features = false, features = [
   "run-cargo-fmt",
 ] }
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
+toml = "0.7.5"
 rstest = "0.18.1"
