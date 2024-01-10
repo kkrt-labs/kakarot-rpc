@@ -13,6 +13,6 @@
   },
   "scripts": {
     "benchmark-katana": "INTER_TRANSACTION_MS_DELAY=50 bun run index.ts",
-    "benchmark-madara": "INTER_TRANSACTION_MS_DELAY=500 bun run index.ts"
+    "benchmark-madara": "INTER_TRANSACTION_MS_DELAY=250 bun run index.ts"
   }
 }

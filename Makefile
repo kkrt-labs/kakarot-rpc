@@ -55,10 +55,9 @@ test-coverage:
 	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 # Make sure to have a Kakarot RPC running and the correct port set in your .env and an underlying Starknet client running.
-# Use benchmark-madara if the underlying Starknet node is Madara
 benchmark-madara:
 	cd benchmarks && bun i && bun run benchmark-madara
-# Use benchmark-katana if the underlying Starknet node is Katana
+
 benchmark-katana:
 	cd benchmarks && bun i && bun run benchmark-katana
 

@@ -48,8 +48,6 @@ let endBlockNumber: number | undefined = undefined;
 const startDelay = 10 * 1000;
 const endDelay = 60 * 1000;
 
-const previousBalance = await provider.getBalance(wallet.address);
-
 setTimeout(async () => {
   startNonce = await wallet.getNonce();
   startBlockNumber = await provider.getBlockNumber();
@@ -73,6 +71,13 @@ while (isRunningFlag) {
     // We expect to get an error:
     // @TODO: the returned hash did not match
     // <https://github.com/ethers-io/ethers.js/issues/4233>
+    if (
+      e instanceof Error &&
+      !e.message.includes("the returned hash did not match")
+    ) {
+      // Handle the specific error case here
+      throw new Error("Transaction failed with error: " + e.message);
+    }
   }
   nonce += 1;
   await Bun.sleep(interTransactionDelay);
@@ -91,4 +96,3 @@ Inferred transactions per second: ${
   (endNonce - startNonce) / ((endDelay - startDelay) / 1000)
 }
 `);
-
