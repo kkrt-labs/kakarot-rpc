@@ -35,7 +35,7 @@ install-katana:
 
 run-katana: install-katana
 	rm -fr .katana/ && mkdir .katana
-	katana --dump-state .katana/dump.bin & echo $$! > .katana/pid
+	katana --disable-fee --dump-state .katana/dump.bin & echo $$! > .katana/pid
 
 kill-katana:
 	kill -2 `cat .katana/pid` && rm -fr .katana/pid
@@ -51,7 +51,12 @@ test: dump-katana
 test-coverage:
 	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
-test-examples:
-	hurl $(HURL_FILES)
+# Make sure to have a Kakarot RPC running and the correct port set in your .env and an underlying Starknet client running.
+benchmark-madara:
+	cd benchmarks && bun i && bun run benchmark-madara
+
+benchmark-katana:
+	cd benchmarks && bun i && bun run benchmark-katana
+
 
 .PHONY: devnet test

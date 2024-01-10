@@ -10,8 +10,8 @@ impl RPCConfig {
     }
 
     pub fn from_env() -> Result<Self> {
-        let socket_addr = std::env::var("KAKAROT_HTTP_RPC_ADDRESS")
-            .map_err(|_| eyre!("Missing mandatory environment variable: KAKAROT_HTTP_RPC_ADDRESS"))?;
+        let socket_addr = std::env::var("KAKAROT_RPC_URL")
+            .map_err(|_| eyre!("Missing mandatory environment variable: KAKAROT_RPC_URL"))?;
         Ok(Self::new(socket_addr))
     }
 }
