@@ -1,8 +1,8 @@
 use std::slice::SliceIndex;
 
-use bytes::Buf;
-use reth_primitives::{Bytes, Transaction, TxEip1559, TxEip2930, TxLegacy};
-use reth_rlp::{Decodable, Header};
+use bytes::BytesMut;
+use reth_primitives::{Signature, Transaction, TransactionSigned};
+use reth_rlp::Decodable;
 use starknet::accounts::Call as StarknetCall;
 use starknet_crypto::FieldElement;
 
@@ -88,64 +88,15 @@ impl TryFrom<Call> for Transaction {
     type Error = DataDecodingError;
 
     fn try_from(value: Call) -> std::result::Result<Self, Self::Error> {
-        let call = value.0.calldata.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<u8>>();
+        let mut call = value.0.calldata.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<u8>>();
+        // Append a default RLP encoded signature in order to
+        // be able to decode the transaction as a TransactionSigned.
+        let mut buf = BytesMut::new();
+        Signature::default().encode(&mut buf);
+        call.append(&mut buf.to_vec());
 
-        let maybe_tx_type = call
-            .first()
-            .ok_or(DataDecodingError::CalldataDecodingError("Transaction Calldata is empty".to_string()))?;
-
-        // If tx_type is superior to 0xb7, it's a legacy tx, otherwise we match on tx type 1, 2 or else
-        // Logic and code snippets taken and adapted from reth_primitives and reth_rlp crates
-        let mut buf = call.as_slice();
-        if maybe_tx_type > &0xbf {
-            let _ = Header::decode(&mut buf)?;
-            let mut tx = TxLegacy {
-                nonce: Decodable::decode(&mut buf)?,
-                gas_price: Decodable::decode(&mut buf)?,
-                gas_limit: Decodable::decode(&mut buf)?,
-                to: Decodable::decode(&mut buf)?,
-                value: Decodable::decode(&mut buf)?,
-                input: Bytes(Decodable::decode(&mut buf)?),
-                chain_id: None,
-            };
-            // Extract the chain_id separately as the TxLegacy struct expects an Option
-            let chain_id = Decodable::decode(&mut buf)?;
-            tx.chain_id = Some(chain_id);
-            return Ok(Transaction::Legacy(tx));
-        }
-        // Skip the transaction type
-        let _ = &mut buf.advance(1);
-        // decode the list header for the rest of the transaction
-        let header = Header::decode(&mut buf)?;
-        if !header.list {
-            return Err(DataDecodingError::CalldataDecodingError(
-                "Typed tx fields must be encoded as a list".to_string(),
-            ));
-        }
-        match maybe_tx_type {
-            1 => Ok(Transaction::Eip2930(TxEip2930 {
-                chain_id: Decodable::decode(&mut buf)?,
-                nonce: Decodable::decode(&mut buf)?,
-                gas_price: Decodable::decode(&mut buf)?,
-                gas_limit: Decodable::decode(&mut buf)?,
-                to: Decodable::decode(&mut buf)?,
-                value: Decodable::decode(&mut buf)?,
-                input: Bytes(Decodable::decode(&mut buf)?),
-                access_list: Decodable::decode(&mut buf)?,
-            })),
-            2 => Ok(Transaction::Eip1559(TxEip1559 {
-                chain_id: Decodable::decode(&mut buf)?,
-                nonce: Decodable::decode(&mut buf)?,
-                max_priority_fee_per_gas: Decodable::decode(&mut buf)?,
-                max_fee_per_gas: Decodable::decode(&mut buf)?,
-                gas_limit: Decodable::decode(&mut buf)?,
-                to: Decodable::decode(&mut buf)?,
-                value: Decodable::decode(&mut buf)?,
-                input: Bytes(Decodable::decode(&mut buf)?),
-                access_list: Decodable::decode(&mut buf)?,
-            })),
-            _ => Err(DataDecodingError::CalldataDecodingError("Transaction type is not supported".to_string())),
-        }
+        let tx = TransactionSigned::decode(&mut call.as_slice())?;
+        Ok(tx.transaction)
     }
 }
 
