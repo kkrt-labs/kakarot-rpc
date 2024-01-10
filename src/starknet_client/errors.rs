@@ -1,4 +1,5 @@
 use jsonrpsee::types::ErrorObject;
+use ruint::FromUintError;
 use starknet::core::types::{FromByteSliceError, StarknetError};
 use starknet::providers::{MaybeUnknownErrorCode, ProviderError};
 use thiserror::Error;
@@ -93,6 +94,12 @@ impl From<ConversionError> for EthApiError {
 impl From<FromByteSliceError> for EthApiError {
     fn from(err: FromByteSliceError) -> Self {
         Self::ConversionError(format!("Failed to convert from byte slice: {}", err))
+    }
+}
+
+impl<T> From<FromUintError<T>> for EthApiError {
+    fn from(err: FromUintError<T>) -> Self {
+        Self::ConversionError(err.to_string())
     }
 }
 
