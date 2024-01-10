@@ -37,7 +37,7 @@ use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::transaction::{StarknetTransaction, StarknetTransactions};
+use crate::models::transaction::transaction::StarknetTransaction;
 use crate::models::transaction::transaction_signed::StarknetTransactionSigned;
 
 use starknet_abigen_macros::abigen_legacy;
@@ -143,14 +143,14 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
 
         let block_transactions = match starknet_block {
             MaybePendingBlockWithTxs::PendingBlock(pending_block_with_txs) => {
-                self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions.into(), None, None).await
+                self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions, None, None).await
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
                 let block_hash: Felt252Wrapper = block_with_txs.block_hash.into();
                 let block_hash = Some(block_hash.into());
                 let block_number: Felt252Wrapper = block_with_txs.block_number.into();
                 let block_number = Some(block_number.into());
-                self.filter_starknet_into_eth_txs(block_with_txs.transactions.into(), block_hash, block_number).await
+                self.filter_starknet_into_eth_txs(block_with_txs.transactions, block_hash, block_number).await
             }
         };
         let len = match block_transactions {
@@ -289,8 +289,9 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             let token_addr: Felt252Wrapper = token_address.into();
             let token =
                 EthereumErc20::new(token_addr.into(), self.starknet_provider(), self.kakarot_contract.reader.address);
+            let balance = token.balance_of(address.into(), block_id);
 
-            FutureTokenBalance::<P, _>::new(token.balance_of(address.into(), block_id), token_address)
+            FutureTokenBalance::new(Box::pin(balance), token_address)
         });
 
         let token_balances = join_all(handles).await;
@@ -534,11 +535,11 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     /// Starknet transaction.
     pub async fn filter_starknet_into_eth_txs(
         &self,
-        initial_transactions: StarknetTransactions,
+        transactions: Vec<TransactionType>,
         block_hash: Option<H256>,
         block_number: Option<U256>,
     ) -> BlockTransactions {
-        let handles = Into::<Vec<TransactionType>>::into(initial_transactions).into_iter().map(|tx| async move {
+        let handles = transactions.into_iter().map(|tx| async move {
             let tx = Into::<StarknetTransaction>::into(tx);
             tx.to_eth_transaction(self, block_hash, block_number, None).await
         });
