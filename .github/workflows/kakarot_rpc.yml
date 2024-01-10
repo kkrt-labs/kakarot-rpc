@@ -50,7 +50,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: Dockerfile
+          file: ./docker/rpc/Dockerfile
           platforms: ${{ matrix.platform }}
           tags: ${{ env.REGISTRY_IMAGE }}:latest
           labels: ${{ steps.meta.outputs.labels }}
