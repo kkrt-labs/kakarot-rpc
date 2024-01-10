@@ -4950,7 +4950,6 @@ dependencies = [
  "katana-core",
  "lazy_static",
  "log",
- "num-bigint",
  "openssl",
  "reqwest",
  "reth-primitives",

@@ -36,8 +36,7 @@ impl EthEventFilter {
         let mut keys: Vec<FieldElement> = filter
             .topics
             .into_iter()
-            .map(|topic| topic.to_value_or_array())
-            .flat_map(|topic| match topic {
+            .flat_map(|filter| match filter.to_value_or_array() {
                 None => vec![],
                 Some(ValueOrArray::Value(value)) => {
                     let topic = U256::from_be_bytes(value.to_fixed_bytes());
