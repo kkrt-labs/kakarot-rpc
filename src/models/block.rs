@@ -9,7 +9,7 @@ use starknet::providers::Provider;
 use super::felt::Felt252Wrapper;
 use crate::models::errors::ConversionError;
 use crate::starknet_client::constants::{
-    DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, NONCE, SIZE, TOTAL_DIFFICULTY,
+    DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, SIZE, TOTAL_DIFFICULTY,
 };
 use crate::starknet_client::KakarotClient;
 
@@ -157,8 +157,8 @@ impl From<MaybePendingBlockWithTxs> for BlockWithTxs {
     }
 }
 
-impl BlockWithTxHashes {
-    pub async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &KakarotClient<P>) -> RichBlock {
+macro_rules! to_eth_block {
+    ($self:ident, $client: ident, $transactions: expr) => {{
         // TODO: Fetch real data
         let gas_limit = *GAS_LIMIT;
 
@@ -181,21 +181,19 @@ impl BlockWithTxHashes {
         let extra_data = Bytes::default();
 
         // TODO: Fetch real data
-        let base_fee_per_gas = client.base_fee_per_gas();
+        let base_fee_per_gas = $client.base_fee_per_gas();
         // TODO: Fetch real data
         let mix_hash = *MIX_HASH;
 
-        let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
-        let sequencer = Address::from_slice(&self.sequencer_address().to_bytes_be()[12..]);
-        let timestamp = U256::from(self.timestamp());
+        let parent_hash = H256::from_slice(&$self.parent_hash().to_bytes_be());
+        let sequencer = Address::from_slice(&$self.sequencer_address().to_bytes_be()[12..]);
+        let timestamp = U256::from($self.timestamp());
 
-        let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
-        let number = self.block_number().map(U256::from);
+        let hash = $self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
+        let number = $self.block_number().map(U256::from);
 
         // TODO: Add filter to tx_hashes
-        let transactions = BlockTransactions::Hashes(
-            self.transactions().iter().map(|tx| H256::from_slice(&tx.to_bytes_be())).collect(),
-        );
+        let transactions = $transactions;
 
         let header = Header {
             // PendingBlockWithTxHashes doesn't have a block hash
@@ -233,82 +231,24 @@ impl BlockWithTxHashes {
             size,
             withdrawals: Some(vec![]),
         };
-        block.into()
+        Into::<RichBlock>::into(block)
+    }};
+}
+
+impl BlockWithTxHashes {
+    pub async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &KakarotClient<P>) -> RichBlock {
+        let transactions = BlockTransactions::Hashes(
+            self.transactions().iter().map(|tx| H256::from_slice(&tx.to_bytes_be())).collect(),
+        );
+        to_eth_block!(self, client, transactions)
     }
 }
 
 impl BlockWithTxs {
     pub async fn to_eth_block<P: Provider + Send + Sync>(&self, client: &KakarotClient<P>) -> RichBlock {
-        // TODO: Fetch real data
-        let gas_limit = *GAS_LIMIT;
-
-        // TODO: Fetch real data
-        let gas_used = *GAS_USED;
-
-        // TODO: Fetch real data
-        let difficulty = *DIFFICULTY;
-
-        // TODO: Fetch real data
-        let nonce: Option<H64> = *NONCE;
-
-        // TODO: Fetch real data
-        let size: Option<U256> = *SIZE;
-
-        // Bloom is a byte array of length 256
-        let logs_bloom = Bloom::default();
-        let extra_data: Bytes = Bytes::default();
-
-        // TODO: Fetch real data
-        let base_fee_per_gas = client.base_fee_per_gas();
-        // TODO: Fetch real data
-        let mix_hash = *MIX_HASH;
-
-        let parent_hash = H256::from_slice(&self.parent_hash().to_bytes_be());
-
-        let sequencer = Address::from_slice(&self.sequencer_address().to_bytes_be()[12..]);
-
-        let timestamp = U256::from(self.timestamp());
-
         let hash = self.block_hash().as_ref().map(|hash| H256::from_slice(&hash.to_bytes_be()));
         let number = self.block_number().map(U256::from);
-
-        let transactions = client.filter_starknet_into_eth_txs(self.transactions().into(), hash, number).await;
-        let header = Header {
-            // PendingBlockWithTxs doesn't have a block hash
-            hash,
-            parent_hash,
-            uncles_hash: parent_hash,
-            miner: sequencer,
-            // PendingBlockWithTxs doesn't have a state root
-            state_root: H256::zero(),
-            // PendingBlockWithTxs doesn't have a transactions root
-            transactions_root: H256::zero(),
-            // PendingBlockWithTxs doesn't have a receipts root
-            receipts_root: H256::zero(),
-            // PendingBlockWithTxs doesn't have a block number
-            number,
-            gas_used,
-            gas_limit,
-            extra_data,
-            logs_bloom,
-            timestamp,
-            difficulty,
-            nonce,
-            base_fee_per_gas: Some(base_fee_per_gas),
-            mix_hash,
-            withdrawals_root: Some(H256::zero()),
-            blob_gas_used: None,
-            excess_blob_gas: None,
-            parent_beacon_block_root: None,
-        };
-        let block = Block {
-            header,
-            total_difficulty: *TOTAL_DIFFICULTY,
-            uncles: vec![],
-            transactions,
-            size,
-            withdrawals: Some(vec![]),
-        };
-        block.into()
+        let transactions = client.filter_starknet_into_eth_txs(self.transactions(), hash, number).await;
+        to_eth_block!(self, client, transactions)
     }
 }
