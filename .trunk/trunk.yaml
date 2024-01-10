@@ -30,8 +30,8 @@ lint:
     - shfmt@3.6.0
     - taplo@0.8.1
     - terrascan@1.18.11
-    - trivy@0.48.1
-    - trufflehog@3.63.7
+    - trivy@0.48.2
+    - trufflehog@3.63.8
     - yamllint@1.33.0
 actions:
   disabled:
