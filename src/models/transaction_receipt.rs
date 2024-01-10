@@ -1,3 +1,4 @@
+use reth_primitives::contract::create_address;
 use reth_primitives::{Bloom, H256, U128, U256, U64, U8};
 use reth_rpc_types::TransactionReceipt as EthTransactionReceipt;
 use starknet::core::types::{
@@ -8,9 +9,7 @@ use starknet::providers::Provider;
 use super::event::StarknetEvent;
 use super::felt::Felt252Wrapper;
 use super::transaction::transaction::StarknetTransaction;
-use crate::starknet_client::constants::selectors::EVM_CONTRACT_DEPLOYED;
 use crate::starknet_client::errors::EthApiError;
-use crate::starknet_client::helpers::DataDecodingError;
 use crate::starknet_client::KakarotClient;
 
 pub struct StarknetTransactionReceipt(MaybePendingTransactionReceipt);
@@ -65,24 +64,7 @@ impl StarknetTransactionReceipt {
                                 // If to is Some, means contract_address should be None as it is a normal transaction
                                 Some(_) => None,
                                 // If to is None, is a contract creation transaction so contract_address should be Some
-                                None => {
-                                    let event = events
-                                        .iter()
-                                        .find(|event| event.keys.iter().any(|key| *key == EVM_CONTRACT_DEPLOYED))
-                                        .ok_or(EthApiError::Other(anyhow::anyhow!(
-                                    "Kakarot Core: No contract deployment event found in Kakarot transaction receipt"
-                                )))?;
-
-                                    let evm_address =
-                                        event.data.first().ok_or(DataDecodingError::InvalidReturnArrayLength {
-                                            entrypoint: "deployment".into(),
-                                            expected: 1,
-                                            actual: 0,
-                                        })?;
-
-                                    let evm_address = Felt252Wrapper::from(*evm_address);
-                                    Some(evm_address.try_into()?)
-                                }
+                                None => Some(create_address(eth_tx.from, eth_tx.nonce.as_u64())),
                             }
                         }
                         ExecutionResult::Reverted { ref reason } => {
