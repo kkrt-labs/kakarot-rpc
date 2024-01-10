@@ -14,10 +14,6 @@ jobs:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
 
-  benchmark:
-    name: Erc20 benchmark
-    uses: ./.github/workflows/benchmark.yml
-
   build:
     name: Build binaries
     uses: ./.github/workflows/kakarot_rpc.yml
