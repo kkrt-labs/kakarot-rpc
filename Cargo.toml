@@ -19,57 +19,56 @@ license = "MIT"
 
 [dependencies]
 # Starknet dependencies
-starknet = "0.7.0"
-starknet-crypto = "0.6.1"
+starknet = { version = "0.7.0", default-features = false }
+starknet-crypto = { version = "0.6.1", default-features = false }
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api", rev = "ecc9b6946ef13003da202838e4124a9ad2efabb0" }
 
-starknet-abigen-parser = { git = "https://github.com/glihm/starknet-abigen-rs", tag = "v0.1.4-beta3" }
-starknet-abigen-macros = { git = "https://github.com/glihm/starknet-abigen-rs", tag = "v0.1.4-beta3" }
+starknet-abigen-parser = { git = "https://github.com/glihm/starknet-abigen-rs", tag = "v0.1.4-beta3", default-features = false }
+starknet-abigen-macros = { git = "https://github.com/glihm/starknet-abigen-rs", tag = "v0.1.4-beta3", default-features = false }
 
 # Ethereum dependencies
-ethers = "2.0.9"
-ethers-solc = "2.0.9"
+ethers = { version = "2.0.9", default-features = false }
+ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.18.2", features = ["full"] }
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10" }
-reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10" }
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
+reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
 
 # Serde
-serde = { version = "1.0.188", features = ["derive"] }
-serde_json = "1.0"
-serde_with = "2.3.1"
+serde = { version = "1.0.188", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0", default-features = false }
+serde_with = { version = "2.3.1", default-features = false }
 
 # Others
-anyhow = "1.0.68"
-async-trait = "0.1.58"
-bytes = "1"
-ctor = "0.2.4"
-dotenv = "0.15.0"
-env_logger = "0.10.0"
-eyre = "0.6.8"
+anyhow = { version = "1.0.68", default-features = false }
+async-trait = { version = "0.1.58", default-features = false }
+bytes = { version = "1", default-features = false }
+ctor = { version = "0.2.4", default-features = false }
+dotenv = { version = "0.15.0", default-features = false }
+env_logger = { version = "0.10.0", default-features = false }
+eyre = { version = "0.6.8", default-features = false }
 
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
-futures = "0.3.26"
-git2 = "0.18.0"
-hex = "0.4"
-lazy_static = "1.4.0"
-log = "0.4.17"
-num-bigint = "0.4.3"
+futures = { version = "0.3.26", default-features = false }
+git2 = { version = "0.18.0", default-features = false }
+hex = { version = "0.4", default-features = false }
+lazy_static = { version = "1.4.0", default-features = false }
+log = { version = "0.4.17", default-features = false }
+num-bigint = { version = "0.4.3", default-features = false }
 openssl = { version = "0", features = ["vendored"] }
-pin-project = "1.1.2"
 reqwest = "0.11.13"
-ruint = "1.9.0"
-rstest = "0.18.1"
+ruint = { version = "1.9.0", default-features = false }
+rstest = { version = "0.18.1", default-features = false }
 
-thiserror = "1.0.38"
+thiserror = { version = "1.0.38", default-features = false }
 tokio = { version = "1.21.2", features = ["macros"] }
-tower = "0.4.12"
-tower-http = "0.4.4"
-tracing = "0.1.37"
+tower = { version = "0.4.12", default-features = false }
+tower-http = { version = "0.4.4", default-features = false }
+tracing = { version = "0.1.37", default-features = false }
 tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
-url = "2.3.1"
-walkdir = "2.3.3"
+url = { version = "2.3.1", default-features = false }
+walkdir = { version = "2.3.3", default-features = false }
 
 
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
@@ -94,5 +93,5 @@ cargo-husky = { version = "1.5.0", default-features = false, features = [
   "run-cargo-fmt",
 ] }
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
-toml = "0.7.5"
-rstest = "0.18.1"
+toml = { version = "0.7.5", default-features = false }
+rstest = { version = "0.18.1", default-features = false }

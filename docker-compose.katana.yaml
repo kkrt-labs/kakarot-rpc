@@ -1,3 +1,4 @@
+# trunk-ignore-all(yamllint/empty-values)
 version: "3.2"
 
 services:
