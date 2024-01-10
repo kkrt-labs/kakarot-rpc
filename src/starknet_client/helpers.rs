@@ -87,14 +87,13 @@ pub fn prepare_kakarot_eth_send_transaction(
     execute_calldata
 }
 
-/// Helper function to split a U256 value into two FieldElements.
-pub fn split_u256_into_field_elements(value: U256) -> [FieldElement; 2] {
-    let low = value & U256::from(U128::MAX);
+/// Helper function to split a U256 value into two generic values
+/// implementing the From<u128> trait
+pub fn split_u256<T: From<u128>>(value: U256) -> [T; 2] {
+    let low: u128 = (value & U256::from(U128::MAX)).try_into().unwrap(); // safe to unwrap
     let high: U256 = value >> 128;
-    [
-        FieldElement::from_bytes_be(&low.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
-        FieldElement::from_bytes_be(&high.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
-    ]
+    let high: u128 = high.try_into().unwrap(); // safe to unwrap
+    [T::from(low), T::from(high)]
 }
 
 #[cfg(test)]
@@ -120,7 +119,7 @@ mod tests {
     )]
     fn test_split_u256_into_field_elements(#[case] input: U256, #[case] expected: U256) {
         // When
-        let result = split_u256_into_field_elements(input);
+        let result = split_u256::<FieldElement>(input);
 
         // Then
         // Recalculate the U256 values using the resulting FieldElements

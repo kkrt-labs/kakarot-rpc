@@ -6,9 +6,7 @@ use starknet_crypto::FieldElement;
 
 use crate::starknet_client::constants::{CHAIN_ID, MAX_FEE};
 use crate::starknet_client::errors::EthApiError;
-use crate::starknet_client::helpers::{
-    prepare_kakarot_eth_send_transaction, split_u256_into_field_elements, DataDecodingError,
-};
+use crate::starknet_client::helpers::{prepare_kakarot_eth_send_transaction, split_u256, DataDecodingError};
 use crate::starknet_client::KakarotClient;
 
 use reth_primitives::Transaction as TransactionType;
@@ -47,8 +45,8 @@ impl StarknetTransactionSigned {
         // Extract the signature from the Ethereum Transaction
         // and place it in the Starknet signature InvokeTransaction vector
         let mut signature: Vec<FieldElement> = {
-            let r = split_u256_into_field_elements(transaction.signature().r);
-            let s = split_u256_into_field_elements(transaction.signature().s);
+            let r = split_u256(transaction.signature().r);
+            let s = split_u256(transaction.signature().s);
             let signature = vec![r[0], r[1], s[0], s[1]];
             signature
         };
