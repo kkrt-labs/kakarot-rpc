@@ -165,7 +165,7 @@ impl BlockWithTxHashes {
         // TODO: Fetch real data
         let gas_used = *GAS_USED;
 
-        // TODO: Fetch real data
+        // Difficulty should be 0 in a non-POW chain
         let difficulty = *DIFFICULTY;
 
         // TODO: Fetch real data
@@ -174,7 +174,9 @@ impl BlockWithTxHashes {
         // TODO: Fetch real data
         let size: Option<U256> = *SIZE;
 
-        // Bloom is a byte array of length 256
+        // TODO:
+        // Aggregate all the logs from the transactions
+        // Create a bloom filter from the logs and add it to the block
         let logs_bloom = Bloom::default();
         let extra_data = Bytes::default();
 
