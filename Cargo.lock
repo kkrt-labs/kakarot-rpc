@@ -900,7 +900,7 @@ dependencies = [
 [[package]]
 name = "c-kzg"
 version = "0.1.0"
-source = "git+https://github.com/ethereum/c-kzg-4844#712ccb629d64552561e2eeb1a1bf094f65c7f3ea"
+source = "git+https://github.com/ethereum/c-kzg-4844#e266280d88f006b23925c5062476b316d5407cb1"
 dependencies = [
  "bindgen",
  "blst",

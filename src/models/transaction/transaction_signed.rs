@@ -3,6 +3,7 @@ use reth_rlp::Decodable as _;
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction};
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
+use tracing::debug;
 
 use crate::starknet_client::constants::{CHAIN_ID, MAX_FEE};
 use crate::starknet_client::errors::EthApiError;
@@ -20,6 +21,7 @@ impl From<Bytes> for StarknetTransactionSigned {
 }
 
 impl StarknetTransactionSigned {
+    #[tracing::instrument(skip_all, level = "debug")]
     pub async fn to_broadcasted_invoke_transaction<P: Provider + Send + Sync>(
         &self,
         client: &KakarotClient<P>,
@@ -71,12 +73,17 @@ impl StarknetTransactionSigned {
         // RLP encode the transaction without the signature
         // Example: For Legacy Transactions: rlp([nonce, gas_price, gas_limit, to, value, data, chain_id, 0, 0])
         let mut signed_data = Vec::new();
+
+        debug!("Ethereum transaction: {:?}", transaction);
+
         transaction.transaction.encode_without_signature(&mut signed_data);
 
         let calldata = prepare_kakarot_eth_send_transaction(
             client.kakarot_address(),
             signed_data.into_iter().map(FieldElement::from).collect(),
         );
+
+        debug!("Kakarot calldata: {:?}", calldata);
 
         Ok(BroadcastedInvokeTransaction {
             max_fee,
