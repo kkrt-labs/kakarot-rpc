@@ -30,7 +30,6 @@ starknet-abigen-macros = { git = "https://github.com/glihm/starknet-abigen-rs", 
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.18.2", features = ["full"] }
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
 reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
@@ -51,12 +50,10 @@ eyre = { version = "0.6.8", default-features = false }
 
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
 futures = { version = "0.3.26", default-features = false }
-git2 = { version = "0.18.0", default-features = false }
 hex = { version = "0.4", default-features = false }
 lazy_static = { version = "1.4.0", default-features = false }
 log = { version = "0.4.17", default-features = false }
-openssl = { version = "0", features = ["vendored"] }
-reqwest = "0.11.13"
+reqwest = { version = "0.11.13", default-features = false }
 ruint = { version = "1.9.0", default-features = false }
 rstest = { version = "0.18.1", default-features = false }
 
@@ -85,12 +82,6 @@ cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7e
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
 
 [dev-dependencies]
-cargo-husky = { version = "1.5.0", default-features = false, features = [
-  "precommit-hook",
-  "run-for-all",
-  "run-cargo-clippy",
-  "run-cargo-fmt",
-] }
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
 toml = { version = "0.7.5", default-features = false }
 rstest = { version = "0.18.1", default-features = false }
