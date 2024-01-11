@@ -4,7 +4,7 @@ pub mod errors;
 pub mod helpers;
 
 use crate::starknet_client::Uint256 as CairoUint256;
-use crate::{convert_try_into, into, try_into_convert};
+use crate::{convert_try_into_via_wrapper, into_via_wrapper, try_into_convert_via_wrapper};
 use eyre::Result;
 use futures::future::join_all;
 use reqwest::Client;
@@ -96,10 +96,10 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         let to = request
             .to
             .ok_or_else(|| EthApiError::MissingParameterError("Missing `to` field in CallRequest".to_string()))?;
-        let to = into!(to);
+        let to = into_via_wrapper!(to);
 
         // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
-        let origin = into!(request.from.unwrap_or_default());
+        let origin = into_via_wrapper!(request.from.unwrap_or_default());
 
         let calldata = request
             .input
@@ -107,11 +107,11 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             .ok_or_else(|| EthApiError::MissingParameterError("Missing `data` field in CallRequest".to_string()))?;
         let calldata: Vec<_> = calldata.to_vec().into_iter().map(FieldElement::from).collect();
 
-        let gas_limit = try_into_convert!(request.gas.unwrap_or_default());
+        let gas_limit = try_into_convert_via_wrapper!(request.gas.unwrap_or_default());
 
-        let gas_price = try_into_convert!(request.gas_price.unwrap_or_default());
+        let gas_price = try_into_convert_via_wrapper!(request.gas_price.unwrap_or_default());
 
-        let value = try_into_convert!(request.value.unwrap_or_default());
+        let value = try_into_convert_via_wrapper!(request.value.unwrap_or_default());
 
         let (_, return_data, success) = self
             .kakarot_contract
@@ -140,8 +140,8 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
                 self.filter_starknet_into_eth_txs(pending_block_with_txs.transactions, None, None).await
             }
             MaybePendingBlockWithTxs::Block(block_with_txs) => {
-                let block_hash = Some(into!(block_with_txs.block_hash));
-                let block_number = Some(into!(block_with_txs.block_number));
+                let block_hash = Some(into_via_wrapper!(block_with_txs.block_hash));
+                let block_number = Some(into_via_wrapper!(block_with_txs.block_number));
                 self.filter_starknet_into_eth_txs(block_with_txs.transactions, block_hash, block_number).await
             }
         };
@@ -170,7 +170,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         let tx_receipt = self.starknet_provider.get_transaction_receipt(tx_hash).await?;
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                (Some(into!(tr.block_hash)), Some(U256::from(tr.block_number)))
+                (Some(into_via_wrapper!(tr.block_hash)), Some(U256::from(tr.block_number)))
             }
             _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
@@ -195,7 +195,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         if class_hash == self.kakarot_contract.contract_account_class_hash {
             // Get the nonce of the contract account -> a storage variable
             let contract_account = ContractAccountReader::new(starknet_address, &self.starknet_provider);
-            Ok(into!(contract_account.get_nonce().call().await?))
+            Ok(into_via_wrapper!(contract_account.get_nonce().call().await?))
         } else {
             // Get the nonce of the Eoa -> the protocol level nonce
             let nonce = self.starknet_provider.get_nonce(starknet_block_id, starknet_address).await;
@@ -208,7 +208,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
                 })) => FieldElement::ZERO,
                 Err(err) => return Err(EthApiError::RequestError(err)),
             };
-            Ok(into!(nonce))
+            Ok(into_via_wrapper!(nonce))
         }
     }
 
@@ -222,8 +222,8 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         let native_token = erc20::ERC20Reader::new(native_token_address, &provider);
         let balance = native_token.balanceOf(&starknet_address).call().await?;
 
-        let low: U256 = into!(balance.low);
-        let high: U256 = into!(balance.high);
+        let low: U256 = into_via_wrapper!(balance.low);
+        let high: U256 = into_via_wrapper!(balance.high);
         Ok(low + (high << 128))
     }
 
@@ -244,8 +244,8 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
 
         let storage: CairoUint256 = contract_account.storage(&storage_address).call().await?;
 
-        let low: U256 = into!(storage.low);
-        let high: U256 = into!(storage.high);
+        let low: U256 = into_via_wrapper!(storage.low);
+        let high: U256 = into_via_wrapper!(storage.high);
         Ok(low + (high << 128))
     }
 
@@ -478,7 +478,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     pub async fn get_evm_address(&self, starknet_address: &FieldElement) -> Result<Address, EthApiError> {
         let contract_account = ContractAccountReader::new(*starknet_address, &self.starknet_provider);
         let evm_address = contract_account.get_evm_address().call().await?;
-        Ok(convert_try_into!(evm_address))
+        Ok(convert_try_into_via_wrapper!(evm_address))
     }
 
     /// Returns the EVM address associated with a given Starknet address for a given block id
@@ -488,7 +488,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         ethereum_address: &Address,
         starknet_block_id: &StarknetBlockId,
     ) -> Result<FieldElement, EthApiError> {
-        let ethereum_address = into!(*ethereum_address);
+        let ethereum_address = into_via_wrapper!(*ethereum_address);
 
         let starknet_address = self
             .kakarot_contract

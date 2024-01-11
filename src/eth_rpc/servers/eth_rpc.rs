@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::into;
+use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::event::StarknetEvent;
 use crate::models::event_filter::EthEventFilter;
@@ -152,7 +152,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
 
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                (Some(into!(tr.block_hash)), Some(U256::from(tr.block_number)))
+                (Some(into_via_wrapper!(tr.block_hash)), Some(U256::from(tr.block_number)))
             }
             _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
@@ -270,8 +270,8 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
             .filter_map(|emitted| {
                 let event: StarknetEvent =
                     Event { from_address: emitted.from_address, keys: emitted.keys, data: emitted.data }.into();
-                let block_hash = into!(emitted.block_hash);
-                let transaction_hash = into!(emitted.transaction_hash);
+                let block_hash = into_via_wrapper!(emitted.block_hash);
+                let transaction_hash = into_via_wrapper!(emitted.transaction_hash);
                 event
                     .to_eth_log(
                         &self.kakarot_client.clone(),

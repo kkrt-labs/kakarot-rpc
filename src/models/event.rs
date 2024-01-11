@@ -4,7 +4,7 @@ use starknet::core::types::Event;
 use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
-use crate::into;
+use crate::into_via_wrapper;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::KakarotClient;
@@ -55,8 +55,8 @@ impl StarknetEvent {
         let topics: Vec<H256> = keys
             .chunks(2)
             .map(|chunk| {
-                let low: U256 = into!(chunk[0]);
-                let high: U256 = into!(chunk[1]);
+                let low: U256 = into_via_wrapper!(chunk[0]);
+                let high: U256 = into_via_wrapper!(chunk[1]);
                 let val = low | (high << 128);
                 H256::from(val)
             })
