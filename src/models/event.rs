@@ -5,6 +5,7 @@ use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
 use super::felt::Felt252Wrapper;
+use crate::into;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::KakarotClient;
 
@@ -54,8 +55,8 @@ impl StarknetEvent {
         let topics: Vec<H256> = keys
             .chunks(2)
             .map(|chunk| {
-                let low = U256::from_be_bytes(chunk[0].to_bytes_be());
-                let high = U256::from_be_bytes(chunk[1].to_bytes_be());
+                let low: U256 = into!(chunk[0]);
+                let high: U256 = into!(chunk[1]);
                 let val = low | (high << 128);
                 H256::from(val)
             })

@@ -7,7 +7,7 @@ use crate::models::call::{Call, Calls};
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::signature::StarknetSignature;
-use crate::starknet_client::constants::{self, CHAIN_ID};
+use crate::starknet_client::constants::CHAIN_ID;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::KakarotClient;
 
@@ -34,7 +34,7 @@ macro_rules! invoke_transaction_field {
                     InvokeTransaction::V1(tx) => Ok(tx.$field_v1.clone().into()),
                 },
                 _ => Err(ConversionError::TransactionConversionError(
-                    constants::error_messages::INVALID_TRANSACTION_TYPE.to_string(),
+                    "L1Handler, Declare, Deploy and DeployAccount transactions unsupported".to_string(),
                 )),
             }
         }

@@ -8,9 +8,7 @@ use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
 use crate::models::errors::ConversionError;
-use crate::starknet_client::constants::{
-    DIFFICULTY, EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, MIX_HASH, SIZE, TOTAL_DIFFICULTY,
-};
+use crate::starknet_client::constants::{EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, SIZE};
 use crate::starknet_client::KakarotClient;
 
 pub struct EthBlockId(EthereumBlockId);
@@ -165,14 +163,8 @@ macro_rules! to_eth_block {
         // TODO: Fetch real data
         let gas_used = *GAS_USED;
 
-        // Difficulty should be 0 in a non-POW chain
-        let difficulty = *DIFFICULTY;
-
         // TODO: Fetch real data
         let nonce: Option<H64> = Some(H64::zero());
-
-        // TODO: Fetch real data
-        let size: Option<U256> = *SIZE;
 
         // TODO:
         // Aggregate all the logs from the transactions
@@ -182,8 +174,6 @@ macro_rules! to_eth_block {
 
         // TODO: Fetch real data
         let base_fee_per_gas = $client.base_fee_per_gas();
-        // TODO: Fetch real data
-        let mix_hash = *MIX_HASH;
 
         let parent_hash = H256::from_slice(&$self.parent_hash().to_bytes_be());
         let sequencer = Address::from_slice(&$self.sequencer_address().to_bytes_be()[12..]);
@@ -214,10 +204,10 @@ macro_rules! to_eth_block {
             extra_data,
             logs_bloom,
             timestamp,
-            difficulty,
+            difficulty: U256::ZERO,
             nonce,
             base_fee_per_gas: Some(base_fee_per_gas),
-            mix_hash,
+            mix_hash: H256::zero(),
             withdrawals_root: Some(H256::zero()),
             blob_gas_used: None,
             excess_blob_gas: None,
@@ -225,10 +215,10 @@ macro_rules! to_eth_block {
         };
         let block = Block {
             header,
-            total_difficulty: *TOTAL_DIFFICULTY,
+            total_difficulty: None,
             uncles: vec![],
             transactions,
-            size,
+            size: Some(*SIZE),
             withdrawals: Some(vec![]),
         };
         Into::<RichBlock>::into(block)
