@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use reth_primitives::{Address, H256, H64, U128, U256, U8};
+use reth_primitives::{Address, U128, U256};
 use starknet::accounts::Call as StarknetCall;
 use starknet::core::types::FieldElement;
 use starknet::macros::selector;
@@ -32,7 +32,6 @@ pub mod selectors {
     pub const ETH_CALL: FieldElement = selector!("eth_call");
     pub const ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
     pub const DEPLOY_EXTERNALLY_OWNED_ACCOUNT: FieldElement = selector!("deploy_externally_owned_account");
-    pub const COMPUTE_STARKNET_ADDRESS: FieldElement = selector!("compute_starknet_address");
 
     pub const GET_EVM_ADDRESS: FieldElement = selector!("get_evm_address");
 
@@ -69,12 +68,6 @@ pub mod gas {
     pub const MINIMUM_GAS_FEE: u64 = 21_000;
 }
 
-/// This module contains error messages related to Kakarot.
-pub mod error_messages {
-    /// Error message when a transaction is not part of Kakarot.
-    pub const INVALID_TRANSACTION_TYPE: &str = "L1Handler, Declare, Deploy and DeployAccount transactions unsupported";
-}
-
 // This module contains constants which are being used in place of real data that should be fetched
 // in production.
 lazy_static! {
@@ -82,14 +75,9 @@ lazy_static! {
     pub static ref GAS_USED: U256 = U256::from(500_000u64);
     pub static ref CUMULATIVE_GAS_USED: U256 = U256::from(1_000_000u64);
     pub static ref EFFECTIVE_GAS_PRICE: U128 = U128::from(1_000_000u64);
-    pub static ref SIZE: Option<U256> = Some(U256::from(1_000_000u64));
-    pub static ref MAX_FEE: FieldElement = FieldElement::from(100_000_000_000_000_000u64);
-    pub static ref ESTIMATE_GAS: U256 = U256::from(100_000_000_000_000_000u64);
-    pub static ref TRANSACTION_TYPE: U8 = U8::from(0);
-    pub static ref NONCE: Option<H64> = Some(H64::zero());
-    pub static ref MIX_HASH: H256 = H256::zero();
-    pub static ref DIFFICULTY: U256 = U256::from(0);
-    pub static ref TOTAL_DIFFICULTY: Option<U256> = None;
+    pub static ref SIZE: U256 = U256::from(1_000_000u64);
+    pub static ref MAX_FEE: u64 = 100_000_000_000_000_000u64;
+    pub static ref ESTIMATE_GAS: u64 = 100_000_000_000_000_000u64;
     pub static ref TX_ORIGIN_ZERO: Address = Address::zero();
 }
 

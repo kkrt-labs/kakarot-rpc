@@ -11,7 +11,7 @@ fn env_var(name: &str) -> Result<String, ConfigError> {
     std::env::var(name).map_err(|_| ConfigError::EnvironmentVariableMissing(name.into()))
 }
 
-fn field_element_from_env(var_name: &str) -> Result<FieldElement, ConfigError> {
+fn env_var_to_field_element(var_name: &str) -> Result<FieldElement, ConfigError> {
     let env_var = env_var(var_name)?;
 
     FieldElement::from_hex_be(&env_var)
@@ -104,10 +104,10 @@ impl KakarotRpcConfig {
             network_url => Network::JsonRpcProvider(Url::parse(network_url)?),
         };
 
-        let kakarot_address = field_element_from_env("KAKAROT_ADDRESS")?;
-        let proxy_account_class_hash = field_element_from_env("PROXY_ACCOUNT_CLASS_HASH")?;
-        let externally_owned_account_class_hash = field_element_from_env("EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH")?;
-        let contract_account_class_hash = field_element_from_env("CONTRACT_ACCOUNT_CLASS_HASH")?;
+        let kakarot_address = env_var_to_field_element("KAKAROT_ADDRESS")?;
+        let proxy_account_class_hash = env_var_to_field_element("PROXY_ACCOUNT_CLASS_HASH")?;
+        let externally_owned_account_class_hash = env_var_to_field_element("EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH")?;
+        let contract_account_class_hash = env_var_to_field_element("CONTRACT_ACCOUNT_CLASS_HASH")?;
 
         Ok(Self::new(
             network,
