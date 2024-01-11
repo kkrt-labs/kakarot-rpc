@@ -44,6 +44,10 @@ pub fn split_u256<T: From<u128>>(value: U256) -> [T; 2] {
     [T::from(low), T::from(high)]
 }
 
+pub fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl Iterator<Item = I>) -> T {
+    it.filter_map(|x| TryInto::<u8>::try_into(x).ok()).collect()
+}
+
 #[cfg(test)]
 mod tests {
 

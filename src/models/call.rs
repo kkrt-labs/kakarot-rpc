@@ -7,7 +7,7 @@ use starknet::accounts::Call as StarknetCall;
 use starknet_crypto::FieldElement;
 
 use crate::models::errors::ConversionError;
-use crate::starknet_client::helpers::DataDecodingError;
+use crate::starknet_client::helpers::{try_from_u8_iterator, DataDecodingError};
 
 #[derive(Clone)]
 pub struct Call(StarknetCall);
@@ -88,7 +88,7 @@ impl TryFrom<Call> for Transaction {
     type Error = DataDecodingError;
 
     fn try_from(value: Call) -> std::result::Result<Self, Self::Error> {
-        let mut call = value.0.calldata.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<u8>>();
+        let mut call: Vec<u8> = try_from_u8_iterator(value.0.calldata.into_iter());
         // Append a default RLP encoded signature in order to
         // be able to decode the transaction as a TransactionSigned.
         let mut buf = BytesMut::new();

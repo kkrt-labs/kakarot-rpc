@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::into;
 use crate::models::block::EthBlockId;
 use crate::models::event::StarknetEvent;
 use crate::models::event_filter::EthEventFilter;
@@ -8,6 +9,7 @@ use crate::models::transaction::transaction::StarknetTransaction;
 use crate::models::transaction_receipt::StarknetTransactionReceipt as TransactionReceiptWrapper;
 use crate::starknet_client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT};
 use crate::starknet_client::errors::EthApiError;
+use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::{ContractAccountReader, KakarotClient};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
@@ -54,15 +56,13 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
                 let starting_block: U256 = U256::from(data.starting_block_num);
                 let current_block: U256 = U256::from(data.current_block_num);
                 let highest_block: U256 = U256::from(data.highest_block_num);
-                let warp_chunks_amount: Option<U256> = None;
-                let warp_chunks_processed: Option<U256> = None;
 
                 let status_info = SyncInfo {
                     starting_block,
                     current_block,
                     highest_block,
-                    warp_chunks_amount,
-                    warp_chunks_processed,
+                    warp_chunks_amount: None,
+                    warp_chunks_processed: None,
                 };
 
                 Ok(SyncStatus::Info(status_info))
@@ -152,8 +152,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
 
         let (block_hash, block_num) = match tx_receipt {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                let block_hash: Felt252Wrapper = tr.block_hash.into();
-                (Some(block_hash.into()), Some(U256::from(tr.block_number)))
+                (Some(into!(tr.block_hash)), Some(U256::from(tr.block_number)))
             }
             _ => (None, None), // skip all transactions other than Invoke, covers the pending case
         };
@@ -234,7 +233,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         // Get the nonce of the contract account -> a storage variable
         let contract_account = ContractAccountReader::new(starknet_contract_address, &provider);
         let (_, bytecode) = contract_account.bytecode().call().await.map_err(EthApiError::from)?;
-        Ok(Bytes::from(bytecode.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>()))
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode.0.into_iter())))
     }
 
     #[tracing::instrument(skip_all, ret, fields(filter = ?filter))]
@@ -271,14 +270,8 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
             .filter_map(|emitted| {
                 let event: StarknetEvent =
                     Event { from_address: emitted.from_address, keys: emitted.keys, data: emitted.data }.into();
-                let block_hash = {
-                    let felt: Felt252Wrapper = emitted.block_hash.into();
-                    felt.into()
-                };
-                let transaction_hash = {
-                    let felt: Felt252Wrapper = emitted.transaction_hash.into();
-                    felt.into()
-                };
+                let block_hash = into!(emitted.block_hash);
+                let transaction_hash = into!(emitted.transaction_hash);
                 event
                     .to_eth_log(
                         &self.kakarot_client.clone(),

@@ -31,7 +31,7 @@ use self::constants::{
     DUMMY_ARGENT_GAS_PRICE_ACCOUNT_ADDRESS, ESTIMATE_GAS, MAX_FEE, STARKNET_NATIVE_TOKEN,
 };
 use self::errors::EthApiError;
-use self::helpers::{prepare_kakarot_eth_send_transaction, split_u256};
+use self::helpers::{prepare_kakarot_eth_send_transaction, split_u256, try_from_u8_iterator};
 use crate::contracts::erc20::EthereumErc20;
 use crate::contracts::kakarot_contract::KakarotContract;
 use crate::models::balance::{FutureTokenBalance, TokenBalances};
@@ -127,9 +127,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             return Err(EthApiError::EVMExecutionError(revert_reason));
         }
 
-        Ok(Bytes::from(
-            return_data.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>(),
-        ))
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(return_data.0.into_iter())))
     }
 
     /// Returns the number of transactions in a block given a block id.

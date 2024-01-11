@@ -2,11 +2,11 @@ use reth_primitives::{Address, Bytes, H256, U256};
 use reth_rpc_types::Log;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 
 use super::felt::Felt252Wrapper;
 use crate::into;
 use crate::starknet_client::errors::EthApiError;
+use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::KakarotClient;
 
 #[derive(Debug, Clone)]
@@ -62,8 +62,7 @@ impl StarknetEvent {
             })
             .collect();
 
-        let data =
-            Bytes::from(self.0.data.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>());
+        let data = Bytes::from(try_from_u8_iterator::<_, Vec<_>>(self.0.data.into_iter()));
 
         Ok(Log {
             address,
