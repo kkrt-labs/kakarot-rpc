@@ -1,6 +1,7 @@
+use reth_primitives::bloom::logs_bloom;
 use reth_primitives::contract::create_address;
-use reth_primitives::{Bloom, H256, U128, U256, U64, U8};
-use reth_rpc_types::TransactionReceipt as EthTransactionReceipt;
+use reth_primitives::{H256, U128, U256, U64, U8};
+use reth_rpc_types::{Log, TransactionReceipt as EthTransactionReceipt};
 use starknet::core::types::{
     ExecutionResult, InvokeTransactionReceipt, MaybePendingTransactionReceipt, TransactionReceipt,
 };
@@ -78,7 +79,7 @@ impl StarknetTransactionReceipt {
                         ExecutionResult::Reverted { .. } => Some(U64::from(0)),
                     };
 
-                    let logs = events
+                    let logs: Vec<Log> = events
                         .into_iter()
                         .map(StarknetEvent::new)
                         .filter_map(|event| {
@@ -86,10 +87,22 @@ impl StarknetTransactionReceipt {
                         })
                         .collect();
 
+                    // Reth note:
+                    // This bloom operation is slow and should be cached if possible.
+                    let bloom = {
+                        let logs: Vec<reth_primitives::Log> = logs
+                            .iter()
+                            .map(|log| reth_primitives::Log {
+                                data: log.data.clone(),
+                                topics: log.topics.clone(),
+                                address: log.address,
+                            })
+                            .collect();
+                        logs_bloom(logs.iter())
+                    };
+
                     EthTransactionReceipt {
                         transaction_hash,
-                        // TODO: transition this hardcoded default out of nearing-demo-day hack and seeing how to
-                        // properly source/translate this value
                         transaction_index: U64::from(0), // TODO: Fetch real data
                         block_hash,
                         block_number,
@@ -99,8 +112,8 @@ impl StarknetTransactionReceipt {
                         gas_used: Some(U256::from(500_000)),
                         contract_address,
                         logs,
-                        state_root: None,             // TODO: Fetch real data
-                        logs_bloom: Bloom::default(), // TODO: Fetch real data
+                        state_root: None,
+                        logs_bloom: bloom,
                         status_code,
                         effective_gas_price: U128::from(1_000_000), // TODO: Fetch real data
                         transaction_type: U8::from(0),              // TODO: Fetch real data
