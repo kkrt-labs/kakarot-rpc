@@ -42,9 +42,6 @@ kill-katana:
 
 dump-katana: run-katana deploy-kakarot kill-katana
 
-dump-genesis: build-kakarot
-	cargo run --bin dump-genesis
-
 test: dump-katana
 	cargo test --all
 

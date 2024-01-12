@@ -1,15 +1,13 @@
 use reth_primitives::{Transaction as TransactionType, H256, U128, U256, U64};
 use reth_rpc_types::{Signature, Transaction as EthTransaction};
-use starknet::core::types::{
-    BlockId as StarknetBlockId, BlockTag, FieldElement, InvokeTransaction, StarknetError, Transaction,
-};
+use starknet::core::types::{BlockId as StarknetBlockId, FieldElement, InvokeTransaction, StarknetError, Transaction};
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 
 use crate::models::call::{Call, Calls};
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::signature::StarknetSignature;
-use crate::starknet_client::constants::{self, CHAIN_ID};
+use crate::starknet_client::constants::CHAIN_ID;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::KakarotClient;
 
@@ -27,7 +25,7 @@ impl From<StarknetTransaction> for Transaction {
     }
 }
 
-macro_rules! get_invoke_transaction_field {
+macro_rules! invoke_transaction_field {
     (($field_v0:ident, $field_v1:ident), $type:ty) => {
         pub fn $field_v1(&self) -> Result<$type, ConversionError> {
             match &self.0 {
@@ -36,7 +34,7 @@ macro_rules! get_invoke_transaction_field {
                     InvokeTransaction::V1(tx) => Ok(tx.$field_v1.clone().into()),
                 },
                 _ => Err(ConversionError::TransactionConversionError(
-                    constants::error_messages::INVALID_TRANSACTION_TYPE.to_string(),
+                    "L1Handler, Declare, Deploy and DeployAccount transactions unsupported".to_string(),
                 )),
             }
         }
@@ -44,26 +42,12 @@ macro_rules! get_invoke_transaction_field {
 }
 
 impl StarknetTransaction {
-    get_invoke_transaction_field!((calldata, calldata), Vec<FieldElement>);
-    get_invoke_transaction_field!((contract_address, sender_address), Felt252Wrapper);
-    get_invoke_transaction_field!((signature, signature), Vec<FieldElement>);
+    invoke_transaction_field!((calldata, calldata), Vec<FieldElement>);
+    invoke_transaction_field!((contract_address, sender_address), Felt252Wrapper);
+    invoke_transaction_field!((signature, signature), Vec<FieldElement>);
 
     pub fn transaction_hash(&self) -> H256 {
         H256::from_slice(&self.0.transaction_hash().to_bytes_be())
-    }
-}
-
-pub struct StarknetTransactions(Vec<Transaction>);
-
-impl From<Vec<Transaction>> for StarknetTransactions {
-    fn from(txs: Vec<Transaction>) -> Self {
-        Self(txs)
-    }
-}
-
-impl From<StarknetTransactions> for Vec<Transaction> {
-    fn from(txs: StarknetTransactions) -> Self {
-        txs.0
     }
 }
 
@@ -75,10 +59,6 @@ impl StarknetTransaction {
         block_number: Option<U256>,
         transaction_index: Option<U256>,
     ) -> Result<EthTransaction, EthApiError> {
-        if !self.is_kakarot_tx(client).await? {
-            return Err(EthApiError::KakarotDataFilteringError("Transaction".into()));
-        }
-
         let sender_address: FieldElement = self.sender_address()?.into();
 
         let hash = self.transaction_hash();
@@ -86,7 +66,7 @@ impl StarknetTransaction {
         let starknet_block_id = match block_hash {
             Some(block_hash) => StarknetBlockId::Hash(TryInto::<Felt252Wrapper>::try_into(block_hash)?.into()),
             None => match block_number {
-                Some(block_number) => StarknetBlockId::Number(block_number.as_limbs()[0]),
+                Some(block_number) => StarknetBlockId::Number(TryInto::<u64>::try_into(block_number)?),
                 None => {
                     return Err(EthApiError::RequestError(ProviderError::StarknetError(StarknetErrorWithMessage {
                         code: MaybeUnknownErrorCode::Known(StarknetError::BlockNotFound),
@@ -152,20 +132,5 @@ impl StarknetTransaction {
             max_fee_per_blob_gas: None,
             blob_versioned_hashes: Vec::new(),
         })
-    }
-}
-
-impl StarknetTransaction {
-    /// Checks if the transaction is a Kakarot transaction.
-    pub async fn is_kakarot_tx<P: Provider + Send + Sync>(
-        &self,
-        client: &KakarotClient<P>,
-    ) -> Result<bool, EthApiError> {
-        let starknet_block_latest = StarknetBlockId::Tag(BlockTag::Latest);
-        let sender_address: FieldElement = self.sender_address()?.into();
-
-        let class_hash = client.starknet_provider().get_class_hash_at(starknet_block_latest, sender_address).await?;
-
-        Ok(class_hash == client.proxy_account_class_hash())
     }
 }

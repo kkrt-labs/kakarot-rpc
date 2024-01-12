@@ -11,33 +11,6 @@ use test_utils::evm_contract::KakarotEvmContract;
 use test_utils::fixtures::counter;
 use test_utils::sequencer::Katana;
 
-use crate::test_utils::eoa::KakarotEOA;
-
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_is_kakarot_tx(#[future] counter: (Katana, KakarotEvmContract)) {
-    // Increment a counter
-    let katana: Katana = counter.0;
-    let counter = counter.1;
-    let client = katana.client();
-    let eoa = katana.eoa();
-    let starknet_tx_hash =
-        KakarotEOA::call_evm_contract(eoa, &counter, "inc", (), 0).await.expect("Failed to increment counter");
-
-    // Query transaction
-    let tx = client
-        .starknet_provider()
-        .get_transaction_by_hash(starknet_tx_hash)
-        .await
-        .expect("Failed to query transaction");
-    let starknet_tx: StarknetTransaction = tx.into();
-    let is_kakarot_tx = starknet_tx.is_kakarot_tx(client).await.unwrap();
-
-    // Then
-    assert!(is_kakarot_tx);
-}
-
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]

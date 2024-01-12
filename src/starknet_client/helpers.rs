@@ -1,14 +1,9 @@
-use eyre::Result;
 use reth_primitives::{U128, U256};
 use reth_rlp::DecodeError;
-use starknet::core::types::{
-    FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, ValueOutOfRangeError,
-};
+use starknet::core::types::FieldElement;
 use thiserror::Error;
 
-use crate::models::errors::ConversionError;
 use crate::starknet_client::constants::selectors::ETH_SEND_TRANSACTION;
-use crate::starknet_client::errors::EthApiError;
 
 #[derive(Debug, Error)]
 pub enum DataDecodingError {
@@ -20,53 +15,6 @@ pub enum DataDecodingError {
     TransactionDecodingError(#[from] DecodeError),
     #[error("{entrypoint} returned invalid array length, expected {expected}, got {actual}")]
     InvalidReturnArrayLength { entrypoint: String, expected: usize, actual: usize },
-}
-
-#[derive(Debug)]
-struct InvalidFieldElementError;
-
-impl std::error::Error for InvalidFieldElementError {}
-
-impl std::fmt::Display for InvalidFieldElementError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Invalid FieldElement")
-    }
-}
-
-pub enum MaybePendingStarknetBlock {
-    BlockWithTxHashes(MaybePendingBlockWithTxHashes),
-    BlockWithTxs(MaybePendingBlockWithTxs),
-}
-
-/// Returns the decoded return value of the `eth_call` entrypoint of Kakarot
-pub fn decode_eth_call_return(call_result: &[FieldElement]) -> Result<Vec<FieldElement>, EthApiError> {
-    // Parse and decode Kakarot's return data (temporary solution and not scalable - will
-    // fail is Kakarot API changes)
-
-    let return_data_len = *call_result.first().ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
-        entrypoint: "eth_call or eth_send_transaction".into(),
-        expected: 1,
-        actual: 0,
-    })?;
-    let return_data_len: u64 =
-        return_data_len.try_into().map_err(|e: ValueOutOfRangeError| ConversionError::Other(e.to_string()))?;
-
-    let return_data = call_result.get(1..).ok_or_else(|| DataDecodingError::InvalidReturnArrayLength {
-        entrypoint: "eth_call or eth_send_transaction".into(),
-        expected: 2,
-        actual: 1,
-    })?;
-
-    if return_data.len() != return_data_len as usize {
-        return Err(DataDecodingError::InvalidReturnArrayLength {
-            entrypoint: "eth_call or eth_send_transaction".into(),
-            expected: return_data_len as usize,
-            actual: return_data.len(),
-        }
-        .into());
-    }
-
-    Ok(return_data.to_vec())
 }
 
 /// Constructs the calldata for a raw Starknet invoke transaction call
@@ -87,14 +35,17 @@ pub fn prepare_kakarot_eth_send_transaction(
     execute_calldata
 }
 
-/// Helper function to split a U256 value into two FieldElements.
-pub fn split_u256_into_field_elements(value: U256) -> [FieldElement; 2] {
-    let low = value & U256::from(U128::MAX);
+/// Helper function to split a U256 value into two generic values
+/// implementing the From<u128> trait
+pub fn split_u256<T: From<u128>>(value: U256) -> [T; 2] {
+    let low: u128 = (value & U256::from(U128::MAX)).try_into().unwrap(); // safe to unwrap
     let high: U256 = value >> 128;
-    [
-        FieldElement::from_bytes_be(&low.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
-        FieldElement::from_bytes_be(&high.to_be_bytes()).unwrap(), // Safe unwrap <= U128::MAX.
-    ]
+    let high: u128 = high.try_into().unwrap(); // safe to unwrap
+    [T::from(low), T::from(high)]
+}
+
+pub fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl Iterator<Item = I>) -> T {
+    it.filter_map(|x| TryInto::<u8>::try_into(x).ok()).collect()
 }
 
 #[cfg(test)]
@@ -106,21 +57,12 @@ mod tests {
 
     #[rstest]
     #[test]
-    #[case(
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    )]
-    #[case(
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "0x0000000000000000000000000000000000000000000000000000000000000000"
-    )]
-    #[case(
-        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-        "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-    )]
-    fn test_split_u256_into_field_elements(#[case] input: U256, #[case] expected: U256) {
+    #[case("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")]
+    #[case("0x0000000000000000000000000000000000000000000000000000000000000000")]
+    #[case("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")]
+    fn test_split_u256(#[case] input: U256) {
         // When
-        let result = split_u256_into_field_elements(input);
+        let result = split_u256::<FieldElement>(input);
 
         // Then
         // Recalculate the U256 values using the resulting FieldElements
@@ -129,7 +71,7 @@ mod tests {
         let result: U256 =
             U256::from_be_bytes(result[1].to_bytes_be()) << 128 | U256::from_be_bytes(result[0].to_bytes_be());
 
-        // Assert that the expected and recombined U256 values are equal
-        assert_eq!(expected, result);
+        // Assert that the input and recombined U256 values are equal
+        assert_eq!(input, result);
     }
 }

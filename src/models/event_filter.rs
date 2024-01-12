@@ -7,7 +7,7 @@ use starknet_crypto::FieldElement;
 use super::block::EthBlockNumberOrTag;
 use super::felt::Felt252Wrapper;
 use crate::starknet_client::errors::EthApiError;
-use crate::starknet_client::helpers::split_u256_into_field_elements;
+use crate::starknet_client::helpers::split_u256;
 use crate::starknet_client::KakarotClient;
 
 pub struct EthEventFilter(Filter);
@@ -36,18 +36,17 @@ impl EthEventFilter {
         let mut keys: Vec<FieldElement> = filter
             .topics
             .into_iter()
-            .map(|topic| topic.to_value_or_array())
-            .flat_map(|topic| match topic {
+            .flat_map(|filter| match filter.to_value_or_array() {
                 None => vec![],
                 Some(ValueOrArray::Value(value)) => {
                     let topic = U256::from_be_bytes(value.to_fixed_bytes());
-                    split_u256_into_field_elements(topic).to_vec()
+                    split_u256(topic).to_vec()
                 },
                 Some(ValueOrArray::Array(topics)) => topics
                 .iter()
                 .flat_map(|topic| {
                     let topic = U256::from_be_bytes(topic.to_fixed_bytes());
-                    split_u256_into_field_elements(topic).to_vec()
+                    split_u256(topic).to_vec()
                 })
                 .collect(),
             })

@@ -16,7 +16,7 @@ use crate::models::block::EthBlockId;
 use crate::models::felt::Felt252Wrapper;
 use crate::starknet_client::constants::TX_ORIGIN_ZERO;
 use crate::starknet_client::errors::EthApiError;
-use crate::starknet_client::helpers::DataDecodingError;
+use crate::starknet_client::helpers::{try_from_u8_iterator, DataDecodingError};
 
 // abigen generates a lot of unused code, needs to be benchmarked if performances ever become a
 // concern
@@ -76,7 +76,7 @@ impl<P: Provider + Send + Sync> EthereumErc20<P> {
             return Err(EthApiError::Other(anyhow!("Revert reason: {}", revert_reason)));
         }
 
-        let balance = return_data.0.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>();
+        let balance: Vec<u8> = try_from_u8_iterator(return_data.0.into_iter());
 
         Ok(U256::try_from_be_slice(&balance).ok_or(DataDecodingError::InvalidReturnArrayLength {
             entrypoint: "balanceOf".into(),

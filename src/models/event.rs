@@ -1,14 +1,12 @@
-use core::iter::once;
-
-use num_bigint::BigUint;
 use reth_primitives::{Address, Bytes, H256, U256};
 use reth_rpc_types::Log;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
 
 use super::felt::Felt252Wrapper;
+use crate::into_via_wrapper;
 use crate::starknet_client::errors::EthApiError;
+use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::KakarotClient;
 
 #[derive(Debug, Clone)]
@@ -50,27 +48,21 @@ impl StarknetEvent {
             felt_wrapper.try_into()?
         };
 
+        if keys.len() % 2 != 0 {
+            return Err(anyhow::anyhow!("Not a convertible event: Keys length is not even").into());
+        }
+
         let topics: Vec<H256> = keys
             .chunks(2)
             .map(|chunk| {
-                let low = BigUint::from_bytes_be(&chunk[0].to_bytes_be());
-                let high = match chunk.get(1) {
-                    Some(h) => BigUint::from_bytes_be(&h.to_bytes_be()),
-                    None => {
-                        return Err(anyhow::anyhow!("Not a convertible event: High value doesn't exist",));
-                    }
-                };
-                let result = low + (BigUint::from(2u128).pow(128u32) * high);
-                // Converts the result to bytes.
-                let bytes = result.to_bytes_be();
-                // If the length of bytes is less than 32, prepends it with zeros to make it 32 bytes long.
-                let bytes = once(0u8).cycle().take(32 - bytes.len()).chain(bytes.into_iter()).collect::<Vec<_>>();
-                Ok(H256::from_slice(&bytes))
+                let low: U256 = into_via_wrapper!(chunk[0]);
+                let high: U256 = into_via_wrapper!(chunk[1]);
+                let val = low | (high << 128);
+                H256::from(val)
             })
-            .collect::<Result<_, _>>()?;
+            .collect();
 
-        let data =
-            Bytes::from(self.0.data.into_iter().filter_map(|x: FieldElement| u8::try_from(x).ok()).collect::<Vec<_>>());
+        let data = Bytes::from(try_from_u8_iterator::<_, Vec<_>>(self.0.data.into_iter()));
 
         Ok(Log {
             address,

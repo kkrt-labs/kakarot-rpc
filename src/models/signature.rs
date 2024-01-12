@@ -61,7 +61,7 @@ mod tests {
     use starknet::core::crypto::pedersen_hash;
     use starknet_crypto::{sign, ExtendedSignature};
 
-    use crate::starknet_client::helpers::split_u256_into_field_elements;
+    use crate::starknet_client::helpers::split_u256;
 
     use super::*;
 
@@ -74,11 +74,11 @@ mod tests {
         let signature = sign(&private_key, &tx_hash, &FieldElement::from(1u8)).unwrap();
         let r = Felt252Wrapper::from(signature.r);
         let r: U256 = r.into();
-        let [r_low, r_high] = split_u256_into_field_elements(r);
+        let [r_low, r_high] = split_u256(r);
 
         let s = Felt252Wrapper::from(signature.s);
         let s: U256 = s.into();
-        let [s_low, s_high] = split_u256_into_field_elements(s);
+        let [s_low, s_high] = split_u256(s);
 
         (vec![r_low, r_high, s_low, s_high, signature.v], signature)
     }

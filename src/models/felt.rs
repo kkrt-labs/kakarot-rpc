@@ -118,6 +118,39 @@ impl From<Felt252Wrapper> for Bytes {
     }
 }
 
+/// This macro provides a convenient way to convert a value from a source
+/// type $val that implements Into<Felt252Wrapper> into a target type that
+/// implements From<Felt252Wrapper>.
+#[macro_export]
+macro_rules! into_via_wrapper {
+    ($val: expr) => {{
+        let intermediate: Felt252Wrapper = $val.into();
+        intermediate.into()
+    }};
+}
+
+/// This macro provides a convenient way to convert a value from a source
+/// type $val that implements TryInto<Felt252Wrapper> into a target type that
+/// implements From<Felt252Wrapper>.
+#[macro_export]
+macro_rules! into_via_try_wrapper {
+    ($val: expr) => {{
+        let intermediate: Felt252Wrapper = $val.try_into()?;
+        intermediate.into()
+    }};
+}
+
+/// This macro provides a convenient way to convert a value from a source
+/// type $val that implements Into<Felt252Wrapper> into a target type that
+/// implements TryInto<Felt252Wrapper>.
+#[macro_export]
+macro_rules! try_into_via_wrapper {
+    ($val: expr) => {{
+        let intermediate: Felt252Wrapper = $val.into();
+        intermediate.try_into()?
+    }};
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;
