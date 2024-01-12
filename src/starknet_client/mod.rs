@@ -4,7 +4,7 @@ pub mod errors;
 pub mod helpers;
 
 use crate::starknet_client::Uint256 as CairoUint256;
-use crate::{convert_try_into_via_wrapper, into_via_wrapper, try_into_convert_via_wrapper};
+use crate::{into_via_try_wrapper, into_via_wrapper, try_into_via_wrapper};
 use eyre::Result;
 use futures::future::join_all;
 use reqwest::Client;
@@ -107,11 +107,11 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             .ok_or_else(|| EthApiError::MissingParameterError("Missing `data` field in CallRequest".to_string()))?;
         let calldata: Vec<_> = calldata.to_vec().into_iter().map(FieldElement::from).collect();
 
-        let gas_limit = try_into_convert_via_wrapper!(request.gas.unwrap_or_default());
+        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_default());
 
-        let gas_price = try_into_convert_via_wrapper!(request.gas_price.unwrap_or_default());
+        let gas_price = into_via_try_wrapper!(request.gas_price.unwrap_or_default());
 
-        let value = try_into_convert_via_wrapper!(request.value.unwrap_or_default());
+        let value = into_via_try_wrapper!(request.value.unwrap_or_default());
 
         let (_, return_data, success) = self
             .kakarot_contract
@@ -478,7 +478,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     pub async fn get_evm_address(&self, starknet_address: &FieldElement) -> Result<Address, EthApiError> {
         let contract_account = ContractAccountReader::new(*starknet_address, &self.starknet_provider);
         let evm_address = contract_account.get_evm_address().call().await?;
-        Ok(convert_try_into_via_wrapper!(evm_address))
+        Ok(try_into_via_wrapper!(evm_address))
     }
 
     /// Returns the EVM address associated with a given Starknet address for a given block id

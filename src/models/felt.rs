@@ -133,7 +133,7 @@ macro_rules! into_via_wrapper {
 /// type $val that implements TryInto<Felt252Wrapper> into a target type that
 /// implements From<Felt252Wrapper>.
 #[macro_export]
-macro_rules! try_into_convert_via_wrapper {
+macro_rules! into_via_try_wrapper {
     ($val: expr) => {{
         let intermediate: Felt252Wrapper = $val.try_into()?;
         intermediate.into()
@@ -144,7 +144,7 @@ macro_rules! try_into_convert_via_wrapper {
 /// type $val that implements Into<Felt252Wrapper> into a target type that
 /// implements TryInto<Felt252Wrapper>.
 #[macro_export]
-macro_rules! convert_try_into_via_wrapper {
+macro_rules! try_into_via_wrapper {
     ($val: expr) => {{
         let intermediate: Felt252Wrapper = $val.into();
         intermediate.try_into()?
