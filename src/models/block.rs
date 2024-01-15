@@ -7,6 +7,7 @@ use starknet::core::types::{
 use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
+use crate::into_via_try_wrapper;
 use crate::models::errors::ConversionError;
 use crate::starknet_client::constants::{EARLIEST_BLOCK_NUMBER, GAS_LIMIT, GAS_USED, SIZE};
 use crate::starknet_client::KakarotClient;
@@ -23,10 +24,7 @@ impl TryFrom<EthBlockId> for StarknetBlockId {
     type Error = ConversionError;
     fn try_from(eth_block_id: EthBlockId) -> Result<Self, Self::Error> {
         match eth_block_id.0 {
-            EthereumBlockId::Hash(hash) => {
-                let hash: Felt252Wrapper = hash.block_hash.try_into()?;
-                Ok(Self::Hash(hash.into()))
-            }
+            EthereumBlockId::Hash(hash) => Ok(Self::Hash(into_via_try_wrapper!(hash.block_hash))),
             EthereumBlockId::Number(block_number_or_tag) => {
                 let block_number_or_tag: EthBlockNumberOrTag = block_number_or_tag.into();
                 Ok(block_number_or_tag.into())

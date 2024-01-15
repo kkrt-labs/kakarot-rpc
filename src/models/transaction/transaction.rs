@@ -3,6 +3,7 @@ use reth_rpc_types::{Signature, Transaction as EthTransaction};
 use starknet::core::types::{BlockId as StarknetBlockId, FieldElement, InvokeTransaction, StarknetError, Transaction};
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 
+use crate::into_via_try_wrapper;
 use crate::models::call::{Call, Calls};
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
@@ -64,7 +65,7 @@ impl StarknetTransaction {
         let hash = self.transaction_hash();
 
         let starknet_block_id = match block_hash {
-            Some(block_hash) => StarknetBlockId::Hash(TryInto::<Felt252Wrapper>::try_into(block_hash)?.into()),
+            Some(block_hash) => StarknetBlockId::Hash(into_via_try_wrapper!(block_hash)),
             None => match block_number {
                 Some(block_number) => StarknetBlockId::Number(TryInto::<u64>::try_into(block_number)?),
                 None => {
