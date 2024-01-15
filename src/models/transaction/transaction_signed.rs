@@ -74,7 +74,7 @@ impl StarknetTransactionSigned {
         // Example: For Legacy Transactions: rlp([nonce, gas_price, gas_limit, to, value, data, chain_id, 0, 0])
         let mut signed_data = Vec::new();
 
-        debug!("Ethereum transaction: {:?}", transaction);
+        debug!("ethereum transaction: {:?}", transaction);
 
         transaction.transaction.encode_without_signature(&mut signed_data);
 
@@ -83,7 +83,7 @@ impl StarknetTransactionSigned {
             signed_data.into_iter().map(FieldElement::from).collect(),
         );
 
-        debug!("Kakarot calldata: {:?}", calldata);
+        debug!("starknet calldata: {:?}", calldata);
 
         Ok(BroadcastedInvokeTransaction {
             max_fee,

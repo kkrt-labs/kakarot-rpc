@@ -404,7 +404,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             input: data,
         });
 
-        debug!("Ethereum transaction: {:?}", tx);
+        debug!("ethereum transaction: {:?}", tx);
 
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
         let block_number = self.map_block_id_to_block_number(&starknet_block_id).await?;
@@ -524,7 +524,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     ) -> Result<FieldElement, EthApiError> {
         let ethereum_address = into_via_wrapper!(*ethereum_address);
 
-        debug!("Ethereum address: {:?}", ethereum_address);
+        debug!("ethereum address: {:?}", ethereum_address);
 
         let starknet_address = self
             .kakarot_contract
@@ -534,7 +534,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             .call()
             .await?;
 
-        debug!("Starknet address: {:?}", starknet_address);
+        debug!("starknet address: {:?}", starknet_address);
 
         Ok(starknet_address)
     }
@@ -548,13 +548,13 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         block_hash: Option<H256>,
         block_number: Option<U256>,
     ) -> BlockTransactions {
-        debug!("Starknet transactions: {:?}", transactions);
+        debug!("starknet transactions: {:?}", transactions);
         let handles = transactions.into_iter().map(|tx| async move {
             let tx = Into::<StarknetTransaction>::into(tx);
             tx.to_eth_transaction(self, block_hash, block_number, None).await
         });
         let transactions = join_all(handles).await.into_iter().filter_map(|transaction| transaction.ok()).collect();
-        debug!("Kakarot transactions: {:?}", transactions);
+        debug!("ethereum transactions: {:?}", transactions);
         BlockTransactions::Full(transactions)
     }
 
