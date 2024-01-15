@@ -1,3 +1,4 @@
+use crate::into_via_wrapper;
 use reth_primitives::U256;
 use reth_rpc_types::{Parity, Signature as EthSignature};
 use starknet::core::types::FieldElement;
@@ -23,28 +24,20 @@ impl TryFrom<StarknetSignature> for EthSignature {
     type Error = StarknetSignatureError;
 
     fn try_from(value: StarknetSignature) -> Result<Self, Self::Error> {
-        let r_low: U256 = Felt252Wrapper::from(
-            *value.0.get(0).ok_or_else(|| StarknetSignatureError::MissingSignatureParamsError("r".to_string()))?,
-        )
-        .into();
-        let r_high: U256 = Felt252Wrapper::from(
-            *value.0.get(1).ok_or_else(|| StarknetSignatureError::MissingSignatureParamsError("r".to_string()))?,
-        )
-        .into();
+        macro_rules! signature_param {
+            ($index: expr, $param: expr) => {
+                into_via_wrapper!(*value.0.get($index).ok_or_else(|| {
+                    StarknetSignatureError::MissingSignatureParamsError(format!("Starknet signature param {}", $param))
+                })?)
+            };
+        }
+        let r_low: U256 = signature_param!(0, "r");
+        let r_high: U256 = signature_param!(1, "r");
         let r = r_low + (r_high << 128);
-        let s_low: U256 = Felt252Wrapper::from(
-            *value.0.get(2).ok_or_else(|| StarknetSignatureError::MissingSignatureParamsError("r".to_string()))?,
-        )
-        .into();
-        let s_high: U256 = Felt252Wrapper::from(
-            *value.0.get(3).ok_or_else(|| StarknetSignatureError::MissingSignatureParamsError("r".to_string()))?,
-        )
-        .into();
+        let s_low: U256 = signature_param!(2, "s");
+        let s_high: U256 = signature_param!(3, "s");
         let s = s_low + (s_high << 128);
-        let v: U256 = Felt252Wrapper::from(
-            *value.0.get(4).ok_or_else(|| StarknetSignatureError::MissingSignatureParamsError("v".to_string()))?,
-        )
-        .into();
+        let v: U256 = signature_param!(4, "v");
         let y_parity = if v == U256::from(0u8) {
             Some(Parity(false))
         } else if v == U256::from(1u8) {

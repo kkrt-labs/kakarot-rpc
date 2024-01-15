@@ -1,15 +1,17 @@
 use reth_primitives::bloom::logs_bloom;
 use reth_primitives::contract::create_address;
-use reth_primitives::{H256, U128, U256, U64, U8};
+use reth_primitives::{U128, U256, U64, U8};
 use reth_rpc_types::{Log, TransactionReceipt as EthTransactionReceipt};
 use starknet::core::types::{
     ExecutionResult, InvokeTransactionReceipt, MaybePendingTransactionReceipt, TransactionReceipt,
 };
 use starknet::providers::Provider;
+use tracing::debug;
 
 use super::event::StarknetEvent;
 use super::felt::Felt252Wrapper;
 use super::transaction::transaction::StarknetTransaction;
+use crate::into_via_wrapper;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::KakarotClient;
 
@@ -28,11 +30,14 @@ impl From<StarknetTransactionReceipt> for MaybePendingTransactionReceipt {
 }
 
 impl StarknetTransactionReceipt {
+    #[tracing::instrument(skip_all, level = "debug")]
     pub async fn to_eth_transaction_receipt<P: Provider + Send + Sync>(
         self,
         client: &KakarotClient<P>,
     ) -> Result<Option<EthTransactionReceipt>, EthApiError> {
         let starknet_tx_receipt: MaybePendingTransactionReceipt = self.into();
+
+        debug!("starknet transaction receipt: {:?}", starknet_tx_receipt);
 
         let res_receipt = match starknet_tx_receipt {
             MaybePendingTransactionReceipt::Receipt(receipt) => match receipt {
@@ -47,14 +52,9 @@ impl StarknetTransactionReceipt {
                     let starknet_tx: StarknetTransaction =
                         client.starknet_provider().get_transaction_by_hash(transaction_hash).await?.into();
 
-                    let transaction_hash: Felt252Wrapper = transaction_hash.into();
-                    let transaction_hash: Option<H256> = Some(transaction_hash.into());
-
-                    let block_hash: Felt252Wrapper = block_hash.into();
-                    let block_hash: Option<H256> = Some(block_hash.into());
-
-                    let block_number: Felt252Wrapper = block_number.into();
-                    let block_number: Option<U256> = Some(block_number.into());
+                    let transaction_hash = Some(into_via_wrapper!(transaction_hash));
+                    let block_hash = Some(into_via_wrapper!(block_hash));
+                    let block_number = Some(into_via_wrapper!(block_number));
 
                     let eth_tx = starknet_tx.to_eth_transaction(client, block_hash, block_number, None).await?;
                     let from = eth_tx.from;
@@ -129,6 +129,8 @@ impl StarknetTransactionReceipt {
                 return Ok(None);
             }
         };
+
+        debug!("ethereum transaction receipt: {:?}", res_receipt);
 
         Ok(Some(res_receipt))
     }

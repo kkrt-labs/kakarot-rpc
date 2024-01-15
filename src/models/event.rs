@@ -4,10 +4,10 @@ use starknet::core::types::Event;
 use starknet::providers::Provider;
 
 use super::felt::Felt252Wrapper;
-use crate::into_via_wrapper;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::KakarotClient;
+use crate::{into_via_wrapper, try_into_via_wrapper};
 
 #[derive(Debug, Clone)]
 pub struct StarknetEvent(Event);
@@ -43,10 +43,7 @@ impl StarknetEvent {
         let (evm_contract_address, keys) =
             self.0.keys.split_first().ok_or_else(|| EthApiError::KakarotDataFilteringError("Event".into()))?;
 
-        let address: Address = {
-            let felt_wrapper: Felt252Wrapper = (*evm_contract_address).into();
-            felt_wrapper.try_into()?
-        };
+        let address: Address = try_into_via_wrapper!(*evm_contract_address);
 
         if keys.len() % 2 != 0 {
             return Err(anyhow::anyhow!("Not a convertible event: Keys length is not even").into());
