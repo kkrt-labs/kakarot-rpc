@@ -1,6 +1,6 @@
 use reth_primitives::{Bytes, TransactionSigned};
 use reth_rlp::Decodable as _;
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, BroadcastedInvokeTransaction};
+use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 use tracing::debug;
@@ -34,9 +34,7 @@ impl StarknetTransactionSigned {
             EthApiError::Other(anyhow::anyhow!("Kakarot send_transaction: signature ecrecover failed"))
         })?;
 
-        let starknet_block_id = StarknetBlockId::Tag(BlockTag::Latest);
-
-        let starknet_address = client.compute_starknet_address(&evm_address, &starknet_block_id).await?;
+        let starknet_address = client.compute_starknet_address(&evm_address).await?;
 
         let nonce = FieldElement::from(transaction.nonce());
 

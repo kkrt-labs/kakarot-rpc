@@ -18,7 +18,7 @@ use starknet::core::types::{
     FieldElement, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingTransactionReceipt,
     StarknetError, Transaction as TransactionType, TransactionReceipt as StarknetTransactionReceipt,
 };
-use starknet::core::utils::get_storage_var_address;
+use starknet::core::utils::{get_contract_address, get_storage_var_address};
 use starknet::providers::sequencer::models::{FeeEstimate, FeeUnit, TransactionSimulationInfo, TransactionTrace};
 use starknet::providers::{MaybeUnknownErrorCode, Provider, ProviderError, StarknetErrorWithMessage};
 use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
@@ -201,7 +201,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     #[tracing::instrument(skip_all, level = "debug")]
     pub async fn nonce(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
-        let starknet_address = self.compute_starknet_address(&ethereum_address, &starknet_block_id).await?;
+        let starknet_address = self.compute_starknet_address(&ethereum_address).await?;
 
         let proxy = ProxyReader::new(starknet_address, &self.starknet_provider);
         let class_hash = proxy.get_implementation().call().await.map_or(FieldElement::ZERO, |class_hash| class_hash);
@@ -210,7 +210,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             debug!("contract account");
             // Get the nonce of the contract account -> a storage variable
             let contract_account = ContractAccountReader::new(starknet_address, &self.starknet_provider);
-            Ok(into_via_wrapper!(contract_account.get_nonce().call().await?))
+            Ok(into_via_wrapper!(contract_account.get_nonce().block_id(starknet_block_id).call().await?))
         } else {
             debug!("eoa");
             // Get the nonce of the Eoa -> the protocol level nonce
@@ -235,12 +235,12 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     #[tracing::instrument(skip_all, level = "debug")]
     pub async fn balance(&self, ethereum_address: Address, block_id: BlockId) -> Result<U256, EthApiError> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
-        let starknet_address = self.compute_starknet_address(&ethereum_address, &starknet_block_id).await?;
+        let starknet_address = self.compute_starknet_address(&ethereum_address).await?;
 
         let native_token_address = FieldElement::from_hex_be(STARKNET_NATIVE_TOKEN).unwrap();
         let provider = self.starknet_provider();
         let native_token = erc20::ERC20Reader::new(native_token_address, &provider);
-        let balance = native_token.balanceOf(&starknet_address).call().await?;
+        let balance = native_token.balanceOf(&starknet_address).block_id(starknet_block_id).call().await?;
 
         debug!("starknet address {} has balance: {:?}", starknet_address, balance);
 
@@ -255,7 +255,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     pub async fn storage_at(&self, address: Address, index: U256, block_id: BlockId) -> Result<U256, EthApiError> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
 
-        let starknet_contract_address = self.compute_starknet_address(&address, &starknet_block_id).await?;
+        let starknet_contract_address = self.compute_starknet_address(&address).await?;
 
         let provider = self.starknet_provider();
         let contract_account = ContractAccountReader::new(starknet_contract_address, &provider);
@@ -265,7 +265,8 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         let storage_address =
             get_storage_var_address("storage_", &keys).map_err(|e| EthApiError::ConversionError(e.to_string()))?;
 
-        let storage: CairoUint256 = contract_account.storage(&storage_address).call().await?;
+        let storage: CairoUint256 =
+            contract_account.storage(&storage_address).block_id(starknet_block_id).call().await?;
 
         debug!(
             "storage at starknet address {} key slot {} is {:?}",
@@ -287,8 +288,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
 
         let handles = token_addresses.into_iter().map(|token_address| {
             let token_addr: Felt252Wrapper = token_address.into();
-            let token =
-                EthereumErc20::new(token_addr.into(), self.starknet_provider(), self.kakarot_contract.reader.address);
+            let token = EthereumErc20::new(token_addr.into(), self.starknet_provider(), self.kakarot_address());
             let balance = token.balance_of(address.into(), block_id);
 
             FutureTokenBalance::new(Box::pin(balance), token_address)
@@ -409,14 +409,14 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into()?;
         let block_number = self.map_block_id_to_block_number(&starknet_block_id).await?;
 
-        let sender_address = self.compute_starknet_address(&from, &starknet_block_id).await?;
+        let sender_address = self.compute_starknet_address(&from).await?;
 
         let mut data = vec![];
         tx.encode_without_signature(&mut data);
         let data = data.into_iter().map(FieldElement::from).collect();
         let calldata = prepare_kakarot_eth_send_transaction(self.kakarot_address(), data);
 
-        debug!("Kakarot calldata: {:?}", calldata);
+        debug!("starknet calldata: {:?}", calldata);
 
         let tx = BroadcastedInvokeTransaction {
             max_fee: FieldElement::ZERO,
@@ -517,25 +517,12 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
     /// Returns the EVM address associated with a given Starknet address for a given block id
     /// by calling the `compute_starknet_address` function on the Kakarot contract.
     #[tracing::instrument(skip_all, level = "debug")]
-    pub async fn compute_starknet_address(
-        &self,
-        ethereum_address: &Address,
-        starknet_block_id: &StarknetBlockId,
-    ) -> Result<FieldElement, EthApiError> {
+    pub async fn compute_starknet_address(&self, ethereum_address: &Address) -> Result<FieldElement, EthApiError> {
         let ethereum_address = into_via_wrapper!(*ethereum_address);
-
         debug!("ethereum address: {:?}", ethereum_address);
-
-        let starknet_address = self
-            .kakarot_contract
-            .reader
-            .compute_starknet_address(&ethereum_address)
-            .block_id(*starknet_block_id)
-            .call()
-            .await?;
-
+        let starknet_address =
+            get_contract_address(ethereum_address, self.proxy_account_class_hash(), &[], self.kakarot_address());
         debug!("starknet address: {:?}", starknet_address);
-
         Ok(starknet_address)
     }
 
