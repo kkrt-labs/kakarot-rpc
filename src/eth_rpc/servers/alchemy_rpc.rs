@@ -21,6 +21,7 @@ impl<P: Provider + Send + Sync + 'static> AlchemyRpc<P> {
 
 #[async_trait]
 impl<P: Provider + Send + Sync + 'static> AlchemyApiServer for AlchemyRpc<P> {
+    #[tracing::instrument(skip_all, ret, fields(address = %address, contract_addresses = ?contract_addresses))]
     async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> Result<TokenBalances> {
         let token_balances = self.kakarot_client.token_balances(address, contract_addresses).await?;
         Ok(token_balances)

@@ -1,24 +1,10 @@
-use std::ops::Mul;
-
-use reth_primitives::{Address, Bytes, H256, U256};
+use reth_primitives::{Address, H256, U256};
 use starknet::core::types::FieldElement;
 
 use crate::models::errors::ConversionError;
 
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);
-
-impl Felt252Wrapper {
-    pub const ZERO: Self = Self(FieldElement::ZERO);
-}
-
-impl Mul for Felt252Wrapper {
-    type Output = Self;
-
-    fn mul(self, rhs: Self) -> Self::Output {
-        Self(self.0 * rhs.0)
-    }
-}
 
 impl From<FieldElement> for Felt252Wrapper {
     fn from(felt: FieldElement) -> Self {
@@ -108,13 +94,6 @@ impl From<Felt252Wrapper> for U256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
         Self::from_be_bytes(felt.to_bytes_be())
-    }
-}
-
-impl From<Felt252Wrapper> for Bytes {
-    fn from(felt: Felt252Wrapper) -> Self {
-        let bytes = felt.0.to_bytes_be();
-        Self::from(bytes)
     }
 }
 
@@ -234,18 +213,5 @@ mod tests {
 
         // When
         Felt252Wrapper::try_from(hash).unwrap();
-    }
-
-    #[test]
-    fn test_bytes_from_felt() {
-        // Given
-        let felt = Felt252Wrapper::from(1);
-
-        // When
-        let bytes = Bytes::from(felt);
-
-        // Then
-        let expected = Bytes::from_str("0x0000000000000000000000000000000000000000000000000000000000000001").unwrap();
-        assert_eq!(expected, bytes);
     }
 }
