@@ -9,7 +9,7 @@ use reth_primitives::{
     sign_message, Address, BlockId, BlockNumberOrTag, Bytes, Transaction, TransactionKind, TransactionSigned,
     TxEip1559, H256, U256,
 };
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag, MaybePendingTransactionReceipt, TransactionReceipt};
+use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
@@ -24,7 +24,7 @@ use crate::test_utils::tx_waiter::watch_tx;
 pub trait Eoa<P: Provider + Send + Sync> {
     async fn starknet_address(&self) -> Result<FieldElement, eyre::Error> {
         let client: &KakarotClient<P> = self.client();
-        Ok(client.compute_starknet_address(&self.evm_address()?, &StarknetBlockId::Tag(BlockTag::Latest)).await?)
+        Ok(client.compute_starknet_address(&self.evm_address()?).await?)
     }
     fn evm_address(&self) -> Result<Address, eyre::Error> {
         let wallet = LocalWallet::from_bytes(self.private_key().as_bytes())?;
@@ -101,7 +101,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
         let maybe_receipt = self
             .provider()
-            .get_transaction_receipt(FieldElement::from(tx_hash.clone()))
+            .get_transaction_receipt(FieldElement::from(tx_hash))
             .await
             .expect("Failed to get transaction receipt after retries");
 

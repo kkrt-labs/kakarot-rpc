@@ -1,8 +1,9 @@
+use jsonrpsee::types::ErrorObject;
 use ruint::FromUintError;
 use starknet::core::types::FromByteArrayError;
 use thiserror::Error;
 
-use crate::starknet_client::helpers::DataDecodingError;
+use crate::starknet_client::{errors::EthApiError, helpers::DataDecodingError};
 
 #[derive(Debug, Error)]
 /// Conversion error
@@ -36,5 +37,12 @@ pub enum ConversionError {
 impl<T> From<FromUintError<T>> for ConversionError {
     fn from(err: FromUintError<T>) -> Self {
         Self::UintConversionError(err.to_string())
+    }
+}
+
+impl From<ConversionError> for ErrorObject<'static> {
+    fn from(err: ConversionError) -> Self {
+        let err = EthApiError::from(err);
+        err.into()
     }
 }
