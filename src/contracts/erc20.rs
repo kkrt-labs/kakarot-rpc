@@ -12,6 +12,7 @@ use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
 use starknet_crypto::FieldElement;
 
 use crate::contracts::kakarot_contract::KakarotCoreReader;
+use crate::contracts::kakarot_contract::Uint256 as CairoUint256;
 use crate::models::block::EthBlockId;
 use crate::models::felt::Felt252Wrapper;
 use crate::starknet_client::constants::TX_ORIGIN_ZERO;
@@ -54,15 +55,14 @@ impl<P: Provider + Send + Sync> EthereumErc20<P> {
 
         let gas_limit = felt!("0x100000");
         let gas_price = felt!("0x1");
-        let value = FieldElement::ZERO;
 
-        let (_, return_data, success) = kakarot_reader
+        let (_, return_data, success, _) = kakarot_reader
             .eth_call(
                 &origin.into(),
                 &self.address,
                 &gas_limit,
                 &gas_price,
-                &value,
+                &CairoUint256 { low: FieldElement::ZERO, high: FieldElement::ZERO },
                 &calldata.len().into(),
                 &CairoArrayLegacy(calldata),
             )
