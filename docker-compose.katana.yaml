@@ -1,24 +1,41 @@
 # trunk-ignore-all(yamllint/empty-values)
-version: "3.2"
+version: '3.2'
 
 services:
   starknet:
     image: greged93/katana:v0.4.4
     command:
-      - "katana"
-      - "--block-time"
-      - "6000"
-      - "--disable-fee"
-      - "--validate-max-steps"
-      - "16777216"
-      - "--invoke-max-steps"
-      - "16777216"
-      - "--gas-price"
-      - "1"
+      - katana
+      - --block-time
+      - '6000'
+      - --disable-fee
+      - --validate-max-steps
+      - '16777216'
+      - --invoke-max-steps
+      - '16777216'
+      - --gas-price
+      - '1'
     ports:
-      - "5050:5050"
+      - '5050:5050'
     networks:
       - internal
+
+  apibara-dna:
+    image: quay.io/apibara/starknet:1.2.0
+    command:
+      - start
+      - --rpc=http://starknet:5050
+      - --wait-for-rpc
+      - --data=/data
+    ports:
+      - 7171:7171
+    volumes:
+      - apibara:/data
+    networks:
+      - internal
+    depends_on:
+      kakarot-deployer:
+        condition: service_completed_successfully
 
   kakarot-deployer:
     extends:
@@ -47,3 +64,4 @@ networks:
 
 volumes:
   deployments:
+  apibara:

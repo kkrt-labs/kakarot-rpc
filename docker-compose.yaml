@@ -1,12 +1,12 @@
-version: "3.2"
+version: '3.2'
 
 services:
   starknet:
     image: greged93/madara:v0.6.0
     ports:
-      - "9615:9615"
-      - "9944:9944"
-      - "30333:30333"
+      - 9615:9615
+      - 9944:9944
+      - 30333:30333
     entrypoint: [/bin/bash, -c]
     command: >
       "/madara-bin setup --from-remote --base-path=/home/madara --chain=dev && /madara-bin --rpc-external --rpc-methods=unsafe --rpc-cors=all --chain=dev --base-path=/home/madara --alice --force-authoring"
@@ -37,8 +37,8 @@ services:
     image: apteno/alpine-jq:2023-07-24
     # Parse deployments and save the result to .env file
     entrypoint:
-      - "/bin/sh"
-      - "-c"
+      - '/bin/sh'
+      - '-c'
       # First line overrides an existing .env, if any.
       # This is to make sure that it is clean even though docker volume was not cleaned.
       - |
