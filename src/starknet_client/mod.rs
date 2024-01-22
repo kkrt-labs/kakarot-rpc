@@ -35,6 +35,7 @@ use self::errors::EthApiError;
 use self::helpers::{prepare_kakarot_eth_send_transaction, split_u256, try_from_u8_iterator};
 use crate::contracts::erc20::EthereumErc20;
 use crate::contracts::kakarot_contract::KakarotContract;
+use crate::contracts::kakarot_contract::Uint256 as KakarotUint256;
 use crate::models::balance::{FutureTokenBalance, TokenBalances};
 use crate::models::block::{BlockWithTxHashes, BlockWithTxs, EthBlockId};
 use crate::models::errors::ConversionError;
@@ -113,7 +114,10 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
 
         let gas_price = into_via_try_wrapper!(request.gas_price.unwrap_or_default());
 
-        let value = into_via_try_wrapper!(request.value.unwrap_or_default());
+        let value = {
+            let value = request.value.unwrap_or_default();
+            split_u256::<FieldElement>(value)
+        };
 
         debug!("origin: {:?}", origin);
         debug!("to: {:?}", to);
@@ -122,10 +126,18 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
         debug!("value: {:?}", value);
         debug!("calldata: {:?}", calldata);
 
-        let (_, return_data, success) = self
+        let (_, return_data, success, _gas_used) = self
             .kakarot_contract
             .reader
-            .eth_call(&origin, &to, &gas_limit, &gas_price, &value, &calldata.len().into(), &CairoArrayLegacy(calldata))
+            .eth_call(
+                &origin,
+                &to,
+                &gas_limit,
+                &gas_price,
+                &KakarotUint256 { low: value[0], high: value[1] },
+                &calldata.len().into(),
+                &CairoArrayLegacy(calldata),
+            )
             .block_id(starknet_block_id)
             .call()
             .await?;
