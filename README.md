@@ -371,6 +371,7 @@ Thanks goes to these wonderful people
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/irisdv"><img src="https://avatars.githubusercontent.com/u/8224462?v=4?s=100" width="100px;" alt="Iris"/><br /><sub><b>Iris</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=irisdv" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://aniketpr01.github.io/"><img src="https://avatars.githubusercontent.com/u/46114123?v=4?s=100" width="100px;" alt="Aniket Prajapati"/><br /><sub><b>Aniket Prajapati</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=aniketpr01" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/tekkac"><img src="https://avatars.githubusercontent.com/u/98529704?v=4?s=100" width="100px;" alt="Trunks @ Carbonable"/><br /><sub><b>Trunks @ Carbonable</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=tekkac" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/alex-sumner"><img src="https://avatars.githubusercontent.com/u/46249612?v=4?s=100" width="100px;" alt="Alex Sumner"/><br /><sub><b>Alex Sumner</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=alex-sumner" title="Code">💻</a></td>
     </tr>
   </tbody>
   <tfoot>
