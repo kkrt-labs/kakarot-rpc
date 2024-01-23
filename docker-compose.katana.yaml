@@ -6,6 +6,8 @@ services:
     image: greged93/katana:v0.4.4
     command:
       - "katana"
+      - "--block-time"
+      - "6000"
       - "--disable-fee"
       - "--validate-max-steps"
       - "16777216"
