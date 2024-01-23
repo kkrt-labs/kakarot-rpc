@@ -47,6 +47,15 @@
       ]
     },
     {
+      "login": "Eikix",
+      "name": "Elias Tazartes",
+      "avatar_url": "https://avatars.githubusercontent.com/u/66871571?v=4",
+      "profile": "https://github.com/Eikix",
+      "contributions": [
+        "code"
+      ]
+    },
+    {
       "login": "greged93",
       "name": "greged93",
       "avatar_url": "https://avatars.githubusercontent.com/u/82421016?v=4",
@@ -240,15 +249,6 @@
       "name": "Santiago Galván (Dub)",
       "avatar_url": "https://avatars.githubusercontent.com/u/58611754?v=4",
       "profile": "https://github.com/dubzn",
-      "contributions": [
-        "code"
-      ]
-    },
-    {
-      "login": "Eikix",
-      "name": "Elias Tazartes",
-      "avatar_url": "https://avatars.githubusercontent.com/u/66871571?v=4",
-      "profile": "https://github.com/Eikix",
       "contributions": [
         "code"
       ]
