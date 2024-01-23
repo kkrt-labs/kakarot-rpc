@@ -36,7 +36,11 @@ pub async fn run_server(
 
     let service = ServiceBuilder::new().layer(cors);
 
-    let server = ServerBuilder::default().set_middleware(service).build(socket_addr.parse::<SocketAddr>()?).await?;
+    let server = ServerBuilder::default()
+        .max_connections(std::env::var("RPC_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse().unwrap())
+        .set_middleware(service)
+        .build(socket_addr.parse::<SocketAddr>()?)
+        .await?;
 
     let addr = server.local_addr()?;
 
