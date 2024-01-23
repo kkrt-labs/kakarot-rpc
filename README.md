@@ -373,6 +373,9 @@ Thanks goes to these wonderful people
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/tekkac"><img src="https://avatars.githubusercontent.com/u/98529704?v=4?s=100" width="100px;" alt="Trunks @ Carbonable"/><br /><sub><b>Trunks @ Carbonable</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=tekkac" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/alex-sumner"><img src="https://avatars.githubusercontent.com/u/46249612?v=4?s=100" width="100px;" alt="Alex Sumner"/><br /><sub><b>Alex Sumner</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=alex-sumner" title="Code">💻</a></td>
     </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/raphdeknop"><img src="https://avatars.githubusercontent.com/u/49572419?v=4?s=100" width="100px;" alt="Raphaël Deknop"/><br /><sub><b>Raphaël Deknop</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=raphdeknop" title="Code">💻</a></td>
+    </tr>
   </tbody>
   <tfoot>
     <tr>

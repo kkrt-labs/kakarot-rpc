@@ -135,6 +135,15 @@
       "contributions": [
         "code"
       ]
+    },
+    {
+      "login": "raphdeknop",
+      "name": "Raphaël Deknop",
+      "avatar_url": "https://avatars.githubusercontent.com/u/49572419?v=4",
+      "profile": "https://github.com/raphdeknop",
+      "contributions": [
+        "code"
+      ]
     }
   ],
   "contributorsPerLine": 7,
