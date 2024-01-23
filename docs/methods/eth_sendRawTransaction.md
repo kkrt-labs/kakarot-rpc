@@ -2,26 +2,18 @@
 
 ## Metadata
 
-- name: sendRawTransaction
+- name: eth_sendRawTransaction
 - prefix: eth
-- state: ⚠️
+- state: ✅
 - [specification](https://github.com/ethereum/execution-apis/blob/6709c2a795b707202e93c4f2867fa0bf2640a84f/src/eth/submit.yaml)
-- [issue](https://github.com/sayajin-labs/kakarot-rpc-adapter/issues/22)
 
-## Specification Description
+## Description
 
-Sends a raw transaction (RLP Encoded) to be submitted to the network.
+Submits a raw transaction by wrapping the EVM compatible transaction into a Starknet formatted transaction. Note that this operation does not come at any additional trust assumption.
+The EVM signature and initial transaction payload will be verified inside a Cairo program (EOA Cairo implementation).
 
-### Parameters
+Kakarot Specificity:
 
-- string - transaction
-
-### Returns
-
-- bytes32 - transactionHash
-
-## Kakarot Logic
-
-This method does not interact with the Kakarot contract directly. It calls the
-Starknet sequencer => Starknet sequencer calls EOA account => EOA account calls
-validate and then execute.
+- Decode RLP encoded transaction, and pass signature in the Starknet metadata `transaction.signature` field
+- Re-encode (RLP) transaction without the signature. The encoded transaction is ready to be keccak-hashed inside the Cairo program (this is pre-formatting without security degradation).
+- For a given sender EVM address, compute the corresponding (bijective mapping) Starknet account. Send the Starknet transaction with `sender_address` field set as this Starknet account.
