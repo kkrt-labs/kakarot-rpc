@@ -377,6 +377,7 @@ Thanks goes to these wonderful people
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/raphdeknop"><img src="https://avatars.githubusercontent.com/u/49572419?v=4?s=100" width="100px;" alt="Raphaël Deknop"/><br /><sub><b>Raphaël Deknop</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=raphdeknop" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/bhavyagosai"><img src="https://avatars.githubusercontent.com/u/64588227?v=4?s=100" width="100px;" alt="Bhavya Gosai"/><br /><sub><b>Bhavya Gosai</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=bhavyagosai" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/apoorvsadana"><img src="https://avatars.githubusercontent.com/u/95699312?v=4?s=100" width="100px;" alt="apoorvsadana"/><br /><sub><b>apoorvsadana</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=apoorvsadana" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://www.linkedin.com/in/paul-henrykajfasz/"><img src="https://avatars.githubusercontent.com/u/42912740?v=4?s=100" width="100px;" alt="Paul-Henry Kajfasz"/><br /><sub><b>Paul-Henry Kajfasz</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=phklive" title="Code">💻</a></td>
     </tr>
   </tbody>
   <tfoot>
