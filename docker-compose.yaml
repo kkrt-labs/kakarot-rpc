@@ -58,7 +58,7 @@ services:
     ports:
       - 3030:3030
     environment:
-      - KAKAROT_HTTP_RPC_ADDRESS=0.0.0.0:3030
+      - KAKAROT_RPC_URL=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:9944
       - RUST_LOG=kakarot_rpc=info
       - DEPLOYER_ACCOUNT_PRIVATE_KEY=0x0288a51c164874bb6a1ca7bd1cb71823c234a86d0f7b150d70fa8f06de645396
