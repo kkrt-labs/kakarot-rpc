@@ -387,6 +387,7 @@ Thanks goes to these wonderful people
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/MartianGreed"><img src="https://avatars.githubusercontent.com/u/11038484?v=4?s=100" width="100px;" alt="valdo.carbonaboyz.stark"/><br /><sub><b>valdo.carbonaboyz.stark</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=MartianGreed" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/dpinones"><img src="https://avatars.githubusercontent.com/u/30808181?v=4?s=100" width="100px;" alt="Damián Piñones"/><br /><sub><b>Damián Piñones</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=dpinones" title="Code">💻</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/zarboq"><img src="https://avatars.githubusercontent.com/u/37303126?v=4?s=100" width="100px;" alt="zarboq"/><br /><sub><b>zarboq</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=zarboq" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/dubzn"><img src="https://avatars.githubusercontent.com/u/58611754?v=4?s=100" width="100px;" alt="Santiago Galván (Dub)"/><br /><sub><b>Santiago Galván (Dub)</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=dubzn" title="Code">💻</a></td>
     </tr>
   </tbody>
   <tfoot>
