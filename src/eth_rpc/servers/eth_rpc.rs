@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+use crate::db_client::client::DbClient;
+use crate::db_client::types::header::DbHeader;
+use crate::db_client::types::transaction::{DbTransactionFull, DbTransactionHash};
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::event::StarknetEvent;
@@ -7,15 +10,16 @@ use crate::models::event_filter::EthEventFilter;
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::transaction::StarknetTransaction;
 use crate::models::transaction_receipt::StarknetTransactionReceipt as TransactionReceiptWrapper;
-use crate::starknet_client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT};
+use crate::starknet_client::constants::CHUNK_SIZE_LIMIT;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::{ContractAccountReader, KakarotClient};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
+use mongodb::bson::doc;
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncInfo,
-    SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
+    Block, BlockTransactions, CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index,
+    RichBlock, SyncInfo, SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
 use starknet::core::types::{
@@ -29,23 +33,24 @@ use crate::eth_rpc::api::eth_api::EthApiServer;
 /// The RPC module for the Ethereum protocol required by Kakarot.
 pub struct KakarotEthRpc<P: Provider + Send + Sync + 'static> {
     pub kakarot_client: Arc<KakarotClient<P>>,
+    pub db_client: DbClient,
 }
 
 impl<P: Provider + Send + Sync + 'static> KakarotEthRpc<P> {
-    pub fn new(kakarot_client: Arc<KakarotClient<P>>) -> Self {
-        Self { kakarot_client }
+    pub fn new(kakarot_client: Arc<KakarotClient<P>>, db_client: DbClient) -> Self {
+        Self { kakarot_client, db_client }
     }
 }
 
 #[async_trait]
 impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {
-        let block_number = self.kakarot_client.starknet_provider().block_number().await.map_err(EthApiError::from)?;
-        Ok(block_number.into())
+        let header = self.db_client.find_one::<DbHeader>("headers", doc! {}, doc! {"header.number": -1}).await?;
+        Ok(header.header.number)
     }
 
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, err)]
     async fn syncing(&self) -> Result<SyncStatus> {
         let status = self.kakarot_client.starknet_provider().syncing().await.map_err(EthApiError::from)?;
 
@@ -74,25 +79,65 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Err(EthApiError::MethodNotSupported("eth_coinbase".to_string()).into())
     }
 
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, err)]
     async fn accounts(&self) -> Result<Vec<Address>> {
         Ok(Vec::new())
     }
 
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, err)]
     async fn chain_id(&self) -> Result<Option<U64>> {
-        Ok(Some(CHAIN_ID.into()))
+        let tx =
+            self.db_client.find_one::<DbTransactionFull>("transactions", doc! {}, doc! {"tx.blockNumber": -1}).await?;
+        Ok(Some(tx.tx.chain_id))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(hash = %hash))]
+    #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {
-        let block_id = EthBlockId::new(BlockId::Hash(hash.into()));
-        let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::from)?;
-        let block = self.kakarot_client.get_eth_block_from_starknet_block(starknet_block_id, full).await?;
-        Ok(Some(block))
+        let header =
+            self.db_client.find_one::<DbHeader>("headers", doc! {"hash": format!("0x{:064x}", hash)}, None).await?;
+        let total_difficulty = Some(header.header.difficulty);
+
+        let transactions = if full {
+            BlockTransactions::Full(
+                self.db_client
+                    .find_all::<DbTransactionFull>(
+                        "transactions",
+                        doc! {"tx.blockHash": format!("0x{:064x}", hash)},
+                        None,
+                    )
+                    .await?
+                    .into_iter()
+                    .map(|tx| tx.tx.into())
+                    .collect(),
+            )
+        } else {
+            BlockTransactions::Hashes(
+                self.db_client
+                    .find_all::<DbTransactionHash>(
+                        "transactions",
+                        doc! {"tx.blockHash": format!("0x{:064x}", hash)},
+                        doc! {"tx.blockHash": 1},
+                    )
+                    .await?
+                    .into_iter()
+                    .map(|tx| tx.tx.into())
+                    .collect(),
+            )
+        };
+
+        let block = Block {
+            header: header.into(),
+            transactions,
+            total_difficulty,
+            uncles: Vec::new(),
+            size: None,
+            withdrawals: None,
+        };
+
+        Ok(Some(block.into()))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(number = %number, full = full))]
+    #[tracing::instrument(skip_all, ret, err, fields(number = %number, full = full))]
     async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
         let block_id = EthBlockId::new(BlockId::Number(number));
         let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::from)?;
@@ -100,14 +145,14 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(Some(block))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(hash = %hash))]
+    #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64> {
         let block_id = BlockId::Hash(hash.into());
         let count = self.kakarot_client.get_transaction_count_by_block(block_id).await.map_err(EthApiError::from)?;
         Ok(count)
     }
 
-    #[tracing::instrument(skip_all, ret, fields(number = %number))]
+    #[tracing::instrument(skip_all, ret, err, fields(number = %number))]
     async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64> {
         let block_id = BlockId::Number(number);
         let count = self.kakarot_client.get_transaction_count_by_block(block_id).await.map_err(EthApiError::from)?;
@@ -134,7 +179,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Err(EthApiError::MethodNotSupported("eth_getUncleByBlockNumberAndIndex".to_string()).into())
     }
 
-    #[tracing::instrument(skip_all, ret, fields(hash = %hash))]
+    #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn transaction_by_hash(&self, hash: H256) -> Result<Option<EtherTransaction>> {
         let hash: Felt252Wrapper = hash.try_into().map_err(EthApiError::from)?;
         let hash: FieldElement = hash.into();
@@ -160,14 +205,14 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(Some(eth_transaction))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(hash = %hash, index = ?index))]
+    #[tracing::instrument(skip_all, ret, err, fields(hash = %hash, index = ?index))]
     async fn transaction_by_block_hash_and_index(&self, hash: H256, index: Index) -> Result<Option<EtherTransaction>> {
         let block_id = BlockId::Hash(hash.into());
         let tx = self.kakarot_client.transaction_by_block_id_and_index(block_id, index).await?;
         Ok(Some(tx))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(number = %number, index = ?index))]
+    #[tracing::instrument(skip_all, ret, err, fields(number = %number, index = ?index))]
     async fn transaction_by_block_number_and_index(
         &self,
         number: BlockNumberOrTag,
@@ -178,7 +223,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(Some(tx))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(hash = %hash))]
+    #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>> {
         // TODO: Error when trying to transform 32 bytes hash to FieldElement
         let transaction_hash: Felt252Wrapper = hash.try_into().map_err(EthApiError::from)?;
@@ -197,21 +242,21 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(res_receipt)
     }
 
-    #[tracing::instrument(skip_all, ret, fields(address = %address, block_id = ?block_id))]
+    #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let balance = self.kakarot_client.balance(address, block_id).await?;
         Ok(balance)
     }
 
-    #[tracing::instrument(skip_all, ret, fields(address = %address, index = ?index, block_id = ?block_id))]
+    #[tracing::instrument(skip_all, ret, err, fields(address = %address, index = ?index, block_id = ?block_id))]
     async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<U256> {
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let value = self.kakarot_client.storage_at(address, index, block_id).await?;
         Ok(value)
     }
 
-    #[tracing::instrument(skip_all, ret, fields(address = %address, block_id = ?block_id))]
+    #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
 
@@ -220,7 +265,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(transaction_count)
     }
 
-    #[tracing::instrument(skip_all, ret, fields(address = %address, block_id = ?block_id))]
+    #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes> {
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into().map_err(EthApiError::from)?;
@@ -236,7 +281,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode.0.into_iter())))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(filter = ?filter))]
+    #[tracing::instrument(skip_all, ret, err, fields(filter = ?filter))]
     async fn get_logs(&self, filter: Filter) -> Result<FilterChanges> {
         // Check the block range
         let current_block: u64 =
@@ -287,7 +332,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(FilterChanges::Logs(logs))
     }
 
-    #[tracing::instrument(skip_all, ret, fields(request = ?request, block_id = ?block_id))]
+    #[tracing::instrument(skip_all, ret, err, fields(request = ?request, block_id = ?block_id))]
     async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let result = self.kakarot_client.call(request, block_id).await?;
@@ -310,13 +355,13 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(self.kakarot_client.estimate_gas(request, block_id).await?)
     }
 
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, err)]
     async fn gas_price(&self) -> Result<U256> {
         let gas_price = self.kakarot_client.base_fee_per_gas();
         Ok(gas_price)
     }
 
-    #[tracing::instrument(skip_all, ret, fields(block_count = %block_count, newest_block = %newest_block, reward_percentiles = ?reward_percentiles))]
+    #[tracing::instrument(skip_all, ret, err, fields(block_count = %block_count, newest_block = %newest_block, reward_percentiles = ?reward_percentiles))]
     async fn fee_history(
         &self,
         block_count: U256,
@@ -328,7 +373,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Ok(fee_history)
     }
 
-    #[tracing::instrument(skip_all, ret)]
+    #[tracing::instrument(skip_all, ret, err)]
     async fn max_priority_fee_per_gas(&self) -> Result<U128> {
         let max_priority_fee = self.kakarot_client.max_priority_fee_per_gas();
         Ok(max_priority_fee)
@@ -358,7 +403,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         Err(EthApiError::MethodNotSupported("eth_sendTransaction".to_string()).into())
     }
 
-    #[tracing::instrument(skip_all, ret, fields(bytes = %bytes))]
+    #[tracing::instrument(skip_all, ret, err, fields(bytes = %bytes))]
     async fn send_raw_transaction(&self, bytes: Bytes) -> Result<H256> {
         let transaction_hash = self.kakarot_client.send_transaction(bytes).await?;
         Ok(transaction_hash)
