@@ -384,6 +384,7 @@ Thanks goes to these wonderful people
     </tr>
     <tr>
       <td align="center" valign="top" width="14.28%"><a href="https://github.com/omahs"><img src="https://avatars.githubusercontent.com/u/73983677?v=4?s=100" width="100px;" alt="omahs"/><br /><sub><b>omahs</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=omahs" title="Code">💻</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/MartianGreed"><img src="https://avatars.githubusercontent.com/u/11038484?v=4?s=100" width="100px;" alt="valdo.carbonaboyz.stark"/><br /><sub><b>valdo.carbonaboyz.stark</b></sub></a><br /><a href="https://github.com/sayajin-labs/kakarot-rpc/commits?author=MartianGreed" title="Code">💻</a></td>
     </tr>
   </tbody>
   <tfoot>
