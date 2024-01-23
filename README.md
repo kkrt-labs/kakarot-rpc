@@ -198,7 +198,7 @@ Here is the list of all the available environment variables:
 | ---------------------------- | ------------------------- | ---------------------------- |
 | TARGET_RPC_URL               | <http://0.0.0.0:5050/rpc> | Target Starknet RPC URL      |
 | RUST_LOG                     | Debug                     | Log level                    |
-| KAKAROT_HTTP_RPC_ADDRESS     | 0.0.0.0:3030              | Kakarot RPC URL              |
+| KAKAROT_RPC_URL              | 0.0.0.0:3030              | Kakarot RPC URL              |
 | KAKAROT_ADDRESS              | see below                 | Kakarot address              |
 | PROXY_ACCOUNT_CLASS_HASH     | see below                 | Proxy account class hash     |
 | DEPLOYER_ACCOUNT_ADDRESS     | N/A                       | Deployer Account Address     |
