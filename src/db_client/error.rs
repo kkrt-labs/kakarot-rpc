@@ -7,7 +7,7 @@ use crate::starknet_client::errors::{rpc_err, EthRpcErrorCode};
 #[derive(Debug, Error)]
 pub enum DatabaseError {
     /// MongoDB error.
-    #[error("MongoDB error: {0}")]
+    #[error(transparent)]
     MongoDbError(#[from] mongodb::error::Error),
     /// Value not found in the database.
     #[error("Did not find value in the database.")]

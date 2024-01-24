@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::db_client::client::DbClient;
+use crate::db_client::error::DatabaseError;
 use crate::db_client::types::header::DbHeader;
 use crate::db_client::types::transaction::{DbTransactionFull, DbTransactionHash};
 use crate::into_via_wrapper;
@@ -48,7 +49,8 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {
         let header = self.db_client.find_one::<DbHeader>("headers", doc! {}, doc! {"header.number": -1}).await?;
-        Ok(header.header.number)
+        let block_number = header.header.number.ok_or(DatabaseError::ValueNotFound)?.as_limbs()[0];
+        Ok(U64::from(block_number))
     }
 
     #[tracing::instrument(skip_all, ret, err)]
@@ -89,13 +91,15 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     async fn chain_id(&self) -> Result<Option<U64>> {
         let tx =
             self.db_client.find_one::<DbTransactionFull>("transactions", doc! {}, doc! {"tx.blockNumber": -1}).await?;
-        Ok(Some(tx.tx.chain_id))
+        Ok(tx.tx.chain_id)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {
-        let header =
-            self.db_client.find_one::<DbHeader>("headers", doc! {"hash": format!("0x{:064x}", hash)}, None).await?;
+        let header = self
+            .db_client
+            .find_one::<DbHeader>("headers", doc! {"header.hash": format!("0x{:064x}", hash)}, None)
+            .await?;
         let total_difficulty = Some(header.header.difficulty);
 
         let transactions = if full {
@@ -108,7 +112,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
                     )
                     .await?
                     .into_iter()
-                    .map(|tx| tx.tx.into())
+                    .map(|tx| tx.tx)
                     .collect(),
             )
         } else {
@@ -127,7 +131,7 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         };
 
         let block = Block {
-            header: header.into(),
+            header: header.header,
             transactions,
             total_difficulty,
             uncles: Vec::new(),

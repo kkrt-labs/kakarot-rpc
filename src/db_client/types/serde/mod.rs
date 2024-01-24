@@ -1,35 +1,19 @@
-use std::str::FromStr;
+use std::collections::HashMap;
 
-use reth_primitives::{H256, U128, U256, U64};
-use serde::{Deserialize as _, Deserializer};
+use serde::{de::value::MapDeserializer, Deserialize, Deserializer};
+use serde_json::Value;
 
-macro_rules! deserialize_uint {
-    ($name: ident, $type: ty, $pad: expr) => {
-        pub fn $name<'de, D>(deserializer: D) -> Result<$type, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let s = String::deserialize(deserializer)?;
-            // check if hex string
-            if s.len() > 2 && &s[..2] == "0x" {
-                <$type>::from_str_radix(&s[2..], 16).map_err(serde::de::Error::custom)
-            } else {
-                <$type>::from_str_radix(&s, 10).map_err(serde::de::Error::custom)
-            }
-        }
-    };
-}
-
-deserialize_uint!(deserialize_u64, U64, 8);
-deserialize_uint!(deserialize_u128, U128, 16);
-deserialize_uint!(deserialize_u256, U256, 32);
-
-pub fn deserialize_h256<'de, D>(deserializer: D) -> Result<H256, D::Error>
+pub fn deserialize_intermediate<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where
     D: Deserializer<'de>,
+    T: Deserialize<'de>,
 {
-    let s = String::deserialize(deserializer)?;
-    // pad with zeros if needed
-    let hash = format!("0x{:0>64}", &s[2..]);
-    H256::from_str(&hash).map_err(serde::de::Error::custom)
+    // Deserialize the map into a `HashMap<String, Value>`. This intermediate
+    // step is required because the primitives types of the transaction (e.g. U64,
+    // H256) are stored as strings in the database. This caused problems when
+    // deserializing the transaction because the deserializer expects a serialized
+    // primitives, not a serialized string.
+    let s: HashMap<String, Value> = HashMap::deserialize(deserializer)?;
+    let deserializer = MapDeserializer::new(s.into_iter());
+    T::deserialize(deserializer).map_err(|err: serde_json::Error| serde::de::Error::custom(err.to_string()))
 }
