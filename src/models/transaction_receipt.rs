@@ -6,7 +6,7 @@ use starknet::core::types::{
     ExecutionResult, InvokeTransactionReceipt, MaybePendingTransactionReceipt, TransactionReceipt,
 };
 use starknet::providers::Provider;
-use tracing::debug;
+use tracing::{debug, error};
 
 use super::event::StarknetEvent;
 use super::felt::Felt252Wrapper;
@@ -69,7 +69,7 @@ impl StarknetTransactionReceipt {
                             }
                         }
                         ExecutionResult::Reverted { ref reason } => {
-                            tracing::error!("Transaction reverted with {reason}");
+                            error!("Transaction reverted with {reason}");
                             None
                         }
                     };

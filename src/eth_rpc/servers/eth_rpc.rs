@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::event::StarknetEvent;
 use crate::models::event_filter::EthEventFilter;
@@ -11,6 +10,7 @@ use crate::starknet_client::constants::{CHAIN_ID, CHUNK_SIZE_LIMIT};
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::{ContractAccountReader, KakarotClient};
+use crate::{into_via_try_wrapper, into_via_wrapper};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
@@ -181,11 +181,11 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     #[tracing::instrument(skip_all, ret, fields(hash = %hash))]
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>> {
         // TODO: Error when trying to transform 32 bytes hash to FieldElement
-        let transaction_hash: Felt252Wrapper = hash.try_into().map_err(EthApiError::from)?;
+        let transaction_hash = into_via_try_wrapper!(hash);
         let starknet_tx_receipt: TransactionReceiptWrapper = match self
             .kakarot_client
             .starknet_provider()
-            .get_transaction_receipt::<FieldElement>(transaction_hash.into())
+            .get_transaction_receipt::<FieldElement>(transaction_hash)
             .await
         {
             Err(_) => return Ok(None),
@@ -225,14 +225,14 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into().map_err(EthApiError::from)?;
 
-        let starknet_contract_address =
-            self.kakarot_client.compute_starknet_address(&address, &starknet_block_id).await?;
+        let starknet_contract_address = self.kakarot_client.compute_starknet_address(&address).await?;
 
         let provider = self.kakarot_client.starknet_provider();
 
         // Get the nonce of the contract account -> a storage variable
-        let contract_account = ContractAccountReader::new(starknet_contract_address, &provider);
-        let (_, bytecode) = contract_account.bytecode().call().await.map_err(EthApiError::from)?;
+        let contract_account = ContractAccountReader::new(starknet_contract_address, provider);
+        let (_, bytecode) =
+            contract_account.bytecode().block_id(starknet_block_id).call().await.map_err(EthApiError::from)?;
         Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode.0.into_iter())))
     }
 

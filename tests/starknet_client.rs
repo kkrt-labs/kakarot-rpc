@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod test_utils;
+use kakarot_rpc::contracts::kakarot_contract::KakarotCoreReader;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use rstest::*;
 use starknet::providers::Provider;
+use starknet_crypto::FieldElement;
 use test_utils::eoa::Eoa;
 use test_utils::evm_contract::KakarotEvmContract;
 use test_utils::fixtures::{counter, katana};
@@ -59,6 +61,21 @@ async fn test_fee_history(#[future] katana: Katana) {
     assert_eq!(fee_history.base_fee_per_gas.len(), block_count as usize);
     assert_eq!(fee_history.gas_used_ratio.len(), block_count as usize);
     assert_eq!(fee_history.oldest_block, U256::ZERO);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_compute_starknet_address(#[future] katana: Katana) {
+    let client = katana.client();
+    let kakarot_contract = KakarotCoreReader::new(client.kakarot_address(), client.starknet_provider());
+    let address = 0x1234u64;
+
+    let starknet_address = client.compute_starknet_address(&Address::from(address)).await.unwrap();
+    let expected_address =
+        kakarot_contract.compute_starknet_address(&FieldElement::from(address)).call().await.unwrap();
+
+    assert_eq!(starknet_address, expected_address);
 }
 
 #[tokio::test]

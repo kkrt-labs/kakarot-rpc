@@ -1,4 +1,4 @@
-use reth_primitives::{Address, Bytes, H256, U256};
+use reth_primitives::{Bytes, H256, U256};
 use reth_rpc_types::Log;
 use starknet::core::types::Event;
 use starknet::providers::Provider;
@@ -43,7 +43,7 @@ impl StarknetEvent {
         let (evm_contract_address, keys) =
             self.0.keys.split_first().ok_or_else(|| EthApiError::KakarotDataFilteringError("Event".into()))?;
 
-        let address: Address = try_into_via_wrapper!(*evm_contract_address);
+        let address = try_into_via_wrapper!(*evm_contract_address);
 
         if keys.len() % 2 != 0 {
             return Err(anyhow::anyhow!("Not a convertible event: Keys length is not even").into());

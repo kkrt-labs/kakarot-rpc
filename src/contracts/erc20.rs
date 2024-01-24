@@ -13,6 +13,7 @@ use starknet_crypto::FieldElement;
 
 use crate::contracts::kakarot_contract::KakarotCoreReader;
 use crate::contracts::kakarot_contract::Uint256 as CairoUint256;
+use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::felt::Felt252Wrapper;
 use crate::starknet_client::constants::TX_ORIGIN_ZERO;
@@ -49,7 +50,7 @@ impl<P: Provider + Send + Sync> EthereumErc20<P> {
         let block_id = EthBlockId::new(block_id);
         let block_id: StarknetBlockId = block_id.try_into()?;
 
-        let origin = Felt252Wrapper::from(*TX_ORIGIN_ZERO);
+        let origin = into_via_wrapper!(*TX_ORIGIN_ZERO);
 
         let kakarot_reader = KakarotCoreReader::new(self.kakarot_address, &self.provider);
 
@@ -58,7 +59,7 @@ impl<P: Provider + Send + Sync> EthereumErc20<P> {
 
         let (_, return_data, success, _) = kakarot_reader
             .eth_call(
-                &origin.into(),
+                &origin,
                 &self.address,
                 &gas_limit,
                 &gas_price,
