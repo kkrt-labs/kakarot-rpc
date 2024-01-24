@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use crate::db_client::client::DbClient;
 use crate::starknet_client::KakarotClient;
 use jsonrpsee::core::Error;
 use jsonrpsee::{Methods, RpcModule};
@@ -16,6 +15,7 @@ use crate::eth_rpc::servers::alchemy_rpc::AlchemyRpc;
 use crate::eth_rpc::servers::eth_rpc::KakarotEthRpc;
 use crate::eth_rpc::servers::net_rpc::NetRpc;
 use crate::eth_rpc::servers::web3_rpc::Web3Rpc;
+use crate::storage::database::EthDatabase;
 
 /// Represents RPC modules that are supported by reth
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -32,8 +32,8 @@ pub struct KakarotRpcModuleBuilder<P: Provider + Send + Sync> {
 }
 
 impl<P: Provider + Send + Sync + 'static> KakarotRpcModuleBuilder<P> {
-    pub fn new(kakarot_client: Arc<KakarotClient<P>>, db_client: DbClient) -> Self {
-        let eth_rpc_module = KakarotEthRpc::new(kakarot_client.clone(), db_client).into_rpc();
+    pub fn new(kakarot_client: Arc<KakarotClient<P>>, eth_db: EthDatabase) -> Self {
+        let eth_rpc_module = KakarotEthRpc::new(kakarot_client.clone(), eth_db).into_rpc();
         let alchemy_rpc_module = AlchemyRpc::new(kakarot_client.clone()).into_rpc();
         let web3_rpc_module = Web3Rpc::default().into_rpc();
         let net_rpc_module = NetRpc::new(kakarot_client.clone()).into_rpc();

@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use dotenv::dotenv;
 use eyre::Result;
-use kakarot_rpc::db_client::client::DbClient;
 use kakarot_rpc::eth_rpc::config::RPCConfig;
 use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::eth_rpc::run_server;
@@ -10,6 +9,7 @@ use kakarot_rpc::starknet_client::config::{
     env_var, JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder,
 };
 use kakarot_rpc::starknet_client::KakarotClient;
+use kakarot_rpc::storage::database::EthDatabase;
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
@@ -50,18 +50,18 @@ async fn main() -> Result<()> {
         "Kakarot-Testnet-0",
         DatabaseOptions::builder().read_concern(ReadConcern::majority()).write_concern(WriteConcern::MAJORITY).build(),
     );
-    let db_client = DbClient::new(db);
+    let eth_db = EthDatabase::new(db);
 
     let kakarot_rpc_module = match starknet_provider {
         StarknetProvider::JsonRpcClient(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
             let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider));
-            KakarotRpcModuleBuilder::new(kakarot_client, db_client).rpc_module()
+            KakarotRpcModuleBuilder::new(kakarot_client, eth_db).rpc_module()
         }
         StarknetProvider::SequencerGatewayProvider(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
             let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider));
-            KakarotRpcModuleBuilder::new(kakarot_client, db_client).rpc_module()
+            KakarotRpcModuleBuilder::new(kakarot_client, eth_db).rpc_module()
         }
     }?;
 
