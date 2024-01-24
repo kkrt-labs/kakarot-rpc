@@ -11,7 +11,7 @@ use crate::starknet_client::constants::CHUNK_SIZE_LIMIT;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::{ContractAccountReader, KakarotClient};
-use crate::storage::database::EthDatabase;
+use crate::storage::database::EthereumProvider;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
@@ -28,22 +28,34 @@ use starknet::providers::Provider;
 use crate::eth_rpc::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
-pub struct KakarotEthRpc<P: Provider + Send + Sync + 'static> {
+pub struct KakarotEthRpc<P, DB>
+where
+    P: Provider + Send + Sync + 'static,
+    DB: EthereumProvider + Send + Sync + 'static,
+{
     pub kakarot_client: Arc<KakarotClient<P>>,
-    pub eth_db: EthDatabase,
+    pub eth_provider: DB,
 }
 
-impl<P: Provider + Send + Sync + 'static> KakarotEthRpc<P> {
-    pub fn new(kakarot_client: Arc<KakarotClient<P>>, eth_db: EthDatabase) -> Self {
-        Self { kakarot_client, eth_db }
+impl<P, DB> KakarotEthRpc<P, DB>
+where
+    P: Provider + Send + Sync + 'static,
+    DB: EthereumProvider + Send + Sync + 'static,
+{
+    pub fn new(kakarot_client: Arc<KakarotClient<P>>, eth_provider: DB) -> Self {
+        Self { kakarot_client, eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
+impl<P, DB> EthApiServer for KakarotEthRpc<P, DB>
+where
+    P: Provider + Send + Sync + 'static,
+    DB: EthereumProvider + Send + Sync + 'static,
+{
     #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {
-        Ok(self.eth_db.block_number().await?)
+        Ok(self.eth_provider.block_number().await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
@@ -82,12 +94,12 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn chain_id(&self) -> Result<Option<U64>> {
-        Ok(self.eth_db.chain_id().await?)
+        Ok(self.eth_provider.chain_id().await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {
-        Ok(self.eth_db.block_by_hash(hash, full).await?)
+        Ok(self.eth_provider.block_by_hash(hash, full).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(number = %number, full = full))]
