@@ -10,6 +10,7 @@ use kakarot_rpc::starknet_client::KakarotClient;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
+use super::database::mock_ethereum_provider;
 use super::sequencer::Katana;
 
 /// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
@@ -76,9 +77,10 @@ pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, Se
     );
 
     let kakarot_client = Arc::new(KakarotClient::new(starknet_config, provider));
+    let eth_db = mock_ethereum_provider();
 
     // Create and run Kakarot RPC module.
-    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(kakarot_client).rpc_module()?;
+    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(kakarot_client, eth_db).rpc_module()?;
     let rpc_config = RPCConfig::from_env()?;
     let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
 

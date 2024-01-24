@@ -67,6 +67,7 @@ async fn test_erc20(#[future] katana: Katana) {
     );
 
     let contract = factory.deploy(()).unwrap().send().await.unwrap();
+    let _: U64 = client.get_block_number().await.unwrap();
     let token = ERC20::new(contract.address(), client.clone());
 
     // Assert initial balance is 0
