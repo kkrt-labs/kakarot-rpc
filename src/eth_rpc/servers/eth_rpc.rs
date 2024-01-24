@@ -1,9 +1,5 @@
 use std::sync::Arc;
 
-use crate::db_client::client::DbClient;
-use crate::db_client::error::DatabaseError;
-use crate::db_client::types::header::DbHeader;
-use crate::db_client::types::transaction::{DbTransactionFull, DbTransactionHash};
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::event::StarknetEvent;
@@ -15,12 +11,12 @@ use crate::starknet_client::constants::CHUNK_SIZE_LIMIT;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::try_from_u8_iterator;
 use crate::starknet_client::{ContractAccountReader, KakarotClient};
+use crate::storage::database::EthDatabase;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use mongodb::bson::doc;
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    Block, BlockTransactions, CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index,
-    RichBlock, SyncInfo, SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncInfo,
+    SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
 use starknet::core::types::{
@@ -34,12 +30,12 @@ use crate::eth_rpc::api::eth_api::EthApiServer;
 /// The RPC module for the Ethereum protocol required by Kakarot.
 pub struct KakarotEthRpc<P: Provider + Send + Sync + 'static> {
     pub kakarot_client: Arc<KakarotClient<P>>,
-    pub db_client: DbClient,
+    pub eth_db: EthDatabase,
 }
 
 impl<P: Provider + Send + Sync + 'static> KakarotEthRpc<P> {
-    pub fn new(kakarot_client: Arc<KakarotClient<P>>, db_client: DbClient) -> Self {
-        Self { kakarot_client, db_client }
+    pub fn new(kakarot_client: Arc<KakarotClient<P>>, eth_db: EthDatabase) -> Self {
+        Self { kakarot_client, eth_db }
     }
 }
 
@@ -47,9 +43,7 @@ impl<P: Provider + Send + Sync + 'static> KakarotEthRpc<P> {
 impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {
-        let header = self.db_client.find_one::<DbHeader>("headers", doc! {}, doc! {"header.number": -1}).await?;
-        let block_number = header.header.number.ok_or(DatabaseError::ValueNotFound)?.as_limbs()[0];
-        Ok(U64::from(block_number))
+        Ok(self.eth_db.block_number().await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
@@ -88,57 +82,12 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn chain_id(&self) -> Result<Option<U64>> {
-        let tx =
-            self.db_client.find_one::<DbTransactionFull>("transactions", doc! {}, doc! {"tx.blockNumber": -1}).await?;
-        Ok(tx.tx.chain_id)
+        Ok(self.eth_db.chain_id().await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {
-        let header = self
-            .db_client
-            .find_one::<DbHeader>("headers", doc! {"header.hash": format!("0x{:064x}", hash)}, None)
-            .await?;
-        let total_difficulty = Some(header.header.difficulty);
-
-        let transactions = if full {
-            BlockTransactions::Full(
-                self.db_client
-                    .find_all::<DbTransactionFull>(
-                        "transactions",
-                        doc! {"tx.blockHash": format!("0x{:064x}", hash)},
-                        None,
-                    )
-                    .await?
-                    .into_iter()
-                    .map(|tx| tx.tx)
-                    .collect(),
-            )
-        } else {
-            BlockTransactions::Hashes(
-                self.db_client
-                    .find_all::<DbTransactionHash>(
-                        "transactions",
-                        doc! {"tx.blockHash": format!("0x{:064x}", hash)},
-                        doc! {"tx.blockHash": 1},
-                    )
-                    .await?
-                    .into_iter()
-                    .map(|tx| tx.tx.into())
-                    .collect(),
-            )
-        };
-
-        let block = Block {
-            header: header.header,
-            transactions,
-            total_difficulty,
-            uncles: Vec::new(),
-            size: None,
-            withdrawals: None,
-        };
-
-        Ok(Some(block.into()))
+        Ok(self.eth_db.block_by_hash(hash, full).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(number = %number, full = full))]
