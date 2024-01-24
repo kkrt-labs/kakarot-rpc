@@ -52,8 +52,16 @@
 
 ## About
 
-> Kakarot RPC is the JSON-RPC server adapter to interact with Kakarot ZK-EVM in
-> a fully EVM-compatible way.
+Kakarot RPC fits in the three-part architecture of the Kakarot zkEVM rollup ([Kakarot EVM Cairo Programs](https://github.com/kkrt-labs/kakarot), Kakarot RPC, [Kakarot Indexer](https://github.com/kkrt-labs/kakarot-indexer)). It is the implementation of the Ethereum JSON-RPC specification made to interact with Kakarot zkEVM in a fully Ethereum-compatible way.
+
+![Kakarot zkEVM architecture](./docs/images/Kakarot%20zkEVM.png)
+
+The Kakarot RPC layer's goal is to receive and output EVM-compatible
+payloads & calls while interacting with an underlying StarknetOS client. This enables
+Kakarot zkEVM to interact with the usual Ethereum tooling: Metamask, Hardhat,
+Foundry, etc.
+
+Note that this is necessary because Kakarot zkEVM is implemented as a set of Cairo Programs that run on an underlying CairoVM (so-called StarknetOS) chain.
 
 This adapter layer is based on:
 
@@ -61,27 +69,24 @@ This adapter layer is based on:
 - [The Starknet JSON-RPC spec](https://github.com/starkware-libs/starknet-specs/blob/master/api/starknet_api_openrpc.json)
 - [And their differences](https://github.com/starkware-libs/starknet-specs/blob/master/starknet_vs_ethereum_node_apis.md)
 
-The Kakarot RPC layer's goal is to receive and output EVM-compatible JSON-RPC
-payloads & calls while interacting with the Starknet Blockchain. This enables
-Kakarot zkEVM to interact with the usual Ethereum tooling: Metamask, Hardhat,
-Foundry, etc.
-
 ## Architecture
 
 Here is a high level overview of the architecture of Kakarot RPC.
 
-![Kakarot RPC Adapter flow](https://user-images.githubusercontent.com/66871571/215438348-26ac2aee-bf30-4429-bbca-a7b901ac0594.png)
+![Kakarot RPC Adapter flow](<./docs/images/Kakarot%20RPC%20(lower%20level).png>)
 
 ## Getting Started
 
 TL;DR:
 
-- Run `make build` to build Kakarot RPC.
+- Run `make setup` to build dependencies.
+- Run `cargo build` to build Kakarot RPC.
 - Test with `make test`.
 - Run Kakarot RPC in dev mode:
-  - Run devnet: `make devnet` ( or feel free to run your own )
-  - Run dev RPC: `make run`
-  - Run production RPC `make run-release`
+  - Run dev RPC: `make run-dev` (you'll need a StarknetOS instance running in another process and Kakarot contracts deployed)
+- Run with Docker Compose:
+  - `make katana-rpc-up`
+  - To kill these processes, `make docker-down`
 
 ### Prerequisites
 
@@ -91,14 +96,28 @@ TL;DR:
 
 ## Installation
 
-### Build from source
+### Setup the project
 
-To build the project from source do `make build` (this requires
-[nightly rustup](https://rust-lang.github.io/rustup/concepts/channels.html)):
+To set up the repository (pulling git submodule and building Cairo dependencies), run:
 
 ```console
-make build
+make setup
 ```
+
+Caveats: the `setup` make command uses linux (MacOs compatible)
+commands to allow running the `./scripts/extract_abi.sh`.
+This script is used to use strongly typed Rust bindings for Cairo programs.
+If you encounter problems when building the project, try running `./scripts/extract_abi.sh`
+
+### Build from source
+
+To build the project from source (in release mode):
+
+```console
+cargo build --release
+```
+
+Note that there are sometimes issues with some dependencies (notably scarb or cairo related packages, there are sometimes needs to `cargo clean` and `cargo build`)
 
 ### Environment variables
 
@@ -116,54 +135,40 @@ make test
 
 The binaries will be located in `target/release/`.
 
-Specify the environment variables and run the binary.
+### Dev mode with [Katana](https://github.com/dojoengine/dojo/tree/main/crates/katana)
+
+To run a local StarknetOS client (Katana) and
+deploy Kakarot zkEVM on it, i.e. the set of Cairo smart contracts implementing the EVM:
 
 ```console
-make run-release
+make run-katana
 ```
 
-### Dev mode with [katana](https://github.com/dojoengine/dojo/tree/main/crates/katana)
-
-run devnet
+To deploy Kakarot Core EVM (set of Cairo Programs):
 
 ```console
-make devnet
+ make deploy-kakarot
 ```
 
-run
+To run the Kakarot RPC pointing to this local devnet:
 
 ```console
-make run
+STARKNET_NETWORK=katana make run-dev
 ```
 
-Some notes on `make devnet`:
-
-- you can run a devnet, by running `make devnet` at the project root.
+Some notes on this local devnet:
 
 - this will run a devnet by running katana, **with contracts automatically
-  deployed**, so you don't have to do them manually (see below for list of
-  contracts and addresses).
-
-- it will use the values from `.env.example` file for deployment by default, but
-  you can override any variable that you want by passing it to docker { changing
-  `.env.example` won't work as it was copied during build phase of the image },
-  you can see the `devnet` target in the `Makefile` of the project, and see how
-  we are overriding STARKNET_NETWORK environment variable, in similar fashion,
-  you can override any other environment variable.
+  deployed**, so you don't have to do them manually (see in `./lib/kakarot/scripts/deploy_kakarot.py` for the list of contracts).
 
 - the deployments and declarations for the devnet will be written to the
   `deployments/katana` folder inside your project root after a successful run of
-  the `make devnet` command.
-
-- feel free to run your own devnet if you are playing around with some custom
-  changes to Kakarot.
+  the `make deploy-kakarot` command.
 
 ### Running with [Docker Compose](https://docs.docker.com/compose/)
 
 To orchestrate running a Katana/Madara devnet instance, deploy Kakarot contracts
 and initialize the RPC, you may use the following commands:
-
-**Note: Ensure that you have the `.env` file**
 
 For Katana
 
@@ -189,59 +194,7 @@ forge script scripts/PlainOpcodes.s.sol --broadcast --legacy --slow
 ### Configuration
 
 Kakarot RPC is configurable through environment variables.
-
-Here is the list of all the available environment variables:
-
-<!-- markdownlint-disable MD013 -->
-
-| Name                         | Default value             | Description                  |
-| ---------------------------- | ------------------------- | ---------------------------- |
-| TARGET_RPC_URL               | <http://0.0.0.0:5050/rpc> | Target Starknet RPC URL      |
-| RUST_LOG                     | Debug                     | Log level                    |
-| KAKAROT_RPC_URL              | 0.0.0.0:3030              | Kakarot RPC URL              |
-| KAKAROT_ADDRESS              | see below                 | Kakarot address              |
-| PROXY_ACCOUNT_CLASS_HASH     | see below                 | Proxy account class hash     |
-| DEPLOYER_ACCOUNT_ADDRESS     | N/A                       | Deployer Account Address     |
-| DEPLOYER_ACCOUNT_PRIVATE_KEY | see below                 | Deployer Account Private Key |
-
-<!-- markdownlint-enable MD013 -->
-
-### Devnet deployed/declared contracts
-
-Deployed:
-
-| Contract | Address                                                           |
-| -------- | ----------------------------------------------------------------- |
-| Kakarot  | 0x7a88f6f9d63ccaa5855babb32cbb0230b8588aaaa6bc4ce2d173fa528ce7567 |
-| EOA      | 0x54b288676b749DEF5Fc10Eb17244fe2C87375de1                        |
-| Counter  | 0x2e11Ed82f5eC165AB8Ce3cC094f025Fe7527F4D1                        |
-
-Declared:
-
-<!-- markdownlint-disable MD013 -->
-
-| Contract                 | Class hash                                                       |
-| ------------------------ | ---------------------------------------------------------------- |
-| Proxy account class hash | 0xba8f3f34eb92f56498fdf14ecac1f19d507dcc6859fa6d85eb8545370654bd |
-
-<!-- markdownlint-enable MD013 -->
-
-The Counter contract implementation can be found
-[here](https://github.com/sayajin-labs/kakarot/blob/main/tests/integration/solidity_contracts/PlainOpcodes/Counter.sol)
-
-### Deployer Account
-
-The Kakarot RPC requires a funded deployer account to deploy ethereum EOAs whose on-chain smart contract don't exist, the role of
-the deployer is to deploy these accounts for a smoother UX { the deployer recovers the amount spent of this deployments }
-
-The kakarot [deploy scripts](https://github.com/kkrt-labs/kakarot/blob/9773e4d10a3c3a32fb8aa3cfbf6fdbff35d6985e/scripts/deploy_kakarot.py#L67) deploy and fund an account with the private key "0x0288a51c164874bb6a1ca7bd1cb71823c234a86d0f7b150d70fa8f06de645396" for [Katana](https://github.com/dojoengine/dojo/tree/main/crates/katana) and [Madara](https://github.com/keep-starknet-strange/madara), the address of this account can be found in the file `deployments/{network}/deployments.json` with the key `deployer_account` after running this script on [Kakarot](https://github.com/kkrt-labs/kakarot).
-
-You can configure Kakarot RPC to run with a particular Deployer Account via the following environment variables:
-
-- `DEPLOYER_ACCOUNT_ADDRESS`
-- `DEPLOYER_ACCOUNT_PRIVATE_KEY`
-
-When running in production on testnet and mainnet it is advised to have a separate pre-funded account for this.
+Check out `.env.example` file to see the environment variables.
 
 ### API
 
@@ -255,37 +208,14 @@ You can take a look at `rpc-call-examples` directory. Please note the following:
   with an updated nonce using the
   [provided python script](https://github.com/sayajin-labs/kakarot/blob/main/scripts/utils/kakarot.py#L273).
 
-## Roadmap
-
-See the [open issues](https://github.com/sayajin-labs/kakarot-rpc/issues) for a
-list of proposed features (and known issues).
-
-- [Top Feature Requests](https://github.com/sayajin-labs/kakarot-rpc/issues?q=label%3Aenhancement+is%3Aopen+sort%3Areactions-%2B1-desc)
-  (Add your votes using the 👍 reaction)
-- [Top Bugs](https://github.com/sayajin-labs/kakarot-rpc/issues?q=is%3Aissue+is%3Aopen+label%3Abug+sort%3Areactions-%2B1-desc)
-  (Add your votes using the 👍 reaction)
-- [Newest Bugs](https://github.com/sayajin-labs/kakarot-rpc/issues?q=is%3Aopen+is%3Aissue+label%3Abug)
-
-## Support
-
-Reach out to the maintainer at one of the following places:
-
-- [GitHub Discussions](https://github.com/sayajin-labs/kakarot-rpc/discussions)
-- Contact options listed on
-  [this GitHub profile](https://github.com/starknet-exploration)
-
 ## Project assistance
 
 If you want to say **thank you** or/and support active development of Kakarot
 RPC:
 
-- Add a [GitHub Star](https://github.com/sayajin-labs/kakarot-rpc) to the
+- Add a [GitHub Star](https://github.com/kkrt-labs/kakarot-rpc) to the
   project.
-- Tweet about the Kakarot RPC.
-- Write interesting articles about the project on [Dev.to](https://dev.to/),
-  [Medium](https://medium.com/) or your personal blog.
-
-Together, we can make Kakarot RPC **better**!
+- Tweet about the Kakarot RPC: https://twitter.com/KakarotZkEvm.
 
 ## Contributing
 
@@ -296,6 +226,14 @@ appreciated**.
 
 Please read [our contribution guidelines](docs/CONTRIBUTING.md), and thank you
 for being involved!
+
+## Glossary
+
+- StarknetOS chain: also called CairoVM chain, or Starknet appchain, it is a full-node (or sequencer) that is powered by the Cairo VM (Cairo smart contracts can be deployed to it). It a chain that behaves in most ways similarly to Starknet L2.
+- Kakarot Core EVM: The set of Cairo Programs that implement the Ethereum Virtual Machine instruction set.
+- Katana: A StarknetOS sequencer developed by the Dojo team. Serves as the underlying StarknetOS client for Kakarot zkEVM locally. It is built with speed and minimalism in mind.
+- Madara: A StarknetOS sequencer and full-node developed by the Madara (e.g. Pragma Oracle, Deoxys, etc.) and Starkware exploration teams. Based on the Substrate framework, it is built with decentralization and robustness in mind.
+- Kakarot zkEVM: the entire system that forms the Kakarot zkRollup: the core EVM Cairo Programs and the StarknetOS chain they are deployed to, the RPC layer (this repository), and the Kakarot Indexer (the backend service that ingests Starknet data types and formats them in EVM format for RPC read requests).
 
 ## Authors & contributors
 
