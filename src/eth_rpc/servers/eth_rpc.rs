@@ -5,53 +5,51 @@ use crate::models::block::EthBlockId;
 use crate::models::event::StarknetEvent;
 use crate::models::event_filter::EthEventFilter;
 use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::transaction::StarknetTransaction;
 use crate::models::transaction_receipt::StarknetTransactionReceipt as TransactionReceiptWrapper;
 use crate::starknet_client::constants::CHUNK_SIZE_LIMIT;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::try_from_u8_iterator;
-use crate::starknet_client::{ContractAccountReader, KakarotClient};
-use crate::storage::database::EthereumProvider;
+use crate::starknet_client::ContractAccountReader;
+use crate::{eth_provider::provider::EthereumProvider, starknet_client::KakarotClient};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncInfo,
-    SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
+    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
+    Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
-use starknet::core::types::{
-    BlockId as StarknetBlockId, Event, EventFilterWithPage, FieldElement, MaybePendingTransactionReceipt,
-    ResultPageRequest, SyncStatusType, TransactionReceipt as StarknetTransactionReceipt,
+use starknet::{
+    core::types::{BlockId as StarknetBlockId, Event, EventFilterWithPage, FieldElement, ResultPageRequest},
+    providers::Provider,
 };
-use starknet::providers::Provider;
 
 use crate::eth_rpc::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
-pub struct KakarotEthRpc<P, DB>
+pub struct KakarotEthRpc<P, SP>
 where
-    P: Provider + Send + Sync + 'static,
-    DB: EthereumProvider + Send + Sync + 'static,
+    P: EthereumProvider,
+    SP: Provider + Send + Sync,
 {
-    pub kakarot_client: Arc<KakarotClient<P>>,
-    pub eth_provider: DB,
+    pub eth_provider: P,
+    pub kakarot_client: Arc<KakarotClient<SP>>,
 }
 
-impl<P, DB> KakarotEthRpc<P, DB>
+impl<P, SP> KakarotEthRpc<P, SP>
 where
-    P: Provider + Send + Sync + 'static,
-    DB: EthereumProvider + Send + Sync + 'static,
+    P: EthereumProvider,
+    SP: Provider + Send + Sync,
 {
-    pub fn new(kakarot_client: Arc<KakarotClient<P>>, eth_provider: DB) -> Self {
-        Self { kakarot_client, eth_provider }
+    pub fn new(eth_provider: P, kakarot_client: Arc<KakarotClient<SP>>) -> Self {
+        Self { eth_provider, kakarot_client }
     }
 }
 
 #[async_trait]
-impl<P, DB> EthApiServer for KakarotEthRpc<P, DB>
+impl<P, SP> EthApiServer for KakarotEthRpc<P, SP>
 where
-    P: Provider + Send + Sync + 'static,
-    DB: EthereumProvider + Send + Sync + 'static,
+    P: EthereumProvider + Send + Sync + 'static,
+    SP: Provider + Send + Sync + 'static,
 {
     #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {
@@ -60,27 +58,7 @@ where
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn syncing(&self) -> Result<SyncStatus> {
-        let status = self.kakarot_client.starknet_provider().syncing().await.map_err(EthApiError::from)?;
-
-        match status {
-            SyncStatusType::NotSyncing => Ok(SyncStatus::None),
-
-            SyncStatusType::Syncing(data) => {
-                let starting_block: U256 = U256::from(data.starting_block_num);
-                let current_block: U256 = U256::from(data.current_block_num);
-                let highest_block: U256 = U256::from(data.highest_block_num);
-
-                let status_info = SyncInfo {
-                    starting_block,
-                    current_block,
-                    highest_block,
-                    warp_chunks_amount: None,
-                    warp_chunks_processed: None,
-                };
-
-                Ok(SyncStatus::Info(status_info))
-            }
-        }
+        Ok(self.syncing().await?)
     }
 
     async fn coinbase(&self) -> Result<Address> {
@@ -104,70 +82,50 @@ where
 
     #[tracing::instrument(skip_all, ret, err, fields(number = %number, full = full))]
     async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
-        let block_id = EthBlockId::new(BlockId::Number(number));
-        let starknet_block_id: StarknetBlockId = block_id.try_into().map_err(EthApiError::from)?;
-        let block = self.kakarot_client.get_eth_block_from_starknet_block(starknet_block_id, full).await?;
-        Ok(Some(block))
+        Ok(self.eth_provider.block_by_number(number, full).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64> {
-        let block_id = BlockId::Hash(hash.into());
-        let count = self.kakarot_client.get_transaction_count_by_block(block_id).await.map_err(EthApiError::from)?;
-        Ok(count)
+        Ok(self.eth_provider.block_transaction_count_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(number = %number))]
     async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64> {
-        let block_id = BlockId::Number(number);
-        let count = self.kakarot_client.get_transaction_count_by_block(block_id).await.map_err(EthApiError::from)?;
-        Ok(count)
+        Ok(self.eth_provider.block_transaction_count_by_number(number).await?)
     }
 
+    #[tracing::instrument(skip_all, ret, err, fields(hash = %_hash))]
     async fn block_uncles_count_by_block_hash(&self, _hash: H256) -> Result<U256> {
-        Err(EthApiError::MethodNotSupported("eth_getUncleCountByBlockHash".to_string()).into())
+        tracing::warn!("Kakarot chain does not produce uncles");
+        Ok(U256::ZERO)
     }
 
+    #[tracing::instrument(skip_all, ret, err, fields(number = %_number))]
     async fn block_uncles_count_by_block_number(&self, _number: BlockNumberOrTag) -> Result<U256> {
-        Err(EthApiError::MethodNotSupported("eth_getUncleCountByBlockNumber".to_string()).into())
+        tracing::warn!("Kakarot chain does not produce uncles");
+        Ok(U256::ZERO)
     }
 
+    #[tracing::instrument(skip_all, ret, err, fields(hash = %_hash, index = ?_index))]
     async fn uncle_by_block_hash_and_index(&self, _hash: H256, _index: Index) -> Result<Option<RichBlock>> {
-        Err(EthApiError::MethodNotSupported("eth_getUncleByBlockHashAndIndex".to_string()).into())
+        tracing::warn!("Kakarot chain does not produce uncles");
+        Ok(None)
     }
 
+    #[tracing::instrument(skip_all, ret, err, fields(hash = %_number, index = ?_index))]
     async fn uncle_by_block_number_and_index(
         &self,
         _number: BlockNumberOrTag,
         _index: Index,
     ) -> Result<Option<RichBlock>> {
-        Err(EthApiError::MethodNotSupported("eth_getUncleByBlockNumberAndIndex".to_string()).into())
+        tracing::warn!("Kakarot chain does not produce uncles");
+        Ok(None)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn transaction_by_hash(&self, hash: H256) -> Result<Option<EtherTransaction>> {
-        let hash: Felt252Wrapper = hash.try_into().map_err(EthApiError::from)?;
-        let hash: FieldElement = hash.into();
-
-        let transaction: StarknetTransaction =
-            match self.kakarot_client.starknet_provider().get_transaction_by_hash(hash).await {
-                Err(_) => return Ok(None),
-                Ok(transaction) => transaction.into(),
-            };
-
-        let tx_receipt = match self.kakarot_client.starknet_provider().get_transaction_receipt(hash).await {
-            Err(_) => return Ok(None),
-            Ok(receipt) => receipt,
-        };
-
-        let (block_hash, block_num) = match tx_receipt {
-            MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
-                (Some(into_via_wrapper!(tr.block_hash)), Some(U256::from(tr.block_number)))
-            }
-            _ => (None, None), // skip all transactions other than Invoke, covers the pending case
-        };
-        let eth_transaction = transaction.to_eth_transaction(&self.kakarot_client, block_hash, block_num, None).await?;
-        Ok(Some(eth_transaction))
+        Ok(self.eth_provider.transaction_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash, index = ?index))]
