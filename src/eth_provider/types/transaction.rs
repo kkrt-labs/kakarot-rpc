@@ -5,8 +5,14 @@ use serde::Deserialize;
 /// A full transaction as stored in the database
 #[derive(Debug, Deserialize)]
 pub struct StoredTransactionFull {
-    #[serde(deserialize_with = "crate::storage::types::serde::deserialize_intermediate")]
+    #[serde(deserialize_with = "crate::eth_provider::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
+}
+
+impl From<StoredTransactionFull> for Transaction {
+    fn from(tx: StoredTransactionFull) -> Self {
+        tx.tx
+    }
 }
 
 /// A transaction hash as stored in the database
@@ -21,8 +27,8 @@ pub struct Hash {
     pub block_hash: H256,
 }
 
-impl From<Hash> for H256 {
-    fn from(hash: Hash) -> Self {
-        hash.block_hash
+impl From<StoredTransactionHash> for H256 {
+    fn from(hash: StoredTransactionHash) -> Self {
+        hash.tx.block_hash
     }
 }
