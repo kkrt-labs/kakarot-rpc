@@ -4919,6 +4919,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "auto_impl",
  "bytes",
  "ctor",
  "dojo-test-utils",

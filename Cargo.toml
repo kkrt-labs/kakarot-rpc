@@ -42,6 +42,7 @@ serde_with = { version = "2.3.1", default-features = false }
 # Others
 anyhow = { version = "1.0.68", default-features = false }
 async-trait = { version = "0.1.58", default-features = false }
+auto_impl = { version = "1.1.0", default-features = false }
 bytes = { version = "1", default-features = false }
 ctor = { version = "0.2.4", default-features = false }
 dotenv = { version = "0.15.0", default-features = false }
