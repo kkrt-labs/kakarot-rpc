@@ -31,7 +31,7 @@ lint:
     - taplo@0.8.1
     - terrascan@1.18.11
     - trivy@0.48.3
-    - trufflehog@3.63.11
+    - trufflehog@3.64.0
     - yamllint@1.33.0
   ignore:
     - linters: [ALL]
