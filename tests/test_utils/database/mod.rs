@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use kakarot_rpc::{starknet_client::constants::CHAIN_ID, storage::database::MockEthereumProvider};
+use kakarot_rpc::{eth_provider::provider::MockEthereumProvider, starknet_client::constants::CHAIN_ID};
 use lazy_static::lazy_static;
 use reth_primitives::U64;
 
