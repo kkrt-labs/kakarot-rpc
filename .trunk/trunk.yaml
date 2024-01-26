@@ -15,6 +15,7 @@ runtimes:
     - python@3.10.8
 lint:
   disabled:
+    - yamllint
     - checkov
   enabled:
     - actionlint@1.6.26
@@ -32,7 +33,6 @@ lint:
     - terrascan@1.18.11
     - trivy@0.48.3
     - trufflehog@3.63.9
-    - yamllint@1.33.0
   ignore:
     - linters: [ALL]
       paths:

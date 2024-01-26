@@ -1,4 +1,4 @@
-version: '3.2'
+version: "3.2"
 
 services:
   starknet:
@@ -14,6 +14,7 @@ services:
       - madara:/home/madara
     networks:
       - internal
+    restart: on-failure
 
   kakarot-deployer:
     image: ghcr.io/kkrt-labs/kakarot/deployer:latest
@@ -37,8 +38,8 @@ services:
     image: apteno/alpine-jq:2023-07-24
     # Parse deployments and save the result to .env file
     entrypoint:
-      - '/bin/sh'
-      - '-c'
+      - "/bin/sh"
+      - "-c"
       # First line overrides an existing .env, if any.
       # This is to make sure that it is clean even though docker volume was not cleaned.
       - |
@@ -72,9 +73,83 @@ services:
     networks:
       - internal
 
+  apibara-dna:
+    image: quay.io/apibara/starknet:1.2.0
+    command:
+      - start
+      - --rpc=http://starknet:5050
+      - --wait-for-rpc
+      - --data=/data
+    ports:
+      - 7171:7171
+    volumes:
+      - apibara:/data
+    networks:
+      - internal
+    restart: on-failure
+    depends_on:
+      kakarot-deployer:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_healthy
+
+  ### MongoDB with Mongo Express
+  mongo:
+    image: mongo:6.0.8
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - internal
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+
+  clone-repo:
+    image: docker.io/alpine/git:latest
+    entrypoint: "/bin/sh"
+    command:
+      - "-c"
+      # clone the repository in `/code`, removing any old copy.
+      - "cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
+    volumes:
+      - "indexer_code:/code"
+    restart: on-failure
+
+  indexer:
+    image: quay.io/apibara/sink-mongo
+    command:
+      - run
+      - /code/kakarot-indexer/src/main.ts
+    environment:
+      # Whitelist environment variables
+      ALLOW_ENV_FROM_ENV: DEBUG, APIBARA_AUTH_TOKEN, MONGO_CONNECTION_STRING, STARTING_BLOCK, STREAM_URL, SINK_TYPE
+      DEBUG: ""
+      APIBARA_AUTH_TOKEN: ""
+      MONGO_CONNECTION_STRING: mongodb://mongo:mongo@mongo:27017
+      MONGO_DATABASE_NAME: kakarot-local
+      STARTING_BLOCK: 0
+      STREAM_URL: http://localhost:7171
+      SINK_TYPE: mongo
+    restart: on-failure
+    volumes:
+      - "indexer_code:/code"
+    networks:
+      - internal
+    depends_on:
+      clone-repo:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_healthy
+
 networks:
   internal:
 
 volumes:
   deployments:
   madara:
+  apibara:
+  mongo_data:
+  indexer_code:
