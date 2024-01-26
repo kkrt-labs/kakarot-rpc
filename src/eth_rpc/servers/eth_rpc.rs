@@ -148,16 +148,12 @@ where
 
     #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let balance = self.kakarot_client.balance(address, block_id).await?;
-        Ok(balance)
+        Ok(self.eth_provider.balance(address, block_id).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(address = %address, index = ?index, block_id = ?block_id))]
     async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<U256> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let value = self.kakarot_client.storage_at(address, index, block_id).await?;
-        Ok(value)
+        Ok(self.eth_provider.storage_at(address, index, block_id).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
