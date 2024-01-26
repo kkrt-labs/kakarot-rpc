@@ -14,6 +14,7 @@ pub fn mock_ethereum_provider() -> MockEthereumProvider {
     let mut eth_db = MockEthereumProvider::new();
 
     eth_db.expect_chain_id().returning(|| Box::pin(async { Ok(Some(U64::from(CHAIN_ID))) }));
+
     // In order to increment the block number, we use a Mutex to lock the block number and increment
     // it by 1 each time the function is called.
     eth_db.expect_block_number().returning(|| {
