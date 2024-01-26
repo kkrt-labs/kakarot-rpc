@@ -128,10 +128,10 @@ services:
       - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME
       - DEBUG=""
       - APIBARA_AUTH_TOKEN=""
-      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017/kakarot-local
+      - MONGO_CONNECTION_STRING=mongodb+srv://mongo:mongo@mongo:27017/kakarot-local
       - MONGO_DATABASE_NAME=kakarot-local
       - STARTING_BLOCK=0
-      - STREAM_URL=http://localhost:7171
+      - STREAM_URL=http://apibara-dna:7171
       - SINK_TYPE=mongo
     restart: on-failure
     volumes:
