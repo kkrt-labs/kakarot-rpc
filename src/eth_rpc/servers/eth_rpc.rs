@@ -1,14 +1,6 @@
 use std::sync::Arc;
 
-use crate::into_via_wrapper;
-use crate::models::block::EthBlockId;
-use crate::models::event::StarknetEvent;
-use crate::models::event_filter::EthEventFilter;
-use crate::models::felt::Felt252Wrapper;
-use crate::starknet_client::constants::CHUNK_SIZE_LIMIT;
 use crate::starknet_client::errors::EthApiError;
-use crate::starknet_client::helpers::try_from_u8_iterator;
-use crate::starknet_client::ContractAccountReader;
 use crate::{eth_provider::provider::EthereumProvider, starknet_client::KakarotClient};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
@@ -17,10 +9,7 @@ use reth_rpc_types::{
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
-use starknet::{
-    core::types::{BlockId as StarknetBlockId, Event, EventFilterWithPage, ResultPageRequest},
-    providers::Provider,
-};
+use starknet::providers::Provider;
 
 use crate::eth_rpc::api::eth_api::EthApiServer;
 
@@ -158,78 +147,17 @@ where
 
     #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-
-        let transaction_count = self.kakarot_client.nonce(address, block_id).await?;
-
-        Ok(transaction_count)
+        Ok(self.eth_provider.transaction_count(address, block_id).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let starknet_block_id: StarknetBlockId = EthBlockId::new(block_id).try_into().map_err(EthApiError::from)?;
-
-        let starknet_contract_address = self.kakarot_client.compute_starknet_address(&address).await?;
-
-        let provider = self.kakarot_client.starknet_provider();
-
-        // Get the nonce of the contract account -> a storage variable
-        let contract_account = ContractAccountReader::new(starknet_contract_address, provider);
-        let (_, bytecode) =
-            contract_account.bytecode().block_id(starknet_block_id).call().await.map_err(EthApiError::from)?;
-        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode.0.into_iter())))
+        Ok(self.eth_provider.get_code(address, block_id).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(filter = ?filter))]
     async fn get_logs(&self, filter: Filter) -> Result<FilterChanges> {
-        // Check the block range
-        let current_block: u64 =
-            self.kakarot_client.starknet_provider().block_number().await.map_err(EthApiError::from)?;
-        let from_block = filter.get_from_block();
-        let to_block = filter.get_to_block();
-
-        let filter = match (from_block, to_block) {
-            (Some(from), _) if from > current_block => return Ok(FilterChanges::Empty),
-            (_, Some(to)) if to > current_block => filter.to_block(current_block),
-            (Some(from), Some(to)) if to < from => return Ok(FilterChanges::Empty),
-            _ => filter,
-        };
-
-        // Convert the eth log filter to a starknet event filter
-        let filter: EthEventFilter = filter.into();
-        let event_filter = filter.to_starknet_event_filter(&self.kakarot_client.clone())?;
-
-        // Filter events
-        let events = self
-            .kakarot_client
-            .filter_events(EventFilterWithPage {
-                event_filter,
-                result_page_request: ResultPageRequest { continuation_token: None, chunk_size: CHUNK_SIZE_LIMIT },
-            })
-            .await?;
-
-        // Convert events to eth logs
-        let logs = events
-            .into_iter()
-            .filter_map(|emitted| {
-                let event: StarknetEvent =
-                    Event { from_address: emitted.from_address, keys: emitted.keys, data: emitted.data }.into();
-                let block_hash = into_via_wrapper!(emitted.block_hash);
-                let transaction_hash = into_via_wrapper!(emitted.transaction_hash);
-                event
-                    .to_eth_log(
-                        &self.kakarot_client.clone(),
-                        Some(block_hash),
-                        Some(U256::from(emitted.block_number)),
-                        Some(transaction_hash),
-                        None,
-                        None,
-                    )
-                    .ok()
-            })
-            .collect::<Vec<_>>();
-        Ok(FilterChanges::Logs(logs))
+        Ok(self.eth_provider.get_logs(filter).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(request = ?request, block_id = ?block_id))]

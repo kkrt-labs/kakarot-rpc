@@ -4,13 +4,13 @@ use serde::Deserialize;
 
 /// A full transaction as stored in the database
 #[derive(Debug, Deserialize)]
-pub struct StoredTransactionFull {
+pub struct StoredTransaction {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
 }
 
-impl From<StoredTransactionFull> for Transaction {
-    fn from(tx: StoredTransactionFull) -> Self {
+impl From<StoredTransaction> for Transaction {
+    fn from(tx: StoredTransaction) -> Self {
         tx.tx
     }
 }
