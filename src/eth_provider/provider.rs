@@ -4,34 +4,46 @@ use eyre::Result;
 use mockall::automock;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
+use reth_primitives::AccessList;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::Bytes;
+use reth_primitives::Signature;
+use reth_primitives::Transaction;
+use reth_primitives::TransactionKind;
+use reth_primitives::TransactionSigned;
+use reth_primitives::TxEip1559;
 use reth_primitives::{BlockNumberOrTag, H256, U256, U64};
+use reth_rpc_types::CallRequest;
 use reth_rpc_types::Filter;
 use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
-use reth_rpc_types::Transaction;
+use reth_rpc_types::Transaction as RpcTransaction;
 use reth_rpc_types::TransactionReceipt;
 use reth_rpc_types::ValueOrArray;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::BlockId as StarknetBlockId;
+use starknet::core::types::BroadcastedTransaction;
+use starknet::core::types::SimulationFlag;
 use starknet::core::types::SyncStatusType;
-use starknet::core::utils::get_contract_address;
 use starknet::core::utils::get_storage_var_address;
 use starknet::providers::Provider as StarknetProvider;
+use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
 use starknet_crypto::FieldElement;
 
+use super::constant::MAX_PRIORITY_FEE_PER_GAS;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
+use super::starknet::kakarot_core::core::{KakarotCoreReader, Uint256};
+use super::starknet::kakarot_core::to_starknet_transaction;
 use super::starknet::kakarot_core::{
-    ContractAccountReader, ProxyReader, CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
-    KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
+    starknet_address, ContractAccountReader, ProxyReader, CONTRACT_ACCOUNT_CLASS_HASH,
+    EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH, KAKAROT_ADDRESS,
 };
 use super::starknet::ERC20Reader;
 use super::starknet::STARKNET_NATIVE_TOKEN;
@@ -39,7 +51,9 @@ use super::utils::iter_into;
 use super::utils::split_u256;
 use super::utils::try_from_u8_iterator;
 use super::{error::EthProviderError, utils::into_filter};
+use crate::eth_provider::constant::BASE_FEE_PER_GAS;
 use crate::eth_provider::utils::format_hex;
+use crate::into_via_try_wrapper;
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::errors::ConversionError;
@@ -71,19 +85,19 @@ pub trait EthereumProvider {
     /// Returns the transaction count for a block by number.
     async fn block_transaction_count_by_number(&self, number_or_tag: BlockNumberOrTag) -> EthProviderResult<U64>;
     /// Returns the transaction by hash.
-    async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<Transaction>>;
+    async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<RpcTransaction>>;
     /// Returns the transaction by block hash and index.
     async fn transaction_by_block_hash_and_index(
         &self,
         hash: H256,
         index: Index,
-    ) -> EthProviderResult<Option<Transaction>>;
+    ) -> EthProviderResult<Option<RpcTransaction>>;
     /// Returns the transaction by block number and index.
     async fn transaction_by_block_number_and_index(
         &self,
         number_or_tag: BlockNumberOrTag,
         index: Index,
-    ) -> EthProviderResult<Option<Transaction>>;
+    ) -> EthProviderResult<Option<RpcTransaction>>;
     /// Returns the transaction receipt by hash of the transaction.
     async fn transaction_receipt(&self, hash: H256) -> EthProviderResult<Option<TransactionReceipt>>;
     /// Returns the balance of an address.
@@ -94,8 +108,12 @@ pub trait EthereumProvider {
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the code for the address at the given block.
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
-    /// Returns the logs for the given filter
+    /// Returns the logs for the given filter.
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges>;
+    /// Returns the result of a call.
+    async fn call(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
+    /// Returns the result of a estimate gas.
+    async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -157,6 +175,7 @@ where
         }
     }
 
+    // TODO cache chain id
     async fn chain_id(&self) -> EthProviderResult<Option<U64>> {
         let chain_id = self.starknet_provider.chain_id().await?;
         let chain_id: Option<u64> = chain_id.try_into().ok();
@@ -199,7 +218,7 @@ where
         Ok(count.into())
     }
 
-    async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<Transaction>> {
+    async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<RpcTransaction>> {
         let filter = into_filter("tx.hash", hash, 64);
         let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
         Ok(tx.map(Into::into))
@@ -209,7 +228,7 @@ where
         &self,
         hash: H256,
         index: Index,
-    ) -> EthProviderResult<Option<Transaction>> {
+    ) -> EthProviderResult<Option<RpcTransaction>> {
         let mut filter = into_filter("tx.blockHash", hash, 64);
         let index: usize = index.into();
         filter.insert("tx.transactionIndex", index as i32);
@@ -221,7 +240,7 @@ where
         &self,
         number_or_tag: BlockNumberOrTag,
         index: Index,
-    ) -> EthProviderResult<Option<Transaction>> {
+    ) -> EthProviderResult<Option<RpcTransaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
         let mut filter = into_filter("tx.blockNumber", block_number, 64);
         let index: usize = index.into();
@@ -242,7 +261,7 @@ where
 
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
-        let address = self.starknet_address(address);
+        let address = starknet_address(address);
         let balance = eth_contract.balanceOf(&address).block_id(starknet_block_id).call().await?;
 
         let low: U256 = into_via_wrapper!(balance.low);
@@ -254,7 +273,7 @@ where
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
-        let address = self.starknet_address(address);
+        let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
 
         let keys = split_u256::<FieldElement>(index);
@@ -271,7 +290,7 @@ where
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
-        let address = self.starknet_address(address);
+        let address = starknet_address(address);
         let proxy = ProxyReader::new(address, &self.starknet_provider);
         let address_class_hash = proxy.get_implementation().block_id(starknet_block_id).call().await?;
 
@@ -290,7 +309,7 @@ where
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
-        let address = self.starknet_address(address);
+        let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
         let (_, bytecode) = contract.bytecode().block_id(starknet_block_id).call().await?;
 
@@ -346,6 +365,106 @@ where
 
         let logs: Vec<StoredLog> = self.database.get("logs", database_filter, None).await?;
         Ok(FilterChanges::Logs(logs.into_iter().map(Into::into).collect()))
+    }
+
+    async fn call(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
+        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
+        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+
+        // unwrap option or return jsonrpc error
+        let to = call.to.ok_or_else(|| {
+            ConversionError::ToStarknetTransactionError("Missing `to` field in CallRequest".to_string())
+        })?;
+        let to = into_via_wrapper!(to);
+
+        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
+        let origin = into_via_wrapper!(call.from.unwrap_or_default());
+
+        let calldata = call.input.data.ok_or_else(|| {
+            ConversionError::ToStarknetTransactionError("Missing `data` field in CallRequest".to_string())
+        })?;
+        let calldata: Vec<_> = calldata.to_vec().into_iter().map(FieldElement::from).collect();
+
+        let gas_limit = into_via_try_wrapper!(call.gas.unwrap_or_default());
+
+        let gas_price = into_via_try_wrapper!(call.gas_price.unwrap_or_default());
+
+        let value = split_u256::<FieldElement>(call.value.unwrap_or_default());
+
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let (_, return_data, success, _) = kakarot_contract
+            .eth_call(
+                &origin,
+                &to,
+                &gas_limit,
+                &gas_price,
+                &Uint256 { low: value[0], high: value[1] },
+                &calldata.len().into(),
+                &CairoArrayLegacy(calldata),
+            )
+            .block_id(starknet_block_id)
+            .call()
+            .await?;
+
+        if success == FieldElement::ZERO {
+            let revert_reason =
+                return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
+            return Err(EthProviderError::EvmExecutionError(revert_reason));
+        }
+
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(return_data.0.into_iter())))
+    }
+
+    async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
+        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+        let chain_id = self.chain_id().await?.unwrap_or_default();
+
+        let chain_id = call.chain_id.unwrap_or(chain_id).low_u64();
+
+        let from = call.from.ok_or_else(|| {
+            ConversionError::ToStarknetTransactionError("Missing `from` field in CallRequest".to_string())
+        })?;
+        let nonce = self.transaction_count(from, block_id).await?.try_into().map_err(ConversionError::from)?;
+
+        let gas_limit = call.gas.unwrap_or_default().try_into().map_err(ConversionError::from)?;
+        let max_fee_per_gas = call
+            .max_fee_per_gas
+            .unwrap_or_else(|| U256::from(*BASE_FEE_PER_GAS))
+            .try_into()
+            .map_err(ConversionError::from)?;
+        let max_priority_fee_per_gas = call
+            .max_priority_fee_per_gas
+            .unwrap_or_else(|| U256::from(*MAX_PRIORITY_FEE_PER_GAS))
+            .try_into()
+            .map_err(ConversionError::from)?;
+
+        let to = call.to.map_or(TransactionKind::Create, TransactionKind::Call);
+        let value = call.value.unwrap_or_default().try_into().map_err(ConversionError::from)?;
+        let data = call.input.data.unwrap_or_default();
+
+        let transaction = Transaction::Eip1559(TxEip1559 {
+            chain_id,
+            nonce,
+            gas_limit,
+            max_fee_per_gas,
+            max_priority_fee_per_gas,
+            to,
+            value,
+            access_list: AccessList(vec![]),
+            input: data,
+        });
+        let starknet_transaction = BroadcastedTransaction::Invoke(to_starknet_transaction(
+            TransactionSigned::from_transaction_and_signature(transaction, Signature::default()),
+            chain_id,
+        )?);
+
+        let result = self
+            .starknet_provider
+            .simulate_transaction(starknet_block_id, starknet_transaction, [SimulationFlag::SkipValidate])
+            .await?;
+
+        Ok(U256::from(result.fee_estimation.gas_consumed))
     }
 }
 
@@ -406,10 +525,5 @@ where
             }
             BlockNumberOrTag::Pending => todo!("pending block number not implemented"),
         }
-    }
-
-    /// Compute the starknet address given a eth address
-    fn starknet_address(&self, address: Address) -> FieldElement {
-        get_contract_address(into_via_wrapper!(address), *PROXY_ACCOUNT_CLASS_HASH, &[], *KAKAROT_ADDRESS)
     }
 }

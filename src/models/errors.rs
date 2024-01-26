@@ -23,6 +23,8 @@ pub enum ConversionError {
          address"
     )]
     ToEthereumAddressError,
+    #[error("Failed to convert Ethereum transaction to Starknet transaction: {0}")]
+    ToStarknetTransactionError(String),
     /// Value out of range error
     #[error("value out of range: {0}")]
     ValueOutOfRange(String),

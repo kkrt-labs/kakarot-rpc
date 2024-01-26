@@ -16,6 +16,9 @@ pub enum EthProviderError {
     /// Starknet Provider error.
     #[error(transparent)]
     StarknetProviderError(#[from] StarknetProviderError),
+    /// EVM execution error.
+    #[error("EVM execution error: {0}")]
+    EvmExecutionError(String),
     /// Contract call error.
     #[error(transparent)]
     ContractCallError(#[from] starknet_abigen_parser::cairo_types::Error),

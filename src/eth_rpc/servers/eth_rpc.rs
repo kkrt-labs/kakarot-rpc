@@ -163,10 +163,7 @@ where
 
     #[tracing::instrument(skip_all, ret, err, fields(request = ?request, block_id = ?block_id))]
     async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let result = self.kakarot_client.call(request, block_id).await?;
-
-        Ok(result)
+        Ok(self.eth_provider.call(request, block_id).await?)
     }
 
     async fn create_access_list(
@@ -179,9 +176,7 @@ where
 
     #[tracing::instrument(skip_all, ret, fields(request = ?request, block_id = ?block_id))]
     async fn estimate_gas(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<U256> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-
-        Ok(self.kakarot_client.estimate_gas(request, block_id).await?)
+        Ok(self.eth_provider.estimate_gas(request, block_id).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
