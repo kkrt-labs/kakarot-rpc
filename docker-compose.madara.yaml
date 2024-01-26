@@ -3,20 +3,17 @@ version: "3.2"
 
 services:
   starknet:
-    image: greged93/katana:v0.4.4
-    command:
-      - katana
-      - --block-time
-      - "6000"
-      - --disable-fee
-      - --validate-max-steps
-      - "16777216"
-      - --invoke-max-steps
-      - "16777216"
-      - --gas-price
-      - "1"
+    image: greged93/madara:v0.6.0
     ports:
-      - "5050:5050"
+      - 9615:9615
+      - 9944:9944
+      - 30333:30333
+      - 5050:5050
+    entrypoint: [/bin/bash, -c]
+    command: >
+      "/madara-bin setup --from-remote --chain=dev && /madara-bin --rpc-external --rpc-methods=unsafe --rpc-cors=all --rpc-port 5050 --chain=dev --base-path=/home/madara --alice --force-authoring"
+    volumes:
+      - madara:/home/madara
     networks:
       - internal
     restart: on-failure
