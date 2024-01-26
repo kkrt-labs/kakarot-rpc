@@ -27,6 +27,8 @@ abigen!(ERC20, "tests/ERC20/IERC20.json");
 // { code: 98, kind: AddrInUse, message: "Address already in use" }'`
 #[rstest]
 #[awt]
+// We ignore this test for now, because we need `send_transaction` to be implemented on the EthereumProvider
+#[ignore]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_erc20(#[future] katana: Katana) {
     let (server_addr, server_handle) =

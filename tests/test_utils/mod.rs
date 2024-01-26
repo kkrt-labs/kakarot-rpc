@@ -1,6 +1,6 @@
 pub mod constants;
-pub mod database;
 pub mod eoa;
+pub mod eth_provider;
 pub mod evm_contract;
 pub mod fixtures;
 pub mod macros;
