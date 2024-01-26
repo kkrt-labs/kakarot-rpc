@@ -10,7 +10,7 @@ use kakarot_rpc::starknet_client::KakarotClient;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use super::database::mock_ethereum_provider;
+use super::eth_provider::mock_ethereum_provider;
 use super::sequencer::Katana;
 
 /// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
