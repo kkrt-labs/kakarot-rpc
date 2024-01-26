@@ -23,12 +23,5 @@ lazy_static! {
     pub static ref CONTRACT_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("CONTRACT_ACCOUNT_CLASS_HASH");
 }
 
-pub mod erc20 {
-    use super::*;
-    abigen_legacy!(ERC20, "./artifacts/fixtures/ERC20.json");
-}
-
-pub mod contract_account {
-    use super::*;
-    abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
-}
+abigen_legacy!(Proxy, "./artifacts/proxy.json");
+abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");

@@ -6,10 +6,14 @@ use mongodb::bson::doc;
 use mongodb::bson::Document;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
+use reth_primitives::Bytes;
 use reth_primitives::{BlockNumberOrTag, H256, U256, U64};
+use reth_rpc_types::Filter;
+use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
 use reth_rpc_types::Transaction;
 use reth_rpc_types::TransactionReceipt;
+use reth_rpc_types::ValueOrArray;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::BlockId as StarknetBlockId;
@@ -19,15 +23,21 @@ use starknet::core::utils::get_storage_var_address;
 use starknet::providers::Provider as StarknetProvider;
 use starknet_crypto::FieldElement;
 
-use super::starknet::kakarot::{contract_account, erc20};
+use super::database::types::log::StoredLog;
+use super::starknet::kakarot::CONTRACT_ACCOUNT_CLASS_HASH;
+use super::starknet::kakarot::EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH;
+use super::starknet::kakarot::{ContractAccountReader, ProxyReader};
+use super::starknet::ERC20Reader;
 use super::utils::split_u256;
+use super::utils::try_from_u8_iterator;
+use crate::eth_provider::utils::format_hex;
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
 
 use super::database::types::{
-    header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransactionFull,
+    header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
@@ -80,6 +90,12 @@ pub trait EthereumProvider {
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the storage of an address at a certain index.
     async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    /// Returns the nonce for the address at the given block.
+    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    /// Returns the code for the address at the given block.
+    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
+    /// Returns the logs for the given filter
+    async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -106,12 +122,12 @@ where
             None => self.starknet_provider.block_number().await?.into(), // in case the database is empty, use the starknet provider
             Some(header) => {
                 let number = header.header.number.ok_or(EthProviderError::ValueNotFound)?;
-                let n = number.as_le_slice();
+                let n = number.as_le_bytes_trimmed();
                 // Block number is U64
                 if n.len() > 8 {
                     return Err(ConversionError::ValueOutOfRange("Block number too large".to_string()).into());
                 }
-                U64::from_little_endian(n)
+                U64::from_little_endian(n.as_ref())
             }
         };
         Ok(block_number)
@@ -185,7 +201,7 @@ where
 
     async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<Transaction>> {
         let filter = into_filter("tx.hash", hash, 64);
-        let tx: Option<StoredTransactionFull> = self.database.get_one("transactions", filter, None).await?;
+        let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
         Ok(tx.map(Into::into))
     }
 
@@ -197,7 +213,7 @@ where
         let mut filter = into_filter("tx.blockHash", hash, 64);
         let index: usize = index.into();
         filter.insert("tx.transactionIndex", index as i32);
-        let tx: Option<StoredTransactionFull> = self.database.get_one("transactions", filter, None).await?;
+        let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
         Ok(tx.map(Into::into))
     }
 
@@ -210,7 +226,7 @@ where
         let mut filter = into_filter("tx.blockNumber", block_number, 64);
         let index: usize = index.into();
         filter.insert("tx.transactionIndex", index as i32);
-        let tx: Option<StoredTransactionFull> = self.database.get_one("transactions", filter, None).await?;
+        let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
         Ok(tx.map(Into::into))
     }
 
@@ -224,7 +240,7 @@ where
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
-        let eth_contract = erc20::ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
+        let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
         let address = self.starknet_address(address);
         let balance = eth_contract.balanceOf(&address).block_id(starknet_block_id).call().await?;
@@ -239,7 +255,7 @@ where
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
         let address = self.starknet_address(address);
-        let contract = contract_account::ContractAccountReader::new(address, &self.starknet_provider);
+        let contract = ContractAccountReader::new(address, &self.starknet_provider);
 
         let keys = split_u256::<FieldElement>(index);
         let storage_address = get_storage_var_address("storage_", &keys).expect("Storage var name is not ASCII");
@@ -249,6 +265,89 @@ where
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
         Ok(low + (high << 128))
+    }
+
+    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
+        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+
+        let address = self.starknet_address(address);
+        let proxy = ProxyReader::new(address, &self.starknet_provider);
+        let address_class_hash = proxy.get_implementation().block_id(starknet_block_id).call().await?;
+
+        let nonce = if address_class_hash == *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH {
+            self.starknet_provider.get_nonce(starknet_block_id, address).await?
+        } else if address_class_hash == *CONTRACT_ACCOUNT_CLASS_HASH {
+            let contract = ContractAccountReader::new(address, &self.starknet_provider);
+            contract.get_nonce().block_id(starknet_block_id).call().await?
+        } else {
+            FieldElement::ZERO
+        };
+        Ok(into_via_wrapper!(nonce))
+    }
+
+    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
+        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
+        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+
+        let address = self.starknet_address(address);
+        let contract = ContractAccountReader::new(address, &self.starknet_provider);
+        let (_, bytecode) = contract.bytecode().block_id(starknet_block_id).call().await?;
+
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode.0.into_iter())))
+    }
+
+    async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
+        let current_block = self.block_number().await?.low_u64();
+        let from = filter.get_from_block().unwrap_or_default();
+        let to = filter.get_to_block().unwrap_or(current_block);
+
+        let (from, to) = match (from, to) {
+            (from, _) if from > current_block => return Ok(FilterChanges::Empty),
+            (from, to) if to > current_block => (from, current_block),
+            (from, to) if to < from => return Ok(FilterChanges::Empty),
+            _ => (from, to),
+        };
+
+        // Convert the topics to a vector of H256
+        let topics = filter
+            .topics
+            .into_iter()
+            .filter_map(|t| t.to_value_or_array())
+            .flat_map(|t| match t {
+                ValueOrArray::Value(topic) => vec![topic],
+                ValueOrArray::Array(topics) => topics,
+            })
+            .collect::<Vec<_>>();
+
+        // Create the database filter. We filter by block number using $gte and $lte,
+        // and by topics using $expr and $eq. The topics query will:
+        // 1. Slice the topics array to the same length as the filter topics
+        // 2. Match on values for which the sliced topics equal the filter topics
+        let mut database_filter = doc! {
+            "log.blockNumber": {"$gte": format_hex(from, 64), "$lte": format_hex(to, 64)},
+            "$expr": {
+                "$eq": [
+                  { "$slice": ["$log.topics", topics.len() as i32] },
+                  topics.into_iter().map(|t| format_hex(t, 64)).collect::<Vec<_>>()
+                ]
+              }
+        };
+
+        // Add the address filter if any
+        let addresses = filter.address.to_value_or_array().map(|a| match a {
+            ValueOrArray::Value(address) => vec![address],
+            ValueOrArray::Array(addresses) => addresses,
+        });
+        addresses.map(|adds| {
+            database_filter
+                .insert("log.address", doc! {"$in": adds.into_iter().map(|a| format_hex(a, 40)).collect::<Vec<_>>()})
+        });
+
+        dbg!(&database_filter);
+
+        let logs: Vec<StoredLog> = self.database.get("logs", database_filter, None).await?;
+        Ok(FilterChanges::Logs(logs.into_iter().map(Into::into).collect()))
     }
 }
 
@@ -277,7 +376,7 @@ where
 
         let transactions = if full {
             BlockTransactions::Full(iter_into(
-                self.database.get::<StoredTransactionFull>("transactions", transactions_filter, None).await?,
+                self.database.get::<StoredTransaction>("transactions", transactions_filter, None).await?,
             ))
         } else {
             BlockTransactions::Hashes(iter_into(

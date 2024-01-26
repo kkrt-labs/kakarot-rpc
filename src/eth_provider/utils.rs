@@ -8,12 +8,21 @@ pub(crate) fn iter_into<D, S: Into<D>>(iter: impl IntoIterator<Item = S>) -> Vec
     iter.into_iter().map(Into::into).collect::<Vec<_>>()
 }
 
+/// Converts an iterator of `TryInto<u8>` into a `FromIterator<u8>`.
+pub(crate) fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl Iterator<Item = I>) -> T {
+    it.filter_map(|x| TryInto::<u8>::try_into(x).ok()).collect()
+}
+
+pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
+    format!("0x{:0width$x}", value, width = width)
+}
+
 /// Converts a key and value into a MongoDB filter.
 pub(crate) fn into_filter<T>(key: &str, value: T, width: usize) -> Document
 where
     T: LowerHex,
 {
-    doc! {key: format!("0x{:0width$x}", value, width = width)}
+    doc! {key: format_hex(value, width)}
 }
 
 /// Helper function to split a U256 value into two generic values
