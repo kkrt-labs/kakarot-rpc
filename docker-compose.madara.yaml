@@ -6,7 +6,6 @@ services:
     image: greged93/madara:v0.6.0
     ports:
       - 9615:9615
-      - 9944:9944
       - 30333:30333
       - 5050:5050
     entrypoint: [/bin/bash, -c]
