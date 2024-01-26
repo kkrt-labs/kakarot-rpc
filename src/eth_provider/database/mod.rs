@@ -1,3 +1,5 @@
+pub mod types;
+
 use futures::TryStreamExt;
 use mongodb::{
     bson::Document,

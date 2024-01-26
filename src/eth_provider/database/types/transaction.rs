@@ -5,7 +5,7 @@ use serde::Deserialize;
 /// A full transaction as stored in the database
 #[derive(Debug, Deserialize)]
 pub struct StoredTransactionFull {
-    #[serde(deserialize_with = "crate::eth_provider::types::serde::deserialize_intermediate")]
+    #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
 }
 
