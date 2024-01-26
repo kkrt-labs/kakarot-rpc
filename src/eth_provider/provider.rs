@@ -19,22 +19,21 @@ use starknet::core::utils::get_storage_var_address;
 use starknet::providers::Provider as StarknetProvider;
 use starknet_crypto::FieldElement;
 
-use super::kakarot::{contract_account, erc20};
+use super::starknet::kakarot::{contract_account, erc20};
 use super::utils::split_u256;
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
 
+use super::database::types::{
+    header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransactionFull,
+    transaction::StoredTransactionHash,
+};
 use super::database::Database;
-use super::kakarot::KAKAROT_ADDRESS;
-use super::kakarot::PROXY_ACCOUNT_CLASS_HASH;
-use super::kakarot::STARKNET_NATIVE_TOKEN;
-use super::types::header::StoredHeader;
-use super::types::receipt::StoredTransactionReceipt;
-use super::types::transaction::StoredTransactionHash;
+use super::starknet::kakarot::{KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH, STARKNET_NATIVE_TOKEN};
 use super::utils::iter_into;
-use super::{error::EthProviderError, types::transaction::StoredTransactionFull, utils::into_filter};
+use super::{error::EthProviderError, utils::into_filter};
 
 pub type EthProviderResult<T> = Result<T, EthProviderError>;
 
