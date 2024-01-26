@@ -22,9 +22,10 @@ services:
       file: docker-compose.yaml
       service: kakarot-deployer
     environment:
-      - ACCOUNT_ADDRESS=0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
-      - PRIVATE_KEY=0x1800000000300000180000000000030000000000003006001800006600
-      - EVM_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+      - ACCOUNT_ADDRESS=0x3
+      - PRIVATE_KEY=0x00c1cf1490de1352865301bb8705143f3ef938f97fdf892f1090dcb5ac7bcd1d
+      # Custom RPC URL for docker
+      - RPC_URL=http://starknet:5050
 
   deployments-parser:
     extends:
@@ -64,3 +65,4 @@ volumes:
   apibara:
   mongo_data:
   indexer_code:
+  madara:

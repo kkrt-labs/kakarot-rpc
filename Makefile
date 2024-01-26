@@ -28,7 +28,7 @@ madara-rpc-up:
 	docker compose -f docker-compose.madara.yaml up -d --force-recreate
 
 docker-down:
-	docker compose down --remove-orphans
+	docker compose down --remove-orphans && docker compose rm
 
 install-katana:
 	cargo install --git https://github.com/dojoengine/dojo --locked --rev be16762 katana
