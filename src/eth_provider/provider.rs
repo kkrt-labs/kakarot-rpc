@@ -4,16 +4,34 @@ use eyre::Result;
 use mockall::automock;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
+use reth_primitives::Address;
+use reth_primitives::BlockId;
 use reth_primitives::{BlockNumberOrTag, H256, U256, U64};
 use reth_rpc_types::Index;
 use reth_rpc_types::Transaction;
+use reth_rpc_types::TransactionReceipt;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
+use starknet::core::types::BlockId as StarknetBlockId;
 use starknet::core::types::SyncStatusType;
+use starknet::core::utils::get_contract_address;
+use starknet::core::utils::get_storage_var_address;
 use starknet::providers::Provider as StarknetProvider;
+use starknet_crypto::FieldElement;
+
+use super::kakarot::{contract_account, erc20};
+use super::utils::split_u256;
+use crate::into_via_wrapper;
+use crate::models::block::EthBlockId;
+use crate::models::errors::ConversionError;
+use crate::models::felt::Felt252Wrapper;
 
 use super::database::Database;
+use super::kakarot::KAKAROT_ADDRESS;
+use super::kakarot::PROXY_ACCOUNT_CLASS_HASH;
+use super::kakarot::STARKNET_NATIVE_TOKEN;
 use super::types::header::StoredHeader;
+use super::types::receipt::StoredTransactionReceipt;
 use super::types::transaction::StoredTransactionHash;
 use super::utils::iter_into;
 use super::{error::EthProviderError, types::transaction::StoredTransactionFull, utils::into_filter};
@@ -59,6 +77,10 @@ pub trait EthereumProvider {
     ) -> EthProviderResult<Option<Transaction>>;
     /// Returns the transaction receipt by hash of the transaction.
     async fn transaction_receipt(&self, hash: H256) -> EthProviderResult<Option<TransactionReceipt>>;
+    /// Returns the balance of an address.
+    async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    /// Returns the storage of an address at a certain index.
+    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<U256>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -165,7 +187,7 @@ where
     async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<Transaction>> {
         let filter = into_filter("tx.hash", hash, 64);
         let tx: Option<StoredTransactionFull> = self.database.get_one("transactions", filter, None).await?;
-        Ok(tx.map(|tx| tx.tx))
+        Ok(tx.map(Into::into))
     }
 
     async fn transaction_by_block_hash_and_index(
@@ -198,6 +220,36 @@ where
         let tx: Option<StoredTransactionReceipt> = self.database.get_one("receipts", filter, None).await?;
         Ok(tx.map(Into::into))
     }
+
+    async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
+        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+
+        let eth_contract = erc20::ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
+
+        let address = self.starknet_address(address);
+        let balance = eth_contract.balanceOf(&address).block_id(starknet_block_id).call().await?;
+
+        let low: U256 = into_via_wrapper!(balance.low);
+        let high: U256 = into_via_wrapper!(balance.high);
+        Ok(low + (high << 128))
+    }
+
+    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
+        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+
+        let address = self.starknet_address(address);
+        let contract = contract_account::ContractAccountReader::new(address, &self.starknet_provider);
+
+        let keys = split_u256::<FieldElement>(index);
+        let storage_address = get_storage_var_address("storage_", &keys).expect("Storage var name is not ASCII");
+
+        let storage = contract.storage(&storage_address).block_id(starknet_block_id).call().await?;
+
+        let low: U256 = into_via_wrapper!(storage.low);
+        let high: U256 = into_via_wrapper!(storage.high);
+        Ok(low + (high << 128))
     }
 }
 
@@ -258,5 +310,10 @@ where
             }
             BlockNumberOrTag::Pending => todo!("pending block number not implemented"),
         }
+    }
+
+    /// Compute the starknet address given a eth address
+    fn starknet_address(&self, address: Address) -> FieldElement {
+        get_contract_address(into_via_wrapper!(address), *PROXY_ACCOUNT_CLASS_HASH, &[], *KAKAROT_ADDRESS)
     }
 }

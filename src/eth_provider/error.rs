@@ -2,7 +2,10 @@ use jsonrpsee::types::ErrorObject;
 use starknet::providers::ProviderError as StarknetProviderError;
 use thiserror::Error;
 
-use crate::starknet_client::errors::{rpc_err, EthRpcErrorCode};
+use crate::{
+    models::errors::ConversionError,
+    starknet_client::errors::{rpc_err, EthRpcErrorCode},
+};
 
 /// Error that can occur when interacting with the database.
 #[derive(Debug, Error)]
@@ -13,6 +16,12 @@ pub enum EthProviderError {
     /// Starknet Provider error.
     #[error(transparent)]
     StarknetProviderError(#[from] StarknetProviderError),
+    /// Contract call error.
+    #[error(transparent)]
+    ContractCallError(#[from] starknet_abigen_parser::cairo_types::Error),
+    /// Conversion error.
+    #[error(transparent)]
+    ConversionError(#[from] ConversionError),
     /// Value not found in the database.
     #[error("Did not find value in the database.")]
     ValueNotFound,
