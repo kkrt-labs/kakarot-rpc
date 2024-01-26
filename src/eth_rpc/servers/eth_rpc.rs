@@ -5,7 +5,6 @@ use crate::models::block::EthBlockId;
 use crate::models::event::StarknetEvent;
 use crate::models::event_filter::EthEventFilter;
 use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction_receipt::StarknetTransactionReceipt as TransactionReceiptWrapper;
 use crate::starknet_client::constants::CHUNK_SIZE_LIMIT;
 use crate::starknet_client::errors::EthApiError;
 use crate::starknet_client::helpers::try_from_u8_iterator;
@@ -19,7 +18,7 @@ use reth_rpc_types::{
 };
 use serde_json::Value;
 use starknet::{
-    core::types::{BlockId as StarknetBlockId, Event, EventFilterWithPage, FieldElement, ResultPageRequest},
+    core::types::{BlockId as StarknetBlockId, Event, EventFilterWithPage, ResultPageRequest},
     providers::Provider,
 };
 
@@ -130,9 +129,7 @@ where
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash, index = ?index))]
     async fn transaction_by_block_hash_and_index(&self, hash: H256, index: Index) -> Result<Option<EtherTransaction>> {
-        let block_id = BlockId::Hash(hash.into());
-        let tx = self.kakarot_client.transaction_by_block_id_and_index(block_id, index).await?;
-        Ok(Some(tx))
+        Ok(self.eth_provider.transaction_by_block_hash_and_index(hash, index).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(number = %number, index = ?index))]
@@ -141,28 +138,12 @@ where
         number: BlockNumberOrTag,
         index: Index,
     ) -> Result<Option<EtherTransaction>> {
-        let block_id = BlockId::Number(number);
-        let tx = self.kakarot_client.transaction_by_block_id_and_index(block_id, index).await?;
-        Ok(Some(tx))
+        Ok(self.eth_provider.transaction_by_block_number_and_index(number, index).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
     async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>> {
-        // TODO: Error when trying to transform 32 bytes hash to FieldElement
-        let transaction_hash: Felt252Wrapper = hash.try_into().map_err(EthApiError::from)?;
-        let starknet_tx_receipt: TransactionReceiptWrapper = match self
-            .kakarot_client
-            .starknet_provider()
-            .get_transaction_receipt::<FieldElement>(transaction_hash.into())
-            .await
-        {
-            Err(_) => return Ok(None),
-            Ok(receipt) => receipt,
-        }
-        .into();
-
-        let res_receipt = starknet_tx_receipt.to_eth_transaction_receipt(&self.kakarot_client).await?;
-        Ok(res_receipt)
+        Ok(self.eth_provider.transaction_receipt(hash).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
