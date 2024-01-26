@@ -74,10 +74,18 @@ where
         let sort = doc! { "header.number": -1 };
         let header: Option<StoredHeader> = self.database.get_one("headers", filter, sort).await?;
         let block_number = match header {
-            Some(header) => header.header.number.ok_or(EthProviderError::ValueNotFound)?.as_limbs()[0],
-            None => self.starknet_provider.block_number().await?, // in case the database is empty, use the starknet provider
+            None => self.starknet_provider.block_number().await?.into(), // in case the database is empty, use the starknet provider
+            Some(header) => {
+                let number = header.header.number.ok_or(EthProviderError::ValueNotFound)?;
+                let n = number.as_le_slice();
+                // Block number is U64
+                if n.len() > 8 {
+                    return Err(ConversionError::ValueOutOfRange("Block number too large".to_string()).into());
+                }
+                U64::from_little_endian(n)
+            }
         };
-        Ok(block_number.into())
+        Ok(block_number)
     }
 
     async fn syncing(&self) -> EthProviderResult<SyncStatus> {

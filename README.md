@@ -68,9 +68,16 @@ Foundry, etc.
 
 ## Architecture
 
+### High level
+
 Here is a high level overview of the architecture of Kakarot RPC.
 
 ![Kakarot RPC Adapter flow](https://user-images.githubusercontent.com/66871571/215438348-26ac2aee-bf30-4429-bbca-a7b901ac0594.png)
+
+### Low level
+
+Below is a lower level detailed overview of the internal architecture.
+![Kakarot RPC Adapter flow](https://github.com/kkrt-labs/ef-tests/assets/82421016/4b34cbbb-df50-4ce3-9aaa-ed42b80ecd3b)
 
 ## Getting Started
 
