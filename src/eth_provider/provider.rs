@@ -51,6 +51,14 @@ pub trait EthereumProvider {
         hash: H256,
         index: Index,
     ) -> EthProviderResult<Option<Transaction>>;
+    /// Returns the transaction by block number and index.
+    async fn transaction_by_block_number_and_index(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+        index: Index,
+    ) -> EthProviderResult<Option<Transaction>>;
+    /// Returns the transaction receipt by hash of the transaction.
+    async fn transaction_receipt(&self, hash: H256) -> EthProviderResult<Option<TransactionReceipt>>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -165,11 +173,31 @@ where
         hash: H256,
         index: Index,
     ) -> EthProviderResult<Option<Transaction>> {
-        let index: usize = index.into();
         let mut filter = into_filter("tx.blockHash", hash, 64);
+        let index: usize = index.into();
         filter.insert("tx.transactionIndex", index as i32);
         let tx: Option<StoredTransactionFull> = self.database.get_one("transactions", filter, None).await?;
-        Ok(tx.map(|tx| tx.tx))
+        Ok(tx.map(Into::into))
+    }
+
+    async fn transaction_by_block_number_and_index(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+        index: Index,
+    ) -> EthProviderResult<Option<Transaction>> {
+        let block_number = self.tag_into_block_number(number_or_tag).await?;
+        let mut filter = into_filter("tx.blockNumber", block_number, 64);
+        let index: usize = index.into();
+        filter.insert("tx.transactionIndex", index as i32);
+        let tx: Option<StoredTransactionFull> = self.database.get_one("transactions", filter, None).await?;
+        Ok(tx.map(Into::into))
+    }
+
+    async fn transaction_receipt(&self, hash: H256) -> EthProviderResult<Option<TransactionReceipt>> {
+        let filter = into_filter("receipt.transactionHash", hash, 64);
+        let tx: Option<StoredTransactionReceipt> = self.database.get_one("receipts", filter, None).await?;
+        Ok(tx.map(Into::into))
+    }
     }
 }
 
