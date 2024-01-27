@@ -3,6 +3,7 @@ use bytes::BytesMut;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
 use kakarot_rpc::models::felt::Felt252Wrapper;
+use kakarot_rpc::starknet_client::constants::CHAIN_ID;
 use kakarot_rpc::starknet_client::errors::EthApiError;
 use kakarot_rpc::starknet_client::KakarotClient;
 use reth_primitives::{
@@ -162,18 +163,8 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
 
-        let client = self.client();
-        let chain_id = client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
-
-        let chain_id = match u64::try_from(chain_id) {
-            Ok(value) => value,
-            Err(_) => {
-                return Err(EthApiError::ConversionError("Conversion from Field to u64 failed".to_string()).into())
-            }
-        };
-
         let tx = Transaction::Eip1559(TxEip1559 {
-            chain_id,
+            chain_id: CHAIN_ID,
             nonce,
             max_priority_fee_per_gas: Default::default(),
             max_fee_per_gas: Default::default(),
