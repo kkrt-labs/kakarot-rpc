@@ -106,7 +106,7 @@ impl EvmContract for KakarotEvmContract {
         let evm_address: Felt252Wrapper = self.evm_address.try_into()?;
 
         Ok(Transaction::Eip1559(TxEip1559 {
-            chain_id: 0,
+            chain_id: CHAIN_ID,
             nonce,
             max_priority_fee_per_gas: Default::default(),
             max_fee_per_gas: Default::default(),
