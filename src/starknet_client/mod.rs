@@ -367,7 +367,10 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             }
         };
 
-        let chain_id = request.chain_id.unwrap();
+        let chain_id = match request.chain_id {
+            Some(value) => value,
+            None => return Err(EthApiError::MissingParameterError("network ID not provided".to_string())),
+        };
 
         let from = request.from.ok_or_else(|| EthApiError::MissingParameterError("from for estimate_gas".into()))?;
         let nonce = self.nonce(from, block_id).await?.try_into().map_err(ConversionError::from)?;

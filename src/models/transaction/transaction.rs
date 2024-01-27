@@ -131,9 +131,12 @@ impl StarknetTransaction {
 
         let signature = Some(signature);
 
-        let chain_id_as_field = client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
-        let chain_id_as_u64 = u64::try_from(chain_id_as_field).ok().unwrap();
-        let chain_id_as_u64_struct = U64([chain_id_as_u64]);
+        let chain_id = client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
+
+        let chain_id = match u64::try_from(chain_id) {
+            Ok(value) => U64::from(value),
+            Err(_) => return Err(EthApiError::ConversionError("Conversion from Field to u64 failed".to_string())),
+        };
 
         Ok(EthTransaction {
             hash,
@@ -150,7 +153,7 @@ impl StarknetTransaction {
             max_priority_fee_per_gas,
             input,
             signature,
-            chain_id: Some(chain_id_as_u64_struct),
+            chain_id: Some(chain_id),
             access_list: None, // TODO fetch the access list
             transaction_type,
             max_fee_per_blob_gas: None,

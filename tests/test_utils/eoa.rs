@@ -163,11 +163,17 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let nonce: u64 = nonce.try_into()?;
 
         let client = self.client();
-        let chain_id_as_field = client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
-        let chain_id_as_u64 = u64::try_from(chain_id_as_field).ok().unwrap();
+        let chain_id = client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
+
+        let chain_id = match u64::try_from(chain_id) {
+            Ok(value) => value,
+            Err(_) => {
+                return Err(EthApiError::ConversionError("Conversion from Field to u64 failed".to_string()).into())
+            }
+        };
 
         let tx = Transaction::Eip1559(TxEip1559 {
-            chain_id: chain_id_as_u64,
+            chain_id,
             nonce,
             max_priority_fee_per_gas: Default::default(),
             max_fee_per_gas: Default::default(),

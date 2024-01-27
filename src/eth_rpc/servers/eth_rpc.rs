@@ -77,11 +77,16 @@ impl<P: Provider + Send + Sync + 'static> EthApiServer for KakarotEthRpc<P> {
     }
 
     async fn chain_id(&self) -> Result<Option<U64>> {
-        let chain_id_as_field = self.kakarot_client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
-        let chain_id_as_u64 = u64::try_from(chain_id_as_field).ok().unwrap();
-        let chain_id_as_u64_struct = U64([chain_id_as_u64]);
+        let chain_id = self.kakarot_client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
 
-        Ok(Some(chain_id_as_u64_struct))
+        let chain_id = match u64::try_from(chain_id) {
+            Ok(value) => U64::from(value),
+            Err(_) => {
+                return Err(EthApiError::ConversionError("Conversion from Field to u64 failed".to_string()).into())
+            }
+        };
+
+        Ok(Some(chain_id))
     }
 
     async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>> {

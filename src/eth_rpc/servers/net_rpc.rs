@@ -23,11 +23,17 @@ impl<P: Provider + Send + Sync> NetRpc<P> {
 #[async_trait]
 impl<P: Provider + Send + Sync + 'static> NetApiServer for NetRpc<P> {
     async fn version(&self) -> Result<U64> {
-        let chain_id_as_field = self.kakarot_client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
-        let chain_id_as_u64 = u64::try_from(chain_id_as_field).ok().unwrap();
-        let chain_id_as_u64_struct = U64([chain_id_as_u64]);
+        // version method returns the network ID
+        let chain_id = self.kakarot_client.starknet_provider().chain_id().await.map_err(EthApiError::from)?;
 
-        Ok(chain_id_as_u64_struct)
+        let chain_id = match u64::try_from(chain_id) {
+            Ok(value) => U64::from(value),
+            Err(_) => {
+                return Err(EthApiError::ConversionError("Conversion from Field to u64 failed".to_string()).into())
+            }
+        };
+
+        Ok(chain_id)
     }
 
     fn peer_count(&self) -> Result<PeerCount> {
