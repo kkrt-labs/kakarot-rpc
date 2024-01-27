@@ -4,7 +4,6 @@ use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::starknet_client::constants::CHAIN_ID;
-use kakarot_rpc::starknet_client::errors::EthApiError;
 use kakarot_rpc::starknet_client::KakarotClient;
 use reth_primitives::{
     sign_message, Address, BlockId, BlockNumberOrTag, Bytes, Transaction, TransactionKind, TransactionSigned,
