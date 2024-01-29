@@ -29,7 +29,7 @@ use super::database::types::{
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
-use super::starknet::kakarot::{
+use super::starknet::kakarot_core::{
     ContractAccountReader, ProxyReader, CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
     KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
 };

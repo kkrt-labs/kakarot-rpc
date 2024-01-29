@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-pub mod kakarot;
+pub mod kakarot_core;
 
 use lazy_static::lazy_static;
 use starknet_abigen_macros::abigen_legacy;
