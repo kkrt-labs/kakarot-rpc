@@ -4,17 +4,14 @@ use eyre::Result;
 use mockall::automock;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
-use reth_primitives::AccessList;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::Bytes;
 use reth_primitives::Signature;
-use reth_primitives::Transaction;
-use reth_primitives::TransactionKind;
 use reth_primitives::TransactionSigned;
-use reth_primitives::TxEip1559;
 use reth_primitives::{BlockNumberOrTag, H256, U256, U64};
 use reth_rpc_types::CallRequest;
+use reth_rpc_types::FeeHistory;
 use reth_rpc_types::Filter;
 use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
@@ -32,7 +29,6 @@ use starknet::providers::Provider as StarknetProvider;
 use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
 use starknet_crypto::FieldElement;
 
-use super::constant::MAX_PRIORITY_FEE_PER_GAS;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
@@ -47,17 +43,17 @@ use super::starknet::kakarot_core::{
 };
 use super::starknet::ERC20Reader;
 use super::starknet::STARKNET_NATIVE_TOKEN;
+use super::utils::call_to_transaction;
 use super::utils::iter_into;
 use super::utils::split_u256;
 use super::utils::try_from_u8_iterator;
 use super::{error::EthProviderError, utils::into_filter};
-use crate::eth_provider::constant::BASE_FEE_PER_GAS;
 use crate::eth_provider::utils::format_hex;
-use crate::into_via_try_wrapper;
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
+use crate::starknet_client::constants::gas::BASE_FEE_PER_GAS;
 
 pub type EthProviderResult<T> = Result<T, EthProviderError>;
 
@@ -114,6 +110,13 @@ pub trait EthereumProvider {
     async fn call(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
     /// Returns the result of a estimate gas.
     async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    /// Returns the fee history given a block count and a newest block number.
+    async fn fee_history(
+        &self,
+        block_count: U256,
+        newest_block: BlockNumberOrTag,
+        reward_percentiles: Option<Vec<f64>>,
+    ) -> EthProviderResult<FeeHistory>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -371,34 +374,27 @@ where
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
+        let chain_id = self.chain_id().await?.unwrap_or_default();
+        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
+        let from = into_via_wrapper!(call.from.unwrap_or_default());
         // unwrap option or return jsonrpc error
         let to = call.to.ok_or_else(|| {
             ConversionError::ToStarknetTransactionError("Missing `to` field in CallRequest".to_string())
         })?;
         let to = into_via_wrapper!(to);
 
-        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
-        let origin = into_via_wrapper!(call.from.unwrap_or_default());
+        let transaction = call_to_transaction(call, chain_id, 0.into())?;
 
-        let calldata = call.input.data.ok_or_else(|| {
-            ConversionError::ToStarknetTransactionError("Missing `data` field in CallRequest".to_string())
-        })?;
-        let calldata: Vec<_> = calldata.to_vec().into_iter().map(FieldElement::from).collect();
-
-        let gas_limit = into_via_try_wrapper!(call.gas.unwrap_or_default());
-
-        let gas_price = into_via_try_wrapper!(call.gas_price.unwrap_or_default());
-
-        let value = split_u256::<FieldElement>(call.value.unwrap_or_default());
+        let calldata: Vec<_> = transaction.input().to_vec().into_iter().map(FieldElement::from).collect();
 
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let (_, return_data, success, _) = kakarot_contract
             .eth_call(
-                &origin,
+                &from,
                 &to,
-                &gas_limit,
-                &gas_price,
-                &Uint256 { low: value[0], high: value[1] },
+                &transaction.gas_limit().into(),
+                &transaction.effective_gas_price(Some(BASE_FEE_PER_GAS)).into(),
+                &Uint256 { low: transaction.value().into(), high: FieldElement::ZERO },
                 &calldata.len().into(),
                 &CairoArrayLegacy(calldata),
             )
@@ -418,45 +414,18 @@ where
     async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+
         let chain_id = self.chain_id().await?.unwrap_or_default();
-
-        let chain_id = call.chain_id.unwrap_or(chain_id).low_u64();
-
         let from = call.from.ok_or_else(|| {
             ConversionError::ToStarknetTransactionError("Missing `from` field in CallRequest".to_string())
         })?;
-        let nonce = self.transaction_count(from, block_id).await?.try_into().map_err(ConversionError::from)?;
+        let nonce: u64 = self.transaction_count(from, block_id).await?.try_into().map_err(ConversionError::from)?;
 
-        let gas_limit = call.gas.unwrap_or_default().try_into().map_err(ConversionError::from)?;
-        let max_fee_per_gas = call
-            .max_fee_per_gas
-            .unwrap_or_else(|| U256::from(*BASE_FEE_PER_GAS))
-            .try_into()
-            .map_err(ConversionError::from)?;
-        let max_priority_fee_per_gas = call
-            .max_priority_fee_per_gas
-            .unwrap_or_else(|| U256::from(*MAX_PRIORITY_FEE_PER_GAS))
-            .try_into()
-            .map_err(ConversionError::from)?;
+        let transaction = call_to_transaction(call, chain_id, nonce.into())?;
 
-        let to = call.to.map_or(TransactionKind::Create, TransactionKind::Call);
-        let value = call.value.unwrap_or_default().try_into().map_err(ConversionError::from)?;
-        let data = call.input.data.unwrap_or_default();
-
-        let transaction = Transaction::Eip1559(TxEip1559 {
-            chain_id,
-            nonce,
-            gas_limit,
-            max_fee_per_gas,
-            max_priority_fee_per_gas,
-            to,
-            value,
-            access_list: AccessList(vec![]),
-            input: data,
-        });
         let starknet_transaction = BroadcastedTransaction::Invoke(to_starknet_transaction(
             TransactionSigned::from_transaction_and_signature(transaction, Signature::default()),
-            chain_id,
+            chain_id.low_u64(),
         )?);
 
         let result = self
@@ -465,6 +434,42 @@ where
             .await?;
 
         Ok(U256::from(result.fee_estimation.gas_consumed))
+    }
+
+    async fn fee_history(
+        &self,
+        block_count: U256,
+        newest_block: BlockNumberOrTag,
+        _reward_percentiles: Option<Vec<f64>>,
+    ) -> EthProviderResult<FeeHistory> {
+        if block_count == U256::ZERO {
+            return Ok(FeeHistory::default());
+        }
+
+        let block_count_usize =
+            usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
+        let base_fee_per_gas = vec![U256::from(BASE_FEE_PER_GAS); block_count_usize];
+
+        let newest_block = U256::from(self.tag_into_block_number(newest_block).await?.low_u64());
+        let oldest_block = if newest_block + U256::from(1) >= block_count {
+            newest_block + U256::from(1) - block_count
+        } else {
+            U256::ZERO
+        };
+
+        let header_filter =
+            doc! {"header.number": {"$gte": format_hex(oldest_block, 64), "$lte": format_hex(newest_block, 64)}}; // TODO: check if we should maybe use a projection since we only need the gasLimit and gasUsed.
+        let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
+        let gas_used_ratio = blocks
+            .iter()
+            .map(|header| {
+                let gas_used = header.header.gas_used.as_limbs()[0] as f64;
+                let gas_limit = header.header.gas_limit.as_limbs()[0] as f64;
+                gas_used / gas_limit
+            })
+            .collect::<Vec<_>>();
+
+        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: Some(vec![]) })
     }
 }
 

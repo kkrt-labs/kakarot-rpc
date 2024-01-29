@@ -1,7 +1,14 @@
 use std::fmt::LowerHex;
 
 use mongodb::bson::{doc, Document};
-use reth_primitives::{U128, U256};
+use reth_primitives::{AccessList, Transaction, TransactionKind, TxEip1559};
+use reth_primitives::{U128, U256, U64};
+use reth_rpc_types::CallRequest;
+
+use crate::models::errors::ConversionError;
+use crate::starknet_client::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
+
+use super::provider::EthProviderResult;
 
 /// Converts an iterator of `Into<D>` into a `Vec<D>`.
 pub(crate) fn iter_into<D, S: Into<D>>(iter: impl IntoIterator<Item = S>) -> Vec<D> {
@@ -32,4 +39,36 @@ pub fn split_u256<T: From<u128>>(value: U256) -> [T; 2] {
     let high: U256 = value >> 128;
     let high: u128 = high.try_into().unwrap(); // safe to unwrap
     [T::from(low), T::from(high)]
+}
+
+pub fn call_to_transaction(call: CallRequest, chain_id: U64, nonce: U64) -> EthProviderResult<Transaction> {
+    let chain_id = call.chain_id.unwrap_or(chain_id).low_u64();
+
+    let gas_limit = call.gas.unwrap_or_default().try_into().map_err(ConversionError::from)?;
+    let max_fee_per_gas = call
+        .max_fee_per_gas
+        .unwrap_or_else(|| U256::from(BASE_FEE_PER_GAS))
+        .try_into()
+        .map_err(ConversionError::from)?;
+    let max_priority_fee_per_gas = call
+        .max_priority_fee_per_gas
+        .unwrap_or_else(|| U256::from(MAX_PRIORITY_FEE_PER_GAS))
+        .try_into()
+        .map_err(ConversionError::from)?;
+
+    let to = call.to.map_or(TransactionKind::Create, TransactionKind::Call);
+    let value = call.value.unwrap_or_default().try_into().map_err(ConversionError::from)?;
+    let data = call.input.data.unwrap_or_default();
+
+    Ok(Transaction::Eip1559(TxEip1559 {
+        chain_id,
+        nonce: nonce.low_u64(),
+        gas_limit,
+        max_fee_per_gas,
+        max_priority_fee_per_gas,
+        to,
+        value,
+        access_list: AccessList(vec![]),
+        input: data,
+    }))
 }

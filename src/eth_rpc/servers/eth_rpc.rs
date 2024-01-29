@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::eth_provider::constant::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use crate::starknet_client::errors::EthApiError;
 use crate::{eth_provider::provider::EthereumProvider, starknet_client::KakarotClient};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
@@ -181,8 +182,7 @@ where
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn gas_price(&self) -> Result<U256> {
-        let gas_price = self.kakarot_client.base_fee_per_gas();
-        Ok(gas_price)
+        Ok(U256::from(*BASE_FEE_PER_GAS))
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(block_count = %block_count, newest_block = %newest_block, reward_percentiles = ?reward_percentiles))]
@@ -192,27 +192,27 @@ where
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
-        let fee_history = self.kakarot_client.fee_history(block_count, newest_block, reward_percentiles).await?;
-
-        Ok(fee_history)
+        Ok(self.eth_provider.fee_history(block_count, newest_block, reward_percentiles).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn max_priority_fee_per_gas(&self) -> Result<U128> {
-        let max_priority_fee = self.kakarot_client.max_priority_fee_per_gas();
-        Ok(max_priority_fee)
+        Ok(U128::from(*MAX_PRIORITY_FEE_PER_GAS))
     }
 
     async fn mining(&self) -> Result<bool> {
-        Err(EthApiError::MethodNotSupported("eth_mining".to_string()).into())
+        tracing::warn!("Kakarot chain does not use mining");
+        Ok(false)
     }
 
     async fn hashrate(&self) -> Result<U256> {
-        Err(EthApiError::MethodNotSupported("eth_hashrate".to_string()).into())
+        tracing::warn!("Kakarot chain does not produce hash rate");
+        Ok(U256::ZERO)
     }
 
     async fn get_work(&self) -> Result<Work> {
-        Err(EthApiError::MethodNotSupported("eth_getWork".to_string()).into())
+        tracing::warn!("Kakarot chain does not produce work");
+        Ok(Work::default())
     }
 
     async fn submit_hashrate(&self, _hashrate: U256, _id: H256) -> Result<bool> {
