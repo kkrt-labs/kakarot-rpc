@@ -10,6 +10,7 @@ use reth_primitives::Bytes;
 use reth_primitives::Signature;
 use reth_primitives::TransactionSigned;
 use reth_primitives::{BlockNumberOrTag, H256, U256, U64};
+use reth_rlp::Decodable as _;
 use reth_rpc_types::CallRequest;
 use reth_rpc_types::FeeHistory;
 use reth_rpc_types::Filter;
@@ -117,6 +118,8 @@ pub trait EthereumProvider {
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> EthProviderResult<FeeHistory>;
+    /// Send a raw transaction to the network and returns the transactions hash.
+    async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<H256>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -470,6 +473,20 @@ where
             .collect::<Vec<_>>();
 
         Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: Some(vec![]) })
+    }
+
+    async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<H256> {
+        let mut data = transaction.0.as_ref();
+        let transaction = TransactionSigned::decode(&mut data)
+            .map_err(|err| ConversionError::ToStarknetTransactionError(err.to_string()))?;
+
+        let hash = transaction.hash();
+        let chain_id = self.chain_id().await?.unwrap_or_default();
+
+        let transaction = to_starknet_transaction(transaction, chain_id.low_u64())?;
+
+        self.starknet_provider.add_invoke_transaction(transaction).await?;
+        Ok(hash)
     }
 }
 

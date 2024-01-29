@@ -229,8 +229,7 @@ where
 
     #[tracing::instrument(skip_all, ret, err, fields(bytes = %bytes))]
     async fn send_raw_transaction(&self, bytes: Bytes) -> Result<H256> {
-        let transaction_hash = self.kakarot_client.send_transaction(bytes).await?;
-        Ok(transaction_hash)
+        Ok(self.eth_provider.send_raw_transaction(bytes).await?)
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
