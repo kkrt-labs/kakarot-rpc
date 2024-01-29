@@ -3,7 +3,7 @@ use std::sync::Arc;
 use dotenv::dotenv;
 use eyre::Result;
 use kakarot_rpc::eth_provider::database::Database;
-use kakarot_rpc::eth_provider::provider::EthereumAccessLayer;
+use kakarot_rpc::eth_provider::provider::EthDataProvider;
 use kakarot_rpc::eth_rpc::config::RPCConfig;
 use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::eth_rpc::run_server;
@@ -57,13 +57,13 @@ async fn main() -> Result<()> {
         StarknetProvider::JsonRpcClient(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
             let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider.clone()));
-            let eth_provider = EthereumAccessLayer::new(db, starknet_provider);
+            let eth_provider = EthDataProvider::new(db, starknet_provider);
             KakarotRpcModuleBuilder::new(kakarot_client, eth_provider).rpc_module()
         }
         StarknetProvider::SequencerGatewayProvider(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
             let kakarot_client = Arc::new(KakarotClient::new(starknet_config, starknet_provider.clone()));
-            let eth_provider = EthereumAccessLayer::new(db, starknet_provider);
+            let eth_provider = EthDataProvider::new(db, starknet_provider);
             KakarotRpcModuleBuilder::new(kakarot_client, eth_provider).rpc_module()
         }
     }?;

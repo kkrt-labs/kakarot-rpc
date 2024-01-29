@@ -24,26 +24,26 @@ use starknet::providers::Provider as StarknetProvider;
 use starknet_crypto::FieldElement;
 
 use super::database::types::log::StoredLog;
-use super::starknet::kakarot::CONTRACT_ACCOUNT_CLASS_HASH;
-use super::starknet::kakarot::EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH;
-use super::starknet::kakarot::{ContractAccountReader, ProxyReader};
-use super::starknet::ERC20Reader;
-use super::utils::split_u256;
-use super::utils::try_from_u8_iterator;
-use crate::eth_provider::utils::format_hex;
-use crate::into_via_wrapper;
-use crate::models::block::EthBlockId;
-use crate::models::errors::ConversionError;
-use crate::models::felt::Felt252Wrapper;
-
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
-use super::starknet::kakarot::{KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH, STARKNET_NATIVE_TOKEN};
+use super::starknet::kakarot::{
+    ContractAccountReader, ProxyReader, CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
+    KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
+};
+use super::starknet::ERC20Reader;
+use super::starknet::STARKNET_NATIVE_TOKEN;
 use super::utils::iter_into;
+use super::utils::split_u256;
+use super::utils::try_from_u8_iterator;
 use super::{error::EthProviderError, utils::into_filter};
+use crate::eth_provider::utils::format_hex;
+use crate::into_via_wrapper;
+use crate::models::block::EthBlockId;
+use crate::models::errors::ConversionError;
+use crate::models::felt::Felt252Wrapper;
 
 pub type EthProviderResult<T> = Result<T, EthProviderError>;
 
@@ -101,7 +101,7 @@ pub trait EthereumProvider {
 /// Structure that implements the EthereumProvider trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
-pub struct EthereumAccessLayer<SP>
+pub struct EthDataProvider<SP>
 where
     SP: StarknetProvider + Send + Sync,
 {
@@ -110,7 +110,7 @@ where
 }
 
 #[async_trait]
-impl<SP> EthereumProvider for EthereumAccessLayer<SP>
+impl<SP> EthereumProvider for EthDataProvider<SP>
 where
     SP: StarknetProvider + Send + Sync,
 {
@@ -344,14 +344,12 @@ where
                 .insert("log.address", doc! {"$in": adds.into_iter().map(|a| format_hex(a, 40)).collect::<Vec<_>>()})
         });
 
-        dbg!(&database_filter);
-
         let logs: Vec<StoredLog> = self.database.get("logs", database_filter, None).await?;
         Ok(FilterChanges::Logs(logs.into_iter().map(Into::into).collect()))
     }
 }
 
-impl<SP> EthereumAccessLayer<SP>
+impl<SP> EthDataProvider<SP>
 where
     SP: StarknetProvider + Send + Sync,
 {
@@ -381,7 +379,7 @@ where
         } else {
             BlockTransactions::Hashes(iter_into(
                 self.database
-                    .get::<StoredTransactionHash>("transactions", transactions_filter, doc! {"tx.blockHash": 1})
+                    .get::<StoredTransactionHash>("transactions", transactions_filter, doc! {"tx.hash": 1})
                     .await?,
             ))
         };
