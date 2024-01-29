@@ -20,6 +20,7 @@ where
     SP: Provider + Send + Sync,
 {
     pub eth_provider: P,
+    // TODO remove kakaort_client from here
     pub kakarot_client: Arc<KakarotClient<SP>>,
 }
 

@@ -14,7 +14,6 @@ fn env_var_to_field_element(var_name: &str) -> FieldElement {
 lazy_static! {
     // Contract addresses
     pub static ref KAKAROT_ADDRESS: FieldElement = env_var_to_field_element("KAKAROT_ADDRESS");
-    pub static ref STARKNET_NATIVE_TOKEN: FieldElement = FieldElement::from_hex_be("0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7").unwrap();
 
     // Contract class hashes
     pub static ref PROXY_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("PROXY_ACCOUNT_CLASS_HASH");

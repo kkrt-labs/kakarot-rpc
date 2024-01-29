@@ -5,7 +5,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct StoredTransactionReceipt {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
-    pub receipt: TransactionReceipt,
+    receipt: TransactionReceipt,
 }
 
 impl From<StoredTransactionReceipt> for TransactionReceipt {

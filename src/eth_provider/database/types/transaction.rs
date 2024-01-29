@@ -24,11 +24,11 @@ pub struct StoredTransactionHash {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hash {
-    pub block_hash: H256,
+    pub hash: H256,
 }
 
 impl From<StoredTransactionHash> for H256 {
     fn from(hash: StoredTransactionHash) -> Self {
-        hash.tx.block_hash
+        hash.tx.hash
     }
 }
