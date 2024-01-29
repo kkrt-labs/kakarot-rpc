@@ -36,39 +36,39 @@ COPY . .
 
 # Cross-compile the application for a given platform
 RUN build_platform() { \
-        ARCH=$1; \
-        COMPILER=$2; \
-        LINKER=$3; \
-        echo "Building for $TARGETPLATFORM on $BUILDPLATFORM"; \
-         # Add the specified Rust target architecture
-        rustup target add $ARCH; \
-        # Update package lists and install the specified compiler
-        apt-get update && apt-get -y install $COMPILER libclang-dev; \
-        # Determine the BINDGEN_EXTRA_CLANG_ARGS based on comparison between BUILDPLATFORM and TARGETPLATFORM
-        if [ "$BUILDPLATFORM" = "$TARGETPLATFORM" ]; then \
-            BINDGEN_EXTRA_CLANG_ARGS=""; \
-        else \
-            BINDGEN_EXTRA_CLANG_ARGS="--sysroot /usr/${LINKER%-gcc}"; \
-        fi; \
-        echo "Using BINDGEN_EXTRA_CLANG_ARGS: $BINDGEN_EXTRA_CLANG_ARGS"; \
-        # Build the Rust application for the specified target
-        BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
-          --target=$ARCH; \
-        # Copy the built binary to a common release directory
-        cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
+    ARCH=$1; \
+    COMPILER=$2; \
+    LINKER=$3; \
+    echo "Building for $TARGETPLATFORM on $BUILDPLATFORM"; \
+    # Add the specified Rust target architecture
+    rustup target add $ARCH; \
+    # Update package lists and install the specified compiler
+    apt-get update && apt-get -y install $COMPILER libclang-dev; \
+    # Determine the BINDGEN_EXTRA_CLANG_ARGS based on comparison between BUILDPLATFORM and TARGETPLATFORM
+    if [ "$BUILDPLATFORM" = "$TARGETPLATFORM" ]; then \
+    BINDGEN_EXTRA_CLANG_ARGS=""; \
+    else \
+    BINDGEN_EXTRA_CLANG_ARGS="--sysroot /usr/${LINKER%-gcc}"; \
+    fi; \
+    echo "Using BINDGEN_EXTRA_CLANG_ARGS: $BINDGEN_EXTRA_CLANG_ARGS"; \
+    # Build the Rust application for the specified target
+    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
+    --target=$ARCH; \
+    # Copy the built binary to a common release directory
+    cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
     } \
     && rustup self update \
     && case "$TARGETPLATFORM" in \
-        "linux/amd64") \
-            build_platform "x86_64-unknown-linux-gnu" "gcc-x86-64-linux-gnu" "x86_64-linux-gnu-gcc"; \
-            ;; \
-        "linux/arm64") \
-            build_platform "aarch64-unknown-linux-gnu" "gcc-aarch64-linux-gnu" "aarch64-linux-gnu-gcc"; \
-            ;; \
-        *) \
-            echo "Unknown TARGETPLATFORM: $TARGETPLATFORM"; \
-            exit 1; \
-            ;; \
+    "linux/amd64") \
+    build_platform "x86_64-unknown-linux-gnu" "gcc-x86-64-linux-gnu" "x86_64-linux-gnu-gcc"; \
+    ;; \
+    "linux/arm64") \
+    build_platform "aarch64-unknown-linux-gnu" "gcc-aarch64-linux-gnu" "aarch64-linux-gnu-gcc"; \
+    ;; \
+    *) \
+    echo "Unknown TARGETPLATFORM: $TARGETPLATFORM"; \
+    exit 1; \
+    ;; \
     esac
 
 # Create a new container from scratch to reduce image size
@@ -88,13 +88,13 @@ EXPOSE 9545
 EXPOSE 3030
 
 # this is required to have exposing ports work from docker, the default is not this.
-ENV KAKAROT_HTTP_RPC_ADDRESS="0.0.0.0:9545"
+ENV KAKAROT_RPC_URL="0.0.0.0:3030"
 
 # Add a health check to make sure the service is healthy
 HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
-  CMD curl --request POST \
+    CMD curl --request POST \
     --header "Content-Type: application/json" \
-    --data '{"jsonrpc": "2.0", "method": "eth_chainId", "id": 1}' http://${KAKAROT_HTTP_RPC_ADDRESS} || exit 1
+    --data '{"jsonrpc": "2.0", "method": "eth_chainId", "id": 1}' http://${KAKAROT_RPC_URL} || exit 1
 
 # Seen in https://github.com/eqlabs/pathfinder/blob/4ab915a830953ed6f02af907937b46cb447d9a92/Dockerfile#L120 - 
 # Allows for passing args down to the underlying binary easily
