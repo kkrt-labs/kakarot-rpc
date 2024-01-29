@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
     .await?;
     let db = Database::new(db_client.database_with_options(
         &env_var("MONGO_DATABASE_NAME").expect("Missing MONGO_DATABASE_NAME from .env"),
-        DatabaseOptions::builder().read_concern(ReadConcern::majority()).write_concern(WriteConcern::MAJORITY).build(),
+        DatabaseOptions::builder().read_concern(ReadConcern::MAJORITY).write_concern(WriteConcern::MAJORITY).build(),
     ));
 
     let kakarot_rpc_module = match starknet_provider {

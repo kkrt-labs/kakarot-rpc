@@ -16,9 +16,14 @@ impl From<StoredTransaction> for Transaction {
 }
 
 /// A transaction hash as stored in the database
+/// This wrapper is used to deserialize a transaction
+/// from the database, on which a projection was
+/// performed in order to only return the transaction
+/// hash (e.g. {tx: {hash: "0x1234"}})
 #[derive(Debug, Deserialize)]
 pub struct StoredTransactionHash {
-    pub tx: Hash,
+    #[serde(rename = "tx")]
+    pub tx_hash: Hash,
 }
 
 #[derive(Debug, Deserialize)]
@@ -29,6 +34,6 @@ pub struct Hash {
 
 impl From<StoredTransactionHash> for H256 {
     fn from(hash: StoredTransactionHash) -> Self {
-        hash.tx.hash
+        hash.tx_hash.hash
     }
 }
