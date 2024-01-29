@@ -7,7 +7,7 @@ use url::Url;
 use super::constants::{KATANA_RPC_URL, MADARA_RPC_URL};
 use super::errors::ConfigError;
 
-fn env_var(name: &str) -> Result<String, ConfigError> {
+pub fn env_var(name: &str) -> Result<String, ConfigError> {
     std::env::var(name).map_err(|_| ConfigError::EnvironmentVariableMissing(name.into()))
 }
 

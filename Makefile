@@ -35,7 +35,7 @@ install-katana:
 
 run-katana: install-katana
 	rm -fr .katana/ && mkdir .katana
-	katana --disable-fee --dump-state .katana/dump.bin & echo $$! > .katana/pid
+	katana --disable-fee --chain-id=KKRT --dump-state .katana/dump.bin & echo $$! > .katana/pid
 
 kill-katana:
 	kill -2 `cat .katana/pid` && rm -fr .katana/pid

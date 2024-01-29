@@ -14,6 +14,8 @@ services:
       - "16777216"
       - --gas-price
       - "1"
+      - --chain-id
+      - "KKRT"
     ports:
       - "5050:5050"
     networks:
@@ -68,6 +70,8 @@ services:
       - KAKAROT_RPC_URL=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:5050
       - RUST_LOG=kakarot_rpc=info
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app
