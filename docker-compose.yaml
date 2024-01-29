@@ -59,6 +59,9 @@ services:
 
   kakarot-rpc:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    # Always pull the latest image, until we use release tags
+    # TODO: use release tags
+    pull_policy: always
     ports:
       - 3030:3030
     environment:

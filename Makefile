@@ -56,4 +56,4 @@ benchmark-katana:
 	cd benchmarks && bun i && bun run benchmark-katana
 
 
-.PHONY: devnet test
+.PHONY: test
