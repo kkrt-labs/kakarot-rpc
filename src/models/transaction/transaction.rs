@@ -65,7 +65,7 @@ impl StarknetTransaction {
         let hash = self.transaction_hash();
 
         let starknet_block_id = StarknetBlockId::Hash(into_via_try_wrapper!(block_hash));
-        
+
         let nonce: Felt252Wrapper = match &self.0 {
             Transaction::Invoke(invoke_tx) => match invoke_tx {
                 InvokeTransaction::V0(_) => {

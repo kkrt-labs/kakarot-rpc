@@ -194,7 +194,7 @@ impl<P: Provider + Send + Sync> KakarotClient<P> {
             MaybePendingTransactionReceipt::Receipt(StarknetTransactionReceipt::Invoke(tr)) => {
                 (into_via_wrapper!(tr.block_hash), U256::from(tr.block_number))
             }
-            _ => (Default::default(), Default::default()),// skip all transactions other than Invoke, covers the pending case
+            _ => (Default::default(), Default::default()), // skip all transactions other than Invoke, covers the pending case
         };
 
         debug!("starknet transaction: {:?}", starknet_tx);
