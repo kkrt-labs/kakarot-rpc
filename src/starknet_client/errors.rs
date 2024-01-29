@@ -30,7 +30,7 @@ pub enum EthRpcErrorCode {
     JsonRpcVersionUnsupported = -32006,
 }
 
-// Error that can accure when preparing configuration.
+/// Error that can occur when preparing configuration.
 #[derive(Debug, Error)]
 pub enum ConfigError {
     /// Missing mandatory environment variable error.

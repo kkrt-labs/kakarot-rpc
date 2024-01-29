@@ -2,27 +2,33 @@ version: "3.2"
 
 services:
   starknet:
-    image: greged93/madara:v0.6.0
+    image: greged93/katana:v0.4.4
+    command:
+      - katana
+      - --block-time
+      - "6000"
+      - --disable-fee
+      - --validate-max-steps
+      - "16777216"
+      - --invoke-max-steps
+      - "16777216"
+      - --gas-price
+      - "1"
+      - --chain-id
+      - "KKRT"
     ports:
-      - "9615:9615"
-      - "9944:9944"
-      - "30333:30333"
-    entrypoint: [/bin/bash, -c]
-    command: >
-      "/madara-bin setup --from-remote --base-path=/home/madara --chain=dev && /madara-bin --rpc-external --rpc-methods=unsafe --rpc-cors=all --chain=dev --base-path=/home/madara --alice --force-authoring"
-    volumes:
-      - madara:/home/madara
+      - "5050:5050"
     networks:
       - internal
+    restart: on-failure
 
   kakarot-deployer:
     image: ghcr.io/kkrt-labs/kakarot/deployer:latest
     environment:
-      - ACCOUNT_ADDRESS=0x3
-      - PRIVATE_KEY=0x00c1cf1490de1352865301bb8705143f3ef938f97fdf892f1090dcb5ac7bcd1d
-      # Custom RPC URL for docker
-      - RPC_URL=http://starknet:9944
+      - ACCOUNT_ADDRESS=0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
+      - PRIVATE_KEY=0x1800000000300000180000000000030000000000003006001800006600
       - EVM_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+      - RPC_URL=http://starknet:5050
     volumes:
       # Since STARKNET_NETWORK is not set, deployments will be saved without network folder
       - deployments:/app/kakarot/deployments
@@ -55,13 +61,17 @@ services:
 
   kakarot-rpc:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    # Always pull the latest image, until we use release tags
+    # TODO: use release tags
+    pull_policy: always
     ports:
       - 3030:3030
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
-      - STARKNET_NETWORK=http://starknet:9944
+      - STARKNET_NETWORK=http://starknet:5050
       - RUST_LOG=kakarot_rpc=info
-      - DEPLOYER_ACCOUNT_PRIVATE_KEY=0x0288a51c164874bb6a1ca7bd1cb71823c234a86d0f7b150d70fa8f06de645396
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app
@@ -72,9 +82,84 @@ services:
     networks:
       - internal
 
+  apibara-dna:
+    image: quay.io/apibara/starknet:1.2.0
+    command:
+      - start
+      - --rpc=http://starknet:5050
+      - --wait-for-rpc
+      - --data=/data
+    ports:
+      - 7171:7171
+    volumes:
+      - apibara:/data
+    networks:
+      - internal
+    restart: on-failure
+    depends_on:
+      kakarot-deployer:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_healthy
+
+  ### MongoDB with Mongo Express
+  mongo:
+    image: mongo:6.0.8
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - internal
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+
+  clone-repo:
+    image: docker.io/alpine/git:latest
+    entrypoint: "/bin/sh"
+    command:
+      - "-c"
+      # clone the repository in `/code`, removing any old copy.
+      - "cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
+    volumes:
+      - "indexer_code:/code"
+    restart: on-failure
+
+  indexer:
+    image: quay.io/apibara/sink-mongo
+    command:
+      - run
+      - /code/kakarot-indexer/src/main.ts
+    environment:
+      # Whitelist environment variables
+      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME
+      - DEBUG=""
+      - APIBARA_AUTH_TOKEN=""
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
+      - STARTING_BLOCK=0
+      - STREAM_URL=http://apibara-dna:7171
+      - SINK_TYPE=mongo
+    restart: on-failure
+    volumes:
+      - "indexer_code:/code"
+    networks:
+      - internal
+    depends_on:
+      clone-repo:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_healthy
+      kakarot-deployer:
+        condition: service_completed_successfully
+
 networks:
   internal:
 
 volumes:
   deployments:
-  madara:
+  apibara:
+  mongo_data:
+  indexer_code:

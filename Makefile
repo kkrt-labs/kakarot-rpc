@@ -21,21 +21,21 @@ run-dev:
 
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
-	docker compose -f docker-compose.katana.yaml up -d --force-recreate
+	docker compose up -d --force-recreate
 
 # Run Madara, Deploy Kakarot, Run Kakarot RPC
 madara-rpc-up:
-	docker compose up -d --force-recreate
+	docker compose -f docker-compose.madara.yaml up -d --force-recreate
 
 docker-down:
-	docker compose down --remove-orphans
+	docker compose down --remove-orphans && docker compose rm
 
 install-katana:
 	cargo install --git https://github.com/dojoengine/dojo --locked --rev be16762 katana
 
 run-katana: install-katana
 	rm -fr .katana/ && mkdir .katana
-	katana --disable-fee --dump-state .katana/dump.bin & echo $$! > .katana/pid
+	katana --disable-fee --chain-id=KKRT --dump-state .katana/dump.bin & echo $$! > .katana/pid
 
 kill-katana:
 	kill -2 `cat .katana/pid` && rm -fr .katana/pid
@@ -56,4 +56,4 @@ benchmark-katana:
 	cd benchmarks && bun i && bun run benchmark-katana
 
 
-.PHONY: devnet test
+.PHONY: test

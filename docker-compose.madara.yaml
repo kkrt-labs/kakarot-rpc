@@ -1,0 +1,65 @@
+version: "3.2"
+
+services:
+  starknet:
+    image: greged93/madara:v0.6.0
+    ports:
+      - 9615:9615
+      - 30333:30333
+      - 5050:5050
+    entrypoint: [/bin/bash, -c]
+    command: >
+      "/madara-bin setup --from-remote --chain=dev && /madara-bin --rpc-external --rpc-methods=unsafe --rpc-cors=all --rpc-port 5050 --chain=dev --base-path=/home/madara --alice --force-authoring"
+    volumes:
+      - madara:/home/madara
+    networks:
+      - internal
+    restart: on-failure
+
+  kakarot-deployer:
+    extends:
+      file: docker-compose.yaml
+      service: kakarot-deployer
+    environment:
+      - ACCOUNT_ADDRESS=0x3
+      - PRIVATE_KEY=0x00c1cf1490de1352865301bb8705143f3ef938f97fdf892f1090dcb5ac7bcd1d
+
+  deployments-parser:
+    extends:
+      file: docker-compose.yaml
+      service: deployments-parser
+
+  kakarot-rpc:
+    extends:
+      file: docker-compose.yaml
+      service: kakarot-rpc
+
+  apibara-dna:
+    extends:
+      file: docker-compose.yaml
+      service: apibara-dna
+
+  mongo:
+    extends:
+      file: docker-compose.yaml
+      service: mongo
+
+  clone-repo:
+    extends:
+      file: docker-compose.yaml
+      service: clone-repo
+
+  indexer:
+    extends:
+      file: docker-compose.yaml
+      service: indexer
+
+networks:
+  internal:
+
+volumes:
+  deployments:
+  apibara:
+  mongo_data:
+  indexer_code:
+  madara:
