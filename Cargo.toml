@@ -29,7 +29,7 @@ starknet-abigen-macros = { git = "https://github.com/glihm/starknet-abigen-rs", 
 # Ethereum dependencies
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
-jsonrpsee = { version = "0.18.2", features = ["full"] }
+jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
 reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }

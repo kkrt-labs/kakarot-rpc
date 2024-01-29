@@ -97,7 +97,7 @@ impl EvmContract for KakarotEvmContract {
 
         let data = abi.function(selector).and_then(|function| function.encode_input(&params))?;
 
-        let evm_address: Felt252Wrapper = self.evm_address.try_into()?;
+        let evm_address: Felt252Wrapper = self.evm_address.into();
         Ok(Transaction::Eip1559(TxEip1559 {
             chain_id,
             nonce,
