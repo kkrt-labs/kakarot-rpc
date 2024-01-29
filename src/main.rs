@@ -44,11 +44,12 @@ async fn main() -> Result<()> {
         ),
     };
 
-    let db_client =
-        mongodb::Client::with_uri_str(env_var("MONGO_CONNECTION_STRING").expect("Missing MONGO_CONNECTION_STRING"))
-            .await?;
+    let db_client = mongodb::Client::with_uri_str(
+        env_var("MONGO_CONNECTION_STRING").expect("Missing MONGO_CONNECTION_STRING .env"),
+    )
+    .await?;
     let db = Database::new(db_client.database_with_options(
-        "Kakarot-Testnet-0",
+        &env_var("MONGO_DATABASE_NAME").expect("Missing MONGO_DATABASE_NAME from .env"),
         DatabaseOptions::builder().read_concern(ReadConcern::majority()).write_concern(WriteConcern::MAJORITY).build(),
     ));
 
