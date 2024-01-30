@@ -2,8 +2,8 @@ use crate::eth_provider::database::Database;
 use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Document},
-    options::{DatabaseOptions, ReadConcern, WriteConcern},
-    Client,
+    options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
+    Client, Collection,
 };
 use testcontainers::{
     clients::{self, Cli},
@@ -39,84 +39,93 @@ pub async fn mock_database() -> Database {
     let address_zero = format!("0x{:040x}", 0);
     let bloom_zero = format!("0x{:0512x}", 0);
     let one = format!("0x{:064x}", 1);
-    let _ = mongodb
-        .collection::<Document>("headers")
-        .insert_many(
-            &[
-                doc! {"header": doc! {
-                    "parentHash": &hash_256_zero,
-                    "sha3Uncles": &hash_256_zero,
-                    "miner": &address_zero,
-                    "stateRoot": &hash_256_zero,
-                    "transactionsRoot": &hash_256_zero,
-                    "receiptsRoot": &hash_256_zero,
-                    "logsBloom": &bloom_zero,
-                    "difficulty": &hash_256_zero,
-                    "number": &hash_256_zero,
-                    "gasLimit": &one,
-                    "gasUsed": &one,
-                    "timestamp": &hash_256_zero,
-                    "extraData": "0x",
-                    "mixHash": &hash_256_zero,
-                }},
-                doc! {"header": doc! {
-                    "parentHash": &hash_256_zero,
-                    "sha3Uncles": &hash_256_zero,
-                    "miner": &address_zero,
-                    "stateRoot": &hash_256_zero,
-                    "transactionsRoot": &hash_256_zero,
-                    "receiptsRoot": &hash_256_zero,
-                    "logsBloom": &bloom_zero,
-                    "difficulty": &hash_256_zero,
-                    "number": &one,
-                    "gasLimit": &one,
-                    "gasUsed": &one,
-                    "timestamp": &hash_256_zero,
-                    "extraData": "0x",
-                    "mixHash": &hash_256_zero,
-                    "baseFeePerGas": &one,
-                }},
-                doc! {"header": doc! {
-                    "parentHash": &hash_256_zero,
-                    "sha3Uncles": &hash_256_zero,
-                    "miner": &address_zero,
-                    "stateRoot": &hash_256_zero,
-                    "transactionsRoot": &hash_256_zero,
-                    "receiptsRoot": &hash_256_zero,
-                    "logsBloom": &bloom_zero,
-                    "difficulty": &hash_256_zero,
-                    "number": format!("0x{:064x}", 2),
-                    "gasLimit": &one,
-                    "gasUsed": &one,
-                    "timestamp": &hash_256_zero,
-                    "extraData": "0x",
-                    "mixHash": &hash_256_zero,
-                    "baseFeePerGas": &one,
-                }},
-                doc! {"header": doc! {
-                    "parentHash": &hash_256_zero,
-                    "sha3Uncles": &hash_256_zero,
-                    "miner": &address_zero,
-                    "stateRoot": &hash_256_zero,
-                    "transactionsRoot": &hash_256_zero,
-                    "receiptsRoot": &hash_256_zero,
-                    "logsBloom": &bloom_zero,
-                    "difficulty": &hash_256_zero,
-                    "number": format!("0x{:064x}", 3),
-                    "gasLimit": &one,
-                    "gasUsed": &one,
-                    "timestamp": &hash_256_zero,
-                    "extraData": "0x",
-                    "mixHash": &hash_256_zero,
-                    "baseFeePerGas": &one,
-                }},
-            ],
-            None,
-        )
-        .await
-        .expect("Failed to insert documents");
-
+    update_many_headers(
+        mongodb.collection("headers"),
+        vec![
+            doc! {"header": doc! {
+                "parentHash": &hash_256_zero,
+                "sha3Uncles": &hash_256_zero,
+                "miner": &address_zero,
+                "stateRoot": &hash_256_zero,
+                "transactionsRoot": &hash_256_zero,
+                "receiptsRoot": &hash_256_zero,
+                "logsBloom": &bloom_zero,
+                "difficulty": &hash_256_zero,
+                "number": &hash_256_zero,
+                "gasLimit": &one,
+                "gasUsed": &one,
+                "timestamp": &hash_256_zero,
+                "extraData": "0x",
+                "mixHash": &hash_256_zero,
+            }},
+            doc! {"header": doc! {
+                "parentHash": &hash_256_zero,
+                "sha3Uncles": &hash_256_zero,
+                "miner": &address_zero,
+                "stateRoot": &hash_256_zero,
+                "transactionsRoot": &hash_256_zero,
+                "receiptsRoot": &hash_256_zero,
+                "logsBloom": &bloom_zero,
+                "difficulty": &hash_256_zero,
+                "number": &one,
+                "gasLimit": &one,
+                "gasUsed": &one,
+                "timestamp": &hash_256_zero,
+                "extraData": "0x",
+                "mixHash": &hash_256_zero,
+                "baseFeePerGas": &one,
+            }},
+            doc! {"header": doc! {
+                "parentHash": &hash_256_zero,
+                "sha3Uncles": &hash_256_zero,
+                "miner": &address_zero,
+                "stateRoot": &hash_256_zero,
+                "transactionsRoot": &hash_256_zero,
+                "receiptsRoot": &hash_256_zero,
+                "logsBloom": &bloom_zero,
+                "difficulty": &hash_256_zero,
+                "number": format!("0x{:064x}", 2),
+                "gasLimit": &one,
+                "gasUsed": &one,
+                "timestamp": &hash_256_zero,
+                "extraData": "0x",
+                "mixHash": &hash_256_zero,
+                "baseFeePerGas": &one,
+            }},
+            doc! {"header": doc! {
+                "parentHash": &hash_256_zero,
+                "sha3Uncles": &hash_256_zero,
+                "miner": &address_zero,
+                "stateRoot": &hash_256_zero,
+                "transactionsRoot": &hash_256_zero,
+                "receiptsRoot": &hash_256_zero,
+                "logsBloom": &bloom_zero,
+                "difficulty": &hash_256_zero,
+                "number": format!("0x{:064x}", 3),
+                "gasLimit": &one,
+                "gasUsed": &one,
+                "timestamp": &hash_256_zero,
+                "extraData": "0x",
+                "mixHash": &hash_256_zero,
+                "baseFeePerGas": &one,
+            }},
+        ],
+    )
+    .await;
     Database::new(mongodb)
+}
+
+async fn update_many_headers(collection: Collection<Document>, updates: Vec<Document>) {
+    for u in updates {
+        collection
+            .update_one(
+                doc! {"header.number": u.get_document("header").unwrap().get_str("number").unwrap()},
+                UpdateModifications::Document(doc! {"$set": u}),
+                UpdateOptions::builder().upsert(true).build(),
+            )
+            .await
+            .expect("Failed to insert documents");
+    }
 }
 
 #[cfg(test)]

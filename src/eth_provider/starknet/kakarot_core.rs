@@ -55,10 +55,9 @@ pub fn starknet_address(address: Address) -> FieldElement {
 pub(crate) fn to_starknet_transaction(
     transaction: &TransactionSigned,
     chain_id: u64,
+    signer: Address,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
-    let evm_address = transaction.recover_signer().unwrap_or_default();
-
-    let starknet_address = starknet_address(evm_address);
+    let starknet_address = starknet_address(signer);
 
     let nonce = FieldElement::from(transaction.nonce());
 

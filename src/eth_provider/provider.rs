@@ -430,6 +430,7 @@ where
         let starknet_transaction = BroadcastedTransaction::Invoke(to_starknet_transaction(
             &TransactionSigned::from_transaction_and_signature(transaction, Signature::default()),
             chain_id.as_u64(),
+            Address::default(),
         )?);
 
         let result = self
@@ -482,7 +483,10 @@ where
 
         let chain_id = self.chain_id().await?.unwrap_or_default();
 
-        let transaction = to_starknet_transaction(&transaction_signed, chain_id.as_u64())?;
+        let signer = transaction_signed
+            .recover_signer()
+            .ok_or_else(|| ConversionError::ToStarknetTransactionError("Failed to recover signer".to_string()))?;
+        let transaction = to_starknet_transaction(&transaction_signed, chain_id.as_u64(), signer)?;
 
         #[cfg(not(feature = "testing"))]
         {
