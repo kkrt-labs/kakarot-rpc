@@ -21,7 +21,15 @@ pub(crate) fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl
 }
 
 pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
-    format!("0x{:0width$x}", value, width = width)
+    // Add 2 to the width to account for the 0x prefix.
+    let width = width + 2;
+    let s = format!("{:#0width$x}", value, width = width);
+    // This can happen because of the LowerHex implementation for Uint,
+    // which just formats 0 into 0x0, ignoring the width.
+    if s.len() < width {
+        return format!("0x{:0>width$}", &s[2..], width = width);
+    }
+    s
 }
 
 /// Converts a key and value into a MongoDB filter.
@@ -42,7 +50,7 @@ pub fn split_u256<T: From<u128>>(value: U256) -> [T; 2] {
 }
 
 pub fn call_to_transaction(call: CallRequest, chain_id: U64, nonce: U64) -> EthProviderResult<Transaction> {
-    let chain_id = call.chain_id.unwrap_or(chain_id).low_u64();
+    let chain_id = call.chain_id.unwrap_or(chain_id).as_u64();
 
     let gas_limit = call.gas.unwrap_or_default().try_into().map_err(ConversionError::from)?;
     let max_fee_per_gas = call
@@ -62,7 +70,7 @@ pub fn call_to_transaction(call: CallRequest, chain_id: U64, nonce: U64) -> EthP
 
     Ok(Transaction::Eip1559(TxEip1559 {
         chain_id,
-        nonce: nonce.low_u64(),
+        nonce: nonce.as_u64(),
         gas_limit,
         max_fee_per_gas,
         max_priority_fee_per_gas,
@@ -71,4 +79,11 @@ pub fn call_to_transaction(call: CallRequest, chain_id: U64, nonce: U64) -> EthP
         access_list: AccessList(vec![]),
         input: data,
     }))
+}
+
+pub(crate) fn contract_not_found<T>(err: &Result<T, impl std::error::Error>) -> bool {
+    match err {
+        Ok(_) => false,
+        Err(err) => err.to_string().contains("Contract not found"),
+    }
 }

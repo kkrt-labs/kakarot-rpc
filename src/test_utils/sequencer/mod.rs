@@ -1,21 +1,19 @@
-use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::eth_provider::provider::EthDataProvider;
 use crate::test_utils::eoa::KakarotEOA;
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
 use ethers::types::H256;
 use foundry_config::utils::find_project_root_path;
-use kakarot_rpc::eth_provider::provider::EthDataProvider;
 use katana_core::db::serde::state::SerializableState;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
 
 use crate::root_project_path;
 
-use super::eth_provider::MockDatabase;
+use super::mongo::mock_database;
 
 /// Returns the dumped Katana state with deployed Kakarot.
 pub fn load_katana_state() -> SerializableState {
@@ -33,7 +31,7 @@ pub fn katana_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
         env: Environment {
-            chain_id: "SN_GOERLI".into(),
+            chain_id: "KKRT".to_string(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
             gas_price: 1,
@@ -50,7 +48,7 @@ async fn katana_sequencer() -> TestSequencer {
 
 pub struct Katana {
     pub sequencer: TestSequencer,
-    pub eoa: KakarotEOA<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>, MockDatabase>>,
+    pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
 }
 
 impl Katana {
@@ -58,49 +56,30 @@ impl Katana {
         let sequencer = katana_sequencer().await;
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-        Self::initialize(sequencer, starknet_provider)
+        Self::initialize(sequencer, starknet_provider).await
     }
 
     /// Initializes the Katana test environment.
-    fn initialize(sequencer: TestSequencer, starknet_provider: Arc<JsonRpcClient<HttpTransport>>) -> Self {
-        // Load deployments
-        let deployments_path = root_project_path!("lib/kakarot/deployments/katana/deployments.json");
-        let deployments = std::fs::read_to_string(deployments_path).expect("Failed to read deployment file");
-        let deployments: HashMap<&str, serde_json::Value> =
-            serde_json::from_str(&deployments).expect("Failed to deserialize deployments");
-
-        let kakarot_address = deployments["kakarot"]["address"].as_str().expect("Failed to get Kakarot address");
-        let kakarot_address = FieldElement::from_hex_be(kakarot_address).expect("Failed to parse Kakarot address");
-
-        // Load declarations
-        let declaration_path = root_project_path!("lib/kakarot/deployments/katana/declarations.json");
-        let declarations = std::fs::read_to_string(declaration_path).expect("Failed to read declaration file");
-        let declarations: HashMap<&str, FieldElement> =
-            serde_json::from_str(&declarations).expect("Failed to deserialize declarations");
-
-        let proxy_class_hash = declarations["proxy"];
-        let externally_owned_account_class_hash = declarations["externally_owned_account"];
-        let contract_account_class_hash = declarations["contract_account"];
-
+    async fn initialize(sequencer: TestSequencer, starknet_provider: Arc<JsonRpcClient<HttpTransport>>) -> Self {
         // Load PK
         dotenv::dotenv().expect("Failed to load .env file");
         let pk = std::env::var("EVM_PRIVATE_KEY").expect("Failed to get EVM private key");
         let pk = H256::from_str(&pk).expect("Failed to parse EVM private key").into();
 
         // Create a Kakarot client
-        let database = MockDatabase;
-        let eth_provider = EthDataProvider::new(database, starknet_provider);
+        let database = mock_database().await;
+        let eth_provider = Arc::new(EthDataProvider::new(database, starknet_provider));
 
         let eoa = KakarotEOA::new(pk, eth_provider);
 
         Self { sequencer, eoa }
     }
 
-    pub const fn provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>, MockDatabase>> {
-        Arc::new(self.eoa.eth_provider)
+    pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {
+        self.eoa.eth_provider.clone()
     }
 
-    pub const fn eoa(&self) -> &KakarotEOA<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>, MockDatabase>> {
+    pub const fn eoa(&self) -> &KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
         &self.eoa
     }
 

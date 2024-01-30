@@ -4,10 +4,10 @@ use std::path::Path;
 use ethers::abi::Tokenize;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::{find_project_root_path, load_config};
-use kakarot_rpc::models::felt::Felt252Wrapper;
 use reth_primitives::{Transaction, TransactionKind, TxEip1559};
 use starknet_crypto::FieldElement;
 
+use crate::models::felt::Felt252Wrapper;
 use crate::root_project_path;
 
 pub trait EvmContract {

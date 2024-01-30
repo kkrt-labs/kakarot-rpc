@@ -5,9 +5,6 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 /// Conversion error
 pub enum ConversionError {
-    /// Ethereum to Starknet transaction conversion error
-    #[error("transaction conversion error: {0}")]
-    TransactionConversionError(String),
     /// Felt252Wrapper conversion error
     #[error(transparent)]
     Felt252WrapperConversionError(#[from] FromByteArrayError),

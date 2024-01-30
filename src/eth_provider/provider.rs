@@ -35,7 +35,7 @@ use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
-use super::database::EthDatabase;
+use super::database::Database;
 use super::starknet::kakarot_core::core::{KakarotCoreReader, Uint256};
 use super::starknet::kakarot_core::to_starknet_transaction;
 use super::starknet::kakarot_core::{
@@ -45,6 +45,7 @@ use super::starknet::kakarot_core::{
 use super::starknet::ERC20Reader;
 use super::starknet::STARKNET_NATIVE_TOKEN;
 use super::utils::call_to_transaction;
+use super::utils::contract_not_found;
 use super::utils::iter_into;
 use super::utils::split_u256;
 use super::utils::try_from_u8_iterator;
@@ -123,20 +124,15 @@ pub trait EthereumProvider {
 /// Structure that implements the EthereumProvider trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
-pub struct EthDataProvider<SP, DB>
-where
-    SP: StarknetProvider + Send + Sync,
-    DB: EthDatabase,
-{
-    database: DB,
+pub struct EthDataProvider<SP: StarknetProvider> {
+    database: Database,
     starknet_provider: SP,
 }
 
 #[async_trait]
-impl<SP, DB> EthereumProvider for EthDataProvider<SP, DB>
+impl<SP> EthereumProvider for EthDataProvider<SP>
 where
     SP: StarknetProvider + Send + Sync,
-    DB: EthDatabase + Send + Sync,
 {
     async fn block_number(&self) -> EthProviderResult<U64> {
         let filter = doc! {};
@@ -298,11 +294,16 @@ where
 
         let address = starknet_address(address);
         let proxy = ProxyReader::new(address, &self.starknet_provider);
-        let address_class_hash = proxy.get_implementation().block_id(starknet_block_id).call().await?;
+        let maybe_class_hash = proxy.get_implementation().block_id(starknet_block_id).call().await;
 
-        let nonce = if address_class_hash == *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH {
+        if contract_not_found(&maybe_class_hash) {
+            return Ok(U256::ZERO);
+        }
+        let class_hash = maybe_class_hash?;
+
+        let nonce = if class_hash == *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH {
             self.starknet_provider.get_nonce(starknet_block_id, address).await?
-        } else if address_class_hash == *CONTRACT_ACCOUNT_CLASS_HASH {
+        } else if class_hash == *CONTRACT_ACCOUNT_CLASS_HASH {
             let contract = ContractAccountReader::new(address, &self.starknet_provider);
             contract.get_nonce().block_id(starknet_block_id).call().await?
         } else {
@@ -323,7 +324,7 @@ where
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
-        let current_block = self.block_number().await?.low_u64();
+        let current_block = self.block_number().await?.as_u64();
         let from = filter.get_from_block().unwrap_or_default();
         let to = filter.get_to_block().unwrap_or(current_block);
 
@@ -427,8 +428,8 @@ where
         let transaction = call_to_transaction(call, chain_id, nonce.into())?;
 
         let starknet_transaction = BroadcastedTransaction::Invoke(to_starknet_transaction(
-            TransactionSigned::from_transaction_and_signature(transaction, Signature::default()),
-            chain_id.low_u64(),
+            &TransactionSigned::from_transaction_and_signature(transaction, Signature::default()),
+            chain_id.as_u64(),
         )?);
 
         let result = self
@@ -448,17 +449,16 @@ where
         if block_count == U256::ZERO {
             return Ok(FeeHistory::default());
         }
-
-        let block_count_usize =
-            usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
-        let base_fee_per_gas = vec![U256::from(*BASE_FEE_PER_GAS); block_count_usize];
-
-        let newest_block = U256::from(self.tag_into_block_number(newest_block).await?.low_u64());
+        let newest_block = U256::from(self.tag_into_block_number(newest_block).await?.as_u64());
         let oldest_block = if newest_block + U256::from(1) >= block_count {
             newest_block + U256::from(1) - block_count
         } else {
             U256::ZERO
         };
+
+        let block_count = newest_block - oldest_block + U256::from(1);
+        let bc = usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
+        let base_fee_per_gas = vec![U256::from(*BASE_FEE_PER_GAS); bc];
 
         let header_filter =
             doc! {"header.number": {"$gte": format_hex(oldest_block, 64), "$lte": format_hex(newest_block, 64)}}; // TODO: check if we should maybe use a projection since we only need the gasLimit and gasUsed.
@@ -477,37 +477,51 @@ where
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<H256> {
         let mut data = transaction.0.as_ref();
-        let transaction = TransactionSigned::decode(&mut data)
+        let transaction_signed = TransactionSigned::decode(&mut data)
             .map_err(|err| ConversionError::ToStarknetTransactionError(err.to_string()))?;
 
-        let hash = transaction.hash();
         let chain_id = self.chain_id().await?.unwrap_or_default();
 
-        let transaction = to_starknet_transaction(transaction, chain_id.low_u64())?;
+        let transaction = to_starknet_transaction(&transaction_signed, chain_id.as_u64())?;
 
-        self.starknet_provider.add_invoke_transaction(transaction).await?;
-        Ok(hash)
+        #[cfg(not(feature = "testing"))]
+        {
+            let hash = transaction_signed.hash();
+            self.starknet_provider.add_invoke_transaction(transaction).await?;
+            Ok(hash)
+        }
+        // If we are currently testing, we need to return the starknet hash in order
+        // to be able to wait for the transaction to be mined.
+        #[cfg(feature = "testing")]
+        {
+            let res = self.starknet_provider.add_invoke_transaction(transaction).await?;
+            Ok(H256::from_slice(&res.transaction_hash.to_bytes_be()[..]))
+        }
     }
 }
 
-impl<SP, DB> EthDataProvider<SP, DB>
+impl<SP> EthDataProvider<SP>
 where
     SP: StarknetProvider + Send + Sync,
-    DB: EthDatabase + Send + Sync,
 {
-    pub fn new(database: DB, starknet_provider: SP) -> Self {
+    pub fn new(database: Database, starknet_provider: SP) -> Self {
         Self { database, starknet_provider }
+    }
+
+    #[cfg(feature = "testing")]
+    pub fn starknet_provider(&self) -> &SP {
+        &self.starknet_provider
     }
 
     /// Get a block from the database based on the header and transaction filters
     /// If full is true, the block will contain the full transactions, otherwise just the hashes
-    async fn block<D: Into<Option<Document>> + Send>(
+    async fn block(
         &self,
-        header_filter: D,
-        transactions_filter: D,
+        header_filter: impl Into<Option<Document>>,
+        transactions_filter: impl Into<Option<Document>>,
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
-        let header = self.database.get_one::<StoredHeader, _, _>("headers", header_filter, None).await?;
+        let header = self.database.get_one::<StoredHeader>("headers", header_filter, None).await?;
         let header = match header {
             Some(header) => header,
             None => return Ok(None),
@@ -516,12 +530,12 @@ where
 
         let transactions = if full {
             BlockTransactions::Full(iter_into(
-                self.database.get::<StoredTransaction, _, _>("transactions", transactions_filter, None).await?,
+                self.database.get::<StoredTransaction>("transactions", transactions_filter, None).await?,
             ))
         } else {
             BlockTransactions::Hashes(iter_into(
                 self.database
-                    .get::<StoredTransactionHash, _, _>("transactions", transactions_filter, doc! {"tx.hash": 1})
+                    .get::<StoredTransactionHash>("transactions", transactions_filter, doc! {"tx.hash": 1})
                     .await?,
             ))
         };

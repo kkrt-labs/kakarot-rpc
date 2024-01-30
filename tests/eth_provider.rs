@@ -1,16 +1,11 @@
-#[cfg(test)]
-mod test_utils;
-use kakarot_rpc::contracts::kakarot_contract::KakarotCoreReader;
-use kakarot_rpc::models::felt::Felt252Wrapper;
+#![cfg(feature = "testing")]
+use kakarot_rpc::eth_provider::provider::EthereumProvider;
+use kakarot_rpc::test_utils::eoa::Eoa as _;
+use kakarot_rpc::test_utils::fixtures::{counter, katana};
+use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, sequencer::Katana};
 use rstest::*;
-use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
-use test_utils::eoa::Eoa;
-use test_utils::evm_contract::KakarotEvmContract;
-use test_utils::fixtures::{counter, katana};
-use test_utils::sequencer::Katana;
 
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
+use reth_primitives::{BlockNumberOrTag, U256};
 
 #[rstest]
 #[awt]
@@ -18,69 +13,38 @@ use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
 async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract)) {
     let katana: Katana = counter.0;
     let counter = counter.1;
-    let client = katana.client();
+    let eth_provider = katana.eth_provider();
     let eoa = katana.eoa();
 
     // Check nonce of Eoa
-    let nonce_before =
-        client.nonce(eoa.evm_address().unwrap(), BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
+    let nonce_before = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
 
     eoa.call_evm_contract(&counter, "inc", (), 0).await.expect("Failed to increment counter");
 
     // Check nonce of Eoa
-    let nonce_after =
-        client.nonce(eoa.evm_address().unwrap(), BlockId::Number(BlockNumberOrTag::Latest)).await.unwrap();
+    let nonce_after = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
     assert_eq!(nonce_before + U256::from(1), nonce_after);
 }
 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_get_evm_address(#[future] counter: (Katana, KakarotEvmContract)) {
-    let katana: Katana = counter.0;
-    let counter = counter.1;
-    let client = katana.client();
-
-    // Check counter EVM address
-    let counter_evm_address = client.get_evm_address(&counter.starknet_address).await.unwrap();
-    assert_eq!(Address::try_from(Felt252Wrapper::from(counter.evm_address)).unwrap(), counter_evm_address);
-}
-
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
 async fn test_fee_history(#[future] katana: Katana) {
-    let client = katana.client();
+    let eth_provider = katana.eth_provider();
 
-    let newest_block = client.starknet_provider().block_number().await.unwrap();
+    let newest_block = eth_provider.block_number().await.unwrap().as_u64();
     let block_count = newest_block + 1;
 
     // Check fee history
     let fee_history =
-        client.fee_history(U256::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
+        eth_provider.fee_history(U256::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
     assert_eq!(fee_history.base_fee_per_gas.len(), block_count as usize);
     assert_eq!(fee_history.gas_used_ratio.len(), block_count as usize);
     assert_eq!(fee_history.oldest_block, U256::ZERO);
 }
 
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_compute_starknet_address(#[future] katana: Katana) {
-    let client = katana.client();
-    let kakarot_contract = KakarotCoreReader::new(client.kakarot_address(), client.starknet_provider());
-    let address = 0x1234u64;
-
-    let starknet_address = client.compute_starknet_address(&Address::from(address)).await.unwrap();
-    let expected_address =
-        kakarot_contract.compute_starknet_address(&FieldElement::from(address)).call().await.unwrap();
-
-    assert_eq!(starknet_address, expected_address);
-}
-
 #[tokio::test]
-// Ignore until #649 is fixed
-#[ignore]
+#[ignore = "until #649 is fixed"]
 async fn test_estimate_gas() {
     // // Given
     // let client = init_testnet_client();
@@ -102,8 +66,7 @@ async fn test_estimate_gas() {
 }
 
 #[tokio::test]
-// Ignore until #649 is fixed and test runs against Madara
-#[ignore]
+#[ignore = "until #649 is fixed"]
 async fn test_gas_price() {
     // // Given
     // let client = init_testnet_client();

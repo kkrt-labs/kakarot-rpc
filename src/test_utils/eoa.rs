@@ -1,24 +1,27 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use bytes::BytesMut;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
-use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::eth_provider::starknet::kakarot_core::starknet_address;
-use kakarot_rpc::models::felt::Felt252Wrapper;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
 };
 use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::core::utils::get_selector_from_name;
+use starknet::providers::Provider;
 use starknet_crypto::FieldElement;
 
+use crate::eth_provider::provider::{EthDataProvider, EthereumProvider};
+use crate::eth_provider::starknet::kakarot_core::starknet_address;
+use crate::models::felt::Felt252Wrapper;
 use crate::test_utils::evm_contract::EvmContract;
 use crate::test_utils::evm_contract::KakarotEvmContract;
 use crate::test_utils::tx_waiter::watch_tx;
 
 /// EOA is an Ethereum-like Externally Owned Account (EOA) that can sign transactions and send them to the underlying Starknet provider.
 #[async_trait]
-pub trait Eoa<P: EthereumProvider> {
+pub trait Eoa<P: Provider + Send + Sync> {
     fn starknet_address(&self) -> Result<FieldElement, eyre::Error> {
         Ok(starknet_address(self.evm_address()?))
     }
@@ -27,7 +30,7 @@ pub trait Eoa<P: EthereumProvider> {
         Ok(Address::from_slice(wallet.address().as_bytes()))
     }
     fn private_key(&self) -> H256;
-    fn eth_provider(&self) -> &P;
+    fn eth_provider(&self) -> &EthDataProvider<P>;
 
     async fn nonce(&self) -> Result<U256, eyre::Error> {
         let eth_provider = self.eth_provider();
@@ -50,28 +53,32 @@ pub trait Eoa<P: EthereumProvider> {
     }
 }
 
-pub struct KakarotEOA<P: EthereumProvider> {
+pub struct KakarotEOA<P: Provider> {
     pub private_key: H256,
-    pub eth_provider: P,
+    pub eth_provider: Arc<EthDataProvider<P>>,
 }
 
-impl<P: EthereumProvider> KakarotEOA<P> {
-    pub const fn new(private_key: H256, eth_provider: P) -> Self {
+impl<P: Provider> KakarotEOA<P> {
+    pub const fn new(private_key: H256, eth_provider: Arc<EthDataProvider<P>>) -> Self {
         Self { private_key, eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider> Eoa<P> for KakarotEOA<P> {
+impl<P: Provider + Send + Sync> Eoa<P> for KakarotEOA<P> {
     fn private_key(&self) -> H256 {
         self.private_key
     }
-    fn eth_provider(&self) -> &P {
+    fn eth_provider(&self) -> &EthDataProvider<P> {
         &self.eth_provider
     }
 }
 
-impl<P: EthereumProvider + Send + Sync> KakarotEOA<P> {
+impl<P: Provider + Send + Sync> KakarotEOA<P> {
+    fn starknet_provider(&self) -> &P {
+        self.eth_provider.starknet_provider()
+    }
+
     pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
         contract_name: &str,
@@ -87,18 +94,23 @@ impl<P: EthereumProvider + Send + Sync> KakarotEOA<P> {
             &bytecode,
             constructor_args,
             nonce,
-            chain_id.low_u64(),
+            chain_id.as_u64(),
         )?;
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
         let tx_hash: Felt252Wrapper = tx_hash.try_into().expect("Tx Hash should fit into Felt252Wrapper");
 
-        wath_tx(self.eth_provider(), tx_hash.clone().into(), std::time::Duration::from_millis(100))
-            .await
-            .expect("Tx polling failed");
+        watch_tx(
+            self.eth_provider.starknet_provider(),
+            tx_hash.clone().into(),
+            std::time::Duration::from_millis(100),
+            60,
+        )
+        .await
+        .expect("Tx polling failed");
 
         let maybe_receipt = self
-            .eth_provider()
+            .starknet_provider()
             .get_transaction_receipt(FieldElement::from(tx_hash))
             .await
             .expect("Failed to get transaction receipt after retries");
@@ -135,15 +147,16 @@ impl<P: EthereumProvider + Send + Sync> KakarotEOA<P> {
     ) -> Result<FieldElement, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
+        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
 
-        let tx = contract.prepare_call_transaction(function, args, nonce, value)?;
+        let tx = contract.prepare_call_transaction(function, args, nonce, value, chain_id.as_u64())?;
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
 
         let bytes = tx_hash.to_fixed_bytes();
         let starknet_tx_hash = FieldElement::from_bytes_be(&bytes).unwrap();
 
-        watch_tx(self.provider(), starknet_tx_hash, std::time::Duration::from_millis(100))
+        watch_tx(self.eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(100), 60)
             .await
             .expect("Tx polling failed");
 
@@ -161,7 +174,7 @@ impl<P: EthereumProvider + Send + Sync> KakarotEOA<P> {
         let nonce: u64 = nonce.try_into()?;
 
         let tx = Transaction::Eip1559(TxEip1559 {
-            chain_id: self.eth_provider.chain_id().await?,
+            chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().as_u64(),
             nonce,
             max_priority_fee_per_gas: Default::default(),
             max_fee_per_gas: Default::default(),

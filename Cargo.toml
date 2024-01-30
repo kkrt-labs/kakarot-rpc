@@ -62,6 +62,7 @@ reqwest = { version = "0.11.13", default-features = false }
 ruint = { version = "1.9.0", default-features = false }
 rstest = { version = "0.18.1", default-features = false }
 
+testcontainers = { version = "0.15.0", default-features = false, optional = true }
 thiserror = { version = "1.0.38", default-features = false }
 tokio = { version = "1.21.2", features = ["macros"] }
 tower = { version = "0.4.12", default-features = false }
@@ -92,4 +93,4 @@ rstest = { version = "0.18.1", default-features = false }
 toml = { version = "0.7.5", default-features = false }
 
 [features]
-testing = []
+testing = ["testcontainers"]

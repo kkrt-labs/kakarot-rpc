@@ -13,7 +13,6 @@ use starknet_crypto::FieldElement;
 use crate::{
     eth_provider::{constant::MAX_FEE, provider::EthProviderResult, utils::split_u256},
     into_via_wrapper,
-    models::errors::ConversionError,
 };
 
 // Contract ABIs
@@ -54,12 +53,10 @@ pub fn starknet_address(address: Address) -> FieldElement {
 
 /// Convert a Ethereum transaction into a Starknet transaction
 pub(crate) fn to_starknet_transaction(
-    transaction: TransactionSigned,
+    transaction: &TransactionSigned,
     chain_id: u64,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
-    let evm_address = transaction
-        .recover_signer()
-        .ok_or_else(|| ConversionError::ToStarknetTransactionError("Failed to recover signer".to_string()))?;
+    let evm_address = transaction.recover_signer().unwrap_or_default();
 
     let starknet_address = starknet_address(evm_address);
 

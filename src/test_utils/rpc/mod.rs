@@ -1,11 +1,11 @@
 use std::net::SocketAddr;
 
 use jsonrpsee::server::ServerHandle;
-use kakarot_rpc::eth_rpc::config::RPCConfig;
-use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
-use kakarot_rpc::eth_rpc::run_server;
 
 use super::sequencer::Katana;
+use crate::eth_rpc::config::RPCConfig;
+use crate::eth_rpc::rpc::KakarotRpcModuleBuilder;
+use crate::eth_rpc::run_server;
 
 /// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
 /// and starting the Kakarot RPC server.
@@ -59,7 +59,7 @@ use super::sequencer::Katana;
 #[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
     // Create and run Kakarot RPC module.
-    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(katana.provider()).rpc_module()?;
+    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(katana.eth_provider()).rpc_module()?;
     let rpc_config = RPCConfig::from_env()?;
     let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
 
