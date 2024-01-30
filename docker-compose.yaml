@@ -1,4 +1,4 @@
-version: '3.2'
+version: "3.2"
 
 services:
   starknet:
@@ -43,8 +43,8 @@ services:
     image: apteno/alpine-jq:2023-07-24
     # Parse deployments and save the result to .env file
     entrypoint:
-      - '/bin/sh'
-      - '-c'
+      - "/bin/sh"
+      - "-c"
       # First line overrides an existing .env, if any.
       # This is to make sure that it is clean even though docker volume was not cleaned.
       - |
