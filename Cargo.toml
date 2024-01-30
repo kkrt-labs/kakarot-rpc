@@ -90,3 +90,6 @@ cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
 rstest = { version = "0.18.1", default-features = false }
 toml = { version = "0.7.5", default-features = false }
+
+[features]
+testing = []

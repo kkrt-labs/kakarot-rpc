@@ -5,7 +5,6 @@ use ethers::abi::Tokenize;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::{find_project_root_path, load_config};
 use kakarot_rpc::models::felt::Felt252Wrapper;
-use kakarot_rpc::starknet_client::constants::CHAIN_ID;
 use reth_primitives::{Transaction, TransactionKind, TxEip1559};
 use starknet_crypto::FieldElement;
 
@@ -28,6 +27,7 @@ pub trait EvmContract {
         contract_bytecode: &CompactContractBytecode,
         constructor_args: T,
         nonce: u64,
+        chain_id: u64,
     ) -> Result<Transaction, eyre::Error>;
 
     fn prepare_call_transaction<T: Tokenize>(
@@ -36,6 +36,7 @@ pub trait EvmContract {
         constructor_args: T,
         nonce: u64,
         value: u128,
+        chain_id: u64,
     ) -> Result<Transaction, eyre::Error>;
 }
 
@@ -61,6 +62,7 @@ impl EvmContract for KakarotEvmContract {
         contract_bytecode: &CompactContractBytecode,
         constructor_args: T,
         nonce: u64,
+        chain_id: u64,
     ) -> Result<Transaction, eyre::Error> {
         let abi = contract_bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
         let bytecode = contract_bytecode
@@ -79,7 +81,7 @@ impl EvmContract for KakarotEvmContract {
         };
 
         Ok(Transaction::Eip1559(TxEip1559 {
-            chain_id: CHAIN_ID,
+            chain_id,
             nonce,
             max_priority_fee_per_gas: Default::default(),
             max_fee_per_gas: Default::default(),
@@ -97,6 +99,7 @@ impl EvmContract for KakarotEvmContract {
         args: T,
         nonce: u64,
         value: u128,
+        chain_id: u64,
     ) -> Result<Transaction, eyre::Error> {
         let abi = self.bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
         let params = args.into_tokens();
@@ -106,7 +109,7 @@ impl EvmContract for KakarotEvmContract {
         let evm_address: Felt252Wrapper = self.evm_address.try_into()?;
 
         Ok(Transaction::Eip1559(TxEip1559 {
-            chain_id: CHAIN_ID,
+            chain_id,
             nonce,
             max_priority_fee_per_gas: Default::default(),
             max_fee_per_gas: Default::default(),

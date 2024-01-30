@@ -1,16 +1,10 @@
 use std::net::SocketAddr;
-use std::sync::Arc;
 
 use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::eth_rpc::config::RPCConfig;
 use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::eth_rpc::run_server;
-use kakarot_rpc::starknet_client::config::{KakarotRpcConfig, Network};
-use kakarot_rpc::starknet_client::KakarotClient;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
 
-use super::eth_provider::mock_ethereum_provider;
 use super::sequencer::Katana;
 
 /// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
@@ -64,23 +58,8 @@ use super::sequencer::Katana;
 /// and each test is compiled separately, so the compiler thinks this function is unused
 #[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    let sequencer = katana.sequencer();
-    let client = katana.client();
-
-    let provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
-    let starknet_config = KakarotRpcConfig::new(
-        Network::JsonRpcProvider(sequencer.url()),
-        client.kakarot_address(),
-        client.proxy_account_class_hash(),
-        client.externally_owned_account_class_hash(),
-        client.contract_account_class_hash(),
-    );
-
-    let kakarot_client = Arc::new(KakarotClient::new(starknet_config, provider));
-    let eth_db = mock_ethereum_provider();
-
     // Create and run Kakarot RPC module.
-    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(kakarot_client, eth_db).rpc_module()?;
+    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(katana.provider()).rpc_module()?;
     let rpc_config = RPCConfig::from_env()?;
     let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
 

@@ -1,5 +1,6 @@
-pub mod contracts;
+pub mod config;
 pub mod eth_provider;
 pub mod eth_rpc;
 pub mod models;
-pub mod starknet_client;
+#[cfg(features = "testing")]
+pub mod test_utils;

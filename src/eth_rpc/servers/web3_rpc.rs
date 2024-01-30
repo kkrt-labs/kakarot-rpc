@@ -1,4 +1,3 @@
-use crate::starknet_client::constants::KAKAROT_CLIENT_VERSION;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{keccak256, Bytes, H256};
 
@@ -17,7 +16,7 @@ impl Web3Rpc {
 #[async_trait]
 impl Web3ApiServer for Web3Rpc {
     fn client_version(&self) -> Result<String> {
-        Ok((*KAKAROT_CLIENT_VERSION).clone())
+        Ok(format!("kakarot_{}", env!("CARGO_PKG_VERSION")))
     }
 
     fn sha3(&self, input: Bytes) -> Result<H256> {

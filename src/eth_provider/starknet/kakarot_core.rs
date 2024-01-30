@@ -48,7 +48,7 @@ lazy_static! {
 
 // Kakarot utils
 /// Compute the starknet address given a eth address
-pub(crate) fn starknet_address(address: Address) -> FieldElement {
+pub fn starknet_address(address: Address) -> FieldElement {
     get_contract_address(into_via_wrapper!(address), *PROXY_ACCOUNT_CLASS_HASH, &[], *KAKAROT_ADDRESS)
 }
 

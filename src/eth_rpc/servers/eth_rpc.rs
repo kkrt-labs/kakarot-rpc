@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
 use crate::eth_provider::constant::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
-use crate::starknet_client::errors::EthApiError;
-use crate::{eth_provider::provider::EthereumProvider, starknet_client::KakarotClient};
+use crate::eth_provider::error::EthProviderError;
+use crate::eth_provider::provider::EthereumProvider;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
 use reth_rpc_types::{
@@ -10,36 +8,30 @@ use reth_rpc_types::{
     Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
-use starknet::providers::Provider;
 
 use crate::eth_rpc::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
-pub struct KakarotEthRpc<P, SP>
+pub struct KakarotEthRpc<P>
 where
     P: EthereumProvider,
-    SP: Provider + Send + Sync,
 {
-    pub eth_provider: P,
-    // TODO remove kakaort_client from here
-    pub kakarot_client: Arc<KakarotClient<SP>>,
+    eth_provider: P,
 }
 
-impl<P, SP> KakarotEthRpc<P, SP>
+impl<P> KakarotEthRpc<P>
 where
     P: EthereumProvider,
-    SP: Provider + Send + Sync,
 {
-    pub fn new(eth_provider: P, kakarot_client: Arc<KakarotClient<SP>>) -> Self {
-        Self { eth_provider, kakarot_client }
+    pub fn new(eth_provider: P) -> Self {
+        Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P, SP> EthApiServer for KakarotEthRpc<P, SP>
+impl<P> EthApiServer for KakarotEthRpc<P>
 where
     P: EthereumProvider + Send + Sync + 'static,
-    SP: Provider + Send + Sync + 'static,
 {
     #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {
@@ -52,7 +44,7 @@ where
     }
 
     async fn coinbase(&self) -> Result<Address> {
-        Err(EthApiError::MethodNotSupported("eth_coinbase".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_coinbase".to_string()).into())
     }
 
     #[tracing::instrument(skip_all, ret, err)]
@@ -172,7 +164,7 @@ where
         _request: CallRequest,
         _block_id: Option<BlockId>,
     ) -> Result<AccessListWithGasUsed> {
-        Err(EthApiError::MethodNotSupported("eth_createAccessList".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_createAccessList".to_string()).into())
     }
 
     #[tracing::instrument(skip_all, ret, fields(request = ?request, block_id = ?block_id))]
@@ -216,15 +208,15 @@ where
     }
 
     async fn submit_hashrate(&self, _hashrate: U256, _id: H256) -> Result<bool> {
-        Err(EthApiError::MethodNotSupported("eth_submitHashrate".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_submitHashrate".to_string()).into())
     }
 
     async fn submit_work(&self, _nonce: H64, _pow_hash: H256, _mix_digest: H256) -> Result<bool> {
-        Err(EthApiError::MethodNotSupported("eth_submitWork".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_submitWork".to_string()).into())
     }
 
     async fn send_transaction(&self, _request: TransactionRequest) -> Result<H256> {
-        Err(EthApiError::MethodNotSupported("eth_sendTransaction".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_sendTransaction".to_string()).into())
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(bytes = %bytes))]
@@ -233,15 +225,15 @@ where
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
-        Err(EthApiError::MethodNotSupported("eth_sign".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_sign".to_string()).into())
     }
 
     async fn sign_transaction(&self, _transaction: CallRequest) -> Result<Bytes> {
-        Err(EthApiError::MethodNotSupported("eth_signTransaction".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_signTransaction".to_string()).into())
     }
 
     async fn sign_typed_data(&self, _address: Address, _data: Value) -> Result<Bytes> {
-        Err(EthApiError::MethodNotSupported("eth_signTypedData".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_signTypedData".to_string()).into())
     }
 
     async fn get_proof(
@@ -250,30 +242,30 @@ where
         _keys: Vec<H256>,
         _block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse> {
-        Err(EthApiError::MethodNotSupported("eth_getProof".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_getProof".to_string()).into())
     }
 
     async fn new_filter(&self, _filter: Filter) -> Result<U64> {
-        Err(EthApiError::MethodNotSupported("eth_newFilter".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_newFilter".to_string()).into())
     }
 
     async fn new_block_filter(&self) -> Result<U64> {
-        Err(EthApiError::MethodNotSupported("eth_newBlockFilter".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_newBlockFilter".to_string()).into())
     }
 
     async fn new_pending_transaction_filter(&self) -> Result<U64> {
-        Err(EthApiError::MethodNotSupported("eth_newPendingTransactionFilter".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_newPendingTransactionFilter".to_string()).into())
     }
 
     async fn uninstall_filter(&self, _id: U64) -> Result<bool> {
-        Err(EthApiError::MethodNotSupported("eth_uninstallFilter".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_uninstallFilter".to_string()).into())
     }
 
     async fn get_filter_changes(&self, _id: U64) -> Result<FilterChanges> {
-        Err(EthApiError::MethodNotSupported("eth_getFilterChanges".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_getFilterChanges".to_string()).into())
     }
 
     async fn get_filter_logs(&self, _id: U64) -> Result<FilterChanges> {
-        Err(EthApiError::MethodNotSupported("eth_getFilterLogs".to_string()).into())
+        Err(EthProviderError::MethodNotSupported("eth_getFilterLogs".to_string()).into())
     }
 }

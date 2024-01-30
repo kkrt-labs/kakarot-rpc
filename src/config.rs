@@ -1,21 +1,14 @@
-use eyre::Result;
+use eyre::eyre;
 use starknet::core::types::FieldElement;
 use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
 use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
+use std::env::var;
 use url::Url;
 
-use super::constants::{KATANA_RPC_URL, MADARA_RPC_URL};
-use super::errors::ConfigError;
+fn env_var_to_field_element(var_name: &str) -> Result<FieldElement, eyre::Error> {
+    let env_var = var(var_name)?;
 
-pub fn env_var(name: &str) -> Result<String, ConfigError> {
-    std::env::var(name).map_err(|_| ConfigError::EnvironmentVariableMissing(name.into()))
-}
-
-fn env_var_to_field_element(var_name: &str) -> Result<FieldElement, ConfigError> {
-    let env_var = env_var(var_name)?;
-
-    FieldElement::from_hex_be(&env_var)
-        .map_err(|err| ConfigError::EnvironmentVariableSetWrong(var_name.into(), err.to_string()))
+    Ok(FieldElement::from_hex_be(&env_var)?)
 }
 
 #[derive(Default, Clone, Debug)]
@@ -31,26 +24,24 @@ pub enum Network {
 }
 
 impl Network {
-    pub fn gateway_url(&self) -> Result<Url, ConfigError> {
+    pub fn gateway_url(&self) -> Result<Url, eyre::Error> {
         match self {
             Self::MainnetGateway => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/")?),
             Self::Goerli1Gateway => Ok(Url::parse("https://alpha4.starknet.io/feeder_gateway/")?),
             Self::Goerli2Gateway => Ok(Url::parse("https://alpha4-2.starknet.io/feeder_gateway/")?),
-            _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for gateway url", self))),
+            _ => Err(eyre!("Network {:?} is not supported for gateway url", self)),
         }
     }
 
-    pub fn provider_url(&self) -> Result<Url, ConfigError> {
+    pub fn provider_url(&self) -> Result<Url, eyre::Error> {
         match self {
-            Self::Katana => Ok(Url::parse(KATANA_RPC_URL)?),
-            Self::Madara => Ok(Url::parse(MADARA_RPC_URL)?),
+            Self::Katana => Ok(Url::parse("http://0.0.0.0:5050")?),
+            Self::Madara => Ok(Url::parse("http://127.0.0.1:9944")?),
             Self::Sharingan => Ok(Url::parse(
-                std::env::var("SHARINGAN_RPC_URL")
-                    .map_err(|_| ConfigError::EnvironmentVariableMissing("SHARINGAN_RPC_URL".to_string()))?
-                    .as_str(),
+                var("SHARINGAN_RPC_URL").map_err(|_| eyre!("Missing env var SHARINGAN_RPC_URL".to_string()))?.as_str(),
             )?),
             Self::JsonRpcProvider(url) => Ok(url.clone()),
-            _ => Err(ConfigError::InvalidNetwork(format!("Network {:?} is not supported for provider url", self))),
+            _ => Err(eyre!("Network {:?} is not supported for provider url", self)),
         }
     }
 }
@@ -91,8 +82,8 @@ impl KakarotRpcConfig {
     /// When using non-standard providers (i.e. not "katana", "madara", "mainnet"), the
     /// `STARKNET_NETWORK` environment variable should be set the URL of a JsonRpc
     /// starknet provider, e.g. https://starknet-goerli.g.alchemy.com/v2/some_key.
-    pub fn from_env() -> Result<Self, ConfigError> {
-        let network = env_var("STARKNET_NETWORK")?;
+    pub fn from_env() -> Result<Self, eyre::Error> {
+        let network = var("STARKNET_NETWORK")?;
         let network = match network.to_lowercase().as_str() {
             "katana" => Network::Katana,
             "madara" => Network::Madara,
@@ -159,7 +150,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
     /// let starknet_provider: JsonRpcClient<HttpTransport> =
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
     /// ```
-    pub fn with_http(config: &KakarotRpcConfig) -> Result<Self> {
+    pub fn with_http(config: &KakarotRpcConfig) -> Result<Self, eyre::Error> {
         let url = config.network.provider_url()?;
         let transport = HttpTransport::new(url);
         Ok(Self::new(transport))

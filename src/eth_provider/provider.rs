@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use eyre::Result;
-use mockall::automock;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
 use reth_primitives::Address;
@@ -30,12 +29,13 @@ use starknet::providers::Provider as StarknetProvider;
 use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
 use starknet_crypto::FieldElement;
 
+use super::constant::BASE_FEE_PER_GAS;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
-use super::database::Database;
+use super::database::EthDatabase;
 use super::starknet::kakarot_core::core::{KakarotCoreReader, Uint256};
 use super::starknet::kakarot_core::to_starknet_transaction;
 use super::starknet::kakarot_core::{
@@ -54,14 +54,12 @@ use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
-use crate::starknet_client::constants::gas::BASE_FEE_PER_GAS;
 
 pub type EthProviderResult<T> = Result<T, EthProviderError>;
 
 /// Ethereum provider trait. Used to abstract away the database and the network.
 #[async_trait]
-#[auto_impl(Arc)]
-#[automock]
+#[auto_impl(Arc, &)]
 pub trait EthereumProvider {
     /// Returns the latest block number.
     async fn block_number(&self) -> EthProviderResult<U64>;
@@ -97,7 +95,7 @@ pub trait EthereumProvider {
     ) -> EthProviderResult<Option<RpcTransaction>>;
     /// Returns the transaction receipt by hash of the transaction.
     async fn transaction_receipt(&self, hash: H256) -> EthProviderResult<Option<TransactionReceipt>>;
-    /// Returns the balance of an address.
+    /// Returns the balance of an address in native eth.
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the storage of an address at a certain index.
     async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<U256>;
@@ -125,18 +123,20 @@ pub trait EthereumProvider {
 /// Structure that implements the EthereumProvider trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
-pub struct EthDataProvider<SP>
+pub struct EthDataProvider<SP, DB>
 where
     SP: StarknetProvider + Send + Sync,
+    DB: EthDatabase,
 {
-    database: Database,
+    database: DB,
     starknet_provider: SP,
 }
 
 #[async_trait]
-impl<SP> EthereumProvider for EthDataProvider<SP>
+impl<SP, DB> EthereumProvider for EthDataProvider<SP, DB>
 where
     SP: StarknetProvider + Send + Sync,
+    DB: EthDatabase + Send + Sync,
 {
     async fn block_number(&self) -> EthProviderResult<U64> {
         let filter = doc! {};
@@ -396,7 +396,7 @@ where
                 &from,
                 &to,
                 &transaction.gas_limit().into(),
-                &transaction.effective_gas_price(Some(BASE_FEE_PER_GAS)).into(),
+                &transaction.effective_gas_price(Some(*BASE_FEE_PER_GAS)).into(),
                 &Uint256 { low: transaction.value().into(), high: FieldElement::ZERO },
                 &calldata.len().into(),
                 &CairoArrayLegacy(calldata),
@@ -451,7 +451,7 @@ where
 
         let block_count_usize =
             usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
-        let base_fee_per_gas = vec![U256::from(BASE_FEE_PER_GAS); block_count_usize];
+        let base_fee_per_gas = vec![U256::from(*BASE_FEE_PER_GAS); block_count_usize];
 
         let newest_block = U256::from(self.tag_into_block_number(newest_block).await?.low_u64());
         let oldest_block = if newest_block + U256::from(1) >= block_count {
@@ -490,23 +490,24 @@ where
     }
 }
 
-impl<SP> EthDataProvider<SP>
+impl<SP, DB> EthDataProvider<SP, DB>
 where
     SP: StarknetProvider + Send + Sync,
+    DB: EthDatabase + Send + Sync,
 {
-    pub fn new(database: Database, starknet_provider: SP) -> Self {
+    pub fn new(database: DB, starknet_provider: SP) -> Self {
         Self { database, starknet_provider }
     }
 
     /// Get a block from the database based on the header and transaction filters
     /// If full is true, the block will contain the full transactions, otherwise just the hashes
-    async fn block(
+    async fn block<D: Into<Option<Document>> + Send>(
         &self,
-        header_filter: impl Into<Option<Document>>,
-        transactions_filter: impl Into<Option<Document>>,
+        header_filter: D,
+        transactions_filter: D,
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
-        let header = self.database.get_one::<StoredHeader>("headers", header_filter, None).await?;
+        let header = self.database.get_one::<StoredHeader, _, _>("headers", header_filter, None).await?;
         let header = match header {
             Some(header) => header,
             None => return Ok(None),
@@ -515,12 +516,12 @@ where
 
         let transactions = if full {
             BlockTransactions::Full(iter_into(
-                self.database.get::<StoredTransaction>("transactions", transactions_filter, None).await?,
+                self.database.get::<StoredTransaction, _, _>("transactions", transactions_filter, None).await?,
             ))
         } else {
             BlockTransactions::Hashes(iter_into(
                 self.database
-                    .get::<StoredTransactionHash>("transactions", transactions_filter, doc! {"tx.hash": 1})
+                    .get::<StoredTransactionHash, _, _>("transactions", transactions_filter, doc! {"tx.hash": 1})
                     .await?,
             ))
         };

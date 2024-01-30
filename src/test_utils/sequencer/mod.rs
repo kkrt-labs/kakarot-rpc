@@ -3,18 +3,19 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use crate::test_utils::eoa::{Eoa, KakarotEOA};
+use crate::test_utils::eoa::KakarotEOA;
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
 use ethers::types::H256;
 use foundry_config::utils::find_project_root_path;
-use kakarot_rpc::starknet_client::config::{KakarotRpcConfig, Network};
-use kakarot_rpc::starknet_client::KakarotClient;
+use kakarot_rpc::eth_provider::provider::EthDataProvider;
 use katana_core::db::serde::state::SerializableState;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use starknet_crypto::FieldElement;
 
 use crate::root_project_path;
+
+use super::eth_provider::MockDatabase;
 
 /// Returns the dumped Katana state with deployed Kakarot.
 pub fn load_katana_state() -> SerializableState {
@@ -49,7 +50,7 @@ async fn katana_sequencer() -> TestSequencer {
 
 pub struct Katana {
     pub sequencer: TestSequencer,
-    pub eoa: KakarotEOA<JsonRpcClient<HttpTransport>>,
+    pub eoa: KakarotEOA<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>, MockDatabase>>,
 }
 
 impl Katana {
@@ -87,28 +88,20 @@ impl Katana {
         let pk = H256::from_str(&pk).expect("Failed to parse EVM private key").into();
 
         // Create a Kakarot client
-        let kakarot_client = KakarotClient::new(
-            KakarotRpcConfig::new(
-                Network::JsonRpcProvider(sequencer.url()),
-                kakarot_address,
-                proxy_class_hash,
-                externally_owned_account_class_hash,
-                contract_account_class_hash,
-            ),
-            starknet_provider,
-        );
+        let database = MockDatabase;
+        let eth_provider = EthDataProvider::new(database, starknet_provider);
 
-        let eoa = KakarotEOA::new(pk, kakarot_client);
+        let eoa = KakarotEOA::new(pk, eth_provider);
 
         Self { sequencer, eoa }
     }
 
-    pub const fn eoa(&self) -> &KakarotEOA<JsonRpcClient<HttpTransport>> {
-        &self.eoa
+    pub const fn provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>, MockDatabase>> {
+        Arc::new(self.eoa.eth_provider)
     }
 
-    pub fn client(&self) -> &KakarotClient<JsonRpcClient<HttpTransport>> {
-        self.eoa.client()
+    pub const fn eoa(&self) -> &KakarotEOA<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>, MockDatabase>> {
+        &self.eoa
     }
 
     /// allow(dead_code) is used because this function is used in tests,

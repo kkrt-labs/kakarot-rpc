@@ -6,8 +6,8 @@ use reth_primitives::{U128, U256, U64};
 use reth_rpc_types::CallRequest;
 
 use crate::models::errors::ConversionError;
-use crate::starknet_client::constants::gas::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 
+use super::constant::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
 use super::provider::EthProviderResult;
 
 /// Converts an iterator of `Into<D>` into a `Vec<D>`.
@@ -47,18 +47,18 @@ pub fn call_to_transaction(call: CallRequest, chain_id: U64, nonce: U64) -> EthP
     let gas_limit = call.gas.unwrap_or_default().try_into().map_err(ConversionError::from)?;
     let max_fee_per_gas = call
         .max_fee_per_gas
-        .unwrap_or_else(|| U256::from(BASE_FEE_PER_GAS))
+        .unwrap_or_else(|| U256::from(*BASE_FEE_PER_GAS))
         .try_into()
         .map_err(ConversionError::from)?;
     let max_priority_fee_per_gas = call
         .max_priority_fee_per_gas
-        .unwrap_or_else(|| U256::from(MAX_PRIORITY_FEE_PER_GAS))
+        .unwrap_or_else(|| U256::from(*MAX_PRIORITY_FEE_PER_GAS))
         .try_into()
         .map_err(ConversionError::from)?;
 
     let to = call.to.map_or(TransactionKind::Create, TransactionKind::Call);
     let value = call.value.unwrap_or_default().try_into().map_err(ConversionError::from)?;
-    let data = call.input.data.unwrap_or_default();
+    let data = call.input.unique_input().unwrap_or_default().cloned().unwrap_or_default();
 
     Ok(Transaction::Eip1559(TxEip1559 {
         chain_id,
