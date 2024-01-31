@@ -1,5 +1,3 @@
-HURL_FILES = $(shell find ./rpc-call-examples/ -name '*.hurl')
-
 -include .env
 export
 
@@ -20,10 +18,10 @@ deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py && cd ..
 
 load-env:
-	export PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.proxy' $(DECLARATIONS)) \
-	export CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.contract_account' $(DECLARATIONS)) \
-	export EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.externally_owned_account' $(DECLARATIONS)) \
-	export KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' $(DEPLOYMENTS))
+	$(eval PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.proxy' $(DECLARATIONS)))
+	$(eval CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.contract_account' $(DECLARATIONS)))
+	$(eval EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.externally_owned_account' $(DECLARATIONS)))
+	$(eval KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' $(DEPLOYMENTS)))
 
 run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
