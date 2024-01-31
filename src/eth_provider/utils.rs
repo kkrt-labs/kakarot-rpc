@@ -16,8 +16,8 @@ pub(crate) fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl
 pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
     // Add 2 to the width to account for the 0x prefix.
     let s = format!("{:#0width$x}", value, width = width + 2);
-    // This can happen because of the LowerHex implementation for Uint,
-    // which just formats 0 into 0x0, ignoring the width.
+    // `s.len() < width` can happen because of the LowerHex implementation
+    // for Uint, which just formats 0 into 0x0, ignoring the width.
     if s.len() < width {
         return format!("0x{:0>width$}", &s[2..], width = width);
     }

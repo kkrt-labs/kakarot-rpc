@@ -15,17 +15,18 @@ use reth_primitives::{BlockNumberOrTag, Bytes, U256};
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
+    // Given
     let katana: Katana = counter.0;
     let counter = counter.1;
     let eth_provider = katana.eth_provider();
     let eoa = katana.eoa();
 
-    // Check nonce of Eoa
     let nonce_before = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
 
+    // When
     eoa.call_evm_contract(&counter, "inc", (), 0).await.expect("Failed to increment counter");
 
-    // Check nonce of Eoa
+    // Then
     let nonce_after = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
     assert_eq!(nonce_before + U256::from(1), nonce_after);
 }
@@ -34,15 +35,17 @@ async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract), _setup: ())
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
+    // Given
     let eth_provider = katana.eth_provider();
-
     let newest_block = eth_provider.block_number().await.unwrap().as_u64();
     let block_count = newest_block + 1;
 
-    // Check fee history
+    // When
     let fee_history =
         eth_provider.fee_history(U256::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
-    assert_eq!(fee_history.base_fee_per_gas.len(), block_count as usize);
+
+    // Then
+    assert_eq!(fee_history.base_fee_per_gas.len(), block_count as usize + 1);
     assert_eq!(fee_history.gas_used_ratio.len(), block_count as usize);
     assert_eq!(fee_history.oldest_block, U256::ZERO);
 }

@@ -27,7 +27,7 @@ use starknet::providers::Provider as StarknetProvider;
 use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
 use starknet_crypto::FieldElement;
 
-use super::constant::{BASE_FEE_PER_GAS, MAX_FEE};
+use super::constant::MAX_FEE;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
@@ -379,8 +379,7 @@ where
 
     async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
         // Set a high gas limit to make sure the transaction will not fail due to gas.
-        let mut call = call;
-        call.gas = Some(U256::from(*MAX_FEE));
+        let call = CallRequest { gas: Some(U256::from(*MAX_FEE)), ..call };
 
         let (_, gas_used) = self.call_helper(call, block_id).await?;
         Ok(U256::from(gas_used))
@@ -388,37 +387,50 @@ where
 
     async fn fee_history(
         &self,
-        block_count: U256,
+        mut block_count: U256,
         newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> EthProviderResult<FeeHistory> {
         if block_count == U256::ZERO {
             return Ok(FeeHistory::default());
         }
-        let newest_block = U256::from(self.tag_into_block_number(newest_block).await?.as_u64());
-        let oldest_block = if newest_block + U256::from(1) >= block_count {
-            newest_block + U256::from(1) - block_count
-        } else {
-            U256::ZERO
-        };
 
-        let block_count = newest_block - oldest_block + U256::from(1);
+        let end_block = U256::from(self.tag_into_block_number(newest_block).await?.as_u64());
+        let end_block_plus = end_block + U256::from(1);
+
+        // If the block count is larger than the end block, we need to reduce it.
+        if end_block_plus < block_count {
+            block_count = end_block_plus;
+        }
+        let start_block = end_block_plus - block_count;
+
         let bc = usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
-        let base_fee_per_gas = vec![U256::from(*BASE_FEE_PER_GAS); bc];
+        // We add one to the block count and fill with 0's.
+        // This comes from the rpc spec: `An array of block base fees per gas.
+        // This includes the next block after the newest of the returned range,
+        // because this value can be derived from the newest block. Zeroes are returned for pre-EIP-1559 blocks.`
+        // Since Kakarot doesn't support EIP-1559 yet, we just fill with 0's.
+        let base_fee_per_gas = vec![U256::ZERO; bc + 1];
 
+        // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
+        // This means we need to introduce a new type for the StoredHeader.
         let header_filter =
-            doc! {"header.number": {"$gte": format_hex(oldest_block, 64), "$lte": format_hex(newest_block, 64)}}; // TODO: check if we should maybe use a projection since we only need the gasLimit and gasUsed.
+            doc! {"header.number": {"$gte": format_hex(start_block, 64), "$lte": format_hex(end_block, 64)}};
         let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
         let gas_used_ratio = blocks
             .iter()
             .map(|header| {
                 let gas_used = header.header.gas_used.as_limbs()[0] as f64;
-                let gas_limit = header.header.gas_limit.as_limbs()[0] as f64;
+                let gas_limit = if header.header.gas_limit != U256::ZERO {
+                    header.header.gas_limit.as_limbs()[0] as f64
+                } else {
+                    1.0
+                };
                 gas_used / gas_limit
             })
             .collect::<Vec<_>>();
 
-        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block, reward: Some(vec![]) })
+        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block: start_block, reward: Some(vec![]) })
     }
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<H256> {

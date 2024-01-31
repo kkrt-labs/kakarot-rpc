@@ -61,7 +61,6 @@ pub(crate) fn to_starknet_transaction(
 
     let nonce = FieldElement::from(transaction.nonce());
 
-    // Get estimated_fee from Starknet
     let max_fee = (*MAX_FEE).into();
 
     // Step: Signature
