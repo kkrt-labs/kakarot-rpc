@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use bytes::BytesMut;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
 use reth_primitives::{
@@ -47,9 +46,9 @@ pub trait Eoa<P: Provider + Send + Sync> {
 
     async fn send_transaction(&self, tx: TransactionSigned) -> Result<H256, eyre::Error> {
         let eth_provider = self.eth_provider();
-        let mut buffer = BytesMut::new();
-        tx.encode_enveloped(&mut buffer);
-        Ok(eth_provider.send_raw_transaction(buffer.to_vec().into()).await?)
+        let mut v = Vec::new();
+        tx.encode_enveloped(&mut v);
+        Ok(eth_provider.send_raw_transaction(v.into()).await?)
     }
 }
 

@@ -59,6 +59,9 @@ test-coverage: load-env
 benchmark-madara:
 	cd benchmarks && bun i && bun run benchmark-madara
 
+test-target: load-env
+	cargo test --tests --features testing $(TARGET) -- --nocapture
+
 benchmark-katana:
 	cd benchmarks && bun i && bun run benchmark-katana
 

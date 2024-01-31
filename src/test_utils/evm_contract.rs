@@ -28,7 +28,33 @@ pub trait EvmContract {
         constructor_args: T,
         nonce: u64,
         chain_id: u64,
-    ) -> Result<Transaction, eyre::Error>;
+    ) -> Result<Transaction, eyre::Error> {
+        let abi = contract_bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
+        let bytecode = contract_bytecode
+            .bytecode
+            .as_ref()
+            .ok_or_else(|| eyre::eyre!("No bytecode found"))?
+            .object
+            .as_bytes()
+            .cloned()
+            .unwrap_or_default();
+        let params = constructor_args.into_tokens();
+
+        let deploy_data = match abi.constructor() {
+            Some(constructor) => constructor.encode_input(bytecode.to_vec(), &params)?,
+            None => bytecode.to_vec(),
+        };
+
+        Ok(Transaction::Eip1559(TxEip1559 {
+            chain_id,
+            nonce,
+            gas_limit: u64::MAX,
+            to: TransactionKind::Create,
+            value: 0,
+            input: deploy_data.into(),
+            ..Default::default()
+        }))
+    }
 
     fn prepare_call_transaction<T: Tokenize>(
         &self,
@@ -58,41 +84,6 @@ impl KakarotEvmContract {
 }
 
 impl EvmContract for KakarotEvmContract {
-    fn prepare_create_transaction<T: Tokenize>(
-        contract_bytecode: &CompactContractBytecode,
-        constructor_args: T,
-        nonce: u64,
-        chain_id: u64,
-    ) -> Result<Transaction, eyre::Error> {
-        let abi = contract_bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
-        let bytecode = contract_bytecode
-            .bytecode
-            .as_ref()
-            .ok_or_else(|| eyre::eyre!("No bytecode found"))?
-            .object
-            .as_bytes()
-            .cloned()
-            .unwrap_or_default();
-        let params = constructor_args.into_tokens();
-
-        let deploy_data = match abi.constructor() {
-            Some(constructor) => constructor.encode_input(bytecode.to_vec(), &params)?,
-            None => bytecode.to_vec(),
-        };
-
-        Ok(Transaction::Eip1559(TxEip1559 {
-            chain_id,
-            nonce,
-            max_priority_fee_per_gas: Default::default(),
-            max_fee_per_gas: Default::default(),
-            gas_limit: u64::MAX,
-            to: TransactionKind::Create,
-            value: 0,
-            input: deploy_data.into(),
-            access_list: Default::default(),
-        }))
-    }
-
     fn prepare_call_transaction<T: Tokenize>(
         &self,
         selector: &str,
@@ -107,17 +98,14 @@ impl EvmContract for KakarotEvmContract {
         let data = abi.function(selector).and_then(|function| function.encode_input(&params))?;
 
         let evm_address: Felt252Wrapper = self.evm_address.try_into()?;
-
         Ok(Transaction::Eip1559(TxEip1559 {
             chain_id,
             nonce,
-            max_priority_fee_per_gas: Default::default(),
-            max_fee_per_gas: Default::default(),
             gas_limit: u64::MAX,
             to: TransactionKind::Call(evm_address.try_into()?),
             value,
             input: data.into(),
-            access_list: Default::default(),
+            ..Default::default()
         }))
     }
 }
