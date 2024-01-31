@@ -6,7 +6,6 @@ use mongodb::bson::Document;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::Bytes;
-use reth_primitives::Signature;
 use reth_primitives::TransactionSigned;
 use reth_primitives::{BlockNumberOrTag, H256, U256, U64};
 use reth_rlp::Decodable as _;
@@ -21,15 +20,14 @@ use reth_rpc_types::ValueOrArray;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::BlockId as StarknetBlockId;
-use starknet::core::types::BroadcastedTransaction;
-use starknet::core::types::SimulationFlag;
 use starknet::core::types::SyncStatusType;
+use starknet::core::types::ValueOutOfRangeError;
 use starknet::core::utils::get_storage_var_address;
 use starknet::providers::Provider as StarknetProvider;
 use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
 use starknet_crypto::FieldElement;
 
-use super::constant::BASE_FEE_PER_GAS;
+use super::constant::{BASE_FEE_PER_GAS, MAX_FEE};
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
@@ -44,13 +42,13 @@ use super::starknet::kakarot_core::{
 };
 use super::starknet::ERC20Reader;
 use super::starknet::STARKNET_NATIVE_TOKEN;
-use super::utils::call_to_transaction;
 use super::utils::contract_not_found;
 use super::utils::iter_into;
 use super::utils::split_u256;
 use super::utils::try_from_u8_iterator;
 use super::{error::EthProviderError, utils::into_filter};
 use crate::eth_provider::utils::format_hex;
+use crate::into_via_try_wrapper;
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::errors::ConversionError;
@@ -375,70 +373,17 @@ where
     }
 
     async fn call(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
-        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
-
-        let chain_id = self.chain_id().await?.unwrap_or_default();
-        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
-        let from = into_via_wrapper!(call.from.unwrap_or_default());
-        // unwrap option or return jsonrpc error
-        let to = call.to.ok_or_else(|| {
-            ConversionError::ToStarknetTransactionError("Missing `to` field in CallRequest".to_string())
-        })?;
-        let to = into_via_wrapper!(to);
-
-        let transaction = call_to_transaction(call, chain_id, 0.into())?;
-
-        let calldata: Vec<_> = transaction.input().to_vec().into_iter().map(FieldElement::from).collect();
-
-        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
-        let (_, return_data, success, _) = kakarot_contract
-            .eth_call(
-                &from,
-                &to,
-                &transaction.gas_limit().into(),
-                &transaction.effective_gas_price(Some(*BASE_FEE_PER_GAS)).into(),
-                &Uint256 { low: transaction.value().into(), high: FieldElement::ZERO },
-                &calldata.len().into(),
-                &CairoArrayLegacy(calldata),
-            )
-            .block_id(starknet_block_id)
-            .call()
-            .await?;
-
-        if success == FieldElement::ZERO {
-            let revert_reason =
-                return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
-            return Err(EthProviderError::EvmExecutionError(revert_reason));
-        }
-
-        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(return_data.0.into_iter())))
+        let (output, _) = self.call_helper(call, block_id).await?;
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(output.0.into_iter())))
     }
 
     async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
-        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+        // Set a high gas limit to make sure the transaction will not fail due to gas.
+        let mut call = call;
+        call.gas = Some(U256::from(*MAX_FEE));
 
-        let chain_id = self.chain_id().await?.unwrap_or_default();
-        let from = call.from.ok_or_else(|| {
-            ConversionError::ToStarknetTransactionError("Missing `from` field in CallRequest".to_string())
-        })?;
-        let nonce: u64 = self.transaction_count(from, block_id).await?.try_into().map_err(ConversionError::from)?;
-
-        let transaction = call_to_transaction(call, chain_id, nonce.into())?;
-
-        let starknet_transaction = BroadcastedTransaction::Invoke(to_starknet_transaction(
-            &TransactionSigned::from_transaction_and_signature(transaction, Signature::default()),
-            chain_id.as_u64(),
-            Address::default(),
-        )?);
-
-        let result = self
-            .starknet_provider
-            .simulate_transaction(starknet_block_id, starknet_transaction, [SimulationFlag::SkipValidate])
-            .await?;
-
-        Ok(U256::from(result.fee_estimation.gas_consumed))
+        let (_, gas_used) = self.call_helper(call, block_id).await?;
+        Ok(U256::from(gas_used))
     }
 
     async fn fee_history(
@@ -515,6 +460,55 @@ where
     #[cfg(feature = "testing")]
     pub fn starknet_provider(&self) -> &SP {
         &self.starknet_provider
+    }
+
+    async fn call_helper(
+        &self,
+        call: CallRequest,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<(CairoArrayLegacy<FieldElement>, u128)> {
+        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
+        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+
+        // unwrap option
+        let to = call.to.unwrap_or_default();
+        let to = into_via_wrapper!(to);
+
+        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
+        let from = into_via_wrapper!(call.from.unwrap_or_default());
+
+        let data = call.input.unique_input().unwrap_or_default().cloned().unwrap_or_default();
+        let calldata: Vec<_> = data.to_vec().into_iter().map(FieldElement::from).collect();
+
+        let gas_limit = into_via_try_wrapper!(call.gas.unwrap_or_default());
+        let gas_price = into_via_try_wrapper!(call.gas_price.unwrap_or_default());
+
+        let value = into_via_try_wrapper!(call.value.unwrap_or_default());
+
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let (_, return_data, success, gas_used) = kakarot_contract
+            .eth_call(
+                &from,
+                &to,
+                &gas_limit,
+                &gas_price,
+                &Uint256 { low: value, high: FieldElement::ZERO },
+                &calldata.len().into(),
+                &CairoArrayLegacy(calldata),
+            )
+            .block_id(starknet_block_id)
+            .call()
+            .await?;
+
+        if success == FieldElement::ZERO {
+            let revert_reason =
+                return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
+            return Err(EthProviderError::EvmExecutionError(revert_reason));
+        }
+        let gas_used = gas_used
+            .try_into()
+            .map_err(|err: ValueOutOfRangeError| ConversionError::ValueOutOfRange(err.to_string()))?;
+        Ok((return_data, gas_used))
     }
 
     /// Get a block from the database based on the header and transaction filters
