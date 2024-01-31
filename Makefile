@@ -7,6 +7,9 @@ ifndef STARKNET_NETWORK
 override STARKNET_NETWORK = katana
 endif
 
+DECLARATIONS=./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json
+DEPLOYMENTS=./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json
+
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
@@ -16,8 +19,14 @@ setup: .gitmodules
 deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py && cd ..
 
-run-dev:
-	PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.proxy' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.contract_account' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.externally_owned_account' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json) KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' ./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json) RUST_LOG=trace cargo run --bin kakarot-rpc
+load-env:
+	export PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.proxy' $(DECLARATIONS)) \
+	export CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.contract_account' $(DECLARATIONS)) \
+	export EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.externally_owned_account' $(DECLARATIONS)) \
+	export KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' $(DEPLOYMENTS))
+
+run-dev: load-env
+	RUST_LOG=trace cargo run --bin kakarot-rpc
 
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
@@ -42,10 +51,10 @@ kill-katana:
 
 dump-katana: run-katana deploy-kakarot kill-katana
 
-test: dump-katana
-	cargo test --all
+test: dump-katana load-env
+	cargo test --all --features testing
 
-test-coverage:
+test-coverage: load-env
 	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 # Make sure to have a Kakarot RPC running and the correct port set in your .env and an underlying Starknet client running.
