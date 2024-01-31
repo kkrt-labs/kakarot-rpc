@@ -2,7 +2,7 @@
 use kakarot_rpc::{
     eth_provider::provider::EthereumProvider as _,
     models::felt::Felt252Wrapper,
-    test_utils::{eoa::Eoa as _, sequencer::Katana},
+    test_utils::{eoa::Eoa as _, fixtures::setup, sequencer::Katana},
     test_utils::{
         evm_contract::KakarotEvmContract,
         fixtures::{counter, katana},
@@ -15,7 +15,7 @@ use starknet::core::types::FieldElement;
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_nonce_eoa(#[future] katana: Katana) {
+async fn test_nonce_eoa(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
 
@@ -30,15 +30,15 @@ async fn test_nonce_eoa(#[future] katana: Katana) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_nonce_contract_account(#[future] counter: (Katana, KakarotEvmContract)) {
+async fn test_nonce_contract_account(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana = counter.0;
     let counter = counter.1;
     let eth_provider = katana.eth_provider();
-    let counter_evm_address: Felt252Wrapper = counter.evm_address.into();
+    let counter_address: Felt252Wrapper = counter.evm_address.into();
 
     // When
-    let nonce_initial = eth_provider.transaction_count(counter_evm_address.try_into().unwrap(), None).await.unwrap();
+    let nonce_initial = eth_provider.transaction_count(counter_address.try_into().unwrap(), None).await.unwrap();
 
     // Then
     assert_eq!(nonce_initial, U256::from(1));
@@ -47,7 +47,7 @@ async fn test_nonce_contract_account(#[future] counter: (Katana, KakarotEvmContr
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_eoa_balance(#[future] katana: Katana) {
+async fn test_eoa_balance(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
     let eoa = katana.eoa();
@@ -63,7 +63,7 @@ async fn test_eoa_balance(#[future] katana: Katana) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract)) {
+async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana = counter.0;
     let counter = counter.1;

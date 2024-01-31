@@ -1,5 +1,6 @@
 use ethers::abi::Token;
 use rstest::*;
+use tracing_subscriber::{filter, FmtSubscriber};
 
 use super::sequencer::Katana;
 use crate::test_utils::evm_contract::KakarotEvmContract;
@@ -35,4 +36,14 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 pub async fn katana() -> Katana {
     // Create a new test environment on Katana
     Katana::new().await
+}
+
+/// This fixture configures the tests. The following setup
+/// is used:
+/// - The log level is set to `info`
+#[fixture]
+pub fn setup() {
+    let filter = filter::EnvFilter::new("info");
+    let subscriber = FmtSubscriber::builder().with_env_filter(filter).finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting tracing default failed");
 }
