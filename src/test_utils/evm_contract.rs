@@ -50,7 +50,7 @@ pub trait EvmContract {
             nonce,
             gas_limit: u64::MAX,
             to: TransactionKind::Create,
-            value: 0,
+            value: 0u64.into(),
             input: deploy_data.into(),
             ..Default::default()
         }))
@@ -97,13 +97,13 @@ impl EvmContract for KakarotEvmContract {
 
         let data = abi.function(selector).and_then(|function| function.encode_input(&params))?;
 
-        let evm_address: Felt252Wrapper = self.evm_address.try_into()?;
+        let evm_address: Felt252Wrapper = self.evm_address.into();
         Ok(Transaction::Eip1559(TxEip1559 {
             chain_id,
             nonce,
             gas_limit: u64::MAX,
             to: TransactionKind::Call(evm_address.try_into()?),
-            value,
+            value: value.into(),
             input: data.into(),
             ..Default::default()
         }))

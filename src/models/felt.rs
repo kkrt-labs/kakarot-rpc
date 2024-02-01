@@ -1,4 +1,4 @@
-use reth_primitives::{Address, H256, U256};
+use reth_primitives::{Address, B256, U256};
 use starknet::core::types::FieldElement;
 
 use crate::models::errors::ConversionError;
@@ -44,7 +44,7 @@ impl TryFrom<Felt252Wrapper> for u128 {
 #[allow(clippy::fallible_impl_from)]
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
-        let felt = FieldElement::from_byte_slice_be(&address.0).unwrap(); // safe unwrap since H160 is 20 bytes
+        let felt = FieldElement::from_byte_slice_be(address.as_slice()).unwrap(); // safe unwrap since H160 is 20 bytes
         Self(felt)
     }
 }
@@ -65,16 +65,16 @@ impl TryFrom<Felt252Wrapper> for Address {
     }
 }
 
-impl TryFrom<H256> for Felt252Wrapper {
+impl TryFrom<B256> for Felt252Wrapper {
     type Error = ConversionError;
 
-    fn try_from(h256: H256) -> Result<Self, Self::Error> {
-        let felt = FieldElement::from_bytes_be(h256.as_fixed_bytes())?;
+    fn try_from(value: B256) -> Result<Self, Self::Error> {
+        let felt = FieldElement::from_bytes_be(value.as_ref())?;
         Ok(Self(felt))
     }
 }
 
-impl From<Felt252Wrapper> for H256 {
+impl From<Felt252Wrapper> for B256 {
     fn from(felt: Felt252Wrapper) -> Self {
         let felt: FieldElement = felt.into();
         Self::from_slice(&felt.to_bytes_be())
@@ -170,9 +170,9 @@ mod tests {
     }
 
     #[test]
-    fn test_felt_try_from_h256_should_pass() {
+    fn test_felt_try_from_b256_should_pass() {
         // Given
-        let hash = H256::from_slice(&FieldElement::MAX.to_bytes_be());
+        let hash = B256::from_slice(&FieldElement::MAX.to_bytes_be());
 
         // When
         let hash = Felt252Wrapper::try_from(hash).unwrap();
@@ -184,9 +184,9 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "Felt252WrapperConversionError")]
-    fn test_felt_try_from_h256_should_fail() {
+    fn test_felt_try_from_b256_should_fail() {
         // Given
-        let hash = H256::from_str(OVERFLOW_FELT).unwrap();
+        let hash = B256::from_str(OVERFLOW_FELT).unwrap();
 
         // When
         Felt252Wrapper::try_from(hash).unwrap();

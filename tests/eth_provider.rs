@@ -144,7 +144,7 @@ async fn test_nonce_eoa(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // When
-    let nonce = eth_provider.transaction_count(Address::zero(), None).await.unwrap();
+    let nonce = eth_provider.transaction_count(Address::ZERO, None).await.unwrap();
 
     // Then
     // Zero address shouldn't throw 'ContractNotFound', but return zero

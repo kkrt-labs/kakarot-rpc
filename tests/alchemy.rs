@@ -1,5 +1,6 @@
 #![cfg(feature = "testing")]
 use ethers::abi::Token;
+use ethers::core::types::{Address as EthersAddress, U256 as EthersU256};
 use kakarot_rpc::models::{balance::TokenBalances, felt::Felt252Wrapper};
 use kakarot_rpc::test_utils::eoa::Eoa as _;
 use kakarot_rpc::test_utils::evm_contract::KakarotEvmContract;
@@ -26,11 +27,17 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     // When
-    let to = eoa.evm_address().unwrap();
+    let to = EthersAddress::from_slice(eoa.evm_address().unwrap().as_slice());
     let amount = U256::from(10_000);
-    eoa.call_evm_contract(&erc20, "mint", (Token::Address(to.into()), Token::Uint(amount.into())), 0)
-        .await
-        .expect("Failed to mint ERC20 tokens");
+
+    eoa.call_evm_contract(
+        &erc20,
+        "mint",
+        (Token::Address(to), Token::Uint(EthersU256::from_big_endian(&amount.to_be_bytes::<32>()[..]))),
+        0,
+    )
+    .await
+    .expect("Failed to mint ERC20 tokens");
 
     // Then
     let reqwest_client = reqwest::Client::new();

@@ -1,4 +1,5 @@
 use ethers::abi::AbiEncode;
+use ethers::core::types::Address as EthersAddress;
 use ethers::prelude::abigen;
 use reth_primitives::Address;
 
@@ -32,7 +33,8 @@ impl<P: EthereumProvider> EthereumErc20<P> {
 
     pub async fn balance_of(self, evm_address: Address, block_id: BlockId) -> EthProviderResult<U256> {
         // Prepare the calldata for the bytecode function call
-        let calldata = IERC20Calls::BalanceOf(BalanceOfCall { account: evm_address.into() }).encode();
+        let address = EthersAddress::from_slice(evm_address.as_slice());
+        let calldata = IERC20Calls::BalanceOf(BalanceOfCall { account: address }).encode();
 
         let call = CallRequest {
             from: Some(Address::default()),
