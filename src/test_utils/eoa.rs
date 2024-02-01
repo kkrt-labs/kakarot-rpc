@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
 use reth_primitives::{
-    sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, H256, U256,
+    sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256,
 };
 use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::core::utils::get_selector_from_name;
@@ -25,10 +25,10 @@ pub trait Eoa<P: Provider + Send + Sync> {
         Ok(starknet_address(self.evm_address()?))
     }
     fn evm_address(&self) -> Result<Address, eyre::Error> {
-        let wallet = LocalWallet::from_bytes(self.private_key().as_bytes())?;
+        let wallet = LocalWallet::from_bytes(self.private_key().as_slice())?;
         Ok(Address::from_slice(wallet.address().as_bytes()))
     }
-    fn private_key(&self) -> H256;
+    fn private_key(&self) -> B256;
     fn eth_provider(&self) -> &EthDataProvider<P>;
 
     async fn nonce(&self) -> Result<U256, eyre::Error> {
@@ -44,7 +44,7 @@ pub trait Eoa<P: Provider + Send + Sync> {
         Ok(TransactionSigned::from_transaction_and_signature(tx, signature))
     }
 
-    async fn send_transaction(&self, tx: TransactionSigned) -> Result<H256, eyre::Error> {
+    async fn send_transaction(&self, tx: TransactionSigned) -> Result<B256, eyre::Error> {
         let eth_provider = self.eth_provider();
         let mut v = Vec::new();
         tx.encode_enveloped(&mut v);
@@ -53,19 +53,19 @@ pub trait Eoa<P: Provider + Send + Sync> {
 }
 
 pub struct KakarotEOA<P: Provider> {
-    pub private_key: H256,
+    pub private_key: B256,
     pub eth_provider: Arc<EthDataProvider<P>>,
 }
 
 impl<P: Provider> KakarotEOA<P> {
-    pub const fn new(private_key: H256, eth_provider: Arc<EthDataProvider<P>>) -> Self {
+    pub const fn new(private_key: B256, eth_provider: Arc<EthDataProvider<P>>) -> Self {
         Self { private_key, eth_provider }
     }
 }
 
 #[async_trait]
 impl<P: Provider + Send + Sync> Eoa<P> for KakarotEOA<P> {
-    fn private_key(&self) -> H256 {
+    fn private_key(&self) -> B256 {
         self.private_key
     }
     fn eth_provider(&self) -> &EthDataProvider<P> {
@@ -93,7 +93,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             &bytecode,
             constructor_args,
             nonce,
-            chain_id.as_u64(),
+            chain_id.try_into()?,
         )?;
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
@@ -148,11 +148,11 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let nonce: u64 = nonce.try_into()?;
         let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
 
-        let tx = contract.prepare_call_transaction(function, args, nonce, value, chain_id.as_u64())?;
+        let tx = contract.prepare_call_transaction(function, args, nonce, value, chain_id.try_into()?)?;
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
 
-        let bytes = tx_hash.to_fixed_bytes();
+        let bytes = tx_hash.0;
         let starknet_tx_hash = FieldElement::from_bytes_be(&bytes).unwrap();
 
         watch_tx(self.eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(100), 60)
@@ -168,18 +168,18 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     /// allow(dead_code) is used because this function is used in tests,
     /// and each test is compiled separately, so the compiler thinks this function is unused
     #[allow(dead_code)]
-    pub async fn transfer(&self, to: Address, value: u128) -> Result<H256, eyre::Error> {
+    pub async fn transfer(&self, to: Address, value: u128) -> Result<B256, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
 
         let tx = Transaction::Eip1559(TxEip1559 {
-            chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().as_u64(),
+            chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().try_into()?,
             nonce,
             max_priority_fee_per_gas: Default::default(),
             max_fee_per_gas: Default::default(),
             gas_limit: u64::MAX,
             to: TransactionKind::Call(to),
-            value,
+            value: value.into(),
             input: Bytes::default(),
             access_list: Default::default(),
         });

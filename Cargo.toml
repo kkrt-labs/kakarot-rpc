@@ -27,12 +27,12 @@ starknet-abigen-parser = { git = "https://github.com/glihm/starknet-abigen-rs", 
 starknet-abigen-macros = { git = "https://github.com/glihm/starknet-abigen-rs", tag = "v0.1.4-beta3", default-features = false }
 
 # Ethereum dependencies
+alloy-rlp = { version = "0.3", default-features = false }
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
-reth-rlp = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.10", default-features = false }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.16", default-features = false }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.16", default-features = false }
 
 # Serde
 serde = { version = "1.0.188", default-features = false, features = ["derive"] }

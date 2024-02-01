@@ -1,4 +1,4 @@
-use reth_primitives::H256;
+use reth_primitives::B256;
 use reth_rpc_types::Transaction;
 use serde::Deserialize;
 
@@ -29,10 +29,10 @@ pub struct StoredTransactionHash {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hash {
-    pub hash: H256,
+    pub hash: B256,
 }
 
-impl From<StoredTransactionHash> for H256 {
+impl From<StoredTransactionHash> for B256 {
     fn from(hash: StoredTransactionHash) -> Self {
         hash.tx_hash.hash
     }

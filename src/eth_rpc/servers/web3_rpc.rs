@@ -1,5 +1,5 @@
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{keccak256, Bytes, H256};
+use reth_primitives::{keccak256, Bytes, B256};
 
 use crate::eth_rpc::api::web3_api::Web3ApiServer;
 
@@ -19,7 +19,7 @@ impl Web3ApiServer for Web3Rpc {
         Ok(format!("kakarot_{}", env!("CARGO_PKG_VERSION")))
     }
 
-    fn sha3(&self, input: Bytes) -> Result<H256> {
+    fn sha3(&self, input: Bytes) -> Result<B256> {
         let hash = keccak256(input);
         Ok(hash)
     }

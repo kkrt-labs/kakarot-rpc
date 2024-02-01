@@ -1,9 +1,9 @@
 use jsonrpsee::core::RpcResult as Result;
 use jsonrpsee::proc_macros::rpc;
-use reth_primitives::{AccessListWithGasUsed, Address, BlockId, BlockNumberOrTag, Bytes, H256, H64, U128, U256, U64};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U128, U256, U64};
 use reth_rpc_types::{
-    CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
-    Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
+    AccessListWithGasUsed, CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index,
+    RichBlock, SyncStatus, Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 
 #[rpc(server, namespace = "eth")]
@@ -30,7 +30,7 @@ pub trait EthApi {
 
     /// Returns information about a block by hash.
     #[method(name = "getBlockByHash")]
-    async fn block_by_hash(&self, hash: H256, full: bool) -> Result<Option<RichBlock>>;
+    async fn block_by_hash(&self, hash: B256, full: bool) -> Result<Option<RichBlock>>;
 
     /// Returns information about a block by number.
     #[method(name = "getBlockByNumber")]
@@ -38,7 +38,7 @@ pub trait EthApi {
 
     /// Returns the number of transactions in a block from a block matching the given block hash.
     #[method(name = "getBlockTransactionCountByHash")]
-    async fn block_transaction_count_by_hash(&self, hash: H256) -> Result<U64>;
+    async fn block_transaction_count_by_hash(&self, hash: B256) -> Result<U64>;
 
     /// Returns the number of transactions in a block matching the given block number.
     #[method(name = "getBlockTransactionCountByNumber")]
@@ -46,7 +46,7 @@ pub trait EthApi {
 
     /// Returns the number of uncles in a block from a block matching the given block hash.
     #[method(name = "getUncleCountByBlockHash")]
-    async fn block_uncles_count_by_block_hash(&self, hash: H256) -> Result<U256>;
+    async fn block_uncles_count_by_block_hash(&self, hash: B256) -> Result<U256>;
 
     /// Returns the number of uncles in a block with given block number.
     #[method(name = "getUncleCountByBlockNumber")]
@@ -54,7 +54,7 @@ pub trait EthApi {
 
     /// Returns an uncle block of the given block and index.
     #[method(name = "getUncleByBlockHashAndIndex")]
-    async fn uncle_by_block_hash_and_index(&self, hash: H256, index: Index) -> Result<Option<RichBlock>>;
+    async fn uncle_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<RichBlock>>;
 
     /// Returns an uncle block of the given block and index.
     #[method(name = "getUncleByBlockNumberAndIndex")]
@@ -66,11 +66,11 @@ pub trait EthApi {
 
     /// Returns the information about a transaction requested by transaction hash.
     #[method(name = "getTransactionByHash")]
-    async fn transaction_by_hash(&self, hash: H256) -> Result<Option<EthTransaction>>;
+    async fn transaction_by_hash(&self, hash: B256) -> Result<Option<EthTransaction>>;
 
     /// Returns information about a transaction by block hash and transaction index position.
     #[method(name = "getTransactionByBlockHashAndIndex")]
-    async fn transaction_by_block_hash_and_index(&self, hash: H256, index: Index) -> Result<Option<EthTransaction>>;
+    async fn transaction_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<EthTransaction>>;
 
     /// Returns information about a transaction by block number and transaction index position.
     #[method(name = "getTransactionByBlockNumberAndIndex")]
@@ -82,7 +82,7 @@ pub trait EthApi {
 
     /// Returns the receipt of a transaction by transaction hash.
     #[method(name = "getTransactionReceipt")]
-    async fn transaction_receipt(&self, hash: H256) -> Result<Option<TransactionReceipt>>;
+    async fn transaction_receipt(&self, hash: B256) -> Result<Option<TransactionReceipt>>;
 
     /// Returns the balance of the account of given address.
     #[method(name = "getBalance")]
@@ -172,20 +172,20 @@ pub trait EthApi {
 
     /// Used for submitting mining hashrate.
     #[method(name = "submitHashrate")]
-    async fn submit_hashrate(&self, hashrate: U256, id: H256) -> Result<bool>;
+    async fn submit_hashrate(&self, hashrate: U256, id: B256) -> Result<bool>;
 
     /// Used for submitting a proof-of-work solution.
     #[method(name = "submitWork")]
-    async fn submit_work(&self, nonce: H64, pow_hash: H256, mix_digest: H256) -> Result<bool>;
+    async fn submit_work(&self, nonce: B64, pow_hash: B256, mix_digest: B256) -> Result<bool>;
 
     /// Sends transaction; will block waiting for signer to return the
     /// transaction hash.
     #[method(name = "sendTransaction")]
-    async fn send_transaction(&self, request: TransactionRequest) -> Result<H256>;
+    async fn send_transaction(&self, request: TransactionRequest) -> Result<B256>;
 
     /// Sends signed transaction, returning its hash.
     #[method(name = "sendRawTransaction")]
-    async fn send_raw_transaction(&self, bytes: Bytes) -> Result<H256>;
+    async fn send_raw_transaction(&self, bytes: Bytes) -> Result<B256>;
 
     /// Returns an Ethereum specific signature with: sign(keccak256("\x19Ethereum Signed Message:\n"
     /// + len(message) + message))).
@@ -207,7 +207,7 @@ pub trait EthApi {
     async fn get_proof(
         &self,
         address: Address,
-        keys: Vec<H256>,
+        keys: Vec<B256>,
         block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse>;
 

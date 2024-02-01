@@ -5,7 +5,7 @@ use mongodb::{
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
-use reth_primitives::H256;
+use reth_primitives::{B256, U256};
 use testcontainers::{
     clients::{self, Cli},
     core::WaitFor,
@@ -23,7 +23,7 @@ lazy_static! {
     // The container is made static to avoid dropping it before the tests are finished.
     static ref CONTAINER: Container<'static, GenericImage> = DOCKER_CLI.run(IMAGE.clone());
 
-    pub static ref BLOCK_HASH: H256 = H256::from_low_u64_be(0x1234);
+    pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
     pub static ref BLOCK_NUMBER: u64 = 0x1234;
 }
 

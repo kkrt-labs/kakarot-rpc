@@ -50,7 +50,7 @@ pub trait EvmContract {
             nonce,
             gas_limit: u64::MAX,
             to: TransactionKind::Create,
-            value: 0,
+            value: 0u64.into(),
             input: deploy_data.into(),
             ..Default::default()
         }))
@@ -103,7 +103,7 @@ impl EvmContract for KakarotEvmContract {
             nonce,
             gas_limit: u64::MAX,
             to: TransactionKind::Call(evm_address.try_into()?),
-            value,
+            value: value.into(),
             input: data.into(),
             ..Default::default()
         }))

@@ -1,13 +1,13 @@
 use std::path::Path;
-use std::str::FromStr;
+use std::str::FromStr as _;
 use std::sync::Arc;
 
 use crate::eth_provider::provider::EthDataProvider;
 use crate::test_utils::eoa::KakarotEOA;
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
-use ethers::types::H256;
 use foundry_config::utils::find_project_root_path;
 use katana_core::db::serde::state::SerializableState;
+use reth_primitives::B256;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
@@ -64,7 +64,7 @@ impl Katana {
         // Load PK
         dotenv::dotenv().expect("Failed to load .env file");
         let pk = std::env::var("EVM_PRIVATE_KEY").expect("Failed to get EVM private key");
-        let pk = H256::from_str(&pk).expect("Failed to parse EVM private key").into();
+        let pk = B256::from_str(&pk).expect("Failed to parse EVM private key");
 
         // Create a Kakarot client
         let database = mock_database().await;

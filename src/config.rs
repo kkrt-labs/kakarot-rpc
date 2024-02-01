@@ -133,7 +133,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
     /// # Example
     ///
     /// ```rust
-    /// use kakarot_rpc::starknet_client::config::{JsonRpcClientBuilder, KakarotRpcConfig, Network};
+    /// use kakarot_rpc::config::{JsonRpcClientBuilder, KakarotRpcConfig, Network};
     /// use starknet::core::types::FieldElement;
     /// use starknet::providers::jsonrpc::HttpTransport;
     /// use starknet::providers::JsonRpcClient;
