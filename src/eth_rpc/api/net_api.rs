@@ -9,7 +9,7 @@ use reth_rpc_types::PeerCount;
 pub trait NetApi {
     /// Returns the protocol version encoded as a string.
     #[method(name = "version")]
-    fn version(&self) -> Result<U64>;
+    async fn version(&self) -> Result<U64>;
 
     /// Returns number of peers connected to node.
     #[method(name = "peerCount")]

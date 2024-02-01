@@ -44,7 +44,6 @@ anyhow = { version = "1.0.68", default-features = false }
 async-trait = { version = "0.1.58", default-features = false }
 auto_impl = { version = "1.1.0", default-features = false }
 bytes = { version = "1", default-features = false }
-ctor = { version = "0.2.4", default-features = false }
 dotenv = { version = "0.15.0", default-features = false }
 env_logger = { version = "0.10.0", default-features = false }
 eyre = { version = "0.6.8", default-features = false }
@@ -54,7 +53,6 @@ futures = { version = "0.3.26", default-features = false }
 hex = { version = "0.4", default-features = false }
 lazy_static = { version = "1.4.0", default-features = false }
 log = { version = "0.4.17", default-features = false }
-mockall = { version = "0.12.1", default-features = false }
 mongodb = { version = "2.8.0", default-features = false, features = [
   "tokio-runtime",
 ] }
@@ -62,6 +60,7 @@ reqwest = { version = "0.11.13", default-features = false }
 ruint = { version = "1.9.0", default-features = false }
 rstest = { version = "0.18.1", default-features = false }
 
+testcontainers = { version = "0.15.0", default-features = false, optional = true }
 thiserror = { version = "1.0.38", default-features = false }
 tokio = { version = "1.21.2", features = ["macros"] }
 tower = { version = "0.4.12", default-features = false }
@@ -90,3 +89,6 @@ cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "be16762" }
 rstest = { version = "0.18.1", default-features = false }
 toml = { version = "0.7.5", default-features = false }
+
+[features]
+testing = ["testcontainers"]

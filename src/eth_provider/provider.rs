@@ -1,45 +1,54 @@
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use eyre::Result;
-use mockall::automock;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::Bytes;
+use reth_primitives::TransactionSigned;
 use reth_primitives::{BlockNumberOrTag, H256, U256, U64};
+use reth_rlp::Decodable as _;
+use reth_rpc_types::CallRequest;
+use reth_rpc_types::FeeHistory;
 use reth_rpc_types::Filter;
 use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
-use reth_rpc_types::Transaction;
+use reth_rpc_types::Transaction as RpcTransaction;
 use reth_rpc_types::TransactionReceipt;
 use reth_rpc_types::ValueOrArray;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::BlockId as StarknetBlockId;
 use starknet::core::types::SyncStatusType;
-use starknet::core::utils::get_contract_address;
+use starknet::core::types::ValueOutOfRangeError;
 use starknet::core::utils::get_storage_var_address;
 use starknet::providers::Provider as StarknetProvider;
+use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
 use starknet_crypto::FieldElement;
 
+use super::constant::MAX_FEE;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
+use super::starknet::kakarot_core::core::{KakarotCoreReader, Uint256};
+use super::starknet::kakarot_core::to_starknet_transaction;
 use super::starknet::kakarot_core::{
-    ContractAccountReader, ProxyReader, CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
-    KAKAROT_ADDRESS, PROXY_ACCOUNT_CLASS_HASH,
+    starknet_address, ContractAccountReader, ProxyReader, CONTRACT_ACCOUNT_CLASS_HASH,
+    EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH, KAKAROT_ADDRESS,
 };
 use super::starknet::ERC20Reader;
 use super::starknet::STARKNET_NATIVE_TOKEN;
+use super::utils::contract_not_found;
 use super::utils::iter_into;
 use super::utils::split_u256;
 use super::utils::try_from_u8_iterator;
 use super::{error::EthProviderError, utils::into_filter};
 use crate::eth_provider::utils::format_hex;
+use crate::into_via_try_wrapper;
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
 use crate::models::errors::ConversionError;
@@ -49,8 +58,7 @@ pub type EthProviderResult<T> = Result<T, EthProviderError>;
 
 /// Ethereum provider trait. Used to abstract away the database and the network.
 #[async_trait]
-#[auto_impl(Arc)]
-#[automock]
+#[auto_impl(Arc, &)]
 pub trait EthereumProvider {
     /// Returns the latest block number.
     async fn block_number(&self) -> EthProviderResult<U64>;
@@ -71,22 +79,22 @@ pub trait EthereumProvider {
     /// Returns the transaction count for a block by number.
     async fn block_transaction_count_by_number(&self, number_or_tag: BlockNumberOrTag) -> EthProviderResult<U64>;
     /// Returns the transaction by hash.
-    async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<Transaction>>;
+    async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<RpcTransaction>>;
     /// Returns the transaction by block hash and index.
     async fn transaction_by_block_hash_and_index(
         &self,
         hash: H256,
         index: Index,
-    ) -> EthProviderResult<Option<Transaction>>;
+    ) -> EthProviderResult<Option<RpcTransaction>>;
     /// Returns the transaction by block number and index.
     async fn transaction_by_block_number_and_index(
         &self,
         number_or_tag: BlockNumberOrTag,
         index: Index,
-    ) -> EthProviderResult<Option<Transaction>>;
+    ) -> EthProviderResult<Option<RpcTransaction>>;
     /// Returns the transaction receipt by hash of the transaction.
     async fn transaction_receipt(&self, hash: H256) -> EthProviderResult<Option<TransactionReceipt>>;
-    /// Returns the balance of an address.
+    /// Returns the balance of an address in native eth.
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the storage of an address at a certain index.
     async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<U256>;
@@ -94,17 +102,27 @@ pub trait EthereumProvider {
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the code for the address at the given block.
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
-    /// Returns the logs for the given filter
+    /// Returns the logs for the given filter.
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges>;
+    /// Returns the result of a call.
+    async fn call(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
+    /// Returns the result of a estimate gas.
+    async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    /// Returns the fee history given a block count and a newest block number.
+    async fn fee_history(
+        &self,
+        block_count: U256,
+        newest_block: BlockNumberOrTag,
+        reward_percentiles: Option<Vec<f64>>,
+    ) -> EthProviderResult<FeeHistory>;
+    /// Send a raw transaction to the network and returns the transactions hash.
+    async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<H256>;
 }
 
 /// Structure that implements the EthereumProvider trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
-pub struct EthDataProvider<SP>
-where
-    SP: StarknetProvider + Send + Sync,
-{
+pub struct EthDataProvider<SP: StarknetProvider> {
     database: Database,
     starknet_provider: SP,
 }
@@ -157,6 +175,7 @@ where
         }
     }
 
+    // TODO cache chain id
     async fn chain_id(&self) -> EthProviderResult<Option<U64>> {
         let chain_id = self.starknet_provider.chain_id().await?;
         let chain_id: Option<u64> = chain_id.try_into().ok();
@@ -199,7 +218,7 @@ where
         Ok(count.into())
     }
 
-    async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<Transaction>> {
+    async fn transaction_by_hash(&self, hash: H256) -> EthProviderResult<Option<RpcTransaction>> {
         let filter = into_filter("tx.hash", hash, 64);
         let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
         Ok(tx.map(Into::into))
@@ -209,7 +228,7 @@ where
         &self,
         hash: H256,
         index: Index,
-    ) -> EthProviderResult<Option<Transaction>> {
+    ) -> EthProviderResult<Option<RpcTransaction>> {
         let mut filter = into_filter("tx.blockHash", hash, 64);
         let index: usize = index.into();
         filter.insert("tx.transactionIndex", index as i32);
@@ -221,7 +240,7 @@ where
         &self,
         number_or_tag: BlockNumberOrTag,
         index: Index,
-    ) -> EthProviderResult<Option<Transaction>> {
+    ) -> EthProviderResult<Option<RpcTransaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
         let mut filter = into_filter("tx.blockNumber", block_number, 64);
         let index: usize = index.into();
@@ -242,7 +261,7 @@ where
 
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
-        let address = self.starknet_address(address);
+        let address = starknet_address(address);
         let balance = eth_contract.balanceOf(&address).block_id(starknet_block_id).call().await?;
 
         let low: U256 = into_via_wrapper!(balance.low);
@@ -254,7 +273,7 @@ where
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
-        let address = self.starknet_address(address);
+        let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
 
         let keys = split_u256::<FieldElement>(index);
@@ -271,13 +290,18 @@ where
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
-        let address = self.starknet_address(address);
+        let address = starknet_address(address);
         let proxy = ProxyReader::new(address, &self.starknet_provider);
-        let address_class_hash = proxy.get_implementation().block_id(starknet_block_id).call().await?;
+        let maybe_class_hash = proxy.get_implementation().block_id(starknet_block_id).call().await;
 
-        let nonce = if address_class_hash == *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH {
+        if contract_not_found(&maybe_class_hash) {
+            return Ok(U256::ZERO);
+        }
+        let class_hash = maybe_class_hash?;
+
+        let nonce = if class_hash == *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH {
             self.starknet_provider.get_nonce(starknet_block_id, address).await?
-        } else if address_class_hash == *CONTRACT_ACCOUNT_CLASS_HASH {
+        } else if class_hash == *CONTRACT_ACCOUNT_CLASS_HASH {
             let contract = ContractAccountReader::new(address, &self.starknet_provider);
             contract.get_nonce().block_id(starknet_block_id).call().await?
         } else {
@@ -290,7 +314,7 @@ where
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
-        let address = self.starknet_address(address);
+        let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
         let (_, bytecode) = contract.bytecode().block_id(starknet_block_id).call().await?;
 
@@ -298,7 +322,7 @@ where
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
-        let current_block = self.block_number().await?.low_u64();
+        let current_block = self.block_number().await?.as_u64();
         let from = filter.get_from_block().unwrap_or_default();
         let to = filter.get_to_block().unwrap_or(current_block);
 
@@ -347,6 +371,94 @@ where
         let logs: Vec<StoredLog> = self.database.get("logs", database_filter, None).await?;
         Ok(FilterChanges::Logs(logs.into_iter().map(Into::into).collect()))
     }
+
+    async fn call(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
+        let (output, _) = self.call_helper(call, block_id).await?;
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(output.0.into_iter())))
+    }
+
+    async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+        // Set a high gas limit to make sure the transaction will not fail due to gas.
+        let call = CallRequest { gas: Some(U256::from(*MAX_FEE)), ..call };
+
+        let (_, gas_used) = self.call_helper(call, block_id).await?;
+        Ok(U256::from(gas_used))
+    }
+
+    async fn fee_history(
+        &self,
+        mut block_count: U256,
+        newest_block: BlockNumberOrTag,
+        _reward_percentiles: Option<Vec<f64>>,
+    ) -> EthProviderResult<FeeHistory> {
+        if block_count == U256::ZERO {
+            return Ok(FeeHistory::default());
+        }
+
+        let end_block = U256::from(self.tag_into_block_number(newest_block).await?.as_u64());
+        let end_block_plus = end_block + U256::from(1);
+
+        // If the block count is larger than the end block, we need to reduce it.
+        if end_block_plus < block_count {
+            block_count = end_block_plus;
+        }
+        let start_block = end_block_plus - block_count;
+
+        let bc = usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
+        // We add one to the block count and fill with 0's.
+        // This comes from the rpc spec: `An array of block base fees per gas.
+        // This includes the next block after the newest of the returned range,
+        // because this value can be derived from the newest block. Zeroes are returned for pre-EIP-1559 blocks.`
+        // Since Kakarot doesn't support EIP-1559 yet, we just fill with 0's.
+        let base_fee_per_gas = vec![U256::ZERO; bc + 1];
+
+        // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
+        // This means we need to introduce a new type for the StoredHeader.
+        let header_filter =
+            doc! {"header.number": {"$gte": format_hex(start_block, 64), "$lte": format_hex(end_block, 64)}};
+        let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
+        let gas_used_ratio = blocks
+            .iter()
+            .map(|header| {
+                let gas_used = header.header.gas_used.as_limbs()[0] as f64;
+                let gas_limit = if header.header.gas_limit != U256::ZERO {
+                    header.header.gas_limit.as_limbs()[0] as f64
+                } else {
+                    1.0
+                };
+                gas_used / gas_limit
+            })
+            .collect::<Vec<_>>();
+
+        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block: start_block, reward: Some(vec![]) })
+    }
+
+    async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<H256> {
+        let mut data = transaction.0.as_ref();
+        let transaction_signed = TransactionSigned::decode(&mut data)
+            .map_err(|err| ConversionError::ToStarknetTransactionError(err.to_string()))?;
+
+        let chain_id = self.chain_id().await?.unwrap_or_default();
+
+        let signer = transaction_signed
+            .recover_signer()
+            .ok_or_else(|| ConversionError::ToStarknetTransactionError("Failed to recover signer".to_string()))?;
+        let transaction = to_starknet_transaction(&transaction_signed, chain_id.as_u64(), signer)?;
+
+        #[cfg(not(feature = "testing"))]
+        {
+            let hash = transaction_signed.hash();
+            self.starknet_provider.add_invoke_transaction(transaction).await?;
+            Ok(hash)
+        }
+        // If we are currently testing, we need to return the starknet hash in order
+        // to be able to wait for the transaction to be mined.
+        #[cfg(feature = "testing")]
+        {
+            let res = self.starknet_provider.add_invoke_transaction(transaction).await?;
+            Ok(H256::from_slice(&res.transaction_hash.to_bytes_be()[..]))
+        }
+    }
 }
 
 impl<SP> EthDataProvider<SP>
@@ -355,6 +467,60 @@ where
 {
     pub fn new(database: Database, starknet_provider: SP) -> Self {
         Self { database, starknet_provider }
+    }
+
+    #[cfg(feature = "testing")]
+    pub fn starknet_provider(&self) -> &SP {
+        &self.starknet_provider
+    }
+
+    async fn call_helper(
+        &self,
+        call: CallRequest,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<(CairoArrayLegacy<FieldElement>, u128)> {
+        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
+        let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
+
+        // unwrap option
+        let to = call.to.unwrap_or_default();
+        let to = into_via_wrapper!(to);
+
+        // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
+        let from = into_via_wrapper!(call.from.unwrap_or_default());
+
+        let data = call.input.unique_input().unwrap_or_default().cloned().unwrap_or_default();
+        let calldata: Vec<_> = data.to_vec().into_iter().map(FieldElement::from).collect();
+
+        let gas_limit = into_via_try_wrapper!(call.gas.unwrap_or_default());
+        let gas_price = into_via_try_wrapper!(call.gas_price.unwrap_or_default());
+
+        let value = into_via_try_wrapper!(call.value.unwrap_or_default());
+
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let (_, return_data, success, gas_used) = kakarot_contract
+            .eth_call(
+                &from,
+                &to,
+                &gas_limit,
+                &gas_price,
+                &Uint256 { low: value, high: FieldElement::ZERO },
+                &calldata.len().into(),
+                &CairoArrayLegacy(calldata),
+            )
+            .block_id(starknet_block_id)
+            .call()
+            .await?;
+
+        if success == FieldElement::ZERO {
+            let revert_reason =
+                return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
+            return Err(EthProviderError::EvmExecutionError(revert_reason));
+        }
+        let gas_used = gas_used
+            .try_into()
+            .map_err(|err: ValueOutOfRangeError| ConversionError::ValueOutOfRange(err.to_string()))?;
+        Ok((return_data, gas_used))
     }
 
     /// Get a block from the database based on the header and transaction filters
@@ -406,10 +572,5 @@ where
             }
             BlockNumberOrTag::Pending => todo!("pending block number not implemented"),
         }
-    }
-
-    /// Compute the starknet address given a eth address
-    fn starknet_address(&self, address: Address) -> FieldElement {
-        get_contract_address(into_via_wrapper!(address), *PROXY_ACCOUNT_CLASS_HASH, &[], *KAKAROT_ADDRESS)
     }
 }
