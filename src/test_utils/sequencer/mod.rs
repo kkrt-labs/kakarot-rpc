@@ -1,28 +1,17 @@
-use std::path::Path;
 use std::str::FromStr as _;
 use std::sync::Arc;
 
-use crate::eth_provider::provider::EthDataProvider;
-use crate::test_utils::eoa::KakarotEOA;
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
-use foundry_config::utils::find_project_root_path;
-use katana_core::db::serde::state::SerializableState;
+use katana_primitives::chain::ChainId;
 use reth_primitives::B256;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use starknet_crypto::FieldElement;
 
-use crate::root_project_path;
+use crate::eth_provider::provider::EthDataProvider;
+use crate::test_utils::eoa::KakarotEOA;
 
 use super::mongo::mock_database;
-
-/// Returns the dumped Katana state with deployed Kakarot.
-pub fn load_katana_state() -> SerializableState {
-    // Get dump path
-    let path = root_project_path!(".katana/dump.bin");
-
-    // Load Serializable state from path
-    SerializableState::load(path).expect("Failed to load Katana state")
-}
 
 /// Returns a `StarknetConfig` instance customized for Kakarot.
 /// If `with_dumped_state` is true, the config will be initialized with the dumped state.
@@ -31,19 +20,18 @@ pub fn katana_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
         env: Environment {
-            chain_id: "KKRT".to_string(),
+            chain_id: ChainId::Id(FieldElement::from(0x4b4b5254u32)),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
             gas_price: 1,
         },
-        init_state: Some(load_katana_state()),
         ..Default::default()
     }
 }
 
 /// Returns a `TestSequencer` configured for Kakarot.
 async fn katana_sequencer() -> TestSequencer {
-    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, katana_config()).await
+    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None, messaging: None }, katana_config()).await
 }
 
 pub struct Katana {
