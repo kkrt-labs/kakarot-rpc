@@ -9,6 +9,7 @@ pub mod rpc;
 pub mod servers;
 
 use eyre::Result;
+use jsonrpsee::server::middleware::http::{InvalidPath, ProxyGetRequestLayer};
 use jsonrpsee::server::{ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
 use thiserror::Error;
@@ -20,6 +21,8 @@ pub enum RpcError {
     IoError(#[from] std::io::Error),
     #[error(transparent)]
     ParseError(#[from] AddrParseError),
+    #[error(transparent)]
+    JsonRpcError(#[from] InvalidPath),
 }
 
 /// # Errors
@@ -33,7 +36,8 @@ pub async fn run_server(
 
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
-    let http_middleware = tower::ServiceBuilder::new().layer(cors);
+    let http_middleware =
+        tower::ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "net_health")?).layer(cors);
 
     let server = ServerBuilder::default()
         .max_connections(std::env::var("RPC_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse().unwrap())
