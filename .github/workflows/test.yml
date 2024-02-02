@@ -65,6 +65,8 @@ jobs:
       # Create dump
       - name: Create dump
         run: ./scripts/make_with_env.sh && make dump-katana
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Lint
         run: |
           cargo check &&
