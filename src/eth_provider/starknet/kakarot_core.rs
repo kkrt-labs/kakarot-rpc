@@ -1,4 +1,5 @@
 use crate::models::felt::Felt252Wrapper;
+use cainome::rs::abigen_legacy;
 use dotenv::dotenv;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Transaction, TransactionSigned};
@@ -6,8 +7,6 @@ use starknet::{
     core::{types::BroadcastedInvokeTransaction, utils::get_contract_address},
     macros::selector,
 };
-use starknet_abigen_macros::abigen_legacy;
-use starknet_abigen_parser;
 use starknet_crypto::FieldElement;
 
 use crate::{
@@ -16,8 +15,16 @@ use crate::{
 };
 
 // Contract ABIs
-abigen_legacy!(Proxy, "./artifacts/proxy.json");
-abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
+
+pub mod proxy {
+    use super::*;
+    abigen_legacy!(Proxy, "./artifacts/proxy.json");
+}
+
+pub mod contract_account {
+    use super::*;
+    abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
+}
 
 #[allow(clippy::too_many_arguments)]
 pub mod core {

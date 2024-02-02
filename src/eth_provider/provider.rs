@@ -1,6 +1,7 @@
 use alloy_rlp::Decodable as _;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
+use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
@@ -25,7 +26,6 @@ use starknet::core::types::SyncStatusType;
 use starknet::core::types::ValueOutOfRangeError;
 use starknet::core::utils::get_storage_var_address;
 use starknet::providers::Provider as StarknetProvider;
-use starknet_abigen_parser::cairo_types::CairoArrayLegacy;
 use starknet_crypto::FieldElement;
 
 use super::constant::MAX_FEE;
@@ -39,7 +39,7 @@ use super::starknet::kakarot_core;
 use super::starknet::kakarot_core::core::{KakarotCoreReader, Uint256};
 use super::starknet::kakarot_core::to_starknet_transaction;
 use super::starknet::kakarot_core::{
-    starknet_address, ContractAccountReader, ProxyReader, CONTRACT_ACCOUNT_CLASS_HASH,
+    contract_account::ContractAccountReader, proxy::ProxyReader, starknet_address, CONTRACT_ACCOUNT_CLASS_HASH,
     EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH, KAKAROT_ADDRESS,
 };
 use super::starknet::ERC20Reader;
@@ -264,7 +264,7 @@ where
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
         let address = starknet_address(address);
-        let balance = eth_contract.balanceOf(&address).block_id(starknet_block_id).call().await?;
+        let balance = eth_contract.balanceOf(&address).block_id(starknet_block_id).call().await?.balance;
 
         let low: U256 = into_via_wrapper!(balance.low);
         let high: U256 = into_via_wrapper!(balance.high);
@@ -281,7 +281,7 @@ where
         let keys = split_u256::<FieldElement>(index);
         let storage_address = get_storage_var_address("storage_", &keys).expect("Storage var name is not ASCII");
 
-        let storage = contract.storage(&storage_address).block_id(starknet_block_id).call().await?;
+        let storage = contract.storage(&storage_address).block_id(starknet_block_id).call().await?.value;
 
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
@@ -299,13 +299,13 @@ where
         if contract_not_found(&maybe_class_hash) {
             return Ok(U256::ZERO);
         }
-        let class_hash = maybe_class_hash?;
+        let class_hash = maybe_class_hash?.implementation;
 
         let nonce = if class_hash == *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH {
             self.starknet_provider.get_nonce(starknet_block_id, address).await?
         } else if class_hash == *CONTRACT_ACCOUNT_CLASS_HASH {
             let contract = ContractAccountReader::new(address, &self.starknet_provider);
-            contract.get_nonce().block_id(starknet_block_id).call().await?
+            contract.get_nonce().block_id(starknet_block_id).call().await?.nonce
         } else {
             FieldElement::ZERO
         };
@@ -318,7 +318,7 @@ where
 
         let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
-        let (_, bytecode) = contract.bytecode().block_id(starknet_block_id).call().await?;
+        let bytecode = contract.bytecode().block_id(starknet_block_id).call().await?.bytecode;
 
         Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode.0.into_iter())))
     }
@@ -504,7 +504,7 @@ where
         let value = into_via_try_wrapper!(call.value.unwrap_or_default());
 
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
-        let (_, return_data, success, gas_used) = kakarot_contract
+        let call_output = kakarot_contract
             .eth_call(
                 &from,
                 &to,
@@ -520,12 +520,14 @@ where
             .call()
             .await?;
 
-        if success == FieldElement::ZERO {
+        let return_data = call_output.return_data;
+        if call_output.success == FieldElement::ZERO {
             let revert_reason =
                 return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
             return Err(EthProviderError::EvmExecutionError(revert_reason));
         }
-        let gas_used = gas_used
+        let gas_used = call_output
+            .gas_used
             .try_into()
             .map_err(|err: ValueOutOfRangeError| ConversionError::ValueOutOfRange(err.to_string()))?;
         Ok((return_data, gas_used))
