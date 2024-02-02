@@ -19,6 +19,7 @@ use crate::{
 abigen_legacy!(Proxy, "./artifacts/proxy.json");
 abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
 
+#[allow(clippy::too_many_arguments)]
 pub mod core {
     use super::*;
     abigen_legacy!(KakarotCore, "./artifacts/kakarot.json");
