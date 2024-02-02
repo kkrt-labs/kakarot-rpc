@@ -60,6 +60,8 @@ jobs:
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
       - name: Setup the Kakarot submodule
         run: make setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       # Create dump
       - name: Create dump
         run: ./scripts/make_with_env.sh && make dump-katana
