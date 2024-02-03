@@ -24,6 +24,8 @@ services:
 
   kakarot-deployer:
     image: ghcr.io/kkrt-labs/kakarot/deployer:latest
+    # Always pull the latest image, until we use release tags
+    pull_policy: always
     environment:
       - ACCOUNT_ADDRESS=0x517ececd29116499f4a1b64b094da79ba08dfd54a3edaa316134c41f8160973
       - PRIVATE_KEY=0x1800000000300000180000000000030000000000003006001800006600

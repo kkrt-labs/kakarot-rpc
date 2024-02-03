@@ -1,8 +1,11 @@
 FROM python:3.9.13 as compiler
 # install poetry
 ENV POETRY_VERSION=1.7.1
-RUN curl -sSL https://install.python-poetry.org | python3 -
 ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin"
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
 RUN poetry config virtualenvs.create false
 
 WORKDIR /usr/src/compiler
@@ -12,7 +15,12 @@ RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
     && chmod +x foundry.sh \
     && ./foundry.sh \
     && foundryup \
-    && apt-get update && apt-get install -y jq
+    && apt-get update && apt-get install -y \
+    jq \
+    wget \
+    tar \
+    unzip \
+    zip
 
 COPY .git ./.git
 COPY .gitmodules .gitmodules
