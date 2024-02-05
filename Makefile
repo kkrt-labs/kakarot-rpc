@@ -10,7 +10,7 @@ DEPLOYMENTS=./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json
 
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
-	git submodule update --init --remote
+	git submodule update --init --recursive
 	cd lib/kakarot && make setup && make build && make build-sol && cd ..
 	./scripts/extract_abi.sh
 
