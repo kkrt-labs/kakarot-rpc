@@ -19,11 +19,11 @@ license = "MIT"
 
 [dependencies]
 # Starknet dependencies
+cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.4-legacy-beta", default-features = false, features = ["abigen-rs"] }
+cairo-lang-starknet = { version = "2.4.0", default-features = false }
 starknet = { version = "0.8.0", default-features = false }
 starknet-crypto = { version = "0.6.1", default-features = false }
 starknet_api = { version = "0.6.0-rc3", default-features = false }
-
-cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.3-legacy-beta", default-features = false, features = ["abigen-rs"] }
 
 # Ethereum dependencies
 alloy-rlp = { version = "0.3", default-features = false }
@@ -55,6 +55,7 @@ log = { version = "0.4.17", default-features = false }
 mongodb = { version = "2.8.0", default-features = false, features = [
   "tokio-runtime",
 ] }
+rand = { version = "0.8.5", default-features = false }
 reqwest = { version = "0.11.13", default-features = false }
 ruint = { version = "1.9.0", default-features = false }
 rstest = { version = "0.18.1", default-features = false }
@@ -74,9 +75,9 @@ walkdir = { version = "2.3.3", default-features = false }
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "15c71c" }
-katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "15c71c", features = ["messaging"] }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', rev = "15c71c" }
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "dfe390", default-features = false }
+katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "dfe390", features = ["messaging"] }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', rev = "dfe390", default-features = false, features = ["serde"] }
 
 
 [patch."https://github.com/starkware-libs/blockifier"]
