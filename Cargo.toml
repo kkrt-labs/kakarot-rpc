@@ -93,3 +93,7 @@ toml = { version = "0.7.5", default-features = false }
 
 [features]
 testing = ["testcontainers"]
+
+[[bin]]
+name = "genesis"
+required-features = ["testing"]

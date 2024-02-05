@@ -41,7 +41,7 @@ install-katana:
 
 katana-genesis:
 	rm -fr .katana/ && mkdir .katana
-	cargo run --bin genesis
+	cargo run --bin genesis --features testing
 
 run-katana: install-katana katana-genesis
 	katana --disable-fee --chain-id=KKRT --genesis .katana/genesis.json
