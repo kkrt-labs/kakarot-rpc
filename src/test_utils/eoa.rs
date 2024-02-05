@@ -3,7 +3,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
-use ethers::utils::get_contract_address;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256,
 };
@@ -90,11 +89,8 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
         let bytecode = <KakarotEvmContract as EvmContract>::load_contract_bytecode(contract_name)?;
         let expected_address = {
-            let expected_eth_address = get_contract_address(
-                ethers::types::Address::from_slice(self.evm_address().expect("EOA should have evm address").as_slice()),
-                ethers::types::U256::from(nonce),
-            );
-            FieldElement::from_byte_slice_be(expected_eth_address.as_bytes())
+            let expected_eth_address = self.evm_address().expect("Failed to get EVM address").create(nonce);
+            FieldElement::from_byte_slice_be(expected_eth_address.as_slice())
                 .expect("Failed to convert address to field element")
         };
 

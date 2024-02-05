@@ -15,7 +15,6 @@ runtimes:
     - python@3.10.8
 lint:
   disabled:
-    - yamllint
     - checkov
   enabled:
     - actionlint@1.6.26
