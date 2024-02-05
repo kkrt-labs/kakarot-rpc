@@ -17,6 +17,7 @@ use lazy_static::lazy_static;
 use rand::{rngs::SmallRng, RngCore, SeedableRng};
 use reth_primitives::Address;
 use reth_primitives::B256;
+use ruint::aliases::U160;
 use serde::Serialize;
 use starknet::core::utils::get_contract_address;
 use starknet::core::{types::contract::legacy::LegacyContractClass, utils::get_storage_var_address};
@@ -30,9 +31,10 @@ use std::{
 use walkdir::WalkDir;
 
 lazy_static! {
-    pub static ref GENESIS_FOLDER_PATH: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join(".katana");
-    pub static ref KAKAROT_CONTRACTS_RELATIVE_PATH: PathBuf = GENESIS_FOLDER_PATH.join("../lib/kakarot/build");
-    pub static ref INCORRECT_FELT: String = "INCORRECT".to_string();
+    static ref GENESIS_FOLDER_PATH: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join(".katana");
+    static ref KAKAROT_CONTRACTS_RELATIVE_PATH: PathBuf = GENESIS_FOLDER_PATH.join("../lib/kakarot/build");
+    static ref INCORRECT_FELT: String = "INCORRECT".to_string();
+    static ref COINBASE_ADDRESS: Address = Address::from(U160::from(0x12345));
 }
 
 #[derive(Serialize)]
@@ -67,12 +69,14 @@ fn main() {
         })
         .collect::<HashMap<_, _>>();
 
-    // Take the first account as the sequencer address
-    let sequencer_address = ContractAddress::new(random_felt());
-
     // Set up the Kakarot and EOA contracts.
+    let proxy_class_hash = class_hashes.get("proxy").cloned().unwrap();
     let (kakarot_address, kakarot) = set_up_kakarot(&class_hashes);
-    let (eoa_address, eoa) = set_up_eoa(&class_hashes, kakarot_address.0, class_hashes.get("proxy").cloned().unwrap());
+    let (eoa_address, eoa) = set_up_eoa(&class_hashes, kakarot_address.0, proxy_class_hash);
+
+    // Compute the coinbase address.
+    let sequencer_address =
+        ContractAddress::new(starknet_address(*COINBASE_ADDRESS, *kakarot_address, proxy_class_hash));
 
     // Construct the genesis json contracts.
     let contracts = [(kakarot_address, kakarot), (eoa_address, eoa)].iter().cloned().collect::<HashMap<_, _>>();
@@ -113,6 +117,7 @@ fn main() {
 
 fn compute_class_hash(class_path: &Path) -> FieldElement {
     let class_code = std::fs::read_to_string(class_path).expect("Failed to read class code");
+    // We try to deserialize the class as a v1 class, if it fails we try to deserialize it as a v0 class.
     match serde_json::from_str::<ContractClass>(&class_code) {
         Ok(casm) => {
             let casm = CasmContractClass::from_contract_class(casm, true).expect("Failed to convert class");
