@@ -40,9 +40,9 @@ impl<P: EthereumProvider> EthereumErc20<P> {
             from: Some(Address::default()),
             to: Some(self.address),
             gas_price: Some(U256::from(1)),
-            gas: Some(U256::from(1_000_000)),
+            gas: Some(U256::from(1_000_000_000)),
             value: Some(U256::ZERO),
-            input: CallInput { input: Some(calldata.into()), data: None },
+            input: CallInput { input: Some(calldata.clone().into()), data: None },
             ..Default::default()
         };
 

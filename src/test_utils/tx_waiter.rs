@@ -27,6 +27,7 @@ where
         match provider.get_transaction_receipt(transaction_hash).await {
             Ok(receipt) => match receipt.execution_result() {
                 ExecutionResult::Succeeded => {
+                    info!("Transaction confirmed successfully 🎉");
                     return Ok(());
                 }
                 ExecutionResult::Reverted { reason } => {

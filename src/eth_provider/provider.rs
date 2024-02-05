@@ -490,10 +490,10 @@ where
         // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
         let from = into_via_wrapper!(call.from.unwrap_or_default());
 
-        let data = call.input.unique_input().unwrap_or_default().cloned().unwrap_or_default();
+        let data = call.input.into_input().unwrap_or_default();
         let calldata: Vec<_> = data.into_iter().map(FieldElement::from).collect();
 
-        let gas_limit = into_via_try_wrapper!(call.gas.unwrap_or_default());
+        let gas_limit = into_via_try_wrapper!(call.gas.unwrap_or_else(|| U256::from(u64::MAX)));
         let gas_price = into_via_try_wrapper!(call.gas_price.unwrap_or_default());
 
         let value = into_via_try_wrapper!(call.value.unwrap_or_default());
@@ -508,6 +508,8 @@ where
                 &Uint256 { low: value, high: FieldElement::ZERO },
                 &calldata.len().into(),
                 &CairoArrayLegacy(calldata),
+                &FieldElement::ZERO,
+                &CairoArrayLegacy(vec![]),
             )
             .block_id(starknet_block_id)
             .call()
