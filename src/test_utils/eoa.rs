@@ -88,6 +88,11 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
 
         let bytecode = <KakarotEvmContract as EvmContract>::load_contract_bytecode(contract_name)?;
+        let expected_address = {
+            let expected_eth_address = self.evm_address().expect("Failed to get EVM address").create(nonce);
+            FieldElement::from_byte_slice_be(expected_eth_address.as_slice())
+                .expect("Failed to convert address to field element")
+        };
 
         let tx = <KakarotEvmContract as EvmContract>::prepare_create_transaction(
             &bytecode,
@@ -124,7 +129,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let event = receipt
             .events
             .into_iter()
-            .find(|event| event.keys.contains(&selector))
+            .find(|event| event.keys.contains(&selector) && event.data.contains(&expected_address))
             .ok_or_else(|| eyre::eyre!("Failed to find deployed contract address"))?;
 
         Ok(KakarotEvmContract::new(bytecode, event.data[1], event.data[0]))
