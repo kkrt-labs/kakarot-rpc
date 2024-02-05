@@ -1058,13 +1058,13 @@ checksum = "ade8366b8bd5ba243f0a58f036cc0ca8a2f069cff1a2351ef1cac6b083e16fc0"
 [[package]]
 name = "cainome"
 version = "0.1.5"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta#ad8d96c7fb090706993b336d910379882caba82a"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
  "cainome-rs-macro",
  "camino",
  "clap",
@@ -1093,7 +1093,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta#ad8d96c7fb090706993b336d910379882caba82a"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
 dependencies = [
  "starknet",
  "thiserror",
@@ -1111,7 +1111,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta#ad8d96c7fb090706993b336d910379882caba82a"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
@@ -1136,11 +1136,11 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta#ad8d96c7fb090706993b336d910379882caba82a"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -1168,12 +1168,12 @@ dependencies = [
 [[package]]
 name = "cainome-rs-macro"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta#ad8d96c7fb090706993b336d910379882caba82a"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -2519,7 +2519,7 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 [[package]]
 name = "dojo-lang"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -2562,7 +2562,7 @@ dependencies = [
 [[package]]
 name = "dojo-test-utils"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -2596,7 +2596,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "crypto-bigint",
  "hex",
@@ -2612,7 +2612,7 @@ dependencies = [
 [[package]]
 name = "dojo-world"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5216,7 +5216,8 @@ dependencies = [
  "async-trait",
  "auto_impl",
  "bytes",
- "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.3-legacy-beta)",
+ "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cairo-lang-starknet",
  "dojo-test-utils",
  "dotenv",
  "env_logger",
@@ -5232,6 +5233,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mongodb",
+ "rand",
  "reqwest",
  "reth-primitives",
  "reth-rpc-types",
@@ -5258,7 +5260,7 @@ dependencies = [
 [[package]]
 name = "katana-core"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5291,7 +5293,7 @@ dependencies = [
 [[package]]
 name = "katana-db"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5311,7 +5313,7 @@ dependencies = [
 [[package]]
 name = "katana-executor"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "blockifier",
@@ -5328,9 +5330,10 @@ dependencies = [
 [[package]]
 name = "katana-primitives"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
+ "base64 0.21.7",
  "blockifier",
  "cairo-lang-starknet",
  "cairo-vm",
@@ -5353,7 +5356,7 @@ dependencies = [
 [[package]]
 name = "katana-provider"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -5370,7 +5373,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "cairo-lang-starknet",
@@ -5402,7 +5405,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc-api"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -5414,7 +5417,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc-types"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "derive_more",
@@ -5432,7 +5435,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc-types-builder"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -5445,7 +5448,7 @@ dependencies = [
 [[package]]
 name = "katana-tasks"
 version = "0.5.1-alpha.5"
-source = "git+https://github.com/dojoengine/dojo?rev=15c71c#15c71cca5d82613382a612bda1d708c199d4f9ba"
+source = "git+https://github.com/dojoengine/dojo?rev=dfe390#dfe390aff156e46f375c8d789a12e3ea1137e4b6"
 dependencies = [
  "futures",
  "rayon",
