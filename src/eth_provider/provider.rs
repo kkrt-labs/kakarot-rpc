@@ -35,6 +35,7 @@ use super::database::types::{
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
+use super::starknet::kakarot_core;
 use super::starknet::kakarot_core::core::{KakarotCoreReader, Uint256};
 use super::starknet::kakarot_core::to_starknet_transaction;
 use super::starknet::kakarot_core::{
@@ -484,8 +485,12 @@ where
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
         // unwrap option
-        let to = call.to.unwrap_or_default();
-        let to = into_via_wrapper!(to);
+        let to: kakarot_core::core::Option = {
+            match call.to {
+                Some(to) => kakarot_core::core::Option { is_some: FieldElement::ONE, value: into_via_wrapper!(to) },
+                None => kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO },
+            }
+        };
 
         // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
         let from = into_via_wrapper!(call.from.unwrap_or_default());
