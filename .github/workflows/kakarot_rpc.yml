@@ -32,3 +32,4 @@ jobs:
           context: .
           file: ./docker/rpc/Dockerfile
           platforms: linux/amd64,linux/arm64
+          build-args: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
