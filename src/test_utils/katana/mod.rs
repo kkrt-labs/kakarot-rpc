@@ -1,3 +1,5 @@
+pub mod generis;
+
 use std::path::Path;
 use std::str::FromStr as _;
 use std::sync::Arc;

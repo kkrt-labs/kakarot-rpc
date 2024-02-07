@@ -2,7 +2,7 @@ use ethers::abi::Token;
 use rstest::*;
 use tracing_subscriber::{filter, FmtSubscriber};
 
-use super::sequencer::Katana;
+use super::katana::Katana;
 use crate::test_utils::evm_contract::KakarotEvmContract;
 
 #[fixture]
