@@ -6,6 +6,7 @@ use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
 use ethers::signers::LocalWallet;
 use ethers::signers::Signer;
+use ethers::types::U256;
 use eyre::{eyre, Result};
 use katana_primitives::block::GasPrices;
 use katana_primitives::contract::{StorageKey, StorageValue};
@@ -16,7 +17,7 @@ use katana_primitives::{
     genesis::json::{GenesisClassJson, GenesisContractJson, PathOrFullArtifact},
 };
 use lazy_static::lazy_static;
-use reth_primitives::{B256, U256};
+use reth_primitives::B256;
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness};
@@ -166,12 +167,11 @@ impl KatanaGenesisBuilder<Uninitialized> {
 impl KatanaGenesisBuilder<Initialized> {
     /// Add an EOA to the genesis. The EOA is deployed to the address derived from the given private key.
     pub fn with_eoa(mut self, private_key: B256) -> Result<Self> {
-        let wallet = LocalWallet::from_bytes(private_key.as_slice())?;
-        let evm_address = wallet.address();
-        let evm_address = FieldElement::from_byte_slice_be(evm_address.as_bytes())?;
+        let evm_address = self.evm_address(private_key)?;
 
         let kakarot_address = self.cache_load("kakarot_address")?;
         let eoa_class_hash = self.eoa_class_hash()?;
+        let proxy_class_hash = self.proxy_class_hash()?;
 
         let eoa_storage = [
             (storage_addr("evm_address")?, evm_address),
@@ -181,30 +181,38 @@ impl KatanaGenesisBuilder<Initialized> {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let eoa = GenesisContractJson { class: eoa_class_hash, balance: None, nonce: None, storage: Some(eoa_storage) };
+        let eoa =
+            GenesisContractJson { class: proxy_class_hash, balance: None, nonce: None, storage: Some(eoa_storage) };
 
         let starknet_address = self.compute_starknet_address(evm_address)?;
         self.contracts.insert(starknet_address, eoa);
 
         // Set the allowance for the EOA to the Kakarot contract.
         let key = get_storage_var_address("ERC20_allowances", &[*starknet_address, kakarot_address])?;
-        let storage = [(key, FieldElement::from(u128::MAX)), (key + FieldElement::ONE, FieldElement::from(u128::MAX))]
-            .into_iter();
+        let storage =
+            [(key, FieldElement::from(u128::MAX)), (key + 1u8.into(), FieldElement::from(u128::MAX))].into_iter();
         self.token_storage.extend(storage);
 
         Ok(self)
     }
 
-    /// Fund the given starknet address with the given amount of tokens.
-    pub fn fund(mut self, starknet_address: ContractAddress, amount: U256) -> Result<Self> {
+    /// Fund the starknet address deployed for the evm address of the passed private key
+    /// with the given amount of tokens.
+    pub fn fund(mut self, pk: B256, amount: U256) -> Result<Self> {
+        let evm_address = self.evm_address(pk)?;
+        let starknet_address = self.compute_starknet_address(evm_address)?;
+        let eoa = self.contracts.get_mut(&starknet_address).ok_or(eyre!("Missing EOA contract"))?;
+
         let key = get_storage_var_address("ERC20_balances", &[*starknet_address])?;
         let low = amount & U256::from(u128::MAX);
         let low: u128 = low.try_into().unwrap(); // safe to unwrap
         let high = amount >> U256::from(128);
         let high: u128 = high.try_into().unwrap(); // safe to unwrap
 
-        let storage = [(key, FieldElement::from(low)), (key + FieldElement::ONE, FieldElement::from(high))].into_iter();
+        let storage = [(key, FieldElement::from(low)), (key + 1u8.into(), FieldElement::from(high))].into_iter();
         self.token_storage.extend(storage);
+
+        eoa.balance = Some(amount);
 
         Ok(self)
     }
@@ -238,6 +246,12 @@ impl KatanaGenesisBuilder<Initialized> {
         let proxy_class_hash = self.proxy_class_hash()?;
 
         Ok(ContractAddress::new(get_contract_address(evm_address, proxy_class_hash, &[], kakarot_address)))
+    }
+
+    fn evm_address(&self, pk: B256) -> Result<FieldElement> {
+        let wallet = LocalWallet::from_bytes(pk.as_slice())?;
+        let evm_address = wallet.address();
+        Ok(FieldElement::from_byte_slice_be(evm_address.as_bytes())?)
     }
 
     fn cache_load(&self, key: &str) -> Result<FieldElement> {

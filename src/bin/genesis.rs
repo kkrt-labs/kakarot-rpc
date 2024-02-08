@@ -1,4 +1,5 @@
 use dotenv::dotenv;
+use ethers::types::U256;
 use kakarot_rpc::test_utils::katana::genesis::KatanaGenesisBuilder;
 use lazy_static::lazy_static;
 use reth_primitives::B256;
@@ -44,7 +45,7 @@ fn main() {
         .load_classes(KAKAROT_CONTRACTS_RELATIVE_PATH.clone())
         .with_kakarot()
         .expect("Failed to set up Kakarot");
-    builder = builder.with_eoa(pk).expect("Failed to set up EOA");
+    builder = builder.with_eoa(pk).expect("Failed to set up EOA").fund(pk, U256::from(u128::MAX)).unwrap();
 
     // Compute the coinbase address.
     let sequencer_address = builder.compute_starknet_address(*COINBASE_ADDRESS).unwrap();
