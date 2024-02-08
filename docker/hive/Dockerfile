@@ -78,7 +78,7 @@ COPY --from=apibara /usr/local/bin/starknet /usr/local/bin/starknet
 COPY --from=indexer-cloner /code /code
 COPY --from=indexer /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
 #### We need the mongo binary
-COPY --from=mongo /usr/bin/mongo /usr/bin/mongo
+COPY --from=mongo /bin/mongod /usr/local/bin/mongod
 
 
 # Copy start script
