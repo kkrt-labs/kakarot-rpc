@@ -12,7 +12,8 @@ MANIFEST=.katana/manifest.json
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
-	cd lib/kakarot && make setup && make build && make build-sol && mv build/ssj/contracts_Precompiles.contract_class.json build/precompiles.json && rm -fr build/ssj && cd ..
+	cd lib/kakarot && make setup && make build && make build-sol && \
+	mv build/ssj/contracts_Precompiles.contract_class.json build/precompiles.json && rm -fr build/ssj && cd ..
 	./scripts/extract_abi.sh
 
 deploy-kakarot:
