@@ -12,7 +12,8 @@ MANIFEST=.katana/manifest.json
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
-	cd lib/kakarot && make setup && make build && make build-sol && mv build/ssj/contracts_Precompiles.compiled_contract_class.json build/precompiles.json && cd ..
+	cd lib/kakarot && make setup && make build && make build-sol && \
+	mv build/ssj/contracts_Precompiles.contract_class.json build/precompiles.json && rm -fr build/ssj && cd ..
 	./scripts/extract_abi.sh
 
 deploy-kakarot:
@@ -22,7 +23,7 @@ load-env:
 	$(eval PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.proxy' $(MANIFEST)))
 	$(eval CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.contract_account' $(MANIFEST)))
 	$(eval EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.externally_owned_account' $(MANIFEST)))
-	$(eval KAKAROT_ADDRESS=$(shell jq -r '.deployments.kakarot' $(MANIFEST)))
+	$(eval KAKAROT_ADDRESS=$(shell jq -r '.deployments.kakarot_address' $(MANIFEST)))
 
 run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
@@ -48,7 +49,7 @@ katana-genesis:
 run-katana: install-katana katana-genesis
 	katana --disable-fee --chain-id=KKRT --genesis .katana/genesis.json
 
-test: katana-genesis load-env
+test: load-env
 	cargo test --all --features testing
 
 test-coverage: load-env

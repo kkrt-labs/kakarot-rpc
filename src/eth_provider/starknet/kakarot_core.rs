@@ -38,6 +38,7 @@ fn env_var_to_field_element(var_name: &str) -> FieldElement {
     dotenv().ok();
     let env_var = std::env::var(var_name).unwrap_or_else(|_| panic!("Missing environment variable {var_name}"));
 
+    dbg!(&env_var);
     FieldElement::from_str(&env_var).unwrap_or_else(|_| panic!("Invalid hex string for {var_name}"))
 }
 

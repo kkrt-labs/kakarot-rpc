@@ -8,7 +8,7 @@ use kakarot_rpc::test_utils::eoa::Eoa as _;
 use kakarot_rpc::test_utils::evm_contract::EvmContract;
 use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
-use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, sequencer::Katana};
+use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_rpc_types::{CallInput, CallRequest};
 use rstest::*;
 
