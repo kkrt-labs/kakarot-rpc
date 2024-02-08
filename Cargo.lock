@@ -1058,13 +1058,13 @@ checksum = "ade8366b8bd5ba243f0a58f036cc0ca8a2f069cff1a2351ef1cac6b083e16fc0"
 [[package]]
 name = "cainome"
 version = "0.1.5"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta#86b83226e66e75932db157668329b0cf61b471f9"
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
  "cainome-rs-macro",
  "camino",
  "clap",
@@ -1093,7 +1093,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta#86b83226e66e75932db157668329b0cf61b471f9"
 dependencies = [
  "starknet",
  "thiserror",
@@ -1111,7 +1111,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta#86b83226e66e75932db157668329b0cf61b471f9"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
@@ -1136,11 +1136,11 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta#86b83226e66e75932db157668329b0cf61b471f9"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -1168,12 +1168,12 @@ dependencies = [
 [[package]]
 name = "cainome-rs-macro"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta#2bfe25d9daa1ff0da404772ebf1272a12bbe8e4c"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta#86b83226e66e75932db157668329b0cf61b471f9"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
- "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
- "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -5216,7 +5216,7 @@ dependencies = [
  "async-trait",
  "auto_impl",
  "bytes",
- "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.4-legacy-beta)",
+ "cainome 0.1.5 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5-legacy-beta)",
  "cairo-lang-starknet",
  "dojo-test-utils",
  "dotenv",
@@ -5233,7 +5233,6 @@ dependencies = [
  "lazy_static",
  "log",
  "mongodb",
- "rand",
  "reqwest",
  "reth-primitives",
  "reth-rpc-types",

@@ -7,10 +7,12 @@ endif
 
 MANIFEST=.katana/manifest.json
 
+# Setup the project. Will also rename the precompiles compiled class
+# and move it to the correct location.
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
-	cd lib/kakarot && make setup && make build && make build-sol && cd ..
+	cd lib/kakarot && make setup && make build && make build-sol && mv build/ssj/contracts_Precompiles.compiled_contract_class.json build/precompiles.json && cd ..
 	./scripts/extract_abi.sh
 
 deploy-kakarot:

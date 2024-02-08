@@ -14,12 +14,13 @@ use katana_primitives::{
     },
 };
 use lazy_static::lazy_static;
-use rand::{rngs::SmallRng, RngCore, SeedableRng};
 use reth_primitives::Address;
 use reth_primitives::B256;
 use ruint::aliases::U160;
 use serde::Serialize;
 use starknet::core::utils::get_contract_address;
+use starknet::core::utils::get_udc_deployed_address;
+use starknet::core::utils::UdcUniqueness;
 use starknet::core::{types::contract::legacy::LegacyContractClass, utils::get_storage_var_address};
 use starknet_crypto::FieldElement;
 use std::{
@@ -35,6 +36,7 @@ lazy_static! {
     static ref KAKAROT_CONTRACTS_RELATIVE_PATH: PathBuf = GENESIS_FOLDER_PATH.join("../lib/kakarot/build");
     static ref INCORRECT_FELT: String = "INCORRECT".to_string();
     static ref COINBASE_ADDRESS: Address = Address::from(U160::from(0x12345));
+    static ref SALT: FieldElement = FieldElement::from_bytes_be(&[0u8; 32]).expect("Failed to convert salt");
 }
 
 #[derive(Serialize)]
@@ -50,7 +52,8 @@ fn main() {
     // Read all the classes.
     let classes = WalkDir::new(KAKAROT_CONTRACTS_RELATIVE_PATH.as_path())
         .into_iter()
-        .filter(|e| e.as_ref().unwrap().file_type().is_file())
+        .filter(|e| e.is_ok() && e.as_ref().unwrap().file_type().is_file())
+        .filter(|e| !e.as_ref().unwrap().path().components().any(|f| f.as_os_str() == "ssj"))
         .map(|entry| GenesisClassJson {
             class: PathOrFullArtifact::Path(entry.unwrap().path().to_path_buf()),
             class_hash: None,
@@ -131,39 +134,48 @@ fn compute_class_hash(class_path: &Path) -> FieldElement {
     }
 }
 
-fn random_felt() -> FieldElement {
-    let mut rng = SmallRng::from_seed([0u8; 32]);
-    let mut rand_bytes = [0u8; 32];
-    rng.fill_bytes(&mut rand_bytes);
-    rand_bytes[0] %= 0x8;
-
-    FieldElement::from_bytes_be(&rand_bytes).expect("Failed to generate random field element")
-}
-
 fn storage(var_name: &str, value: FieldElement) -> (FieldElement, FieldElement) {
     (get_storage_var_address(var_name, &[]).expect("Failed to compute storage address"), value)
 }
 
 fn set_up_kakarot(class_hashes: &HashMap<String, FieldElement>) -> (ContractAddress, GenesisContractJson) {
     // Read the env var or generate a random field element
-    let kakarot_address = ContractAddress::new(random_felt());
+    let kakarot_class_hash = class_hashes.get("kakarot").cloned().expect("Failed to get Kakarot class hash");
+    let contract_account_class_hash =
+        class_hashes.get("contract_account").cloned().expect("Failed to get contract_account class hash");
+    let eoa_class_hash = class_hashes
+        .get("externally_owned_account")
+        .cloned()
+        .expect("Failed to get externally_owned_account class hash");
+    let proxy_class_hash = class_hashes.get("proxy").cloned().expect("Failed to get proxy class hash");
+    let precompiles_class_hash = class_hashes
+        .get("contracts_Precompiles.contract_class")
+        .cloned()
+        .expect("Failed to get precompiles class hash");
+
+    // Construct the kakarot contract address. Based on the constructor args from
+    // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/kakarot.cairo#L23
+    let kakarot_address = ContractAddress::new(get_udc_deployed_address(
+        *SALT,
+        kakarot_class_hash,
+        &UdcUniqueness::NotUnique,
+        &[
+            FieldElement::ZERO,
+            DEFAULT_FEE_TOKEN_ADDRESS.0,
+            contract_account_class_hash,
+            eoa_class_hash,
+            proxy_class_hash,
+            precompiles_class_hash,
+        ],
+    ));
 
     // Construct the kakarot contract storage.
     let kakarot_storage = [
         storage("native_token_address", *DEFAULT_FEE_TOKEN_ADDRESS),
-        storage(
-            "contract_account_class_hash",
-            class_hashes.get("contract_account").cloned().expect("Failed to get contract_account class hash"),
-        ),
-        storage(
-            "externally_owned_account_class_hash",
-            class_hashes.get("externally_owned_account").cloned().expect("Failed to get contract_account class hash"),
-        ),
-        storage(
-            "account_proxy_class_hash",
-            class_hashes.get("proxy").cloned().expect("Failed to get proxy class hash"),
-        ),
-        storage("deploy_fee", FieldElement::ZERO),
+        storage("contract_account_class_hash", contract_account_class_hash),
+        storage("externally_owned_account_class_hash", eoa_class_hash),
+        storage("account_proxy_class_hash", proxy_class_hash),
+        storage("precompiles_class_hash", precompiles_class_hash),
     ]
     .into_iter()
     .collect::<HashMap<_, _>>();
@@ -171,12 +183,7 @@ fn set_up_kakarot(class_hashes: &HashMap<String, FieldElement>) -> (ContractAddr
     // Construct the kakarot contract.
     (
         kakarot_address,
-        GenesisContractJson {
-            class: class_hashes.get("kakarot").cloned().expect("Failed to get Kakarot class hash"),
-            balance: None,
-            nonce: None,
-            storage: Some(kakarot_storage),
-        },
+        GenesisContractJson { class: kakarot_class_hash, balance: None, nonce: None, storage: Some(kakarot_storage) },
     )
 }
 
