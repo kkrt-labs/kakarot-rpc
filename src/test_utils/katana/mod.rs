@@ -38,10 +38,14 @@ fn load_genesis() -> Genesis {
 /// If `with_dumped_state` is true, the config will be initialized with the dumped state.
 pub fn katana_config() -> StarknetConfig {
     let max_steps = std::u32::MAX;
+    let mut name = "kkrt-test".as_bytes().to_vec();
+    let mut chain_id = vec![0u8; 16 - name.len()];
+    chain_id.append(&mut name);
+    let chain_id = u128::from_be_bytes(chain_id.try_into().unwrap());
     StarknetConfig {
         disable_fee: true,
         env: Environment {
-            chain_id: ChainId::Id(FieldElement::from(0x4b4b5254u32)),
+            chain_id: ChainId::Id(FieldElement::from(chain_id)),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
             gas_price: 1,

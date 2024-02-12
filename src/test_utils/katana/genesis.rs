@@ -41,7 +41,7 @@ pub struct KatanaGenesisBuilder<T> {
     classes: Vec<GenesisClassJson>,
     class_hashes: HashMap<String, FieldElement>,
     contracts: HashMap<ContractAddress, GenesisContractJson>,
-    token_storage: HashMap<StorageKey, StorageValue>,
+    fee_token_storage: HashMap<StorageKey, StorageValue>,
     cache: HashMap<String, FieldElement>,
     status: PhantomData<T>,
 }
@@ -53,7 +53,7 @@ impl<T> KatanaGenesisBuilder<T> {
             classes: self.classes,
             class_hashes: self.class_hashes,
             contracts: self.contracts,
-            token_storage: self.token_storage,
+            fee_token_storage: self.fee_token_storage,
             cache: self.cache,
             status: PhantomData::<State>,
         }
@@ -87,7 +87,7 @@ impl Default for KatanaGenesisBuilder<Uninitialized> {
             classes: vec![],
             class_hashes: HashMap::new(),
             contracts: HashMap::new(),
-            token_storage: HashMap::new(),
+            fee_token_storage: HashMap::new(),
             cache: HashMap::new(),
             status: PhantomData::<Uninitialized>,
         }
@@ -124,8 +124,8 @@ impl KatanaGenesisBuilder<Uninitialized> {
 }
 
 impl KatanaGenesisBuilder<Loaded> {
-    /// Add the Kakarot contract to the genesis. Updates the state to Initialized.
-    /// From this point on, the builder can be build.
+    /// Add the Kakarot contract to the genesis. Updates the state to [Initialized].
+    /// Once in the [Initialized] status, the builder can be built.
     pub fn with_kakarot(mut self, coinbase_address: FieldElement) -> Result<KatanaGenesisBuilder<Initialized>> {
         let kakarot_class_hash = self.kakarot_class_hash()?;
 
@@ -216,7 +216,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let key = get_storage_var_address("ERC20_allowances", &[*starknet_address, kakarot_address])?;
         let storage =
             [(key, FieldElement::from(u128::MAX)), (key + 1u8.into(), FieldElement::from(u128::MAX))].into_iter();
-        self.token_storage.extend(storage);
+        self.fee_token_storage.extend(storage);
 
         // Write the address to the Kakarot evm to starknet mapping
         let kakarot_address = ContractAddress::new(kakarot_address);
@@ -243,14 +243,14 @@ impl KatanaGenesisBuilder<Initialized> {
         let high: u128 = high.try_into().unwrap(); // safe to unwrap
 
         let storage = [(key, FieldElement::from(low)), (key + 1u8.into(), FieldElement::from(high))].into_iter();
-        self.token_storage.extend(storage);
+        self.fee_token_storage.extend(storage);
 
         eoa.balance = Some(amount);
 
         Ok(self)
     }
 
-    /// Consume the builder and build the genesis json.
+    /// Consume the [KatanaGenesisBuilder] and returns the corresponding [GenesisJson].
     pub fn build(self) -> Result<GenesisJson> {
         Ok(GenesisJson {
             parent_hash: FieldElement::ZERO,
@@ -264,7 +264,7 @@ impl KatanaGenesisBuilder<Initialized> {
                 name: "Ether".to_string(),
                 symbol: "ETH".to_string(),
                 decimals: 18,
-                storage: Some(self.token_storage),
+                storage: Some(self.fee_token_storage),
                 address: None,
                 class: None,
             },
@@ -274,6 +274,7 @@ impl KatanaGenesisBuilder<Initialized> {
         })
     }
 
+    /// Compute the Starknet address for the given Ethereum address.
     pub fn compute_starknet_address(&self, evm_address: FieldElement) -> Result<ContractAddress> {
         let kakarot_address = self.cache_load("kakarot_address")?;
         let proxy_class_hash = self.proxy_class_hash()?;
