@@ -40,7 +40,7 @@ docker-down:
 	docker compose down -v --remove-orphans && docker compose rm
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --rev dfe390 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --rev fe8f23 katana
 
 katana-genesis:
 	rm -fr .katana/ && mkdir .katana
