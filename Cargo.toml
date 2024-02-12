@@ -61,6 +61,7 @@ log = { version = "0.4.17", default-features = false }
 mongodb = { version = "2.8.0", default-features = false, features = [
   "tokio-runtime",
 ] }
+rayon = { version = "1.8.1", default-features = false, optional = true }
 reqwest = { version = "0.11.13", default-features = false }
 ruint = { version = "1.9.0", default-features = false, features = ["serde"] }
 rstest = { version = "0.18.1", default-features = false }
@@ -101,7 +102,7 @@ rstest = { version = "0.18.1", default-features = false }
 toml = { version = "0.7.5", default-features = false }
 
 [features]
-testing = ["testcontainers"]
+testing = ["testcontainers", "rayon"]
 
 [[bin]]
 name = "genesis"

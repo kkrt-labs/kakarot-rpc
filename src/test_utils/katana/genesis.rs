@@ -17,6 +17,7 @@ use katana_primitives::{
     genesis::json::{GenesisClassJson, GenesisContractJson, PathOrFullArtifact},
 };
 use lazy_static::lazy_static;
+use rayon::prelude::*;
 use reth_primitives::{Address, B256};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::FieldElement;
@@ -107,7 +108,7 @@ impl KatanaGenesisBuilder<Uninitialized> {
 
         self.class_hashes = self
             .classes
-            .iter()
+            .par_iter()
             .filter_map(|class| {
                 let path = match &class.class {
                     PathOrFullArtifact::Path(path) => path,
