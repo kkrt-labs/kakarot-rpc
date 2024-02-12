@@ -16,7 +16,8 @@ use std::{
 
 lazy_static! {
     static ref GENESIS_FOLDER_PATH: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join(".katana");
-    static ref KAKAROT_CONTRACTS_RELATIVE_PATH: PathBuf = GENESIS_FOLDER_PATH.join("../lib/kakarot/build");
+    static ref KAKAROT_CONTRACTS_PATH: PathBuf =
+        Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join("lib/kakarot/build");
     static ref INCORRECT_FELT: String = "INCORRECT".to_string();
     static ref COINBASE_ADDRESS: FieldElement = FieldElement::from(0x12345u32);
     static ref SALT: FieldElement = FieldElement::from_bytes_be(&[0u8; 32]).expect("Failed to convert salt");
@@ -41,20 +42,17 @@ fn main() {
         .expect("Failed to parse EVM private key");
 
     // Read all the classes.
-    let mut builder = KatanaGenesisBuilder::new()
-        .load_classes(KAKAROT_CONTRACTS_RELATIVE_PATH.clone())
-        .with_kakarot()
+    let mut builder = KatanaGenesisBuilder::default()
+        .load_classes(KAKAROT_CONTRACTS_PATH.clone())
+        .with_kakarot(*COINBASE_ADDRESS)
         .expect("Failed to set up Kakarot");
-    builder = builder.with_eoa(pk).expect("Failed to set up EOA").fund(pk, U256::from(u128::MAX)).unwrap();
-
-    // Compute the coinbase address.
-    let sequencer_address = builder.compute_starknet_address(*COINBASE_ADDRESS).unwrap();
+    builder = builder.with_eoa(pk, None).expect("Failed to set up EOA").fund(pk, U256::from(u128::MAX)).unwrap();
 
     let cache = builder.cache().clone().into_iter().map(|(k, v)| (k, Hex(v))).collect::<HashMap<_, _>>();
     let class_hashes = builder.class_hashes().clone().into_iter().map(|(k, v)| (k, Hex(v))).collect::<HashMap<_, _>>();
     let manifest = KatanaManifest { declarations: class_hashes, deployments: cache };
 
-    let genesis = builder.build(sequencer_address).expect("Failed to build genesis");
+    let genesis = builder.build().expect("Failed to build genesis");
 
     // Write the genesis json to the file.
     std::fs::create_dir_all(GENESIS_FOLDER_PATH.as_path()).expect("Failed to create genesis directory");

@@ -1237,7 +1237,7 @@ dependencies = [
 [[package]]
 name = "build-utils"
 version = "0.1.0"
-source = "git+https://github.com/kkrt-labs/ef-tests.git?rev=97f50f1#97f50f18e048834be8b785aadc68d3a98bdcebd3"
+source = "git+https://github.com/kkrt-labs/ef-tests.git?rev=c1723e#c1723e820905c06ad5b5b096f6ec6426c1bf5b63"
 dependencies = [
  "eyre",
  "lazy_static",
@@ -3785,7 +3785,7 @@ dependencies = [
 [[package]]
 name = "ef-testing"
 version = "0.1.0"
-source = "git+https://github.com/kkrt-labs/ef-tests.git?rev=97f50f1#97f50f18e048834be8b785aadc68d3a98bdcebd3"
+source = "git+https://github.com/kkrt-labs/ef-tests.git?rev=c1723e#c1723e820905c06ad5b5b096f6ec6426c1bf5b63"
 dependencies = [
  "alloy-rlp",
  "async-trait",
@@ -3809,7 +3809,7 @@ dependencies = [
  "regex",
  "reth-primitives",
  "ruint",
- "sequencer",
+ "sequencer 0.1.0 (git+https://github.com/kkrt-labs/ef-tests.git?rev=c1723e)",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -6688,7 +6688,7 @@ dependencies = [
  "reth-rpc-types",
  "rstest",
  "ruint",
- "sequencer",
+ "sequencer 0.1.0 (git+https://github.com/kkrt-labs/ef-tests.git?rev=97f50f1)",
  "serde",
  "serde_json",
  "serde_with 2.3.3",
@@ -9911,6 +9911,22 @@ checksum = "cd0b0ec5f1c1ca621c432a25813d8d60c88abe6d3e08a3eb9cf37d97a0fe3d73"
 name = "sequencer"
 version = "0.1.0"
 source = "git+https://github.com/kkrt-labs/ef-tests.git?rev=97f50f1#97f50f18e048834be8b785aadc68d3a98bdcebd3"
+dependencies = [
+ "blockifier 0.4.0-rc6",
+ "eyre",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "starknet 0.6.0",
+ "starknet_api",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "sequencer"
+version = "0.1.0"
+source = "git+https://github.com/kkrt-labs/ef-tests.git?rev=c1723e#c1723e820905c06ad5b5b096f6ec6426c1bf5b63"
 dependencies = [
  "blockifier 0.4.0-rc6",
  "eyre",

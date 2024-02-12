@@ -17,7 +17,7 @@ use katana_primitives::{
     genesis::json::{GenesisClassJson, GenesisContractJson, PathOrFullArtifact},
 };
 use lazy_static::lazy_static;
-use reth_primitives::B256;
+use reth_primitives::{Address, B256};
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness};
@@ -27,11 +27,16 @@ lazy_static! {
     static ref SALT: FieldElement = FieldElement::from_bytes_be(&[0u8; 32]).unwrap();
 }
 
+#[derive(Debug, Clone)]
 pub struct Uninitialized;
+#[derive(Debug, Clone)]
+pub struct Loaded;
+#[derive(Debug, Clone)]
 pub struct Initialized;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct KatanaGenesisBuilder<T> {
+    coinbase: FieldElement,
     classes: Vec<GenesisClassJson>,
     class_hashes: HashMap<String, FieldElement>,
     contracts: HashMap<ContractAddress, GenesisContractJson>,
@@ -43,6 +48,7 @@ pub struct KatanaGenesisBuilder<T> {
 impl<T> KatanaGenesisBuilder<T> {
     pub fn update_state<State>(self) -> KatanaGenesisBuilder<State> {
         KatanaGenesisBuilder {
+            coinbase: self.coinbase,
             classes: self.classes,
             class_hashes: self.class_hashes,
             contracts: self.contracts,
@@ -56,26 +62,27 @@ impl<T> KatanaGenesisBuilder<T> {
         self.class_hashes.get("kakarot").cloned().ok_or(eyre!("Missing Kakarot class hash"))
     }
 
-    fn contract_account_class_hash(&self) -> Result<FieldElement> {
+    pub fn contract_account_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("contract_account").cloned().ok_or(eyre!("Missing contract account class hash"))
     }
 
-    fn eoa_class_hash(&self) -> Result<FieldElement> {
+    pub fn eoa_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("externally_owned_account").cloned().ok_or(eyre!("Missing eoa account class hash"))
     }
 
-    fn proxy_class_hash(&self) -> Result<FieldElement> {
+    pub fn proxy_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("proxy").cloned().ok_or(eyre!("Missing proxy class hash"))
     }
 
-    fn precompiles_class_hash(&self) -> Result<FieldElement> {
+    pub fn precompiles_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("precompiles").cloned().ok_or(eyre!("Missing precompiles class hash"))
     }
 }
 
-impl KatanaGenesisBuilder<Uninitialized> {
-    pub fn new() -> Self {
+impl Default for KatanaGenesisBuilder<Uninitialized> {
+    fn default() -> Self {
         KatanaGenesisBuilder {
+            coinbase: FieldElement::ZERO,
             classes: vec![],
             class_hashes: HashMap::new(),
             contracts: HashMap::new(),
@@ -84,10 +91,12 @@ impl KatanaGenesisBuilder<Uninitialized> {
             state: PhantomData::<Uninitialized>,
         }
     }
+}
 
+impl KatanaGenesisBuilder<Uninitialized> {
     /// Load the classes from the given path. Computes the class hashes and stores them in the builder.
     #[must_use]
-    pub fn load_classes(mut self, path: PathBuf) -> Self {
+    pub fn load_classes(mut self, path: PathBuf) -> KatanaGenesisBuilder<Loaded> {
         let entries = WalkDir::new(path).into_iter().filter(|e| e.is_ok() && e.as_ref().unwrap().file_type().is_file());
         self.classes = entries
             .map(|entry| GenesisClassJson {
@@ -109,12 +118,14 @@ impl KatanaGenesisBuilder<Uninitialized> {
             })
             .collect::<HashMap<_, _>>();
 
-        self
+        self.update_state()
     }
+}
 
+impl KatanaGenesisBuilder<Loaded> {
     /// Add the Kakarot contract to the genesis. Updates the state to Initialized.
     /// From this point on, the builder can be build.
-    pub fn with_kakarot(mut self) -> Result<KatanaGenesisBuilder<Initialized>> {
+    pub fn with_kakarot(mut self, coinbase_address: FieldElement) -> Result<KatanaGenesisBuilder<Initialized>> {
         let kakarot_class_hash = self.kakarot_class_hash()?;
 
         let contract_account_class_hash = self.contract_account_class_hash()?;
@@ -147,6 +158,7 @@ impl KatanaGenesisBuilder<Uninitialized> {
             (storage_addr("externally_owned_account_class_hash")?, eoa_class_hash),
             (storage_addr("account_proxy_class_hash")?, proxy_class_hash),
             (storage_addr("precompiles_class_hash")?, precompiles_class_hash),
+            (storage_addr("coinbase")?, coinbase_address),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
@@ -159,6 +171,7 @@ impl KatanaGenesisBuilder<Uninitialized> {
         };
 
         self.contracts.insert(kakarot_address, kakarot);
+        self.coinbase = coinbase_address;
 
         Ok(self.update_state())
     }
@@ -166,13 +179,24 @@ impl KatanaGenesisBuilder<Uninitialized> {
 
 impl KatanaGenesisBuilder<Initialized> {
     /// Add an EOA to the genesis. The EOA is deployed to the address derived from the given private key.
-    pub fn with_eoa(mut self, private_key: B256) -> Result<Self> {
-        let evm_address = self.evm_address(private_key)?;
+    pub fn with_eoa(
+        mut self,
+        private_key: impl Into<Option<B256>>,
+        evm_address: impl Into<Option<Address>>,
+    ) -> Result<Self> {
+        let private_key: Option<B256> = private_key.into();
+        let evm_address: Option<Address> = evm_address.into();
+
+        let evm_address = evm_address
+            .and_then(|addr| FieldElement::from_byte_slice_be(addr.as_slice()).ok())
+            .or(private_key.and_then(|pk| self.evm_address(pk).ok()));
+        let evm_address = evm_address.ok_or(eyre!("Failed to derive EVM address"))?;
 
         let kakarot_address = self.cache_load("kakarot_address")?;
         let eoa_class_hash = self.eoa_class_hash()?;
         let proxy_class_hash = self.proxy_class_hash()?;
 
+        // Set the eoa storage
         let eoa_storage = [
             (storage_addr("evm_address")?, evm_address),
             (storage_addr("kakarot_address")?, kakarot_address),
@@ -192,6 +216,14 @@ impl KatanaGenesisBuilder<Initialized> {
         let storage =
             [(key, FieldElement::from(u128::MAX)), (key + 1u8.into(), FieldElement::from(u128::MAX))].into_iter();
         self.token_storage.extend(storage);
+
+        // Write the address to the Kakarot evm to starknet mapping
+        let kakarot_address = ContractAddress::new(kakarot_address);
+        let kakarot_contract = self.contracts.get_mut(&kakarot_address).ok_or(eyre!("Kakarot contract missing"))?;
+        kakarot_contract
+            .storage
+            .get_or_insert_with(HashMap::new)
+            .extend([(get_storage_var_address("evm_to_starknet_address", &[evm_address])?, starknet_address.0)]);
 
         Ok(self)
     }
@@ -218,13 +250,13 @@ impl KatanaGenesisBuilder<Initialized> {
     }
 
     /// Consume the builder and build the genesis json.
-    pub fn build(self, sequencer_address: ContractAddress) -> Result<GenesisJson> {
+    pub fn build(self) -> Result<GenesisJson> {
         Ok(GenesisJson {
             parent_hash: FieldElement::ZERO,
             state_root: FieldElement::ZERO,
             number: 0,
             timestamp: 0,
-            sequencer_address,
+            sequencer_address: self.compute_starknet_address(self.coinbase)?,
             gas_prices: GasPrices::default(),
             classes: self.classes,
             fee_token: FeeTokenConfigJson {
@@ -254,7 +286,7 @@ impl KatanaGenesisBuilder<Initialized> {
         Ok(FieldElement::from_byte_slice_be(evm_address.as_bytes())?)
     }
 
-    fn cache_load(&self, key: &str) -> Result<FieldElement> {
+    pub fn cache_load(&self, key: &str) -> Result<FieldElement> {
         self.cache.get(key).cloned().ok_or(eyre!("Cache miss for {key} address"))
     }
 

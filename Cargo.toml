@@ -23,7 +23,7 @@ cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5-l
   "abigen-rs",
 ] }
 cairo-lang-starknet = { version = "2.4.0", default-features = false }
-ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "97f50f1", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "c1723e", default-features = false, features = [
   "v0",
 ] }
 sequencer = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "97f50f1", default-features = false }
