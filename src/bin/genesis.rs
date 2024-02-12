@@ -18,7 +18,6 @@ lazy_static! {
     static ref GENESIS_FOLDER_PATH: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join(".katana");
     static ref KAKAROT_CONTRACTS_PATH: PathBuf =
         Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join("lib/kakarot/build");
-    // TODO: fix the coinbase address to the correct value.
     static ref COINBASE_ADDRESS: FieldElement = FieldElement::from(0x12345u32);
     static ref SALT: FieldElement = FieldElement::ZERO;
 }

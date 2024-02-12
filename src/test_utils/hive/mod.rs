@@ -48,7 +48,8 @@ pub struct AccountInfo {
 }
 
 impl HiveGenesisConfig {
-    /// Convert the HiveGenesisConfig into a GenesisJson using an Loaded KatanaGenesisBuilder
+    /// Convert the [HiveGenesisConfig] into a [GenesisJson] using an [KatanaGenesisBuilder]<[Loaded]>. The [Loaded]
+    /// marker type indicates that the Kakarot contract classes need to have been loaded into the builder.
     pub fn try_into_genesis_json(self, builder: KatanaGenesisBuilder<Loaded>) -> Result<GenesisJson, eyre::Error> {
         let coinbase_address = FieldElement::from_byte_slice_be(self.coinbase.as_slice())?;
         let builder = builder.with_kakarot(coinbase_address)?;

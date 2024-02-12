@@ -46,6 +46,7 @@ katana-genesis:
 	rm -fr .katana/ && mkdir .katana
 	cargo run --bin genesis --features testing
 
+# Runs Katana with Kakarot deployed on top.
 run-katana: install-katana katana-genesis
 	katana --disable-fee --chain-id=KKRT --genesis .katana/genesis.json
 

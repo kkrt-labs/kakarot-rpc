@@ -43,7 +43,7 @@ pub struct KatanaGenesisBuilder<T> {
     contracts: HashMap<ContractAddress, GenesisContractJson>,
     token_storage: HashMap<StorageKey, StorageValue>,
     cache: HashMap<String, FieldElement>,
-    state: PhantomData<T>,
+    status: PhantomData<T>,
 }
 
 impl<T> KatanaGenesisBuilder<T> {
@@ -55,7 +55,7 @@ impl<T> KatanaGenesisBuilder<T> {
             contracts: self.contracts,
             token_storage: self.token_storage,
             cache: self.cache,
-            state: PhantomData::<State>,
+            status: PhantomData::<State>,
         }
     }
 
@@ -89,7 +89,7 @@ impl Default for KatanaGenesisBuilder<Uninitialized> {
             contracts: HashMap::new(),
             token_storage: HashMap::new(),
             cache: HashMap::new(),
-            state: PhantomData::<Uninitialized>,
+            status: PhantomData::<Uninitialized>,
         }
     }
 }
