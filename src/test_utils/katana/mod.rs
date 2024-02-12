@@ -1,27 +1,36 @@
+pub mod genesis;
+
 use std::path::Path;
 use std::str::FromStr as _;
 use std::sync::Arc;
 
-use crate::eth_provider::provider::EthDataProvider;
-use crate::test_utils::eoa::KakarotEOA;
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
-use foundry_config::utils::find_project_root_path;
-use katana_core::db::serde::state::SerializableState;
+use katana_primitives::chain::ChainId;
+use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
+use katana_primitives::genesis::json::GenesisJson;
+use katana_primitives::genesis::Genesis;
 use reth_primitives::B256;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::root_project_path;
+use crate::eth_provider::provider::EthDataProvider;
+use crate::test_utils::eoa::KakarotEOA;
 
 use super::mongo::mock_database;
 
-/// Returns the dumped Katana state with deployed Kakarot.
-pub fn load_katana_state() -> SerializableState {
-    // Get dump path
-    let path = root_project_path!(".katana/dump.bin");
+fn load_genesis() -> Genesis {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(".katana/genesis.json");
+    let genesis_json = GenesisJson::load(path).expect("Failed to load genesis.json, run `make katana-genesis`");
+    let mut genesis = Genesis::try_from(genesis_json).expect("Failed to convert GenesisJson to Genesis");
 
-    // Load Serializable state from path
-    SerializableState::load(path).expect("Failed to load Katana state")
+    let dev_allocations = DevAllocationsGenerator::new(10)
+        .generate()
+        .into_iter()
+        .map(|(address, account)| (address, Into::<GenesisAllocation>::into(account)))
+        .collect::<Vec<_>>();
+    genesis.extend_allocations(dev_allocations);
+
+    genesis
 }
 
 /// Returns a `StarknetConfig` instance customized for Kakarot.
@@ -31,19 +40,19 @@ pub fn katana_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
         env: Environment {
-            chain_id: "KKRT".to_string(),
+            chain_id: ChainId::parse("kakatest").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
             gas_price: 1,
         },
-        init_state: Some(load_katana_state()),
+        genesis: load_genesis(),
         ..Default::default()
     }
 }
 
 /// Returns a `TestSequencer` configured for Kakarot.
 async fn katana_sequencer() -> TestSequencer {
-    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, katana_config()).await
+    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None, messaging: None }, katana_config()).await
 }
 
 pub struct Katana {

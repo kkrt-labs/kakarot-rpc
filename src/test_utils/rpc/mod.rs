@@ -2,7 +2,7 @@ use std::net::SocketAddr;
 
 use jsonrpsee::server::ServerHandle;
 
-use super::sequencer::Katana;
+use super::katana::Katana;
 use crate::eth_rpc::config::RPCConfig;
 use crate::eth_rpc::rpc::KakarotRpcModuleBuilder;
 use crate::eth_rpc::run_server;

@@ -8,7 +8,7 @@ use kakarot_rpc::test_utils::eoa::Eoa as _;
 use kakarot_rpc::test_utils::evm_contract::EvmContract;
 use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
-use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, sequencer::Katana};
+use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_rpc_types::{CallInput, CallRequest};
 use rstest::*;
 
@@ -41,8 +41,8 @@ async fn test_chain_id(#[future] katana: Katana, _setup: ()) {
     let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default();
 
     // Then
-    // ASCII code for "KKRT" is 0x4b4b5254
-    assert_eq!(chain_id, U64::from(0x4b4b5254));
+    // ASCII code for "kakatest" is 0x6b616b6174657374
+    assert_eq!(chain_id, U64::from(0x6b616b6174657374u64));
 }
 
 #[rstest]

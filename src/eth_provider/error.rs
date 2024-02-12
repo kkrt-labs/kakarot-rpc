@@ -39,7 +39,7 @@ pub enum EthProviderError {
     EvmExecutionError(String),
     /// Contract call error.
     #[error(transparent)]
-    ContractCallError(#[from] starknet_abigen_parser::cairo_types::Error),
+    ContractCallError(#[from] cainome::cairo_serde::Error),
     /// Conversion error.
     #[error(transparent)]
     ConversionError(#[from] ConversionError),

@@ -40,7 +40,7 @@ pub async fn run_server(
         tower::ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "net_health")?).layer(cors);
 
     let server = ServerBuilder::default()
-        .max_connections(std::env::var("RPC_MAX_CONNECTIONS").unwrap_or("100".to_string()).parse().unwrap())
+        .max_connections(std::env::var("RPC_MAX_CONNECTIONS").unwrap_or_else(|_| "100".to_string()).parse().unwrap())
         .set_http_middleware(http_middleware)
         .build(socket_addr.parse::<SocketAddr>()?)
         .await?;

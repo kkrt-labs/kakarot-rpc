@@ -1,7 +1,9 @@
 use std::fmt::LowerHex;
 
+use cainome::cairo_serde::Error;
 use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
+use starknet::{core::types::StarknetError, providers::ProviderError};
 
 /// Converts an iterator of `Into<D>` into a `Vec<D>`.
 pub(crate) fn iter_into<D, S: Into<D>>(iter: impl IntoIterator<Item = S>) -> Vec<D> {
@@ -41,9 +43,9 @@ pub fn split_u256<T: From<u128>>(value: U256) -> [T; 2] {
     [T::from(low), T::from(high)]
 }
 
-pub(crate) fn contract_not_found<T>(err: &Result<T, impl std::error::Error>) -> bool {
+pub(crate) const fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
     match err {
         Ok(_) => false,
-        Err(err) => err.to_string().contains("Contract not found"),
+        Err(err) => matches!(err, Error::Provider(ProviderError::StarknetError(StarknetError::ContractNotFound))),
     }
 }

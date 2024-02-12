@@ -1,4 +1,7 @@
+use std::str::FromStr;
+
 use crate::models::felt::Felt252Wrapper;
+use cainome::rs::abigen_legacy;
 use dotenv::dotenv;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Transaction, TransactionSigned};
@@ -6,8 +9,6 @@ use starknet::{
     core::{types::BroadcastedInvokeTransaction, utils::get_contract_address},
     macros::selector,
 };
-use starknet_abigen_macros::abigen_legacy;
-use starknet_abigen_parser;
 use starknet_crypto::FieldElement;
 
 use crate::{
@@ -16,8 +17,16 @@ use crate::{
 };
 
 // Contract ABIs
-abigen_legacy!(Proxy, "./artifacts/proxy.json");
-abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
+
+pub mod proxy {
+    use super::*;
+    abigen_legacy!(Proxy, "./artifacts/proxy.json");
+}
+
+pub mod contract_account {
+    use super::*;
+    abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
+}
 
 #[allow(clippy::too_many_arguments)]
 pub mod core {
@@ -29,7 +38,7 @@ fn env_var_to_field_element(var_name: &str) -> FieldElement {
     dotenv().ok();
     let env_var = std::env::var(var_name).unwrap_or_else(|_| panic!("Missing environment variable {var_name}"));
 
-    FieldElement::from_hex_be(&env_var).unwrap_or_else(|_| panic!("Invalid hex string for {var_name}"))
+    FieldElement::from_str(&env_var).unwrap_or_else(|_| panic!("Invalid hex string for {var_name}"))
 }
 
 lazy_static! {

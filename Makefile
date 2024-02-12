@@ -5,23 +5,25 @@ ifndef STARKNET_NETWORK
 override STARKNET_NETWORK = katana
 endif
 
-DECLARATIONS=./lib/kakarot/deployments/$(STARKNET_NETWORK)/declarations.json
-DEPLOYMENTS=./lib/kakarot/deployments/$(STARKNET_NETWORK)/deployments.json
+MANIFEST=.katana/manifest.json
 
+# Setup the project. Will also rename the precompiles compiled class
+# and move it to the correct location.
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
-	cd lib/kakarot && make setup && make build && make build-sol && cd ..
+	cd lib/kakarot && make setup && make build && make build-sol && \
+	mv build/ssj/contracts_Precompiles.contract_class.json build/precompiles.json && rm -fr build/ssj && cd ..
 	./scripts/extract_abi.sh
 
 deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py && cd ..
 
 load-env:
-	$(eval PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.proxy' $(DECLARATIONS)))
-	$(eval CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.contract_account' $(DECLARATIONS)))
-	$(eval EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.externally_owned_account' $(DECLARATIONS)))
-	$(eval KAKAROT_ADDRESS=$(shell jq -r '.kakarot.address' $(DEPLOYMENTS)))
+	$(eval PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.proxy' $(MANIFEST)))
+	$(eval CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.contract_account' $(MANIFEST)))
+	$(eval EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.externally_owned_account' $(MANIFEST)))
+	$(eval KAKAROT_ADDRESS=$(shell jq -r '.deployments.kakarot_address' $(MANIFEST)))
 
 run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
@@ -38,21 +40,20 @@ docker-down:
 	docker compose down -v --remove-orphans && docker compose rm
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --rev be16762 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --rev fe8f23 katana
 
-run-katana: install-katana
+katana-genesis:
 	rm -fr .katana/ && mkdir .katana
-	katana --disable-fee --chain-id=KKRT --dump-state .katana/dump.bin & echo $$! > .katana/pid
+	cargo run --bin katana_genesis --features testing
 
-kill-katana:
-	kill -2 `cat .katana/pid` && rm -fr .katana/pid
+# Runs Katana with Kakarot deployed on top.
+run-katana: install-katana katana-genesis
+	katana --disable-fee --chain-id=KKRT --genesis .katana/genesis.json
 
-dump-katana: run-katana deploy-kakarot kill-katana
-
-test: dump-katana load-env
+test: katana-genesis load-env
 	cargo test --all --features testing
 
-test-coverage: load-env
+test-coverage: katana-genesis load-env
 	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 # Make sure to have a Kakarot RPC running and the correct port set in your .env and an underlying Starknet client running.
