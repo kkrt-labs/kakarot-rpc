@@ -107,7 +107,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         watch_tx(
             self.eth_provider.starknet_provider(),
             tx_hash.clone().into(),
-            std::time::Duration::from_millis(100),
+            std::time::Duration::from_millis(300),
             60,
         )
         .await
@@ -160,7 +160,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let bytes = tx_hash.0;
         let starknet_tx_hash = FieldElement::from_bytes_be(&bytes).unwrap();
 
-        watch_tx(self.eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(100), 60)
+        watch_tx(self.eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
             .await
             .expect("Tx polling failed");
 
