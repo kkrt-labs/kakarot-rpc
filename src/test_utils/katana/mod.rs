@@ -12,7 +12,6 @@ use katana_primitives::genesis::Genesis;
 use reth_primitives::B256;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
-use starknet_crypto::FieldElement;
 
 use crate::eth_provider::provider::EthDataProvider;
 use crate::test_utils::eoa::KakarotEOA;
@@ -38,14 +37,10 @@ fn load_genesis() -> Genesis {
 /// If `with_dumped_state` is true, the config will be initialized with the dumped state.
 pub fn katana_config() -> StarknetConfig {
     let max_steps = std::u32::MAX;
-    let mut name = "kkrt-test".as_bytes().to_vec();
-    let mut chain_id = vec![0u8; 16 - name.len()];
-    chain_id.append(&mut name);
-    let chain_id = u128::from_be_bytes(chain_id.try_into().unwrap());
     StarknetConfig {
         disable_fee: true,
         env: Environment {
-            chain_id: ChainId::Id(FieldElement::from(chain_id)),
+            chain_id: ChainId::parse("kakatest").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
             gas_price: 1,
