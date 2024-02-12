@@ -105,5 +105,5 @@ toml = { version = "0.7.5", default-features = false }
 testing = ["testcontainers", "rayon"]
 
 [[bin]]
-name = "genesis"
+name = "katana_genesis"
 required-features = ["testing"]

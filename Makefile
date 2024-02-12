@@ -44,7 +44,7 @@ install-katana:
 
 katana-genesis:
 	rm -fr .katana/ && mkdir .katana
-	cargo run --bin genesis --features testing
+	cargo run --bin katana_genesis --features testing
 
 # Runs Katana with Kakarot deployed on top.
 run-katana: install-katana katana-genesis
