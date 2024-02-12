@@ -1,23 +1,24 @@
 version: "3.2"
 
 services:
-  starknet:
-    image: greged93/katana:v0.4.4
+  juno:
+    image: nethermind/juno:v0.9.3
     command:
-      - katana
-      - --block-time
-      - "6000"
-      - --disable-fee
-      - --validate-max-steps
-      - "16777216"
-      - --invoke-max-steps
-      - "16777216"
-      - --gas-price
-      - "1"
-      - --chain-id
-      - "KKRT"
+      - --http
+      - --http-port=5050
+      - --http-host=0.0.0.0
+      - --db-path=/var/lib/juno
+      - --cn-name=KakarotSepolia
+      - --cn-feeder-url=https://feeder.juno.giansalex.dev
+      - --cn-gateway-url=https://gateway.juno.giansalex.dev
+      - --cn-l1-chain-id=sepolia
+      - --cn-l2-chain-id=kkrt
+      - --cn-core-contract-address=0xabde1
+      - "--eth-node=<YOUR-ETH-NODE>" # Replace <YOUR-ETH-NODE> with your actual ETH node address
     ports:
       - "5050:5050"
+    volumes:
+      - juno_data:/var/lib/juno
     networks:
       - internal
     restart: on-failure
@@ -161,6 +162,7 @@ networks:
   internal:
 
 volumes:
+  juno_data:
   deployments:
   apibara:
   mongo_data:
