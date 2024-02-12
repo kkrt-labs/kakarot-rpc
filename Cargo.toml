@@ -107,3 +107,7 @@ testing = ["testcontainers", "rayon"]
 [[bin]]
 name = "katana_genesis"
 required-features = ["testing"]
+
+[[bin]]
+name = "hive_genesis"
+required-features = ["testing"]
