@@ -14,7 +14,7 @@ use super::provider::EthProviderResult;
 pub struct Database(MongoDatabase);
 
 impl Database {
-    pub fn new(database: MongoDatabase) -> Self {
+    pub const fn new(database: MongoDatabase) -> Self {
         Self(database)
     }
 }

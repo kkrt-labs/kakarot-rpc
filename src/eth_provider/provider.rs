@@ -467,7 +467,7 @@ impl<SP> EthDataProvider<SP>
 where
     SP: StarknetProvider + Send + Sync,
 {
-    pub fn new(database: Database, starknet_provider: SP) -> Self {
+    pub const fn new(database: Database, starknet_provider: SP) -> Self {
         Self { database, starknet_provider }
     }
 

@@ -13,7 +13,7 @@ pub struct AlchemyRpc<P: EthereumProvider> {
 }
 
 impl<P: EthereumProvider> AlchemyRpc<P> {
-    pub fn new(eth_provider: P) -> Self {
+    pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }

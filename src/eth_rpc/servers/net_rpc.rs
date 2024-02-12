@@ -11,7 +11,7 @@ pub struct NetRpc<P: EthereumProvider> {
 }
 
 impl<P: EthereumProvider> NetRpc<P> {
-    pub fn new(eth_provider: P) -> Self {
+    pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }

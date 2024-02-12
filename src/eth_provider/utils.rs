@@ -43,7 +43,7 @@ pub fn split_u256<T: From<u128>>(value: U256) -> [T; 2] {
     [T::from(low), T::from(high)]
 }
 
-pub(crate) fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
+pub(crate) const fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
     match err {
         Ok(_) => false,
         Err(err) => matches!(err, Error::Provider(ProviderError::StarknetError(StarknetError::ContractNotFound))),

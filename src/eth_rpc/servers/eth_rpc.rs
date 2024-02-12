@@ -23,7 +23,7 @@ impl<P> KakarotEthRpc<P>
 where
     P: EthereumProvider,
 {
-    pub fn new(eth_provider: P) -> Self {
+    pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
