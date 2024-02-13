@@ -1,0 +1,111 @@
+version: "3.2"
+
+services:
+  kakarot-rpc:
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    # Always pull the latest image, until we use release tags
+    # TODO: use release tags
+    pull_policy: always
+    ports:
+      - 3030:3030
+    environment:
+      - KAKAROT_RPC_URL=0.0.0.0:3030
+      - STARKNET_NETWORK=http://starknet:5050
+      - RUST_LOG=kakarot_rpc=info
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
+      - KAKAROT_ADDRESS=
+      - DEPLOYER_ACCOUNT_ADDRESS=
+      - PROXY_ACCOUNT_CLASS_HASH=
+      - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=
+      - CONTRACT_ACCOUNT_CLASS_HASH=
+    volumes:
+      # Mount the volume on workdir and use .env stored in root of the volume
+      - deployments:/usr/src/app
+    depends_on:
+      deployments-parser:
+        condition: service_completed_successfully
+    restart: on-failure
+    networks:
+      - internal
+
+  apibara-dna:
+    image: quay.io/apibara/starknet:1.2.0
+    command:
+      - start
+      - --rpc=http://starknet:5050
+      - --wait-for-rpc
+      - --data=/data
+    ports:
+      - 7171:7171
+    volumes:
+      - apibara:/data
+    networks:
+      - internal
+    restart: on-failure
+    depends_on:
+      kakarot-deployer:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_healthy
+
+  ### MongoDB with Mongo Express
+  mongo:
+    image: mongo:6.0.8
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - internal
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+
+  clone-repo:
+    image: docker.io/alpine/git:latest
+    entrypoint: "/bin/sh"
+    command:
+      - "-c"
+      # clone the repository in `/code`, removing any old copy.
+      - "cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
+    volumes:
+      - "indexer_code:/code"
+    restart: on-failure
+
+  indexer:
+    image: quay.io/apibara/sink-mongo
+    command:
+      - run
+      - /code/kakarot-indexer/src/main.ts
+    environment:
+      # Whitelist environment variables
+      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME
+      - DEBUG=""
+      - APIBARA_AUTH_TOKEN=""
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
+      - STARTING_BLOCK=0
+      - STREAM_URL=http://apibara-dna:7171
+      - SINK_TYPE=mongo
+    restart: on-failure
+    volumes:
+      - "indexer_code:/code"
+    networks:
+      - internal
+    depends_on:
+      clone-repo:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_healthy
+      kakarot-deployer:
+        condition: service_completed_successfully
+
+networks:
+  internal:
+
+volumes:
+  apibara:
+  mongo_data:
+  indexer_code:
