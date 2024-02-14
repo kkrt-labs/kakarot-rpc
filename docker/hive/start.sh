@@ -1,7 +1,6 @@
-# 1. Convert the genesis.json from hive format to Katana format using the convert binary from Kakarot RPC test utils
-# 2. Start the Katana, the CairoVM chain
+# 1. Start the Katana, the CairoVM chain
 echo "Launching Katana..."
-katana --block-time 6000 --disable-fee --chain-id=kkrt &
+katana --block-time 6000 --disable-fee --chain-id=kkrt --genesis genesis.json &
 ###### 2.5. Await Katana to be healthy
 # Loop until the curl command succeeds
 until
@@ -19,25 +18,21 @@ do
 	sleep 1
 done
 
-# 3. Start the Indexer service: DNA Indexer, Indexer transformer, and MongoDB
+# 2. Start the Indexer service: DNA Indexer, Indexer transformer, and MongoDB
 ## MongoDB
 echo "Launching mongo..."
-mongod --dbpath "/usr/app/data/db" --logpath "/usr/app/data/logs/mongod.log" &
+mongod &
 ## DNA
 echo "Launching DNA..."
-starknet start --rpc=http://starknet:5050 --wait-for-rpc --data=/data & 
+starknet start --rpc=http://localhost:5050 --wait-for-rpc --data=/data & 
 # ## Indexer
 echo "Launching indexer..."
-sink-mongo run /usr/src/app/code/kakarot-indexer/src/main.ts
+sink-mongo run /usr/src/app/code/kakarot-indexer/src/main.ts &
 
-# 4. Start the Kakarot RPC service
-# echo "Launching Kakarot RPC..."
-# kakarot-rpc --bin hive_genesis --features testing
-#  "KAKAROT_ADDRESS=
-#  "DEPLOYER_ACCOUNT_ADDRESS=
-#  "PROXY_ACCOUNT_CLASS_HASH=
-#  "EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=
-#  "CONTRACT_ACCOUNT_CLASS_HASH=
-#  Make sure they are set in the environment after Katana has created a genesis file.
-
-# kakarot-rpc
+# 3. Start the Kakarot RPC service
+echo "Launching Kakarot RPC..."
+export PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.proxy' manifest.json)
+export CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.contract_account' manifest.json)
+export EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.externally_owned_account' manifest.json)
+export KAKAROT_ADDRESS=$(shell jq -r '.deployments.kakarot_address' manifest.json)
+kakarot-rpc

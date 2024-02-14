@@ -32,7 +32,7 @@ FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.1 as rpc
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
-RUN apt-get update && apt-get install -y tini curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y tini curl jq && rm -rf /var/lib/apt/lists/*
 
 # Environment
 #############
@@ -65,12 +65,9 @@ HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
 
 # Ports
 #######
-# 9615 Prometheus exporter
-# 30333 P2P communication
 # 8545 Ethereum RPC
-# 7171 DNA indexer
 # 27017 MongoDB
-EXPOSE 5050 9615 30333 8545 7171 27017
+EXPOSE 8545 27017
 
 # Copy binaries and dependencies
 ################################
@@ -88,20 +85,19 @@ COPY --from=apibara-build /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
 
 #### We need the mongo binary
 COPY --from=mongo /bin/mongod /usr/local/bin
-RUN mkdir -p /usr/app/data/db
-RUN mkdir -p /usr/app/data/logs
+
 
 # Generate the genesis
-# RUN mkdir -p /genesis/contracts
-# COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
-# COPY ./lib/kakarot/build /genesis/contracts
-# COPY ./docker/hive/genesis.json /genesis/genesis.json
-# RUN KAKAROT_CONTRACTS_PATH="genesis/contracts" \
-#     HIVE_GENESIS_PATH="genesis/genesis.json" \
-#     GENESIS_OUTPUT="genesis.json" \
-#     MANIFEST_OUTPUT="manifest.json" \
-#     hive_genesis
-# RUN rm -fr /genesis
+RUN mkdir -p /genesis/contracts
+COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
+COPY ./lib/kakarot/build /genesis/contracts
+COPY ./docker/hive/genesis.json /genesis/genesis.json
+RUN KAKAROT_CONTRACTS_PATH="genesis/contracts" \
+    HIVE_GENESIS_PATH="genesis/genesis.json" \
+    GENESIS_OUTPUT="genesis.json" \
+    MANIFEST_OUTPUT="manifest.json" \
+    hive_genesis;
+RUN rm -fr /genesis
 
 # Copy start script
 COPY docker/hive/start.sh /start.sh
