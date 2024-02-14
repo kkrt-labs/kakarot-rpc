@@ -11,7 +11,7 @@ MANIFEST=.katana/manifest.json
 # and move it to the correct location.
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
-	git submodule update --init --recursive
+	git submodule update --init --remote
 	cd lib/kakarot && make setup && make build && make build-sol && \
 	mv build/ssj/contracts_Precompiles.contract_class.json build/precompiles.json && rm -fr build/ssj && cd ..
 	./scripts/extract_abi.sh
@@ -50,7 +50,7 @@ katana-genesis:
 run-katana: install-katana katana-genesis
 	katana --disable-fee --chain-id=KKRT --genesis .katana/genesis.json
 
-test: katana-genesis load-env
+test: install-katana katana-genesis load-env
 	cargo test --all --features testing
 
 test-coverage: katana-genesis load-env

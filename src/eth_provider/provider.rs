@@ -28,7 +28,6 @@ use starknet::core::utils::get_storage_var_address;
 use starknet::providers::Provider as StarknetProvider;
 use starknet_crypto::FieldElement;
 
-use super::constant::MAX_FEE;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
@@ -119,6 +118,7 @@ pub trait EthereumProvider {
     ) -> EthProviderResult<FeeHistory>;
     /// Send a raw transaction to the network and returns the transactions hash.
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256>;
+    async fn gas_price(&self) -> EthProviderResult<U256>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -381,7 +381,7 @@ where
 
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
         // Set a high gas limit to make sure the transaction will not fail due to gas.
-        let request = TransactionRequest { gas: Some(U256::from(*MAX_FEE)), ..request };
+        let request = TransactionRequest { gas: Some(U256::from(u64::MAX)), ..request };
 
         let (_, gas_used) = self.call_helper(request, block_id).await?;
         Ok(U256::from(gas_used))
@@ -466,6 +466,12 @@ where
             let res = self.starknet_provider.add_invoke_transaction(transaction).await?;
             Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]))
         }
+    }
+
+    async fn gas_price(&self) -> EthProviderResult<U256> {
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let gas_price = kakarot_contract.get_base_fee().call().await?.base_fee;
+        Ok(into_via_wrapper!(gas_price))
     }
 }
 

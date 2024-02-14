@@ -71,7 +71,7 @@ pub(crate) fn to_starknet_transaction(
 
     let nonce = FieldElement::from(transaction.nonce());
 
-    let max_fee = (*MAX_FEE).into();
+    let max_fee = (u64::MAX).into();
 
     // Step: Signature
     // Extract the signature from the Ethereum Transaction

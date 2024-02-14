@@ -1,4 +1,4 @@
-use crate::eth_provider::constant::{BASE_FEE_PER_GAS, MAX_PRIORITY_FEE_PER_GAS};
+use crate::eth_provider::constant::MAX_PRIORITY_FEE_PER_GAS;
 use crate::eth_provider::error::EthProviderError;
 use crate::eth_provider::provider::EthereumProvider;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
@@ -174,7 +174,7 @@ where
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn gas_price(&self) -> Result<U256> {
-        Ok(U256::from(*BASE_FEE_PER_GAS))
+        Ok(self.eth_provider.gas_price().await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(block_count = %block_count, newest_block = %newest_block, reward_percentiles = ?reward_percentiles))]
