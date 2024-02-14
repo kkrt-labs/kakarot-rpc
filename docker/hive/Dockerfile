@@ -1,25 +1,38 @@
 # trunk-ignore-all(terrascan/AC_DOCKER_0047)
 
 # CairoVM Chain
-FROM greged93/katana:v0.4.4 as katana
+FROM ghcr.io/dojoengine/dojo:v0.5.1 as katana
 
 # Indexer service
-### Apibara DNA indexer
+### Apibara DNA indexer and indexer
 FROM quay.io/apibara/starknet:1.2.0 as apibara
+FROM quay.io/apibara/sink-mongo as indexer
+FROM debian:bookworm as apibara-build
+RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
+# Run `docker image inspect apibara/starknet:1.2.0` to get the exact path
+COPY --from=apibara /nix/store/swzxd9vbhhj92qzh16j48vb011q57v59-apibara-starknet-1.2.0/bin/apibara-starknet /usr/local/bin/starknet
+COPY --from=indexer /nix/store/3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc-apibara-sink-mongo-0.5.3/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
+# Change the interpreter path.
+# x86-64  "/lib64/ld-linux-x86-64.so.2"
+# aarch64 "/lib/ld-linux-aarch64.so.1"
+RUN patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/starknet && \
+    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/sink-mongo
+
 ### Indexer transform plugin
 #### First, clone the indexer repository
 FROM docker.io/alpine/git:latest as indexer-cloner
 WORKDIR /code
-RUN git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
-#### Then, get the indexer binary
-FROM quay.io/apibara/sink-mongo as indexer
+RUN git clone -v "https://github.com/kkrt-labs/kakarot-indexer.git"
+
 #### MongoDB
 FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
-FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.1
-WORKDIR /usr/src/app
+FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.1 as rpc
 
+FROM debian:bookworm-slim as base
+# Install any necessary dependencies
+RUN apt-get update && apt-get install -y tini curl && rm -rf /var/lib/apt/lists/*
 
 # Environment
 #############
@@ -31,18 +44,18 @@ ENV MONGO_INITDB_ROOT_PASSWORD: mongo
 ENV ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME
 ENV DEBUG=""
 ENV APIBARA_AUTH_TOKEN=""
-ENV MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+ENV MONGO_CONNECTION_STRING=mongodb://mongo:mongo@localhost:27017
 ENV MONGO_DATABASE_NAME=kakarot-local
 ENV STARTING_BLOCK=0
-ENV STREAM_URL=http://apibara-dna:7171
+ENV STREAM_URL=http://localhost:7171
 ENV SINK_TYPE=mongo
 ### Kakarot RPC environment variables
 ### Port 8545: https://github.com/ethereum/hive/blob/master/simulators/ethereum/rpc/helper.go#L50
 ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
 ENV RUST_LOG=kakarot_rpc=info
-ENV MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
-# ENV MONGO_DATABASE_NAME=kakarot-local - already set in indexer
+ENV MONGO_CONNECTION_STRING=mongodb://mongo:mongo@localhost:27017
+ENV MONGO_DATABASE_NAME=kakarot-local
 
 # Add a health check to make sure the service is healthy
 HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
@@ -59,27 +72,36 @@ HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
 # 27017 MongoDB
 EXPOSE 5050 9615 30333 8545 7171 27017
 
-# Kakarot RPC needs the following variables to function
-# "KAKAROT_ADDRESS=
-# "DEPLOYER_ACCOUNT_ADDRESS=
-# "PROXY_ACCOUNT_CLASS_HASH=
-# "EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=
-# "CONTRACT_ACCOUNT_CLASS_HASH=
-# Make sure they are set in the environment after Katana has created a genesis file.
-
 # Copy binaries and dependencies
 ################################
 ### CairoVM chain service
-COPY --from=katana /usr/local/bin/katana /usr/local/bin/katana
+COPY --from=katana /usr/local/bin/katana /usr/local/bin
+COPY --from=rpc /usr/local/bin/kakarot-rpc /usr/local/bin
+
 ### Indexer service
 #### We need the DNA indexer binary
-COPY --from=apibara /usr/local/bin/starknet /usr/local/bin/starknet
-#### We need the indexer typescript code and the binary that knows how to run it
-COPY --from=indexer-cloner /code /code
-COPY --from=indexer /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
-#### We need the mongo binary
-COPY --from=mongo /bin/mongod /usr/local/bin/mongod
+COPY --from=apibara-build /usr/local/bin/starknet /usr/local/bin/starknet
 
+#### We need the indexer typescript code and the binary that knows how to run it
+COPY --from=indexer-cloner /code /usr/src/app/code
+COPY --from=apibara-build /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
+
+#### We need the mongo binary
+COPY --from=mongo /bin/mongod /usr/local/bin
+RUN mkdir -p /usr/app/data/db
+RUN mkdir -p /usr/app/data/logs
+
+# Generate the genesis
+# RUN mkdir -p /genesis/contracts
+# COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
+# COPY ./lib/kakarot/build /genesis/contracts
+# COPY ./docker/hive/genesis.json /genesis/genesis.json
+# RUN KAKAROT_CONTRACTS_PATH="genesis/contracts" \
+#     HIVE_GENESIS_PATH="genesis/genesis.json" \
+#     GENESIS_OUTPUT="genesis.json" \
+#     MANIFEST_OUTPUT="manifest.json" \
+#     hive_genesis
+# RUN rm -fr /genesis
 
 # Copy start script
 COPY docker/hive/start.sh /start.sh
