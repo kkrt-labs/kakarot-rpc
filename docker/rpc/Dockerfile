@@ -61,7 +61,7 @@ RUN build_platform() { \
     fi; \
     echo "Using BINDGEN_EXTRA_CLANG_ARGS: $BINDGEN_EXTRA_CLANG_ARGS"; \
     # Build the Rust application for the specified target
-    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
+    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --all-features --release \
     --target=$ARCH; \
     # Copy the built binary to a common release directory
     cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
@@ -91,6 +91,7 @@ WORKDIR /usr/src/app
 
 # Copy the built binary from the previous container
 COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin
+COPY --from=builder /usr/src/rpc/target/release/hive_genesis /usr/local/bin
 
 # Expose the port that the RPC server will run on
 EXPOSE 9545
