@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
-use std::{collections::HashMap, path::Path};
 
 use cairo_lang_starknet::casm_contract_class::CasmContractClass;
 use cairo_lang_starknet::contract_class::ContractClass;
@@ -19,6 +20,10 @@ use katana_primitives::{
 use lazy_static::lazy_static;
 use rayon::prelude::*;
 use reth_primitives::{Address, B256};
+use serde::Serialize;
+use serde_json::Value;
+use serde_with::serde_as;
+use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness};
@@ -26,6 +31,16 @@ use walkdir::WalkDir;
 
 lazy_static! {
     static ref SALT: FieldElement = FieldElement::from_bytes_be(&[0u8; 32]).unwrap();
+}
+
+#[serde_as]
+#[derive(Serialize)]
+pub struct Hex(#[serde_as(as = "UfeHex")] pub FieldElement);
+
+#[derive(Serialize)]
+pub struct KatanaManifest {
+    pub declarations: HashMap<String, Hex>,
+    pub deployments: HashMap<String, Hex>,
 }
 
 #[derive(Debug, Clone)]
@@ -99,25 +114,35 @@ impl KatanaGenesisBuilder<Uninitialized> {
     #[must_use]
     pub fn load_classes(mut self, path: PathBuf) -> KatanaGenesisBuilder<Loaded> {
         let entries = WalkDir::new(path).into_iter().filter(|e| e.is_ok() && e.as_ref().unwrap().file_type().is_file());
-        self.classes = entries
-            .map(|entry| GenesisClassJson {
-                class: PathOrFullArtifact::Path(entry.unwrap().path().to_path_buf()),
-                class_hash: None,
+        let classes = entries
+            .par_bridge()
+            .map(|entry| {
+                let path = entry.unwrap().path().to_path_buf();
+                let artifact = fs::read_to_string(&path).expect("Failed to read artifact");
+                (
+                    path,
+                    GenesisClassJson {
+                        class: PathOrFullArtifact::Artifact(
+                            serde_json::from_str(&artifact).expect("Failed to parse artifact"),
+                        ),
+                        class_hash: None,
+                    },
+                )
             })
             .collect::<Vec<_>>();
 
-        self.class_hashes = self
-            .classes
+        self.class_hashes = classes
             .par_iter()
-            .filter_map(|class| {
-                let path = match &class.class {
-                    PathOrFullArtifact::Path(path) => path,
-                    _ => unreachable!("Expected path"),
+            .filter_map(|(path, class)| {
+                let artifact = match &class.class {
+                    PathOrFullArtifact::Artifact(artifact) => artifact,
+                    PathOrFullArtifact::Path(_) => unreachable!("Expected artifact"),
                 };
-                let class_hash = compute_class_hash(path).ok()?;
+                let class_hash = compute_class_hash(artifact).ok()?;
                 Some((path.file_stem().unwrap().to_str().unwrap().to_string(), class_hash))
             })
             .collect::<HashMap<_, _>>();
+        self.classes = classes.into_iter().map(|(_, class)| class).collect();
 
         self.update_state()
     }
@@ -274,6 +299,13 @@ impl KatanaGenesisBuilder<Initialized> {
         })
     }
 
+    /// Returns the manifest of the genesis.
+    pub fn manifest(&self) -> KatanaManifest {
+        let cache = self.cache().clone().into_iter().map(|(k, v)| (k, Hex(v))).collect::<HashMap<_, _>>();
+        let class_hashes = self.class_hashes().clone().into_iter().map(|(k, v)| (k, Hex(v))).collect::<HashMap<_, _>>();
+        KatanaManifest { declarations: class_hashes, deployments: cache }
+    }
+
     /// Compute the Starknet address for the given Ethereum address.
     pub fn compute_starknet_address(&self, evm_address: FieldElement) -> Result<ContractAddress> {
         let kakarot_address = self.cache_load("kakarot_address")?;
@@ -301,15 +333,15 @@ impl KatanaGenesisBuilder<Initialized> {
     }
 }
 
-fn compute_class_hash(class_path: &Path) -> Result<FieldElement> {
-    let class_code = std::fs::read_to_string(class_path).expect("Failed to read class code");
-    match serde_json::from_str::<ContractClass>(&class_code) {
+fn compute_class_hash(class: &Value) -> Result<FieldElement> {
+    match serde_json::from_value::<ContractClass>(class.clone()) {
         Ok(casm) => {
             let casm = CasmContractClass::from_contract_class(casm, true).expect("Failed to convert class");
             Ok(FieldElement::from_bytes_be(&casm.compiled_class_hash().to_be_bytes())?)
         }
         Err(_) => {
-            let casm: LegacyContractClass = serde_json::from_str(&class_code).expect("Failed to parse class code v0");
+            let casm: LegacyContractClass =
+                serde_json::from_value(class.clone()).expect("Failed to parse class code v0");
             Ok(casm.class_hash()?)
         }
     }

@@ -1,5 +1,6 @@
 use dotenv::dotenv;
 use kakarot_rpc::test_utils::{hive::HiveGenesisConfig, katana::genesis::KatanaGenesisBuilder};
+use starknet_crypto::FieldElement;
 use std::{env::var, path::Path};
 
 fn main() {
@@ -21,10 +22,18 @@ fn main() {
 
     // Convert the hive genesis to a katana genesis.
     let genesis =
-        hive_genesis.try_into_genesis_json(builder).expect("Failed to convert hive genesis to katana genesis");
+        hive_genesis.try_into_genesis_json(builder.clone()).expect("Failed to convert hive genesis to katana genesis");
+
+    let builder = builder.with_kakarot(FieldElement::ZERO).expect("Failed to set up Kakarot");
+    let manifest = builder.manifest();
 
     // Write the genesis json to the file.
     let genesis_path = Path::new(&var("GENESIS_OUTPUT").expect("Failed to load GENESIS_OUTPUT var")).to_path_buf();
     std::fs::write(genesis_path, serde_json::to_string(&genesis).expect("Failed to serialize genesis json"))
         .expect("Failed to write genesis json");
+
+    // Write the manifest to the file.
+    let manifest_path = Path::new(&var("MANIFEST_OUTPUT").expect("Failed to load MANIFEST_OUTPUT var")).to_path_buf();
+    std::fs::write(manifest_path, serde_json::to_string(&manifest).expect("Failed to serialize manifest json"))
+        .expect("Failed to write manifest json");
 }
