@@ -61,10 +61,14 @@ RUN build_platform() { \
     fi; \
     echo "Using BINDGEN_EXTRA_CLANG_ARGS: $BINDGEN_EXTRA_CLANG_ARGS"; \
     # Build the Rust application for the specified target
-    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --all-features --release \
+    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
     --target=$ARCH; \
     # Copy the built binary to a common release directory
     cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
+    # Build the hive genesis binary
+    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --release \
+    --bin hive_genesis --features testing --target=$ARCH; \
+    # Copy the genesis binary to a common release directory
     cp /usr/src/rpc/target/$ARCH/release/hive_genesis /usr/src/rpc/target/release/; \
     } \
     && rustup self update \
