@@ -65,6 +65,7 @@ RUN build_platform() { \
     --target=$ARCH; \
     # Copy the built binary to a common release directory
     cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
+    cp /usr/src/rpc/target/$ARCH/release/hive_genesis /usr/src/rpc/target/release/; \
     } \
     && rustup self update \
     && case "$TARGETPLATFORM" in \
