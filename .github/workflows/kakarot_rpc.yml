@@ -2,8 +2,7 @@
 name: RPC
 
 on:
-  release:
-    types: [published]
+  workflow_call:
 
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
