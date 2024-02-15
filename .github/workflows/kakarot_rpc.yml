@@ -2,7 +2,8 @@
 name: RPC
 
 on:
-  workflow_call:
+  release:
+    types: [published]
 
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
@@ -27,7 +28,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ${{ env.REGISTRY_IMAGE }}:test, ${{ env.REGISTRY_IMAGE }}:latest
+          tags: ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }}, ${{ env.REGISTRY_IMAGE }}:latest
           context: .
           file: ./docker/rpc/Dockerfile
           platforms: linux/amd64,linux/arm64
