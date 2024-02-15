@@ -4,7 +4,8 @@ use ethers::prelude::abigen;
 use reth_primitives::Address;
 
 use reth_primitives::{BlockId, U256};
-use reth_rpc_types::{CallInput, CallRequest};
+use reth_rpc_types::request::TransactionInput;
+use reth_rpc_types::TransactionRequest;
 
 use crate::eth_provider::provider::EthProviderResult;
 use crate::eth_provider::provider::EthereumProvider;
@@ -36,17 +37,17 @@ impl<P: EthereumProvider> EthereumErc20<P> {
         let address = EthersAddress::from_slice(evm_address.as_slice());
         let calldata = IERC20Calls::BalanceOf(BalanceOfCall { account: address }).encode();
 
-        let call = CallRequest {
+        let request = TransactionRequest {
             from: Some(Address::default()),
             to: Some(self.address),
             gas_price: Some(U256::from(1)),
             gas: Some(U256::from(1_000_000)),
             value: Some(U256::ZERO),
-            input: CallInput { input: Some(calldata.into()), data: None },
+            input: TransactionInput { input: Some(calldata.into()), data: None },
             ..Default::default()
         };
 
-        let ret = self.provider.call(call, Some(block_id)).await?;
+        let ret = self.provider.call(request, Some(block_id)).await?;
         let balance = U256::try_from_be_slice(&ret)
             .ok_or_else(|| ConversionError::UintConversionError("Failed to convert call return to U256".to_string()))?;
 

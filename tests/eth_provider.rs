@@ -9,7 +9,8 @@ use kakarot_rpc::test_utils::evm_contract::EvmContract;
 use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
-use reth_rpc_types::{CallInput, CallRequest};
+use reth_rpc_types::request::TransactionInput;
+use reth_rpc_types::TransactionRequest;
 use rstest::*;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, U256, U64};
@@ -223,10 +224,10 @@ async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _set
     let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default();
     let counter_address: Felt252Wrapper = counter.evm_address.into();
 
-    let request = CallRequest {
+    let request = TransactionRequest {
         from: Some(eoa.evm_address().unwrap()),
         to: Some(counter_address.try_into().unwrap()),
-        input: CallInput { input: None, data: Some(Bytes::from_str("0x371303c0").unwrap()) }, // selector of "function inc()"
+        input: TransactionInput { input: None, data: Some(Bytes::from_str("0x371303c0").unwrap()) }, // selector of "function inc()"
         chain_id: Some(chain_id),
         ..Default::default()
     };

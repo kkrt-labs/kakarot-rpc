@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::models::felt::Felt252Wrapper;
+use crate::{eth_provider::constant::MAX_FEE, models::felt::Felt252Wrapper};
 use cainome::rs::abigen_legacy;
 use dotenv::dotenv;
 use lazy_static::lazy_static;
@@ -12,7 +12,7 @@ use starknet::{
 use starknet_crypto::FieldElement;
 
 use crate::{
-    eth_provider::{constant::MAX_FEE, provider::EthProviderResult, utils::split_u256},
+    eth_provider::{provider::EthProviderResult, utils::split_u256},
     into_via_wrapper,
 };
 

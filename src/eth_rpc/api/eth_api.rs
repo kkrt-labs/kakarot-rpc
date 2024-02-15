@@ -2,8 +2,8 @@ use jsonrpsee::core::RpcResult as Result;
 use jsonrpsee::proc_macros::rpc;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U128, U256, U64};
 use reth_rpc_types::{
-    AccessListWithGasUsed, CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index,
-    RichBlock, SyncStatus, Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
+    AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock,
+    SyncStatus, Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 
 #[rpc(server, namespace = "eth")]
@@ -106,7 +106,7 @@ pub trait EthApi {
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "call")]
-    async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes>;
+    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<Bytes>;
 
     /// Generates an access list for a transaction.
     ///
@@ -125,14 +125,14 @@ pub trait EthApi {
     #[method(name = "createAccessList")]
     async fn create_access_list(
         &self,
-        request: CallRequest,
+        request: TransactionRequest,
         block_id: Option<BlockId>,
     ) -> Result<AccessListWithGasUsed>;
 
     /// Generates and returns an estimate of how much gas is necessary to allow the transaction to
     /// complete.
     #[method(name = "estimateGas")]
-    async fn estimate_gas(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<U256>;
+    async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<U256>;
 
     /// Returns the current price per gas in wei.
     #[method(name = "gasPrice")]
@@ -195,7 +195,7 @@ pub trait EthApi {
     /// Signs a transaction that can be submitted to the network at a later time using with
     /// `sendRawTransaction.`
     #[method(name = "signTransaction")]
-    async fn sign_transaction(&self, transaction: CallRequest) -> Result<Bytes>;
+    async fn sign_transaction(&self, transaction: TransactionRequest) -> Result<Bytes>;
 
     /// Signs data via [EIP-712](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md).
     #[method(name = "signTypedData")]
