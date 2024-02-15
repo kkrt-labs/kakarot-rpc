@@ -17,5 +17,5 @@ jobs:
     uses: ./.github/workflows/test.yml
 
   push:
-    name: Rust tests
+    name: Push binaries
     uses: ./.github/workflows/kakarot_rpc.yml
