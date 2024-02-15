@@ -23,10 +23,10 @@ cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5-l
   "abigen-rs",
 ] }
 cairo-lang-starknet = { version = "2.4.0", default-features = false }
-ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "c1723e", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "e7d0f3e", default-features = false, features = [
   "v0",
-] }
-sequencer = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "97f50f1", default-features = false }
+], optional = true }
+sequencer = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "e7d0f3e", default-features = false, optional = true }
 starknet = { version = "0.8.0", default-features = false }
 starknet-crypto = { version = "0.6.1", default-features = false }
 starknet_api = { version = "0.6.0-rc3", default-features = false }
@@ -36,8 +36,8 @@ alloy-rlp = { version = "0.3", default-features = false }
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.16", default-features = false }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.16", default-features = false }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.18", default-features = false }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.18", default-features = false }
 
 # Serde
 serde = { version = "1.0.188", default-features = false, features = ["derive"] }
@@ -102,7 +102,7 @@ rstest = { version = "0.18.1", default-features = false }
 toml = { version = "0.7.5", default-features = false }
 
 [features]
-testing = ["testcontainers", "rayon"]
+testing = ["testcontainers", "rayon", "sequencer", "ef-testing"]
 
 [[bin]]
 name = "katana_genesis"

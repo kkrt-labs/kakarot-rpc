@@ -11,13 +11,13 @@ use reth_primitives::Bytes;
 use reth_primitives::TransactionSigned;
 use reth_primitives::{BlockNumberOrTag, B256, U256, U64};
 use reth_rpc_types::other::OtherFields;
-use reth_rpc_types::CallRequest;
 use reth_rpc_types::FeeHistory;
 use reth_rpc_types::Filter;
 use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
 use reth_rpc_types::Transaction as RpcTransaction;
 use reth_rpc_types::TransactionReceipt;
+use reth_rpc_types::TransactionRequest;
 use reth_rpc_types::ValueOrArray;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
@@ -107,9 +107,9 @@ pub trait EthereumProvider {
     /// Returns the logs for the given filter.
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges>;
     /// Returns the result of a call.
-    async fn call(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
+    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
     /// Returns the result of a estimate gas.
-    async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    async fn estimate_gas(&self, call: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the fee history given a block count and a newest block number.
     async fn fee_history(
         &self,
@@ -374,16 +374,16 @@ where
         Ok(FilterChanges::Logs(logs.into_iter().map(Into::into).collect()))
     }
 
-    async fn call(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
-        let (output, _) = self.call_helper(call, block_id).await?;
+    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
+        let (output, _) = self.call_helper(request, block_id).await?;
         Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(output.0.into_iter())))
     }
 
-    async fn estimate_gas(&self, call: CallRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+    async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
         // Set a high gas limit to make sure the transaction will not fail due to gas.
-        let call = CallRequest { gas: Some(U256::from(*MAX_FEE)), ..call };
+        let request = TransactionRequest { gas: Some(U256::from(*MAX_FEE)), ..request };
 
-        let (_, gas_used) = self.call_helper(call, block_id).await?;
+        let (_, gas_used) = self.call_helper(request, block_id).await?;
         Ok(U256::from(gas_used))
     }
 
@@ -432,7 +432,13 @@ where
             })
             .collect::<Vec<_>>();
 
-        Ok(FeeHistory { base_fee_per_gas, gas_used_ratio, oldest_block: start_block, reward: Some(vec![]) })
+        Ok(FeeHistory {
+            base_fee_per_gas,
+            gas_used_ratio,
+            oldest_block: start_block,
+            reward: Some(vec![]),
+            ..Default::default()
+        })
     }
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
@@ -478,7 +484,7 @@ where
 
     async fn call_helper(
         &self,
-        call: CallRequest,
+        request: TransactionRequest,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<(CairoArrayLegacy<FieldElement>, u128)> {
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
@@ -486,22 +492,22 @@ where
 
         // unwrap option
         let to: kakarot_core::core::Option = {
-            match call.to {
+            match request.to {
                 Some(to) => kakarot_core::core::Option { is_some: FieldElement::ONE, value: into_via_wrapper!(to) },
                 None => kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO },
             }
         };
 
         // Here we check if CallRequest.origin is None, if so, we insert origin = address(0)
-        let from = into_via_wrapper!(call.from.unwrap_or_default());
+        let from = into_via_wrapper!(request.from.unwrap_or_default());
 
-        let data = call.input.into_input().unwrap_or_default();
+        let data = request.input.into_input().unwrap_or_default();
         let calldata: Vec<_> = data.into_iter().map(FieldElement::from).collect();
 
-        let gas_limit = into_via_try_wrapper!(call.gas.unwrap_or_else(|| U256::from(u64::MAX)));
-        let gas_price = into_via_try_wrapper!(call.gas_price.unwrap_or_default());
+        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(u64::MAX)));
+        let gas_price = into_via_try_wrapper!(request.gas_price.unwrap_or_default());
 
-        let value = into_via_try_wrapper!(call.value.unwrap_or_default());
+        let value = into_via_try_wrapper!(request.value.unwrap_or_default());
 
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let call_output = kakarot_contract

@@ -4,8 +4,8 @@ use crate::eth_provider::provider::EthereumProvider;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U128, U256, U64};
 use reth_rpc_types::{
-    AccessListWithGasUsed, CallRequest, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index,
-    RichBlock, SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
+    AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock,
+    SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
 
@@ -155,20 +155,20 @@ where
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(request = ?request, block_id = ?block_id))]
-    async fn call(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<Bytes> {
+    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<Bytes> {
         Ok(self.eth_provider.call(request, block_id).await?)
     }
 
     async fn create_access_list(
         &self,
-        _request: CallRequest,
+        _request: TransactionRequest,
         _block_id: Option<BlockId>,
     ) -> Result<AccessListWithGasUsed> {
         Err(EthProviderError::MethodNotSupported("eth_createAccessList".to_string()).into())
     }
 
     #[tracing::instrument(skip_all, ret, fields(request = ?request, block_id = ?block_id))]
-    async fn estimate_gas(&self, request: CallRequest, block_id: Option<BlockId>) -> Result<U256> {
+    async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<U256> {
         Ok(self.eth_provider.estimate_gas(request, block_id).await?)
     }
 
@@ -228,7 +228,7 @@ where
         Err(EthProviderError::MethodNotSupported("eth_sign".to_string()).into())
     }
 
-    async fn sign_transaction(&self, _transaction: CallRequest) -> Result<Bytes> {
+    async fn sign_transaction(&self, _transaction: TransactionRequest) -> Result<Bytes> {
         Err(EthProviderError::MethodNotSupported("eth_signTransaction".to_string()).into())
     }
 

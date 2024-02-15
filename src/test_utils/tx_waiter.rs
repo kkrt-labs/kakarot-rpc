@@ -40,9 +40,6 @@ where
             // Some nodes are still serving error code `25` for tx hash not found. This is
             // technically a bug on the node's side, but we maximize compatibility here by also
             // accepting it.
-            Err(ProviderError::StarknetError(StarknetError::InvalidTransactionHash)) => {
-                info!("Transaction not confirmed yet...");
-            }
             Err(err) => return Err(err.into()),
         }
 
