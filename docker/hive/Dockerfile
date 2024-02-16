@@ -28,7 +28,7 @@ RUN git clone -v "https://github.com/kkrt-labs/kakarot-indexer.git"
 FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
-FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.1 as rpc
+FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.2-1 as rpc
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
@@ -37,14 +37,11 @@ RUN apt-get update && apt-get install -y tini curl jq && rm -rf /var/lib/apt/lis
 # Environment
 #############
 ### Indexer environment variables
-#### MongoDB environment variables
-ENV MONGO_INITDB_ROOT_USERNAME: mongo
-ENV MONGO_INITDB_ROOT_PASSWORD: mongo
 #### Indexer environment variables
 ENV ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME
 ENV DEBUG=""
 ENV APIBARA_AUTH_TOKEN=""
-ENV MONGO_CONNECTION_STRING=mongodb://mongo:mongo@localhost:27017
+ENV MONGO_CONNECTION_STRING=mongodb://localhost:27017
 ENV MONGO_DATABASE_NAME=kakarot-local
 ENV STARTING_BLOCK=0
 ENV STREAM_URL=http://localhost:7171
@@ -54,11 +51,9 @@ ENV SINK_TYPE=mongo
 ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
 ENV RUST_LOG=kakarot_rpc=info
-ENV MONGO_CONNECTION_STRING=mongodb://mongo:mongo@localhost:27017
-ENV MONGO_DATABASE_NAME=kakarot-local
 
 # Add a health check to make sure the service is healthy
-HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
+HEALTHCHECK --interval=10s --timeout=10s --start-period=1s --retries=5 \
     CMD curl --request POST \
     --header "Content-Type: application/json" \
     --data '{"jsonrpc": "2.0", "method": "eth_chainId", "id": 1}' http://${KAKAROT_RPC_URL} || exit 1
@@ -85,19 +80,14 @@ COPY --from=apibara-build /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
 
 #### We need the mongo binary
 COPY --from=mongo /bin/mongod /usr/local/bin
+RUN mkdir -p /data/db
 
 
 # Generate the genesis
 RUN mkdir -p /genesis/contracts
 COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
 COPY ./lib/kakarot/build /genesis/contracts
-COPY ./docker/hive/genesis.json /genesis/genesis.json
-RUN KAKAROT_CONTRACTS_PATH="genesis/contracts" \
-    HIVE_GENESIS_PATH="genesis/genesis.json" \
-    GENESIS_OUTPUT="genesis.json" \
-    MANIFEST_OUTPUT="manifest.json" \
-    hive_genesis;
-RUN rm -fr /genesis
+COPY ./docker/hive/genesis.json /genesis/hive-genesis.json
 
 # Copy start script
 COPY docker/hive/start.sh /start.sh
