@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{eth_provider::constant::MAX_FEE, models::felt::Felt252Wrapper};
+use crate::models::felt::Felt252Wrapper;
 use cainome::rs::abigen_legacy;
 use dotenv::dotenv;
 use lazy_static::lazy_static;
