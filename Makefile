@@ -50,7 +50,7 @@ katana-genesis:
 run-katana: install-katana katana-genesis
 	katana --disable-fee --chain-id=KKRT --genesis .katana/genesis.json
 
-test: katana-genesis load-env
+test: install-katana katana-genesis load-env
 	cargo test --all --features testing
 
 test-coverage: katana-genesis load-env

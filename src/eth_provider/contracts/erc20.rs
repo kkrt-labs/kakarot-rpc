@@ -40,7 +40,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
         let request = TransactionRequest {
             from: Some(Address::default()),
             to: Some(self.address),
-            gas_price: Some(U256::from(1)),
+            gas_price: Some(U256::ZERO),
             gas: Some(U256::from(1_000_000)),
             value: Some(U256::ZERO),
             input: TransactionInput { input: Some(calldata.into()), data: None },
