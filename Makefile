@@ -61,7 +61,7 @@ benchmark-madara:
 	cd benchmarks && bun i && bun run benchmark-madara
 
 test-target: load-env
-	cargo test --tests --features testing $(TARGET) -- --nocapture
+	cargo test --tests --features "testing,hive" $(TARGET) -- --nocapture
 
 benchmark-katana:
 	cd benchmarks && bun i && bun run benchmark-katana

@@ -453,6 +453,47 @@ where
             .ok_or_else(|| ConversionError::ToStarknetTransactionError("Failed to recover signer".to_string()))?;
         let transaction = to_starknet_transaction(&transaction_signed, chain_id, signer)?;
 
+        // If the contract is not found, we need to deploy it.
+        #[cfg(feature = "hive")]
+        {
+            use crate::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET};
+            use starknet::accounts::Account;
+            use starknet::accounts::Call;
+            use starknet::accounts::Execution;
+            use starknet::core::types::BlockTag;
+            use starknet::core::utils::get_selector_from_name;
+            let sender = transaction.sender_address;
+            let proxy = ProxyReader::new(sender, &self.starknet_provider);
+            let maybe_class_hash =
+                proxy.get_implementation().block_id(StarknetBlockId::Tag(BlockTag::Latest)).call().await;
+
+            if contract_not_found(&maybe_class_hash) {
+                let chain_id = self.starknet_provider.chain_id().await?;
+                let _ = CHAIN_ID.set(chain_id);
+                let execution = Execution::new(
+                    vec![Call {
+                        to: *KAKAROT_ADDRESS,
+                        selector: get_selector_from_name("deploy_externally_owned_account").unwrap(),
+                        calldata: vec![into_via_wrapper!(signer)],
+                    }],
+                    &*DEPLOY_WALLET,
+                );
+                let nonce = self
+                    .starknet_provider
+                    .get_nonce(StarknetBlockId::Tag(BlockTag::Latest), DEPLOY_WALLET.address())
+                    .await?;
+                let tx = execution
+                    .nonce(nonce)
+                    .max_fee(FieldElement::from(u64::MAX))
+                    .prepared()
+                    .map_err(|err| eyre::eyre!(err.to_string()))?
+                    .get_invoke_request(false)
+                    .await
+                    .map_err(|err| eyre::eyre!(err.to_string()))?;
+                self.starknet_provider.add_invoke_transaction(tx).await?;
+            };
+        }
+
         #[cfg(not(feature = "testing"))]
         {
             let hash = transaction_signed.hash();
