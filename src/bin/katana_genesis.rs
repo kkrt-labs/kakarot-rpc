@@ -31,7 +31,7 @@ fn main() {
         .load_classes(KAKAROT_CONTRACTS_PATH.clone())
         .with_kakarot(*COINBASE_ADDRESS)
         .expect("Failed to set up Kakarot");
-    builder = builder.with_eoa(pk, None).expect("Failed to set up EOA").fund(pk, U256::from(u128::MAX)).unwrap();
+    builder = builder.with_eoa(pk).expect("Failed to set up EOA").fund(pk, U256::from(u128::MAX)).unwrap();
 
     let manifest = builder.manifest();
 

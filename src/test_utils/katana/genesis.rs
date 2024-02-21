@@ -19,7 +19,7 @@ use katana_primitives::{
 };
 use lazy_static::lazy_static;
 use rayon::prelude::*;
-use reth_primitives::{Address, B256};
+use reth_primitives::B256;
 use serde::Serialize;
 use serde_json::Value;
 use serde_with::serde_as;
@@ -205,18 +205,8 @@ impl KatanaGenesisBuilder<Loaded> {
 
 impl KatanaGenesisBuilder<Initialized> {
     /// Add an EOA to the genesis. The EOA is deployed to the address derived from the given private key.
-    pub fn with_eoa(
-        mut self,
-        private_key: impl Into<Option<B256>>,
-        evm_address: impl Into<Option<Address>>,
-    ) -> Result<Self> {
-        let private_key: Option<B256> = private_key.into();
-        let evm_address: Option<Address> = evm_address.into();
-
-        let evm_address = evm_address
-            .and_then(|addr| FieldElement::from_byte_slice_be(addr.as_slice()).ok())
-            .or(private_key.and_then(|pk| self.evm_address(pk).ok()));
-        let evm_address = evm_address.ok_or(eyre!("Failed to derive EVM address"))?;
+    pub fn with_eoa(mut self, private_key: B256) -> Result<Self> {
+        let evm_address = self.evm_address(private_key)?;
 
         let kakarot_address = self.cache_load("kakarot_address")?;
         let eoa_class_hash = self.eoa_class_hash()?;

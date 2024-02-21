@@ -62,6 +62,7 @@ impl HiveGenesisConfig {
 
         // Fetch the contracts from the alloc field.
         let mut additional_kakarot_storage = HashMap::new();
+        let mut fee_token_storage = HashMap::new();
         let contracts = self
             .alloc
             .into_iter()
@@ -97,6 +98,10 @@ impl HiveGenesisConfig {
                 };
                 kakarot_account_storage.push((get_storage_var_address("kakarot_address", &[])?, kakarot_address));
 
+                let key = get_storage_var_address("ERC20_allowances", &[starknet_address, kakarot_address])?;
+                fee_token_storage.insert(key, FieldElement::from(u128::MAX));
+                fee_token_storage.insert(key + 1u8.into(), FieldElement::from(u128::MAX));
+
                 Ok((
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
@@ -112,9 +117,12 @@ impl HiveGenesisConfig {
         // Build the builder
         let kakarot_address = ContractAddress::new(kakarot_address);
         let mut genesis = builder.build()?;
+
         let kakarot_contract =
             genesis.contracts.get_mut(&kakarot_address).ok_or(eyre!("Kakarot contract not found"))?;
         kakarot_contract.storage.get_or_insert_with(HashMap::new).extend(additional_kakarot_storage);
+
+        genesis.fee_token.storage.get_or_insert_with(HashMap::new).extend(fee_token_storage);
 
         // Add the contracts to the genesis.
         genesis.contracts.extend(contracts);
