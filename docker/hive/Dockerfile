@@ -28,7 +28,7 @@ RUN git clone -v "https://github.com/kkrt-labs/kakarot-indexer.git"
 FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
-FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.2-1 as rpc
+FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.3 as rpc
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
@@ -48,6 +48,8 @@ ENV STREAM_URL=http://localhost:7171
 ENV SINK_TYPE=mongo
 ### Kakarot RPC environment variables
 ### Port 8545: https://github.com/ethereum/hive/blob/master/simulators/ethereum/rpc/helper.go#L50
+ENV KATANA_ACCOUNT_ADDRESS=0x01b44e32c8edbcada35fa7ae6f1f44bbc16657f442b7b19286812e1976c34d83
+ENV KATANA_PRIVATE_KEY=0x05b8e27acc53020ed612507af8245cbffafd8aa588b79decaee1acf99a1c5cc2
 ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
 ENV RUST_LOG=kakarot_rpc=info
@@ -68,7 +70,6 @@ EXPOSE 8545 27017
 ################################
 ### CairoVM chain service
 COPY --from=katana /usr/local/bin/katana /usr/local/bin
-COPY --from=rpc /usr/local/bin/kakarot-rpc /usr/local/bin
 
 ### Indexer service
 #### We need the DNA indexer binary
@@ -84,8 +85,9 @@ RUN mkdir -p /data/db
 
 
 # Generate the genesis
-RUN mkdir -p /genesis/contracts
+COPY --from=rpc /usr/local/bin/kakarot-rpc /usr/local/bin
 COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
+RUN mkdir -p /genesis/contracts
 COPY ./lib/kakarot/build /genesis/contracts
 COPY ./docker/hive/genesis.json /genesis/hive-genesis.json
 
