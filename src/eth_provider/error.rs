@@ -49,6 +49,9 @@ pub enum EthProviderError {
     /// Method not supported.
     #[error("Method not supported: {0}")]
     MethodNotSupported(String),
+    /// Other error.
+    #[error(transparent)]
+    Other(#[from] eyre::Error),
 }
 
 impl From<EthProviderError> for ErrorObject<'static> {

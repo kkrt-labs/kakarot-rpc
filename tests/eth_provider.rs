@@ -258,3 +258,25 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     assert_eq!(fee_history.gas_used_ratio.len(), actual_block_count);
     assert_eq!(fee_history.oldest_block, U256::ZERO);
 }
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+#[cfg(feature = "hive")]
+async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
+    use kakarot_rpc::test_utils::eoa::KakarotEOA;
+    use reth_primitives::B256;
+    // Given
+    let eoa = katana.eoa();
+    let eth_provider = katana.eth_provider();
+    let other_eoa = KakarotEOA::new(B256::from_str(&format!("0x{:0>64}", "0abde1")).unwrap(), eth_provider.clone());
+
+    // When
+    let balance_before = eth_provider.balance(eoa.evm_address().unwrap(), None).await.unwrap();
+    eoa.transfer(other_eoa.evm_address().unwrap(), 1).await.expect("Failed to transfer funds to other eoa");
+    other_eoa.transfer(eoa.evm_address().unwrap(), 1).await.expect("Failed to transfer funds back to eoa");
+    let balance_after = eth_provider.balance(eoa.evm_address().unwrap(), None).await.unwrap();
+
+    // Then
+    assert_eq!(balance_after, balance_before);
+}

@@ -29,7 +29,7 @@ COPY scripts scripts
 RUN make setup
 
 # Define ARG for build platform
-FROM --platform=$BUILDPLATFORM rust:1.64 as builder
+FROM --platform=$BUILDPLATFORM rust:1.75 as builder
 
 # Set ARG for build and target platform
 ARG BUILDPLATFORM
@@ -65,8 +65,13 @@ RUN build_platform() { \
     --target=$ARCH; \
     # Copy the built binary to a common release directory
     cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
+    # Build the Rust application for the specified target for hive
+    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
+    --features hive --target=$ARCH; \
+    # Copy the built binary to a common release directory
+    cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/kakarot-rpc-hive; \
     # Build the hive genesis binary
-    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --release \
+    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
     --bin hive_genesis --features testing --target=$ARCH; \
     # Copy the genesis binary to a common release directory
     cp /usr/src/rpc/target/$ARCH/release/hive_genesis /usr/src/rpc/target/release/; \

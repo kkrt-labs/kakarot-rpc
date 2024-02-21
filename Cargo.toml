@@ -103,6 +103,7 @@ toml = { version = "0.7.5", default-features = false }
 
 [features]
 testing = ["testcontainers", "rayon", "sequencer", "ef-testing"]
+hive = []
 
 [[bin]]
 name = "katana_genesis"

@@ -172,7 +172,6 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     ///
     /// allow(dead_code) is used because this function is used in tests,
     /// and each test is compiled separately, so the compiler thinks this function is unused
-    #[allow(dead_code)]
     pub async fn transfer(&self, to: Address, value: u128) -> Result<B256, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
