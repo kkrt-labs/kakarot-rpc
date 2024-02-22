@@ -50,6 +50,16 @@ async fn main() -> Result<()> {
         DatabaseOptions::builder().read_concern(ReadConcern::MAJORITY).write_concern(WriteConcern::MAJORITY).build(),
     ));
 
+    // Get the deployer nonce and set the value in the DEPLOY_WALLET_NONCE
+    #[cfg(feature = "hive")]
+    {
+        use kakarot_rpc::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+        use starknet::accounts::ConnectedAccount;
+        let deployer_nonce = DEPLOY_WALLET.get_nonce().await?;
+        let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
+        *nonce = deployer_nonce;
+    }
+
     let kakarot_rpc_module = match starknet_provider {
         StarknetProvider::JsonRpcClient(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);

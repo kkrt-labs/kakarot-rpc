@@ -88,8 +88,8 @@ impl Katana {
         self.eoa.eth_provider.clone()
     }
 
-    pub const fn eoa(&self) -> &KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
-        &self.eoa
+    pub fn eoa(&self) -> KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
+        self.eoa.clone()
     }
 
     /// allow(dead_code) is used because this function is used in tests,
