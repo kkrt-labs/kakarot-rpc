@@ -1,8 +1,5 @@
 use dotenv::dotenv;
 use kakarot_rpc::test_utils::{hive::HiveGenesisConfig, katana::genesis::KatanaGenesisBuilder};
-use katana_primitives::genesis::{
-    allocation::DevAllocationsGenerator, constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE, json::GenesisAccountJson,
-};
 use starknet_crypto::FieldElement;
 use std::{env::var, path::Path};
 
@@ -16,7 +13,10 @@ fn main() {
         Path::new(&var("HIVE_GENESIS_PATH").expect("Failed to load HIVE_GENESIS_PATH var")).to_path_buf();
 
     // Read all the classes.
-    let builder = KatanaGenesisBuilder::default().load_classes(kakarot_contracts_path);
+    let mut builder = KatanaGenesisBuilder::default().load_classes(kakarot_contracts_path);
+
+    // Add dev allocations.
+    builder = builder.with_dev_allocation(10);
 
     // Read the hive genesis.
     let hive_genesis_content = std::fs::read_to_string(hive_genesis_path).expect("Failed to read hive genesis file");
@@ -24,28 +24,8 @@ fn main() {
         serde_json::from_str(&hive_genesis_content).expect("Failed to parse hive genesis json");
 
     // Convert the hive genesis to a katana genesis.
-    let mut genesis_json =
+    let genesis_json =
         hive_genesis.try_into_genesis_json(builder.clone()).expect("Failed to convert hive genesis to katana genesis");
-
-    // Add dev allocations.
-    let dev_allocations = DevAllocationsGenerator::new(10)
-        .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
-        .generate()
-        .into_iter()
-        .map(|(address, account)| {
-            (
-                address,
-                GenesisAccountJson {
-                    public_key: account.public_key,
-                    balance: Some(account.balance),
-                    nonce: account.nonce,
-                    class: None,
-                    storage: account.storage.clone(),
-                },
-            )
-        })
-        .collect::<Vec<_>>();
-    genesis_json.accounts.extend(dev_allocations);
 
     let builder = builder.with_kakarot(FieldElement::ZERO).expect("Failed to set up Kakarot");
     let manifest = builder.manifest();

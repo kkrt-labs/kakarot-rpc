@@ -11,7 +11,10 @@ use ethers::types::U256;
 use eyre::{eyre, Result};
 use katana_primitives::block::GasPrices;
 use katana_primitives::contract::{StorageKey, StorageValue};
+use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
+use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use katana_primitives::genesis::json::GenesisAccountJson;
 use katana_primitives::genesis::json::{FeeTokenConfigJson, GenesisJson};
 use katana_primitives::{
     contract::ContractAddress,
@@ -56,6 +59,7 @@ pub struct KatanaGenesisBuilder<T> {
     classes: Vec<GenesisClassJson>,
     class_hashes: HashMap<String, FieldElement>,
     contracts: HashMap<ContractAddress, GenesisContractJson>,
+    accounts: HashMap<ContractAddress, GenesisAccountJson>,
     fee_token_storage: HashMap<StorageKey, StorageValue>,
     cache: HashMap<String, FieldElement>,
     status: PhantomData<T>,
@@ -68,10 +72,33 @@ impl<T> KatanaGenesisBuilder<T> {
             classes: self.classes,
             class_hashes: self.class_hashes,
             contracts: self.contracts,
+            accounts: self.accounts,
             fee_token_storage: self.fee_token_storage,
             cache: self.cache,
             status: PhantomData::<State>,
         }
+    }
+
+    pub fn with_dev_allocation(mut self, amount: u16) -> Self {
+        let dev_allocations = DevAllocationsGenerator::new(amount)
+            .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+            .generate()
+            .into_iter()
+            .map(|(address, account)| {
+                (
+                    address,
+                    GenesisAccountJson {
+                        public_key: account.public_key,
+                        balance: Some(account.balance),
+                        nonce: account.nonce,
+                        class: None,
+                        storage: account.storage.clone(),
+                    },
+                )
+            });
+        self.accounts.extend(dev_allocations);
+
+        self
     }
 
     fn kakarot_class_hash(&self) -> Result<FieldElement> {
@@ -102,6 +129,7 @@ impl Default for KatanaGenesisBuilder<Uninitialized> {
             classes: vec![],
             class_hashes: HashMap::new(),
             contracts: HashMap::new(),
+            accounts: HashMap::new(),
             fee_token_storage: HashMap::new(),
             cache: HashMap::new(),
             status: PhantomData::<Uninitialized>,
@@ -284,7 +312,7 @@ impl KatanaGenesisBuilder<Initialized> {
                 class: None,
             },
             universal_deployer: None,
-            accounts: HashMap::new(),
+            accounts: self.accounts,
             contracts: self.contracts,
         })
     }
