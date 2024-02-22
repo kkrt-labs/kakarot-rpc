@@ -1,4 +1,33 @@
 # trunk-ignore-all(terrascan/AC_DOCKER_0047)
+FROM python:3.9.13 as contracts
+# install poetry
+ENV POETRY_VERSION=1.7.1
+ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin"
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN poetry config virtualenvs.create false
+
+WORKDIR /usr/src/compiler
+
+# Install dependencies
+RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
+    && chmod +x foundry.sh \
+    && ./foundry.sh \
+    && foundryup \
+    && apt-get update && apt-get install -y \
+    jq \
+    wget \
+    tar \
+    unzip \
+    zip
+
+COPY .git ./.git
+COPY .gitmodules .gitmodules
+COPY Makefile Makefile
+COPY scripts scripts
+RUN make setup
 
 # CairoVM Chain
 FROM ghcr.io/dojoengine/dojo:v0.5.1 as katana
@@ -100,7 +129,7 @@ RUN mkdir -p /data/db
 COPY --from=rpc /usr/local/bin/kakarot-rpc-hive /usr/local/bin/kakarot-rpc
 COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
 RUN mkdir -p /genesis/contracts
-COPY ./lib/kakarot/build /genesis/contracts
+COPY --from=contracts /usr/src/compiler/lib/kakarot/build /genesis/contracts
 COPY ./docker/hive/genesis.json /genesis/hive-genesis.json
 
 # Copy start script
