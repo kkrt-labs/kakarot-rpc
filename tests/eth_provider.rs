@@ -265,6 +265,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
 #[cfg(feature = "hive")]
 async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     use futures::future::join_all;
+    use kakarot_rpc::eth_provider::constant::CHAIN_ID;
     use kakarot_rpc::test_utils::eoa::KakarotEOA;
     use reth_primitives::B256;
     use starknet::providers::Provider;
@@ -275,6 +276,8 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     let starknet_provider = eth_provider.starknet_provider();
     let other_eoa_1 = KakarotEOA::new(B256::from_str(&format!("0x{:0>64}", "0abde1")).unwrap(), eth_provider.clone());
     let other_eoa_2 = KakarotEOA::new(B256::from_str(&format!("0x{:0>64}", "0abde2")).unwrap(), eth_provider.clone());
+    let chain_id = starknet_provider.chain_id().await.unwrap();
+    CHAIN_ID.set(chain_id).expect("Failed to set chain id");
 
     let evm_address = eoa.evm_address().unwrap();
     let balance_before = eth_provider.balance(eoa.evm_address().unwrap(), None).await.unwrap();

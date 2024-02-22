@@ -53,8 +53,16 @@ async fn main() -> Result<()> {
     // Get the deployer nonce and set the value in the DEPLOY_WALLET_NONCE
     #[cfg(feature = "hive")]
     {
-        use kakarot_rpc::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+        use kakarot_rpc::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::accounts::ConnectedAccount;
+        use starknet::providers::Provider;
+        let provider = JsonRpcClient::new(HttpTransport::new(
+            starknet_config.network.provider_url().expect("Incorrect provider URL"),
+        ));
+
+        let chain_id = provider.chain_id().await?;
+        CHAIN_ID.set(chain_id).expect("Failed to set chain id");
+
         let deployer_nonce = DEPLOY_WALLET.get_nonce().await?;
         let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
         *nonce = deployer_nonce;
