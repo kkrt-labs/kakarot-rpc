@@ -13,10 +13,21 @@ RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
 COPY --from=apibara /nix/store/swzxd9vbhhj92qzh16j48vb011q57v59-apibara-starknet-1.2.0/bin/apibara-starknet /usr/local/bin/starknet
 COPY --from=indexer /nix/store/3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc-apibara-sink-mongo-0.5.3/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
 # Change the interpreter path.
-# x86-64  "/lib64/ld-linux-x86-64.so.2"
-# aarch64 "/lib/ld-linux-aarch64.so.1"
-RUN patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/starknet && \
-    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/sink-mongo
+ARG BUILDPLATFORM
+RUN case $BUILDPLATFORM in \
+    "linux/amd64") \
+        patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/starknet && \
+        patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/sink-mongo; \
+    ;; \
+    "linux/arm64") \
+        patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/starknet && \
+        patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/sink-mongo; \
+    ;; \
+    *) \
+    echo "Unknown BUILDPLATFORM: $BUILDPLATFORM"; \
+    exit 1; \
+    ;; \
+    esac
 
 ### Indexer transform plugin
 #### First, clone the indexer repository
@@ -28,7 +39,7 @@ RUN git clone -v "https://github.com/kkrt-labs/kakarot-indexer.git"
 FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
-FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.3 as rpc
+FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.3-2 as rpc
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
@@ -86,7 +97,7 @@ RUN mkdir -p /data/db
 
 
 # Generate the genesis
-COPY --from=rpc /usr/local/bin/kakarot-rpc /usr/local/bin
+COPY --from=rpc /usr/local/bin/kakarot-rpc-hive /usr/local/bin/kakarot-rpc
 COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
 RUN mkdir -p /genesis/contracts
 COPY ./lib/kakarot/build /genesis/contracts
