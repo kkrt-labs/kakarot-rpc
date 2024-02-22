@@ -40,7 +40,7 @@ where
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn syncing(&self) -> Result<SyncStatus> {
-        Ok(self.syncing().await?)
+        Ok(self.eth_provider.syncing().await?)
     }
 
     async fn coinbase(&self) -> Result<Address> {
