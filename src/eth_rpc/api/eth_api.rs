@@ -90,7 +90,7 @@ pub trait EthApi {
 
     /// Returns the value from a storage position at a given address
     #[method(name = "getStorageAt")]
-    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<U256>;
+    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<B256>;
 
     /// Returns the number of transactions sent from an address at given block number.
     #[method(name = "getTransactionCount")]

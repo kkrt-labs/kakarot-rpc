@@ -1,6 +1,6 @@
 #![cfg(feature = "testing")]
 use std::cmp::min;
-use std::str::FromStr as _;
+use std::str::FromStr;
 
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::models::felt::Felt252Wrapper;
@@ -13,7 +13,7 @@ use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::TransactionRequest;
 use rstest::*;
 
-use reth_primitives::{Address, BlockNumberOrTag, Bytes, U256, U64};
+use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
 
 #[rstest]
 #[awt]
@@ -134,7 +134,7 @@ async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup
 
     // Then
     let count = eth_provider.storage_at(counter_address, U256::from(0), None).await.unwrap();
-    assert_eq!(U256::from(1), count);
+    assert_eq!(B256::from_str("0x01").unwrap(), count);
 }
 
 #[rstest]
