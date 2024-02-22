@@ -2,15 +2,18 @@
 name: RPC
 
 on:
-  release:
-    types: [published]
-
-env:
-  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
+  workflow_call:
 
 jobs:
   build:
     runs-on: ubuntu-latest-16-cores
+    strategy:
+      matrix:
+        include:
+          # - dockerfile: ./docker/rpc/Dockerfile
+          #   image: ghcr.io/${{ github.repository }}/node
+          - dockerfile: ./docker/hive/Dockerfile
+            image: ghcr.io/${{ github.repository }}/node-hive
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v3
@@ -28,8 +31,8 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }}, ${{ env.REGISTRY_IMAGE }}:latest
+          tags: ${{ matrix.image }}:${{ github.ref_name }}, ${{ matrix.image }}:latest
           context: .
-          file: ./docker/rpc/Dockerfile
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           build-args: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
