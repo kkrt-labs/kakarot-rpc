@@ -54,11 +54,12 @@ ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
 ENV RUST_LOG=kakarot_rpc=info
 
-# Add a health check to make sure the service is healthy
-HEALTHCHECK --interval=10s --timeout=10s --start-period=1s --retries=5 \
-    CMD curl --request POST \
-    --header "Content-Type: application/json" \
-    --data '{"jsonrpc": "2.0", "method": "eth_chainId", "id": 1}' http://${KAKAROT_RPC_URL} || exit 1
+HEALTHCHECK --interval=10s --timeout=10s --start-period=15s --retries=5 \
+    CMD response=$(curl --silent --request POST \
+        --header "Content-Type: application/json" \
+        --data '{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["latest", true], "id": 1}' \
+        http://${KAKAROT_RPC_URL} | jq -e '.result != null') && echo $response && [ "$response" = "true" ] || exit 1
+
 
 # Ports
 #######

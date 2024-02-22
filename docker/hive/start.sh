@@ -1,10 +1,10 @@
 # 1. Create the genesis file
 echo "Creating the genesis file..."
 KAKAROT_CONTRACTS_PATH="genesis/contracts" \
-HIVE_GENESIS_PATH="genesis/hive-genesis.json" \
-GENESIS_OUTPUT="genesis.json" \
-MANIFEST_OUTPUT="manifest.json" \
-hive_genesis;
+	HIVE_GENESIS_PATH="genesis/hive-genesis.json" \
+	GENESIS_OUTPUT="genesis.json" \
+	MANIFEST_OUTPUT="manifest.json" \
+	hive_genesis
 mv /genesis/hive-genesis.json /hive-genesis.json && rm -fr /genesis
 
 # 2. Start Katana
@@ -33,10 +33,14 @@ echo "Launching mongo..."
 mongod --bind_ip 0.0.0.0 --noauth &
 ## DNA
 echo "Launching DNA..."
-starknet start --rpc=http://localhost:5050 --wait-for-rpc --head-refresh-interval-ms=500 --data=/data & 
+starknet start --rpc=http://localhost:5050 --wait-for-rpc --head-refresh-interval-ms=500 --data=/data &
 # ## Indexer
 echo "Launching indexer..."
 sink-mongo run /usr/src/app/code/kakarot-indexer/src/main.ts &
+
+### 3.5. Await the Indexer to be healthy
+echo "Waiting for the indexer to start..."
+sleep 3
 
 # 4. Start the Kakarot RPC service
 echo "Launching Kakarot RPC..."
