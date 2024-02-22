@@ -31,7 +31,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ${{ matrix.image }}:${{ github.ref_name }}, ${{ matrix.image }}:latest
+          tags: ${{ matrix.image }}:latest
           context: .
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
