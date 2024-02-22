@@ -456,8 +456,7 @@ where
         // If the contract is not found, we need to deploy it.
         #[cfg(feature = "hive")]
         {
-            use crate::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET};
-            use starknet::accounts::Account;
+            use crate::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
             use starknet::accounts::Call;
             use starknet::accounts::Execution;
             use starknet::core::types::BlockTag;
@@ -478,12 +477,12 @@ where
                     }],
                     &*DEPLOY_WALLET,
                 );
-                let nonce = self
-                    .starknet_provider
-                    .get_nonce(StarknetBlockId::Tag(BlockTag::Latest), DEPLOY_WALLET.address())
-                    .await?;
+
+                let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
+                let current_nonce = *nonce;
+
                 let tx = execution
-                    .nonce(nonce)
+                    .nonce(current_nonce)
                     .max_fee(FieldElement::from(u64::MAX))
                     .prepared()
                     .map_err(|err| eyre::eyre!(err.to_string()))?
@@ -491,6 +490,9 @@ where
                     .await
                     .map_err(|err| eyre::eyre!(err.to_string()))?;
                 self.starknet_provider.add_invoke_transaction(tx).await?;
+
+                *nonce += 1u8.into();
+                drop(nonce);
             };
         }
 

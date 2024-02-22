@@ -264,19 +264,41 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
 #[tokio::test(flavor = "multi_thread")]
 #[cfg(feature = "hive")]
 async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
+    use futures::future::join_all;
     use kakarot_rpc::test_utils::eoa::KakarotEOA;
     use reth_primitives::B256;
+    use starknet::providers::Provider;
+
     // Given
     let eoa = katana.eoa();
     let eth_provider = katana.eth_provider();
-    let other_eoa = KakarotEOA::new(B256::from_str(&format!("0x{:0>64}", "0abde1")).unwrap(), eth_provider.clone());
+    let starknet_provider = eth_provider.starknet_provider();
+    let other_eoa_1 = KakarotEOA::new(B256::from_str(&format!("0x{:0>64}", "0abde1")).unwrap(), eth_provider.clone());
+    let other_eoa_2 = KakarotEOA::new(B256::from_str(&format!("0x{:0>64}", "0abde2")).unwrap(), eth_provider.clone());
+
+    let evm_address = eoa.evm_address().unwrap();
+    let balance_before = eth_provider.balance(eoa.evm_address().unwrap(), None).await.unwrap();
+    eoa.transfer(other_eoa_1.evm_address().unwrap(), 1).await.expect("Failed to transfer funds to other eoa 1");
+    // Sleep for 2 seconds to let the transaction pass
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    eoa.transfer(other_eoa_2.evm_address().unwrap(), 2).await.expect("Failed to transfer funds to other eoa 2");
+    // Sleep for 2 seconds to let the transaction pass
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
     // When
-    let balance_before = eth_provider.balance(eoa.evm_address().unwrap(), None).await.unwrap();
-    eoa.transfer(other_eoa.evm_address().unwrap(), 1).await.expect("Failed to transfer funds to other eoa");
-    other_eoa.transfer(eoa.evm_address().unwrap(), 1).await.expect("Failed to transfer funds back to eoa");
-    let balance_after = eth_provider.balance(eoa.evm_address().unwrap(), None).await.unwrap();
+    let t1 = tokio::task::spawn(async move {
+        other_eoa_1.transfer(evm_address, 1).await.expect("Failed to transfer funds back to eoa");
+    });
+    let t2 = tokio::task::spawn(async move {
+        other_eoa_2.transfer(evm_address, 1).await.expect("Failed to transfer funds back to eoa");
+    });
+    join_all([t1, t2]).await;
 
     // Then
-    assert_eq!(balance_after, balance_before);
+    // Await all transactions to pass
+    while starknet_provider.block_number().await.unwrap() < 6 {
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    }
+    let balance_after = eth_provider.balance(evm_address, None).await.unwrap();
+    assert_eq!(balance_after, balance_before - U256::from(1));
 }

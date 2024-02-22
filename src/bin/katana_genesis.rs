@@ -32,6 +32,7 @@ fn main() {
         .with_kakarot(*COINBASE_ADDRESS)
         .expect("Failed to set up Kakarot");
     builder = builder.with_eoa(pk).expect("Failed to set up EOA").fund(pk, U256::from(u128::MAX)).unwrap();
+    builder = builder.with_dev_allocation(10);
 
     let manifest = builder.manifest();
 

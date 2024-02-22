@@ -101,6 +101,7 @@ WORKDIR /usr/src/app
 
 # Copy the built binary from the previous container
 COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin
+COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc-hive /usr/local/bin
 COPY --from=builder /usr/src/rpc/target/release/hive_genesis /usr/local/bin
 
 # Expose the port that the RPC server will run on

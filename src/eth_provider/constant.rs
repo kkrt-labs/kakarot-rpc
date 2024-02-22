@@ -13,7 +13,9 @@ use {
         signers::{LocalWallet, SigningKey},
     },
     starknet_crypto::FieldElement,
+    std::sync::Arc,
     std::{env::var, str::FromStr, sync::OnceLock},
+    tokio::sync::Mutex,
 };
 
 #[cfg(feature = "hive")]
@@ -34,4 +36,5 @@ lazy_static! {
             *CHAIN_ID.get().expect("Missing chain ID"),
             ExecutionEncoding::New
         );
+    pub static ref DEPLOY_WALLET_NONCE: Arc<Mutex<FieldElement>> = Arc::new(Mutex::new(FieldElement::ZERO));
 }
