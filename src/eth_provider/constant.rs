@@ -33,7 +33,7 @@ lazy_static! {
             )),
             FieldElement::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
                 .expect("Failed to parse deployer address"),
-            *CHAIN_ID.get().expect("Missing chain ID"),
+            *CHAIN_ID.get().expect("Failed to get chain id"),
             ExecutionEncoding::New
         );
     pub static ref DEPLOY_WALLET_NONCE: Arc<Mutex<FieldElement>> = Arc::new(Mutex::new(FieldElement::ZERO));

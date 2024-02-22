@@ -456,7 +456,7 @@ where
         // If the contract is not found, we need to deploy it.
         #[cfg(feature = "hive")]
         {
-            use crate::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+            use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
             use starknet::accounts::Call;
             use starknet::accounts::Execution;
             use starknet::core::types::BlockTag;
@@ -467,8 +467,6 @@ where
                 proxy.get_implementation().block_id(StarknetBlockId::Tag(BlockTag::Latest)).call().await;
 
             if contract_not_found(&maybe_class_hash) {
-                let chain_id = self.starknet_provider.chain_id().await?;
-                let _ = CHAIN_ID.set(chain_id);
                 let execution = Execution::new(
                     vec![Call {
                         to: *KAKAROT_ADDRESS,
