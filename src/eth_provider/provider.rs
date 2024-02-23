@@ -285,7 +285,7 @@ where
 
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
-        let storage =  low + (high << 128);
+        let storage: U256 = low + (high << 128);
 
         Ok(storage.into())
     }
