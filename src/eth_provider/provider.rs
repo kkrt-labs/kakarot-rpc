@@ -44,6 +44,7 @@ use super::starknet::kakarot_core::{
 use super::starknet::ERC20Reader;
 use super::starknet::STARKNET_NATIVE_TOKEN;
 use super::utils::contract_not_found;
+use super::utils::entrypoint_not_found;
 use super::utils::iter_into;
 use super::utils::split_u256;
 use super::utils::try_from_u8_iterator;
@@ -318,9 +319,14 @@ where
 
         let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
-        let bytecode = contract.bytecode().block_id(starknet_block_id).call().await?.bytecode;
+        let bytecode = contract.bytecode().block_id(starknet_block_id).call().await;
 
-        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode.0.into_iter())))
+        if contract_not_found(&bytecode) || entrypoint_not_found(&bytecode) {
+            return Ok(Bytes::default());
+        }
+
+        let bytecode = bytecode?.bytecode.0;
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode.into_iter())))
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {

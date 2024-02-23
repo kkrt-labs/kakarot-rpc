@@ -215,6 +215,20 @@ async fn test_get_code(#[future] counter: (Katana, KakarotEvmContract), _setup: 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
+async fn test_get_code_no_contract(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // When
+    let bytecode = eth_provider.get_code(Address::random(), None).await.unwrap();
+
+    // Then
+    assert_eq!(bytecode, Bytes::default());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let eoa = counter.0.eoa();

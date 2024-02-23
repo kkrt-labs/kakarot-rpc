@@ -3,7 +3,10 @@ use std::fmt::LowerHex;
 use cainome::cairo_serde::Error;
 use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
-use starknet::{core::types::StarknetError, providers::ProviderError};
+use starknet::{
+    core::types::{ContractErrorData, StarknetError},
+    providers::ProviderError,
+};
 
 /// Converts an iterator of `Into<D>` into a `Vec<D>`.
 pub(crate) fn iter_into<D, S: Into<D>>(iter: impl IntoIterator<Item = S>) -> Vec<D> {
@@ -47,5 +50,17 @@ pub(crate) const fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
     match err {
         Ok(_) => false,
         Err(err) => matches!(err, Error::Provider(ProviderError::StarknetError(StarknetError::ContractNotFound))),
+    }
+}
+
+pub(crate) fn entrypoint_not_found<T>(err: &Result<T, Error>) -> bool {
+    match err {
+        Ok(_) => false,
+        Err(err) => matches!(
+            err,
+            Error::Provider(ProviderError::StarknetError(StarknetError::ContractError(ContractErrorData {
+                revert_error: reason
+            }))) if reason.contains("Entry point") && reason.contains("not found in contract")
+        ),
     }
 }
