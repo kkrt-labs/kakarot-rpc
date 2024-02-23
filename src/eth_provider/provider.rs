@@ -285,12 +285,9 @@ where
 
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
-        let storage = {
-            let storage: U256 = low + (high << 128);
-            storage.to_be_bytes_vec()
-        };
+        let storage =  low + (high << 128);
 
-        Ok(B256::from_slice(&storage))
+        Ok(storage.into())
     }
 
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
