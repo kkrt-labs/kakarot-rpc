@@ -134,7 +134,7 @@ async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup
 
     // Then
     let count = eth_provider.storage_at(counter_address, U256::from(0), None).await.unwrap();
-    assert_eq!(B256::from_str("0x01").unwrap(), count);
+    assert_eq!(B256::from_str(&format!("0x{:0>64}", "1")).unwrap(), count);
 }
 
 #[rstest]
