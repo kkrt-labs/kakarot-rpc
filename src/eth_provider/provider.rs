@@ -99,7 +99,7 @@ pub trait EthereumProvider {
     /// Returns the balance of an address in native eth.
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the storage of an address at a certain index.
-    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<B256>;
     /// Returns the nonce for the address at the given block.
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the code for the address at the given block.
@@ -272,7 +272,7 @@ where
         Ok(low + (high << 128))
     }
 
-    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<B256> {
         let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
         let starknet_block_id: StarknetBlockId = eth_block_id.try_into()?;
 
@@ -286,7 +286,9 @@ where
 
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
-        Ok(low + (high << 128))
+        let storage: U256 = low + (high << 128);
+
+        Ok(storage.into())
     }
 
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {

@@ -135,7 +135,7 @@ where
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(address = %address, index = ?index, block_id = ?block_id))]
-    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<U256> {
+    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<B256> {
         Ok(self.eth_provider.storage_at(address, index, block_id).await?)
     }
 
