@@ -91,7 +91,7 @@ RUN build_platform() { \
     esac
 
 # Create a new container from scratch to reduce image size
-FROM debian:bullseye
+FROM debian:bookworm
 
 # Install any necessary dependencies
 RUN apt-get update && apt-get install -y libssl-dev ca-certificates tini curl && rm -rf /var/lib/apt/lists/*
