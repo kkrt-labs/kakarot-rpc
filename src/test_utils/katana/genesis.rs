@@ -89,7 +89,8 @@ impl<T> KatanaGenesisBuilder<T> {
                     address,
                     GenesisAccountJson {
                         public_key: account.public_key,
-                        balance: Some(account.balance),
+                        private_key: Some(account.private_key),
+                        balance: account.balance,
                         nonce: account.nonce,
                         class: None,
                         storage: account.storage.clone(),
@@ -218,7 +219,7 @@ impl KatanaGenesisBuilder<Loaded> {
         .collect::<HashMap<_, _>>();
 
         let kakarot = GenesisContractJson {
-            class: kakarot_class_hash,
+            class: Some(kakarot_class_hash),
             balance: None,
             nonce: None,
             storage: Some(kakarot_storage),
@@ -249,8 +250,12 @@ impl KatanaGenesisBuilder<Initialized> {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let eoa =
-            GenesisContractJson { class: proxy_class_hash, balance: None, nonce: None, storage: Some(eoa_storage) };
+        let eoa = GenesisContractJson {
+            class: Some(proxy_class_hash),
+            balance: None,
+            nonce: None,
+            storage: Some(eoa_storage),
+        };
 
         let starknet_address = self.compute_starknet_address(evm_address)?;
         self.contracts.insert(starknet_address, eoa);

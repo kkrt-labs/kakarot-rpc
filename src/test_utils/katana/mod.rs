@@ -5,6 +5,7 @@ use std::str::FromStr as _;
 use std::sync::Arc;
 
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
+use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::allocation::{DevAllocationsGenerator, GenesisAllocation};
 use katana_primitives::genesis::json::GenesisJson;
@@ -43,7 +44,7 @@ pub fn katana_config() -> StarknetConfig {
             chain_id: ChainId::parse("kakatest").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
-            gas_price: 1,
+            gas_price: GasPrices { eth: 1, strk: 0 },
         },
         genesis: load_genesis(),
         ..Default::default()
