@@ -566,9 +566,12 @@ where
 
         let value = into_via_try_wrapper!(request.value.unwrap_or_default());
 
+        let nonce = into_via_wrapper!(request.nonce.unwrap_or_default());
+
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let call_output = kakarot_contract
             .eth_call(
+                &nonce,
                 &from,
                 &to,
                 &gas_limit,

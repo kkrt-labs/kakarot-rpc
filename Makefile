@@ -40,7 +40,7 @@ docker-down:
 	docker compose down -v --remove-orphans && docker compose rm
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.0-alpha.1 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.0-alpha.2 katana
 
 katana-genesis:
 	rm -fr .katana/ && mkdir .katana
@@ -48,7 +48,7 @@ katana-genesis:
 
 # Runs Katana with Kakarot deployed on top.
 run-katana: install-katana katana-genesis
-	katana --disable-fee --chain-id=KKRT --genesis .katana/genesis.json
+	katana --disable-fee --chain-id=kkrt --genesis .katana/genesis.json
 
 test: install-katana katana-genesis load-env
 	cargo test --all --features testing

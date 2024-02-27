@@ -1,4 +1,4 @@
-use reth_primitives::{Address, B256, U256};
+use reth_primitives::{Address, B256, U256, U64};
 use starknet::core::types::FieldElement;
 
 use crate::models::errors::ConversionError;
@@ -45,6 +45,14 @@ impl TryFrom<Felt252Wrapper> for u128 {
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
         let felt = FieldElement::from_byte_slice_be(address.as_slice()).unwrap(); // safe unwrap since H160 is 20 bytes
+        Self(felt)
+    }
+}
+
+#[allow(clippy::fallible_impl_from)]
+impl From<U64> for Felt252Wrapper {
+    fn from(value: U64) -> Self {
+        let felt = FieldElement::from_byte_slice_be(&value.to_be_bytes::<8>()).unwrap(); // safe unwrap since U64 is 8 bytes
         Self(felt)
     }
 }
