@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   starknet:
-    image: greged93/katana:v0.4.4
+    image: greged93/katana:v0.5.1
     command:
       - katana
       - --block-time
@@ -15,7 +15,7 @@ services:
       - --gas-price
       - "1"
       - --chain-id
-      - "KKRT"
+      - "0x18F014DC84"
     ports:
       - "5050:5050"
     networks:
