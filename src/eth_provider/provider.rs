@@ -506,7 +506,7 @@ where
         #[cfg(not(feature = "testing"))]
         {
             let hash = transaction_signed.hash();
-            self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V3(transaction)).await?;
+            self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction)).await?;
             Ok(hash)
         }
         // If we are currently testing, we need to return the starknet hash in order
@@ -514,7 +514,7 @@ where
         #[cfg(feature = "testing")]
         {
             let res =
-                self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V3(transaction)).await?;
+                self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction)).await?;
             Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]))
         }
     }

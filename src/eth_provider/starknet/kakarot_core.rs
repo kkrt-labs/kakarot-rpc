@@ -6,10 +6,7 @@ use dotenv::dotenv;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Transaction, TransactionSigned};
 use starknet::{
-    core::{
-        types::{BroadcastedInvokeTransactionV3, DataAvailabilityMode, ResourceBounds, ResourceBoundsMapping},
-        utils::get_contract_address,
-    },
+    core::{types::BroadcastedInvokeTransactionV1, utils::get_contract_address},
     macros::selector,
 };
 use starknet_crypto::FieldElement;
@@ -69,7 +66,7 @@ pub(crate) fn to_starknet_transaction(
     transaction: &TransactionSigned,
     chain_id: u64,
     signer: Address,
-) -> EthProviderResult<BroadcastedInvokeTransactionV3> {
+) -> EthProviderResult<BroadcastedInvokeTransactionV1> {
     let starknet_address = starknet_address(signer);
 
     let nonce = FieldElement::from(transaction.nonce());
@@ -109,16 +106,9 @@ pub(crate) fn to_starknet_transaction(
     ];
     execute_calldata.append(&mut signed_data.into_iter().map(FieldElement::from).collect());
 
-    Ok(BroadcastedInvokeTransactionV3 {
-        fee_data_availability_mode: DataAvailabilityMode::L1,
-        nonce_data_availability_mode: DataAvailabilityMode::L1,
-        tip: 0,
-        account_deployment_data: vec![],
-        paymaster_data: vec![],
-        resource_bounds: ResourceBoundsMapping {
-            l1_gas: ResourceBounds { max_amount: u32::MAX as u64, max_price_per_unit: u32::MAX as u128 },
-            l2_gas: ResourceBounds { max_amount: u32::MAX as u64, max_price_per_unit: u32::MAX as u128 },
-        },
+    let max_fee = (u64::MAX).into();
+    Ok(BroadcastedInvokeTransactionV1 {
+        max_fee,
         signature,
         nonce,
         sender_address: starknet_address,
