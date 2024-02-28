@@ -65,6 +65,20 @@ pub struct KatanaGenesisBuilder<T> {
     status: PhantomData<T>,
 }
 
+// Copy pasted from Dojo repository as it is part of the Katana binary
+// https://github.com/dojoengine/dojo/blob/main/bin/katana/src/utils.rs#L6
+fn parse_seed(seed: &str) -> [u8; 32] {
+    let seed = seed.as_bytes();
+
+    if seed.len() >= 32 {
+        unsafe { *(seed[..32].as_ptr() as *const [u8; 32]) }
+    } else {
+        let mut actual_seed = [0u8; 32];
+        seed.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
+        actual_seed
+    }
+}
+
 impl<T> KatanaGenesisBuilder<T> {
     pub fn update_state<State>(self) -> KatanaGenesisBuilder<State> {
         KatanaGenesisBuilder {
@@ -82,6 +96,7 @@ impl<T> KatanaGenesisBuilder<T> {
     pub fn with_dev_allocation(mut self, amount: u16) -> Self {
         let dev_allocations = DevAllocationsGenerator::new(amount)
             .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+            .with_seed(parse_seed("0"))
             .generate()
             .into_iter()
             .map(|(address, account)| {
