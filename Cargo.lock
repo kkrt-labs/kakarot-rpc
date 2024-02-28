@@ -3493,8 +3493,8 @@ checksum = "fea41bba32d969b513997752735605054bc0dfa92b4c56bf1189f2e174be7a10"
 
 [[package]]
 name = "dojo-lang"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler 2.5.4",
@@ -3537,8 +3537,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3571,8 +3571,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "crypto-bigint 0.5.5",
  "hex",
@@ -3587,8 +3587,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6595,8 +6595,8 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6629,8 +6629,8 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "blockifier 0.5.0-dev.0",
@@ -6649,8 +6649,8 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "blockifier 0.5.0-dev.0",
@@ -6667,8 +6667,8 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -6694,8 +6694,8 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -6711,8 +6711,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "cairo-lang-starknet 2.5.4",
@@ -6743,8 +6743,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -6755,8 +6755,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "derive_more",
@@ -6774,8 +6774,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -6787,8 +6787,8 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "0.6.0-alpha.1"
-source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.1#82a5bb885b4f74cf3592c3a62ede9d5f4b9a6e37"
+version = "0.6.0-alpha.2"
+source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.2#db0c4d783c3626a8d69d5035e2ae352595d86763"
 dependencies = [
  "futures",
  "rayon",
