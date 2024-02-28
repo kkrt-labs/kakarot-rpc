@@ -566,7 +566,19 @@ where
 
         let value = into_via_try_wrapper!(request.value.unwrap_or_default());
 
-        let nonce = into_via_wrapper!(request.nonce.unwrap_or_default());
+        // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
+        //  when we can simulate the transaction instead of calling `eth_call`
+        let nonce = {
+            match request.nonce {
+                Some(nonce) => into_via_wrapper!(nonce),
+                None => match request.from {
+                    None => FieldElement::ZERO,
+                    Some(address) => {
+                        into_via_try_wrapper!(self.transaction_count(address, block_id).await?)
+                    }
+                },
+            }
+        };
 
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let call_output = kakarot_contract
