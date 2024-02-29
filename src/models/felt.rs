@@ -52,7 +52,7 @@ impl From<Address> for Felt252Wrapper {
 #[allow(clippy::fallible_impl_from)]
 impl From<U64> for Felt252Wrapper {
     fn from(value: U64) -> Self {
-        let felt = FieldElement::from_byte_slice_be(&value.to_be_bytes::<8>()).unwrap(); // safe unwrap since U64 is 8 bytes
+        let felt = FieldElement::from(value.to::<u64>());
         Self(felt)
     }
 }
