@@ -121,6 +121,7 @@ pub trait EthereumProvider {
     /// Send a raw transaction to the network and returns the transactions hash.
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256>;
     async fn gas_price(&self) -> EthProviderResult<U256>;
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -523,6 +524,38 @@ where
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let gas_price = kakarot_contract.get_base_fee().call().await?.base_fee;
         Ok(into_via_wrapper!(gas_price))
+    }
+
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>> {
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+        match block_id {
+            BlockId::Number(maybe_number) => {
+                let block_number = match maybe_number {
+                    BlockNumberOrTag::Latest => self.block_number().await?,
+                    BlockNumberOrTag::Earliest => U64::ZERO,
+                    BlockNumberOrTag::Number(number) => U64::from(number),
+                    BlockNumberOrTag::Pending => self.block_number().await? + U64::from(1_u64),
+                    BlockNumberOrTag::Finalized => {
+                        return Err(EthProviderError::MethodNotSupported(
+                            "Block tag variant Error: Cannot query finalized blocks in Kakarot network. Change BlockTag to 'latest'".to_string()
+                        ));
+                    }
+                    BlockNumberOrTag::Safe => {
+                        return Err(EthProviderError::MethodNotSupported(
+                            "Block tag variant Error: Cannot query safe blocks in Kakarot network. Change BlockTag to 'latest'".to_string()
+                        ));
+                    }
+                };
+                let filter = into_filter("receipt.blockNumber", block_number, 64);
+                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
+                Ok(Some(tx.into_iter().map(Into::into).collect()))
+            }
+            BlockId::Hash(hash) => {
+                let filter = into_filter("receipt.blockHash", hash.block_hash, 64);
+                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
+                Ok(Some(tx.into_iter().map(Into::into).collect()))
+            }
+        }
     }
 }
 

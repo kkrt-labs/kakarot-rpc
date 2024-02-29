@@ -185,6 +185,63 @@ pub async fn mock_database() -> Database {
     )
     .await;
 
+    update_many(
+        "receipt".to_string(),
+        "transactionHash".to_string(),
+        mongodb.collection("receipts"),
+        vec![
+            doc! {"receipt": doc! {
+                "transactionHash": &zero,
+                "transactionIndex": &zero,
+                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
+                "blockNumber": format!("0x{:064x}", *BLOCK_NUMBER),
+                "from": &address_zero,
+                "to": &address_zero,
+                "cumulativeGasUsed": &zero,
+                "effectiveGasPrice": &zero,
+                "gasUsed": &zero,
+                "contractAddress": None::<String>,
+                "logs":Vec::<Document>::new(),
+                "logsBloom": &bloom_zero,
+                "type": &zero,
+                "status": &zero,
+            }},
+            doc! {"receipt": doc! {
+                "transactionHash": &one,
+                "transactionIndex": &zero,
+                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
+                "blockNumber": format!("0x{:064x}", *BLOCK_NUMBER),
+                "from": &address_zero,
+                "to": &address_zero,
+                "cumulativeGasUsed": &zero,
+                "effectiveGasPrice": &zero,
+                "gasUsed": &zero,
+                "contractAddress": None::<String>,
+                "logs": Vec::<Document>::new(),
+                "logsBloom": &bloom_zero,
+                "type": &zero,
+                "status": &zero,
+            }},
+            doc! {"receipt": doc! {
+                "transactionHash": &two,
+                "transactionIndex": &zero,
+                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
+                "blockNumber": format!("0x{:064x}", *BLOCK_NUMBER),
+                "from": &address_zero,
+                "to": &address_zero,
+                "cumulativeGasUsed": &zero,
+                "effectiveGasPrice": &zero,
+                "gasUsed": &zero,
+                "contractAddress": None::<String>,
+                "logs": Vec::<Document>::new(),
+                "logsBloom": &bloom_zero,
+                "type": &zero,
+                "status": &zero,
+            }},
+        ],
+    )
+    .await;
+
     Database::new(mongodb)
 }
 

@@ -60,7 +60,7 @@ test-coverage: katana-genesis load-env
 benchmark-madara:
 	cd benchmarks && bun i && bun run benchmark-madara
 
-test-target: load-env
+test-target: katana-genesis load-env
 	cargo test --tests --features "testing,hive" $(TARGET) -- --nocapture
 
 benchmark-katana:

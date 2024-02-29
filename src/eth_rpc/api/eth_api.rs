@@ -6,6 +6,9 @@ use reth_rpc_types::{
     SyncStatus, Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 
+/// Ethereum JSON-RPC API Trait
+/// Mostly based on <https://github.com/paradigmxyz/reth/blob/559124ac5a0b25030250203babcd8a94693df648/crates/rpc/rpc-api/src/eth.rs#L15>
+/// With some small modifications
 #[rpc(server, namespace = "eth")]
 #[async_trait]
 pub trait EthApi {
@@ -234,4 +237,8 @@ pub trait EthApi {
     /// Returns a list of all logs based on filter ID
     #[method(name = "getFilterLogs")]
     async fn get_filter_logs(&self, id: U64) -> Result<FilterChanges>;
+
+    /// Returns all transaction receipts for a given block.
+    #[method(name = "getBlockReceipts")]
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> Result<Option<Vec<TransactionReceipt>>>;
 }

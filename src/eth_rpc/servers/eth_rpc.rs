@@ -268,4 +268,8 @@ where
     async fn get_filter_logs(&self, _id: U64) -> Result<FilterChanges> {
         Err(EthProviderError::MethodNotSupported("eth_getFilterLogs".to_string()).into())
     }
+
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> Result<Option<Vec<TransactionReceipt>>> {
+        Ok(self.eth_provider.block_receipts(block_id).await?)
+    }
 }
