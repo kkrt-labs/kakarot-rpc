@@ -1,4 +1,7 @@
 # 1. Create the genesis file
+echo "Supplied genesis state:"
+cat /genesis.json
+mv /genesis.json /genesis/hive-genesis.json
 echo "Creating the genesis file..."
 KAKAROT_CONTRACTS_PATH="genesis/contracts" \
 	HIVE_GENESIS_PATH="genesis/hive-genesis.json" \

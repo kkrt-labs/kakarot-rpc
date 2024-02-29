@@ -101,7 +101,6 @@ COPY --from=rpc /usr/local/bin/kakarot-rpc-hive /usr/local/bin/kakarot-rpc
 COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
 RUN mkdir -p /genesis/contracts
 COPY ./lib/kakarot/build /genesis/contracts
-COPY ./docker/hive/genesis.json /genesis/hive-genesis.json
 
 # Copy start script
 COPY docker/hive/start.sh /start.sh
