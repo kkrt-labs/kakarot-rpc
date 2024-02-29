@@ -62,7 +62,7 @@ services:
         condition: service_completed_successfully
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    image: eliastazartes/kakarot-rpc:latest
     # Always pull the latest image, until we use release tags
     # TODO: use release tags
     pull_policy: always
