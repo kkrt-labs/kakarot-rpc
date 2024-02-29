@@ -6,7 +6,7 @@ use dotenv::dotenv;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Transaction, TransactionSigned};
 use starknet::{
-    core::{types::BroadcastedInvokeTransaction, utils::get_contract_address},
+    core::{types::BroadcastedInvokeTransactionV1, utils::get_contract_address},
     macros::selector,
 };
 use starknet_crypto::FieldElement;
@@ -66,12 +66,10 @@ pub(crate) fn to_starknet_transaction(
     transaction: &TransactionSigned,
     chain_id: u64,
     signer: Address,
-) -> EthProviderResult<BroadcastedInvokeTransaction> {
+) -> EthProviderResult<BroadcastedInvokeTransactionV1> {
     let starknet_address = starknet_address(signer);
 
     let nonce = FieldElement::from(transaction.nonce());
-
-    let max_fee = (u64::MAX).into();
 
     // Step: Signature
     // Extract the signature from the Ethereum Transaction
@@ -108,7 +106,8 @@ pub(crate) fn to_starknet_transaction(
     ];
     execute_calldata.append(&mut signed_data.into_iter().map(FieldElement::from).collect());
 
-    Ok(BroadcastedInvokeTransaction {
+    let max_fee = (u64::MAX).into();
+    Ok(BroadcastedInvokeTransactionV1 {
         max_fee,
         signature,
         nonce,

@@ -105,7 +105,7 @@ impl HiveGenesisConfig {
                 Ok((
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
-                        class: proxy_class_hash.0.into(),
+                        class: Some(proxy_class_hash.0.into()),
                         balance: Some(EthersU256::from_big_endian(&info.balance.to_be_bytes::<32>())),
                         nonce: None,
                         storage: Some(kakarot_account_storage.into_iter().collect()),

@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   starknet:
-    image: greged93/madara:v0.6.0
+    image: gchr.io/keep-starknet-strange/madara:v0.7.0
     ports:
       - 9615:9615
       - 30333:30333

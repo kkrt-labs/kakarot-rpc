@@ -19,17 +19,17 @@ license = "MIT"
 
 [dependencies]
 # Starknet dependencies
-cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5-legacy-beta", default-features = false, features = [
+cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5", default-features = false, features = [
   "abigen-rs",
 ] }
-cairo-lang-starknet = { version = "2.4.0", default-features = false }
+cairo-lang-starknet = { version = "2.5.4", default-features = false }
 ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "e7d0f3e", default-features = false, features = [
   "v0",
 ], optional = true }
 sequencer = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "e7d0f3e", default-features = false, optional = true }
-starknet = { version = "0.8.0", default-features = false }
+starknet = { version = "0.9.0", default-features = false }
 starknet-crypto = { version = "0.6.1", default-features = false }
-starknet_api = { version = "0.6.0-rc3", default-features = false }
+starknet_api = { version = "0.6.0", default-features = false }
 
 # Ethereum dependencies
 alloy-rlp = { version = "0.3", default-features = false }
@@ -81,21 +81,21 @@ walkdir = { version = "2.3.3", default-features = false }
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "dfe390", default-features = false }
-katana-core = { git = 'https://github.com/dojoengine/dojo', rev = "dfe390", features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.2", default-features = false }
+katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.2", features = [
   "messaging",
 ] }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', rev = "dfe390", default-features = false, features = [
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.2", default-features = false, features = [
   "serde",
 ] }
 
 
 [patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "e6e9c90" }
+blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "8860946" }
 
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "262b7eb4b11ab165a2a936a5f914e78aa732d4a2" }
+cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
+cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
 
 [dev-dependencies]
 rstest = { version = "0.18.1", default-features = false }

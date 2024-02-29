@@ -22,6 +22,7 @@ use reth_rpc_types::ValueOrArray;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::BlockId as StarknetBlockId;
+use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::core::types::SyncStatusType;
 use starknet::core::types::ValueOutOfRangeError;
 use starknet::core::utils::get_storage_var_address;
@@ -505,14 +506,15 @@ where
         #[cfg(not(feature = "testing"))]
         {
             let hash = transaction_signed.hash();
-            self.starknet_provider.add_invoke_transaction(transaction).await?;
+            self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction)).await?;
             Ok(hash)
         }
         // If we are currently testing, we need to return the starknet hash in order
         // to be able to wait for the transaction to be mined.
         #[cfg(feature = "testing")]
         {
-            let res = self.starknet_provider.add_invoke_transaction(transaction).await?;
+            let res =
+                self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction)).await?;
             Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]))
         }
     }
@@ -564,9 +566,24 @@ where
 
         let value = into_via_try_wrapper!(request.value.unwrap_or_default());
 
+        // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
+        //  when we can simulate the transaction instead of calling `eth_call`
+        let nonce = {
+            match request.nonce {
+                Some(nonce) => into_via_wrapper!(nonce),
+                None => match request.from {
+                    None => FieldElement::ZERO,
+                    Some(address) => {
+                        into_via_try_wrapper!(self.transaction_count(address, block_id).await?)
+                    }
+                },
+            }
+        };
+
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let call_output = kakarot_contract
             .eth_call(
+                &nonce,
                 &from,
                 &to,
                 &gas_limit,
