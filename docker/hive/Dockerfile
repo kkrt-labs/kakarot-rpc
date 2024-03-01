@@ -1,7 +1,7 @@
 # trunk-ignore-all(terrascan/AC_DOCKER_0047)
 
 # CairoVM Chain
-FROM ghcr.io/dojoengine/dojo:v0.5.1 as katana
+FROM ghcr.io/dojoengine/dojo:v0.6.0-alpha.2 as katana
 
 # Indexer service
 ### Apibara DNA indexer and indexer
@@ -16,12 +16,12 @@ COPY --from=indexer /nix/store/3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc-apibara-sink-mon
 ARG BUILDPLATFORM
 RUN case $BUILDPLATFORM in \
     "linux/amd64") \
-        patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/starknet && \
-        patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/sink-mongo; \
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/starknet && \
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/sink-mongo; \
     ;; \
     "linux/arm64") \
-        patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/starknet && \
-        patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/sink-mongo; \
+    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/starknet && \
+    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/sink-mongo; \
     ;; \
     *) \
     echo "Unknown BUILDPLATFORM: $BUILDPLATFORM"; \
@@ -39,7 +39,7 @@ RUN git clone -v "https://github.com/kkrt-labs/kakarot-indexer.git"
 FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
-FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.3-4 as rpc
+FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.4 as rpc
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
@@ -57,19 +57,19 @@ ENV MONGO_DATABASE_NAME=kakarot-local
 ENV STARTING_BLOCK=0
 ENV STREAM_URL=http://localhost:7171
 ENV SINK_TYPE=mongo
+ENV KATANA_ACCOUNT_ADDRESS=0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca
+ENV KATANA_PRIVATE_KEY=0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a
 ### Kakarot RPC environment variables
 ### Port 8545: https://github.com/ethereum/hive/blob/master/simulators/ethereum/rpc/helper.go#L50
-ENV KATANA_ACCOUNT_ADDRESS=0x01b44e32c8edbcada35fa7ae6f1f44bbc16657f442b7b19286812e1976c34d83
-ENV KATANA_PRIVATE_KEY=0x05b8e27acc53020ed612507af8245cbffafd8aa588b79decaee1acf99a1c5cc2
 ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
 ENV RUST_LOG=kakarot_rpc=info
 
 HEALTHCHECK --interval=10s --timeout=10s --start-period=15s --retries=5 \
     CMD response=$(curl --silent --request POST \
-        --header "Content-Type: application/json" \
-        --data '{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["latest", true], "id": 1}' \
-        http://${KAKAROT_RPC_URL} | jq -e '.result != null') && echo $response && [ "$response" = "true" ] || exit 1
+    --header "Content-Type: application/json" \
+    --data '{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["latest", true], "id": 1}' \
+    http://${KAKAROT_RPC_URL} | jq -e '.result != null') && echo $response && [ "$response" = "true" ] || exit 1
 
 
 # Ports
