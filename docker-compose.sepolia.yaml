@@ -1,12 +1,12 @@
 version: "3.8"
 
 services:
-  juno:
+  starknet:
     image: nethermind/juno:v0.9.4
     ports:
-        - 6060:6060
+      - 6060:6060
     volumes:
-      - ./juno_files/:/var/lib/juno
+      - juno_files:/var/lib/juno
     command: >
       --pending-poll-interval "1s"
       --http
@@ -26,7 +26,7 @@ services:
   starknet-explorer:
     image: ghcr.io/lambdaclass/stark_compass_explorer:v0.2.37
     ports:
-      - "4000:4000"
+      - 4000:4000
     environment:
       - PHX_HOST=localhost
       - PORT=4000
@@ -42,7 +42,7 @@ services:
     depends_on:
       starknet-explorer-db:
         condition: service_started
-      juno:
+      starknet:
         condition: service_started
     extra_hosts:
       - host.docker.internal:172.17.0.1
@@ -59,18 +59,15 @@ services:
       - POSTGRES_DB=starknet_explorer_dev
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - ./.data/starknet-explorer/:/var/lib/postgresql/data/
+      - starknet-explorer:/var/lib/postgresql/data/
 
   kakarot-rpc:
-    image: eliastazartes/kakarot-rpc:latest
-    # Always pull the latest image, until we use release tags
-    # TODO: use release tags
-    pull_policy: always
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.4
     ports:
       - 3030:3030
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
-      - STARKNET_NETWORK=http://starknet:5050
+      - STARKNET_NETWORK=http://starknet:6060
       - RUST_LOG=kakarot_rpc=info
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
       - MONGO_DATABASE_NAME=kakarot-local
@@ -84,10 +81,10 @@ services:
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app
-    depends_on:
-      deployments-parser:
-        condition: service_completed_successfully
     restart: on-failure
+    depends_on:
+      starknet:
+        condition: service_started
     networks:
       - internal
 
@@ -95,7 +92,7 @@ services:
     image: quay.io/apibara/starknet:1.4.1
     command:
       - start
-      - --rpc=http://starknet:5050
+      - --rpc=http://starknet:6060
       - --wait-for-rpc
       - --data=/data
     ports:
@@ -106,8 +103,6 @@ services:
       - internal
     restart: on-failure
     depends_on:
-      kakarot-deployer:
-        condition: service_completed_successfully
       starknet:
         condition: service_started
 
@@ -127,13 +122,13 @@ services:
 
   clone-repo:
     image: docker.io/alpine/git:latest
-    entrypoint: "/bin/sh"
+    entrypoint: /bin/sh
     command:
-      - "-c"
+      - -c
       # clone the repository in `/code`, removing any old copy.
-      - "cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
+      - cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git
     volumes:
-      - "indexer_code:/code"
+      - indexer_code:/code
     restart: on-failure
 
   indexer:
@@ -153,7 +148,7 @@ services:
       - SINK_TYPE=mongo
     restart: on-failure
     volumes:
-      - "indexer_code:/code"
+      - indexer_code:/code
     networks:
       - internal
     depends_on:
@@ -161,20 +156,27 @@ services:
         condition: service_completed_successfully
       starknet:
         condition: service_started
-      kakarot-deployer:
-        condition: service_completed_successfully
 
 networks:
   internal:
+    driver: bridge
   default:
     driver: bridge
   close:
     driver: bridge
 
-  
 volumes:
+  # trunk-ignore(yamllint/empty-values)
   deployments:
+  # trunk-ignore(yamllint/empty-values)
   apibara:
+  # trunk-ignore(yamllint/empty-values)
   mongo_data:
+  # trunk-ignore(yamllint/empty-values)
   indexer_code:
+  # trunk-ignore(yamllint/empty-values)
   pgadmin_data:
+  # trunk-ignore(yamllint/empty-values)
+  juno_files:
+  # trunk-ignore(yamllint/empty-values)
+  starknet-explorer:
