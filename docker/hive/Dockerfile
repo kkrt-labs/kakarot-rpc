@@ -39,7 +39,7 @@ RUN git clone -v "https://github.com/kkrt-labs/kakarot-indexer.git"
 FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
-FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.3-4 as rpc
+FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.4 as rpc
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
