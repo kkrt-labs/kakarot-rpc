@@ -157,6 +157,10 @@ pub trait EthApi {
     #[method(name = "maxPriorityFeePerGas")]
     async fn max_priority_fee_per_gas(&self) -> Result<U128>;
 
+    /// Introduced in EIP-4844, returns the current blob base fee in wei.
+    #[method(name = "blobBaseFee")]
+    async fn blob_base_fee(&self) -> Result<U256>;
+
     /// Returns whether the client is actively mining new blocks.
     #[method(name = "mining")]
     async fn mining(&self) -> Result<bool>;
