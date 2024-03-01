@@ -1,0 +1,180 @@
+version: "3.8"
+
+services:
+  juno:
+    image: nethermind/juno:v0.9.4
+    ports:
+        - 6060:6060
+    volumes:
+      - ./juno_files/:/var/lib/juno
+    command: >
+      --pending-poll-interval "1s"
+      --http
+      --http-host 0.0.0.0
+      --http-port 6060
+      --db-path /var/lib/juno
+      --eth-node wss://eth-sepolia.g.alchemy.com/v2/WIUR5JUZXieEBkze6Xs3IOXWhsS840TX
+      --cn-name kakarot-sepolia
+      --cn-feeder-url https://gateway.kakarot.sw-dev.io/feeder_gateway/
+      --cn-gateway-url https://gateway.kakarot.sw-dev.io/gateway/
+      --cn-l1-chain-id 0xaa36a7
+      --cn-l2-chain-id kkrt
+      --cn-core-contract-address 0x9DAd05893305352cDd142F79e36bc39393F23770
+      --cn-unverifiable-range 0,1000000
+    networks:
+      - internal
+  starknet-explorer:
+    image: ghcr.io/lambdaclass/stark_compass_explorer:v0.2.37
+    ports:
+      - "4000:4000"
+    environment:
+      - PHX_HOST=localhost
+      - PORT=4000
+      - RPC_API_HOST=http://host.docker.internal:6060
+      - TESTNET_RPC_API_HOST=http://host.docker.internal:6060
+      - SEPOLIA_RPC_API_HOST=http://host.docker.internal:6060
+      - DISABLE_MAINNET_SYNC=true
+      - DISABLE_SEPOLIA_SYNC=true
+      - DATABASE_PATH=ecto://postgres:postgres@starknet-explorer-db:5432/starknet_explorer_dev
+      - DB_TYPE=postgres
+      - SECRET_KEY_BASE=JyULoT5cLBifW+XNEuCTVoAb+SaFgQt9j227RN0cKpR3wTsrApGd1HNcgeopemyl
+      - ENABLE_LISTENER=true
+    depends_on:
+      starknet-explorer-db:
+        condition: service_started
+      juno:
+        condition: service_started
+    extra_hosts:
+      - host.docker.internal:172.17.0.1
+    networks:
+      - internal
+
+  starknet-explorer-db:
+    image: postgres:15.3
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=starknet_explorer_dev
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - ./.data/starknet-explorer/:/var/lib/postgresql/data/
+
+  kakarot-rpc:
+    image: eliastazartes/kakarot-rpc:latest
+    # Always pull the latest image, until we use release tags
+    # TODO: use release tags
+    pull_policy: always
+    ports:
+      - 3030:3030
+    environment:
+      - KAKAROT_RPC_URL=0.0.0.0:3030
+      - STARKNET_NETWORK=http://starknet:5050
+      - RUST_LOG=kakarot_rpc=info
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
+      # These values are unique to Sepolia Testnet
+      # They'll need to be manually changed in case the testnet is reset
+      # To add robustness: parse the `deployments/kakarot-sepolia` folder in `kkrt-labs/kakarot` repo
+      - KAKAROT_ADDRESS=0x1a18210c20241ea7a06224246264a59add11c8358d69826e8bd51f4ba6d3be7
+      - PROXY_ACCOUNT_CLASS_HASH=0x5bcd4d02cfe3aeb836f2ef4bd21b2020793e52a8269dbef9cd883fbddd2963c
+      - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=0x2ab68b7f5cea86752714b499f602cdb8c36e8cdf270f04b6a275b609baf7aea
+      - CONTRACT_ACCOUNT_CLASS_HASH=0x34e8e05a28a6ac98118860ae0cca56487e2f0a3589a4b713a0f19ccda3386d9
+    volumes:
+      # Mount the volume on workdir and use .env stored in root of the volume
+      - deployments:/usr/src/app
+    depends_on:
+      deployments-parser:
+        condition: service_completed_successfully
+    restart: on-failure
+    networks:
+      - internal
+
+  apibara-dna:
+    image: quay.io/apibara/starknet:1.4.1
+    command:
+      - start
+      - --rpc=http://starknet:5050
+      - --wait-for-rpc
+      - --data=/data
+    ports:
+      - 7171:7171
+    volumes:
+      - apibara:/data
+    networks:
+      - internal
+    restart: on-failure
+    depends_on:
+      kakarot-deployer:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_started
+
+  ### MongoDB with Mongo Express
+  mongo:
+    image: mongo:6.0.8
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - internal
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+
+  clone-repo:
+    image: docker.io/alpine/git:latest
+    entrypoint: "/bin/sh"
+    command:
+      - "-c"
+      # clone the repository in `/code`, removing any old copy.
+      - "cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
+    volumes:
+      - "indexer_code:/code"
+    restart: on-failure
+
+  indexer:
+    image: quay.io/apibara/sink-mongo
+    command:
+      - run
+      - /code/kakarot-indexer/src/main.ts
+    environment:
+      # Whitelist environment variables
+      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME
+      - DEBUG=""
+      - APIBARA_AUTH_TOKEN=""
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
+      - STARTING_BLOCK=0
+      - STREAM_URL=http://apibara-dna:7171
+      - SINK_TYPE=mongo
+    restart: on-failure
+    volumes:
+      - "indexer_code:/code"
+    networks:
+      - internal
+    depends_on:
+      clone-repo:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_started
+      kakarot-deployer:
+        condition: service_completed_successfully
+
+networks:
+  internal:
+  default:
+    driver: bridge
+  close:
+    driver: bridge
+
+  
+volumes:
+  deployments:
+  apibara:
+  mongo_data:
+  indexer_code:
+  pgadmin_data:
