@@ -16,12 +16,12 @@ COPY --from=indexer /nix/store/3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc-apibara-sink-mon
 ARG BUILDPLATFORM
 RUN case $BUILDPLATFORM in \
     "linux/amd64") \
-        patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/starknet && \
-        patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/sink-mongo; \
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/starknet && \
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 /usr/local/bin/sink-mongo; \
     ;; \
     "linux/arm64") \
-        patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/starknet && \
-        patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/sink-mongo; \
+    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/starknet && \
+    patchelf --set-interpreter /lib/ld-linux-aarch64.so.1 /usr/local/bin/sink-mongo; \
     ;; \
     *) \
     echo "Unknown BUILDPLATFORM: $BUILDPLATFORM"; \
@@ -67,9 +67,9 @@ ENV RUST_LOG=kakarot_rpc=info
 
 HEALTHCHECK --interval=10s --timeout=10s --start-period=15s --retries=5 \
     CMD response=$(curl --silent --request POST \
-        --header "Content-Type: application/json" \
-        --data '{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["latest", true], "id": 1}' \
-        http://${KAKAROT_RPC_URL} | jq -e '.result != null') && echo $response && [ "$response" = "true" ] || exit 1
+    --header "Content-Type: application/json" \
+    --data '{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["latest", true], "id": 1}' \
+    http://${KAKAROT_RPC_URL} | jq -e '.result != null') && echo $response && [ "$response" = "true" ] || exit 1
 
 
 # Ports
