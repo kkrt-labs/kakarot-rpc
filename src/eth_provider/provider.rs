@@ -530,22 +530,7 @@ where
         let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
         match block_id {
             BlockId::Number(maybe_number) => {
-                let block_number = match maybe_number {
-                    BlockNumberOrTag::Latest => self.block_number().await?,
-                    BlockNumberOrTag::Earliest => U64::ZERO,
-                    BlockNumberOrTag::Number(number) => U64::from(number),
-                    BlockNumberOrTag::Pending => self.block_number().await? + U64::from(1_u64),
-                    BlockNumberOrTag::Finalized => {
-                        return Err(EthProviderError::MethodNotSupported(
-                            "Block tag variant Error: Cannot query finalized blocks in Kakarot network. Change BlockTag to 'latest'".to_string()
-                        ));
-                    }
-                    BlockNumberOrTag::Safe => {
-                        return Err(EthProviderError::MethodNotSupported(
-                            "Block tag variant Error: Cannot query safe blocks in Kakarot network. Change BlockTag to 'latest'".to_string()
-                        ));
-                    }
-                };
+                let block_number = self.tag_into_block_number(maybe_number).await?;
                 let filter = into_filter("receipt.blockNumber", block_number, 64);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))

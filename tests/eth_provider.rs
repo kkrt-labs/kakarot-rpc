@@ -10,7 +10,7 @@ use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::TransactionRequest;
+use reth_rpc_types::{RpcBlockHash, TransactionRequest};
 use rstest::*;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
@@ -329,7 +329,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
 
     // Then
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(0x1234))))
+        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(*BLOCK_NUMBER))))
         .await
         .unwrap()
         .unwrap();
@@ -341,7 +341,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipt.block_number.unwrap(), U256::from(*BLOCK_NUMBER));
 
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Hash(B256::from(U256::from(0x1234_u64)).into())))
+        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH))))
         .await
         .unwrap()
         .unwrap();
