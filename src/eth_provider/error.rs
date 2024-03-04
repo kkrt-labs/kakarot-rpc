@@ -1,8 +1,5 @@
 use jsonrpsee::types::ErrorObject;
-use starknet::providers::ProviderError as StarknetProviderError;
 use thiserror::Error;
-
-use crate::models::errors::ConversionError;
 
 /// List of JSON-RPC error codes from ETH rpc spec.
 /// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md
@@ -33,7 +30,7 @@ pub enum EthProviderError {
     MongoDbError(#[from] mongodb::error::Error),
     /// Starknet Provider error.
     #[error(transparent)]
-    StarknetProviderError(#[from] StarknetProviderError),
+    StarknetProviderError(#[from] starknet::providers::ProviderError),
     /// EVM execution error.
     #[error("EVM execution error: {0}")]
     EvmExecutionError(String),
@@ -42,7 +39,7 @@ pub enum EthProviderError {
     ContractCallError(#[from] cainome::cairo_serde::Error),
     /// Conversion error.
     #[error(transparent)]
-    ConversionError(#[from] ConversionError),
+    ConversionError(#[from] crate::models::errors::ConversionError),
     /// Value not found in the database.
     #[error("Did not find value in the database.")]
     ValueNotFound,

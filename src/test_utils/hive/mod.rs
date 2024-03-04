@@ -35,7 +35,7 @@ pub struct Config {
     pub chain_id: i128,
     pub homestead_block: i128,
     pub eip150_block: i128,
-    pub eip150_hash: B256,
+    pub eip150_hash: Option<B256>,
     pub eip155_block: i128,
     pub eip158_block: i128,
 }
