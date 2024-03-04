@@ -50,14 +50,13 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
     fn from(block_number_or_tag: EthBlockNumberOrTag) -> Self {
         let block_number_or_tag = block_number_or_tag.into();
         match block_number_or_tag {
-            BlockNumberOrTag::Latest => {
-                // We set to pending because in Starknet, a pending block is an unsealed block being filled,
-                // With a centralized sequencer, that is a soft finality: latest
+            BlockNumberOrTag::Latest | BlockNumberOrTag::Pending => {
+                // We set to pending because in Starknet, a pending block is an unsealed block,
+                // With a centralized sequencer, the latest block is the pending block being filled.
                 Self::Tag(BlockTag::Pending)
             }
             BlockNumberOrTag::Safe | BlockNumberOrTag::Finalized => Self::Tag(BlockTag::Latest),
             BlockNumberOrTag::Earliest => Self::Number(0),
-            BlockNumberOrTag::Pending => Self::Tag(BlockTag::Pending),
             BlockNumberOrTag::Number(number) => Self::Number(number),
         }
     }
