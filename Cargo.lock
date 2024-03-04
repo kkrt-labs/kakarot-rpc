@@ -6562,6 +6562,7 @@ dependencies = [
  "foundry-config",
  "futures",
  "hex",
+ "itertools 0.12.1",
  "jsonrpsee 0.21.0",
  "katana-core",
  "katana-primitives",

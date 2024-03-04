@@ -1,6 +1,7 @@
 use std::fmt::LowerHex;
 
 use cainome::cairo_serde::Error;
+use itertools::Itertools;
 use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
 use starknet::{
@@ -10,12 +11,12 @@ use starknet::{
 
 /// Converts an iterator of `Into<D>` into a `Vec<D>`.
 pub(crate) fn iter_into<D, S: Into<D>>(iter: impl IntoIterator<Item = S>) -> Vec<D> {
-    iter.into_iter().map(Into::into).collect::<Vec<_>>()
+    iter.into_iter().map_into().collect()
 }
 
 /// Converts an iterator of `TryInto<u8>` into a `FromIterator<u8>`.
-pub(crate) fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl Iterator<Item = I>) -> T {
-    it.filter_map(|x| TryInto::<u8>::try_into(x).ok()).collect()
+pub(crate) fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl IntoIterator<Item = I>) -> T {
+    it.into_iter().filter_map(|x| TryInto::<u8>::try_into(x).ok()).collect()
 }
 
 pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
