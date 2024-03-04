@@ -62,7 +62,7 @@ services:
         condition: service_completed_successfully
 
   kakarot-rpc:
-    image: eliastazartes/kakarot-rpc:latest
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
     # Always pull the latest image, until we use release tags
     # TODO: use release tags
     pull_policy: always
@@ -85,7 +85,7 @@ services:
       - internal
 
   apibara-dna:
-    image: quay.io/apibara/starknet:1.4.0
+    image: quay.io/apibara/starknet:1.4.1
     command:
       - start
       - --rpc=http://starknet:5050
@@ -99,8 +99,6 @@ services:
       - internal
     restart: on-failure
     depends_on:
-      kakarot-deployer:
-        condition: service_completed_successfully
       starknet:
         condition: service_started
 
@@ -154,8 +152,6 @@ services:
         condition: service_completed_successfully
       starknet:
         condition: service_started
-      kakarot-deployer:
-        condition: service_completed_successfully
 
 networks:
   internal:
