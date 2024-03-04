@@ -650,10 +650,10 @@ where
         match tag {
             BlockNumberOrTag::Earliest => Ok(U64::ZERO),
             BlockNumberOrTag::Number(number) => Ok(U64::from(number)),
-            BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe => {
-                self.block_number().await
-            }
-            BlockNumberOrTag::Pending => todo!("pending block number not implemented"),
+            BlockNumberOrTag::Latest
+            | BlockNumberOrTag::Finalized
+            | BlockNumberOrTag::Safe
+            | BlockNumberOrTag::Pending => self.block_number().await,
         }
     }
 }
