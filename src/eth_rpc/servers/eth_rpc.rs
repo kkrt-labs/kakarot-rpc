@@ -192,6 +192,10 @@ where
         Ok(U128::from(*MAX_PRIORITY_FEE_PER_GAS))
     }
 
+    async fn blob_base_fee(&self) -> Result<U256> {
+        Err(EthProviderError::MethodNotSupported("eth_blobBaseFee".to_string()).into())
+    }
+
     async fn mining(&self) -> Result<bool> {
         tracing::warn!("Kakarot chain does not use mining");
         Ok(false)
