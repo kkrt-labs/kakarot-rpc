@@ -85,7 +85,7 @@ services:
       - internal
 
   apibara-dna:
-    image: quay.io/apibara/starknet:1.4.0
+    image: quay.io/apibara/starknet:1.4.1
     command:
       - start
       - --rpc=http://starknet:5050

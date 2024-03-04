@@ -1,3 +1,4 @@
+# trunk-ignore-all(yamllint/empty-values)
 version: "3.8"
 
 services:
@@ -62,9 +63,9 @@ services:
       - starknet-explorer:/var/lib/postgresql/data/
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.4
-    ports:
-      - 3030:3030
+    extends:
+      file: docker-compose.yaml
+      service: kakarot-rpc
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:6060
@@ -78,84 +79,35 @@ services:
       - PROXY_ACCOUNT_CLASS_HASH=0x5bcd4d02cfe3aeb836f2ef4bd21b2020793e52a8269dbef9cd883fbddd2963c
       - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=0x2ab68b7f5cea86752714b499f602cdb8c36e8cdf270f04b6a275b609baf7aea
       - CONTRACT_ACCOUNT_CLASS_HASH=0x34e8e05a28a6ac98118860ae0cca56487e2f0a3589a4b713a0f19ccda3386d9
-    volumes:
-      # Mount the volume on workdir and use .env stored in root of the volume
-      - deployments:/usr/src/app
-    restart: on-failure
-    depends_on:
-      starknet:
-        condition: service_started
-    networks:
-      - internal
 
   apibara-dna:
-    image: quay.io/apibara/starknet:1.4.1
+    extends:
+      file: docker-compose.yaml
+      service: apibara-dna
     command:
       - start
       - --rpc=http://starknet:6060
       - --wait-for-rpc
       - --data=/data
-    ports:
-      - 7171:7171
-    volumes:
-      - apibara:/data
-    networks:
-      - internal
-    restart: on-failure
     depends_on:
       starknet:
         condition: service_started
 
   ### MongoDB with Mongo Express
   mongo:
-    image: mongo:6.0.8
-    restart: always
-    ports:
-      - 27017:27017
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - internal
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mongo
-      MONGO_INITDB_ROOT_PASSWORD: mongo
+    extends:
+      file: docker-compose.yaml
+      service: mongo
 
   clone-repo:
-    image: docker.io/alpine/git:latest
-    entrypoint: /bin/sh
-    command:
-      - -c
-      # clone the repository in `/code`, removing any old copy.
-      - cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git
-    volumes:
-      - indexer_code:/code
-    restart: on-failure
+    extends:
+      file: docker-compose.yaml
+      service: clone-repo
 
   indexer:
-    image: quay.io/apibara/sink-mongo
-    command:
-      - run
-      - /code/kakarot-indexer/src/main.ts
-    environment:
-      # Whitelist environment variables
-      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME
-      - DEBUG=""
-      - APIBARA_AUTH_TOKEN=""
-      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
-      - MONGO_DATABASE_NAME=kakarot-local
-      - STARTING_BLOCK=0
-      - STREAM_URL=http://apibara-dna:7171
-      - SINK_TYPE=mongo
-    restart: on-failure
-    volumes:
-      - indexer_code:/code
-    networks:
-      - internal
-    depends_on:
-      clone-repo:
-        condition: service_completed_successfully
-      starknet:
-        condition: service_started
+    extends:
+      file: docker-compose.yaml
+      service: indexer
 
 networks:
   internal:
@@ -166,17 +118,10 @@ networks:
     driver: bridge
 
 volumes:
-  # trunk-ignore(yamllint/empty-values)
-  deployments:
-  # trunk-ignore(yamllint/empty-values)
+deployments:
   apibara:
-  # trunk-ignore(yamllint/empty-values)
   mongo_data:
-  # trunk-ignore(yamllint/empty-values)
   indexer_code:
-  # trunk-ignore(yamllint/empty-values)
   pgadmin_data:
-  # trunk-ignore(yamllint/empty-values)
   juno_files:
-  # trunk-ignore(yamllint/empty-values)
   starknet-explorer:
