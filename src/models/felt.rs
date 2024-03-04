@@ -49,7 +49,6 @@ impl From<Address> for Felt252Wrapper {
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl From<U64> for Felt252Wrapper {
     fn from(value: U64) -> Self {
         let felt = FieldElement::from(value.to::<u64>());
@@ -124,17 +123,6 @@ macro_rules! into_via_try_wrapper {
     ($val: expr) => {{
         let intermediate: Felt252Wrapper = $val.try_into()?;
         intermediate.into()
-    }};
-}
-
-/// This macro provides a convenient way to convert a value from a source
-/// type $val that implements Into<Felt252Wrapper> into a target type that
-/// implements TryInto<Felt252Wrapper>.
-#[macro_export]
-macro_rules! try_into_via_wrapper {
-    ($val: expr) => {{
-        let intermediate: Felt252Wrapper = $val.into();
-        intermediate.try_into()?
     }};
 }
 

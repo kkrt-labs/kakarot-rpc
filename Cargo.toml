@@ -56,6 +56,7 @@ eyre = { version = "0.6.8", default-features = false }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
 futures = { version = "0.3.26", default-features = false }
 hex = { version = "0.4", default-features = false }
+itertools = { version = "0.12", default-features = false }
 lazy_static = { version = "1.4.0", default-features = false }
 log = { version = "0.4.17", default-features = false }
 mongodb = { version = "2.8.0", default-features = false, features = [
