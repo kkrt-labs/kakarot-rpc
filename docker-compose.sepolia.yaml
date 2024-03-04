@@ -24,7 +24,7 @@ services:
     networks:
       - internal
   starknet-explorer:
-    image: ghcr.io/lambdaclass/stark_compass_explorer:v0.2.37
+    image: public.ecr.aws/o5q6k5w4/stark_compass_explorer:latest
     ports:
       - 4000:4000
     environment:
