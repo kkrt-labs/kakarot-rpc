@@ -63,9 +63,9 @@ services:
       - starknet-explorer:/var/lib/postgresql/data/
 
   kakarot-rpc:
-    extends:
-      file: docker-compose.yaml
-      service: kakarot-rpc
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.4
+    ports:
+      - 3030:3030
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:6060
@@ -79,6 +79,12 @@ services:
       - PROXY_ACCOUNT_CLASS_HASH=0x5bcd4d02cfe3aeb836f2ef4bd21b2020793e52a8269dbef9cd883fbddd2963c
       - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=0x2ab68b7f5cea86752714b499f602cdb8c36e8cdf270f04b6a275b609baf7aea
       - CONTRACT_ACCOUNT_CLASS_HASH=0x34e8e05a28a6ac98118860ae0cca56487e2f0a3589a4b713a0f19ccda3386d9
+    restart: on-failure
+    depends_on:
+      starknet:
+        condition: service_started
+    networks:
+      - internal
 
   apibara-dna:
     extends:
@@ -89,9 +95,6 @@ services:
       - --rpc=http://starknet:6060
       - --wait-for-rpc
       - --data=/data
-    depends_on:
-      starknet:
-        condition: service_started
 
   ### MongoDB with Mongo Express
   mongo:
@@ -118,7 +121,6 @@ networks:
     driver: bridge
 
 volumes:
-deployments:
   apibara:
   mongo_data:
   indexer_code:

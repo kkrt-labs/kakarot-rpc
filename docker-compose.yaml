@@ -99,8 +99,6 @@ services:
       - internal
     restart: on-failure
     depends_on:
-      kakarot-deployer:
-        condition: service_completed_successfully
       starknet:
         condition: service_started
 
@@ -154,8 +152,6 @@ services:
         condition: service_completed_successfully
       starknet:
         condition: service_started
-      kakarot-deployer:
-        condition: service_completed_successfully
 
 networks:
   internal:
