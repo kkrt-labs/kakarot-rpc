@@ -16,6 +16,7 @@ use reth_rpc_types::FeeHistory;
 use reth_rpc_types::Filter;
 use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
+use reth_rpc_types::RpcBlockHash;
 use reth_rpc_types::TransactionReceipt;
 use reth_rpc_types::TransactionRequest;
 use reth_rpc_types::ValueOrArray;
@@ -140,7 +141,7 @@ where
         let block_number = match header {
             None => U64::from(self.starknet_provider.block_number().await?), // in case the database is empty, use the starknet provider
             Some(header) => {
-                let number = header.header.number.ok_or(EthProviderError::ValueNotFound)?;
+                let number = header.header.number.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
                 let n = number.as_le_bytes_trimmed();
                 // Block number is U64
                 if n.len() > 8 {
@@ -257,8 +258,7 @@ where
     }
 
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
-        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id: starknet::core::types::BlockId = eth_block_id.try_into()?;
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
@@ -271,8 +271,7 @@ where
     }
 
     async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<B256> {
-        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id: starknet::core::types::BlockId = eth_block_id.try_into()?;
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
@@ -290,8 +289,7 @@ where
     }
 
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
-        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id: starknet::core::types::BlockId = eth_block_id.try_into()?;
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
         let proxy = ProxyReader::new(address, &self.starknet_provider);
@@ -314,8 +312,7 @@ where
     }
 
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
-        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id: starknet::core::types::BlockId = eth_block_id.try_into()?;
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
@@ -556,8 +553,7 @@ where
         request: TransactionRequest,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<(CairoArrayLegacy<FieldElement>, u128)> {
-        let eth_block_id = EthBlockId::new(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)));
-        let starknet_block_id: starknet::core::types::BlockId = eth_block_id.try_into()?;
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         // unwrap option
         let to: kakarot_core::core::Option = {
@@ -663,6 +659,23 @@ where
         Ok(Some(block.into()))
     }
 
+    /// Convert the given block id into a Starknet block id
+    async fn to_starknet_block_id(
+        &self,
+        block_id: impl Into<Option<BlockId>>,
+    ) -> EthProviderResult<starknet::core::types::BlockId> {
+        match block_id.into() {
+            Some(BlockId::Hash(hash)) => {
+                Ok(starknet::core::types::BlockId::Number(self.hash_into_block_number(hash).await?.to::<u64>()))
+            }
+            Some(id) => {
+                let eth_block_id = EthBlockId::new(id);
+                Ok(eth_block_id.try_into()?)
+            }
+            None => Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Latest)),
+        }
+    }
+
     /// Convert the given BlockNumberOrTag into a block number
     async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<U64> {
         match tag {
@@ -673,5 +686,22 @@ where
             }
             BlockNumberOrTag::Pending => todo!("pending block number not implemented"),
         }
+    }
+
+    /// Convert the given block hash into a block number
+    async fn hash_into_block_number(&self, hash: RpcBlockHash) -> EthProviderResult<U64> {
+        let filter = into_filter("header.hash", hash.block_hash, 64);
+        let header: Option<StoredHeader> = self.database.get_one("headers", filter, None).await?;
+        let header = match header {
+            Some(header) => header,
+            None => return Err(EthProviderError::ValueNotFound("Block".to_string())),
+        };
+        let number = header.header.number.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
+        let n = number.as_le_bytes_trimmed();
+        // Block number is U64
+        if n.len() > 8 {
+            return Err(ConversionError::ValueOutOfRange("Block number too large".to_string()).into());
+        }
+        Ok(U64::from_le_slice(n.as_ref()))
     }
 }

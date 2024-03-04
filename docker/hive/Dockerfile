@@ -5,12 +5,12 @@ FROM ghcr.io/dojoengine/dojo:v0.6.0-alpha.2 as katana
 
 # Indexer service
 ### Apibara DNA indexer and indexer
-FROM quay.io/apibara/starknet:1.2.0 as apibara
-FROM quay.io/apibara/sink-mongo as indexer
+FROM quay.io/apibara/starknet:1.4.0 as apibara
+FROM quay.io/apibara/sink-mongo:0.5.3 as indexer
 FROM debian:bookworm as apibara-build
 RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
-# Run `docker image inspect apibara/starknet:1.2.0` to get the exact path
-COPY --from=apibara /nix/store/swzxd9vbhhj92qzh16j48vb011q57v59-apibara-starknet-1.2.0/bin/apibara-starknet /usr/local/bin/starknet
+# Run `docker image inspect apibara/starknet:1.4.0` to get the exact path
+COPY --from=apibara /nix/store/nkskc1iii2s658r2mx8bsgk11p6ibz82-apibara-starknet-1.4.0/bin/apibara-starknet /usr/local/bin/starknet
 COPY --from=indexer /nix/store/3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc-apibara-sink-mongo-0.5.3/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
 # Change the interpreter path.
 ARG BUILDPLATFORM
@@ -99,6 +99,7 @@ RUN mkdir -p /data/db
 # Generate the genesis
 COPY --from=rpc /usr/local/bin/kakarot-rpc-hive /usr/local/bin/kakarot-rpc
 COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
+COPY --from=rpc /usr/local/bin/hive_chain /usr/local/bin
 RUN mkdir -p /genesis/contracts
 COPY ./lib/kakarot/build /genesis/contracts
 

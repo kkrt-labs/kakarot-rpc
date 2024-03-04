@@ -75,6 +75,11 @@ RUN build_platform() { \
     --bin hive_genesis --features testing --target=$ARCH; \
     # Copy the genesis binary to a common release directory
     cp /usr/src/rpc/target/$ARCH/release/hive_genesis /usr/src/rpc/target/release/; \
+    # Build the hive chain binary
+    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
+    --bin hive_chain --features hive-chain --target=$ARCH; \
+    # Copy the genesis binary to a common release directory
+    cp /usr/src/rpc/target/$ARCH/release/hive_chain /usr/src/rpc/target/release/; \
     } \
     && rustup self update \
     && case "$TARGETPLATFORM" in \
@@ -103,6 +108,7 @@ WORKDIR /usr/src/app
 COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin
 COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc-hive /usr/local/bin
 COPY --from=builder /usr/src/rpc/target/release/hive_genesis /usr/local/bin
+COPY --from=builder /usr/src/rpc/target/release/hive_chain /usr/local/bin
 
 # Expose the port that the RPC server will run on
 EXPOSE 9545

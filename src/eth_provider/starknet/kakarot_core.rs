@@ -105,7 +105,6 @@ pub fn to_starknet_transaction(
         FieldElement::from(signed_data.len()), // calldata length
     ];
     execute_calldata.append(&mut signed_data.into_iter().map(FieldElement::from).collect());
-    dbg!(&execute_calldata);
 
     let max_fee = (u64::MAX).into();
     Ok(BroadcastedInvokeTransactionV1 {

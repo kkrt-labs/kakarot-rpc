@@ -6,6 +6,7 @@ use starknet::{
     core::types::BroadcastedInvokeTransaction,
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
+use starknet_crypto::FieldElement;
 use std::{path::Path, str::FromStr};
 use tokio::{fs::File, io::AsyncReadExt};
 use tokio_stream::StreamExt;
@@ -51,25 +52,25 @@ async fn main() -> eyre::Result<()> {
         bodies.push(BlockBody { transactions: block.body, ommers: block.ommers, withdrawals: block.withdrawals });
     }
 
-    for body in bodies {
-        for transaction in body.transactions {
-            println!("Sending transaction: {:?}", transaction);
-            let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str("http://localhost:5050")?));
+    let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str("http://localhost:5050")?));
+    let mut current_nonce = FieldElement::ZERO;
 
+    for (block_number, body) in bodies.into_iter().enumerate() {
+        while provider.block_number().await? < block_number as u64 {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        }
+
+        for transaction in body.transactions {
             let signer = transaction.recover_signer().ok_or(eyre!("Failed to recover signer"))?;
-            let mut tx = transaction.clone();
-            tx.transaction.set_chain_id(7);
-            let chain_id = tx.chain_id().ok_or(eyre!("Failed to recover chain id"))?;
-            let starknet_tx = to_starknet_transaction(&tx, chain_id, signer)?;
-            let provider_chain_id = provider.chain_id().await?;
-            println!("Provider chain id: {:?}", provider_chain_id);
-            println!("Chain id: {:?}", chain_id);
-            println!("Eth signer: {:?}", signer);
-            println!("Starknet sender: {:?}", starknet_tx.sender_address);
-            println!("Starknet transaction: {:?}", starknet_tx);
+            let chain_id = transaction.chain_id().ok_or(eyre!("Failed to recover chain id"))?;
+            let starknet_tx = to_starknet_transaction(&transaction, chain_id, signer)?;
+
+            // Stop if the nonce is incorrect
+            assert_eq!(starknet_tx.nonce, current_nonce);
 
             provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(starknet_tx)).await?;
-            tokio::time::sleep(tokio::time::Duration::from_secs(3)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            current_nonce += 1u8.into();
         }
     }
 

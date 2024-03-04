@@ -22,7 +22,7 @@ pub enum EthRpcErrorCode {
     JsonRpcVersionUnsupported = -32006,
 }
 
-/// Error that can occur when interacting with the database.
+/// Error that can occur when interacting with the provider.
 #[derive(Debug, Error)]
 pub enum EthProviderError {
     /// MongoDB error.
@@ -41,8 +41,8 @@ pub enum EthProviderError {
     #[error(transparent)]
     ConversionError(#[from] crate::models::errors::ConversionError),
     /// Value not found in the database.
-    #[error("Did not find value in the database.")]
-    ValueNotFound,
+    #[error("{0} not found.")]
+    ValueNotFound(String),
     /// Method not supported.
     #[error("Method not supported: {0}")]
     MethodNotSupported(String),
@@ -53,7 +53,17 @@ pub enum EthProviderError {
 
 impl From<EthProviderError> for ErrorObject<'static> {
     fn from(value: EthProviderError) -> Self {
-        rpc_err(EthRpcErrorCode::InternalError, value.to_string())
+        let msg = value.to_string();
+        match value {
+            EthProviderError::MongoDbError(msg) => rpc_err(EthRpcErrorCode::ResourceNotFound, msg.to_string()),
+            EthProviderError::StarknetProviderError(msg) => rpc_err(EthRpcErrorCode::InternalError, msg.to_string()),
+            EthProviderError::EvmExecutionError(_) => rpc_err(EthRpcErrorCode::ExecutionError, msg),
+            EthProviderError::ContractCallError(msg) => rpc_err(EthRpcErrorCode::ExecutionError, msg.to_string()),
+            EthProviderError::ConversionError(msg) => rpc_err(EthRpcErrorCode::ParseError, msg.to_string()),
+            EthProviderError::ValueNotFound(_) => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
+            EthProviderError::MethodNotSupported(_) => rpc_err(EthRpcErrorCode::MethodNotSupported, msg),
+            EthProviderError::Other(msg) => rpc_err(EthRpcErrorCode::InternalError, msg.to_string()),
+        }
     }
 }
 
