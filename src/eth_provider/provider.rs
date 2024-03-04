@@ -117,6 +117,7 @@ pub trait EthereumProvider {
     /// Send a raw transaction to the network and returns the transactions hash.
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256>;
     async fn gas_price(&self) -> EthProviderResult<U256>;
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -517,6 +518,23 @@ where
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let gas_price = kakarot_contract.get_base_fee().call().await?.base_fee;
         Ok(into_via_wrapper!(gas_price))
+    }
+
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>> {
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+        match block_id {
+            BlockId::Number(maybe_number) => {
+                let block_number = self.tag_into_block_number(maybe_number).await?;
+                let filter = into_filter("receipt.blockNumber", block_number, 64);
+                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
+                Ok(Some(tx.into_iter().map(Into::into).collect()))
+            }
+            BlockId::Hash(hash) => {
+                let filter = into_filter("receipt.blockHash", hash.block_hash, 64);
+                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
+                Ok(Some(tx.into_iter().map(Into::into).collect()))
+            }
+        }
     }
 }
 

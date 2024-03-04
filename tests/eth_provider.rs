@@ -10,7 +10,7 @@ use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::TransactionRequest;
+use reth_rpc_types::{RpcBlockHash, TransactionRequest};
 use rstest::*;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
@@ -318,4 +318,37 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     }
     let balance_after = eth_provider.balance(evm_address, None).await.unwrap();
     assert_eq!(balance_after, balance_before - U256::from(1));
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // Then
+    let receipts = eth_provider
+        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(*BLOCK_NUMBER))))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(receipts.len(), 3);
+    let receipt = receipts.first().unwrap();
+    assert_eq!(receipt.transaction_index, U64::ZERO);
+    assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
+    assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
+    assert_eq!(receipt.block_number.unwrap(), U256::from(*BLOCK_NUMBER));
+
+    let receipts = eth_provider
+        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH))))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(receipts.len(), 3);
+    let receipt = receipts.first().unwrap();
+    assert_eq!(receipt.transaction_index, U64::ZERO);
+    assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
+    assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
+    assert_eq!(receipt.block_number.unwrap(), U256::from(*BLOCK_NUMBER));
 }
