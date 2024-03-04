@@ -34,7 +34,7 @@ impl Decoder for BlockFileCodec {
 /// https://github.com/paradigmxyz/reth/blob/main/bin/reth/src/commands/import.rs
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
-    let chain_path = Path::new(&std::env::var("CHAIN_PATH").expect("Failed to load CHAIN_PATH var")).to_path_buf();
+    let chain_path = Path::new(&std::env::var("CHAIN_PATH")?).to_path_buf();
     let mut file = File::open(chain_path).await?;
 
     let metadata = file.metadata().await?;
@@ -52,7 +52,7 @@ async fn main() -> eyre::Result<()> {
         bodies.push(BlockBody { transactions: block.body, ommers: block.ommers, withdrawals: block.withdrawals });
     }
 
-    let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str("http://localhost:5050")?));
+    let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str(&std::env::var("STARKNET_NETWORK")?)?));
     let mut current_nonce = FieldElement::ZERO;
 
     for (block_number, body) in bodies.into_iter().enumerate() {
