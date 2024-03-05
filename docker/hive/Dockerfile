@@ -86,7 +86,9 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /usr/src/rpc
 
-COPY --from=compiler /usr/src/compiler/artifacts /usr/src/rpc/artifacts
+COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/artifacts
+
+COPY . .
 
 RUN cargo build --release \
     --features hive --target-dir /usr/src/rpc/target && \
@@ -155,7 +157,7 @@ COPY --from=rpc target/release/kakarot-rpc /usr/local/bin/kakarot-rpc
 COPY --from=rpc target/release/hive_genesis /usr/local/bin/hive_genesis
 COPY --from=rpc target/release/hive_chain /usr/local/bin/hive_chain
 RUN mkdir -p /genesis/contracts
-COPY --from=compiler .kakarot/build /genesis/contracts
+COPY --from=compiler /usr/src/compiler/.kakarot/build /genesis/contracts
 
 # Copy start script
 COPY docker/hive/start.sh /start.sh
