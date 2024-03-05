@@ -154,7 +154,7 @@ RUN mkdir -p /data/db
 # Generate the genesis
 COPY --from=rpc /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin/kakarot-rpc
 COPY --from=rpc /usr/src/rpc/target/release/hive_genesis /usr/local/bin/hive_genesis
-COPY --from=rpc /usr/local/bin/hive_chain /usr/local/bin
+COPY --from=rpc /usr/src/rpc/target/release/hive_chain /usr/local/bin/hive_chain
 RUN mkdir -p /genesis/contracts
 COPY --from=compiler /usr/src/compiler/artifacts /genesis/contracts
 
