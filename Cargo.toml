@@ -36,8 +36,8 @@ alloy-rlp = { version = "0.3", default-features = false }
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.18", default-features = false }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.18", default-features = false }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.1.0-alpha.18", default-features = false }
 
 # Serde
 serde = { version = "1.0.188", default-features = false, features = ["derive"] }
@@ -70,6 +70,10 @@ rstest = { version = "0.18.1", default-features = false }
 testcontainers = { version = "0.15.0", default-features = false, optional = true }
 thiserror = { version = "1.0.38", default-features = false }
 tokio = { version = "1.21.2", features = ["macros"] }
+tokio-util = { version = "0.7.10", features = [
+  "codec",
+], default-features = false, optional = true }
+tokio-stream = { version = "0.1.14", default-features = false, optional = true }
 tower = { version = "0.4.12", default-features = false }
 tower-http = { version = "0.4.4", default-features = false }
 tracing = { version = "0.1.37", default-features = false }
@@ -105,6 +109,7 @@ toml = { version = "0.7.5", default-features = false }
 [features]
 testing = ["testcontainers", "rayon", "sequencer", "ef-testing"]
 hive = []
+hive-chain = ["testing", "tokio-util", "tokio-stream"]
 
 [[bin]]
 name = "katana_genesis"
@@ -113,3 +118,7 @@ required-features = ["testing"]
 [[bin]]
 name = "hive_genesis"
 required-features = ["testing"]
+
+[[bin]]
+name = "hive_chain"
+required-features = ["hive-chain"]
