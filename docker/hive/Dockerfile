@@ -76,8 +76,6 @@ COPY Makefile Makefile
 COPY scripts scripts
 RUN make setup
 
-COPY lib/kakarot/build lib/kakarot/build
-
 ### Build the RPC server
 # Define ARG for build platform
 FROM rust:1.75 as rpc
@@ -89,9 +87,6 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /usr/src/rpc
 
 COPY --from=compiler /usr/src/compiler/artifacts /usr/src/rpc/artifacts
-
-# Copy source code
-COPY . .
 
 RUN cargo build --release \
     --features hive --target-dir /usr/src/rpc/target && \
