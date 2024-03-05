@@ -35,8 +35,12 @@ export PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.declarations.proxy' manifest.json)
 export CONTRACT_ACCOUNT_CLASS_HASH=$(jq -r '.declarations.contract_account' manifest.json)
 export EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(jq -r '.declarations.externally_owned_account' manifest.json)
 export KAKAROT_ADDRESS=$(jq -r '.deployments.kakarot_address' manifest.json)
-echo "Launching Hive Chain..."
-CHAIN_PATH="/chain.rlp" hive_chain
+
+# Only launch the Hive Chain if the chain file exists
+if test -f "/chain.rlp"; then
+	echo "Launching Hive Chain..."
+	CHAIN_PATH="/chain.rlp" hive_chain
+fi
 
 # 3. Start the Indexer service: DNA Indexer, Indexer transformer, and MongoDB
 ## MongoDB
