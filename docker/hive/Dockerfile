@@ -76,6 +76,8 @@ COPY Makefile Makefile
 COPY scripts scripts
 RUN make setup
 
+COPY /lib/kakarot/build /usr/src/compiler/lib/kakarot/build
+
 ### Build the RPC server
 # Define ARG for build platform
 FROM rust:1.75 as rpc
