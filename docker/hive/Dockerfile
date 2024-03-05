@@ -94,7 +94,9 @@ COPY . .
 RUN cargo build --release \
     --features hive --target-dir /usr/src/rpc/target && \
     cargo build --release \
-    --bin hive_genesis --features testing --target-dir /usr/src/rpc/target 
+    --bin hive_genesis --features testing --target-dir /usr/src/rpc/target && \
+    cargo build --release \ 
+    --bin hive_chain --features hive-chain --target-dir /usr/src/rpc/target
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
