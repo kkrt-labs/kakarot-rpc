@@ -5,13 +5,19 @@ FROM ghcr.io/dojoengine/dojo:v0.6.0-alpha.2 as katana
 
 # Indexer service
 ### Apibara DNA indexer and indexer
-FROM quay.io/apibara/starknet:1.4.0 as apibara
+FROM quay.io/apibara/starknet:1.4.1 as apibara
 FROM quay.io/apibara/sink-mongo:0.5.3 as indexer
 FROM debian:bookworm as apibara-build
 RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
-# Run `docker image inspect apibara/starknet:1.4.0` to get the exact path
-COPY --from=apibara /nix/store/nkskc1iii2s658r2mx8bsgk11p6ibz82-apibara-starknet-1.4.0/bin/apibara-starknet /usr/local/bin/starknet
-COPY --from=indexer /nix/store/3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc-apibara-sink-mongo-0.5.3/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
+
+# Apibara Starknet and Sink are built with Nix, so we need to extract the binaries from the Nix store
+# Depending on the platform, the path to the binaries will be different
+ARG APIBARA_STARKNET_BIN_DIR
+ARG APIBARA_SINK_BIN_DIR
+# Run `docker image inspect apibara/starknet:1.4.1-x86-64` to get the exact path
+# ⚠️ This path is subject to change, so it's important to check it before building the image ⚠️
+COPY --from=apibara /nix/store/${APIBARA_STARKNET_BIN_DIR}-apibara-starknet-1.4.1/bin/apibara-starknet /usr/local/bin/starknet
+COPY --from=indexer /nix/store/${APIBARA_SINK_BIN_DIR}-apibara-sink-mongo-0.5.3/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
 # Change the interpreter path.
 ARG BUILDPLATFORM
 RUN case $BUILDPLATFORM in \
@@ -39,11 +45,60 @@ RUN git clone -v "https://github.com/kkrt-labs/kakarot-indexer.git"
 FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
-FROM ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.6 as rpc
+### Build the Cairo programs artifacts
+FROM python:3.9.13 as compiler
+# install poetry
+ENV POETRY_VERSION=1.7.1
+ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin"
+ARG GITHUB_TOKEN
+ENV GITHUB_TOKEN=$GITHUB_TOKEN
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
+RUN poetry config virtualenvs.create false
+
+WORKDIR /usr/src/compiler
+
+# Install dependencies
+RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
+    && chmod +x foundry.sh \
+    && ./foundry.sh \
+    && foundryup \
+    && apt-get update && apt-get install -y \
+    jq \
+    wget \
+    tar \
+    unzip \
+    zip
+
+COPY .git ./.git
+COPY .gitmodules .gitmodules
+COPY Makefile Makefile
+COPY scripts scripts
+RUN make setup
+
+### Build the RPC server
+# Define ARG for build platform
+FROM rust:1.75 as rpc
+
+RUN apt-get update && apt-get install -y \
+    gcc-aarch64-linux-gnu libssl-dev clang libclang-dev
+
+# Set working directory
+WORKDIR /usr/src/rpc
+
+COPY --from=compiler /usr/src/compiler/artifacts /usr/src/rpc/artifacts
+
+# Copy source code
+COPY . .
+
+RUN cargo build --release \
+    --features hive --target-dir /usr/src/rpc/target && \
+    cargo build --release \
+    --bin hive_genesis --features testing --target-dir /usr/src/rpc/target 
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
-RUN apt-get update && apt-get install -y tini curl jq && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y tini curl jq libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Environment
 #############
@@ -97,11 +152,11 @@ RUN mkdir -p /data/db
 
 
 # Generate the genesis
-COPY --from=rpc /usr/local/bin/kakarot-rpc-hive /usr/local/bin/kakarot-rpc
-COPY --from=rpc /usr/local/bin/hive_genesis /usr/local/bin
+COPY --from=rpc /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin/kakarot-rpc
+COPY --from=rpc /usr/src/rpc/target/release/hive_genesis /usr/local/bin/hive_genesis
 COPY --from=rpc /usr/local/bin/hive_chain /usr/local/bin
 RUN mkdir -p /genesis/contracts
-COPY ./lib/kakarot/build /genesis/contracts
+COPY --from=compiler /usr/src/compiler/artifacts /genesis/contracts
 
 # Copy start script
 COPY docker/hive/start.sh /start.sh
