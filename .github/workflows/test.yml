@@ -86,6 +86,7 @@ jobs:
         with:
           push: false
           tags: hive
+          load: true
           context: .
           file: ./docker/hive/Dockerfile
           platforms: linux/amd64
