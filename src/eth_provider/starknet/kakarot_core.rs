@@ -20,18 +20,18 @@ use crate::{
 
 pub mod proxy {
     use super::*;
-    abigen_legacy!(Proxy, "./artifacts/proxy.json");
+    abigen_legacy!(Proxy, ".kakarot/artifacts/proxy.json");
 }
 
 pub mod contract_account {
     use super::*;
-    abigen_legacy!(ContractAccount, "./artifacts/contract_account.json");
+    abigen_legacy!(ContractAccount, ".kakarot/artifacts/contract_account.json");
 }
 
 #[allow(clippy::too_many_arguments)]
 pub mod core {
     use super::*;
-    abigen_legacy!(KakarotCore, "./artifacts/kakarot.json");
+    abigen_legacy!(KakarotCore, ".kakarot/artifacts/kakarot.json");
 }
 
 fn env_var_to_field_element(var_name: &str) -> FieldElement {
