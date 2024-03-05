@@ -76,8 +76,6 @@ COPY Makefile Makefile
 COPY scripts scripts
 RUN make setup
 
-COPY /lib/kakarot/build /usr/src/compiler/lib/kakarot/build
-
 ### Build the RPC server
 # Define ARG for build platform
 FROM rust:1.75 as rpc
@@ -157,7 +155,7 @@ COPY --from=rpc target/release/kakarot-rpc /usr/local/bin/kakarot-rpc
 COPY --from=rpc target/release/hive_genesis /usr/local/bin/hive_genesis
 COPY --from=rpc target/release/hive_chain /usr/local/bin/hive_chain
 RUN mkdir -p /genesis/contracts
-COPY --from=compiler lib/kakarot/build /genesis/contracts
+COPY --from=compiler .kakarot/build /genesis/contracts
 
 # Copy start script
 COPY docker/hive/start.sh /start.sh
