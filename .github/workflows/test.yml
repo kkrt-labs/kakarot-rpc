@@ -104,9 +104,17 @@ jobs:
         run: |
           cd hive
           go build hive.go
-      - name: List Docker images
-        run: docker images
       - name: Run hive
         run: |
           cd hive
           ./hive --client kakarot --sim=ethereum/rpc --docker.endpoint=unix:///var/run/docker.sock
+      - name: Print logs
+        if: always()
+        run: |
+          cd hive
+          echo "Logs:"
+          cat workspace/logs/*.log
+          echo "Kakarot logs:"
+          cat workspace/logs/kakarot/*.log
+          echo "Details logs:"
+          cat workspace/logs/details/*.log
