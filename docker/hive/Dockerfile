@@ -86,9 +86,10 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /usr/src/rpc
 
-COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/artifacts
-
 COPY . .
+
+COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/artifacts
+
 
 RUN cargo build --release \
     --features hive --target-dir /usr/src/rpc/target && \
