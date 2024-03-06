@@ -1,10 +1,11 @@
 use jsonrpsee::core::RpcResult as Result;
 use jsonrpsee::proc_macros::rpc;
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U128, U256, U64};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
 use reth_rpc_types::{
     AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock,
     SyncStatus, Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
 };
+use reth_rpc_types::{JsonStorageKey, U64HexOrNumber};
 
 /// Ethereum JSON-RPC API Trait
 /// Mostly based on <https://github.com/paradigmxyz/reth/blob/559124ac5a0b25030250203babcd8a94693df648/crates/rpc/rpc-api/src/eth.rs#L15>
@@ -41,11 +42,11 @@ pub trait EthApi {
 
     /// Returns the number of transactions in a block from a block matching the given block hash.
     #[method(name = "getBlockTransactionCountByHash")]
-    async fn block_transaction_count_by_hash(&self, hash: B256) -> Result<U64>;
+    async fn block_transaction_count_by_hash(&self, hash: B256) -> Result<Option<U256>>;
 
     /// Returns the number of transactions in a block matching the given block number.
     #[method(name = "getBlockTransactionCountByNumber")]
-    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64>;
+    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<Option<U256>>;
 
     /// Returns the number of uncles in a block from a block matching the given block hash.
     #[method(name = "getUncleCountByBlockHash")]
@@ -93,7 +94,7 @@ pub trait EthApi {
 
     /// Returns the value from a storage position at a given address
     #[method(name = "getStorageAt")]
-    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<B256>;
+    async fn storage_at(&self, address: Address, index: JsonStorageKey, block_id: Option<BlockId>) -> Result<B256>;
 
     /// Returns the number of transactions sent from an address at given block number.
     #[method(name = "getTransactionCount")]
@@ -151,14 +152,14 @@ pub trait EthApi {
     #[method(name = "feeHistory")]
     async fn fee_history(
         &self,
-        block_count: U256,
+        block_count: U64HexOrNumber,
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory>;
 
     /// Returns the current maxPriorityFeePerGas per gas in wei.
     #[method(name = "maxPriorityFeePerGas")]
-    async fn max_priority_fee_per_gas(&self) -> Result<U128>;
+    async fn max_priority_fee_per_gas(&self) -> Result<U256>;
 
     /// Introduced in EIP-4844, returns the current blob base fee in wei.
     #[method(name = "blobBaseFee")]
