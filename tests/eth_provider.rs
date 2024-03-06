@@ -10,7 +10,7 @@ use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::{RpcBlockHash, TransactionRequest};
+use reth_rpc_types::{JsonStorageKey, RpcBlockHash, TransactionRequest};
 use rstest::*;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
@@ -82,10 +82,10 @@ async fn test_block_transaction_count_by_hash(#[future] katana: Katana, _setup: 
     let eth_provider = katana.eth_provider();
 
     // When
-    let count = eth_provider.block_transaction_count_by_hash(*BLOCK_HASH).await.unwrap();
+    let count = eth_provider.block_transaction_count_by_hash(*BLOCK_HASH).await.unwrap().unwrap();
 
     // Then
-    assert_eq!(count, U64::from(3));
+    assert_eq!(count, U256::from(3));
 }
 
 #[rstest]
@@ -96,10 +96,11 @@ async fn test_block_transaction_count_by_number(#[future] katana: Katana, _setup
     let eth_provider = katana.eth_provider();
 
     // When
-    let count = eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(*BLOCK_NUMBER)).await.unwrap();
+    let count =
+        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(*BLOCK_NUMBER)).await.unwrap().unwrap();
 
     // Then
-    assert_eq!(count, U64::from(3));
+    assert_eq!(count, U256::from(3));
 }
 
 #[rstest]
@@ -133,7 +134,7 @@ async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup
     eoa.call_evm_contract(&counter, "inc", (), 0).await.expect("Failed to increment counter");
 
     // Then
-    let count = eth_provider.storage_at(counter_address, U256::from(0), None).await.unwrap();
+    let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
     assert_eq!(B256::left_padding_from(&[0x1]), count);
 }
 

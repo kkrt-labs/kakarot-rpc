@@ -2,10 +2,10 @@ use crate::eth_provider::constant::MAX_PRIORITY_FEE_PER_GAS;
 use crate::eth_provider::error::EthProviderError;
 use crate::eth_provider::provider::EthereumProvider;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U128, U256, U64};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
 use reth_rpc_types::{
-    AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock,
-    SyncStatus, Transaction as EtherTransaction, TransactionReceipt, TransactionRequest, Work,
+    AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, JsonStorageKey,
+    RichBlock, SyncStatus, Transaction, TransactionReceipt, TransactionRequest, U64HexOrNumber, Work,
 };
 use serde_json::Value;
 
@@ -68,12 +68,12 @@ where
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
-    async fn block_transaction_count_by_hash(&self, hash: B256) -> Result<U64> {
+    async fn block_transaction_count_by_hash(&self, hash: B256) -> Result<Option<U256>> {
         Ok(self.eth_provider.block_transaction_count_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(number = %number))]
-    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<U64> {
+    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<Option<U256>> {
         Ok(self.eth_provider.block_transaction_count_by_number(number).await?)
     }
 
@@ -106,12 +106,12 @@ where
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash))]
-    async fn transaction_by_hash(&self, hash: B256) -> Result<Option<EtherTransaction>> {
+    async fn transaction_by_hash(&self, hash: B256) -> Result<Option<Transaction>> {
         Ok(self.eth_provider.transaction_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(hash = %hash, index = ?index))]
-    async fn transaction_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<EtherTransaction>> {
+    async fn transaction_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<Transaction>> {
         Ok(self.eth_provider.transaction_by_block_hash_and_index(hash, index).await?)
     }
 
@@ -120,7 +120,7 @@ where
         &self,
         number: BlockNumberOrTag,
         index: Index,
-    ) -> Result<Option<EtherTransaction>> {
+    ) -> Result<Option<Transaction>> {
         Ok(self.eth_provider.transaction_by_block_number_and_index(number, index).await?)
     }
 
@@ -135,7 +135,7 @@ where
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(address = %address, index = ?index, block_id = ?block_id))]
-    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> Result<B256> {
+    async fn storage_at(&self, address: Address, index: JsonStorageKey, block_id: Option<BlockId>) -> Result<B256> {
         Ok(self.eth_provider.storage_at(address, index, block_id).await?)
     }
 
@@ -177,19 +177,19 @@ where
         Ok(self.eth_provider.gas_price().await?)
     }
 
-    #[tracing::instrument(skip_all, ret, err, fields(block_count = %block_count, newest_block = %newest_block, reward_percentiles = ?reward_percentiles))]
+    #[tracing::instrument(skip_all, ret, err, fields(block_count = ?block_count, newest_block = %newest_block, reward_percentiles = ?reward_percentiles))]
     async fn fee_history(
         &self,
-        block_count: U256,
+        block_count: U64HexOrNumber,
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
-        Ok(self.eth_provider.fee_history(block_count, newest_block, reward_percentiles).await?)
+        Ok(self.eth_provider.fee_history(U256::from(block_count.to()), newest_block, reward_percentiles).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
-    async fn max_priority_fee_per_gas(&self) -> Result<U128> {
-        Ok(U128::from(*MAX_PRIORITY_FEE_PER_GAS))
+    async fn max_priority_fee_per_gas(&self) -> Result<U256> {
+        Ok(U256::from(*MAX_PRIORITY_FEE_PER_GAS))
     }
 
     async fn blob_base_fee(&self) -> Result<U256> {

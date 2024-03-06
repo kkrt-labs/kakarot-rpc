@@ -6,7 +6,6 @@ use eyre::eyre;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
-use mongodb::bson::Document;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
@@ -14,10 +13,12 @@ use reth_primitives::Bytes;
 use reth_primitives::TransactionSigned;
 use reth_primitives::{BlockNumberOrTag, B256, U256, U64};
 use reth_rpc_types::other::OtherFields;
+use reth_rpc_types::BlockHashOrNumber;
 use reth_rpc_types::FeeHistory;
 use reth_rpc_types::Filter;
 use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
+use reth_rpc_types::JsonStorageKey;
 use reth_rpc_types::RpcBlockHash;
 use reth_rpc_types::TransactionReceipt;
 use reth_rpc_types::TransactionRequest;
@@ -77,9 +78,12 @@ pub trait EthereumProvider {
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>>;
     /// Returns the transaction count for a block by hash.
-    async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<U64>;
+    async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>>;
     /// Returns the transaction count for a block by number.
-    async fn block_transaction_count_by_number(&self, number_or_tag: BlockNumberOrTag) -> EthProviderResult<U64>;
+    async fn block_transaction_count_by_number(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+    ) -> EthProviderResult<Option<U256>>;
     /// Returns the transaction by hash.
     async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>>;
     /// Returns the transaction by block hash and index.
@@ -99,7 +103,12 @@ pub trait EthereumProvider {
     /// Returns the balance of an address in native eth.
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the storage of an address at a certain index.
-    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<B256>;
+    async fn storage_at(
+        &self,
+        address: Address,
+        index: JsonStorageKey,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<B256>;
     /// Returns the nonce for the address at the given block.
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the code for the address at the given block.
@@ -187,9 +196,7 @@ where
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
-        let header_filter = into_filter("header.hash", hash, 64);
-        let tx_filter = into_filter("tx.blockHash", hash, 64);
-        let block = self.block(header_filter, tx_filter, full).await?;
+        let block = self.block(BlockHashOrNumber::Hash(hash), full).await?;
 
         Ok(block)
     }
@@ -200,26 +207,35 @@ where
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-
-        let header_filter = into_filter("header.number", block_number, 64);
-        let tx_filter = into_filter("tx.blockNumber", block_number, 64);
-        let block = self.block(header_filter, tx_filter, full).await?;
+        let block = self.block(BlockHashOrNumber::Number(block_number.to::<u64>()), full).await?;
 
         Ok(block)
     }
 
-    async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<U64> {
+    async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
+        let block_exists = self.header(BlockHashOrNumber::Hash(hash)).await?.is_some();
+        if !block_exists {
+            return Ok(None);
+        }
+
         let filter = into_filter("tx.blockHash", hash, 64);
         let count = self.database.count("transactions", filter).await?;
-        Ok(U64::from(count))
+        Ok(Some(U256::from(count)))
     }
 
-    async fn block_transaction_count_by_number(&self, number_or_tag: BlockNumberOrTag) -> EthProviderResult<U64> {
+    async fn block_transaction_count_by_number(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+    ) -> EthProviderResult<Option<U256>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
+        let block_exists = self.header(BlockHashOrNumber::Number(block_number.to::<u64>())).await?.is_some();
+        if !block_exists {
+            return Ok(None);
+        }
 
         let filter = into_filter("tx.blockNumber", block_number, 64);
         let count = self.database.count("transactions", filter).await?;
-        Ok(U64::from(count))
+        Ok(Some(U256::from(count)))
     }
 
     async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
@@ -272,13 +288,18 @@ where
         Ok(low + (high << 128))
     }
 
-    async fn storage_at(&self, address: Address, index: U256, block_id: Option<BlockId>) -> EthProviderResult<B256> {
+    async fn storage_at(
+        &self,
+        address: Address,
+        index: JsonStorageKey,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<B256> {
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
         let contract = ContractAccountReader::new(address, &self.starknet_provider);
 
-        let keys = split_u256::<FieldElement>(index);
+        let keys = split_u256::<FieldElement>(index.0);
         let storage_address = get_storage_var_address("storage_", &keys).expect("Storage var name is not ASCII");
 
         let storage = contract.storage(&storage_address).block_id(starknet_block_id).call().await?.value;
@@ -621,20 +642,29 @@ where
         Ok((return_data, gas_used))
     }
 
-    /// Get a block from the database based on the header and transaction filters
+    /// Get a header from the database based on the filter.
+    async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
+        let filter = match id {
+            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
+            BlockHashOrNumber::Number(number) => into_filter("header.number", number, 64),
+        };
+        self.database.get_one("headers", filter, None).await
+    }
+
+    /// Get a block from the database based on a block hash or number.
     /// If full is true, the block will contain the full transactions, otherwise just the hashes
-    async fn block(
-        &self,
-        header_filter: impl Into<Option<Document>>,
-        transactions_filter: impl Into<Option<Document>>,
-        full: bool,
-    ) -> EthProviderResult<Option<RichBlock>> {
-        let header = self.database.get_one::<StoredHeader>("headers", header_filter, None).await?;
+    async fn block(&self, block_id: BlockHashOrNumber, full: bool) -> EthProviderResult<Option<RichBlock>> {
+        let header = self.header(block_id).await?;
         let header = match header {
             Some(header) => header,
             None => return Ok(None),
         };
         let total_difficulty = Some(header.header.difficulty);
+
+        let transactions_filter = match block_id {
+            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, 64),
+            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, 64),
+        };
 
         let transactions = if full {
             BlockTransactions::Full(iter_into(
