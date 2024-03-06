@@ -74,6 +74,7 @@ COPY . .
 
 RUN make setup
 
+COPY . .
 
 ### Build the RPC server
 # Define ARG for build platform
