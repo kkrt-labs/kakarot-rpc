@@ -7,6 +7,7 @@ use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
+use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::Bytes;
@@ -29,7 +30,6 @@ use starknet::core::types::ValueOutOfRangeError;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
-use super::constant::EMPTY_HASH;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
@@ -650,7 +650,7 @@ where
 
         // The withdrawals are not supported, hence the withdrawals_root should always be empty.
         let withdrawal_root = header.header.withdrawals_root.unwrap_or_default();
-        if withdrawal_root != *EMPTY_HASH {
+        if withdrawal_root != EMPTY_ROOT_HASH {
             return Err(EthProviderError::Other(eyre!("Withdrawals are not supported")));
         }
 
