@@ -11,6 +11,18 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest-16-cores
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+        include:
+          - platform: linux/amd64
+            STARKNET_BIN_DIR: dsrifc349xgnwsv661shqljxb8pbxx2j
+            SINK_BIN_DIR: vr6f0crii7571q19j122dfqb1ha1m4i9
+          - platform: linux/arm64
+            STARKNET_BIN_DIR: f7va4mjqww1kkpp4il6y295dgcwq147v
+            SINK_BIN_DIR: 3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v3
@@ -40,8 +52,8 @@ jobs:
           tags: ghcr.io/${{ github.repository }}/hive:${{ github.ref_name }}, ghcr.io/${{ github.repository }}/hive:latest
           context: .
           file: ./docker/hive/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           build-args: |
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-            APIBARA_STARKNET_BIN_DIR=dsrifc349xgnwsv661shqljxb8pbxx2j
-            APIBARA_SINK_BIN_DIR=vr6f0crii7571q19j122dfqb1ha1m4i9
+            APIBARA_STARKNET_BIN_DIR=${{ matrix.STARKNET_BIN_DIR }}
+            APIBARA_SINK_BIN_DIR=${{ matrix.SINK_BIN_DIR }}
