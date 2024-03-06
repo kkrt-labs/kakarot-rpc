@@ -22,10 +22,7 @@ RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
     unzip \
     zip
 
-COPY .git ./.git
-COPY .gitmodules .gitmodules
-COPY Makefile Makefile
-COPY scripts scripts
+COPY . .
 RUN make setup
 
 # Define ARG for build platform
