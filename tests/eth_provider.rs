@@ -352,4 +352,10 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
     assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
     assert_eq!(receipt.block_number.unwrap(), U256::from(*BLOCK_NUMBER));
+
+    let receipts = eth_provider
+        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::default()))))
+        .await
+        .unwrap();
+    assert!(receipts.is_none());
 }

@@ -547,11 +547,17 @@ where
                 let block_number = self.tag_into_block_number(maybe_number).await?;
                 let filter = into_filter("receipt.blockNumber", block_number, 64);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
+                if tx.is_empty() {
+                    return Ok(None);
+                }
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
             BlockId::Hash(hash) => {
                 let filter = into_filter("receipt.blockHash", hash.block_hash, 64);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
+                if tx.is_empty() {
+                    return Ok(None);
+                }
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
         }
