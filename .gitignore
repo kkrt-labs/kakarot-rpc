@@ -32,3 +32,5 @@ broadcast
 .hive
 
 artifacts/
+build/
+.kakarot/

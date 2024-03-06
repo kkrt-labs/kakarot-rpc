@@ -5,7 +5,7 @@ use cainome::rs::abigen_legacy;
 use lazy_static::lazy_static;
 use starknet_crypto::FieldElement;
 
-abigen_legacy!(ERC20, "./artifacts/fixtures/ERC20.json");
+abigen_legacy!(ERC20, "./.kakarot/artifacts/fixtures/ERC20.json");
 
 lazy_static! {
     pub static ref STARKNET_NATIVE_TOKEN: FieldElement =
