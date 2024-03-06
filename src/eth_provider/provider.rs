@@ -2,10 +2,12 @@ use alloy_rlp::Decodable as _;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
+use eyre::eyre;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use mongodb::bson::Document;
+use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::Bytes;
@@ -646,13 +648,19 @@ where
             ))
         };
 
+        // The withdrawals are not supported, hence the withdrawals_root should always be empty.
+        let withdrawal_root = header.header.withdrawals_root.unwrap_or_default();
+        if withdrawal_root != EMPTY_ROOT_HASH {
+            return Err(EthProviderError::Other(eyre!("Withdrawals are not supported")));
+        }
+
         let block = Block {
             header: header.header,
             transactions,
             total_difficulty,
             uncles: Vec::new(),
             size: None,
-            withdrawals: None,
+            withdrawals: Some(vec![]),
             other: OtherFields::default(),
         };
 

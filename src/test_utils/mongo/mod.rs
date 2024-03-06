@@ -5,7 +5,7 @@ use mongodb::{
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
-use reth_primitives::{B256, U256};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, B256, U256};
 use testcontainers::{
     clients::{self, Cli},
     core::WaitFor,
@@ -40,6 +40,7 @@ pub async fn mock_database() -> Database {
     );
 
     // Insert one document to create collection
+    let empty_root_hash = format!("{:064x}", EMPTY_ROOT_HASH);
     let hash_256_zero = format!("0x{:064x}", 0);
     let address_zero = format!("0x{:040x}", 0);
     let bloom_zero = format!("0x{:0512x}", 0);
@@ -70,6 +71,7 @@ pub async fn mock_database() -> Database {
                 "timestamp": &hash_256_zero,
                 "extraData": "0x",
                 "mixHash": &hash_256_zero,
+                "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
                 "parentHash": &hash_256_zero,
@@ -87,6 +89,7 @@ pub async fn mock_database() -> Database {
                 "extraData": "0x",
                 "mixHash": &hash_256_zero,
                 "baseFeePerGas": &one,
+                "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
                 "parentHash": &hash_256_zero,
@@ -104,6 +107,7 @@ pub async fn mock_database() -> Database {
                 "extraData": "0x",
                 "mixHash": &hash_256_zero,
                 "baseFeePerGas": &one,
+                "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
                 "parentHash": &hash_256_zero,
@@ -121,6 +125,7 @@ pub async fn mock_database() -> Database {
                 "extraData": "0x",
                 "mixHash": &hash_256_zero,
                 "baseFeePerGas": &one,
+                "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
                 "parentHash": &hash_256_zero,
@@ -138,6 +143,7 @@ pub async fn mock_database() -> Database {
                 "extraData": "0x",
                 "mixHash": &hash_256_zero,
                 "baseFeePerGas": &one,
+                "withdrawalsRoot": &empty_root_hash,
             }},
         ],
     )
