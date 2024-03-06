@@ -1,7 +1,11 @@
 use lazy_static::lazy_static;
+use reth_primitives::B256;
+use std::str::FromStr;
 
 lazy_static! {
     pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
+    pub static ref EMPTY_HASH: B256 =
+        B256::from_str("0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421").unwrap();
 }
 
 #[cfg(feature = "hive")]
@@ -14,7 +18,7 @@ use {
     },
     starknet_crypto::FieldElement,
     std::sync::Arc,
-    std::{env::var, str::FromStr, sync::OnceLock},
+    std::{env::var, sync::OnceLock},
     tokio::sync::Mutex,
 };
 

@@ -2,6 +2,7 @@ use alloy_rlp::Decodable as _;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
+use eyre::eyre;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
@@ -28,6 +29,7 @@ use starknet::core::types::ValueOutOfRangeError;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
+use super::constant::EMPTY_HASH;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
@@ -646,13 +648,19 @@ where
             ))
         };
 
+        // The withdrawals are not supported, hence the withdrawals_root should always be empty.
+        let withdrawal_root = header.header.withdrawals_root.unwrap_or_default();
+        if withdrawal_root != *EMPTY_HASH {
+            return Err(EthProviderError::Other(eyre!("Withdrawals are not supported")));
+        }
+
         let block = Block {
             header: header.header,
             transactions,
             total_difficulty,
             uncles: Vec::new(),
             size: None,
-            withdrawals: None,
+            withdrawals: Some(vec![]),
             other: OtherFields::default(),
         };
 
