@@ -40,7 +40,8 @@ where
 
 /// Helper function to split a U256 value into two generic values
 /// implementing the From<u128> trait
-pub fn split_u256<T: From<u128>>(value: U256) -> [T; 2] {
+pub fn split_u256<T: From<u128>>(value: impl Into<U256>) -> [T; 2] {
+    let value: U256 = value.into();
     let low: u128 = (value & U256::from(U128::MAX)).try_into().unwrap(); // safe to unwrap
     let high: U256 = value >> 128;
     let high: u128 = high.try_into().unwrap(); // safe to unwrap
