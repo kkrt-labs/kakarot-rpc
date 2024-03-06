@@ -48,7 +48,7 @@ pub trait EvmContract {
         Ok(Transaction::Eip1559(TxEip1559 {
             chain_id,
             nonce,
-            gas_limit: u64::MAX,
+            gas_limit: 10_000_000_u64,
             to: TransactionKind::Create,
             value: 0u64.into(),
             input: deploy_data.into(),
@@ -101,7 +101,7 @@ impl EvmContract for KakarotEvmContract {
         Ok(Transaction::Eip1559(TxEip1559 {
             chain_id,
             nonce,
-            gas_limit: u64::MAX,
+            gas_limit: 10_000_000_u64,
             to: TransactionKind::Call(evm_address.try_into()?),
             value: value.into(),
             input: data.into(),

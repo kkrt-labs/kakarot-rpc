@@ -60,6 +60,8 @@ async fn main() -> eyre::Result<()> {
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
 
+        // Set the block gas limit in kakarot
+
         for transaction in body.transactions {
             let signer = transaction.recover_signer().ok_or(eyre!("Failed to recover signer"))?;
             let chain_id = transaction.chain_id().ok_or(eyre!("Failed to recover chain id"))?;
@@ -69,6 +71,7 @@ async fn main() -> eyre::Result<()> {
             assert_eq!(starknet_tx.nonce, current_nonce);
 
             provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(starknet_tx)).await?;
+
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             current_nonce += 1u8.into();
         }
