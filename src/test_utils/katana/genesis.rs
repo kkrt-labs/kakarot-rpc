@@ -203,6 +203,8 @@ impl KatanaGenesisBuilder<Loaded> {
         let proxy_class_hash = self.proxy_class_hash()?;
         let precompiles_class_hash = self.precompiles_class_hash()?;
 
+        let block_gas_limit = FieldElement::from(20_000_000u64);
+
         // Construct the kakarot contract address. Based on the constructor args from
         // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/kakarot.cairo#L23
         let kakarot_address = ContractAddress::new(get_udc_deployed_address(
@@ -216,6 +218,7 @@ impl KatanaGenesisBuilder<Loaded> {
                 eoa_class_hash,
                 proxy_class_hash,
                 precompiles_class_hash,
+                block_gas_limit,
             ],
         ));
         // Cache the address for later use.
@@ -229,6 +232,8 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr("account_proxy_class_hash")?, proxy_class_hash),
             (storage_addr("precompiles_class_hash")?, precompiles_class_hash),
             (storage_addr("coinbase")?, coinbase_address),
+            (storage_addr("base_fee")?, FieldElement::ZERO),
+            (storage_addr("prev_randao")?, FieldElement::ZERO),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
