@@ -107,7 +107,7 @@ jobs:
       - name: Run hive
         run: |
           cd hive
-          ./hive --client kakarot --sim=ethereum/rpc --docker.endpoint=unix:///var/run/docker.sock
+          ./hive --client kakarot --sim=ethereum/rpc$ --docker.endpoint=unix:///var/run/docker.sock
       - name: Print logs
         if: always()
         run: |
