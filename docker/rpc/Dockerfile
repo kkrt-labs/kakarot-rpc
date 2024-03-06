@@ -38,7 +38,7 @@ ARG TARGETPLATFORM
 # Set working directory
 WORKDIR /usr/src/rpc
 
-COPY --from=compiler /usr/src/compiler/artifacts /usr/src/rpc/artifacts
+COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/artifacts
 
 # Copy source code
 COPY . .
@@ -65,21 +65,6 @@ RUN build_platform() { \
     --target=$ARCH; \
     # Copy the built binary to a common release directory
     cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/; \
-    # Build the Rust application for the specified target for hive
-    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
-    --features hive --target=$ARCH; \
-    # Copy the built binary to a common release directory
-    cp /usr/src/rpc/target/$ARCH/release/kakarot-rpc /usr/src/rpc/target/release/kakarot-rpc-hive; \
-    # Build the hive genesis binary
-    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
-    --bin hive_genesis --features testing --target=$ARCH; \
-    # Copy the genesis binary to a common release directory
-    cp /usr/src/rpc/target/$ARCH/release/hive_genesis /usr/src/rpc/target/release/; \
-    # Build the hive chain binary
-    BINDGEN_EXTRA_CLANG_ARGS=$BINDGEN_EXTRA_CLANG_ARGS cargo build --all --release \
-    --bin hive_chain --features hive-chain --target=$ARCH; \
-    # Copy the genesis binary to a common release directory
-    cp /usr/src/rpc/target/$ARCH/release/hive_chain /usr/src/rpc/target/release/; \
     } \
     && rustup self update \
     && case "$TARGETPLATFORM" in \
@@ -106,9 +91,6 @@ WORKDIR /usr/src/app
 
 # Copy the built binary from the previous container
 COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin
-COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc-hive /usr/local/bin
-COPY --from=builder /usr/src/rpc/target/release/hive_genesis /usr/local/bin
-COPY --from=builder /usr/src/rpc/target/release/hive_chain /usr/local/bin
 
 # Expose the port that the RPC server will run on
 EXPOSE 9545
