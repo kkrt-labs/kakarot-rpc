@@ -184,7 +184,7 @@ jobs:
       - name: Run ${{ matrix.sim }} simulator
         run: |
           cd hivetests
-          hive --sim "${{ matrix.sim }}$" --sim.limit "/${{join(matrix.include, '|')}}" --client reth
+          hive --sim "${{ matrix.sim }}$" --sim.limit "/${{join(matrix.include, '|')}}" --client kakarot
       - name: Print logs
         if: always()
         run: |
