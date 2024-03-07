@@ -10,6 +10,8 @@ use starknet_crypto::FieldElement;
 use crate::models::felt::Felt252Wrapper;
 use crate::root_project_path;
 
+use super::eoa::TX_GAS_LIMIT;
+
 pub trait EvmContract {
     fn load_contract_bytecode(contract_name: &str) -> Result<CompactContractBytecode, eyre::Error> {
         let dot_sol = format!("{contract_name}.sol");
@@ -48,7 +50,7 @@ pub trait EvmContract {
         Ok(Transaction::Eip1559(TxEip1559 {
             chain_id,
             nonce,
-            gas_limit: 10_000_000_u64,
+            gas_limit: TX_GAS_LIMIT,
             to: TransactionKind::Create,
             value: 0u64.into(),
             input: deploy_data.into(),
@@ -101,7 +103,7 @@ impl EvmContract for KakarotEvmContract {
         Ok(Transaction::Eip1559(TxEip1559 {
             chain_id,
             nonce,
-            gas_limit: 10_000_000_u64,
+            gas_limit: TX_GAS_LIMIT,
             to: TransactionKind::Call(evm_address.try_into()?),
             value: value.into(),
             input: data.into(),
