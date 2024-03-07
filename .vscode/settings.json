@@ -4,5 +4,5 @@
     "**/.git": false
   },
   "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.cargo.features": ["testing", "hive", "hive-chain"]
+  "rust-analyzer.cargo.features": ["testing", "hive"]
 }

@@ -251,7 +251,8 @@ where
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         let mut filter = into_filter("tx.blockHash", hash, 64);
         let index: usize = index.into();
-        filter.insert("tx.transactionIndex", index as i32);
+
+        filter.insert("tx.transactionIndex", format_hex(index, 64));
         let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
         Ok(tx.map(Into::into))
     }
@@ -264,7 +265,8 @@ where
         let block_number = self.tag_into_block_number(number_or_tag).await?;
         let mut filter = into_filter("tx.blockNumber", block_number, 64);
         let index: usize = index.into();
-        filter.insert("tx.transactionIndex", index as i32);
+
+        filter.insert("tx.transactionIndex", format_hex(index, 64));
         let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
         Ok(tx.map(Into::into))
     }
