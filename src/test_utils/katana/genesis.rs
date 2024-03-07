@@ -234,6 +234,7 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr("coinbase")?, coinbase_address),
             (storage_addr("base_fee")?, FieldElement::ZERO),
             (storage_addr("prev_randao")?, FieldElement::ZERO),
+            (storage_addr("block_gas_limit")?, block_gas_limit),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();

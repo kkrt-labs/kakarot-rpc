@@ -52,7 +52,6 @@ pub trait EvmContract {
             to: TransactionKind::Create,
             value: 0u64.into(),
             input: deploy_data.into(),
-            max_fee_per_gas: u64::MAX.into(),
             ..Default::default()
         }))
     }
@@ -106,7 +105,6 @@ impl EvmContract for KakarotEvmContract {
             to: TransactionKind::Call(evm_address.try_into()?),
             value: value.into(),
             input: data.into(),
-            max_fee_per_gas: u64::MAX.into(),
             ..Default::default()
         }))
     }
