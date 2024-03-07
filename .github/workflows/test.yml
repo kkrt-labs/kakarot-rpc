@@ -70,7 +70,9 @@ jobs:
         with:
           files: lcov.info
           fail_ci_if_error: false
-  hive:
+
+  # The CI job for the Hive was taken from Reth workflow
+  hive-prepare:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 45
     steps:
@@ -94,20 +96,96 @@ jobs:
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
             APIBARA_STARKNET_BIN_DIR=dsrifc349xgnwsv661shqljxb8pbxx2j
             APIBARA_SINK_BIN_DIR=vr6f0crii7571q19j122dfqb1ha1m4i9
-      - name: Clone kkrt-labs hive fork
-        run: git clone https://github.com/kkrt-labs/hive
+          outputs: type=docker,dest=./artifacts/kakarot_image.tar
+      - name: Checkout hive tests
+        uses: actions/checkout@v4
+        with:
+          repository: kkrt-labs/hive
+          ref: master
+          path: hivetests
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.22"
       - name: Compile hive
         run: |
-          cd hive
+          cd hivetests
           go build hive.go
-      - name: Run hive
+          mv ./hive ../artifacts/
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: ./artifacts
+
+  hive-test:
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        sim: [ethereum/rpc]
+        include:
+          - sim: ethereum/rpc-compat
+            include:
+              - eth_blockNumber/simple-test
+              - eth_call/call-simple-contract
+              - eth_call/call-simple-transfer
+              - eth_chainId/get-chain-id
+              - eth_estimateGas/estimate-simple-contract
+              - eth_estimateGas/estimate-simple-transfer
+              - eth_getBalance/get-balance
+              - eth_getBlockByHash/get-block-by-empty-hash
+              - eth_getBlockByHash/get-block-by-notfound-hash
+              - eth_getBlockByNumber/get-block-notfound
+              - eth_getBlockReceipts/get-block-receipts-empty
+              - eth_getBlockReceipts/get-block-receipts-future
+              - eth_getBlockReceipts/get-block-receipts-not-found
+              - eth_getBlockTransactionCountByNumber/get-block-n
+              - eth_getBlockTransactionCountByNumber/get-genesis
+              - eth_getCode/get-code
+              - eth_getStorage/get-storage
+              - eth_getTransactionByBlockNumberAndIndex/get-block-n
+              - eth_getTransactionByHash/get-access-list
+              - eth_getTransactionByHash/get-dynamic-fee
+              - eth_getTransactionByHash/get-empty-tx
+              - eth_getTransactionByHash/get-legacy-create
+              - eth_getTransactionByHash/get-legacy-input
+              - eth_getTransactionByHash/get-legacy-tx
+              - eth_getTransactionByHash/get-notfound-tx
+              - eth_getTransactionReceipt/get-dynamic-fee
+              - eth_getTransactionReceipt/get-empty-tx
+              - eth_getTransactionReceipt/get-legacy-receipt
+              - eth_getTransactionReceipt/get-notfound-tx
+              - eth_sendRawTransaction/send-access-list-transaction
+              - eth_sendRawTransaction/send-dynamic-fee-access-list-transaction
+              - eth_sendRawTransaction/send-dynamic-fee-transaction
+              - eth_sendRawTransaction/send-legacy-transaction
+              - eth_syncing/check-syncing
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts
+          path: /tmp
+      - name: Load Docker image
         run: |
-          cd hive
-          ./hive --client kakarot --sim=ethereum/rpc$ --docker.endpoint=unix:///var/run/docker.sock
+          docker load --input /tmp/kakarot_image.tar
+          docker image ls -a
+      - name: Move hive binary
+        run: |
+          mv /tmp/hive /usr/local/bin
+          chmod +x /usr/local/bin/hive
+      - name: Checkout hive tests
+        uses: actions/checkout@v4
+        with:
+          repository: kkrt-labs/hive
+          ref: master
+          path: hivetests
+      - name: Run ${{ matrix.sim }} simulator
+        run: |
+          cd hivetests
+          hive --sim "${{ matrix.sim }}$" --sim.limit "/${{join(matrix.include, '|')}}" --client reth
       - name: Print logs
         if: always()
         run: |
