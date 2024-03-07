@@ -181,7 +181,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().try_into()?,
             nonce,
             max_priority_fee_per_gas: Default::default(),
-            max_fee_per_gas: u64::MAX.into(),
+            max_fee_per_gas: Default::default(),
             gas_limit: 50_000u64,
             to: TransactionKind::Call(to),
             value: value.into(),
