@@ -107,9 +107,15 @@ rstest = { version = "0.18.1", default-features = false }
 toml = { version = "0.7.5", default-features = false }
 
 [features]
-testing = ["testcontainers", "rayon", "sequencer", "ef-testing"]
+testing = [
+  "testcontainers",
+  "rayon",
+  "sequencer",
+  "ef-testing",
+  "tokio-util",
+  "tokio-stream",
+]
 hive = []
-hive-chain = ["testing", "tokio-util", "tokio-stream"]
 
 [[bin]]
 name = "katana_genesis"
@@ -121,4 +127,4 @@ required-features = ["testing"]
 
 [[bin]]
 name = "hive_chain"
-required-features = ["hive-chain"]
+required-features = ["testing"]

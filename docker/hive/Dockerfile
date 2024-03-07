@@ -12,6 +12,13 @@ RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
 
 # Apibara Starknet and Sink are built with Nix, so we need to extract the binaries from the Nix store
 # Depending on the platform, the path to the binaries will be different
+# These values need to be updated if the version of ApiBara Starknet or Sink change.
+# platform: linux/amd64:
+#   - APIBARA_STARKNET_BIN_DIR: dsrifc349xgnwsv661shqljxb8pbxx2j
+#   - APIBARA_SINK_BIN_DIR: vr6f0crii7571q19j122dfqb1ha1m4i9
+# platform: linux/arm64
+#   - APIBARA_STARKNET_BIN_DIR: f7va4mjqww1kkpp4il6y295dgcwq147v
+#   - APIBARA_SINK_BIN_DIR: 3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc
 ARG APIBARA_STARKNET_BIN_DIR
 ARG APIBARA_SINK_BIN_DIR
 # Run `docker image inspect apibara/starknet:1.4.1-x86-64` to get the exact path
@@ -96,7 +103,7 @@ RUN cargo build --release \
     cargo build --release \
     --bin hive_genesis --features testing --target-dir /usr/src/rpc/target && \
     cargo build --release \ 
-    --bin hive_chain --features hive-chain --target-dir /usr/src/rpc/target
+    --bin hive_chain --features testing --target-dir /usr/src/rpc/target
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
