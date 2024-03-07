@@ -127,40 +127,40 @@ jobs:
         include:
           - sim: ethereum/rpc-compat
             include:
-              - eth_blockNumber/simple-test
-              - eth_call/call-simple-contract
-              - eth_call/call-simple-transfer
-              - eth_chainId/get-chain-id
-              - eth_estimateGas/estimate-simple-contract
-              - eth_estimateGas/estimate-simple-transfer
-              - eth_getBalance/get-balance
-              - eth_getBlockByHash/get-block-by-empty-hash
-              - eth_getBlockByHash/get-block-by-notfound-hash
-              - eth_getBlockByNumber/get-block-notfound
-              - eth_getBlockReceipts/get-block-receipts-empty
-              - eth_getBlockReceipts/get-block-receipts-future
-              - eth_getBlockReceipts/get-block-receipts-not-found
-              - eth_getBlockTransactionCountByNumber/get-block-n
-              - eth_getBlockTransactionCountByNumber/get-genesis
-              - eth_getCode/get-code
-              - eth_getStorage/get-storage
-              - eth_getTransactionByBlockNumberAndIndex/get-block-n
-              - eth_getTransactionByHash/get-access-list
-              - eth_getTransactionByHash/get-dynamic-fee
-              - eth_getTransactionByHash/get-empty-tx
-              - eth_getTransactionByHash/get-legacy-create
-              - eth_getTransactionByHash/get-legacy-input
-              - eth_getTransactionByHash/get-legacy-tx
-              - eth_getTransactionByHash/get-notfound-tx
-              - eth_getTransactionReceipt/get-dynamic-fee
-              - eth_getTransactionReceipt/get-empty-tx
-              - eth_getTransactionReceipt/get-legacy-receipt
-              - eth_getTransactionReceipt/get-notfound-tx
-              - eth_sendRawTransaction/send-access-list-transaction
-              - eth_sendRawTransaction/send-dynamic-fee-access-list-transaction
-              - eth_sendRawTransaction/send-dynamic-fee-transaction
-              - eth_sendRawTransaction/send-legacy-transaction
-              - eth_syncing/check-syncing
+              - eth_blockNumber/simple-test$
+              - eth_call/call-simple-contract$
+              - eth_call/call-simple-transfer$
+              - eth_chainId/get-chain-id$
+              - eth_estimateGas/estimate-simple-contract$
+              - eth_estimateGas/estimate-simple-transfer$
+              - eth_getBalance/get-balance$
+              - eth_getBlockByHash/get-block-by-empty-hash$
+              - eth_getBlockByHash/get-block-by-notfound-hash$
+              - eth_getBlockByNumber/get-block-notfound$
+              - eth_getBlockReceipts/get-block-receipts-empty$
+              - eth_getBlockReceipts/get-block-receipts-future$
+              - eth_getBlockReceipts/get-block-receipts-not-found$
+              - eth_getBlockTransactionCountByNumber/get-block-n$
+              - eth_getBlockTransactionCountByNumber/get-genesis$
+              - eth_getCode/get-code$
+              - eth_getStorage/get-storage$
+              - eth_getTransactionByBlockNumberAndIndex/get-block-n$
+              - eth_getTransactionByHash/get-access-list$
+              - eth_getTransactionByHash/get-dynamic-fee$
+              - eth_getTransactionByHash/get-empty-tx$
+              - eth_getTransactionByHash/get-legacy-create$
+              - eth_getTransactionByHash/get-legacy-input$
+              - eth_getTransactionByHash/get-legacy-tx$
+              - eth_getTransactionByHash/get-notfound-tx$
+              - eth_getTransactionReceipt/get-dynamic-fee$
+              - eth_getTransactionReceipt/get-empty-tx$
+              - eth_getTransactionReceipt/get-legacy-receipt$
+              - eth_getTransactionReceipt/get-notfound-tx$
+              - eth_sendRawTransaction/send-access-list-transaction$
+              - eth_sendRawTransaction/send-dynamic-fee-access-list-transaction$
+              - eth_sendRawTransaction/send-dynamic-fee-transaction$
+              - eth_sendRawTransaction/send-legacy-transaction$
+              - eth_syncing/check-syncing$
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -188,7 +188,7 @@ jobs:
       - name: Print logs
         if: always()
         run: |
-          cd hive
+          cd hivetests
           echo "Logs:"
           cat workspace/logs/*.log
           echo "Kakarot logs:"
