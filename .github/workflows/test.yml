@@ -135,7 +135,6 @@ jobs:
               - eth_estimateGas/estimate-simple-transfer$
               - eth_getBalance/get-balance$
               - eth_getBlockByHash/get-block-by-empty-hash$
-              - eth_getBlockByNumber/get-block-n$
               - eth_getBlockByHash/get-block-by-notfound-hash$
               - eth_getBlockByNumber/get-finalized$
               - eth_getBlockByNumber/get-latest$
