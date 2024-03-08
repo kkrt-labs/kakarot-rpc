@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use crate::models::felt::Felt252Wrapper;
+use alloy_rlp::Encodable;
 use cainome::rs::abigen_legacy;
 use dotenv::dotenv;
 use lazy_static::lazy_static;
@@ -77,7 +78,9 @@ pub fn to_starknet_transaction(
     let mut signature: Vec<FieldElement> = {
         let r = split_u256(transaction.signature().r);
         let s = split_u256(transaction.signature().s);
-        let signature = vec![r[0], r[1], s[0], s[1]];
+        let mut signature = Vec::with_capacity(5);
+        signature.extend_from_slice(&r);
+        signature.extend_from_slice(&s);
         signature
     };
     // Push the last element of the signature
@@ -92,18 +95,20 @@ pub fn to_starknet_transaction(
     // Step: Calldata
     // RLP encode the transaction without the signature
     // Example: For Legacy Transactions: rlp([nonce, gas_price, gas_limit, to, value, data, chain_id, 0, 0])
-    let mut signed_data = Vec::new();
+    let mut signed_data = Vec::with_capacity(transaction.transaction.length());
     transaction.transaction.encode_without_signature(&mut signed_data);
 
     // Prepare the calldata for the Starknet invoke transaction
-    let mut execute_calldata = vec![
+    let capacity = 6 + signed_data.len();
+    let mut execute_calldata = Vec::with_capacity(capacity);
+    execute_calldata.append(&mut vec![
         FieldElement::ONE,                     // call array length
         *KAKAROT_ADDRESS,                      // contract address
         *ETH_SEND_TRANSACTION,                 // selector
         FieldElement::ZERO,                    // data offset
         FieldElement::from(signed_data.len()), // data length
         FieldElement::from(signed_data.len()), // calldata length
-    ];
+    ]);
     execute_calldata.append(&mut signed_data.into_iter().map(FieldElement::from).collect());
 
     let max_fee = (u64::MAX).into();
