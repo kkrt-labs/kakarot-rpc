@@ -18,6 +18,8 @@ use crate::test_utils::evm_contract::EvmContract;
 use crate::test_utils::evm_contract::KakarotEvmContract;
 use crate::test_utils::tx_waiter::watch_tx;
 
+pub const TX_GAS_LIMIT: u64 = 5_000_000;
+
 /// EOA is an Ethereum-like Externally Owned Account (EOA) that can sign transactions and send them to the underlying Starknet provider.
 #[async_trait]
 pub trait Eoa<P: Provider + Send + Sync> {
@@ -182,7 +184,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             nonce,
             max_priority_fee_per_gas: Default::default(),
             max_fee_per_gas: Default::default(),
-            gas_limit: u64::MAX,
+            gas_limit: TX_GAS_LIMIT,
             to: TransactionKind::Call(to),
             value: value.into(),
             input: Bytes::default(),

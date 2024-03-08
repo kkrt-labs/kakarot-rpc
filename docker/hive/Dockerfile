@@ -113,7 +113,7 @@ RUN apt-get update && apt-get install -y tini curl jq libssl-dev ca-certificates
 #############
 ### Indexer environment variables
 #### Indexer environment variables
-ENV ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME
+ENV ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET
 ENV DEBUG=""
 ENV APIBARA_AUTH_TOKEN=""
 ENV MONGO_CONNECTION_STRING=mongodb://localhost:27017
@@ -123,6 +123,7 @@ ENV STREAM_URL=http://localhost:7171
 ENV SINK_TYPE=mongo
 ENV KATANA_ACCOUNT_ADDRESS=0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca
 ENV KATANA_PRIVATE_KEY=0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a
+ENV ALLOW_NET=""
 ### Kakarot RPC environment variables
 ### Port 8545: https://github.com/ethereum/hive/blob/master/simulators/ethereum/rpc/helper.go#L50
 ENV KAKAROT_RPC_URL=0.0.0.0:8545

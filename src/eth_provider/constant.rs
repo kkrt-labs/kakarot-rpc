@@ -4,6 +4,8 @@ lazy_static! {
     pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
 }
 
+pub const CALL_REQUEST_GAS_LIMIT: u64 = 5_000_000;
+
 #[cfg(feature = "hive")]
 use {
     crate::config::KakarotRpcConfig,
