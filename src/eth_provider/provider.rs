@@ -31,6 +31,7 @@ use starknet::core::types::ValueOutOfRangeError;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
+use super::constant::CALL_REQUEST_GAS_LIMIT;
 use super::database::types::log::StoredLog;
 use super::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
@@ -604,7 +605,7 @@ where
         let data = request.input.into_input().unwrap_or_default();
         let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
 
-        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(5_000_000u64)));
+        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(CALL_REQUEST_GAS_LIMIT)));
         let gas_price = into_via_try_wrapper!(request.gas_price.unwrap_or_default());
 
         let value = into_via_try_wrapper!(request.value.unwrap_or_default());
