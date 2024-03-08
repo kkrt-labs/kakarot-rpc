@@ -135,14 +135,17 @@ jobs:
               - eth_estimateGas/estimate-simple-transfer$
               - eth_getBalance/get-balance$
               - eth_getBlockByHash/get-block-by-empty-hash$
-              - eth_getBlockByNumber/get-block-n$
               - eth_getBlockByHash/get-block-by-notfound-hash$
-              - eth_getBlockByNumber/get-finalized
-              - eth_getBlockByNumber/get-latest
-              - eth_getBlockByNumber/get-safe
+              - eth_getBlockByNumber/get-finalized$
+              - eth_getBlockByNumber/get-latest$
+              - eth_getBlockByNumber/get-safe$
               - eth_getBlockByNumber/get-block-notfound$
+              - eth_getBlockReceipts/get-block-receipts-0$
+              - eth_getBlockReceipts/get-block-receipts-earliest$
               - eth_getBlockReceipts/get-block-receipts-empty$
+              - eth_getBlockReceipts/get-block-receipts-latest$
               - eth_getBlockReceipts/get-block-receipts-future$
+              - eth_getBlockReceipts/get-block-receipts-n$
               - eth_getBlockReceipts/get-block-receipts-not-found$
               - eth_getBlockTransactionCountByNumber/get-block-n$
               - eth_getBlockTransactionCountByNumber/get-genesis$
@@ -156,10 +159,13 @@ jobs:
               - eth_getTransactionByHash/get-legacy-input$
               - eth_getTransactionByHash/get-legacy-tx$
               - eth_getTransactionByHash/get-notfound-tx$
+              - eth_getTransactionReceipt/get-access-list$
               - eth_getTransactionReceipt/get-dynamic-fee$
               - eth_getTransactionReceipt/get-empty-tx$
               - eth_getTransactionReceipt/get-legacy-receipt$
               - eth_getTransactionReceipt/get-notfound-tx$
+              - eth_getTransactionReceipt/get-legacy-contract$
+              - eth_getTransactionReceipt/get-legacy-input$
               - eth_sendRawTransaction/send-access-list-transaction$
               - eth_sendRawTransaction/send-dynamic-fee-access-list-transaction$
               - eth_sendRawTransaction/send-dynamic-fee-transaction$
