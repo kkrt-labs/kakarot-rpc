@@ -213,7 +213,7 @@ where
     }
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
-        let block_exists = self.header(BlockHashOrNumber::Hash(hash)).await?.is_some();
+        let block_exists = self.block_exists(BlockHashOrNumber::Hash(hash)).await?;
         if !block_exists {
             return Ok(None);
         }
@@ -228,7 +228,7 @@ where
         number_or_tag: BlockNumberOrTag,
     ) -> EthProviderResult<Option<U256>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let block_exists = self.header(BlockHashOrNumber::Number(block_number.to::<u64>())).await?.is_some();
+        let block_exists = self.block_exists(BlockHashOrNumber::Number(block_number.to::<u64>())).await?;
         if !block_exists {
             return Ok(None);
         }
@@ -547,19 +547,23 @@ where
         match block_id {
             BlockId::Number(maybe_number) => {
                 let block_number = self.tag_into_block_number(maybe_number).await?;
-                let filter = into_filter("receipt.blockNumber", block_number, 64);
-                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
-                if tx.is_empty() {
+                let block_exists = self.block_exists(BlockHashOrNumber::Number(block_number.to())).await?;
+                if !block_exists {
                     return Ok(None);
                 }
+
+                let filter = into_filter("receipt.blockNumber", block_number, 64);
+                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
             BlockId::Hash(hash) => {
-                let filter = into_filter("receipt.blockHash", hash.block_hash, 64);
-                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
-                if tx.is_empty() {
+                let block_exists = self.block_exists(BlockHashOrNumber::Hash(hash.block_hash)).await?;
+                if !block_exists {
                     return Ok(None);
                 }
+
+                let filter = into_filter("receipt.blockHash", hash.block_hash, 64);
+                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
         }
@@ -648,6 +652,11 @@ where
             .try_into()
             .map_err(|err: ValueOutOfRangeError| ConversionError::ValueOutOfRange(err.to_string()))?;
         Ok((return_data, gas_used))
+    }
+
+    /// Check if a block exists in the database.
+    async fn block_exists(&self, block_id: BlockHashOrNumber) -> EthProviderResult<bool> {
+        Ok(self.header(block_id).await?.is_some())
     }
 
     /// Get a header from the database based on the filter.
