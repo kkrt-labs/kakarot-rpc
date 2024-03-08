@@ -743,11 +743,8 @@ where
             None => return Err(EthProviderError::ValueNotFound("Block".to_string())),
         };
         let number = header.header.number.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
-        let n = number.as_le_bytes_trimmed();
-        // Block number is U64
-        if n.len() > 8 {
-            return Err(ConversionError::ValueOutOfRange("Block number too large".to_string()).into());
-        }
-        Ok(U64::from_le_slice(n.as_ref()))
+        let number: u64 =
+            number.try_into().map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?;
+        Ok(U64::from(number))
     }
 }
