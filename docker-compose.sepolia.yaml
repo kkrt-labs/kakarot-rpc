@@ -63,7 +63,7 @@ services:
       - starknet-explorer:/var/lib/postgresql/data/
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.2.4
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.3.0
     ports:
       - 3030:3030
     environment:
