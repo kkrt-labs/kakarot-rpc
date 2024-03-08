@@ -108,9 +108,33 @@ services:
       service: clone-repo
 
   indexer:
-    extends:
-      file: docker-compose.yaml
-      service: indexer
+    image: quay.io/apibara/sink-mongo
+    command:
+      - run
+      - /code/kakarot-indexer/src/main.ts
+    environment:
+      # Whitelist environment variables
+      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET
+      - DEBUG=""
+      - APIBARA_AUTH_TOKEN=""
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
+      - STARTING_BLOCK=0
+      - STREAM_URL=http://apibara-dna:7171
+      - SINK_TYPE=mongo
+      - STARKNET_NETWORK=http://starknet:6060
+      - ALLOW_NET=
+      - KAKAROT_ADDRESS=0x1a18210c20241ea7a06224246264a59add11c8358d69826e8bd51f4ba6d3be7
+    restart: on-failure
+    volumes:
+      - indexer_code:/code
+    networks:
+      - internal
+    depends_on:
+      clone-repo:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_started
 
 networks:
   internal:

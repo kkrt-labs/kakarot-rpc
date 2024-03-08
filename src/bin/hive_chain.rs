@@ -60,7 +60,7 @@ async fn main() -> eyre::Result<()> {
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
 
-        // Set the block gas limit in kakarot
+        // TODO(HIVE): Set the block gas limit in kakarot
 
         for transaction in body.transactions {
             let signer = transaction.recover_signer().ok_or(eyre!("Failed to recover signer"))?;
