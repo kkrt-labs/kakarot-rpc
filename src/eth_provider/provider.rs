@@ -728,7 +728,7 @@ where
                 let eth_block_id = EthBlockId::new(id);
                 Ok(eth_block_id.try_into()?)
             }
-            None => Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Latest)),
+            None => Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending)),
         }
     }
 
