@@ -23,7 +23,7 @@ jobs:
           - platform: linux/arm64
             STARKNET_BIN_DIR: f7va4mjqww1kkpp4il6y295dgcwq147v
             SINK_BIN_DIR: 3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc
-    timeout-minutes: 85
+    timeout-minutes: 200
     steps:
       - uses: actions/checkout@v3
       - name: Set up QEMU
