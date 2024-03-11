@@ -28,7 +28,7 @@ if (interTransactionDelay === undefined) {
   );
 }
 
-const provider = new JsonRpcProvider(`http://${rpcUrl}`);
+const provider = new JsonRpcProvider(`${rpcUrl}`);
 const wallet = new Wallet(privateKey, provider);
 const recipient = Wallet.createRandom().address;
 
