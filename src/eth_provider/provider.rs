@@ -727,32 +727,22 @@ where
                 // 1. The block number corresponds to a Starknet pending block, then we return the pending tag
                 // 2. The block number corresponds to a Starknet sealed block, then we return the block number
                 // 3. The block number is not found, then we return an error
-                if let BlockNumberOrTag::Number(number) = number_or_tag {
-                    let filter = doc! {};
-                    let sort = doc! { "header.number": -1 };
-                    let header: Option<StoredHeader> = self.database.get_one("headers", filter, sort).await?;
-                    match header {
-                        Some(header) => {
-                            let highest_block_number =
-                                header.header.number.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
-                            let highest_block_number: u64 = highest_block_number
-                                .try_into()
-                                .map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?;
-                            let highest_block_hash =
-                                header.header.hash.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
-                            if highest_block_number == number && highest_block_hash == FixedBytes::ZERO {
-                                // Case 1.
-                                Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
-                            } else {
-                                // Case 2.
-                                Ok(starknet::core::types::BlockId::Number(number))
-                            }
+                match number_or_tag {
+                    BlockNumberOrTag::Number(number) => {
+                        let header = self
+                            .header(BlockHashOrNumber::Number(number))
+                            .await?
+                            .ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
+                        // If the block hash is zero, then the block corresponds to a Starknet pending block
+                        if header.header.hash.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?
+                            == FixedBytes::ZERO
+                        {
+                            Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
+                        } else {
+                            Ok(starknet::core::types::BlockId::Number(number))
                         }
-                        // Case 3.
-                        None => Err(EthProviderError::ValueNotFound("Block".to_string())),
                     }
-                } else {
-                    Ok(EthBlockNumberOrTag::from(number_or_tag).into())
+                    _ => Ok(EthBlockNumberOrTag::from(number_or_tag).into()),
                 }
             }
             None => Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending)),
