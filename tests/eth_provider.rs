@@ -14,6 +14,7 @@ use reth_rpc_types::{JsonStorageKey, RpcBlockHash, TransactionRequest};
 use rstest::*;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
+use starknet::core::types::BlockTag;
 
 #[rstest]
 #[awt]
@@ -358,4 +359,19 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
         .await
         .unwrap();
     assert!(receipts.is_none());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // When
+    let block_id = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(*BLOCK_NUMBER));
+    let starknet_block_id = eth_provider.to_starknet_block_id(block_id).await.unwrap();
+
+    // Then
+    assert_eq!(starknet_block_id, starknet::core::types::BlockId::Tag(BlockTag::Pending));
 }

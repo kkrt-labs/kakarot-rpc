@@ -715,7 +715,7 @@ where
     }
 
     /// Convert the given block id into a Starknet block id
-    async fn to_starknet_block_id(
+    pub async fn to_starknet_block_id(
         &self,
         block_id: impl Into<Option<BlockId>>,
     ) -> EthProviderResult<starknet::core::types::BlockId> {
