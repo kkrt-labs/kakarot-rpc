@@ -14,6 +14,8 @@ use reth_rpc_types::{JsonStorageKey, RpcBlockHash, TransactionRequest};
 use rstest::*;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
+use starknet::core::types::BlockTag;
+use starknet_crypto::FieldElement;
 
 #[rstest]
 #[awt]
@@ -354,8 +356,35 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipt.block_number.unwrap(), U256::from(*BLOCK_NUMBER));
 
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::default()))))
+        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::from(U256::from(0xc0fefe))))))
         .await
         .unwrap();
     assert!(receipts.is_none());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // When
+    let block_id = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(*BLOCK_NUMBER));
+    let pending_starknet_block_id = eth_provider.to_starknet_block_id(block_id).await.unwrap();
+
+    let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH));
+    let some_starknet_block_hash = eth_provider.to_starknet_block_id(some_block_hash).await.unwrap();
+
+    let some_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(0));
+    let some_starknet_block_number = eth_provider.to_starknet_block_id(some_block_number).await.unwrap();
+
+    let unknown_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(u64::MAX));
+    let unknown_starknet_block_number = eth_provider.to_starknet_block_id(unknown_block_number).await;
+
+    // Then
+    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Tag(BlockTag::Pending));
+    assert_eq!(some_starknet_block_hash, starknet::core::types::BlockId::Hash(FieldElement::from(0x1234_u64)));
+    assert_eq!(some_starknet_block_number, starknet::core::types::BlockId::Number(0_u64));
+    assert!(unknown_starknet_block_number.is_err());
 }

@@ -7,6 +7,7 @@ use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
+use reth_primitives::revm_primitives::FixedBytes;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::Bytes;
@@ -19,7 +20,6 @@ use reth_rpc_types::Filter;
 use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
 use reth_rpc_types::JsonStorageKey;
-use reth_rpc_types::RpcBlockHash;
 use reth_rpc_types::TransactionReceipt;
 use reth_rpc_types::TransactionRequest;
 use reth_rpc_types::ValueOrArray;
@@ -55,6 +55,7 @@ use crate::eth_provider::utils::format_hex;
 use crate::into_via_try_wrapper;
 use crate::into_via_wrapper;
 use crate::models::block::EthBlockId;
+use crate::models::block::EthBlockNumberOrTag;
 use crate::models::errors::ConversionError;
 use crate::models::felt::Felt252Wrapper;
 
@@ -154,12 +155,10 @@ where
             None => U64::from(self.starknet_provider.block_number().await?), // in case the database is empty, use the starknet provider
             Some(header) => {
                 let number = header.header.number.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
-                let n = number.as_le_bytes_trimmed();
-                // Block number is U64
-                if n.len() > 8 {
-                    return Err(ConversionError::ValueOutOfRange("Block number too large".to_string()).into());
-                }
-                U64::from_le_slice(n.as_ref())
+                let number: u64 = number
+                    .try_into()
+                    .map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?;
+                U64::from(number)
             }
         };
         Ok(block_number)
@@ -716,17 +715,35 @@ where
     }
 
     /// Convert the given block id into a Starknet block id
-    async fn to_starknet_block_id(
+    pub async fn to_starknet_block_id(
         &self,
         block_id: impl Into<Option<BlockId>>,
     ) -> EthProviderResult<starknet::core::types::BlockId> {
         match block_id.into() {
-            Some(BlockId::Hash(hash)) => {
-                Ok(starknet::core::types::BlockId::Number(self.hash_into_block_number(hash).await?.to::<u64>()))
-            }
-            Some(id) => {
-                let eth_block_id = EthBlockId::new(id);
-                Ok(eth_block_id.try_into()?)
+            Some(BlockId::Hash(hash)) => Ok(EthBlockId::new(BlockId::Hash(hash)).try_into()?),
+            Some(BlockId::Number(number_or_tag)) => {
+                // There is a need to separate the BlockNumberOrTag case into three subcases
+                // because pending Starknet blocks don't have a number.
+                // 1. The block number corresponds to a Starknet pending block, then we return the pending tag
+                // 2. The block number corresponds to a Starknet sealed block, then we return the block number
+                // 3. The block number is not found, then we return an error
+                match number_or_tag {
+                    BlockNumberOrTag::Number(number) => {
+                        let header = self
+                            .header(BlockHashOrNumber::Number(number))
+                            .await?
+                            .ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
+                        // If the block hash is zero, then the block corresponds to a Starknet pending block
+                        if header.header.hash.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?
+                            == FixedBytes::ZERO
+                        {
+                            Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
+                        } else {
+                            Ok(starknet::core::types::BlockId::Number(number))
+                        }
+                    }
+                    _ => Ok(EthBlockNumberOrTag::from(number_or_tag).into()),
+                }
             }
             None => Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending)),
         }
@@ -742,19 +759,5 @@ where
             | BlockNumberOrTag::Safe
             | BlockNumberOrTag::Pending => self.block_number().await,
         }
-    }
-
-    /// Convert the given block hash into a block number
-    async fn hash_into_block_number(&self, hash: RpcBlockHash) -> EthProviderResult<U64> {
-        let filter = into_filter("header.hash", hash.block_hash, 64);
-        let header: Option<StoredHeader> = self.database.get_one("headers", filter, None).await?;
-        let header = match header {
-            Some(header) => header,
-            None => return Err(EthProviderError::ValueNotFound("Block".to_string())),
-        };
-        let number = header.header.number.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
-        let number: u64 =
-            number.try_into().map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?;
-        Ok(U64::from(number))
     }
 }

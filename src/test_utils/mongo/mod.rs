@@ -74,6 +74,7 @@ pub async fn mock_database() -> Database {
                 "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
+                "hash": format!("0x{:064x}", *BLOCK_HASH),
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
                 "miner": &address_zero,
@@ -92,6 +93,7 @@ pub async fn mock_database() -> Database {
                 "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
+                "hash": format!("0x{:064x}", *BLOCK_HASH),
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
                 "miner": &address_zero,
@@ -110,6 +112,7 @@ pub async fn mock_database() -> Database {
                 "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
+                "hash": format!("0x{:064x}", *BLOCK_HASH),
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
                 "miner": &address_zero,
@@ -128,6 +131,7 @@ pub async fn mock_database() -> Database {
                 "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
+                "hash": &hash_256_zero,
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
                 "miner": &address_zero,
