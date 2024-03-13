@@ -47,7 +47,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: mkdir -p ./artifacts/contracts && mv ./lib/kakarot/build/* ./artifacts/contracts
-      - run: mkdir -p ./artifacts/abi && mv mv ./artifacts/* ./artifacts/abi
+      - run: mkdir -p ./artifacts/abi && mv ./artifacts/* ./artifacts/abi
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
