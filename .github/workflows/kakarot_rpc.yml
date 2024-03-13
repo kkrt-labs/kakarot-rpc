@@ -1,59 +1,94 @@
 ---
 name: RPC
 
-on:
-  release:
-    types: [published]
+on: [pull_request]
 
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
+  DOCKER_USERNAME: ${{ github.actor }}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 30
+    steps:
+      # Install Foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      # Install Python
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v3
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+      - name: Install Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Setup the Kakarot submodule
+        run: make setup
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: mkdir -p ./artifacts/contracts && mv ./lib/kakarot/build/* ./artifacts/contracts
+      - run: mkdir -p ./artifacts/abi && mv mv ./artifacts/* ./artifacts/abi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: ./artifacts
+  # Inspired by Reth CI.
+  # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
   build:
     runs-on: ubuntu-latest-16-cores
     strategy:
       matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
         include:
-          - platform: linux/amd64
-            STARKNET_BIN_DIR: dsrifc349xgnwsv661shqljxb8pbxx2j
-            SINK_BIN_DIR: vr6f0crii7571q19j122dfqb1ha1m4i9
-          - platform: linux/arm64
-            STARKNET_BIN_DIR: f7va4mjqww1kkpp4il6y295dgcwq147v
-            SINK_BIN_DIR: 3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc
+          - platform: amd64
+            target: x86_64-unknown-linux-gnu
+          - platform: arm64
+            target: aarch64-unknown-linux-gnu
     timeout-minutes: 200
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push RPC
-        uses: docker/build-push-action@v4
+          name: artifacts
+          path: /tmp
+      - run: mkdir -p lib/kakarot/build && mv /tmp/artifacts/contracts/* lib/kakarot/build
+      - run: mkdir artifacts && mv /tmp/artifacts/abi/* artifacts
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
-          push: true
-          tags: ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }}, ${{ env.REGISTRY_IMAGE }}:latest
-          context: .
-          file: ./docker/rpc/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          build-args: GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-      - name: Build and Push Hive
-        uses: docker/build-push-action@v4
-        with:
-          push: true
-          tags: ghcr.io/${{ github.repository }}/hive:${{ github.ref_name }}, ghcr.io/${{ github.repository }}/hive:latest
-          context: .
-          file: ./docker/hive/Dockerfile
-          platforms: ${{ matrix.platform }}
-          build-args: |
-            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-            APIBARA_STARKNET_BIN_DIR=${{ matrix.STARKNET_BIN_DIR }}
-            APIBARA_SINK_BIN_DIR=${{ matrix.SINK_BIN_DIR }}
+          cache-on-failure: true
+      - uses: taiki-e/install-action@cross
+      - name: Log in to Docker
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io --username ${DOCKER_USERNAME} --password-stdin
+      - name: Set up Docker builder
+        run: |
+          docker run --privileged --rm tonistiigi/binfmt --install ${{ matrix.platform }}
+          docker buildx create --use --name cross-builder
+      - name: Build and push image, tag as "latest"
+        run: |
+          cross build --bin kakarot-rpc --release --target ${{ matrix.target }}
+          mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.target }}/kakarot-rpc
+          docker buildx build --file ./docker/rpc/Dockerfile.cross . \
+            --platform linux/${{ matrix.target }} \
+            --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} --tag ${{ env.REGISTRY_IMAGE }}:latest --push

@@ -71,7 +71,8 @@ jobs:
           files: lcov.info
           fail_ci_if_error: false
 
-  # The CI job for the Hive was taken from Reth workflow
+  # Inspired by Reth CI.
+  # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/hive.yml>
   hive-prepare:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 45
