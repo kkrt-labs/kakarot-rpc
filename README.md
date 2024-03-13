@@ -94,6 +94,8 @@ TL;DR:
 - Run with Docker Compose:
   - `make katana-rpc-up`
   - To kill these processes, `make docker-down`
+- Build the docker image for the RPC:
+  - `make docker-build`
 
 ### Prerequisites
 
@@ -187,6 +189,15 @@ For Madara
 
 ```console
 make madara-rpc-up
+```
+
+### Building a [Docker Image](https://docs.docker.com/reference/cli/docker/image/build/)
+
+In order to build a Docker Image for the RPC, you can run the below command
+which will setup the local environment and compile the binary:
+
+```console
+make docker-build
 ```
 
 ### Sending transactions to RPC using [forge script](https://book.getfoundry.sh/reference/forge/forge-script)
