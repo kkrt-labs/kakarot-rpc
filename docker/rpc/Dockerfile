@@ -1,17 +1,24 @@
-FROM --platform=$TARGETPLATFORM debian:bookworm
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
+WORKDIR /app
 
-# Filled by docker buildx
-ARG TARGETARCH
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Install any necessary dependencies
+FROM chef AS builder 
+COPY --from=planner /app/recipe.json recipe.json
+
+# Build application
+COPY . .
+# Install system dependencies
 RUN apt-get update && \
     apt-get -y upgrade && \ 
-    apt-get install -y libssl-dev ca-certificates tini curl && \ 
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y libclang-dev
+RUN cargo build --release --bin kakarot-rpc
 
-# Copy the built binary. This assumes that the binary
-# has already been compiled for the target architecture
-COPY ./bin/$TARGETARCH/kakarot-rpc /usr/local/bin/kakarot-rpc
+FROM debian:bookworm-slim AS runtime
+WORKDIR /app
+COPY --from=builder /app/target/release/kakarot-rpc /usr/local/bin
 
 # Expose the port that the RPC server will run on
 EXPOSE 9545
@@ -25,6 +32,11 @@ HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
     CMD curl --request POST \
     --header "Content-Type: application/json" \
     --data '{"jsonrpc": "2.0", "method": "eth_chainId", "id": 1}' http://${KAKAROT_RPC_URL} || exit 1
+
+RUN apt-get update && \
+    apt-get -y upgrade && \ 
+    apt-get install -y libssl-dev ca-certificates tini curl && \ 
+    rm -rf /var/lib/apt/lists/*
 
 # Seen in https://github.com/eqlabs/pathfinder/blob/4ab915a830953ed6f02af907937b46cb447d9a92/Dockerfile#L120 - 
 # Allows for passing args down to the underlying binary easily
