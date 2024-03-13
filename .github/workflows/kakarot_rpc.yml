@@ -87,7 +87,8 @@ jobs:
         run: |
           RUSTFLAGS="-C link-arg=-lgcc -Clink-arg=-static-libgcc" \
             cross build --bin kakarot-rpc --release --target ${{ matrix.target }}
-          mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.target }}/kakarot-rpc
+          mkdir -p ./bin/${{ matrix.platform }}
+          mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.platform }}/kakarot-rpc
           docker buildx build --file ./docker/rpc/Dockerfile.cross . \
             --platform linux/${{ matrix.target }} \
             --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} --tag ${{ env.REGISTRY_IMAGE }}:latest --push
