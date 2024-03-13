@@ -92,5 +92,5 @@ jobs:
           mkdir -p ./bin/${{ matrix.platform }}
           mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.platform }}/kakarot-rpc
           docker buildx build --file ./docker/rpc/Dockerfile.cross . \
-            --platform linux/${{ matrix.target }} \
+            --platform linux/${{ matrix.platform }} \
             --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} --tag ${{ env.REGISTRY_IMAGE }}:latest --push
