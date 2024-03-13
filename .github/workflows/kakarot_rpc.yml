@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 30
     steps:
+      - uses: actions/checkout@v4
       # Install Foundry
       - name: install foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -56,6 +57,7 @@ jobs:
   # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
   build:
     runs-on: ubuntu-latest-16-cores
+    needs: prepare
     strategy:
       matrix:
         include:
@@ -65,13 +67,14 @@ jobs:
             target: aarch64-unknown-linux-gnu
     timeout-minutes: 200
     steps:
+      - uses: actions/checkout@v4
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts
           path: /tmp
-      - run: mkdir -p lib/kakarot/build && mv /tmp/artifacts/contracts/* lib/kakarot/build
-      - run: mkdir artifacts && mv /tmp/artifacts/abi/* artifacts
+      - run: mkdir -p ./lib/kakarot/build && mv /tmp/artifacts/contracts/* ./lib/kakarot/build
+      - run: mkdir ./artifacts && mv /tmp/artifacts/abi/* ./artifacts
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
