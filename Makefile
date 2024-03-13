@@ -28,6 +28,9 @@ load-env:
 run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
 
+docker-build: setup
+	docker build -t kakarot-rpc . -f docker/rpc/Dockerfile
+
 # Run Katana, Deploy Kakarot, Run Kakarot RPC
 katana-rpc-up:
 	docker compose up -d --force-recreate
