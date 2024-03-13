@@ -184,7 +184,7 @@ where
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
-        Ok(self.eth_provider.fee_history(U256::from(block_count.to()), newest_block, reward_percentiles).await?)
+        Ok(self.eth_provider.fee_history(block_count, newest_block, reward_percentiles).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
