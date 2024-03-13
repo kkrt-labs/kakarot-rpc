@@ -427,10 +427,11 @@ where
         }
 
         let end_block = self.tag_into_block_number(newest_block).await?;
-        let end_block_plus = end_block + U64::from(1_u64);
+        let end_block = end_block.to::<u64>();
+        let end_block_plus = end_block + 1;
 
         // Clamp the block count to the range [0, end_block_plus]
-        let block_count = Ord::clamp(U64::from(block_count.to()), U64::ZERO, end_block_plus);
+        let block_count = Ord::clamp(block_count.to(), 0, end_block_plus);
         let start_block = end_block_plus - block_count;
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
@@ -458,6 +459,7 @@ where
 
         let mut base_fee_per_gas =
             blocks.iter().map(|header| header.header.base_fee_per_gas.unwrap_or_default()).collect::<Vec<_>>();
+        // TODO(EIP1559): Remove this when proper base fee computation: if gas_ratio > 50%, increase base_fee_per_gas
         base_fee_per_gas.extend_from_within((base_fee_per_gas.len() - 1)..);
 
         Ok(FeeHistory {
