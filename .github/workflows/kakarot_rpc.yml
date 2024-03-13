@@ -46,13 +46,11 @@ jobs:
         run: make setup
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: mkdir ./abi && mv ./artifacts/* ./abi && mv abi artifacts
-      - run: mkdir -p ./artifacts/contracts && mv ./lib/kakarot/build/* ./artifacts/contracts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
-          path: ./artifacts
+          path: ./kakarot
   # Inspired by Reth CI.
   # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
   build:
@@ -65,16 +63,13 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - platform: arm64
             target: aarch64-unknown-linux-gnu
-    timeout-minutes: 200
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts
-          path: /tmp
-      - run: mkdir -p ./lib/kakarot/build && mv /tmp/artifacts/contracts/* ./lib/kakarot/build
-      - run: mkdir ./artifacts && mv /tmp/artifacts/abi/* ./artifacts
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
