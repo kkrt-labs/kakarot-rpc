@@ -79,7 +79,7 @@ services:
       - MONGO_DATABASE_NAME=kakarot-local
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
-      - deployments:/usr/src/app
+      - deployments:/app
     depends_on:
       deployments-parser:
         condition: service_completed_successfully
