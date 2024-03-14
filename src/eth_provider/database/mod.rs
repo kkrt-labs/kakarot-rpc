@@ -28,7 +28,7 @@ impl Database {
         project: impl Into<Option<Document>>,
     ) -> EthProviderResult<Vec<T>>
     where
-        T: DeserializeOwned + Unpin + Send + Sync,
+        T: DeserializeOwned,
     {
         let find_options = FindOptions::builder().projection(project).build();
         let collection = self.0.collection::<T>(collection);

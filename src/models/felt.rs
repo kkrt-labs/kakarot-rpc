@@ -18,29 +18,6 @@ impl From<Felt252Wrapper> for FieldElement {
     }
 }
 
-impl From<u64> for Felt252Wrapper {
-    fn from(u64: u64) -> Self {
-        let felt = FieldElement::from(u64);
-        Self(felt)
-    }
-}
-
-impl TryFrom<Felt252Wrapper> for u64 {
-    type Error = ConversionError;
-
-    fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
-        Self::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
-    }
-}
-
-impl TryFrom<Felt252Wrapper> for u128 {
-    type Error = ConversionError;
-
-    fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
-        Self::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
-    }
-}
-
 #[allow(clippy::fallible_impl_from)]
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
@@ -78,13 +55,6 @@ impl TryFrom<B256> for Felt252Wrapper {
     fn try_from(value: B256) -> Result<Self, Self::Error> {
         let felt = FieldElement::from_bytes_be(value.as_ref())?;
         Ok(Self(felt))
-    }
-}
-
-impl From<Felt252Wrapper> for B256 {
-    fn from(felt: Felt252Wrapper) -> Self {
-        let felt: FieldElement = felt.into();
-        Self::from_slice(&felt.to_bytes_be())
     }
 }
 
