@@ -232,7 +232,7 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr("account_proxy_class_hash")?, proxy_class_hash),
             (storage_addr("precompiles_class_hash")?, precompiles_class_hash),
             (storage_addr("coinbase")?, coinbase_address),
-            (storage_addr("base_fee")?, FieldElement::ZERO),
+            (storage_addr("base_fee")?, FieldElement::from(0_u64)),
             (storage_addr("prev_randao")?, FieldElement::ZERO),
             (storage_addr("block_gas_limit")?, block_gas_limit),
         ]
