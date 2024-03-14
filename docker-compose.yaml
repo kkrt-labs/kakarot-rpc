@@ -15,7 +15,7 @@ services:
       - --strk-gas-price
       - "0"
       - --chain-id
-      - "kkrt"
+      - "KKRT"
     ports:
       - "5050:5050"
     networks:
