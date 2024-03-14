@@ -428,11 +428,9 @@ where
 
         let end_block = self.tag_into_block_number(newest_block).await?;
         let end_block = end_block.to::<u64>();
-        let end_block_plus = end_block + 1;
+        let end_block_plus = end_block.saturating_add(1);
 
-        // Clamp the block count to the range [0, end_block_plus]
-        let block_count = Ord::clamp(block_count.to(), 0, end_block_plus);
-        let start_block = end_block_plus - block_count;
+        let start_block = end_block_plus.saturating_sub(block_count.to());
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
         // This means we need to introduce a new type for the StoredHeader.
