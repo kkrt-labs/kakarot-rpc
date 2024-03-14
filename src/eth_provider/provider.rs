@@ -22,6 +22,7 @@ use reth_rpc_types::Index;
 use reth_rpc_types::JsonStorageKey;
 use reth_rpc_types::TransactionReceipt;
 use reth_rpc_types::TransactionRequest;
+use reth_rpc_types::U64HexOrNumber;
 use reth_rpc_types::ValueOrArray;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
@@ -124,7 +125,7 @@ pub trait EthereumProvider {
     /// Returns the fee history given a block count and a newest block number.
     async fn fee_history(
         &self,
-        block_count: U256,
+        block_count: U64HexOrNumber,
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> EthProviderResult<FeeHistory>;
@@ -417,34 +418,31 @@ where
 
     async fn fee_history(
         &self,
-        mut block_count: U256,
+        block_count: U64HexOrNumber,
         newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> EthProviderResult<FeeHistory> {
-        if block_count == U256::ZERO {
+        if block_count.to() == 0 {
             return Ok(FeeHistory::default());
         }
 
-        let end_block = U256::from(self.tag_into_block_number(newest_block).await?);
-        let end_block_plus = end_block + U256::from(1);
+        let end_block = self.tag_into_block_number(newest_block).await?;
+        let end_block = end_block.to::<u64>();
+        let end_block_plus = end_block.saturating_add(1);
 
-        // Clamp the block count to the range [0, end_block_plus]
-        block_count = Ord::clamp(block_count, U256::ZERO, end_block_plus);
-        let start_block = end_block_plus - block_count;
-
-        let bc = usize::try_from(block_count).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))?;
-        // We add one to the block count and fill with 0's.
-        // This comes from the rpc spec: `An array of block base fees per gas.
-        // This includes the next block after the newest of the returned range,
-        // because this value can be derived from the newest block. Zeroes are returned for pre-EIP-1559 blocks.`
-        // Since Kakarot doesn't support EIP-1559 yet, we just fill with 0's.
-        let base_fee_per_gas = vec![U256::ZERO; bc + 1];
+        // 0 <= start_block < end_block
+        let start_block = end_block_plus.saturating_sub(block_count.to());
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
         // This means we need to introduce a new type for the StoredHeader.
         let header_filter =
             doc! {"header.number": {"$gte": format_hex(start_block, 64), "$lte": format_hex(end_block, 64)}};
         let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
+
+        if blocks.is_empty() {
+            return Err(EthProviderError::ValueNotFound("Block".to_string()));
+        }
+
         let gas_used_ratio = blocks
             .iter()
             .map(|header| {
@@ -458,10 +456,15 @@ where
             })
             .collect::<Vec<_>>();
 
+        let mut base_fee_per_gas =
+            blocks.iter().map(|header| header.header.base_fee_per_gas.unwrap_or_default()).collect::<Vec<_>>();
+        // TODO(EIP1559): Remove this when proper base fee computation: if gas_ratio > 50%, increase base_fee_per_gas
+        base_fee_per_gas.extend_from_within((base_fee_per_gas.len() - 1)..);
+
         Ok(FeeHistory {
             base_fee_per_gas,
             gas_used_ratio,
-            oldest_block: start_block,
+            oldest_block: U256::from(start_block),
             reward: Some(vec![]),
             ..Default::default()
         })

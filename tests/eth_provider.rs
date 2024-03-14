@@ -10,7 +10,7 @@ use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::{JsonStorageKey, RpcBlockHash, TransactionRequest};
+use reth_rpc_types::{JsonStorageKey, RpcBlockHash, TransactionRequest, U64HexOrNumber};
 use rstest::*;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
@@ -263,16 +263,18 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
     let newest_block = 3;
-    let block_count = 100usize;
+    let block_count = 100u64;
 
     // When
-    let fee_history =
-        eth_provider.fee_history(U256::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
+    let fee_history = eth_provider
+        .fee_history(U64HexOrNumber::from(block_count), BlockNumberOrTag::Number(newest_block), None)
+        .await
+        .unwrap();
 
     // Then
-    let actual_block_count = min(block_count, newest_block as usize + 1);
-    assert_eq!(fee_history.base_fee_per_gas.len(), actual_block_count + 1);
-    assert_eq!(fee_history.gas_used_ratio.len(), actual_block_count);
+    let actual_block_count = min(block_count, newest_block + 1);
+    assert_eq!(fee_history.base_fee_per_gas.len(), actual_block_count as usize + 1);
+    assert_eq!(fee_history.gas_used_ratio.len(), actual_block_count as usize);
     assert_eq!(fee_history.oldest_block, U256::ZERO);
 }
 
@@ -376,15 +378,15 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH));
     let some_starknet_block_hash = eth_provider.to_starknet_block_id(some_block_hash).await.unwrap();
 
-    let some_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(0));
+    let some_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(1));
     let some_starknet_block_number = eth_provider.to_starknet_block_id(some_block_number).await.unwrap();
 
     let unknown_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(u64::MAX));
     let unknown_starknet_block_number = eth_provider.to_starknet_block_id(unknown_block_number).await;
 
     // Then
-    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Tag(BlockTag::Pending));
+    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(0x1234_u64));
     assert_eq!(some_starknet_block_hash, starknet::core::types::BlockId::Hash(FieldElement::from(0x1234_u64)));
-    assert_eq!(some_starknet_block_number, starknet::core::types::BlockId::Number(0_u64));
+    assert_eq!(some_starknet_block_number, starknet::core::types::BlockId::Tag(BlockTag::Pending));
     assert!(unknown_starknet_block_number.is_err());
 }
