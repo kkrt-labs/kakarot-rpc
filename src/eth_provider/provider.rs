@@ -430,6 +430,7 @@ where
         let end_block = end_block.to::<u64>();
         let end_block_plus = end_block.saturating_add(1);
 
+        // 0 <= start_block < end_block
         let start_block = end_block_plus.saturating_sub(block_count.to());
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
