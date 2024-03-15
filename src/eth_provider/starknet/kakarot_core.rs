@@ -67,6 +67,7 @@ pub fn to_starknet_transaction(
     transaction: &TransactionSigned,
     chain_id: u64,
     signer: Address,
+    max_fee: Option<u64>,
 ) -> EthProviderResult<BroadcastedInvokeTransactionV1> {
     let starknet_address = starknet_address(signer);
 
@@ -111,7 +112,7 @@ pub fn to_starknet_transaction(
     ]);
     execute_calldata.append(&mut signed_data.into_iter().map(FieldElement::from).collect());
 
-    let max_fee = (u64::MAX).into();
+    let max_fee = max_fee.unwrap_or(u64::MAX).into();
     Ok(BroadcastedInvokeTransactionV1 {
         max_fee,
         signature,

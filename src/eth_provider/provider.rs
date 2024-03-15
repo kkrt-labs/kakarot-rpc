@@ -480,7 +480,19 @@ where
         let signer = transaction_signed
             .recover_signer()
             .ok_or_else(|| ConversionError::ToStarknetTransactionError("Failed to recover signer".to_string()))?;
-        let transaction = to_starknet_transaction(&transaction_signed, chain_id, signer)?;
+
+        // TODO(Kakarot Fee Mechanism): When we no longer need to use the Starknet fees, remove this line.
+        // We need to get the balance (in Kakarot/Starknet native Token) of the signer to compute the Starknet maximum `max_fee`.
+        // We used to set max_fee = u64::MAX, but it'll fail if the signer doesn't have enough balance to pay the fees.
+        let eth_fees = transaction_signed.effective_gas_price(Some(transaction_signed.max_fee_per_gas() as u64)) as u64;
+        let balance = self.balance(signer, None).await?;
+        let max_fee: u64 = {
+            let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
+            max_fee.saturating_sub(eth_fees)
+        };
+        // End of Kakarot TODO
+
+        let transaction = to_starknet_transaction(&transaction_signed, chain_id, signer, Some(max_fee))?;
 
         // If the contract is not found, we need to deploy it.
         #[cfg(feature = "hive")]
@@ -526,7 +538,13 @@ where
         #[cfg(not(feature = "testing"))]
         {
             let hash = transaction_signed.hash();
-            self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction)).await?;
+            let tx =
+                self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction)).await?;
+            tracing::info!(
+                "Fired a transaction: Starknet Hash: {:?} --- Ethereum Hash: {:?}",
+                tx.transaction_hash,
+                hash
+            );
             Ok(hash)
         }
         // If we are currently testing, we need to return the starknet hash in order

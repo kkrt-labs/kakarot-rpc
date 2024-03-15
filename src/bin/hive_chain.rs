@@ -65,7 +65,7 @@ async fn main() -> eyre::Result<()> {
         for transaction in body.transactions {
             let signer = transaction.recover_signer().ok_or(eyre!("Failed to recover signer"))?;
             let chain_id = transaction.chain_id().ok_or(eyre!("Failed to recover chain id"))?;
-            let starknet_tx = to_starknet_transaction(&transaction, chain_id, signer)?;
+            let starknet_tx = to_starknet_transaction(&transaction, chain_id, signer, None)?;
 
             // Stop if the nonce is incorrect
             assert_eq!(starknet_tx.nonce, current_nonce);
