@@ -1,7 +1,9 @@
 use reth_primitives::{Address, B256, U256, U64};
 use starknet::core::types::FieldElement;
 
-use crate::models::errors::ConversionError;
+#[derive(Debug, thiserror::Error)]
+#[error("conversion failed")]
+pub struct ConversionError;
 
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);
@@ -42,7 +44,7 @@ impl TryFrom<Felt252Wrapper> for Address {
 
         // Check if the first 12 bytes are all zeros.
         if bytes[0..12].iter().any(|&x| x != 0) {
-            return Err(ConversionError::ToEthereumAddressError);
+            return Err(ConversionError);
         }
 
         Ok(Self::from_slice(&bytes[12..]))
@@ -53,7 +55,7 @@ impl TryFrom<B256> for Felt252Wrapper {
     type Error = ConversionError;
 
     fn try_from(value: B256) -> Result<Self, Self::Error> {
-        let felt = FieldElement::from_bytes_be(value.as_ref())?;
+        let felt = FieldElement::from_bytes_be(value.as_ref()).map_err(|_| ConversionError)?;
         Ok(Self(felt))
     }
 }
@@ -62,7 +64,7 @@ impl TryFrom<U256> for Felt252Wrapper {
     type Error = ConversionError;
 
     fn try_from(u256: U256) -> Result<Self, Self::Error> {
-        let felt = FieldElement::from_bytes_be(&u256.to_be_bytes())?;
+        let felt = FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| ConversionError)?;
         Ok(Self(felt))
     }
 }
@@ -91,8 +93,11 @@ macro_rules! into_via_wrapper {
 #[macro_export]
 macro_rules! into_via_try_wrapper {
     ($val: expr) => {{
-        let intermediate: Felt252Wrapper = $val.try_into()?;
-        intermediate.into()
+        let intermediate: Result<_, $crate::models::felt::ConversionError> =
+            TryInto::<$crate::models::felt::Felt252Wrapper>::try_into($val)
+                .map_err(|_| $crate::models::felt::ConversionError)
+                .map(Into::into);
+        intermediate
     }};
 }
 

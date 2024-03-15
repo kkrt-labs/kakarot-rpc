@@ -9,7 +9,7 @@ use reth_rpc_types::{
 use serde_json::Value;
 
 use crate::eth_provider::constant::MAX_PRIORITY_FEE_PER_GAS;
-use crate::eth_provider::error::EthProviderError;
+use crate::eth_provider::error::EthApiError;
 use crate::eth_provider::provider::EthereumProvider;
 use crate::eth_rpc::api::eth_api::EthApiServer;
 
@@ -46,7 +46,7 @@ where
     }
 
     async fn coinbase(&self) -> Result<Address> {
-        Err(EthProviderError::MethodNotSupported("eth_coinbase".to_string()).into())
+        Err(EthApiError::Unsupported("eth_coinbase").into())
     }
 
     #[tracing::instrument(skip_all, ret, err)]
@@ -166,7 +166,7 @@ where
         _request: TransactionRequest,
         _block_id: Option<BlockId>,
     ) -> Result<AccessListWithGasUsed> {
-        Err(EthProviderError::MethodNotSupported("eth_createAccessList".to_string()).into())
+        Err(EthApiError::Unsupported("eth_createAccessList").into())
     }
 
     #[tracing::instrument(skip_all, ret, fields(request = ?request, block_id = ?block_id))]
@@ -195,7 +195,7 @@ where
     }
 
     async fn blob_base_fee(&self) -> Result<U256> {
-        Err(EthProviderError::MethodNotSupported("eth_blobBaseFee".to_string()).into())
+        Err(EthApiError::Unsupported("eth_blobBaseFee").into())
     }
 
     async fn mining(&self) -> Result<bool> {
@@ -214,15 +214,15 @@ where
     }
 
     async fn submit_hashrate(&self, _hashrate: U256, _id: B256) -> Result<bool> {
-        Err(EthProviderError::MethodNotSupported("eth_submitHashrate".to_string()).into())
+        Err(EthApiError::Unsupported("eth_submitHashrate").into())
     }
 
     async fn submit_work(&self, _nonce: B64, _pow_hash: B256, _mix_digest: B256) -> Result<bool> {
-        Err(EthProviderError::MethodNotSupported("eth_submitWork".to_string()).into())
+        Err(EthApiError::Unsupported("eth_submitWork").into())
     }
 
     async fn send_transaction(&self, _request: TransactionRequest) -> Result<B256> {
-        Err(EthProviderError::MethodNotSupported("eth_sendTransaction".to_string()).into())
+        Err(EthApiError::Unsupported("eth_sendTransaction").into())
     }
 
     #[tracing::instrument(skip_all, ret, err, fields(bytes = %bytes))]
@@ -231,15 +231,15 @@ where
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
-        Err(EthProviderError::MethodNotSupported("eth_sign".to_string()).into())
+        Err(EthApiError::Unsupported("eth_sign").into())
     }
 
     async fn sign_transaction(&self, _transaction: TransactionRequest) -> Result<Bytes> {
-        Err(EthProviderError::MethodNotSupported("eth_signTransaction".to_string()).into())
+        Err(EthApiError::Unsupported("eth_signTransaction").into())
     }
 
     async fn sign_typed_data(&self, _address: Address, _data: Value) -> Result<Bytes> {
-        Err(EthProviderError::MethodNotSupported("eth_signTypedData".to_string()).into())
+        Err(EthApiError::Unsupported("eth_signTypedData").into())
     }
 
     async fn get_proof(
@@ -248,31 +248,31 @@ where
         _keys: Vec<B256>,
         _block_id: Option<BlockId>,
     ) -> Result<EIP1186AccountProofResponse> {
-        Err(EthProviderError::MethodNotSupported("eth_getProof".to_string()).into())
+        Err(EthApiError::Unsupported("eth_getProof").into())
     }
 
     async fn new_filter(&self, _filter: Filter) -> Result<U64> {
-        Err(EthProviderError::MethodNotSupported("eth_newFilter".to_string()).into())
+        Err(EthApiError::Unsupported("eth_newFilter").into())
     }
 
     async fn new_block_filter(&self) -> Result<U64> {
-        Err(EthProviderError::MethodNotSupported("eth_newBlockFilter".to_string()).into())
+        Err(EthApiError::Unsupported("eth_newBlockFilter").into())
     }
 
     async fn new_pending_transaction_filter(&self) -> Result<U64> {
-        Err(EthProviderError::MethodNotSupported("eth_newPendingTransactionFilter".to_string()).into())
+        Err(EthApiError::Unsupported("eth_newPendingTransactionFilter").into())
     }
 
     async fn uninstall_filter(&self, _id: U64) -> Result<bool> {
-        Err(EthProviderError::MethodNotSupported("eth_uninstallFilter".to_string()).into())
+        Err(EthApiError::Unsupported("eth_uninstallFilter").into())
     }
 
     async fn get_filter_changes(&self, _id: U64) -> Result<FilterChanges> {
-        Err(EthProviderError::MethodNotSupported("eth_getFilterChanges".to_string()).into())
+        Err(EthApiError::Unsupported("eth_getFilterChanges").into())
     }
 
     async fn get_filter_logs(&self, _id: U64) -> Result<FilterChanges> {
-        Err(EthProviderError::MethodNotSupported("eth_getFilterLogs".to_string()).into())
+        Err(EthApiError::Unsupported("eth_getFilterLogs").into())
     }
 
     async fn block_receipts(&self, block_id: Option<BlockId>) -> Result<Option<Vec<TransactionReceipt>>> {

@@ -1,9 +1,8 @@
 use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
-use super::felt::Felt252Wrapper;
+use super::felt::ConversionError;
 use crate::into_via_try_wrapper;
-use crate::models::errors::ConversionError;
 
 pub struct EthBlockId(EthereumBlockId);
 
@@ -17,7 +16,7 @@ impl TryFrom<EthBlockId> for StarknetBlockId {
     type Error = ConversionError;
     fn try_from(eth_block_id: EthBlockId) -> Result<Self, Self::Error> {
         match eth_block_id.0 {
-            EthereumBlockId::Hash(hash) => Ok(Self::Hash(into_via_try_wrapper!(hash.block_hash))),
+            EthereumBlockId::Hash(hash) => Ok(Self::Hash(into_via_try_wrapper!(hash.block_hash)?)),
             EthereumBlockId::Number(block_number_or_tag) => {
                 let block_number_or_tag: EthBlockNumberOrTag = block_number_or_tag.into();
                 Ok(block_number_or_tag.into())
