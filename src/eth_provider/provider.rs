@@ -5,25 +5,12 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
-use reth_primitives::constants::EMPTY_ROOT_HASH;
-use reth_primitives::revm_primitives::FixedBytes;
-use reth_primitives::Address;
-use reth_primitives::BlockId;
-use reth_primitives::Bytes;
-use reth_primitives::TransactionSigned;
-use reth_primitives::{BlockNumberOrTag, B256, U256, U64};
-use reth_rpc_types::other::OtherFields;
-use reth_rpc_types::BlockHashOrNumber;
-use reth_rpc_types::FeeHistory;
-use reth_rpc_types::Filter;
-use reth_rpc_types::FilterChanges;
-use reth_rpc_types::Index;
-use reth_rpc_types::JsonStorageKey;
-use reth_rpc_types::TransactionReceipt;
-use reth_rpc_types::TransactionRequest;
-use reth_rpc_types::U64HexOrNumber;
-use reth_rpc_types::ValueOrArray;
-use reth_rpc_types::{Block, BlockTransactions, RichBlock};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
+use reth_rpc_types::{
+    other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Index,
+    JsonStorageKey, RichBlock, TransactionReceipt, TransactionRequest, U64HexOrNumber, ValueOrArray,
+};
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::core::types::SyncStatusType;
@@ -31,36 +18,28 @@ use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
 use super::constant::CALL_REQUEST_GAS_LIMIT;
-use super::database::types::log::StoredLog;
 use super::database::types::{
-    header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
-use super::error::log_map_err;
-use super::error::EthApiError;
-use super::error::EvmError;
-use super::error::KakarotError;
-use super::error::SignatureError;
-use super::error::TransactionError;
-use super::starknet::kakarot_core;
-use super::starknet::kakarot_core::core::{KakarotCoreReader, Uint256};
-use super::starknet::kakarot_core::to_starknet_transaction;
+use super::error::{log_map_err, EthApiError, EvmError, KakarotError, SignatureError, TransactionError};
 use super::starknet::kakarot_core::{
-    contract_account::ContractAccountReader, proxy::ProxyReader, starknet_address, CONTRACT_ACCOUNT_CLASS_HASH,
-    EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH, KAKAROT_ADDRESS,
+    self,
+    contract_account::ContractAccountReader,
+    core::{KakarotCoreReader, Uint256},
+    proxy::ProxyReader,
+    starknet_address, to_starknet_transaction, CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
+    KAKAROT_ADDRESS,
 };
-use super::starknet::ERC20Reader;
-use super::starknet::STARKNET_NATIVE_TOKEN;
+use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
 use super::utils::{
     contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator,
 };
 use crate::eth_provider::utils::format_hex;
-use crate::into_via_try_wrapper;
-use crate::into_via_wrapper;
-use crate::models::block::EthBlockId;
-use crate::models::block::EthBlockNumberOrTag;
+use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
+use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
