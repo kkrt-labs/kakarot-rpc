@@ -131,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "ToEthereumAddressError")]
+    #[should_panic(expected = "ConversionError")]
     fn test_address_try_from_felt_should_fail() {
         // Given
         let address: Felt252Wrapper = FieldElement::from_hex_be(OVERFLOW_ADDRESS).unwrap().into();
@@ -154,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Felt252WrapperConversionError")]
+    #[should_panic(expected = "ConversionError")]
     fn test_felt_try_from_b256_should_fail() {
         // Given
         let hash = B256::from_str(OVERFLOW_FELT).unwrap();
@@ -177,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Felt252WrapperConversionError")]
+    #[should_panic(expected = "ConversionError")]
     fn test_felt_try_from_u256_should_fail() {
         // Given
         let hash = U256::from_str_radix(OVERFLOW_FELT, 16).unwrap();
