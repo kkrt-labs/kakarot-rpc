@@ -88,8 +88,10 @@ pub enum KakarotError {
     /// Error related to the evm execution.
     #[error(transparent)]
     ExecutionError(EvmError),
+    /// Error related to a starknet call.
     #[error(transparent)]
     CallError(#[from] cainome::cairo_serde::Error),
+    /// Error related to starknet to eth conversion or vice versa.
     #[error(transparent)]
     ConversionError(#[from] ConversionError),
 }
@@ -177,6 +179,7 @@ impl From<String> for EvmError {
 /// Error related to a transaction.
 #[derive(Debug, Error)]
 pub enum TransactionError {
+    /// Thrown when the chain id is invalid.
     #[error("invalid chain id")]
     InvalidChainId,
     /// Thrown when the gas used overflows u128.
@@ -196,15 +199,17 @@ impl TransactionError {
 /// Error related to signature.
 #[derive(Debug, Error)]
 pub enum SignatureError {
+    /// Thrown when signer recovery fails.
     #[error("could not recover signer")]
     RecoveryError,
+    /// Thrown when signing fails.
     #[error("failed to sign")]
     SignError,
     #[error("missing signature")]
     MissingSignature,
 }
 
-pub fn log_map_err<T, E: std::fmt::Debug>(
+pub(crate) fn log_map_err<T, E: std::fmt::Debug>(
     result: Result<T, E>,
     op: impl FnOnce(E) -> EthApiError,
 ) -> Result<T, EthApiError> {
