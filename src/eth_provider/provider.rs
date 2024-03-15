@@ -481,16 +481,24 @@ where
             .recover_signer()
             .ok_or_else(|| ConversionError::ToStarknetTransactionError("Failed to recover signer".to_string()))?;
 
-        // TODO(Kakarot Fee Mechanism): When we no longer need to use the Starknet fees, remove this line.
-        // We need to get the balance (in Kakarot/Starknet native Token) of the signer to compute the Starknet maximum `max_fee`.
-        // We used to set max_fee = u64::MAX, but it'll fail if the signer doesn't have enough balance to pay the fees.
-        let eth_fees = transaction_signed.effective_gas_price(Some(transaction_signed.max_fee_per_gas() as u64)) as u64;
-        let balance = self.balance(signer, None).await?;
-        let max_fee: u64 = {
-            let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
-            max_fee.saturating_sub(eth_fees)
-        };
-        // End of Kakarot TODO
+        let max_fee: u64;
+        #[cfg(not(feature = "hive"))]
+        {
+            // TODO(Kakarot Fee Mechanism): When we no longer need to use the Starknet fees, remove this line.
+            // We need to get the balance (in Kakarot/Starknet native Token) of the signer to compute the Starknet maximum `max_fee`.
+            // We used to set max_fee = u64::MAX, but it'll fail if the signer doesn't have enough balance to pay the fees.
+            let eth_fees =
+                transaction_signed.effective_gas_price(Some(transaction_signed.max_fee_per_gas() as u64)) as u64;
+            let balance = self.balance(signer, None).await?;
+            max_fee = {
+                let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
+                max_fee.saturating_sub(eth_fees)
+            };
+        }
+        #[cfg(feature = "hive")]
+        {
+            max_fee = u64::MAX;
+        }
 
         let transaction = to_starknet_transaction(&transaction_signed, chain_id, signer, Some(max_fee))?;
 
