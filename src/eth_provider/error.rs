@@ -27,6 +27,9 @@ pub enum EthRpcErrorCode {
 /// Error that can occur when interacting with the ETH Api.
 #[derive(Debug, Error)]
 pub enum EthApiError {
+    /// When a block is not found
+    #[error("unknown block")]
+    UnknownBlock,
     /// When an unknown block number is encountered
     #[error("unknown block number")]
     UnknownBlockNumber,
@@ -54,6 +57,7 @@ impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
         let msg = value.to_string();
         match value {
+            EthApiError::UnknownBlock => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
             EthApiError::UnknownBlockNumber => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
             EthApiError::InvalidBlockRange => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::TransactionConversionError => rpc_err(EthRpcErrorCode::InvalidParams, msg),

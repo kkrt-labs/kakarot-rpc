@@ -452,7 +452,7 @@ where
         let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
 
         if blocks.is_empty() {
-            return Err(EthApiError::UnknownBlockNumber);
+            return Err(EthApiError::UnknownBlock);
         }
 
         let gas_used_ratio = blocks
@@ -719,7 +719,7 @@ where
             BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
             BlockHashOrNumber::Number(number) => into_filter("header.number", number, 64),
         };
-        log_map_err(self.database.get_one("headers", filter, None).await, |_| EthApiError::UnknownBlockNumber)
+        log_map_err(self.database.get_one("headers", filter, None).await, |_| EthApiError::UnknownBlock)
     }
 
     /// Get a block from the database based on a block hash or number.
@@ -790,7 +790,7 @@ where
                             .await?
                             .ok_or(EthApiError::UnknownBlockNumber)?;
                         // If the block hash is zero, then the block corresponds to a Starknet pending block
-                        if header.header.hash.ok_or(EthApiError::UnknownBlockNumber)? == FixedBytes::ZERO {
+                        if header.header.hash.ok_or(EthApiError::UnknownBlock)? == FixedBytes::ZERO {
                             Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
                         } else {
                             Ok(starknet::core::types::BlockId::Number(number))
