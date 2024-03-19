@@ -80,11 +80,6 @@ services:
       file: docker-compose.yaml
       service: mongo
 
-  clone-repo:
-    extends:
-      file: docker-compose.yaml
-      service: clone-repo
-
   indexer:
     image: quay.io/apibara/sink-mongo
     command:
@@ -93,13 +88,9 @@ services:
     env_file:
       - ./docker/env/indexer.env
     restart: on-failure
-    volumes:
-      - indexer_code:/code
     networks:
       - internal
     depends_on:
-      clone-repo:
-        condition: service_completed_successfully
       starknet:
         condition: service_started
 

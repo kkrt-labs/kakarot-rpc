@@ -41,18 +41,9 @@ services:
   deployments-parser:
     image: apteno/alpine-jq:2023-07-24
     # Parse deployments and save the result to .env file
-    entrypoint:
-      - "/bin/sh"
-      - "-c"
-      # First line overrides an existing .env, if any.
-      # This is to make sure that it is clean even though docker volume was not cleaned.
-      - |
-        echo "KAKAROT_ADDRESS=$$(jq -r '.kakarot.address' /deployments/katana/deployments.json)" > /deployments/.env;
-        echo "DEPLOYER_ACCOUNT_ADDRESS=$$(jq -r '.deployer_account.address' /deployments/katana/deployments.json)" >> /deployments/.env;
-        echo "PROXY_ACCOUNT_CLASS_HASH=$$(jq -r '.proxy' /deployments/katana/declarations.json)" >> /deployments/.env
-        echo "EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$$(jq -r '.externally_owned_account' /deployments/katana/declarations.json)" >> /deployments/.env
-        echo "CONTRACT_ACCOUNT_CLASS_HASH=$$(jq -r '.contract_account' /deployments/katana/declarations.json)" >> /deployments/.env
+    entrypoint: /entrypoint.sh
     volumes:
+      - ./docker/scripts/deployments-parser-entrypoint.sh:/entrypoint.sh
       - deployments:/deployments
     depends_on:
       kakarot-deployer:
@@ -105,19 +96,9 @@ services:
     env_file:
       - ./docker/env/mongo.env
 
-  clone-repo:
-    image: docker.io/alpine/git:latest
-    entrypoint: "/bin/sh"
-    command:
-      - "-c"
-      # clone the repository in `/code`, removing any old copy.
-      - "cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
-    volumes:
-      - "indexer_code:/code"
-    restart: on-failure
-
   indexer:
     image: quay.io/apibara/sink-mongo
+    entrypoint: /entrypoint.sh
     command:
       - run
       - /code/kakarot-indexer/src/main.ts
@@ -125,13 +106,11 @@ services:
       - ./docker/env/indexer.env
     restart: on-failure
     volumes:
-      - indexer_code:/code
+      - ./docker/scripts/indexer-entrypoint.sh:/entrypoint.sh
       - deployments:/deployments
     networks:
       - internal
     depends_on:
-      clone-repo:
-        condition: service_completed_successfully
       starknet:
         condition: service_started
       deployments-parser:
