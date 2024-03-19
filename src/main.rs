@@ -81,9 +81,10 @@ async fn main() -> Result<()> {
         }
     }?;
 
+    let socket_addr = rpc_config.socket_addr.clone();
     let server_handle = run_server(kakarot_rpc_module, rpc_config).await?;
 
-    let url = format!("http://{}", rpc_config.socket_addr);
+    let url = format!("http://{}", socket_addr);
 
     println!("RPC Server running on {url}...");
 

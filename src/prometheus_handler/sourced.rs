@@ -116,8 +116,7 @@ impl<T: SourcedType, S: MetricSource> Collector for SourcedMetric<T, S> {
                         l
                     })
                     .chain(self.desc.const_label_pairs.iter().cloned())
-                    .collect::<Vec<_>>()
-                    .into(),
+                    .collect::<Vec<_>>(),
             );
 
             counters.push(m);
@@ -127,7 +126,7 @@ impl<T: SourcedType, S: MetricSource> Collector for SourcedMetric<T, S> {
         m.set_name(self.desc.fq_name.clone());
         m.set_help(self.desc.help.clone());
         m.set_field_type(T::proto());
-        m.set_metric(counters.into());
+        m.set_metric(counters);
 
         vec![m]
     }

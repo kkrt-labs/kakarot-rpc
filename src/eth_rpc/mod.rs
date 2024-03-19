@@ -79,9 +79,14 @@ pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig
         rpc_module: kakarot_rpc_module,
     };
     tokio::spawn(async move {
-        let _ =
-            init_prometheus(SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), get_env_or_default("PROMETHEUS_PORT","9615").parse().unwrap()), registry.clone())
-                .await;
+        let _ = init_prometheus(
+            SocketAddr::new(
+                std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+                get_env_or_default("PROMETHEUS_PORT", "9615").parse().unwrap(),
+            ),
+            registry.clone(),
+        )
+        .await;
     });
 
     let make_service = make_service_fn(move |_conn: &AddrStream| {
