@@ -26,14 +26,8 @@ services:
     image: ghcr.io/kkrt-labs/kakarot/deployer:latest
     # Always pull the latest image, until we use release tags
     pull_policy: always
-    environment:
-      # Pre-funded Katana accounts
-      - ACCOUNT_ADDRESS=0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca
-      - PRIVATE_KEY=0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a
-      # EVM Private key of the Anvil default Account (address 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
-      - EVM_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-      - KATANA_RPC_URL=http://starknet:5050
-      - STARKNET_NETWORK=katana
+    env_file:
+      - ./docker/env/kakarot-deployer.env
     volumes:
       # Since STARKNET_NETWORK is set to katana, the deployments json files will be saved with katana network folder
       - deployments:/app/kakarot/deployments
@@ -71,12 +65,8 @@ services:
     pull_policy: always
     ports:
       - 3030:3030
-    environment:
-      - KAKAROT_RPC_URL=0.0.0.0:3030
-      - STARKNET_NETWORK=http://starknet:5050
-      - RUST_LOG=kakarot_rpc=info
-      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
-      - MONGO_DATABASE_NAME=kakarot-local
+    env_file:
+      - ./docker/env/kakarot-node.env
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/app
@@ -112,9 +102,8 @@ services:
       - mongo_data:/data/db
     networks:
       - internal
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: mongo
-      MONGO_INITDB_ROOT_PASSWORD: mongo
+    env_file:
+      - ./docker/env/mongo.env
 
   clone-repo:
     image: docker.io/alpine/git:latest
@@ -132,19 +121,8 @@ services:
     command:
       - run
       - /code/kakarot-indexer/src/main.ts
-    environment:
-      # Whitelist environment variables
-      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET
-      - DEBUG=""
-      - APIBARA_AUTH_TOKEN=""
-      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
-      - MONGO_DATABASE_NAME=kakarot-local
-      - STARTING_BLOCK=0
-      - STREAM_URL=http://apibara-dna:7171
-      - SINK_TYPE=mongo
-      - STARKNET_NETWORK=http://starknet:5050
-      - ALLOW_NET=
-      - ALLOW_ENV=/deployments/.env
+    env_file:
+      - ./docker/env/indexer.env
     restart: on-failure
     volumes:
       - indexer_code:/code

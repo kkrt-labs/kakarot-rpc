@@ -20,9 +20,8 @@ services:
     extends:
       file: docker-compose.yaml
       service: kakarot-deployer
-    environment:
-      - ACCOUNT_ADDRESS=0x3
-      - PRIVATE_KEY=0x00c1cf1490de1352865301bb8705143f3ef938f97fdf892f1090dcb5ac7bcd1d
+    env_file:
+      - ./docker/env/kakarot-deployer.madara.env
 
   deployments-parser:
     extends:

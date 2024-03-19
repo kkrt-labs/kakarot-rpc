@@ -24,22 +24,13 @@ services:
       --cn-unverifiable-range 0,1000000
     networks:
       - internal
+
   starknet-explorer:
     image: public.ecr.aws/o5q6k5w4/stark_compass_explorer:latest
     ports:
       - 4000:4000
-    environment:
-      - PHX_HOST=localhost
-      - PORT=4000
-      - RPC_API_HOST=http://host.docker.internal:6060
-      - TESTNET_RPC_API_HOST=http://host.docker.internal:6060
-      - SEPOLIA_RPC_API_HOST=http://host.docker.internal:6060
-      - DISABLE_MAINNET_SYNC=true
-      - DISABLE_SEPOLIA_SYNC=true
-      - DATABASE_PATH=ecto://postgres:postgres@starknet-explorer-db:5432/starknet_explorer_dev
-      - DB_TYPE=postgres
-      - SECRET_KEY_BASE=JyULoT5cLBifW+XNEuCTVoAb+SaFgQt9j227RN0cKpR3wTsrApGd1HNcgeopemyl
-      - ENABLE_LISTENER=true
+    env_file:
+      - ./docker/env/stark-compass.env
     depends_on:
       starknet-explorer-db:
         condition: service_started
@@ -54,11 +45,8 @@ services:
     image: postgres:15.3
     ports:
       - 5432:5432
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=starknet_explorer_dev
-      - PGDATA=/var/lib/postgresql/data/pgdata
+    env_file:
+      - ./docker/env/postgres.env
     volumes:
       - starknet-explorer:/var/lib/postgresql/data/
 
@@ -67,19 +55,8 @@ services:
     pull_policy: always
     ports:
       - 3030:3030
-    environment:
-      - KAKAROT_RPC_URL=0.0.0.0:3030
-      - STARKNET_NETWORK=http://starknet:6060
-      - RUST_LOG=kakarot_rpc=info
-      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
-      - MONGO_DATABASE_NAME=kakarot-local
-      # These values are unique to Sepolia Testnet
-      # They'll need to be manually changed in case the testnet is reset
-      # To add robustness: parse the `deployments/kakarot-sepolia` folder in `kkrt-labs/kakarot` repo
-      - KAKAROT_ADDRESS=0x1a18210c20241ea7a06224246264a59add11c8358d69826e8bd51f4ba6d3be7
-      - PROXY_ACCOUNT_CLASS_HASH=0x5bcd4d02cfe3aeb836f2ef4bd21b2020793e52a8269dbef9cd883fbddd2963c
-      - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=0x2ab68b7f5cea86752714b499f602cdb8c36e8cdf270f04b6a275b609baf7aea
-      - CONTRACT_ACCOUNT_CLASS_HASH=0x34e8e05a28a6ac98118860ae0cca56487e2f0a3589a4b713a0f19ccda3386d9
+    env_file:
+      - ./docker/env/kakarot-node.sepolia.env
     restart: on-failure
     depends_on:
       starknet:
@@ -113,19 +90,8 @@ services:
     command:
       - run
       - /code/kakarot-indexer/src/main.ts
-    environment:
-      # Whitelist environment variables
-      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET
-      - DEBUG=""
-      - APIBARA_AUTH_TOKEN=""
-      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
-      - MONGO_DATABASE_NAME=kakarot-local
-      - STARTING_BLOCK=0
-      - STREAM_URL=http://apibara-dna:7171
-      - SINK_TYPE=mongo
-      - STARKNET_NETWORK=http://starknet:6060
-      - ALLOW_NET=
-      - KAKAROT_ADDRESS=0x1a18210c20241ea7a06224246264a59add11c8358d69826e8bd51f4ba6d3be7
+    env_file:
+      - ./docker/env/indexer.env
     restart: on-failure
     volumes:
       - indexer_code:/code
