@@ -43,6 +43,11 @@ services:
       file: docker-compose.yaml
       service: mongo
 
+  clone-repo:
+    extends:
+      file: docker-compose.yaml
+      service: clone-repo
+
   indexer:
     extends:
       file: docker-compose.yaml

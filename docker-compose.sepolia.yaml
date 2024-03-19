@@ -79,6 +79,11 @@ services:
     extends:
       file: docker-compose.yaml
       service: mongo
+        
+  clone-repo:
+    extends:
+      file: docker-compose.yaml
+      service: clone-repo
 
   indexer:
     image: quay.io/apibara/sink-mongo
@@ -87,10 +92,14 @@ services:
       - /code/kakarot-indexer/src/main.ts
     env_file:
       - ./docker/env/indexer.env
+    volumes:
+      - indexer_code:/code
     restart: on-failure
     networks:
       - internal
     depends_on:
+      clone-repo:
+        condition: service_completed_successfully
       starknet:
         condition: service_started
 

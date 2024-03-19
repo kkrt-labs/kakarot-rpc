@@ -96,9 +96,19 @@ services:
     env_file:
       - ./docker/env/mongo.env
 
+  clone-repo:
+    image: docker.io/alpine/git:latest
+    entrypoint: "/bin/sh"
+    command:
+      - "-c"
+      # clone the repository in `/code`, removing any old copy.
+      - "cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
+    volumes:
+      - "indexer_code:/code"
+    restart: on-failure
+
   indexer:
     image: quay.io/apibara/sink-mongo
-    entrypoint: /entrypoint.sh
     command:
       - run
       - /code/kakarot-indexer/src/main.ts
@@ -106,11 +116,13 @@ services:
       - ./docker/env/indexer.env
     restart: on-failure
     volumes:
-      - ./docker/scripts/indexer-entrypoint.sh:/entrypoint.sh
+      - indexer_code:/code
       - deployments:/deployments
     networks:
       - internal
     depends_on:
+      clone-repo:
+        condition: service_completed_successfully
       starknet:
         condition: service_started
       deployments-parser:
