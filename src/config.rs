@@ -6,7 +6,6 @@ use std::env::var;
 use url::Url;
 
 fn env_var_to_field_element(var_name: &str) -> Result<FieldElement, eyre::Error> {
-    println!(var_name);
     let env_var = var(var_name)?;
 
     Ok(FieldElement::from_hex_be(&env_var)?)
