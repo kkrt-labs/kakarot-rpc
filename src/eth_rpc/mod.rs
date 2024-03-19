@@ -57,7 +57,10 @@ struct PerConnection<RpcMiddleware, HttpMiddleware> {
 /// # Errors
 ///
 /// Will return `Err` if an error occurs when running the `ServerBuilder` start fails.
-pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig) -> Result<ServerHandle, RpcError> {
+pub async fn run_server(
+    kakarot_rpc_module: RpcModule<()>,
+    rpc_config: RPCConfig,
+) -> Result<(SocketAddr, ServerHandle), RpcError> {
     let RPCConfig { socket_addr } = rpc_config;
 
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
@@ -115,7 +118,7 @@ pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig
         let _ = graceful.await;
     });
 
-    Ok(server_handle)
+    Ok((addr, server_handle))
 }
 
 fn get_env_or_default(name: &str, default: &str) -> String {
