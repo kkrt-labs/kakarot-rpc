@@ -22,6 +22,9 @@ pub enum ConversionError {
     /// Uint conversion error
     #[error("Uint conversion error: {0}")]
     UintConversionError(String),
+    /// Transaction conversion error
+    #[error("Transaction conversion error: {0}")]
+    TransactionConversionError(String),
     /// Other conversion error
     #[error("failed to convert value: {0}")]
     Other(String),

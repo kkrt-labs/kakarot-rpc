@@ -635,7 +635,16 @@ where
         let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
 
         let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(CALL_REQUEST_GAS_LIMIT)));
-        let gas_price = into_via_try_wrapper!(request.gas_price.unwrap_or_default());
+
+        // We cannot unwrap_or_default() here because Kakarot.eth_call will
+        // Reject transactions with gas_price < Kakarot.base_fee
+        let gas_price = {
+            let gas_price = match request.gas_price {
+                Some(gas_price) => gas_price,
+                None => self.gas_price().await?,
+            };
+            into_via_try_wrapper!(gas_price)
+        };
 
         let value = into_via_try_wrapper!(request.value.unwrap_or_default());
 
