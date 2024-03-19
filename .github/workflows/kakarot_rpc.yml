@@ -117,7 +117,7 @@ jobs:
         run: |
           docker buildx build \
             --file ./docker/rpc/Dockerfile.cross . \
-            --platform linux/amd64 linux/arm64 \
+            --platform linux/amd64,linux/arm64 \
             --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} \
             --tag ${{ env.REGISTRY_IMAGE }}:latest \
             --push
