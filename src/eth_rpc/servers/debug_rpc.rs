@@ -5,6 +5,10 @@ use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Bytes, Log, Receipt, TransactionSigned, B256};
 use reth_rpc_types::BlockId;
 
+use crate::eth_provider::error::{EthApiError, SignatureError};
+use crate::eth_rpc::api::debug_api::DebugApiServer;
+use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
+
 /// The RPC module for the implementing Net api
 pub struct DebugRpc<P: EthereumProvider> {
     eth_provider: P,
@@ -20,12 +24,12 @@ impl<P: EthereumProvider> DebugRpc<P> {
 impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P> {
     /// Returns an RLP-encoded header.
     async fn raw_header(&self, _block_id: BlockId) -> Result<Bytes> {
-        Err(EthProviderError::MethodNotSupported("debug_rawHeader".to_string()).into())
+        Err(EthApiError::Unsupported("debug_rawHeader").into())
     }
 
     /// Returns an RLP-encoded block.
     async fn raw_block(&self, _block_id: BlockId) -> Result<Bytes> {
-        Err(EthProviderError::MethodNotSupported("debug_rawBlock".to_string()).into())
+        Err(EthApiError::Unsupported("debug_rawBlock").into())
     }
 
     /// Returns a EIP-2718 binary-encoded transaction.
@@ -36,8 +40,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         if let Some(tx) = transaction {
             let mut raw_transaction = Vec::new();
-            let signature = tx.signature.ok_or(EthProviderError::ValueNotFound("signature".to_string()))?;
-            let tx = rpc_transaction_to_primitive(tx).map_err(EthProviderError::from)?;
+            let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
+            let tx = rpc_transaction_to_primitive(tx).map_err(EthApiError::from)?;
             TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
@@ -55,7 +59,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
     async fn raw_transactions(&self, _block_id: BlockId) -> Result<Vec<Bytes>> {
-        Err(EthProviderError::MethodNotSupported("debug_rawTransactions".to_string()).into())
+        Err(EthApiError::Unsupported("debug_rawTransactions").into())
     }
 
     /// Returns an array of EIP-2718 binary-encoded receipts.

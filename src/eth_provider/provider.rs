@@ -2,65 +2,46 @@ use alloy_rlp::Decodable as _;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
-use eyre::eyre;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
-use reth_primitives::constants::EMPTY_ROOT_HASH;
-use reth_primitives::revm_primitives::FixedBytes;
-use reth_primitives::serde_helper::JsonStorageKey;
-use reth_primitives::serde_helper::U64HexOrNumber;
-use reth_primitives::Address;
-use reth_primitives::BlockId;
-use reth_primitives::Bytes;
-use reth_primitives::TransactionSigned;
-use reth_primitives::{BlockNumberOrTag, B256, U256, U64};
-use reth_rpc_types::other::OtherFields;
-use reth_rpc_types::BlockHashOrNumber;
-use reth_rpc_types::FeeHistory;
-use reth_rpc_types::Filter;
-use reth_rpc_types::FilterChanges;
-use reth_rpc_types::Index;
-use reth_rpc_types::TransactionReceipt;
-use reth_rpc_types::TransactionRequest;
-use reth_rpc_types::ValueOrArray;
-use reth_rpc_types::{Block, BlockTransactions, RichBlock};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
+use reth_rpc_types::{
+    other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Index,
+    JsonStorageKey, RichBlock, TransactionReceipt, TransactionRequest, U64HexOrNumber, ValueOrArray,
+};
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::core::types::SyncStatusType;
-use starknet::core::types::ValueOutOfRangeError;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
 use super::constant::CALL_REQUEST_GAS_LIMIT;
-use super::database::types::log::StoredLog;
 use super::database::types::{
-    header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
-use super::error::EthProviderError;
-use super::starknet::kakarot_core;
-use super::starknet::kakarot_core::core::{KakarotCoreReader, Uint256};
-use super::starknet::kakarot_core::to_starknet_transaction;
+use super::error::{EthApiError, EvmError, KakarotError, SignatureError, TransactionError};
 use super::starknet::kakarot_core::{
-    contract_account::ContractAccountReader, proxy::ProxyReader, starknet_address, CONTRACT_ACCOUNT_CLASS_HASH,
-    EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH, KAKAROT_ADDRESS,
+    self,
+    contract_account::ContractAccountReader,
+    core::{KakarotCoreReader, Uint256},
+    proxy::ProxyReader,
+    starknet_address, to_starknet_transaction, CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
+    KAKAROT_ADDRESS,
 };
-use super::starknet::ERC20Reader;
-use super::starknet::STARKNET_NATIVE_TOKEN;
+use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
 use super::utils::{
     contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator,
 };
 use crate::eth_provider::utils::format_hex;
-use crate::into_via_try_wrapper;
-use crate::into_via_wrapper;
-use crate::models::block::EthBlockId;
-use crate::models::block::EthBlockNumberOrTag;
-use crate::models::errors::ConversionError;
+use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
+use crate::{into_via_try_wrapper, into_via_wrapper};
 
-pub type EthProviderResult<T> = Result<T, EthProviderError>;
+pub type EthProviderResult<T> = Result<T, EthApiError>;
 
 /// Ethereum provider trait. Used to abstract away the database and the network.
 #[async_trait]
@@ -155,12 +136,13 @@ where
         let sort = doc! { "header.number": -1 };
         let header: Option<StoredHeader> = self.database.get_one("headers", filter, sort).await?;
         let block_number = match header {
-            None => U64::from(self.starknet_provider.block_number().await?), // in case the database is empty, use the starknet provider
+            None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?), // in case the database is empty, use the starknet provider
             Some(header) => {
-                let number = header.header.number.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
+                let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber)?;
                 let number: u64 = number
                     .try_into()
-                    .map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?;
+                    .inspect_err(|err| tracing::error!("internal error: {:?}", err))
+                    .map_err(|_| EthApiError::UnknownBlockNumber)?;
                 U64::from(number)
             }
         };
@@ -168,7 +150,7 @@ where
     }
 
     async fn syncing(&self) -> EthProviderResult<SyncStatus> {
-        let syncing_status = self.starknet_provider.syncing().await?;
+        let syncing_status = self.starknet_provider.syncing().await.map_err(KakarotError::from)?;
 
         match syncing_status {
             SyncStatusType::NotSyncing => Ok(SyncStatus::None),
@@ -193,7 +175,7 @@ where
 
     // TODO cache chain id
     async fn chain_id(&self) -> EthProviderResult<Option<U64>> {
-        let chain_id = self.starknet_provider.chain_id().await?;
+        let chain_id = self.starknet_provider.chain_id().await.map_err(KakarotError::from)?;
         let chain_id: Option<u64> = chain_id.try_into().ok();
         Ok(chain_id.map(U64::from))
     }
@@ -293,7 +275,13 @@ where
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
         let address = starknet_address(address);
-        let balance = eth_contract.balanceOf(&address).block_id(starknet_block_id).call().await?.balance;
+        let balance = eth_contract
+            .balanceOf(&address)
+            .block_id(starknet_block_id)
+            .call()
+            .await
+            .map_err(KakarotError::from)?
+            .balance;
 
         let low: U256 = into_via_wrapper!(balance.low);
         let high: U256 = into_via_wrapper!(balance.high);
@@ -314,7 +302,13 @@ where
         let keys = split_u256::<FieldElement>(index.0);
         let storage_address = get_storage_var_address("storage_", &keys).expect("Storage var name is not ASCII");
 
-        let storage = contract.storage(&storage_address).block_id(starknet_block_id).call().await?.value;
+        let storage = contract
+            .storage(&storage_address)
+            .block_id(starknet_block_id)
+            .call()
+            .await
+            .map_err(KakarotError::from)?
+            .value;
 
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
@@ -333,13 +327,13 @@ where
         if contract_not_found(&maybe_class_hash) {
             return Ok(U256::ZERO);
         }
-        let class_hash = maybe_class_hash?.implementation;
+        let class_hash = maybe_class_hash.map_err(KakarotError::from)?.implementation;
 
         let nonce = if class_hash == *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH {
-            self.starknet_provider.get_nonce(starknet_block_id, address).await?
+            self.starknet_provider.get_nonce(starknet_block_id, address).await.map_err(KakarotError::from)?
         } else if class_hash == *CONTRACT_ACCOUNT_CLASS_HASH {
             let contract = ContractAccountReader::new(address, &self.starknet_provider);
-            contract.get_nonce().block_id(starknet_block_id).call().await?.nonce
+            contract.get_nonce().block_id(starknet_block_id).call().await.map_err(KakarotError::from)?.nonce
         } else {
             FieldElement::ZERO
         };
@@ -357,12 +351,12 @@ where
             return Ok(Bytes::default());
         }
 
-        let bytecode = bytecode?.bytecode.0;
+        let bytecode = bytecode.map_err(KakarotError::from)?.bytecode.0;
         Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode)))
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
-        let current_block = self.block_number().await?.try_into().map_err(ConversionError::from)?;
+        let current_block = self.block_number().await?.try_into().map_err(|_| EthApiError::UnknownBlockNumber)?;
         let from = filter.get_from_block().unwrap_or_default();
         let to = filter.get_to_block().unwrap_or(current_block);
 
@@ -439,7 +433,7 @@ where
         let end_block = end_block.to::<u64>();
         let end_block_plus = end_block.saturating_add(1);
 
-        // 0 <= start_block < end_block
+        // 0 <= start_block <= end_block
         let start_block = end_block_plus.saturating_sub(block_count.to());
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
@@ -449,7 +443,7 @@ where
         let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
 
         if blocks.is_empty() {
-            return Err(EthProviderError::ValueNotFound("Block".to_string()));
+            return Err(EthApiError::UnknownBlock);
         }
 
         let gas_used_ratio = blocks
@@ -481,14 +475,13 @@ where
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
         let mut data = transaction.0.as_ref();
-        let transaction_signed = TransactionSigned::decode(&mut data)
-            .map_err(|err| ConversionError::ToStarknetTransactionError(err.to_string()))?;
+        let transaction_signed =
+            TransactionSigned::decode(&mut data).map_err(|_| EthApiError::TransactionConversionError)?;
 
-        let chain_id = self.chain_id().await?.unwrap_or_default().try_into().map_err(ConversionError::from)?;
+        let chain_id =
+            self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
 
-        let signer = transaction_signed
-            .recover_signer()
-            .ok_or_else(|| ConversionError::ToStarknetTransactionError("Failed to recover signer".to_string()))?;
+        let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
 
         let max_fee: u64;
         #[cfg(not(feature = "hive"))]
@@ -542,11 +535,11 @@ where
                     .nonce(current_nonce)
                     .max_fee(FieldElement::from(u64::MAX))
                     .prepared()
-                    .map_err(|err| eyre::eyre!(err.to_string()))?
+                    .map_err(|_| EthApiError::TransactionConversionError)?
                     .get_invoke_request(false)
                     .await
-                    .map_err(|err| eyre::eyre!(err.to_string()))?;
-                self.starknet_provider.add_invoke_transaction(tx).await?;
+                    .map_err(|_| SignatureError::SignError)?;
+                self.starknet_provider.add_invoke_transaction(tx).await.map_err(KakarotError::from)?;
 
                 *nonce += 1u8.into();
                 drop(nonce);
@@ -556,8 +549,11 @@ where
         #[cfg(not(feature = "testing"))]
         {
             let hash = transaction_signed.hash();
-            let tx =
-                self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction)).await?;
+            let tx = self
+                .starknet_provider
+                .add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction))
+                .await
+                .map_err(KakarotError::from)?;
             tracing::info!(
                 "Fired a transaction: Starknet Hash: {:?} --- Ethereum Hash: {:?}",
                 tx.transaction_hash,
@@ -569,15 +565,18 @@ where
         // to be able to wait for the transaction to be mined.
         #[cfg(feature = "testing")]
         {
-            let res =
-                self.starknet_provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction)).await?;
+            let res = self
+                .starknet_provider
+                .add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction))
+                .await
+                .map_err(KakarotError::from)?;
             Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]))
         }
     }
 
     async fn gas_price(&self) -> EthProviderResult<U256> {
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
-        let gas_price = kakarot_contract.get_base_fee().call().await?.base_fee;
+        let gas_price = kakarot_contract.get_base_fee().call().await.map_err(KakarotError::from)?.base_fee;
         Ok(into_via_wrapper!(gas_price))
     }
 
@@ -643,7 +642,8 @@ where
         let data = request.input.into_input().unwrap_or_default();
         let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
 
-        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(CALL_REQUEST_GAS_LIMIT)));
+        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(CALL_REQUEST_GAS_LIMIT)))
+            .map_err(KakarotError::from)?;
 
         // We cannot unwrap_or_default() here because Kakarot.eth_call will
         // Reject transactions with gas_price < Kakarot.base_fee
@@ -652,10 +652,10 @@ where
                 Some(gas_price) => gas_price,
                 None => self.gas_price().await?,
             };
-            into_via_try_wrapper!(gas_price)
+            into_via_try_wrapper!(gas_price).map_err(KakarotError::from)?
         };
 
-        let value = into_via_try_wrapper!(request.value.unwrap_or_default());
+        let value = into_via_try_wrapper!(request.value.unwrap_or_default()).map_err(KakarotError::from)?;
 
         // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
         //  when we can simulate the transaction instead of calling `eth_call`
@@ -664,9 +664,8 @@ where
                 Some(nonce) => into_via_wrapper!(nonce),
                 None => match request.from {
                     None => FieldElement::ZERO,
-                    Some(address) => {
-                        into_via_try_wrapper!(self.transaction_count(address, block_id).await?)
-                    }
+                    Some(address) => into_via_try_wrapper!(self.transaction_count(address, block_id).await?)
+                        .map_err(KakarotError::from)?,
                 },
             }
         };
@@ -687,18 +686,16 @@ where
             )
             .block_id(starknet_block_id)
             .call()
-            .await?;
+            .await
+            .map_err(KakarotError::from)?;
 
         let return_data = call_output.return_data;
         if call_output.success == FieldElement::ZERO {
             let revert_reason =
                 return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
-            return Err(EthProviderError::EvmExecutionError(revert_reason));
+            return Err(KakarotError::from(EvmError::from(revert_reason)).into());
         }
-        let gas_used = call_output
-            .gas_used
-            .try_into()
-            .map_err(|err: ValueOutOfRangeError| ConversionError::ValueOutOfRange(err.to_string()))?;
+        let gas_used = call_output.gas_used.try_into().map_err(|_| TransactionError::GasOverflow)?;
         Ok((return_data, gas_used))
     }
 
@@ -713,7 +710,13 @@ where
             BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
             BlockHashOrNumber::Number(number) => into_filter("header.number", number, 64),
         };
-        self.database.get_one("headers", filter, None).await
+        self.database
+            .get_one("headers", filter, None)
+            .await
+            .inspect_err(|err| {
+                tracing::error!("internal error: {:?}", err);
+            })
+            .map_err(|_| EthApiError::UnknownBlock)
     }
 
     /// Get a block from the database based on a block hash or number.
@@ -745,7 +748,7 @@ where
         // The withdrawals are not supported, hence the withdrawals_root should always be empty.
         let withdrawal_root = header.header.withdrawals_root.unwrap_or_default();
         if withdrawal_root != EMPTY_ROOT_HASH {
-            return Err(EthProviderError::Other(eyre!("Withdrawals are not supported")));
+            return Err(EthApiError::Unsupported("withdrawals"));
         }
 
         let block = Block {
@@ -766,7 +769,9 @@ where
         block_id: impl Into<Option<BlockId>>,
     ) -> EthProviderResult<starknet::core::types::BlockId> {
         match block_id.into() {
-            Some(BlockId::Hash(hash)) => Ok(EthBlockId::new(BlockId::Hash(hash)).try_into()?),
+            Some(BlockId::Hash(hash)) => {
+                Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(KakarotError::from)?)
+            }
             Some(BlockId::Number(number_or_tag)) => {
                 // There is a need to separate the BlockNumberOrTag case into three subcases
                 // because pending Starknet blocks don't have a number.
@@ -778,11 +783,9 @@ where
                         let header = self
                             .header(BlockHashOrNumber::Number(number))
                             .await?
-                            .ok_or(EthProviderError::ValueNotFound("Block".to_string()))?;
+                            .ok_or(EthApiError::UnknownBlockNumber)?;
                         // If the block hash is zero, then the block corresponds to a Starknet pending block
-                        if header.header.hash.ok_or(EthProviderError::ValueNotFound("Block".to_string()))?
-                            == FixedBytes::ZERO
-                        {
+                        if header.header.hash.ok_or(EthApiError::UnknownBlock)? == FixedBytes::ZERO {
                             Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
                         } else {
                             Ok(starknet::core::types::BlockId::Number(number))
