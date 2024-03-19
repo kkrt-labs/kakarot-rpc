@@ -53,6 +53,7 @@ jobs:
         with:
           name: artifacts
           path: ./.kakarot
+
   # Inspired by Reth CI.
   # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
   build:
@@ -78,7 +79,7 @@ jobs:
         with:
           cache-on-failure: true
       - uses: taiki-e/install-action@cross
-      - name: Build and push image, tag as "latest"
+      - name: Build
         run: |
           RUSTFLAGS="-C link-arg=-lgcc -Clink-arg=-static-libgcc" \
             cross build --bin kakarot-rpc --release --target ${{ matrix.target }}
@@ -92,6 +93,7 @@ jobs:
 
   build-push-docker:
     runs-on: ubuntu-latest
+    needs: build
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
