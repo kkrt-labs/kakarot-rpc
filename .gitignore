@@ -27,6 +27,7 @@
 .env
 vscode
 broadcast
+.idea
 
 # ignore genesis.json
 .hive
