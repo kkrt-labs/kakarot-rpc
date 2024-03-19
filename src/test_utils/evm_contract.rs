@@ -4,7 +4,7 @@ use std::path::Path;
 use ethers::abi::Tokenize;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::{find_project_root_path, load_config};
-use reth_primitives::{Transaction, TransactionKind, TxEip1559};
+use reth_primitives::{Transaction, TransactionKind, TxEip1559, U256};
 use starknet_crypto::FieldElement;
 
 use crate::models::felt::Felt252Wrapper;
@@ -52,7 +52,7 @@ pub trait EvmContract {
             nonce,
             gas_limit: TX_GAS_LIMIT,
             to: TransactionKind::Create,
-            value: 0u64.into(),
+            value: U256::ZERO,
             input: deploy_data.into(),
             ..Default::default()
         }))
@@ -105,7 +105,7 @@ impl EvmContract for KakarotEvmContract {
             nonce,
             gas_limit: TX_GAS_LIMIT,
             to: TransactionKind::Call(evm_address.try_into()?),
-            value: value.into(),
+            value: U256::from(value),
             input: data.into(),
             ..Default::default()
         }))

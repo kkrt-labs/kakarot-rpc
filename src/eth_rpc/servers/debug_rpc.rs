@@ -1,9 +1,8 @@
 use crate::eth_provider::error::EthProviderError;
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
-// use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{Bytes, TransactionSigned, B256};
+use reth_primitives::{Bytes, Log, Receipt, TransactionSigned, B256};
 use reth_rpc_types::BlockId;
 
 /// The RPC module for the implementing Net api
@@ -60,7 +59,27 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     }
 
     /// Returns an array of EIP-2718 binary-encoded receipts.
-    async fn raw_receipts(&self, _block_id: BlockId) -> Result<Vec<Bytes>> {
-        Err(EthProviderError::MethodNotSupported("debug_rawReceipts".to_string()).into())
+    async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
+        Ok(self
+            .eth_provider
+            .block_receipts(Some(block_id))
+            .await?
+            .unwrap_or_default()
+            .into_iter()
+            .map(|receipt| {
+                Receipt {
+                    tx_type: receipt.transaction_type.to::<u8>().try_into().unwrap(),
+                    success: receipt.status_code.unwrap_or_default().to::<u8>() == 1,
+                    cumulative_gas_used: receipt.cumulative_gas_used.to::<u64>(),
+                    logs: receipt
+                        .logs
+                        .into_iter()
+                        .map(|log| Log { address: log.address, topics: log.topics, data: log.data })
+                        .collect(),
+                }
+                .with_bloom()
+                .envelope_encoded()
+            })
+            .collect())
     }
 }

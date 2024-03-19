@@ -8,6 +8,8 @@ use itertools::Itertools;
 use mongodb::bson::doc;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::revm_primitives::FixedBytes;
+use reth_primitives::serde_helper::JsonStorageKey;
+use reth_primitives::serde_helper::U64HexOrNumber;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::Bytes;
@@ -19,10 +21,8 @@ use reth_rpc_types::FeeHistory;
 use reth_rpc_types::Filter;
 use reth_rpc_types::FilterChanges;
 use reth_rpc_types::Index;
-use reth_rpc_types::JsonStorageKey;
 use reth_rpc_types::TransactionReceipt;
 use reth_rpc_types::TransactionRequest;
-use reth_rpc_types::U64HexOrNumber;
 use reth_rpc_types::ValueOrArray;
 use reth_rpc_types::{Block, BlockTransactions, RichBlock};
 use reth_rpc_types::{SyncInfo, SyncStatus};
@@ -72,6 +72,8 @@ pub trait EthereumProvider {
     async fn syncing(&self) -> EthProviderResult<SyncStatus>;
     /// Returns the chain id.
     async fn chain_id(&self) -> EthProviderResult<Option<U64>>;
+    /// Retrieves a block by its ID.
+    async fn block_by_id(&self, id: BlockId, full: bool) -> EthProviderResult<Option<RichBlock>>;
     /// Returns a block by hash. Block can be full or just the hashes of the transactions.
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>>;
     /// Returns a block by number. Block can be full or just the hashes of the transactions.
@@ -194,6 +196,13 @@ where
         let chain_id = self.starknet_provider.chain_id().await?;
         let chain_id: Option<u64> = chain_id.try_into().ok();
         Ok(chain_id.map(U64::from))
+    }
+
+    async fn block_by_id(&self, id: BlockId, full: bool) -> EthProviderResult<Option<RichBlock>> {
+        match id {
+            BlockId::Number(num) => self.block_by_number(num, full).await,
+            BlockId::Hash(hash) => self.block_by_hash(hash.block_hash, full).await,
+        }
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
@@ -715,7 +724,6 @@ where
             Some(header) => header,
             None => return Ok(None),
         };
-        let total_difficulty = Some(header.header.difficulty);
 
         let transactions_filter = match block_id {
             BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, 64),
@@ -743,7 +751,6 @@ where
         let block = Block {
             header: header.header,
             transactions,
-            total_difficulty,
             uncles: Vec::new(),
             size: None,
             withdrawals: Some(vec![]),
