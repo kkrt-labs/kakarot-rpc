@@ -37,8 +37,8 @@ use super::utils::{
     contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator,
 };
 use crate::eth_provider::utils::format_hex;
-use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
-use crate::models::felt::Felt252Wrapper;
+use crate::models::block::EthBlockNumberOrTag;
+use crate::models::felt::{ConversionError, Felt252Wrapper};
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -763,7 +763,11 @@ where
     ) -> EthProviderResult<starknet::core::types::BlockId> {
         match block_id.into() {
             Some(BlockId::Hash(hash)) => {
-                Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(KakarotError::from)?)
+                let header = self.header(BlockHashOrNumber::Hash(hash.block_hash)).await?;
+                let n = header.ok_or(EthApiError::UnknownBlock)?.header.number.ok_or(EthApiError::UnknownBlock)?;
+                Ok(starknet::core::types::BlockId::Number(
+                    n.try_into().map_err(|_| KakarotError::from(ConversionError))?,
+                ))
             }
             Some(BlockId::Number(number_or_tag)) => {
                 // There is a need to separate the BlockNumberOrTag case into three subcases
