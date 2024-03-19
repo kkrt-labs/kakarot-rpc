@@ -2,6 +2,7 @@ use std::convert::Infallible;
 // //! Kakarot RPC module for Ethereum.
 // //! It is an adapter layer to interact with Kakarot ZK-EVM.
 use std::net::{AddrParseError, Ipv4Addr, SocketAddr};
+use std::str::FromStr;
 
 use config::RPCConfig;
 pub mod api;
@@ -57,7 +58,7 @@ struct PerConnection<RpcMiddleware, HttpMiddleware> {
 ///
 /// Will return `Err` if an error occurs when running the `ServerBuilder` start fails.
 pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig) -> Result<ServerHandle, RpcError> {
-    let RPCConfig { socket_addr: _ } = rpc_config;
+    let RPCConfig { socket_addr } = rpc_config;
 
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
@@ -65,7 +66,7 @@ pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig
         tower::ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "net_health")?).layer(cors);
 
     let builder = ServerBuilder::default()
-        .max_connections(std::env::var("RPC_MAX_CONNECTIONS").unwrap_or_else(|_| "100".to_string()).parse().unwrap())
+        .max_connections(get_env_or_default("RPC_MAX_CONNECTIONS", "100").parse().unwrap())
         .set_http_middleware(http_middleware)
         .to_service_builder();
     let (stop_handle, server_handle) = stop_channel();
@@ -79,7 +80,7 @@ pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig
     };
     tokio::spawn(async move {
         let _ =
-            init_prometheus(SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 9615), registry.clone())
+            init_prometheus(SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), get_env_or_default("PROMETHEUS_PORT","9615").parse().unwrap()), registry.clone())
                 .await;
     });
 
@@ -100,14 +101,8 @@ pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig
         }
     });
 
-    // if binding the specified port failed then a random port is assigned by the OS.
-    let backup_port = |mut addr: SocketAddr| {
-        addr.set_port(0);
-        addr
-    };
-    let addr = ([127, 0, 0, 1], 3030).into();
-    let backup_addr = backup_port(addr);
-    let std_listener = TcpListener::bind([addr, backup_addr].as_slice()).await?.into_std()?;
+    let addr = SocketAddr::from_str(socket_addr.as_str())?;
+    let std_listener = TcpListener::bind(addr).await?.into_std()?;
     let server = hyper::Server::from_tcp(std_listener)?.serve(make_service);
 
     tokio::spawn(async move {
@@ -116,6 +111,10 @@ pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig
     });
 
     Ok(server_handle)
+}
+
+fn get_env_or_default(name: &str, default: &str) -> String {
+    std::env::var(name).unwrap_or_else(|_| default.to_string())
 }
 
 fn build_rpc_api<M: Send + Sync + 'static>(mut rpc_api: RpcModule<M>) -> RpcModule<M> {

@@ -5682,15 +5682,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68a7f542ee6b35af73b06abc0dad1c1bae89964e4e253bc4b587b91c9637867b"
 dependencies = [
  "cfg-if",
- "dashmap",
  "futures",
  "futures-timer",
  "no-std-compat",
  "nonzero_ext",
  "parking_lot 0.12.1",
  "portable-atomic",
- "quanta",
- "rand 0.8.5",
  "smallvec",
  "spinning_top",
 ]
@@ -8234,7 +8231,6 @@ dependencies = [
  "lazy_static",
  "memchr",
  "parking_lot 0.12.1",
- "protobuf",
  "thiserror",
 ]
 
@@ -8270,12 +8266,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf"
-version = "2.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
-
-[[package]]
 name = "public-ip"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8294,21 +8284,6 @@ dependencies = [
  "tracing-futures",
  "trust-dns-client",
  "trust-dns-proto 0.20.4",
-]
-
-[[package]]
-name = "quanta"
-version = "0.12.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ca0b7bac0b97248c40bb77288fc52029cf1459c0461ea1b05ee32ccf011de2c"
-dependencies = [
- "crossbeam-utils",
- "libc",
- "once_cell",
- "raw-cpuid",
- "wasi 0.11.0+wasi-snapshot-preview1",
- "web-sys",
- "winapi",
 ]
 
 [[package]]
@@ -8426,15 +8401,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d25bf25ec5ae4a3f1b92f929810509a2f53d7dca2f50b794ff57e3face536c8f"
 dependencies = [
  "rand_core 0.6.4",
-]
-
-[[package]]
-name = "raw-cpuid"
-version = "11.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d86a7c4638d42c44551f4791a20e687dbb4c3de1f33c43dd71e355cd429def1"
-dependencies = [
- "bitflags 2.4.2",
 ]
 
 [[package]]
