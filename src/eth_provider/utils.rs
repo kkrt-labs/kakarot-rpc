@@ -10,11 +10,13 @@ use starknet::{
 };
 
 /// Converts an iterator of `Into<D>` into a `Vec<D>`.
+#[inline]
 pub(crate) fn iter_into<D, S: Into<D>>(iter: impl IntoIterator<Item = S>) -> Vec<D> {
     iter.into_iter().map_into().collect()
 }
 
 /// Converts an iterator of `TryInto<u8>` into a `FromIterator<u8>`.
+#[inline]
 pub(crate) fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl IntoIterator<Item = I>) -> T {
     it.into_iter().filter_map(|x| TryInto::<u8>::try_into(x).ok()).collect()
 }
@@ -38,8 +40,8 @@ where
     doc! {key: format_hex(value, width)}
 }
 
-/// Helper function to split a U256 value into two generic values
-/// implementing the From<u128> trait
+/// Splits a U256 value into two generic values implementing the From<u128> trait
+#[inline]
 pub fn split_u256<T: From<u128>>(value: impl Into<U256>) -> [T; 2] {
     let value: U256 = value.into();
     let low: u128 = (value & U256::from(U128::MAX)).try_into().unwrap(); // safe to unwrap
@@ -48,6 +50,8 @@ pub fn split_u256<T: From<u128>>(value: impl Into<U256>) -> [T; 2] {
     [T::from(low), T::from(high)]
 }
 
+/// Checks if the error is a contract not found error.
+#[inline]
 pub(crate) const fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
     match err {
         Ok(_) => false,
@@ -55,6 +59,8 @@ pub(crate) const fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
     }
 }
 
+/// Checks if the error is an entrypoint not found error.
+#[inline]
 pub(crate) fn entrypoint_not_found<T>(err: &Result<T, Error>) -> bool {
     match err {
         Ok(_) => false,

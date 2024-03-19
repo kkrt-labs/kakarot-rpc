@@ -8,7 +8,9 @@ use mongodb::{
 };
 use serde::de::DeserializeOwned;
 
-use super::provider::EthProviderResult;
+use super::error::KakarotError;
+
+type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 
 /// Wrapper around a MongoDB database
 pub struct Database(MongoDatabase);
@@ -26,9 +28,9 @@ impl Database {
         collection: &str,
         filter: impl Into<Option<Document>>,
         project: impl Into<Option<Document>>,
-    ) -> EthProviderResult<Vec<T>>
+    ) -> DatabaseResult<Vec<T>>
     where
-        T: DeserializeOwned + Unpin + Send + Sync,
+        T: DeserializeOwned,
     {
         let find_options = FindOptions::builder().projection(project).build();
         let collection = self.0.collection::<T>(collection);
@@ -42,7 +44,7 @@ impl Database {
         collection: &str,
         filter: impl Into<Option<Document>>,
         sort: impl Into<Option<Document>>,
-    ) -> EthProviderResult<Option<T>>
+    ) -> DatabaseResult<Option<T>>
     where
         T: DeserializeOwned + Unpin + Send + Sync,
     {
@@ -53,7 +55,7 @@ impl Database {
     }
 
     /// Count the number of documents in a collection matching the filter
-    pub async fn count(&self, collection: &str, filter: impl Into<Option<Document>>) -> EthProviderResult<u64> {
+    pub async fn count(&self, collection: &str, filter: impl Into<Option<Document>>) -> DatabaseResult<u64> {
         let collection = self.0.collection::<Document>(collection);
         let count = collection.count_documents(filter, None).await?;
         Ok(count)

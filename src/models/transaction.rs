@@ -1,42 +1,27 @@
 use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, TxEip2930, TxLegacy};
 
-use super::errors::ConversionError;
+use super::felt::ConversionError;
+use crate::eth_provider::error::KakarotError;
 
 pub fn rpc_transaction_to_primitive(
     rpc_transaction: reth_rpc_types::Transaction,
-) -> Result<reth_primitives::Transaction, ConversionError> {
+) -> Result<reth_primitives::Transaction, KakarotError> {
     match rpc_transaction.transaction_type {
-        None => Err(ConversionError::TransactionConversionError("Transaction type not found".to_string())),
         Some(transaction_type) => match transaction_type.to::<u64>() {
             0 => Ok(reth_primitives::Transaction::Legacy(TxLegacy {
                 nonce: rpc_transaction.nonce.to::<u64>(),
-                gas_price: rpc_transaction
-                    .gas_price
-                    .ok_or(ConversionError::TransactionConversionError("Gas price not found".to_string()))?
-                    .to::<u128>(),
-                gas_limit: rpc_transaction
-                    .gas
-                    .try_into()
-                    .map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?,
+                gas_price: rpc_transaction.gas_price.ok_or(ConversionError)?.to::<u128>(),
+                gas_limit: rpc_transaction.gas.try_into().map_err(|_| ConversionError)?,
                 to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
                 value: rpc_transaction.value.into(),
                 input: rpc_transaction.input,
                 chain_id: rpc_transaction.chain_id.map(|id| id.to::<u64>()),
             })),
             1 => Ok(reth_primitives::Transaction::Eip2930(TxEip2930 {
-                chain_id: rpc_transaction
-                    .chain_id
-                    .ok_or(ConversionError::TransactionConversionError("Chain id not found".to_string()))?
-                    .to::<u64>(),
+                chain_id: rpc_transaction.chain_id.ok_or(ConversionError)?.to::<u64>(),
                 nonce: rpc_transaction.nonce.to::<u64>(),
-                gas_price: rpc_transaction
-                    .gas_price
-                    .ok_or(ConversionError::TransactionConversionError("Gas price not found".to_string()))?
-                    .to::<u128>(),
-                gas_limit: rpc_transaction
-                    .gas
-                    .try_into()
-                    .map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?,
+                gas_price: rpc_transaction.gas_price.ok_or(ConversionError)?.to::<u128>(),
+                gas_limit: rpc_transaction.gas.try_into().map_err(|_| ConversionError)?,
                 to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
                 value: rpc_transaction.value.into(),
                 access_list: AccessList(
@@ -53,25 +38,11 @@ pub fn rpc_transaction_to_primitive(
                 input: rpc_transaction.input,
             })),
             2 => Ok(reth_primitives::Transaction::Eip1559(TxEip1559 {
-                chain_id: rpc_transaction
-                    .chain_id
-                    .ok_or(ConversionError::TransactionConversionError("Chain id not found".to_string()))?
-                    .to::<u64>(),
+                chain_id: rpc_transaction.chain_id.ok_or(ConversionError)?.to::<u64>(),
                 nonce: rpc_transaction.nonce.to::<u64>(),
-                gas_limit: rpc_transaction
-                    .gas
-                    .try_into()
-                    .map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?,
-                max_fee_per_gas: rpc_transaction
-                    .max_fee_per_gas
-                    .ok_or(ConversionError::TransactionConversionError("Max fee per gas not found".to_string()))?
-                    .to::<u128>(),
-                max_priority_fee_per_gas: rpc_transaction
-                    .max_priority_fee_per_gas
-                    .ok_or(ConversionError::TransactionConversionError(
-                        "Max priority fee per gas not found".to_string(),
-                    ))?
-                    .to::<u128>(),
+                gas_limit: rpc_transaction.gas.try_into().map_err(|_| ConversionError)?,
+                max_fee_per_gas: rpc_transaction.max_fee_per_gas.ok_or(ConversionError)?.to::<u128>(),
+                max_priority_fee_per_gas: rpc_transaction.max_priority_fee_per_gas.ok_or(ConversionError)?.to::<u128>(),
                 to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
                 value: rpc_transaction.value.into(),
                 access_list: AccessList(
@@ -87,8 +58,9 @@ pub fn rpc_transaction_to_primitive(
                 ),
                 input: rpc_transaction.input,
             })),
-            _ => Err(ConversionError::TransactionConversionError("Invalid transaction type".to_string())),
+            _ => Err(ConversionError.into()),
         },
+        _ => Err(ConversionError.into()),
     }
 }
 #[cfg(test)]
@@ -215,11 +187,11 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "ConversionError")]
     fn test_invalid_transaction_type() {
         let mut rpc_tx = base_rpc_transaction();
         rpc_tx.transaction_type = Some(U64::from(99)); // Invalid type
 
-        let result = rpc_transaction_to_primitive(rpc_tx.clone());
-        assert!(matches!(result, Err(ConversionError::TransactionConversionError(_))));
+        let _ = rpc_transaction_to_primitive(rpc_tx.clone()).unwrap();
     }
 }

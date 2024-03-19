@@ -85,7 +85,7 @@ COPY . .
 
 ### Build the RPC server
 # Define ARG for build platform
-FROM rust:1.75 as rpc
+FROM rust:1.76 as rpc
 
 RUN apt-get update && apt-get install -y \
     gcc-aarch64-linux-gnu libssl-dev clang libclang-dev
