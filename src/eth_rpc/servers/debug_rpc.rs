@@ -1,13 +1,9 @@
-use crate::eth_provider::error::EthProviderError;
+use crate::eth_provider::error::{EthApiError, SignatureError};
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Bytes, Log, Receipt, TransactionSigned, B256};
 use reth_rpc_types::BlockId;
-
-use crate::eth_provider::error::{EthApiError, SignatureError};
-use crate::eth_rpc::api::debug_api::DebugApiServer;
-use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
 
 /// The RPC module for the implementing Net api
 pub struct DebugRpc<P: EthereumProvider> {
