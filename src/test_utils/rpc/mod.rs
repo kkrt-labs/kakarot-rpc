@@ -57,11 +57,11 @@ use crate::eth_rpc::run_server;
 /// allow(dead_code) is used because this function is used in tests,
 /// and each test is compiled separately, so the compiler thinks this function is unused
 #[allow(dead_code)]
-pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
+pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<ServerHandle, eyre::Report> {
     // Create and run Kakarot RPC module.
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(katana.eth_provider()).rpc_module()?;
     let rpc_config = RPCConfig::from_env()?;
-    let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
+    let server_handle = run_server(kakarot_rpc_module, rpc_config).await?;
 
-    Ok((server_addr, server_handle))
+    Ok(server_handle)
 }

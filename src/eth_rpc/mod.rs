@@ -1,18 +1,32 @@
+use std::convert::Infallible;
 // //! Kakarot RPC module for Ethereum.
 // //! It is an adapter layer to interact with Kakarot ZK-EVM.
-use std::net::{AddrParseError, SocketAddr};
+use std::net::{AddrParseError, Ipv4Addr, SocketAddr};
 
 use config::RPCConfig;
 pub mod api;
 pub mod config;
+pub mod middleware;
 pub mod rpc;
 pub mod servers;
 
+use crate::eth_rpc::middleware::metrics::RpcMetrics;
+use crate::eth_rpc::middleware::MetricsLayer;
+use crate::prometheus_handler::init_prometheus;
 use eyre::Result;
+use hyper::{
+    server::conn::AddrStream,
+    service::{make_service_fn, service_fn},
+};
 use jsonrpsee::server::middleware::http::{InvalidPath, ProxyGetRequestLayer};
-use jsonrpsee::server::{ServerBuilder, ServerHandle};
+use jsonrpsee::server::{
+    stop_channel, RpcServiceBuilder, ServerBuilder, ServerHandle, StopHandle, TowerServiceBuilder,
+};
 use jsonrpsee::RpcModule;
+use prometheus::Registry;
 use thiserror::Error;
+use tokio::net::TcpListener;
+use tower::Service;
 use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Error, Debug)]
@@ -23,31 +37,100 @@ pub enum RpcError {
     ParseError(#[from] AddrParseError),
     #[error(transparent)]
     JsonRpcError(#[from] InvalidPath),
+    #[error(transparent)]
+    HyperError(#[from] hyper::Error),
+    #[error(transparent)]
+    PrometheusHandlerError(#[from] crate::prometheus_handler::Error),
+    #[error(transparent)]
+    PrometheusError(#[from] prometheus::Error),
+}
+
+#[derive(Debug, Clone)]
+struct PerConnection<RpcMiddleware, HttpMiddleware> {
+    stop_handle: StopHandle,
+    metrics: Option<RpcMetrics>,
+    service_builder: TowerServiceBuilder<RpcMiddleware, HttpMiddleware>,
+    rpc_module: RpcModule<()>,
 }
 
 /// # Errors
 ///
 /// Will return `Err` if an error occurs when running the `ServerBuilder` start fails.
-pub async fn run_server(
-    kakarot_rpc_module: RpcModule<()>,
-    rpc_config: RPCConfig,
-) -> Result<(SocketAddr, ServerHandle), RpcError> {
-    let RPCConfig { socket_addr } = rpc_config;
+pub async fn run_server(kakarot_rpc_module: RpcModule<()>, rpc_config: RPCConfig) -> Result<ServerHandle, RpcError> {
+    let RPCConfig { socket_addr: _ } = rpc_config;
 
     let cors = CorsLayer::new().allow_methods(Any).allow_origin(Any).allow_headers(Any);
 
     let http_middleware =
         tower::ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "net_health")?).layer(cors);
 
-    let server = ServerBuilder::default()
+    let builder = ServerBuilder::default()
         .max_connections(std::env::var("RPC_MAX_CONNECTIONS").unwrap_or_else(|_| "100".to_string()).parse().unwrap())
         .set_http_middleware(http_middleware)
-        .build(socket_addr.parse::<SocketAddr>()?)
-        .await?;
+        .to_service_builder();
+    let (stop_handle, server_handle) = stop_channel();
 
-    let addr = server.local_addr()?;
+    let registry = Registry::new();
+    let cfg = PerConnection {
+        stop_handle: stop_handle.clone(),
+        metrics: RpcMetrics::new(Some(&registry))?,
+        service_builder: builder.clone(),
+        rpc_module: kakarot_rpc_module,
+    };
+    tokio::spawn(async move {
+        let _ =
+            init_prometheus(SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 9615), registry.clone())
+                .await;
+    });
 
-    let handle = server.start(kakarot_rpc_module);
+    let make_service = make_service_fn(move |_conn: &AddrStream| {
+        let cfg = cfg.clone();
+        async move {
+            Ok::<_, Infallible>(service_fn(move |req| {
+                let PerConnection { service_builder, metrics, stop_handle, rpc_module } = cfg.clone();
+                let metrics = metrics.map(|m| MetricsLayer::new(m, "http"));
 
-    Ok((addr, handle))
+                let rpc_middleware = RpcServiceBuilder::new().option_layer(metrics);
+
+                let mut svc =
+                    service_builder.set_rpc_middleware(rpc_middleware).build(build_rpc_api(rpc_module), stop_handle);
+
+                async move { svc.call(req).await }
+            }))
+        }
+    });
+
+    // if binding the specified port failed then a random port is assigned by the OS.
+    let backup_port = |mut addr: SocketAddr| {
+        addr.set_port(0);
+        addr
+    };
+    let addr = ([127, 0, 0, 1], 3030).into();
+    let backup_addr = backup_port(addr);
+    let std_listener = TcpListener::bind([addr, backup_addr].as_slice()).await?.into_std()?;
+    let server = hyper::Server::from_tcp(std_listener)?.serve(make_service);
+
+    tokio::spawn(async move {
+        let graceful = server.with_graceful_shutdown(async move { stop_handle.shutdown().await });
+        let _ = graceful.await;
+    });
+
+    Ok(server_handle)
+}
+
+fn build_rpc_api<M: Send + Sync + 'static>(mut rpc_api: RpcModule<M>) -> RpcModule<M> {
+    let mut available_methods = rpc_api.method_names().collect::<Vec<_>>();
+    // The "rpc_methods" is defined below and we want it to be part of the reported methods.
+    available_methods.push("rpc_methods");
+    available_methods.sort();
+
+    rpc_api
+        .register_method("rpc_methods", move |_, _| {
+            serde_json::json!({
+                "methods": available_methods,
+            })
+        })
+        .expect("infallible all other methods have their own address space; qed");
+
+    rpc_api
 }

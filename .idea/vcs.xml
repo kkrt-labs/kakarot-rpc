@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/kakarot" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/kakarot/lib/forge-std" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/kakarot/lib/forge-std/lib/ds-test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/kakarot/tests/integration/ef_tests/test_data" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/kakarot/tests/integration/ef_tests/test_data/LegacyTests" vcs="Git" />
+  </component>
+</project>

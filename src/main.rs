@@ -81,11 +81,11 @@ async fn main() -> Result<()> {
         }
     }?;
 
-    let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
+    let server_handle = run_server(kakarot_rpc_module, rpc_config).await?;
 
-    let url = format!("http://{server_addr}");
-
-    println!("RPC Server running on {url}...");
+    // let url = format!("http://{server_addr}");
+    //
+    // println!("RPC Server running on {url}...");
 
     server_handle.stopped().await;
 
