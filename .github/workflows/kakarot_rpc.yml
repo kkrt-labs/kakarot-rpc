@@ -11,7 +11,7 @@ env:
 
 jobs:
   prepare:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-16-cores
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
   # Inspired by Reth CI.
   # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-16-cores
     needs: prepare
     strategy:
       matrix:
@@ -92,7 +92,7 @@ jobs:
           path: ./bin/${{ matrix.platform }}/kakarot-rpc
 
   build-push-docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-16-cores
     needs: build
     timeout-minutes: 30
     steps:
