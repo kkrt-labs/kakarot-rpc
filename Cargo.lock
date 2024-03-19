@@ -6573,6 +6573,7 @@ dependencies = [
  "reqwest",
  "reth-primitives",
  "reth-rpc-types",
+ "reth-rpc-types-compat",
  "rstest",
  "ruint",
  "sequencer",

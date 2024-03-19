@@ -7,7 +7,7 @@ use mongodb::{
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
-use reth_primitives::{constants::EMPTY_ROOT_HASH, B256, U128, U256, U64};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, Address, B256, U128, U256, U64};
 use testcontainers::{
     clients::{self, Cli},
     core::WaitFor,
@@ -25,14 +25,24 @@ lazy_static! {
     // The container is made static to avoid dropping it before the tests are finished.
     static ref CONTAINER: Container<'static, GenericImage> = DOCKER_CLI.run(IMAGE.clone());
 
+    pub static ref CHAIN_ID: U256 = U256::from(1);
+
     pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
-    pub static ref EIP1599_TX_HASH: B256 = B256::from(U256::from(0x1559));
-    pub static ref EIP2930_TX_HASH: B256 = B256::from(U256::from(0x2930));
-    pub static ref LEGACY_TX_HASH: B256 = B256::from(U256::from(0x6666));
+    pub static ref EIP1599_TX_HASH: B256 = B256::from(U256::from_str("0xc92a4e464caa049999cb2073cc4d8586bebb42b518115f631710b2597155c962").unwrap());
+    pub static ref EIP2930_TX_HASH: B256 = B256::from(U256::from_str("0x972ba18c780c31bade31873d6f076a3be4e6d314776e2ad50a30eda861acab79").unwrap());
+    pub static ref LEGACY_TX_HASH: B256 = B256::from(U256::from_str("0x38c7e066854c56932100b896320a37adbab32713cca46d1e06307fe5d6062b7d").unwrap());
 
     pub static ref TEST_SIG_R: U256 = U256::from_str("0x1ae9d63d9152a0f628cc5c843c9d0edc6cb705b027d12d30b871365d7d9c8ed5").unwrap();
     pub static ref TEST_SIG_S: U256 = U256::from_str("0x0d9fa834b490259ad6aa62a49d926053ca1b52acbb59a5e1cf8ecabd65304606").unwrap();
     pub static ref TEST_SIG_V: U256 = U256::from(1);
+    // Given constant r, s, v and transaction fields, we can derive the `Transaction.from` field "a posteriori"
+    // ⚠️ If the transaction fields change, the below addresses should be updated accordingly ⚠️
+    // Recovered address from the above R, S, V, with EIP1559 transaction
+    pub static ref RECOVERED_EIP1599_TX_ADDRESS: Address = Address::from_str("0x520666a744f86a09c2a794b8d56501c109afba2d").unwrap();
+    // Recovered address from the above R, S, V, with EIP2930 transaction
+    pub static ref RECOVERED_EIP2930_TX_ADDRESS: Address = Address::from_str("0x753925d9bbd7682e4b77f102c47d24ee0580aa8d").unwrap();
+    // Recovered address from the above R, S, V, with Legacy transaction
+    pub static ref RECOVERED_LEGACY_TX_ADDRESS: Address = Address::from_str("0x05ac0c7c5930a6f9003a709042dbb136e98220f2").unwrap();
 
 
 }
@@ -169,7 +179,7 @@ pub async fn mock_database() -> Database {
     let gas_hundred = format!("0x{:064x}", U256::from(100));
     let max_fee_per_gas_ten = format!("0x{:032x}", U128::from(10));
     let max_priority_fee_per_gas_ten = format!("0x{:032x}", U128::from(1));
-    let chain_id = format!("0x{:064x}", U256::from(1));
+    let chain_id = format!("0x{:064x}", *CHAIN_ID);
     let tx_eip1559 = format!("0x{:016x}", U64::from(2));
     let tx_eip2930 = format!("0x{:016x}", U64::from(1));
     let tx_legacy = format!("0x{:016x}", U64::from(0));
@@ -189,8 +199,9 @@ pub async fn mock_database() -> Database {
                 "blockHash": format!("0x{:064x}", *BLOCK_HASH),
                 "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
                 "transactionIndex": &zero,
-                "from": &address_zero,
+                "from": &format!("0x{:040x}", *RECOVERED_EIP1599_TX_ADDRESS),
                 "to": &address_zero,
+                "accessList": [],
                 "value": &zero,
                 "gas": &gas_hundred,
                 "gasPrice": &gas_price_ten,
@@ -210,7 +221,8 @@ pub async fn mock_database() -> Database {
                 "blockHash": format!("0x{:064x}", *BLOCK_HASH),
                 "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
                 "transactionIndex": &zero,
-                "from": &address_zero,
+                "from": format!("0x{:040x}", *RECOVERED_EIP2930_TX_ADDRESS),
+                "accessList": [],
                 "to": &address_zero,
                 "value": &zero,
                 "gas": &gas_hundred,
@@ -229,7 +241,7 @@ pub async fn mock_database() -> Database {
                 "blockHash": format!("0x{:064x}", *BLOCK_HASH),
                 "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
                 "transactionIndex": &zero,
-                "from": &address_zero,
+                "from": &format!("0x{:040x}", *RECOVERED_LEGACY_TX_ADDRESS),
                 "to": &address_zero,
                 "value": &zero,
                 "gas": &gas_hundred,
@@ -237,7 +249,8 @@ pub async fn mock_database() -> Database {
                 "type": &tx_legacy,
                 "chainId": &chain_id,
                 "input": "0x",
-                "v": &v,
+                // EIP-155 legacy transaction: v = {0,1} + CHAIN_ID * 2 + 35
+                "v": &format!("0x{:064x}", CHAIN_ID.saturating_mul(U256::from(2)).saturating_add(U256::from(35))),
                 "r": &r,
                 "s": &s,
             }},
