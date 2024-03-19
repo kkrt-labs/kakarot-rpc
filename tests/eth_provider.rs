@@ -15,7 +15,6 @@ use rstest::*;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
 use starknet::core::types::BlockTag;
-use starknet_crypto::FieldElement;
 
 #[rstest]
 #[awt]
@@ -386,7 +385,7 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
 
     // Then
     assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(0x1234_u64));
-    assert_eq!(some_starknet_block_hash, starknet::core::types::BlockId::Hash(FieldElement::from(0x1234_u64)));
+    assert_eq!(some_starknet_block_hash, starknet::core::types::BlockId::Number(0x1234_u64));
     assert_eq!(some_starknet_block_number, starknet::core::types::BlockId::Tag(BlockTag::Pending));
     assert!(unknown_starknet_block_number.is_err());
 }
