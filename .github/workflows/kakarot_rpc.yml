@@ -78,19 +78,41 @@ jobs:
         with:
           cache-on-failure: true
       - uses: taiki-e/install-action@cross
-      - name: Log in to Docker
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io --username ${DOCKER_USERNAME} --password-stdin
-      - name: Set up Docker builder
-        run: |
-          docker run --privileged --rm tonistiigi/binfmt --install ${{ matrix.platform }}
-          docker buildx create --use --name cross-builder
       - name: Build and push image, tag as "latest"
         run: |
           RUSTFLAGS="-C link-arg=-lgcc -Clink-arg=-static-libgcc" \
             cross build --bin kakarot-rpc --release --target ${{ matrix.target }}
           mkdir -p ./bin/${{ matrix.platform }}
           mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.platform }}/kakarot-rpc
-          docker buildx build --file ./docker/rpc/Dockerfile.cross . \
-            --platform linux/${{ matrix.platform }} \
-            --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} --tag ${{ env.REGISTRY_IMAGE }}:latest --push
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.platform }}
+          path: ./bin/${{ matrix.platform }}/kakarot-rpc
+
+  build-push-docker:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-amd64
+          path: ./bin/amd64/kakarot-rpc
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-arm64
+          path: ./bin/arm64/kakarot-rpc
+      - name: Log in to Docker
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io --username ${DOCKER_USERNAME} --password-stdin
+      - name: Set up Docker builder
+        run: |
+          docker run --privileged --rm tonistiigi/binfmt --install amd64
+          docker run --privileged --rm tonistiigi/binfmt --install arm64
+          docker buildx create --use --name cross-builder
+      - name: Build and push image, tag as "latest"
+        run: |
+          docker buildx build \
+            --file ./docker/rpc/Dockerfile.cross . \
+            --platform linux/amd64 linux/arm64 \
+            --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} \
+            --tag ${{ env.REGISTRY_IMAGE }}:latest \
+            --push
