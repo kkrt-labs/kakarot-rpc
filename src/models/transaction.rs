@@ -1,15 +1,14 @@
-use reth_primitives::{
-    AccessList, AccessListItem, Transaction as PrimitiveTransaction, TransactionKind, TxEip1559, TxEip2930, TxLegacy,
-};
-use reth_rpc_types::Transaction as RpcTransaction;
+use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, TxEip2930, TxLegacy};
 
 use super::errors::ConversionError;
 
-pub fn rpc_transaction_to_primitive(rpc_transaction: RpcTransaction) -> Result<PrimitiveTransaction, ConversionError> {
+pub fn rpc_transaction_to_primitive(
+    rpc_transaction: reth_rpc_types::Transaction,
+) -> Result<reth_primitives::Transaction, ConversionError> {
     match rpc_transaction.transaction_type {
         None => Err(ConversionError::TransactionConversionError("Transaction type not found".to_string())),
         Some(transaction_type) => match transaction_type.to::<u64>() {
-            0 => Ok(PrimitiveTransaction::Legacy(TxLegacy {
+            0 => Ok(reth_primitives::Transaction::Legacy(TxLegacy {
                 nonce: rpc_transaction.nonce.to::<u64>(),
                 gas_price: rpc_transaction
                     .gas_price
@@ -24,7 +23,7 @@ pub fn rpc_transaction_to_primitive(rpc_transaction: RpcTransaction) -> Result<P
                 input: rpc_transaction.input,
                 chain_id: rpc_transaction.chain_id.map(|id| id.to::<u64>()),
             })),
-            1 => Ok(PrimitiveTransaction::Eip2930(TxEip2930 {
+            1 => Ok(reth_primitives::Transaction::Eip2930(TxEip2930 {
                 chain_id: rpc_transaction
                     .chain_id
                     .ok_or(ConversionError::TransactionConversionError("Chain id not found".to_string()))?
@@ -53,7 +52,7 @@ pub fn rpc_transaction_to_primitive(rpc_transaction: RpcTransaction) -> Result<P
                 ),
                 input: rpc_transaction.input,
             })),
-            2 => Ok(PrimitiveTransaction::Eip1559(TxEip1559 {
+            2 => Ok(reth_primitives::Transaction::Eip1559(TxEip1559 {
                 chain_id: rpc_transaction
                     .chain_id
                     .ok_or(ConversionError::TransactionConversionError("Chain id not found".to_string()))?
@@ -102,8 +101,8 @@ mod tests {
     use super::*;
 
     // Helper to create a common base for RPC transactions
-    fn base_rpc_transaction() -> RpcTransaction {
-        RpcTransaction {
+    fn base_rpc_transaction() -> reth_rpc_types::Transaction {
+        reth_rpc_types::Transaction {
             hash: B256::default(),
             nonce: U64::from(1),
             block_hash: None,
@@ -133,8 +132,8 @@ mod tests {
         rpc_tx.transaction_type = Some(U64::from(0));
 
         let result = rpc_transaction_to_primitive(rpc_tx.clone());
-        assert!(matches!(result, Ok(PrimitiveTransaction::Legacy(_))));
-        if let Ok(PrimitiveTransaction::Legacy(tx)) = result {
+        assert!(matches!(result, Ok(reth_primitives::Transaction::Legacy(_))));
+        if let Ok(reth_primitives::Transaction::Legacy(tx)) = result {
             assert_eq!(tx.nonce, 1);
             assert_eq!(tx.gas_price, 20);
             assert_eq!(tx.gas_limit, 21000);
@@ -158,8 +157,8 @@ mod tests {
         }]);
 
         let result = rpc_transaction_to_primitive(rpc_tx.clone());
-        assert!(matches!(result, Ok(PrimitiveTransaction::Eip2930(_))));
-        if let Ok(PrimitiveTransaction::Eip2930(tx)) = result {
+        assert!(matches!(result, Ok(reth_primitives::Transaction::Eip2930(_))));
+        if let Ok(reth_primitives::Transaction::Eip2930(tx)) = result {
             assert_eq!(tx.chain_id, 1);
             assert_eq!(tx.nonce, 1);
             assert_eq!(tx.gas_price, 20);
@@ -192,8 +191,8 @@ mod tests {
         }]);
 
         let result = rpc_transaction_to_primitive(rpc_tx.clone());
-        assert!(matches!(result, Ok(PrimitiveTransaction::Eip1559(_))));
-        if let Ok(PrimitiveTransaction::Eip1559(tx)) = result {
+        assert!(matches!(result, Ok(reth_primitives::Transaction::Eip1559(_))));
+        if let Ok(reth_primitives::Transaction::Eip1559(tx)) = result {
             assert_eq!(tx.chain_id, 1);
             assert_eq!(tx.nonce, 1);
             assert_eq!(tx.max_fee_per_gas, 30);
