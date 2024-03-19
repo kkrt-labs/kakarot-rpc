@@ -91,6 +91,9 @@ jobs:
           path: ./bin/${{ matrix.platform }}/kakarot-rpc
 
   build-push-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
