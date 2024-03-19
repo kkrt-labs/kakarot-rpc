@@ -208,13 +208,3 @@ pub enum SignatureError {
     #[error("missing signature")]
     MissingSignature,
 }
-
-pub(crate) fn log_map_err<T, E: std::fmt::Debug>(result: Result<T, E>, err: EthApiError) -> Result<T, EthApiError> {
-    match result {
-        Ok(value) => Ok(value),
-        Err(log) => {
-            log::error!("{:?}", log);
-            Err(err)
-        }
-    }
-}

@@ -23,7 +23,7 @@ use super::database::types::{
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
-use super::error::{log_map_err, EthApiError, EvmError, KakarotError, SignatureError, TransactionError};
+use super::error::{EthApiError, EvmError, KakarotError, SignatureError, TransactionError};
 use super::starknet::kakarot_core::{
     self,
     contract_account::ContractAccountReader,
@@ -137,7 +137,10 @@ where
             None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?), // in case the database is empty, use the starknet provider
             Some(header) => {
                 let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber)?;
-                let number: u64 = log_map_err(number.try_into(), EthApiError::UnknownBlockNumber)?;
+                let number: u64 = number
+                    .try_into()
+                    .inspect_err(|err| tracing::error!("internal error: {:?}", err))
+                    .map_err(|_| EthApiError::UnknownBlockNumber)?;
                 U64::from(number)
             }
         };
@@ -698,7 +701,13 @@ where
             BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
             BlockHashOrNumber::Number(number) => into_filter("header.number", number, 64),
         };
-        log_map_err(self.database.get_one("headers", filter, None).await, EthApiError::UnknownBlock)
+        self.database
+            .get_one("headers", filter, None)
+            .await
+            .inspect_err(|err| {
+                tracing::error!("internal error: {:?}", err);
+            })
+            .map_err(|_| EthApiError::UnknownBlock)
     }
 
     /// Get a block from the database based on a block hash or number.
