@@ -43,7 +43,7 @@ docker-down:
 	docker compose down -v --remove-orphans && docker compose rm
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.0-alpha.2 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.0-alpha.6 katana
 
 katana-genesis: install-katana
 	rm -fr .katana/ && mkdir .katana
@@ -55,9 +55,6 @@ run-katana: katana-genesis
 
 test: katana-genesis load-env
 	cargo test --all --features testing
-
-test-coverage: katana-genesis load-env
-	cargo llvm-cov nextest --all-features --workspace --lcov --output-path lcov.info
 
 # Make sure to have a Kakarot RPC running and the correct port set in your .env and an underlying Starknet client running.
 benchmark-madara:
