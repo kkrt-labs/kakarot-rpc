@@ -55,8 +55,6 @@ pub trait EthereumProvider {
     async fn syncing(&self) -> EthProviderResult<SyncStatus>;
     /// Returns the chain id.
     async fn chain_id(&self) -> EthProviderResult<Option<U64>>;
-    /// Retrieves a block by its ID.
-    async fn block_by_id(&self, id: BlockId, full: bool) -> EthProviderResult<Option<RichBlock>>;
     /// Returns a block by hash. Block can be full or just the hashes of the transactions.
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>>;
     /// Returns a block by number. Block can be full or just the hashes of the transactions.
@@ -180,13 +178,6 @@ where
         let chain_id = self.starknet_provider.chain_id().await.map_err(KakarotError::from)?;
         let chain_id: Option<u64> = chain_id.try_into().ok();
         Ok(chain_id.map(U64::from))
-    }
-
-    async fn block_by_id(&self, id: BlockId, full: bool) -> EthProviderResult<Option<RichBlock>> {
-        match id {
-            BlockId::Number(num) => self.block_by_number(num, full).await,
-            BlockId::Hash(hash) => self.block_by_hash(hash.block_hash, full).await,
-        }
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
