@@ -14,8 +14,8 @@ use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::{RpcBlockHash, TransactionRequest};
 use rstest::*;
-use starknet_crypto::FieldElement;
 use starknet::core::types::BlockTag;
+use starknet_crypto::FieldElement;
 
 #[rstest]
 #[awt]
