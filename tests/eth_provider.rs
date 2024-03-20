@@ -12,10 +12,10 @@ use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::{JsonStorageKey, RpcBlockHash, TransactionRequest, U64HexOrNumber};
 use rstest::*;
+use starknet_crypto::FieldElement;
 
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
 use starknet::core::types::BlockTag;
-use starknet_crypto::FieldElement;
 
 #[rstest]
 #[awt]

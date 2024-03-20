@@ -90,6 +90,7 @@ impl HiveGenesisConfig {
                     AccountType::Contract => {
                         kakarot_account_storage.append(&mut vec![
                             (implementation_key, contract_account_class_hash.0.into()),
+                            (get_storage_var_address("nonce", &[])?, FieldElement::ONE),
                             (get_storage_var_address("Ownable_owner", &[])?, kakarot_address),
                         ]);
                     }
