@@ -5,8 +5,7 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
-use reth_primitives::serde_helper::JsonStorageKey;
-use reth_primitives::serde_helper::U64HexOrNumber;
+use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::{
