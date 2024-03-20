@@ -1,1 +1,0 @@
-{"flood_version":"0.3.1","type":"single_test","name":"eth_getLogs","test_parameters":{"flood_version":"0.3.1","test_name":"eth_getLogs","rates":[200],"durations":[2],"vegeta_args":null,"network":"ethereum","random_seed":null}}
