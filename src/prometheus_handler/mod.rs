@@ -114,7 +114,7 @@ mod tests {
     use super::*;
     use hyper::{Client, Uri};
 
-#[tokio::test]
+    #[tokio::test]
     async fn prometheus_works() {
         const METRIC_NAME: &str = "test_test_metric_name_test_test";
 
