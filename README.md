@@ -226,6 +226,104 @@ You can take a look at `rpc-call-examples` directory. Please note the following:
   with an updated nonce using the
   [provided python script](https://github.com/sayajin-labs/kakarot/blob/main/scripts/utils/kakarot.py#L273).
 
+## Testing
+
+### Hive
+
+The [Hive] end-to-end test suite is set up in the Github Continuous Integration (CI)
+flow of the repository. This ensures a safe guard when modifying the current RPC
+implementation and/or the [execution layer](https://github.com/kkrt-labs/kakarot).
+
+Due to the current existing differences between the Kakarot EVM implementation which
+aims to be a type 2 ZK-EVM (see the blog post from [Vitalik](https://vitalik.eth.limo/general/2022/08/04/zkevm.html)
+for more details), some of the Hive tests need to be skipped or slightly modified
+in order to pass.
+
+For the [hive rpc tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc),
+all the websocket related tests are skipped as websocket aren't currently supported
+by the Kakarot RPC.
+
+For the [hive rpc compatibility tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc-compat),
+the following tests are skipped:
+
+- debug_getRawBlock/get-block-n: debug API is currently not supported by the
+  Kakarot RPC.
+- debug_getRawBlock/get-genesis: debug API is currently not supported by the
+  Kakarot RPC.
+- debug_getRawBlock/get-invalid-number: debug API is currently not supported by the
+  Kakarot RPC.
+- debug_getRawHeader/get-block-n: debug API is currently not supported by the
+  Kakarot RPC.
+- debug_getRawHeader/get-genesis: debug API is currently not supported by the
+  Kakarot RPC.
+- debug_getRawHeader/get-invalid-number: debug API is currently not supported
+  by the Kakarot RPC.
+- debug_getRawTransaction/get-invalid-hash: the Kakarot implementation of the
+  debug_getRawTransaction endpoint uses `reth_primitives::B256` type when
+  deserializing the hash. This test is expected to fail as the provided hash
+  in the query doesn't start with `0x`. As this test doesn't bring much, we
+  decide to skip it.
+- eth_createAccessList/create-al-multiple-reads: the createAccessList endpoint
+  is currently not supported by the Kakarot RPC.
+- eth_createAccessList/create-al-simple-contract: the createAccessList endpoint
+  is currently not supported by the Kakarot RPC.
+- eth_createAccessList/create-al-simple-transfer: the createAccessList endpoint
+  is currently not supported by the Kakarot RPC.
+- eth_feeHistory/fee-history: the Kakarot implementation doesn't currently
+  set the block gas limit dynamically, which causes some disparity in the
+  returned data. Additionally, the rewards of the blocks aren't available.
+- eth_getBalance/get-balance-blockhash: the Kakarot implementation currently
+  doesn't compute the block hash following EVM standards .
+- eth_getBlockByHash/get-block-by-hash: see `eth_getBalance/get-balance-blockhash`.
+- eth_getBlockReceipts/get-block-receipts-by-hash: see `eth_getBalance/get-balance-blockhash`.
+- eth_getBlockTransactionCountByHash/get-block-n: see `eth_getBalance/get-balance-blockhash`.
+- eth_getBlockTransactionCountByHash/get-genesis: see `eth_getBalance/get-balance-blockhash`.
+- eth_getProof/get-account-proof-blockhash: the getProof endpoint is currently
+  not supported by the Kakarot RPC.
+- eth_getProof/get-account-proof-with-storage: the getProof endpoint is currently
+  not supported by the Kakarot RPC.
+- eth_getProof/get-account-proof: the getProof endpoint is currently
+  not supported by the Kakarot RPC.
+- eth_getStorage/get-storage-invalid-key-too-large: the Kakarot implementation
+  of the eth_getStorage endpoint uses `reth_primitives::U256` type when
+  deserializing the number. This test is expected to fail as the provided block
+  number in the query doesn't start with exceeds 32 bytes. As this test doesn't
+  bring much, we decide to skip it.
+- eth_getStorage/get-storage-invalid-key: the Kakarot implementation uses the
+  `jsonrpsee` crate's macro `rpc` in order to generate the server implementation
+  of the ETH API. This test passes an invalid block hash `0xasdf` and expects
+  the server to return with an error code `-32000` which corresponds to an
+  invalid input error. The code derived from the `rpc` macro returns an error
+  code of `-32602` which corresponds to an invalid parameters error, whenever
+  it encounters issues when deserializing the input. We decide to ignore this
+  test as the only issue is the error code returned.
+- eth_getTransactionByBlockHashAndIndex/get-block-n: see `eth_getBalance/get-balance-blockhash`.
+
+In addition to the tests we skip, some of the objects fields need to be ignored in
+the passing tests:
+
+- For blocks: the hash, parent hash, timestamp, base fee per gas, difficulty, gas
+  limit, miner, size, state root, total difficulty and withdrawals are all skipped.
+  Due to the difference between a type 1 and a type 2 ZK-EVM, these fields are
+  currently not computed according to the EVM specifications and need to be skipped.
+- For receipts, transactions and logs: the block hash is skipped.
+
+If you which to run our hive test suite locally, the following steps should be taken:
+
+- Set up the repo: `make setup`.
+- Build a local docker image of the RPC:
+
+  ```shell
+  docker build --build-arg APIBARA_STARKNET_BIN_DIR=f7va4mjqww1kkpp4il6y295dgcwq147v --build-arg APIBARA_SINK_BIN_DIR=3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc  -t hive . -f docker/hive/Dockerfile
+  ```
+
+- Checkout the Kakarot fork of hive: `git clone https://github.com/kkrt-labs/hive`
+- Build the hive binary: `go build hive.go`
+- Run the full rpc test suite against Kakarot:
+  `./hive --sim "ethereum/rpc" --client kakarot`
+- Additional filtering can be provided using `--sim.limit` if you which to run
+  a certain limited set of tests.
+
 ## Project assistance
 
 If you want to say **thank you** or/and support active development of Kakarot
@@ -233,7 +331,7 @@ RPC:
 
 - Add a [GitHub Star](https://github.com/kkrt-labs/kakarot-rpc) to the
   project.
-- Tweet about the Kakarot RPC: https://twitter.com/KakarotZkEvm.
+- Tweet about the Kakarot RPC: <https://twitter.com/KakarotZkEvm>.
 
 ## Contributing
 
