@@ -230,9 +230,10 @@ You can take a look at `rpc-call-examples` directory. Please note the following:
 
 ### Hive
 
-The [Hive] end-to-end test suite is set up in the Github Continuous Integration (CI)
-flow of the repository. This ensures a safe guard when modifying the current RPC
-implementation and/or the [execution layer](https://github.com/kkrt-labs/kakarot).
+The [Hive](https://github.com/ethereum/hive/tree/master) end-to-end test suite
+is set up in the Github Continuous Integration (CI) flow of the repository.
+This ensures a safe guard when modifying the current RPC implementation and/or
+the [execution layer](https://github.com/kkrt-labs/kakarot).
 
 Due to the current existing differences between the Kakarot EVM implementation which
 aims to be a type 2 ZK-EVM (see the blog post from [Vitalik](https://vitalik.eth.limo/general/2022/08/04/zkevm.html)
@@ -240,7 +241,7 @@ for more details), some of the Hive tests need to be skipped or slightly modifie
 in order to pass.
 
 For the [hive rpc tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc),
-all the websocket related tests are skipped as websocket aren't currently supported
+all the websockets related tests are skipped as websockets aren't currently supported
 by the Kakarot RPC.
 
 For the [hive rpc compatibility tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc-compat),
