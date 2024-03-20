@@ -442,10 +442,9 @@ where
             .iter()
             .map(|header| {
                 let gas_used = header.header.gas_used.as_limbs()[0] as f64;
-                let gas_limit = if header.header.gas_limit != U256::ZERO {
-                    header.header.gas_limit.as_limbs()[0] as f64
-                } else {
-                    1.0
+                let mut gas_limit = header.header.gas_limit.as_limbs()[0] as f64;
+                if gas_limit == 0. {
+                    gas_limit = 1.;
                 };
                 gas_used / gas_limit
             })
