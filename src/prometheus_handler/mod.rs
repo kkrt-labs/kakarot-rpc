@@ -114,34 +114,32 @@ mod tests {
     use super::*;
     use hyper::{Client, Uri};
 
-    #[test]
-    fn prometheus_works() {
+#[tokio::test]
+    async fn prometheus_works() {
         const METRIC_NAME: &str = "test_test_metric_name_test_test";
 
-        let runtime = tokio::runtime::Runtime::new().expect("Creates the runtime");
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("failed to create listener");
 
-        let listener = runtime.block_on(tokio::net::TcpListener::bind("127.0.0.1:0")).expect("Creates listener");
-
-        let local_addr = listener.local_addr().expect("Returns the local addr");
+        let local_addr = listener.local_addr().expect("failed to get local addr");
 
         let registry = Registry::default();
         register(prometheus::Counter::new(METRIC_NAME, "yeah").expect("Creates test counter"), &registry)
             .expect("Registers the test metric");
 
-        runtime.spawn(init_prometheus_with_listener(listener, registry));
-
-        runtime.block_on(async {
-            let client = Client::new();
-
-            let res = client
-                .get(Uri::try_from(&format!("http://{}/metrics", local_addr)).expect("Parses URI"))
-                .await
-                .expect("Requests metrics");
-
-            let buf = hyper::body::to_bytes(res).await.expect("Converts body to bytes");
-
-            let body = String::from_utf8(buf.to_vec()).expect("Converts body to String");
-            assert!(body.contains(&format!("{} 0", METRIC_NAME)));
+        tokio::task::spawn(async {
+            init_prometheus_with_listener(listener, registry).await.expect("failed to init prometheus")
         });
+
+        let client = Client::new();
+
+        let res = client
+            .get(Uri::try_from(&format!("http://{}/metrics", local_addr)).expect("failed to parse URI"))
+            .await
+            .expect("failed to request metrics");
+
+        let buf = hyper::body::to_bytes(res).await.expect("failed to convert body to bytes");
+
+        let body = String::from_utf8(buf.to_vec()).expect("failed to convert body to String");
+        assert!(body.contains(&format!("{} 0", METRIC_NAME)));
     }
 }
