@@ -6661,7 +6661,6 @@ dependencies = [
  "lazy_static",
  "log",
  "mongodb",
- "once_cell",
  "rayon",
  "reqwest",
  "reth-primitives 0.2.0-beta.3",

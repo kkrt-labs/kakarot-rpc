@@ -6,13 +6,15 @@ use super::katana::Katana;
 use crate::eth_rpc::config::RPCConfig;
 use crate::eth_rpc::rpc::KakarotRpcModuleBuilder;
 use crate::eth_rpc::run_server;
-use once_cell::sync::Lazy;
+use lazy_static::lazy_static;
 use tokio::sync::Mutex;
 
-/// A lazy static mutex for managing the next available port number.
-///
-/// It ensures thread-safe access to the next port number.
-static NEXT_PORT: Lazy<Mutex<u16>> = Lazy::new(|| Mutex::new(3030));
+lazy_static! {
+    /// A lazy static mutex for managing the next available port number.
+    ///
+    /// It ensures thread-safe access to the next port number.
+    static ref NEXT_PORT: Mutex<u16> = Mutex::new(3030);
+}
 
 /// Asynchronously gets the next available port number.
 ///
