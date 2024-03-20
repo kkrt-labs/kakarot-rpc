@@ -121,6 +121,7 @@ jobs:
         include:
           - sim: ethereum/rpc-compat
             include:
+              - debug_getRawReceipts
               - eth_blockNumber/simple-test$
               - eth_call/call-simple-contract$
               - eth_call/call-simple-transfer$
