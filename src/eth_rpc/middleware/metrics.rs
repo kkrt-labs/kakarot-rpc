@@ -70,7 +70,7 @@ impl RpcMetrics {
                 calls_finished: register(
                     CounterVec::new(
                         Opts::new(
-                            "substrate_rpc_calls_finished",
+                            "eth_rpc_calls_finished",
                             "Number of processed RPC calls (unique un-batched requests)",
                         ),
                         &["protocol", "method", "is_error"],
