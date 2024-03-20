@@ -19,7 +19,7 @@ impl RPCConfig {
         let mut config = Self::from_env()?;
         // Remove port from socket address and replace it with provided port
         let parts: Vec<&str> = config.socket_addr.split(':').collect();
-        if let Some(addr) = parts.get(0) {
+        if let Some(addr) = parts.first() {
             config.socket_addr = format!("{}:{}", addr, port);
         }
         Ok(config)
