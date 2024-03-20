@@ -6,6 +6,24 @@ use super::katana::Katana;
 use crate::eth_rpc::config::RPCConfig;
 use crate::eth_rpc::rpc::KakarotRpcModuleBuilder;
 use crate::eth_rpc::run_server;
+use once_cell::sync::Lazy;
+use tokio::sync::Mutex;
+
+/// A lazy static mutex for managing the next available port number.
+///
+/// It ensures thread-safe access to the next port number.
+static NEXT_PORT: Lazy<Mutex<u16>> = Lazy::new(|| Mutex::new(3030));
+
+/// Asynchronously gets the next available port number.
+///
+/// This function locks the `NEXT_PORT` mutex to ensure exclusive access
+/// to the next port number and increments it for subsequent calls.
+async fn get_next_port() -> u16 {
+    let mut port = NEXT_PORT.lock().await;
+    let next_port = *port;
+    *port += 1;
+    next_port
+}
 
 /// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
 /// and starting the Kakarot RPC server.
@@ -58,10 +76,9 @@ use crate::eth_rpc::run_server;
 /// and each test is compiled separately, so the compiler thinks this function is unused
 #[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    // Create and run Kakarot RPC module.
-    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(katana.eth_provider()).rpc_module()?;
-    let rpc_config = RPCConfig::from_env()?;
-    let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
-
-    Ok((server_addr, server_handle))
+    Ok(run_server(
+        KakarotRpcModuleBuilder::new(katana.eth_provider()).rpc_module()?,
+        RPCConfig::from_port(get_next_port().await)?,
+    )
+    .await?)
 }
