@@ -1,7 +1,7 @@
 use jsonrpsee::types::ErrorObject;
 use thiserror::Error;
 
-use crate::models::felt::ConversionError;
+use crate::models::ConversionError;
 
 /// List of JSON-RPC error codes from ETH rpc spec.
 /// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md

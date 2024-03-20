@@ -1,9 +1,8 @@
 use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
-use super::felt::Felt252Wrapper;
-use super::transaction::rpc_transaction_to_primitive;
-use crate::into_via_try_wrapper;
+use super::{transaction::rpc_transaction_to_primitive, ConversionError};
+use crate::{eth_provider::error::KakarotError, into_via_try_wrapper};
 
 pub struct EthBlockId(EthereumBlockId);
 
@@ -62,15 +61,11 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
     }
 }
 
-pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, ConversionError> {
+pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, KakarotError> {
     let base_fee_per_gas: Option<u64> = block
         .header
         .base_fee_per_gas
-        .map(|base_fee_per_gas| {
-            base_fee_per_gas
-                .try_into()
-                .map_err(|_| ConversionError::ValueOutOfRange("Block base fee too large".to_string()))
-        })
+        .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| ConversionError))
         .transpose()?;
     let header = reth_primitives::Header {
         base_fee_per_gas,
@@ -79,46 +74,27 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
         difficulty: block.header.difficulty,
         excess_blob_gas: block.header.excess_blob_gas.map(|excess_blob_gas| excess_blob_gas.to::<u64>()),
         extra_data: block.header.extra_data,
-        gas_limit: block
-            .header
-            .gas_limit
-            .try_into()
-            .map_err(|_| ConversionError::ValueOutOfRange("Block gas limit too large".to_string()))?,
-        gas_used: block
-            .header
-            .gas_used
-            .try_into()
-            .map_err(|_| ConversionError::ValueOutOfRange("Block gas used too large".to_string()))?,
+        gas_limit: block.header.gas_limit.try_into().map_err(|_| ConversionError)?,
+        gas_used: block.header.gas_used.try_into().map_err(|_| ConversionError)?,
         logs_bloom: block.header.logs_bloom,
         mix_hash: block.header.mix_hash.unwrap_or_default(),
         nonce: u64::from_be_bytes(block.header.nonce.unwrap_or_default().0),
-        number: block
-            .header
-            .number
-            .ok_or(ConversionError::BlockConversionError("Block number is none".to_string()))?
-            .try_into()
-            .map_err(|_| ConversionError::ValueOutOfRange("Block number too large".to_string()))?,
+        number: block.header.number.ok_or(ConversionError)?.try_into().map_err(|_| ConversionError)?,
         ommers_hash: block.header.uncles_hash,
         parent_beacon_block_root: block.header.parent_beacon_block_root,
         parent_hash: block.header.parent_hash,
         receipts_root: block.header.receipts_root,
         state_root: block.header.state_root,
-        timestamp: block
-            .header
-            .timestamp
-            .try_into()
-            .map_err(|_| ConversionError::ValueOutOfRange("Block timestamp too large".to_string()))?,
+        timestamp: block.header.timestamp.try_into().map_err(|_| ConversionError)?,
         transactions_root: block.header.transactions_root,
         withdrawals_root: block.header.withdrawals_root,
     };
     let body = {
-        let transactions: Result<Vec<TransactionSigned>, ConversionError> = match block.transactions {
+        let transactions: Result<Vec<TransactionSigned>, KakarotError> = match block.transactions {
             reth_rpc_types::BlockTransactions::Full(transactions) => transactions
                 .into_iter()
                 .map(|tx| {
-                    let signature = tx.signature.ok_or(ConversionError::BlockConversionError(
-                        format!("Transaction {:?} within Block does not have signature field", tx.hash).to_string(),
-                    ))?;
+                    let signature = tx.signature.ok_or(ConversionError)?;
                     let tx_signed = TransactionSigned::from_transaction_and_signature(
                         rpc_transaction_to_primitive(tx)?,
                         reth_primitives::Signature {
@@ -131,12 +107,10 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
                 })
                 .collect(),
             reth_rpc_types::BlockTransactions::Hashes(_transaction_hashes) => {
-                return Err(ConversionError::BlockConversionError(
-                    "Block does not contain full transactions".to_string(),
-                ));
+                return Err(KakarotError::ConversionError(ConversionError));
             }
             reth_rpc_types::BlockTransactions::Uncle => {
-                return Err(ConversionError::BlockConversionError("Uncle block is not supported".to_string()));
+                return Err(KakarotError::ConversionError(ConversionError));
             }
         };
         transactions?
@@ -177,6 +151,7 @@ mod tests {
             nonce: Some(B64::from_str(&format!("0x{:0>16}", "10")).unwrap()),
             number: Some(U256::from(17)),
             timestamp: U256::from(18),
+            total_difficulty: None,
         }
     }
 
@@ -213,7 +188,6 @@ mod tests {
     fn base_rpc_block() -> reth_rpc_types::Block {
         reth_rpc_types::Block {
             header: base_rpc_header(),
-            total_difficulty: Some(U256::ZERO),
             uncles: Vec::default(),
             transactions: reth_rpc_types::BlockTransactions::Full(vec![
                 base_rpc_transaction(),

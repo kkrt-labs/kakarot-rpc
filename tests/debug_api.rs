@@ -290,3 +290,34 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     // Stop the Kakarot RPC server.
     drop(server_handle);
 }
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
+    let (server_addr, server_handle) =
+        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+    let reqwest_client = reqwest::Client::new();
+    let res = reqwest_client
+        .post(format!("http://localhost:{}", server_addr.port()))
+        .header("Content-Type", "application/json")
+        .body(
+            json!(
+                {
+                    "jsonrpc":"2.0",
+                    "method":"debug_getRawBlock",
+                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "id":1,
+                }
+            )
+            .to_string(),
+        )
+        .send()
+        .await
+        .expect("Failed to call Debug RPC");
+    let response = res.text().await.expect("Failed to get response body");
+    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
+    let rlp_bytes: Option<Bytes> = serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
+    assert!(rlp_bytes.is_some());
+}
