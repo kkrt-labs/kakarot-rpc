@@ -13,7 +13,7 @@ pub fn rpc_transaction_to_primitive(
                 gas_price: rpc_transaction.gas_price.ok_or(ConversionError)?.to::<u128>(),
                 gas_limit: rpc_transaction.gas.try_into().map_err(|_| ConversionError)?,
                 to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
-                value: rpc_transaction.value.into(),
+                value: rpc_transaction.value,
                 input: rpc_transaction.input,
                 chain_id: rpc_transaction.chain_id.map(|id| id.to::<u64>()),
             })),
@@ -23,7 +23,7 @@ pub fn rpc_transaction_to_primitive(
                 gas_price: rpc_transaction.gas_price.ok_or(ConversionError)?.to::<u128>(),
                 gas_limit: rpc_transaction.gas.try_into().map_err(|_| ConversionError)?,
                 to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
-                value: rpc_transaction.value.into(),
+                value: rpc_transaction.value,
                 access_list: AccessList(
                     rpc_transaction
                         .access_list
@@ -44,7 +44,7 @@ pub fn rpc_transaction_to_primitive(
                 max_fee_per_gas: rpc_transaction.max_fee_per_gas.ok_or(ConversionError)?.to::<u128>(),
                 max_priority_fee_per_gas: rpc_transaction.max_priority_fee_per_gas.ok_or(ConversionError)?.to::<u128>(),
                 to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
-                value: rpc_transaction.value.into(),
+                value: rpc_transaction.value,
                 access_list: AccessList(
                     rpc_transaction
                         .access_list

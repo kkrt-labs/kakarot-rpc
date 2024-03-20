@@ -5,11 +5,12 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
+use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::{
     other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Index,
-    JsonStorageKey, RichBlock, TransactionReceipt, TransactionRequest, U64HexOrNumber, ValueOrArray,
+    RichBlock, TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::BroadcastedInvokeTransaction;
@@ -718,7 +719,6 @@ where
             Some(header) => header,
             None => return Ok(None),
         };
-        let total_difficulty = Some(header.header.difficulty);
 
         let transactions_filter = match block_id {
             BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, 64),
@@ -746,7 +746,6 @@ where
         let block = Block {
             header: header.header,
             transactions,
-            total_difficulty,
             uncles: Vec::new(),
             size: None,
             withdrawals: Some(vec![]),

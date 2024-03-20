@@ -9,13 +9,13 @@ use kakarot_rpc::test_utils::evm_contract::EvmContract;
 use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
-use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::{JsonStorageKey, RpcBlockHash, TransactionRequest, U64HexOrNumber};
-use rstest::*;
-use starknet_crypto::FieldElement;
-
+use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
+use reth_rpc_types::request::TransactionInput;
+use reth_rpc_types::{RpcBlockHash, TransactionRequest};
+use rstest::*;
 use starknet::core::types::BlockTag;
+use starknet_crypto::FieldElement;
 
 #[rstest]
 #[awt]
@@ -245,7 +245,7 @@ async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _set
         from: Some(eoa.evm_address().unwrap()),
         to: Some(counter_address.try_into().unwrap()),
         input: TransactionInput { input: None, data: Some(Bytes::from_str("0x371303c0").unwrap()) }, // selector of "function inc()"
-        chain_id: Some(chain_id),
+        chain_id: Some(chain_id.to::<u64>()),
         ..Default::default()
     };
 

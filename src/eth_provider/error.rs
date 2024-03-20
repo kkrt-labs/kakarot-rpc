@@ -45,6 +45,9 @@ pub enum EthApiError {
     /// Error related to signing
     #[error("signature error")]
     SignatureError(#[from] SignatureError),
+    /// Error related to receipt
+    #[error("receipt error")]
+    ReceiptError(#[from] ReceiptError),
     /// Unsupported feature
     #[error("unsupported")]
     Unsupported(&'static str),
@@ -63,6 +66,7 @@ impl From<EthApiError> for ErrorObject<'static> {
             EthApiError::TransactionConversionError => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::TransactionError(err) => rpc_err(err.error_code(), msg),
             EthApiError::SignatureError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
+            EthApiError::ReceiptError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::Unsupported(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
             EthApiError::Internal(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
         }
@@ -207,4 +211,12 @@ pub enum SignatureError {
     SignError,
     #[error("missing signature")]
     MissingSignature,
+}
+
+/// Error related to receipts.
+#[derive(Debug, Error)]
+pub enum ReceiptError {
+    /// Error related to conversion.
+    #[error("conversion error")]
+    ConversionError,
 }

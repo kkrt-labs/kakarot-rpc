@@ -1,10 +1,11 @@
 #![allow(clippy::blocks_in_conditions)]
 
 use jsonrpsee::core::{async_trait, RpcResult as Result};
+use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
 use reth_rpc_types::{
-    AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, JsonStorageKey,
-    RichBlock, SyncStatus, Transaction, TransactionReceipt, TransactionRequest, U64HexOrNumber, Work,
+    AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock,
+    SyncStatus, Transaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
 
