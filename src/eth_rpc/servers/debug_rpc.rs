@@ -1,6 +1,8 @@
 use crate::eth_provider::error::{EthApiError, ReceiptError, SignatureError};
 use crate::eth_rpc::api::debug_api::DebugApiServer;
+use crate::models::block::rpc_to_primitive_block;
 use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
+use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
 use reth_rpc_types::BlockId;
@@ -24,8 +26,17 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     }
 
     /// Returns an RLP-encoded block.
-    async fn raw_block(&self, _block_id: BlockId) -> Result<Bytes> {
-        Err(EthApiError::Unsupported("debug_rawBlock").into())
+    async fn raw_block(&self, block_id: BlockId) -> Result<Bytes> {
+        let block = match block_id {
+            BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.into(), true).await?,
+            BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
+        };
+        let mut raw_block = Vec::new();
+        if let Some(block) = block {
+            let block = rpc_to_primitive_block(block.inner).map_err(EthProviderError::from)?;
+            block.encode(&mut raw_block);
+        }
+        Ok(Bytes::from(raw_block))
     }
 
     /// Returns a EIP-2718 binary-encoded transaction.
