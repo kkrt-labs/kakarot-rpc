@@ -1,8 +1,8 @@
-use crate::eth_provider::error::{EthApiError, SignatureError};
+use crate::eth_provider::error::{EthApiError, ReceiptError, SignatureError};
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{Bytes, Log, Receipt, TransactionSigned, B256};
+use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
 use reth_rpc_types::BlockId;
 
 /// The RPC module for the implementing Net api
@@ -60,26 +60,43 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
     /// Returns an array of EIP-2718 binary-encoded receipts.
     async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
-        Ok(self
-            .eth_provider
-            .block_receipts(Some(block_id))
-            .await?
-            .unwrap_or_default()
-            .into_iter()
-            .map(|receipt| {
-                Receipt {
-                    tx_type: receipt.transaction_type.to::<u8>().try_into().unwrap(),
-                    success: receipt.status_code.unwrap_or_default().to::<u8>() == 1,
-                    cumulative_gas_used: receipt.cumulative_gas_used.to::<u64>(),
-                    logs: receipt
-                        .logs
-                        .into_iter()
-                        .map(|log| Log { address: log.address, topics: log.topics, data: log.data })
-                        .collect(),
+        // Initializes an empty vector to store the raw receipts
+        let mut raw_receipts = Vec::new();
+
+        // Iterates through the receipts of the block using the `block_receipts` method of the Ethereum API
+        for receipt in self.eth_provider.block_receipts(Some(block_id)).await?.unwrap_or_default() {
+            // Converts the transaction type to a u8 and then tries to convert it into TxType
+            let tx_type = match receipt.transaction_type.to::<u8>().try_into() {
+                Ok(tx_type) => tx_type,
+                Err(_) => return Err(EthApiError::ReceiptError(ReceiptError::ConversionError).into()),
+            };
+
+            // Tries to convert the cumulative gas used to u64
+            let cumulative_gas_used = match TryInto::<u64>::try_into(receipt.cumulative_gas_used) {
+                Ok(cumulative_gas_used) => cumulative_gas_used,
+                Err(_) => return Err(EthApiError::ReceiptError(ReceiptError::ConversionError).into()),
+            };
+
+            // Creates a ReceiptWithBloom from the receipt data
+            raw_receipts.push(
+                ReceiptWithBloom {
+                    receipt: Receipt {
+                        tx_type,
+                        success: receipt.status_code.unwrap_or_default().to::<u64>() == 1,
+                        cumulative_gas_used,
+                        logs: receipt
+                            .logs
+                            .into_iter()
+                            .map(|log| Log { address: log.address, topics: log.topics, data: log.data })
+                            .collect(),
+                    },
+                    bloom: receipt.logs_bloom,
                 }
-                .with_bloom()
-                .envelope_encoded()
-            })
-            .collect())
+                .envelope_encoded(),
+            );
+        }
+
+        // Returns the vector containing the raw receipts
+        Ok(raw_receipts)
     }
 }
