@@ -1,4 +1,5 @@
 FROM --platform=$TARGETPLATFORM debian:bookworm
+WORKDIR /usr/src/app
 
 # Filled by docker buildx
 ARG TARGETARCH
