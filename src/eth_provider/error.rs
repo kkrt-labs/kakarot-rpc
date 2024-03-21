@@ -39,20 +39,20 @@ pub enum EthApiError {
     /// Conversion error.
     #[error("transaction conversion error")]
     TransactionConversionError,
+    /// Error related to receipt
+    #[error("receipt error: {0}")]
+    ReceiptError(#[from] ReceiptError),
     /// Error related to transaction
-    #[error(transparent)]
+    #[error("transaction error: {0}")]
     TransactionError(#[from] TransactionError),
     /// Error related to signing
-    #[error("signature error")]
+    #[error("signature error: {0}")]
     SignatureError(#[from] SignatureError),
-    /// Error related to receipt
-    #[error("receipt error")]
-    ReceiptError(#[from] ReceiptError),
     /// Unsupported feature
-    #[error("unsupported")]
+    #[error("unsupported: {0}")]
     Unsupported(&'static str),
     /// Other internal error
-    #[error("internal error")]
+    #[error("internal error: {0}")]
     Internal(KakarotError),
 }
 
