@@ -58,7 +58,7 @@ pub enum EthApiError {
 
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
-        let msg = value.to_string();
+        let msg = format!("{:?}", value);
         match value {
             EthApiError::UnknownBlock => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
             EthApiError::UnknownBlockNumber => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
@@ -219,4 +219,21 @@ pub enum ReceiptError {
     /// Error related to conversion.
     #[error("conversion error")]
     ConversionError,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_assure_source_error_visible_in_kakarot_error() {
+        let err = KakarotError::ProviderError(starknet::providers::ProviderError::StarknetError(
+            starknet::core::types::StarknetError::UnexpectedError("test".to_string()),
+        ));
+
+        let eth_err: EthApiError = err.into();
+        let json_err: ErrorObject<'static> = eth_err.into();
+
+        assert_eq!(json_err.message(), "Internal(ProviderError(StarknetError(UnexpectedError(\"test\"))))");
+    }
 }
