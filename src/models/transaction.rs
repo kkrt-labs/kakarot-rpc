@@ -1,6 +1,4 @@
-use reth_primitives::{
-    AccessList, AccessListItem, Transaction, TransactionKind, TxEip1559, TxEip2930, TxLegacy, TxType,
-};
+use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, TxEip2930, TxLegacy, TxType};
 
 use super::felt::ConversionError;
 use crate::eth_provider::error::KakarotError;
@@ -14,7 +12,7 @@ pub fn rpc_transaction_to_primitive(
     };
 
     match tx_type {
-        TxType::Legacy => Ok(Transaction::Legacy(TxLegacy {
+        TxType::Legacy => Ok(reth_primitives::Transaction::Legacy(TxLegacy {
             nonce: rpc_transaction.nonce.to::<u64>(),
             gas_price: rpc_transaction.gas_price.ok_or(ConversionError)?.to::<u128>(),
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| ConversionError)?,
@@ -23,7 +21,7 @@ pub fn rpc_transaction_to_primitive(
             input: rpc_transaction.input,
             chain_id: rpc_transaction.chain_id.map(|id| id.to::<u64>()),
         })),
-        TxType::Eip2930 => Ok(Transaction::Eip2930(TxEip2930 {
+        TxType::Eip2930 => Ok(reth_primitives::Transaction::Eip2930(TxEip2930 {
             chain_id: rpc_transaction.chain_id.ok_or(ConversionError)?.to::<u64>(),
             nonce: rpc_transaction.nonce.to::<u64>(),
             gas_price: rpc_transaction.gas_price.ok_or(ConversionError)?.to::<u128>(),
@@ -43,7 +41,7 @@ pub fn rpc_transaction_to_primitive(
             ),
             input: rpc_transaction.input,
         })),
-        TxType::Eip1559 => Ok(Transaction::Eip1559(TxEip1559 {
+        TxType::Eip1559 => Ok(reth_primitives::Transaction::Eip1559(TxEip1559 {
             chain_id: rpc_transaction.chain_id.ok_or(ConversionError)?.to::<u64>(),
             nonce: rpc_transaction.nonce.to::<u64>(),
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| ConversionError)?,
