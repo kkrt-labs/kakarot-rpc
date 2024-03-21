@@ -18,7 +18,7 @@ RUN cargo build --release --bin kakarot-rpc
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /usr/src/app
-COPY --from=builder /app/target/release/kakarot-rpc /usr/local/bin
+COPY --chmod=111 --from=builder /app/target/release/kakarot-rpc /usr/local/bin
 
 # Expose the port that the RPC server will run on
 EXPOSE 9545
@@ -37,8 +37,6 @@ RUN apt-get update && \
     apt-get -y upgrade && \ 
     apt-get install -y libssl-dev ca-certificates tini curl && \ 
     rm -rf /var/lib/apt/lists/*
-
-RUN chmod +x /usr/local/bin/kakarot-rpc
 
 # Seen in https://github.com/eqlabs/pathfinder/blob/4ab915a830953ed6f02af907937b46cb447d9a92/Dockerfile#L120 - 
 # Allows for passing args down to the underlying binary easily
