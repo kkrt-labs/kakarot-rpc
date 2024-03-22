@@ -49,18 +49,24 @@ pub async fn run_server(
     let http_middleware =
         tower::ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "net_health")?).layer(cors);
 
+    // Creating the prometheus registry to register the metrics
     let registry = Registry::new();
+    // register the metrics
     let metrics = RpcMetrics::new(Some(&registry))?.map(|m| MetricsLayer::new(m, "http"));
     tokio::spawn(async move {
+        // serve the prometheus metrics on the given port so that it can be read
         let _ = init_prometheus(
             SocketAddr::new(
                 std::net::IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
                 get_env_or_default("PROMETHEUS_PORT", "9615").parse().unwrap(),
             ),
-            registry.clone(),
+            registry,
         )
         .await;
     });
+    // add the metrics as a middleware to the RPC so that every new RPC call fires prometheus metrics
+    // upon start, finish etc. we don't need to manually handle each method, it should automatically
+    // work for any new method.
     let rpc_middleware = RpcServiceBuilder::new().option_layer(metrics);
 
     let server = ServerBuilder::default()
