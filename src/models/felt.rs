@@ -1,5 +1,6 @@
 use reth_primitives::{Address, B256, U256, U64};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{EthAddress, FieldElement};
+use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, thiserror::Error)]
 #[error("conversion failed")]
@@ -23,15 +24,14 @@ impl From<Felt252Wrapper> for FieldElement {
 #[allow(clippy::fallible_impl_from)]
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
-        let felt = FieldElement::from_byte_slice_be(address.as_slice()).unwrap(); // safe unwrap since H160 is 20 bytes
-        Self(felt)
+        // safe unwrap since H160 is 20 bytes
+        Self(FieldElement::from_byte_slice_be(address.as_slice()).unwrap())
     }
 }
 
 impl From<U64> for Felt252Wrapper {
     fn from(value: U64) -> Self {
-        let felt = FieldElement::from(value.to::<u64>());
-        Self(felt)
+        Self(FieldElement::from(value.to::<u64>()))
     }
 }
 
@@ -39,15 +39,9 @@ impl TryFrom<Felt252Wrapper> for Address {
     type Error = ConversionError;
 
     fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
-        let felt: FieldElement = felt.into();
-        let bytes = felt.to_bytes_be();
-
-        // Check if the first 12 bytes are all zeros.
-        if bytes[0..12].iter().any(|&x| x != 0) {
-            return Err(ConversionError);
-        }
-
-        Ok(Self::from_slice(&bytes[12..]))
+        EthAddress::from_felt(&felt)
+            .map(|eth_address| Self::from_slice(eth_address.as_bytes()))
+            .map_err(|_| ConversionError)
     }
 }
 
@@ -55,8 +49,7 @@ impl TryFrom<B256> for Felt252Wrapper {
     type Error = ConversionError;
 
     fn try_from(value: B256) -> Result<Self, Self::Error> {
-        let felt = FieldElement::from_bytes_be(value.as_ref()).map_err(|_| ConversionError)?;
-        Ok(Self(felt))
+        Ok(Self(FieldElement::from_bytes_be(value.as_ref()).map_err(|_| ConversionError)?))
     }
 }
 
@@ -64,15 +57,27 @@ impl TryFrom<U256> for Felt252Wrapper {
     type Error = ConversionError;
 
     fn try_from(u256: U256) -> Result<Self, Self::Error> {
-        let felt = FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| ConversionError)?;
-        Ok(Self(felt))
+        Ok(Self(FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| ConversionError)?))
     }
 }
 
 impl From<Felt252Wrapper> for U256 {
     fn from(felt: Felt252Wrapper) -> Self {
-        let felt: FieldElement = felt.into();
         Self::from_be_bytes(felt.to_bytes_be())
+    }
+}
+
+impl Deref for Felt252Wrapper {
+    type Target = FieldElement;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Felt252Wrapper {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
