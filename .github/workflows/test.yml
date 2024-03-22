@@ -4,6 +4,18 @@ on:
   workflow_call:
 
 jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+          toolchain: nightly
+      - run: cargo fmt --all --check
+
   test:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 30

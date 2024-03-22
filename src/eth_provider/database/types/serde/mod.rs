@@ -1,7 +1,6 @@
-use std::collections::HashMap;
-
 use serde::{de::value::MapDeserializer, Deserialize, Deserializer};
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// Used in order to perform a custom deserialization of the stored
 /// Ethereum data from the database. All the primitive types are stored

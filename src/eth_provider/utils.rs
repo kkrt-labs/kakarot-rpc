@@ -1,5 +1,3 @@
-use std::fmt::LowerHex;
-
 use cainome::cairo_serde::Error;
 use itertools::Itertools;
 use mongodb::bson::{doc, Document};
@@ -8,6 +6,7 @@ use starknet::{
     core::types::{ContractErrorData, StarknetError},
     providers::ProviderError,
 };
+use std::fmt::LowerHex;
 
 /// Converts an iterator of `Into<D>` into a `Vec<D>`.
 #[inline]

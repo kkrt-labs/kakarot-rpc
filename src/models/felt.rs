@@ -1,8 +1,7 @@
+use super::ConversionError;
 use reth_primitives::{Address, B256, U256, U64};
 use starknet::core::types::{EthAddress, FieldElement};
 use std::ops::{Deref, DerefMut};
-
-use super::ConversionError;
 
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);

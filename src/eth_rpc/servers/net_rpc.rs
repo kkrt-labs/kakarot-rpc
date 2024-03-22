@@ -1,9 +1,7 @@
-use crate::eth_provider::provider::EthereumProvider;
+use crate::{eth_provider::provider::EthereumProvider, eth_rpc::api::net_api::NetApiServer};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
-
-use crate::eth_rpc::api::net_api::NetApiServer;
 
 /// The RPC module for the implementing Net api
 pub struct NetRpc<P: EthereumProvider> {

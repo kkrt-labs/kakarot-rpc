@@ -1,12 +1,18 @@
 #![cfg(feature = "testing")]
-use ethers::abi::Token;
-use ethers::core::types::{Address as EthersAddress, U256 as EthersU256};
-use kakarot_rpc::models::{balance::TokenBalances, felt::Felt252Wrapper};
-use kakarot_rpc::test_utils::eoa::Eoa as _;
-use kakarot_rpc::test_utils::evm_contract::KakarotEvmContract;
-use kakarot_rpc::test_utils::fixtures::{erc20, setup};
-use kakarot_rpc::test_utils::katana::Katana;
-use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
+use ethers::{
+    abi::Token,
+    core::types::{Address as EthersAddress, U256 as EthersU256},
+};
+use kakarot_rpc::{
+    models::{balance::TokenBalances, felt::Felt252Wrapper},
+    test_utils::{
+        eoa::Eoa as _,
+        evm_contract::KakarotEvmContract,
+        fixtures::{erc20, setup},
+        katana::Katana,
+        rpc::start_kakarot_rpc_server,
+    },
+};
 use reth_primitives::{Address, U256};
 use rstest::*;
 use serde_json::{json, Value};

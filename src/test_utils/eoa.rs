@@ -1,22 +1,33 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use ethers::abi::Tokenize;
-use ethers::signers::{LocalWallet, Signer};
+use ethers::{
+    abi::Tokenize,
+    signers::{LocalWallet, Signer},
+};
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256,
 };
-use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
-use starknet::core::utils::get_selector_from_name;
-use starknet::providers::Provider;
+use starknet::{
+    core::{
+        types::{MaybePendingTransactionReceipt, TransactionReceipt},
+        utils::get_selector_from_name,
+    },
+    providers::Provider,
+};
 use starknet_crypto::FieldElement;
 
-use crate::eth_provider::provider::{EthDataProvider, EthereumProvider};
-use crate::eth_provider::starknet::kakarot_core::starknet_address;
-use crate::models::felt::Felt252Wrapper;
-use crate::test_utils::evm_contract::EvmContract;
-use crate::test_utils::evm_contract::KakarotEvmContract;
-use crate::test_utils::tx_waiter::watch_tx;
+use crate::{
+    eth_provider::{
+        provider::{EthDataProvider, EthereumProvider},
+        starknet::kakarot_core::starknet_address,
+    },
+    models::felt::Felt252Wrapper,
+    test_utils::{
+        evm_contract::{EvmContract, KakarotEvmContract},
+        tx_waiter::watch_tx,
+    },
+};
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
 

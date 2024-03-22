@@ -1,7 +1,6 @@
-use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, TxEip2930, TxLegacy, TxType};
-
 use super::ConversionError;
 use crate::eth_provider::error::KakarotError;
+use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, TxEip2930, TxLegacy, TxType};
 
 pub fn rpc_transaction_to_primitive(
     rpc_transaction: reth_rpc_types::Transaction,

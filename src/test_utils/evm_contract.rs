@@ -1,5 +1,4 @@
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 
 use ethers::abi::Tokenize;
 use ethers_solc::artifacts::CompactContractBytecode;
@@ -7,8 +6,7 @@ use foundry_config::{find_project_root_path, load_config};
 use reth_primitives::{Transaction, TransactionKind, TxEip1559, U256};
 use starknet_crypto::FieldElement;
 
-use crate::models::felt::Felt252Wrapper;
-use crate::root_project_path;
+use crate::{models::felt::Felt252Wrapper, root_project_path};
 
 use super::eoa::TX_GAS_LIMIT;
 

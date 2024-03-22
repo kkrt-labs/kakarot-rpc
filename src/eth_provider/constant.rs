@@ -1,11 +1,4 @@
 use lazy_static::lazy_static;
-
-lazy_static! {
-    pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
-}
-
-pub const CALL_REQUEST_GAS_LIMIT: u64 = 5_000_000;
-
 #[cfg(feature = "hive")]
 use {
     crate::config::KakarotRpcConfig,
@@ -19,6 +12,12 @@ use {
     std::{env::var, str::FromStr, sync::OnceLock},
     tokio::sync::Mutex,
 };
+
+lazy_static! {
+    pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
+}
+
+pub const CALL_REQUEST_GAS_LIMIT: u64 = 5_000_000;
 
 #[cfg(feature = "hive")]
 pub static CHAIN_ID: OnceLock<FieldElement> = OnceLock::new();
