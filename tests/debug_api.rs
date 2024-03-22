@@ -346,10 +346,13 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     let rpc_block: reth_rpc_types::Block =
         serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
     let primitive_block = rpc_to_primitive_block(rpc_block).unwrap();
+
+    // Encode primitive block and compare with the result of debug_getRawBlock
     let mut buf = Vec::new();
     primitive_block.encode(&mut buf);
     assert_eq!(rlp_bytes.clone().unwrap(), Bytes::from(buf));
-    // Decode encoded block
+
+    // Decode encoded block and compare with the block from eth_getBlockByNumber
     let decoded_block = reth_primitives::Block::decode(&mut rlp_bytes.unwrap().as_ref()).unwrap();
     assert_eq!(decoded_block, primitive_block);
 

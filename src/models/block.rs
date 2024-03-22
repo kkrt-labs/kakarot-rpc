@@ -107,10 +107,10 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
                 })
                 .collect(),
             reth_rpc_types::BlockTransactions::Hashes(_transaction_hashes) => {
-                return Err(KakarotError::ConversionError(ConversionError));
+                return Err(ConversionError.into());
             }
             reth_rpc_types::BlockTransactions::Uncle => {
-                return Err(KakarotError::ConversionError(ConversionError));
+                return Err(ConversionError.into());
             }
         };
         transactions?
