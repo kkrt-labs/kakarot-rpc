@@ -24,7 +24,7 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          components: llvm-tools-preview, clippy
+          components: llvm-tools-preview, rustfmt, clippy
           override: true
           toolchain: 1.76.0
       - name: Retrieve cached dependencies
