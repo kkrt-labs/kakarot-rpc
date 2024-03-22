@@ -7,7 +7,11 @@ pub fn rpc_transaction_to_primitive(
     rpc_transaction: reth_rpc_types::Transaction,
 ) -> Result<reth_primitives::Transaction, KakarotError> {
     let tx_type = match rpc_transaction.transaction_type {
-        Some(transaction_type) => transaction_type.to::<u8>().try_into().map_err(|_| ConversionError)?,
+        Some(transaction_type) => {
+            let transaction_type_u8: u8 = transaction_type.try_into().map_err(|_| ConversionError)?;
+
+            transaction_type_u8.try_into().map_err(|_| ConversionError)?
+        }
         _ => return Err(ConversionError.into()),
     };
 
