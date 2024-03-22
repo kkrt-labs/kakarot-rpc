@@ -1,5 +1,5 @@
 use reth_primitives::{Address, B256, U256, U64};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{EthAddress, FieldElement};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, thiserror::Error)]
@@ -39,15 +39,9 @@ impl TryFrom<Felt252Wrapper> for Address {
     type Error = ConversionError;
 
     fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
-        let bytes = felt.to_bytes_be();
-
-        let (prefix, suffix) = bytes.split_at(12);
-
-        if prefix.iter().all(|&x| x == 0) {
-            Ok(Self::from_slice(suffix))
-        } else {
-            Err(ConversionError)
-        }
+        EthAddress::from_felt(&felt)
+            .map(|eth_address| Self::from_slice(eth_address.as_bytes()))
+            .map_err(|_| ConversionError)
     }
 }
 
