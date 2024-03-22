@@ -1,8 +1,7 @@
-use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals};
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
-
 use super::{transaction::rpc_transaction_to_primitive, ConversionError};
 use crate::{eth_provider::error::KakarotError, into_via_try_wrapper};
+use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals};
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
 pub struct EthBlockId(EthereumBlockId);
 

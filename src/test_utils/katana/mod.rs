@@ -1,20 +1,17 @@
 pub mod genesis;
 
-use std::path::Path;
-use std::str::FromStr as _;
-use std::sync::Arc;
+use std::{path::Path, str::FromStr as _, sync::Arc};
 
 use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
-use katana_primitives::block::GasPrices;
-use katana_primitives::chain::ChainId;
-use katana_primitives::genesis::json::GenesisJson;
-use katana_primitives::genesis::Genesis;
+use katana_primitives::{
+    block::GasPrices,
+    chain::ChainId,
+    genesis::{json::GenesisJson, Genesis},
+};
 use reth_primitives::B256;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 
-use crate::eth_provider::provider::EthDataProvider;
-use crate::test_utils::eoa::KakarotEOA;
+use crate::{eth_provider::provider::EthDataProvider, test_utils::eoa::KakarotEOA};
 
 use super::mongo::mock_database;
 

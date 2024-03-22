@@ -1,19 +1,22 @@
 // //! Kakarot RPC module for Ethereum.
 // //! It is an adapter layer to interact with Kakarot ZK-EVM.
-use std::net::{AddrParseError, SocketAddr};
-
 use config::RPCConfig;
+use eyre::Result;
+use jsonrpsee::{
+    server::{
+        middleware::http::{InvalidPath, ProxyGetRequestLayer},
+        ServerBuilder, ServerHandle,
+    },
+    RpcModule,
+};
+use std::net::{AddrParseError, SocketAddr};
+use thiserror::Error;
+use tower_http::cors::{Any, CorsLayer};
+
 pub mod api;
 pub mod config;
 pub mod rpc;
 pub mod servers;
-
-use eyre::Result;
-use jsonrpsee::server::middleware::http::{InvalidPath, ProxyGetRequestLayer};
-use jsonrpsee::server::{ServerBuilder, ServerHandle};
-use jsonrpsee::RpcModule;
-use thiserror::Error;
-use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Error, Debug)]
 pub enum RpcError {

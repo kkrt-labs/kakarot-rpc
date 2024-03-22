@@ -1,9 +1,9 @@
 #![allow(non_snake_case)]
-pub mod kakarot_core;
-
 use cainome::rs::abigen_legacy;
 use lazy_static::lazy_static;
 use starknet_crypto::FieldElement;
+
+pub mod kakarot_core;
 
 abigen_legacy!(ERC20, "./.kakarot/artifacts/fixtures/ERC20.json");
 

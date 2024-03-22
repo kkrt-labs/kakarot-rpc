@@ -1,11 +1,8 @@
-use std::pin::Pin;
-use std::task::Poll;
-
+use crate::eth_provider::error::EthApiError;
 use futures::{Future, FutureExt};
 use reth_primitives::{Address, U256};
 use serde::{Deserialize, Serialize};
-
-use crate::eth_provider::error::EthApiError;
+use std::{pin::Pin, task::Poll};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenBalance {

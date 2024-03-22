@@ -1,21 +1,24 @@
 #![cfg(feature = "testing")]
-use std::cmp::min;
-use std::str::FromStr;
-
-use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::models::felt::Felt252Wrapper;
-use kakarot_rpc::test_utils::eoa::Eoa as _;
-use kakarot_rpc::test_utils::evm_contract::EvmContract;
-use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
-use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
-use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
-use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
-use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
-use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::{RpcBlockHash, TransactionRequest};
+use kakarot_rpc::{
+    eth_provider::provider::EthereumProvider,
+    models::felt::Felt252Wrapper,
+    test_utils::{
+        eoa::Eoa as _,
+        evm_contract::{EvmContract, KakarotEvmContract},
+        fixtures::{counter, katana, setup},
+        katana::Katana,
+        mongo::{BLOCK_HASH, BLOCK_NUMBER},
+    },
+};
+use reth_primitives::{
+    serde_helper::{JsonStorageKey, U64HexOrNumber},
+    Address, BlockNumberOrTag, Bytes, B256, U256, U64,
+};
+use reth_rpc_types::{request::TransactionInput, RpcBlockHash, TransactionRequest};
 use rstest::*;
 use starknet::core::types::BlockTag;
 use starknet_crypto::FieldElement;
+use std::{cmp::min, str::FromStr};
 
 #[rstest]
 #[awt]
@@ -284,8 +287,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
 #[cfg(feature = "hive")]
 async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     use futures::future::join_all;
-    use kakarot_rpc::eth_provider::constant::CHAIN_ID;
-    use kakarot_rpc::test_utils::eoa::KakarotEOA;
+    use kakarot_rpc::{eth_provider::constant::CHAIN_ID, test_utils::eoa::KakarotEOA};
     use reth_primitives::B256;
     use starknet::providers::Provider;
 

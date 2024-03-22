@@ -1,5 +1,4 @@
-use jsonrpsee::core::RpcResult as Result;
-use jsonrpsee::proc_macros::rpc;
+use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
 use reth_primitives::{Bytes, B256};
 use reth_rpc_types::BlockId;
 

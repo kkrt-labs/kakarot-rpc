@@ -1,17 +1,14 @@
-use std::env::var;
-use std::sync::Arc;
+use std::{env::var, sync::Arc};
 
 use dotenv::dotenv;
 use eyre::Result;
-use kakarot_rpc::config::{JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder};
-use kakarot_rpc::eth_provider::database::Database;
-use kakarot_rpc::eth_provider::provider::EthDataProvider;
-use kakarot_rpc::eth_rpc::config::RPCConfig;
-use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
-use kakarot_rpc::eth_rpc::run_server;
+use kakarot_rpc::{
+    config::{JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder},
+    eth_provider::{database::Database, provider::EthDataProvider},
+    eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
+};
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient, SequencerGatewayProvider};
 use tracing_subscriber::util::SubscriberInitExt;
 
 enum StarknetProvider {
@@ -54,8 +51,7 @@ async fn main() -> Result<()> {
     #[cfg(feature = "hive")]
     {
         use kakarot_rpc::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
-        use starknet::accounts::ConnectedAccount;
-        use starknet::providers::Provider;
+        use starknet::{accounts::ConnectedAccount, providers::Provider};
         let provider = JsonRpcClient::new(HttpTransport::new(
             starknet_config.network.provider_url().expect("Incorrect provider URL"),
         ));

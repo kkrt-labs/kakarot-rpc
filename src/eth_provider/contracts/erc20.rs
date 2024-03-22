@@ -1,15 +1,10 @@
-use ethers::abi::AbiEncode;
-use ethers::core::types::Address as EthersAddress;
-use ethers::prelude::abigen;
-use reth_primitives::Address;
-
-use reth_primitives::{BlockId, U256};
-use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::TransactionRequest;
-
-use crate::eth_provider::error::KakarotError;
-use crate::eth_provider::provider::EthProviderResult;
-use crate::eth_provider::provider::EthereumProvider;
+use crate::eth_provider::{
+    error::KakarotError,
+    provider::{EthProviderResult, EthereumProvider},
+};
+use ethers::{abi::AbiEncode, core::types::Address as EthersAddress, prelude::abigen};
+use reth_primitives::{Address, BlockId, U256};
+use reth_rpc_types::{request::TransactionInput, TransactionRequest};
 
 // abigen generates a lot of unused code, needs to be benchmarked if performances ever become a
 // concern

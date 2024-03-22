@@ -1,7 +1,11 @@
 use eyre::eyre;
-use starknet::core::types::FieldElement;
-use starknet::providers::jsonrpc::{HttpTransport, JsonRpcTransport};
-use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
+use starknet::{
+    core::types::FieldElement,
+    providers::{
+        jsonrpc::{HttpTransport, JsonRpcTransport},
+        JsonRpcClient, SequencerGatewayProvider,
+    },
+};
 use std::env::var;
 use url::Url;
 

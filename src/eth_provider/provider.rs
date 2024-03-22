@@ -1,3 +1,36 @@
+use super::{
+    constant::CALL_REQUEST_GAS_LIMIT,
+    database::{
+        types::{
+            header::StoredHeader,
+            log::StoredLog,
+            receipt::StoredTransactionReceipt,
+            transaction::{StoredTransaction, StoredTransactionHash},
+        },
+        Database,
+    },
+    error::{EthApiError, EvmError, KakarotError, SignatureError, TransactionError},
+    starknet::{
+        kakarot_core::{
+            self,
+            contract_account::ContractAccountReader,
+            core::{KakarotCoreReader, Uint256},
+            proxy::ProxyReader,
+            starknet_address, to_starknet_transaction, CONTRACT_ACCOUNT_CLASS_HASH,
+            EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH, KAKAROT_ADDRESS,
+        },
+        ERC20Reader, STARKNET_NATIVE_TOKEN,
+    },
+    utils::{contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator},
+};
+use crate::{
+    eth_provider::utils::format_hex,
+    into_via_try_wrapper, into_via_wrapper,
+    models::{
+        block::{EthBlockId, EthBlockNumberOrTag},
+        felt::Felt252Wrapper,
+    },
+};
 use alloy_rlp::Decodable as _;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -5,42 +38,21 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
-use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
-use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
+use reth_primitives::{
+    constants::EMPTY_ROOT_HASH,
+    revm_primitives::FixedBytes,
+    serde_helper::{JsonStorageKey, U64HexOrNumber},
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64,
+};
 use reth_rpc_types::{
     other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Index,
-    RichBlock, TransactionReceipt, TransactionRequest, ValueOrArray,
+    RichBlock, SyncInfo, SyncStatus, TransactionReceipt, TransactionRequest, ValueOrArray,
 };
-use reth_rpc_types::{SyncInfo, SyncStatus};
-use starknet::core::types::BroadcastedInvokeTransaction;
-use starknet::core::types::SyncStatusType;
-use starknet::core::utils::get_storage_var_address;
+use starknet::core::{
+    types::{BroadcastedInvokeTransaction, SyncStatusType},
+    utils::get_storage_var_address,
+};
 use starknet_crypto::FieldElement;
-
-use super::constant::CALL_REQUEST_GAS_LIMIT;
-use super::database::types::{
-    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
-    transaction::StoredTransactionHash,
-};
-use super::database::Database;
-use super::error::{EthApiError, EvmError, KakarotError, SignatureError, TransactionError};
-use super::starknet::kakarot_core::{
-    self,
-    contract_account::ContractAccountReader,
-    core::{KakarotCoreReader, Uint256},
-    proxy::ProxyReader,
-    starknet_address, to_starknet_transaction, CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
-    KAKAROT_ADDRESS,
-};
-use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{
-    contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator,
-};
-use crate::eth_provider::utils::format_hex;
-use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
-use crate::models::felt::Felt252Wrapper;
-use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
@@ -500,10 +512,10 @@ where
         #[cfg(feature = "hive")]
         {
             use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
-            use starknet::accounts::Call;
-            use starknet::accounts::Execution;
-            use starknet::core::types::BlockTag;
-            use starknet::core::utils::get_selector_from_name;
+            use starknet::{
+                accounts::{Call, Execution},
+                core::{types::BlockTag, utils::get_selector_from_name},
+            };
             let sender = transaction.sender_address;
             let proxy = ProxyReader::new(sender, &self.starknet_provider);
             let maybe_class_hash =

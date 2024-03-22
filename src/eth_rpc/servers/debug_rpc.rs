@@ -1,7 +1,11 @@
-use crate::eth_provider::error::{EthApiError, ReceiptError, SignatureError};
-use crate::eth_rpc::api::debug_api::DebugApiServer;
-use crate::models::block::rpc_to_primitive_block;
-use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
+use crate::{
+    eth_provider::{
+        error::{EthApiError, ReceiptError, SignatureError},
+        provider::EthereumProvider,
+    },
+    eth_rpc::api::debug_api::DebugApiServer,
+    models::{block::rpc_to_primitive_block, transaction::rpc_transaction_to_primitive},
+};
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};

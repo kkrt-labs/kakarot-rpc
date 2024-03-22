@@ -1,5 +1,4 @@
-pub mod types;
-
+use super::error::KakarotError;
 use futures::TryStreamExt;
 use mongodb::{
     bson::Document,
@@ -8,7 +7,7 @@ use mongodb::{
 };
 use serde::de::DeserializeOwned;
 
-use super::error::KakarotError;
+pub mod types;
 
 type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 

@@ -1,6 +1,8 @@
-use std::str::FromStr;
-
-use crate::models::felt::Felt252Wrapper;
+use crate::{
+    eth_provider::{provider::EthProviderResult, utils::split_u256},
+    into_via_wrapper,
+    models::felt::Felt252Wrapper,
+};
 use alloy_rlp::Encodable;
 use cainome::rs::abigen_legacy;
 use dotenv::dotenv;
@@ -11,11 +13,7 @@ use starknet::{
     macros::selector,
 };
 use starknet_crypto::FieldElement;
-
-use crate::{
-    eth_provider::{provider::EthProviderResult, utils::split_u256},
-    into_via_wrapper,
-};
+use std::str::FromStr;
 
 // Contract ABIs
 

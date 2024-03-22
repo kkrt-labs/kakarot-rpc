@@ -1,24 +1,22 @@
-use std::collections::HashMap;
-use std::fs;
-use std::marker::PhantomData;
-use std::path::PathBuf;
+use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf};
 
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
-use ethers::signers::LocalWallet;
-use ethers::signers::Signer;
-use ethers::types::U256;
+use cairo_lang_starknet::{casm_contract_class::CasmContractClass, contract_class::ContractClass};
+use ethers::{
+    signers::{LocalWallet, Signer},
+    types::U256,
+};
 use eyre::{eyre, Result};
-use katana_primitives::block::GasPrices;
-use katana_primitives::contract::{StorageKey, StorageValue};
-use katana_primitives::genesis::allocation::DevAllocationsGenerator;
-use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
-use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
-use katana_primitives::genesis::json::GenesisAccountJson;
-use katana_primitives::genesis::json::{FeeTokenConfigJson, GenesisJson};
 use katana_primitives::{
-    contract::ContractAddress,
-    genesis::json::{GenesisClassJson, GenesisContractJson, PathOrFullArtifact},
+    block::GasPrices,
+    contract::{ContractAddress, StorageKey, StorageValue},
+    genesis::{
+        allocation::DevAllocationsGenerator,
+        constant::{DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE},
+        json::{
+            FeeTokenConfigJson, GenesisAccountJson, GenesisClassJson, GenesisContractJson, GenesisJson,
+            PathOrFullArtifact,
+        },
+    },
 };
 use lazy_static::lazy_static;
 use rayon::prelude::*;
@@ -26,10 +24,11 @@ use reth_primitives::B256;
 use serde::Serialize;
 use serde_json::Value;
 use serde_with::serde_as;
-use starknet::core::serde::unsigned_field_element::UfeHex;
-use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::FieldElement;
-use starknet::core::utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness};
+use starknet::core::{
+    serde::unsigned_field_element::UfeHex,
+    types::{contract::legacy::LegacyContractClass, FieldElement},
+    utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness},
+};
 use walkdir::WalkDir;
 
 lazy_static! {
