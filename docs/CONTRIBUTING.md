@@ -20,7 +20,17 @@ To set up a development environment, please follow these steps:
    cargo test
    ```
 
-2. TODO
+2. If you are working in VSCode, we recommend you install the [rust-analyzer](https://rust-analyzer.github.io/) extension, and use the following VSCode user settings:
+
+   ```json
+   "editor.formatOnSave": true,
+   "rust-analyzer.rustfmt.extraArgs": ["+nightly"],
+   "[rust]": {
+   "editor.defaultFormatter": "rust-lang.rust-analyzer"
+   }
+   ```
+
+3. TODO
 
 ## Issues and feature requests
 
