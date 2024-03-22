@@ -2,9 +2,7 @@ use reth_primitives::{Address, B256, U256, U64};
 use starknet::core::types::{EthAddress, FieldElement};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Debug, thiserror::Error)]
-#[error("conversion failed")]
-pub struct ConversionError;
+use super::ConversionError;
 
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);
@@ -98,9 +96,9 @@ macro_rules! into_via_wrapper {
 #[macro_export]
 macro_rules! into_via_try_wrapper {
     ($val: expr) => {{
-        let intermediate: Result<_, $crate::models::felt::ConversionError> =
+        let intermediate: Result<_, $crate::models::ConversionError> =
             TryInto::<$crate::models::felt::Felt252Wrapper>::try_into($val)
-                .map_err(|_| $crate::models::felt::ConversionError)
+                .map_err(|_| $crate::models::ConversionError)
                 .map(Into::into);
         intermediate
     }};
