@@ -13,6 +13,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
+          toolchain: nightly
       - run: cargo fmt --all --check
 
   test:
