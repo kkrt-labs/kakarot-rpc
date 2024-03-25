@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::models::felt::Felt252Wrapper;
 use alloy_rlp::Encodable;
 use cainome::rs::abigen_legacy;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Transaction, TransactionSigned};
 use starknet::{

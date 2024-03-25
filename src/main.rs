@@ -1,7 +1,7 @@
 use std::env::var;
 use std::sync::Arc;
 
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::config::{JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder};
 use kakarot_rpc::eth_provider::database::Database;
