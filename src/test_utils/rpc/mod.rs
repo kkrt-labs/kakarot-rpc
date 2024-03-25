@@ -1,6 +1,5 @@
-use std::net::SocketAddr;
-
 use jsonrpsee::server::ServerHandle;
+use std::net::SocketAddr;
 
 use super::katana::Katana;
 use crate::eth_rpc::config::RPCConfig;
