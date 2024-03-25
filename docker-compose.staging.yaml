@@ -1,0 +1,148 @@
+# trunk-ignore-all(yamllint/empty-values)
+version: "3.8"
+
+services:
+  starknet:
+    image: nethermind/juno:v0.11.1
+    ports:
+      - 6060:6060
+    volumes:
+      - juno_files_staging:/var/lib/notjuno
+    command: >
+      --pending-poll-interval "1s"
+      --http
+      --http-host 0.0.0.0
+      --http-port 6060
+      --db-path /var/lib/notjuno
+      --eth-node wss://eth-sepolia.g.alchemy.com/v2/WIUR5JUZXieEBkze6Xs3IOXWhsS840TX
+      --network sepolia
+    networks:
+      - internal
+  starknet-explorer:
+    image: public.ecr.aws/o5q6k5w4/stark_compass_explorer:latest
+    ports:
+      - 4000:4000
+    environment:
+      - PHX_HOST=localhost
+      - PORT=4000
+      - RPC_API_HOST=http://host.docker.internal:6060
+      - TESTNET_RPC_API_HOST=http://host.docker.internal:6060
+      - SEPOLIA_RPC_API_HOST=http://host.docker.internal:6060
+      - DISABLE_MAINNET_SYNC=true
+      - DISABLE_SEPOLIA_SYNC=true
+      - DATABASE_PATH=ecto://postgres:postgres@starknet-explorer-db:5432/starknet_explorer_dev
+      - DB_TYPE=postgres
+      - SECRET_KEY_BASE=JyULoT5cLBifW+XNEuCTVoAb+SaFgQt9j227RN0cKpR3wTsrApGd1HNcgeopemyl
+      - ENABLE_LISTENER=true
+    depends_on:
+      starknet-explorer-db:
+        condition: service_started
+      starknet:
+        condition: service_started
+    extra_hosts:
+      - host.docker.internal:172.17.0.1
+    networks:
+      - internal
+
+  starknet-explorer-db:
+    image: postgres:15.3
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=starknet_explorer_dev
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - starknet-explorer:/var/lib/postgresql/data/
+
+  kakarot-rpc:
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    pull_policy: always
+    ports:
+      - 3030:3030
+    environment:
+      - KAKAROT_RPC_URL=0.0.0.0:3030
+      - STARKNET_NETWORK=http://starknet:6060/v0_6
+      - RUST_LOG=kakarot_rpc=info
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
+      # These values are unique to Sepolia Testnet
+      # They'll need to be manually changed in case the testnet is reset
+      # To add robustness: parse the `deployments/starknet-sepolia` folder in `kkrt-labs/kakarot` repo
+      - KAKAROT_ADDRESS=0x05def47dc1141d9647ce4e655aed3a67878291122d88dd1b20721fc7df7513
+      - PROXY_ACCOUNT_CLASS_HASH=0x68f4c274f4dd5d4b0c25422583dce9e2441d95af4aa14c29f8d69d8814507b1
+      - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=0x369eee5ef500244414a4ef6c26652fa28aac4920aeeab64686b36c3fb5b7bc5
+      - CONTRACT_ACCOUNT_CLASS_HASH=0x48c3aef2e264d2f010b88f52e7b8a54630f98ae99c4338a4f51b2f92110b22c
+    restart: on-failure
+    depends_on:
+      starknet:
+        condition: service_started
+    networks:
+      - internal
+
+  apibara-dna:
+    extends:
+      file: docker-compose.yaml
+      service: apibara-dna
+    command:
+      - start
+      - --rpc=http://starknet:6060/v0_6
+      - --wait-for-rpc
+      - --data=/data
+
+  ### MongoDB with Mongo Express
+  mongo:
+    extends:
+      file: docker-compose.yaml
+      service: mongo
+
+  clone-repo:
+    extends:
+      file: docker-compose.yaml
+      service: clone-repo
+
+  indexer:
+    image: quay.io/apibara/sink-mongo
+    command:
+      - run
+      - /code/kakarot-indexer/src/main.ts
+    environment:
+      # Whitelist environment variables
+      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET
+      - DEBUG=""
+      - APIBARA_AUTH_TOKEN=""
+      - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
+      - MONGO_DATABASE_NAME=kakarot-local
+      - STARTING_BLOCK=0
+      - STREAM_URL=http://apibara-dna:7171
+      - SINK_TYPE=mongo
+      - STARKNET_NETWORK=http://starknet:6060/v0_6
+      - ALLOW_NET=
+      - KAKAROT_ADDRESS=0x05def47dc1141d9647ce4e655aed3a67878291122d88dd1b20721fc7df7513
+    restart: on-failure
+    volumes:
+      - indexer_code:/code
+    networks:
+      - internal
+    depends_on:
+      clone-repo:
+        condition: service_completed_successfully
+      starknet:
+        condition: service_started
+
+networks:
+  internal:
+    driver: bridge
+  default:
+    driver: bridge
+  close:
+    driver: bridge
+
+volumes:
+  apibara:
+  mongo_data:
+  indexer_code:
+  pgadmin_data:
+  starknet-explorer:
+  juno_files_staging:
