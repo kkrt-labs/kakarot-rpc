@@ -38,7 +38,7 @@ pub fn katana_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
         env: Environment {
-            chain_id: ChainId::parse("kakatest").unwrap(),
+            chain_id: ChainId::parse("test").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
             gas_price: GasPrices { eth: 1, strk: 0 },
