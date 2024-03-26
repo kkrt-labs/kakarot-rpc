@@ -201,7 +201,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
-    // Fetch raw receipts by block hash.
+    // Fetch raw transactions by block hash.
     let reqwest_client = reqwest::Client::new();
     let res_by_block_hash = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -227,7 +227,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let rlp_bytes_by_block_hash: Vec<Bytes> =
         serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
 
-    // Fetch raw receipts by block number.
+    // Fetch raw transactions by block number.
     let res_by_block_number = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
@@ -252,10 +252,9 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let rlp_bytes_by_block_number: Vec<Bytes> =
         serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
 
-    // Assert equality of receipts fetched by block hash and block number.
+    // Assert equality of transactions fetched by block hash and block number.
     assert_eq!(rlp_bytes_by_block_number, rlp_bytes_by_block_hash);
 
-    // Get eth provider
     let eth_provider = katana.eth_provider();
 
     for (i, actual_tx) in eth_provider
