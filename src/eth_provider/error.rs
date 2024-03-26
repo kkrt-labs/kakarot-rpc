@@ -189,6 +189,10 @@ pub enum TransactionError {
     /// Thrown when the gas used overflows u128.
     #[error("gas overflow")]
     GasOverflow,
+    /// Thrown when the transaction isn't the
+    /// BlockTransactions::FullTransactions variant.
+    #[error("expected full transactions")]
+    ExpectedFullTransactions,
 }
 
 impl TransactionError {
@@ -196,6 +200,7 @@ impl TransactionError {
         match self {
             TransactionError::InvalidChainId => EthRpcErrorCode::InvalidInput,
             TransactionError::GasOverflow => EthRpcErrorCode::TransactionRejected,
+            TransactionError::ExpectedFullTransactions => EthRpcErrorCode::InternalError,
         }
     }
 }
