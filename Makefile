@@ -66,16 +66,17 @@ local-rpc-up:
 # Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Sepolia Testnet in production
 # This is equivalent to locally running a Geth instance that syncs with Sepolia.
 testnet-rpc-up:
-	docker compose -f docker-compose.sepolia.yml up -d --force-recreate
+	docker compose -f docker-compose.sepolia.yaml up -d --force-recreate
 
 # Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Staging environment.
 # The staging environment is in all things equivalent to the production environment, but with a different chain ID.
 # It is meant to be used for testing and development before pushing things to the public production-ready Testnet.
 staging-rpc-up:
-	docker compose -f docker-compose.staging.yml up -d --force-recreate
+	docker compose -f docker-compose.staging.yaml up -d --force-recreate
 
-docker-down:
-	docker compose down -v --remove-orphans && docker compose rm
+# To stop the dockerized local instances, run: docker compose -f <NAME OF THE FILE> down
+# To delete volumes, add the `--volumes` flag to the command above.
+# Example: docker compose -f docker-compose.sepolia.yaml down --remove-orphans --volumes
 
 
 .PHONY: test

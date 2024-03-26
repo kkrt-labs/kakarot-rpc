@@ -7,13 +7,13 @@ services:
     ports:
       - 6060:6060
     volumes:
-      - juno_files_staging:/var/lib/notjuno
+      - juno_files_staging:/var/lib/juno
     command: >
       --pending-poll-interval "1s"
       --http
       --http-host 0.0.0.0
       --http-port 6060
-      --db-path /var/lib/notjuno
+      --db-path /var/lib/juno
       --eth-node wss://eth-sepolia.g.alchemy.com/v2/WIUR5JUZXieEBkze6Xs3IOXWhsS840TX
       --network sepolia
     networks:
@@ -63,7 +63,7 @@ services:
       - 3030:3030
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
-      - STARKNET_NETWORK=http://starknet:6060/v0_6
+      - STARKNET_NETWORK=http://starknet:6060
       - RUST_LOG=kakarot_rpc=info
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
       - MONGO_DATABASE_NAME=kakarot-local
@@ -87,7 +87,7 @@ services:
       service: apibara-dna
     command:
       - start
-      - --rpc=http://starknet:6060/v0_6
+      - --rpc=http://starknet:6060
       - --wait-for-rpc
       - --data=/data
 
@@ -117,7 +117,7 @@ services:
       - STARTING_BLOCK=0
       - STREAM_URL=http://apibara-dna:7171
       - SINK_TYPE=mongo
-      - STARKNET_NETWORK=http://starknet:6060/v0_6
+      - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
       - KAKAROT_ADDRESS=0x05def47dc1141d9647ce4e655aed3a67878291122d88dd1b20721fc7df7513
     restart: on-failure

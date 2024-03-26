@@ -14,8 +14,9 @@ use reth_rpc_types::{
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::SyncStatusType;
+use starknet::core::types::{BroadcastedInvokeTransaction, ValueOutOfRangeError};
 use starknet::core::utils::get_storage_var_address;
-use starknet_crypto::FieldElement;
+use starknet_crypto::{poseidon_hash_single, FieldElement};
 
 use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
 use super::database::types::{
@@ -37,6 +38,7 @@ use super::utils::{
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
+use crate::models::ConversionError;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
