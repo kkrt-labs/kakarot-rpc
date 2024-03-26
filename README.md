@@ -247,12 +247,9 @@ by the Kakarot RPC.
 For the [hive rpc compatibility tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc-compat),
 the following tests are skipped:
 
-- debug_getRawBlock/get-block-n: debug API is currently not supported by the
-  Kakarot RPC.
-- debug_getRawBlock/get-genesis: debug API is currently not supported by the
-  Kakarot RPC.
-- debug_getRawBlock/get-invalid-number: debug API is currently not supported by the
-  Kakarot RPC.
+- debug_getRawBlock/get-block-n: the Kakarot implementation currently
+  doesn't compute the block hash following EVM standards.
+- debug_getRawBlock/get-genesis: see `debug_getRawBlock/get-block-n`.
 - debug_getRawHeader/get-block-n: debug API is currently not supported by the
   Kakarot RPC.
 - debug_getRawHeader/get-genesis: debug API is currently not supported by the
@@ -273,12 +270,11 @@ the following tests are skipped:
 - eth_feeHistory/fee-history: the Kakarot implementation doesn't currently
   set the block gas limit dynamically, which causes some disparity in the
   returned data. Additionally, the rewards of the blocks aren't available.
-- eth_getBalance/get-balance-blockhash: the Kakarot implementation currently
-  doesn't compute the block hash following EVM standards .
-- eth_getBlockByHash/get-block-by-hash: see `eth_getBalance/get-balance-blockhash`.
-- eth_getBlockReceipts/get-block-receipts-by-hash: see `eth_getBalance/get-balance-blockhash`.
-- eth_getBlockTransactionCountByHash/get-block-n: see `eth_getBalance/get-balance-blockhash`.
-- eth_getBlockTransactionCountByHash/get-genesis: see `eth_getBalance/get-balance-blockhash`.
+- eth_getBalance/get-balance-blockhash: see `debug_getRawBlock/get-block-n`.
+- eth_getBlockByHash/get-block-by-hash: see `debug_getRawBlock/get-block-n`.
+- eth_getBlockReceipts/get-block-receipts-by-hash: see `debug_getRawBlock/get-block-n`.
+- eth_getBlockTransactionCountByHash/get-block-n: see `debug_getRawBlock/get-block-n`.
+- eth_getBlockTransactionCountByHash/get-genesis: see `debug_getRawBlock/get-block-n`.
 - eth_getProof/get-account-proof-blockhash: the getProof endpoint is currently
   not supported by the Kakarot RPC.
 - eth_getProof/get-account-proof-with-storage: the getProof endpoint is currently
@@ -298,7 +294,7 @@ the following tests are skipped:
   code of `-32602` which corresponds to an invalid parameters error, whenever
   it encounters issues when deserializing the input. We decide to ignore this
   test as the only issue is the error code returned.
-- eth_getTransactionByBlockHashAndIndex/get-block-n: see `eth_getBalance/get-balance-blockhash`.
+- eth_getTransactionByBlockHashAndIndex/get-block-n: see `debug_getRawBlock/get-block-n`.
 
 In addition to the tests we skip, some of the objects fields need to be ignored in
 the passing tests:
