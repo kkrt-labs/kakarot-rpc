@@ -14,7 +14,7 @@ services:
       --http-host 0.0.0.0
       --http-port 6060
       --db-path /var/lib/juno
-      --eth-node wss://eth-sepolia.g.alchemy.com/v2/WIUR5JUZXieEBkze6Xs3IOXWhsS840TX
+      --eth-node ${ETH_NODE_WS}
       --cn-name kakarot-sepolia
       --cn-feeder-url https://gateway.kakarot.sw-dev.io/feeder_gateway/
       --cn-gateway-url https://gateway.kakarot.sw-dev.io/gateway/
