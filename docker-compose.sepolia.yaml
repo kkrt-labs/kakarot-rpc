@@ -56,7 +56,7 @@ services:
     ports:
       - 3030:3030
     env_file:
-      - ./docker/env/kakarot-node.sepolia.env
+      - ./docker/env/kakarot-rpc.sepolia.env
     restart: on-failure
     depends_on:
       starknet:

@@ -56,7 +56,7 @@ services:
     ports:
       - 3030:3030
     env_file:
-      - ./docker/env/kakarot-node.env
+      - ./docker/env/kakarot-rpc.env
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app

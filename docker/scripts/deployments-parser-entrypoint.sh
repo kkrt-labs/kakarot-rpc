@@ -6,4 +6,4 @@ echo "PROXY_ACCOUNT_CLASS_HASH=$$(jq -r '.proxy' /deployments/katana/declaration
 echo "EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$$(jq -r '.externally_owned_account' /deployments/katana/declarations.json)" >> /deployments/.env
 echo "CONTRACT_ACCOUNT_CLASS_HASH=$$(jq -r '.contract_account' /deployments/katana/declarations.json)" >> /deployments/.env
 
-exec "$@"
+# exec "$@"
