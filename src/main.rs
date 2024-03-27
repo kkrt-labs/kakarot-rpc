@@ -11,7 +11,7 @@ use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
 use kakarot_rpc::eth_rpc::run_server;
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
+use starknet::providers::{JsonRpcClient, Provider as _, SequencerGatewayProvider};
 use tracing_subscriber::util::SubscriberInitExt;
 
 enum StarknetProvider {
@@ -50,18 +50,18 @@ async fn main() -> Result<()> {
         DatabaseOptions::builder().read_concern(ReadConcern::MAJORITY).write_concern(WriteConcern::MAJORITY).build(),
     ));
 
+    let provider =
+        JsonRpcClient::new(HttpTransport::new(starknet_config.network.provider_url().expect("Incorrect provider URL")));
+    let chain_id = provider.chain_id().await?;
+    let chain_id: u64 = chain_id.try_into()?;
+
     // Get the deployer nonce and set the value in the DEPLOY_WALLET_NONCE
     #[cfg(feature = "hive")]
     {
         use kakarot_rpc::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::accounts::ConnectedAccount;
-        use starknet::providers::Provider;
-        let provider = JsonRpcClient::new(HttpTransport::new(
-            starknet_config.network.provider_url().expect("Incorrect provider URL"),
-        ));
 
-        let chain_id = provider.chain_id().await?;
-        CHAIN_ID.set(chain_id).expect("Failed to set chain id");
+        CHAIN_ID.set(chain_id.into()).expect("Failed to set chain id");
 
         let deployer_nonce = DEPLOY_WALLET.get_nonce().await?;
         let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
@@ -71,12 +71,12 @@ async fn main() -> Result<()> {
     let kakarot_rpc_module = match starknet_provider {
         StarknetProvider::JsonRpcClient(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
-            let eth_provider = EthDataProvider::new(db, starknet_provider);
+            let eth_provider = EthDataProvider::new(db, starknet_provider, chain_id);
             KakarotRpcModuleBuilder::new(eth_provider).rpc_module()
         }
         StarknetProvider::SequencerGatewayProvider(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
-            let eth_provider = EthDataProvider::new(db, starknet_provider);
+            let eth_provider = EthDataProvider::new(db, starknet_provider, chain_id);
             KakarotRpcModuleBuilder::new(eth_provider).rpc_module()
         }
     }?;
