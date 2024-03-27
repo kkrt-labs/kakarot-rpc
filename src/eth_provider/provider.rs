@@ -130,6 +130,7 @@ pub trait EthereumProvider {
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
     database: Database,
     starknet_provider: SP,
+    chain_id: u64,
 }
 
 #[async_trait]
@@ -179,11 +180,8 @@ where
         }
     }
 
-    // TODO cache chain id
     async fn chain_id(&self) -> EthProviderResult<Option<U64>> {
-        let chain_id = self.starknet_provider.chain_id().await.map_err(KakarotError::from)?;
-        let chain_id: Option<u64> = chain_id.try_into().ok();
-        Ok(chain_id.map(U64::from))
+        Ok(Some(U64::from(self.chain_id)))
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
@@ -634,8 +632,8 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    pub const fn new(database: Database, starknet_provider: SP) -> Self {
-        Self { database, starknet_provider }
+    pub const fn new(database: Database, starknet_provider: SP, chain_id: u64) -> Self {
+        Self { database, starknet_provider, chain_id }
     }
 
     #[cfg(feature = "testing")]
