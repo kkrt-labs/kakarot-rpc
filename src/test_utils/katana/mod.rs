@@ -38,7 +38,8 @@ pub fn katana_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
         env: Environment {
-            chain_id: ChainId::parse("test").unwrap(),
+            // Since ignoredprefix_kakatest > u64::MAX, we should return the last 8 bytes of the chain_id: kakatest
+            chain_id: ChainId::parse("ignoredprefix_kakatest").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
             gas_price: GasPrices { eth: 1, strk: 0 },

@@ -13,8 +13,8 @@ use reth_rpc_types::{
     TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
+use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::core::types::SyncStatusType;
-use starknet::core::types::{BroadcastedInvokeTransaction, ValueOutOfRangeError};
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
@@ -38,7 +38,6 @@ use super::utils::{
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
-use crate::models::ConversionError;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
