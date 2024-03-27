@@ -1,4 +1,4 @@
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use ethers::types::U256;
 use kakarot_rpc::test_utils::katana::genesis::KatanaGenesisBuilder;
 use lazy_static::lazy_static;

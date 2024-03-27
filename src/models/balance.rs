@@ -5,7 +5,7 @@ use futures::{Future, FutureExt};
 use reth_primitives::{Address, U256};
 use serde::{Deserialize, Serialize};
 
-use crate::eth_provider::error::EthProviderError;
+use crate::eth_provider::error::EthApiError;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenBalance {
@@ -20,7 +20,7 @@ pub struct TokenBalances {
     pub token_balances: Vec<TokenBalance>,
 }
 
-type BalanceOfResult = Result<U256, EthProviderError>;
+type BalanceOfResult = Result<U256, EthApiError>;
 
 pub struct FutureTokenBalance<F: Future<Output = BalanceOfResult>> {
     pub balance: F,

@@ -15,9 +15,9 @@ services:
       - --strk-gas-price
       - "0"
       - --chain-id
-      - "KKRT"
+      - KKRT
     ports:
-      - "5050:5050"
+      - 5050:5050
     networks:
       - internal
     restart: on-failure
@@ -40,7 +40,6 @@ services:
 
   deployments-parser:
     image: apteno/alpine-jq:2023-07-24
-    # Parse deployments and save the result to .env file
     entrypoint: /entrypoint.sh
     volumes:
       - ./docker/scripts/deployments-parser-entrypoint.sh:/entrypoint.sh
@@ -60,7 +59,7 @@ services:
       - ./docker/env/kakarot-node.env
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
-      - deployments:/usr/app
+      - deployments:/usr/src/app
     depends_on:
       deployments-parser:
         condition: service_completed_successfully
@@ -98,13 +97,13 @@ services:
 
   clone-repo:
     image: docker.io/alpine/git:latest
-    entrypoint: "/bin/sh"
+    entrypoint: /bin/sh
     command:
-      - "-c"
+      - -c
       # clone the repository in `/code`, removing any old copy.
-      - "cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git"
+      - cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git
     volumes:
-      - "indexer_code:/code"
+      - indexer_code:/code
     restart: on-failure
 
   indexer:

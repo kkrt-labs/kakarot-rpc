@@ -62,7 +62,7 @@ impl Katana {
     /// Initializes the Katana test environment.
     async fn initialize(sequencer: TestSequencer, starknet_provider: Arc<JsonRpcClient<HttpTransport>>) -> Self {
         // Load PK
-        dotenv::dotenv().expect("Failed to load .env file");
+        dotenvy::dotenv().expect("Failed to load .env file");
         let pk = std::env::var("EVM_PRIVATE_KEY").expect("Failed to get EVM private key");
         let pk = B256::from_str(&pk).expect("Failed to parse EVM private key");
 

@@ -9,11 +9,11 @@ use kakarot_rpc::test_utils::evm_contract::EvmContract;
 use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
-use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::{JsonStorageKey, RpcBlockHash, TransactionRequest, U64HexOrNumber};
-use rstest::*;
-
+use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
+use reth_rpc_types::request::TransactionInput;
+use reth_rpc_types::{RpcBlockHash, TransactionRequest};
+use rstest::*;
 use starknet::core::types::BlockTag;
 use starknet_crypto::FieldElement;
 
@@ -29,7 +29,7 @@ async fn test_block_number(#[future] katana: Katana, _setup: ()) {
 
     // Then
     // The block number is 3 because this is what we set in the mocked mongo database.
-    let expected = U64::from(*BLOCK_NUMBER);
+    let expected = U64::from(BLOCK_NUMBER);
     assert_eq!(block_number, expected);
 }
 
@@ -70,10 +70,10 @@ async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // When
-    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(*BLOCK_NUMBER), false).await.unwrap().unwrap();
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(BLOCK_NUMBER), false).await.unwrap().unwrap();
 
     // Then
-    assert_eq!(block.header.number, Some(U256::from(*BLOCK_NUMBER)));
+    assert_eq!(block.header.number, Some(U256::from(BLOCK_NUMBER)));
 }
 
 #[rstest]
@@ -99,7 +99,7 @@ async fn test_block_transaction_count_by_number(#[future] katana: Katana, _setup
 
     // When
     let count =
-        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(*BLOCK_NUMBER)).await.unwrap().unwrap();
+        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(BLOCK_NUMBER)).await.unwrap().unwrap();
 
     // Then
     assert_eq!(count, U256::from(3));
@@ -245,7 +245,7 @@ async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _set
         from: Some(eoa.evm_address().unwrap()),
         to: Some(counter_address.try_into().unwrap()),
         input: TransactionInput { input: None, data: Some(Bytes::from_str("0x371303c0").unwrap()) }, // selector of "function inc()"
-        chain_id: Some(chain_id),
+        chain_id: Some(chain_id.to::<u64>()),
         ..Default::default()
     };
 
@@ -334,7 +334,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
 
     // Then
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(*BLOCK_NUMBER))))
+        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(BLOCK_NUMBER))))
         .await
         .unwrap()
         .unwrap();
@@ -343,7 +343,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipt.transaction_index, U64::ZERO);
     assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
     assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
-    assert_eq!(receipt.block_number.unwrap(), U256::from(*BLOCK_NUMBER));
+    assert_eq!(receipt.block_number.unwrap(), U256::from(BLOCK_NUMBER));
 
     let receipts = eth_provider
         .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH))))
@@ -355,7 +355,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipt.transaction_index, U64::ZERO);
     assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
     assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
-    assert_eq!(receipt.block_number.unwrap(), U256::from(*BLOCK_NUMBER));
+    assert_eq!(receipt.block_number.unwrap(), U256::from(BLOCK_NUMBER));
 
     let receipts = eth_provider
         .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::from(U256::from(0xc0fefe))))))
@@ -372,7 +372,7 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // When
-    let block_id = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(*BLOCK_NUMBER));
+    let block_id = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(BLOCK_NUMBER));
     let pending_starknet_block_id = eth_provider.to_starknet_block_id(block_id).await.unwrap();
 
     let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH));

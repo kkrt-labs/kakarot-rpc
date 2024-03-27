@@ -13,7 +13,3 @@ jobs:
   spell_check:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
-
-  build:
-    name: Build binaries
-    uses: ./.github/workflows/kakarot_rpc.yml

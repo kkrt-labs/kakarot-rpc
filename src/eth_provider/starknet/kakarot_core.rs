@@ -3,7 +3,7 @@ use std::str::FromStr;
 use crate::models::felt::Felt252Wrapper;
 use alloy_rlp::Encodable;
 use cainome::rs::abigen_legacy;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, Transaction, TransactionSigned};
 use starknet::{
@@ -58,6 +58,7 @@ lazy_static! {
 
 // Kakarot utils
 /// Compute the starknet address given a eth address
+#[inline]
 pub fn starknet_address(address: Address) -> FieldElement {
     get_contract_address(into_via_wrapper!(address), *PROXY_ACCOUNT_CLASS_HASH, &[], *KAKAROT_ADDRESS)
 }

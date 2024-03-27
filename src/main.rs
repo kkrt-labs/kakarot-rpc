@@ -1,7 +1,7 @@
 use std::env::var;
 use std::sync::Arc;
 
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::config::{JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder};
 use kakarot_rpc::eth_provider::database::Database;
@@ -81,9 +81,9 @@ async fn main() -> Result<()> {
         }
     }?;
 
-    let (server_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
+    let (socket_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
 
-    let url = format!("http://{server_addr}");
+    let url = format!("http://{}", socket_addr);
 
     println!("RPC Server running on {url}...");
 

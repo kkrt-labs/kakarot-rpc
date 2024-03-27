@@ -186,7 +186,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             max_fee_per_gas: Default::default(),
             gas_limit: TX_GAS_LIMIT,
             to: TransactionKind::Call(to),
-            value: value.into(),
+            value: U256::from(value),
             input: Bytes::default(),
             access_list: Default::default(),
         });

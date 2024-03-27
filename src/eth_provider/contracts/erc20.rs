@@ -7,9 +7,9 @@ use reth_primitives::{BlockId, U256};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::TransactionRequest;
 
+use crate::eth_provider::error::KakarotError;
 use crate::eth_provider::provider::EthProviderResult;
 use crate::eth_provider::provider::EthereumProvider;
-use crate::models::errors::ConversionError;
 
 // abigen generates a lot of unused code, needs to be benchmarked if performances ever become a
 // concern
@@ -48,8 +48,9 @@ impl<P: EthereumProvider> EthereumErc20<P> {
         };
 
         let ret = self.provider.call(request, Some(block_id)).await?;
-        let balance = U256::try_from_be_slice(&ret)
-            .ok_or_else(|| ConversionError::UintConversionError("Failed to convert call return to U256".to_string()))?;
+        let balance = U256::try_from_be_slice(&ret).ok_or(KakarotError::CallError(
+            cainome::cairo_serde::Error::Deserialize("failed to deserialize balance".to_string()),
+        ))?;
 
         Ok(balance)
     }

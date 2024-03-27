@@ -85,10 +85,22 @@ COPY . .
 
 ### Build the RPC server
 # Define ARG for build platform
-FROM rust:1.75 as rpc
+FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
+WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    gcc-aarch64-linux-gnu libssl-dev clang libclang-dev
+FROM chef AS planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder 
+COPY --from=planner /app/recipe.json recipe.json
+
+# Build application
+COPY . .
+# Install system dependencies
+RUN apt-get update && \
+    apt-get -y upgrade && \ 
+    apt-get install -y gcc-aarch64-linux-gnu libssl-dev clang libclang-dev
 
 # Set working directory
 WORKDIR /usr/src/rpc
@@ -98,11 +110,11 @@ COPY . .
 COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/artifacts
 
 
-RUN cargo build --release \
+RUN cargo build \
     --features hive --target-dir /usr/src/rpc/target && \
-    cargo build --release \
+    cargo build \
     --bin hive_genesis --features testing --target-dir /usr/src/rpc/target && \
-    cargo build --release \ 
+    cargo build \ 
     --bin hive_chain --features testing --target-dir /usr/src/rpc/target
 
 FROM debian:bookworm-slim as base
@@ -162,9 +174,9 @@ RUN mkdir -p /data/db
 
 
 # Generate the genesis
-COPY --from=rpc /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin/kakarot-rpc
-COPY --from=rpc /usr/src/rpc/target/release/hive_genesis /usr/local/bin/hive_genesis
-COPY --from=rpc /usr/src/rpc/target/release/hive_chain /usr/local/bin/hive_chain
+COPY --from=builder /usr/src/rpc/target/debug/kakarot-rpc /usr/local/bin/kakarot-rpc
+COPY --from=builder /usr/src/rpc/target/debug/hive_genesis /usr/local/bin/hive_genesis
+COPY --from=builder /usr/src/rpc/target/debug/hive_chain /usr/local/bin/hive_chain
 RUN mkdir -p /genesis/contracts
 COPY --from=compiler /usr/src/compiler/.kakarot/build /genesis/contracts
 

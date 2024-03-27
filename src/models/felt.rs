@@ -1,7 +1,8 @@
 use reth_primitives::{Address, B256, U256, U64};
-use starknet::core::types::FieldElement;
+use starknet::core::types::{EthAddress, FieldElement};
+use std::ops::{Deref, DerefMut};
 
-use crate::models::errors::ConversionError;
+use super::ConversionError;
 
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);
@@ -18,41 +19,17 @@ impl From<Felt252Wrapper> for FieldElement {
     }
 }
 
-impl From<u64> for Felt252Wrapper {
-    fn from(u64: u64) -> Self {
-        let felt = FieldElement::from(u64);
-        Self(felt)
-    }
-}
-
-impl TryFrom<Felt252Wrapper> for u64 {
-    type Error = ConversionError;
-
-    fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
-        Self::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
-    }
-}
-
-impl TryFrom<Felt252Wrapper> for u128 {
-    type Error = ConversionError;
-
-    fn try_from(value: Felt252Wrapper) -> Result<Self, Self::Error> {
-        Self::try_from(value.0).map_err(|e| ConversionError::ValueOutOfRange(e.to_string()))
-    }
-}
-
 #[allow(clippy::fallible_impl_from)]
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
-        let felt = FieldElement::from_byte_slice_be(address.as_slice()).unwrap(); // safe unwrap since H160 is 20 bytes
-        Self(felt)
+        // safe unwrap since H160 is 20 bytes
+        Self(FieldElement::from_byte_slice_be(address.as_slice()).unwrap())
     }
 }
 
 impl From<U64> for Felt252Wrapper {
     fn from(value: U64) -> Self {
-        let felt = FieldElement::from(value.to::<u64>());
-        Self(felt)
+        Self(FieldElement::from(value.to::<u64>()))
     }
 }
 
@@ -60,15 +37,9 @@ impl TryFrom<Felt252Wrapper> for Address {
     type Error = ConversionError;
 
     fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
-        let felt: FieldElement = felt.into();
-        let bytes = felt.to_bytes_be();
-
-        // Check if the first 12 bytes are all zeros.
-        if bytes[0..12].iter().any(|&x| x != 0) {
-            return Err(ConversionError::ToEthereumAddressError);
-        }
-
-        Ok(Self::from_slice(&bytes[12..]))
+        EthAddress::from_felt(&felt)
+            .map(|eth_address| Self::from_slice(eth_address.as_bytes()))
+            .map_err(|_| ConversionError)
     }
 }
 
@@ -76,15 +47,7 @@ impl TryFrom<B256> for Felt252Wrapper {
     type Error = ConversionError;
 
     fn try_from(value: B256) -> Result<Self, Self::Error> {
-        let felt = FieldElement::from_bytes_be(value.as_ref())?;
-        Ok(Self(felt))
-    }
-}
-
-impl From<Felt252Wrapper> for B256 {
-    fn from(felt: Felt252Wrapper) -> Self {
-        let felt: FieldElement = felt.into();
-        Self::from_slice(&felt.to_bytes_be())
+        Ok(Self(FieldElement::from_bytes_be(value.as_ref()).map_err(|_| ConversionError)?))
     }
 }
 
@@ -92,15 +55,27 @@ impl TryFrom<U256> for Felt252Wrapper {
     type Error = ConversionError;
 
     fn try_from(u256: U256) -> Result<Self, Self::Error> {
-        let felt = FieldElement::from_bytes_be(&u256.to_be_bytes())?;
-        Ok(Self(felt))
+        Ok(Self(FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| ConversionError)?))
     }
 }
 
 impl From<Felt252Wrapper> for U256 {
     fn from(felt: Felt252Wrapper) -> Self {
-        let felt: FieldElement = felt.into();
         Self::from_be_bytes(felt.to_bytes_be())
+    }
+}
+
+impl Deref for Felt252Wrapper {
+    type Target = FieldElement;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Felt252Wrapper {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -121,8 +96,11 @@ macro_rules! into_via_wrapper {
 #[macro_export]
 macro_rules! into_via_try_wrapper {
     ($val: expr) => {{
-        let intermediate: Felt252Wrapper = $val.try_into()?;
-        intermediate.into()
+        let intermediate: Result<_, $crate::models::ConversionError> =
+            TryInto::<$crate::models::felt::Felt252Wrapper>::try_into($val)
+                .map_err(|_| $crate::models::ConversionError)
+                .map(Into::into);
+        intermediate
     }};
 }
 
@@ -156,7 +134,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "ToEthereumAddressError")]
+    #[should_panic(expected = "ConversionError")]
     fn test_address_try_from_felt_should_fail() {
         // Given
         let address: Felt252Wrapper = FieldElement::from_hex_be(OVERFLOW_ADDRESS).unwrap().into();
@@ -179,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Felt252WrapperConversionError")]
+    #[should_panic(expected = "ConversionError")]
     fn test_felt_try_from_b256_should_fail() {
         // Given
         let hash = B256::from_str(OVERFLOW_FELT).unwrap();
@@ -202,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Felt252WrapperConversionError")]
+    #[should_panic(expected = "ConversionError")]
     fn test_felt_try_from_u256_should_fail() {
         // Given
         let hash = U256::from_str_radix(OVERFLOW_FELT, 16).unwrap();

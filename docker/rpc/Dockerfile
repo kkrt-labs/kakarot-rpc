@@ -17,8 +17,8 @@ RUN apt-get update && \
 RUN cargo build --release --bin kakarot-rpc
 
 FROM debian:bookworm-slim AS runtime
-WORKDIR /usr/app
-COPY --from=builder /app/target/release/kakarot-rpc /usr/local/bin
+WORKDIR /usr/src/app
+COPY --chmod=111 --from=builder /app/target/release/kakarot-rpc /usr/local/bin
 
 # Expose the port that the RPC server will run on
 EXPOSE 9545

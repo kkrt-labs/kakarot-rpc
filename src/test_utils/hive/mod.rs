@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use ef_testing::evm_sequencer::account::{AccountType, KakarotAccount};
 use ethers::types::U256 as EthersU256;
-use eyre::eyre;
 use katana_primitives::{
     contract::ContractAddress,
     genesis::json::{GenesisContractJson, GenesisJson},
@@ -61,8 +60,8 @@ impl HiveGenesisConfig {
         let contract_account_class_hash = ClassHash(builder.contract_account_class_hash()?.into());
 
         // Fetch the contracts from the alloc field.
-        let mut additional_kakarot_storage = HashMap::new();
-        let mut fee_token_storage = HashMap::new();
+        let mut additional_kakarot_storage = HashMap::with_capacity(self.alloc.len()); // 1 mapping per contract
+        let mut fee_token_storage = HashMap::with_capacity(2 * self.alloc.len()); // 2 allowances per contract
         let contracts = self
             .alloc
             .into_iter()
@@ -78,7 +77,8 @@ impl HiveGenesisConfig {
                 let code = info.code.unwrap_or_default();
                 let storage = info.storage.unwrap_or_default();
                 let storage: Vec<(U256, U256)> = storage.into_iter().collect();
-                let kakarot_account = KakarotAccount::new(&address, &code, U256::ZERO, &storage)?;
+                let is_eoa = code.is_empty() & storage.is_empty();
+                let kakarot_account = KakarotAccount::new(&address, &code, U256::ZERO, &storage, is_eoa)?;
 
                 let account_type = kakarot_account.account_type();
                 let mut kakarot_account_storage: Vec<(FieldElement, FieldElement)> =
@@ -90,6 +90,7 @@ impl HiveGenesisConfig {
                     AccountType::Contract => {
                         kakarot_account_storage.append(&mut vec![
                             (implementation_key, contract_account_class_hash.0.into()),
+                            (get_storage_var_address("nonce", &[])?, FieldElement::ONE),
                             (get_storage_var_address("Ownable_owner", &[])?, kakarot_address),
                         ]);
                     }
@@ -118,9 +119,10 @@ impl HiveGenesisConfig {
         let kakarot_address = ContractAddress::new(kakarot_address);
         let mut genesis = builder.build()?;
 
-        let kakarot_contract =
-            genesis.contracts.get_mut(&kakarot_address).ok_or(eyre!("Kakarot contract not found"))?;
-        kakarot_contract.storage.get_or_insert_with(HashMap::new).extend(additional_kakarot_storage);
+        let kakarot_contract = genesis.contracts.entry(kakarot_address);
+        kakarot_contract.and_modify(|contract| {
+            contract.storage.get_or_insert_with(HashMap::new).extend(additional_kakarot_storage)
+        });
 
         genesis.fee_token.storage.get_or_insert_with(HashMap::new).extend(fee_token_storage);
 

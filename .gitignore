@@ -27,6 +27,7 @@
 .env
 vscode
 broadcast
+.idea
 
 # ignore genesis.json
 .hive
@@ -34,3 +35,4 @@ broadcast
 artifacts/
 build/
 .kakarot/
+
