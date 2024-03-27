@@ -45,6 +45,7 @@ async fn test_chain_id(#[future] katana: Katana, _setup: ()) {
 
     // Then
     // ASCII code for "kakatest" is 0x6b616b6174657374
+    // Since ignoredprefix_kakatest > u64::MAX, we should return the last 8 bytes of the chain_id.
     assert_eq!(chain_id, U64::from(0x6b616b6174657374u64));
 }
 

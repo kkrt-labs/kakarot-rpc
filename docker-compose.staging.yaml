@@ -3,11 +3,11 @@ version: "3.8"
 
 services:
   starknet:
-    image: nethermind/juno:v0.9.4
+    image: nethermind/juno:v0.11.1
     ports:
       - 6060:6060
     volumes:
-      - juno_files:/var/lib/juno
+      - juno_files_staging:/var/lib/juno
     command: >
       --pending-poll-interval "1s"
       --http
@@ -15,13 +15,7 @@ services:
       --http-port 6060
       --db-path /var/lib/juno
       --eth-node ${ETH_NODE_WS}
-      --cn-name kakarot-sepolia
-      --cn-feeder-url https://gateway.kakarot.sw-dev.io/feeder_gateway/
-      --cn-gateway-url https://gateway.kakarot.sw-dev.io/gateway/
-      --cn-l1-chain-id 0xaa36a7
-      --cn-l2-chain-id kkrt
-      --cn-core-contract-address 0x9DAd05893305352cDd142F79e36bc39393F23770
-      --cn-unverifiable-range 0,1000000
+      --network sepolia
     networks:
       - internal
   starknet-explorer:
@@ -63,7 +57,7 @@ services:
       - starknet-explorer:/var/lib/postgresql/data/
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    image: eliastazartes/kakarot-rpc:latest
     pull_policy: always
     ports:
       - 3030:3030
@@ -75,11 +69,11 @@ services:
       - MONGO_DATABASE_NAME=kakarot-local
       # These values are unique to Sepolia Testnet
       # They'll need to be manually changed in case the testnet is reset
-      # To add robustness: parse the `deployments/kakarot-sepolia` folder in `kkrt-labs/kakarot` repo
-      - KAKAROT_ADDRESS=0x1a18210c20241ea7a06224246264a59add11c8358d69826e8bd51f4ba6d3be7
-      - PROXY_ACCOUNT_CLASS_HASH=0x5bcd4d02cfe3aeb836f2ef4bd21b2020793e52a8269dbef9cd883fbddd2963c
-      - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=0x2ab68b7f5cea86752714b499f602cdb8c36e8cdf270f04b6a275b609baf7aea
-      - CONTRACT_ACCOUNT_CLASS_HASH=0x34e8e05a28a6ac98118860ae0cca56487e2f0a3589a4b713a0f19ccda3386d9
+      # To add robustness: parse the `deployments/starknet-sepolia` folder in `kkrt-labs/kakarot` repo
+      - KAKAROT_ADDRESS=0x05def47dc1141d9647ce4e655aed3a67878291122d88dd1b20721fc7df7513
+      - PROXY_ACCOUNT_CLASS_HASH=0x68f4c274f4dd5d4b0c25422583dce9e2441d95af4aa14c29f8d69d8814507b1
+      - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=0x369eee5ef500244414a4ef6c26652fa28aac4920aeeab64686b36c3fb5b7bc5
+      - CONTRACT_ACCOUNT_CLASS_HASH=0x48c3aef2e264d2f010b88f52e7b8a54630f98ae99c4338a4f51b2f92110b22c
     restart: on-failure
     depends_on:
       starknet:
@@ -125,7 +119,7 @@ services:
       - SINK_TYPE=mongo
       - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
-      - KAKAROT_ADDRESS=0x1a18210c20241ea7a06224246264a59add11c8358d69826e8bd51f4ba6d3be7
+      - KAKAROT_ADDRESS=0x05def47dc1141d9647ce4e655aed3a67878291122d88dd1b20721fc7df7513
     restart: on-failure
     volumes:
       - indexer_code:/code
@@ -150,5 +144,5 @@ volumes:
   mongo_data:
   indexer_code:
   pgadmin_data:
-  juno_files:
   starknet-explorer:
+  juno_files_staging:
