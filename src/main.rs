@@ -53,7 +53,13 @@ async fn main() -> Result<()> {
     let provider =
         JsonRpcClient::new(HttpTransport::new(starknet_config.network.provider_url().expect("Incorrect provider URL")));
     let chain_id = provider.chain_id().await?;
-    let chain_id: u64 = chain_id.try_into()?;
+    let chain_id = match chain_id.try_into() {
+        Ok(chain_id) => chain_id,
+        // In some cases, integration environments may have chain_id out of our control,
+        // And may not be in the range of u64.
+        // In this case, we return the last 8 bytes of the chain_id.
+        Err(_) => u64::from_be_bytes(chain_id.to_bytes_be()[24..32].try_into()?),
+    };
 
     // Get the deployer nonce and set the value in the DEPLOY_WALLET_NONCE
     #[cfg(feature = "hive")]
