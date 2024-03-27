@@ -16,7 +16,7 @@ use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::SyncStatusType;
 use starknet::core::types::{BroadcastedInvokeTransaction, ValueOutOfRangeError};
 use starknet::core::utils::get_storage_var_address;
-use starknet_crypto::{poseidon_hash_single, FieldElement};
+use starknet_crypto::FieldElement;
 
 use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
 use super::database::types::{
