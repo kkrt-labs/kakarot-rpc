@@ -46,10 +46,9 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         let transaction = self.eth_provider.transaction_by_hash(hash).await?;
 
         if let Some(tx) = transaction {
-            let mut raw_transaction = Vec::new();
             let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
             let tx = rpc_transaction_to_primitive(tx).map_err(EthApiError::from)?;
-            TransactionSigned::from_transaction_and_signature(
+            let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
                     r: signature.r,
@@ -57,25 +56,46 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
                     odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
                 },
             )
-            .encode_enveloped(&mut raw_transaction);
-            Ok(Some(Bytes::from(raw_transaction)))
+            .envelope_encoded();
+            Ok(Some(bytes))
         } else {
             Ok(None)
         }
     }
 
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
-    async fn raw_transactions(&self, _block_id: BlockId) -> Result<Vec<Bytes>> {
-        Err(EthApiError::Unsupported("debug_rawTransactions").into())
+    async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
+        let transactions = self.eth_provider.block_transactions(Some(block_id)).await?.unwrap_or_default();
+
+        let mut raw_transactions = Vec::with_capacity(transactions.len());
+
+        for t in transactions {
+            let signature = t.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
+            let tx = rpc_transaction_to_primitive(t).map_err(EthApiError::from)?;
+            let bytes = TransactionSigned::from_transaction_and_signature(
+                tx,
+                reth_primitives::Signature {
+                    r: signature.r,
+                    s: signature.s,
+                    odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
+                },
+            )
+            .envelope_encoded();
+            raw_transactions.push(bytes);
+        }
+
+        Ok(raw_transactions)
     }
 
     /// Returns an array of EIP-2718 binary-encoded receipts.
     async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
+        let receipts = self.eth_provider.block_receipts(Some(block_id)).await?.unwrap_or_default();
+
         // Initializes an empty vector to store the raw receipts
-        let mut raw_receipts = Vec::new();
+        let mut raw_receipts = Vec::with_capacity(receipts.len());
 
         // Iterates through the receipts of the block using the `block_receipts` method of the Ethereum API
-        for receipt in self.eth_provider.block_receipts(Some(block_id)).await?.unwrap_or_default() {
+        for receipt in receipts {
             // Converts the transaction type to a u8 and then tries to convert it into TxType
             let tx_type = match receipt.transaction_type.to::<u8>().try_into() {
                 Ok(tx_type) => tx_type,

@@ -113,8 +113,15 @@ pub trait EthereumProvider {
     ) -> EthProviderResult<FeeHistory>;
     /// Send a raw transaction to the network and returns the transactions hash.
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256>;
+    /// Returns the current gas price.
     async fn gas_price(&self) -> EthProviderResult<U256>;
+    /// Returns the block receipts for a block.
     async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>>;
+    /// Returns the transactions for a block.
+    async fn block_transactions(
+        &self,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -597,6 +604,30 @@ where
             }
         }
     }
+
+    async fn block_transactions(
+        &self,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
+        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
+        let block_id = match block_id {
+            BlockId::Number(maybe_number) => {
+                BlockHashOrNumber::Number(self.tag_into_block_number(maybe_number).await?.to())
+            }
+            BlockId::Hash(hash) => BlockHashOrNumber::Hash(hash.block_hash),
+        };
+
+        let block_exists = self.block_exists(block_id).await?;
+        if !block_exists {
+            return Ok(None);
+        }
+
+        let transactions = self.transactions(block_id, true).await?;
+        match transactions {
+            BlockTransactions::Full(transactions) => Ok(Some(transactions)),
+            _ => Err(TransactionError::ExpectedFullTransactions.into()),
+        }
+    }
 }
 
 impl<SP> EthDataProvider<SP>
@@ -710,21 +741,18 @@ where
             .map_err(|_| EthApiError::UnknownBlock)
     }
 
-    /// Get a block from the database based on a block hash or number.
-    /// If full is true, the block will contain the full transactions, otherwise just the hashes
-    async fn block(&self, block_id: BlockHashOrNumber, full: bool) -> EthProviderResult<Option<RichBlock>> {
-        let header = self.header(block_id).await?;
-        let header = match header {
-            Some(header) => header,
-            None => return Ok(None),
-        };
-
+    /// Return the transactions given a block id.
+    pub(crate) async fn transactions(
+        &self,
+        block_id: BlockHashOrNumber,
+        full: bool,
+    ) -> EthProviderResult<BlockTransactions> {
         let transactions_filter = match block_id {
             BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, 64),
             BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, 64),
         };
 
-        let transactions = if full {
+        let block_transactions = if full {
             BlockTransactions::Full(iter_into(
                 self.database.get::<StoredTransaction>("transactions", transactions_filter, None).await?,
             ))
@@ -735,6 +763,20 @@ where
                     .await?,
             ))
         };
+
+        Ok(block_transactions)
+    }
+
+    /// Get a block from the database based on a block hash or number.
+    /// If full is true, the block will contain the full transactions, otherwise just the hashes
+    async fn block(&self, block_id: BlockHashOrNumber, full: bool) -> EthProviderResult<Option<RichBlock>> {
+        let header = self.header(block_id).await?;
+        let header = match header {
+            Some(header) => header,
+            None => return Ok(None),
+        };
+
+        let transactions = self.transactions(block_id, full).await?;
 
         // The withdrawals are not supported, hence the withdrawals_root should always be empty.
         let withdrawal_root = header.header.withdrawals_root.unwrap_or_default();
