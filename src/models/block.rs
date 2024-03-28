@@ -62,7 +62,7 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
 }
 
 pub fn rpc_to_primitive_header(header: reth_rpc_types::Header) -> Result<reth_primitives::Header, KakarotError> {
-    return Ok(reth_primitives::Header {
+    Ok(reth_primitives::Header {
         base_fee_per_gas: header
             .base_fee_per_gas
             .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| ConversionError))
@@ -86,7 +86,7 @@ pub fn rpc_to_primitive_header(header: reth_rpc_types::Header) -> Result<reth_pr
         timestamp: header.timestamp.try_into().map_err(|_| ConversionError)?,
         transactions_root: header.transactions_root,
         withdrawals_root: header.withdrawals_root,
-    });
+    })
 }
 
 pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, KakarotError> {
