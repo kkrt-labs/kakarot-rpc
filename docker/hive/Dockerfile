@@ -53,7 +53,7 @@ FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
 ### Build the Cairo programs artifacts
-FROM python:3.9.13 as compiler
+FROM python:3.10.13 as compiler
 # install poetry
 ENV POETRY_VERSION=1.7.1
 ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin"
