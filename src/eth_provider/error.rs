@@ -42,6 +42,9 @@ pub enum EthApiError {
     /// Error related to receipt
     #[error("receipt error: {0}")]
     ReceiptError(#[from] ReceiptError),
+    /// Error related to header
+    #[error("header error: {0}")]
+    HeaderError(#[from] HeaderError),
     /// Error related to transaction
     #[error("transaction error: {0}")]
     TransactionError(#[from] TransactionError),
@@ -67,6 +70,7 @@ impl From<EthApiError> for ErrorObject<'static> {
             EthApiError::TransactionError(err) => rpc_err(err.error_code(), msg),
             EthApiError::SignatureError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::ReceiptError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
+            EthApiError::HeaderError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::Unsupported(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
             EthApiError::Internal(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
         }
@@ -216,6 +220,14 @@ pub enum SignatureError {
 /// Error related to receipts.
 #[derive(Debug, Error)]
 pub enum ReceiptError {
+    /// Error related to conversion.
+    #[error("conversion error")]
+    ConversionError,
+}
+
+/// Error related to headers.
+#[derive(Debug, Error)]
+pub enum HeaderError {
     /// Error related to conversion.
     #[error("conversion error")]
     ConversionError,

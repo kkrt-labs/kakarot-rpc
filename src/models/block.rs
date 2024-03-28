@@ -61,34 +61,35 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
     }
 }
 
+pub fn rpc_to_primitive_header(header: reth_rpc_types::Header) -> Result<reth_primitives::Header, KakarotError> {
+    return Ok(reth_primitives::Header {
+        base_fee_per_gas: header
+            .base_fee_per_gas
+            .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| ConversionError))
+            .transpose()?,
+        beneficiary: header.miner,
+        blob_gas_used: header.blob_gas_used.map(|blob_gas_used| blob_gas_used.to::<u64>()),
+        difficulty: header.difficulty,
+        excess_blob_gas: header.excess_blob_gas.map(|excess_blob_gas| excess_blob_gas.to::<u64>()),
+        extra_data: header.extra_data,
+        gas_limit: header.gas_limit.try_into().map_err(|_| ConversionError)?,
+        gas_used: header.gas_used.try_into().map_err(|_| ConversionError)?,
+        logs_bloom: header.logs_bloom,
+        mix_hash: header.mix_hash.unwrap_or_default(),
+        nonce: u64::from_be_bytes(header.nonce.unwrap_or_default().0),
+        number: header.number.ok_or(ConversionError)?.try_into().map_err(|_| ConversionError)?,
+        ommers_hash: header.uncles_hash,
+        parent_beacon_block_root: header.parent_beacon_block_root,
+        parent_hash: header.parent_hash,
+        receipts_root: header.receipts_root,
+        state_root: header.state_root,
+        timestamp: header.timestamp.try_into().map_err(|_| ConversionError)?,
+        transactions_root: header.transactions_root,
+        withdrawals_root: header.withdrawals_root,
+    });
+}
+
 pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, KakarotError> {
-    let base_fee_per_gas: Option<u64> = block
-        .header
-        .base_fee_per_gas
-        .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| ConversionError))
-        .transpose()?;
-    let header = reth_primitives::Header {
-        base_fee_per_gas,
-        beneficiary: block.header.miner,
-        blob_gas_used: block.header.blob_gas_used.map(|blob_gas_used| blob_gas_used.to::<u64>()),
-        difficulty: block.header.difficulty,
-        excess_blob_gas: block.header.excess_blob_gas.map(|excess_blob_gas| excess_blob_gas.to::<u64>()),
-        extra_data: block.header.extra_data,
-        gas_limit: block.header.gas_limit.try_into().map_err(|_| ConversionError)?,
-        gas_used: block.header.gas_used.try_into().map_err(|_| ConversionError)?,
-        logs_bloom: block.header.logs_bloom,
-        mix_hash: block.header.mix_hash.unwrap_or_default(),
-        nonce: u64::from_be_bytes(block.header.nonce.unwrap_or_default().0),
-        number: block.header.number.ok_or(ConversionError)?.try_into().map_err(|_| ConversionError)?,
-        ommers_hash: block.header.uncles_hash,
-        parent_beacon_block_root: block.header.parent_beacon_block_root,
-        parent_hash: block.header.parent_hash,
-        receipts_root: block.header.receipts_root,
-        state_root: block.header.state_root,
-        timestamp: block.header.timestamp.try_into().map_err(|_| ConversionError)?,
-        transactions_root: block.header.transactions_root,
-        withdrawals_root: block.header.withdrawals_root,
-    };
     let body = {
         let transactions: Result<Vec<TransactionSigned>, KakarotError> = match block.transactions {
             reth_rpc_types::BlockTransactions::Full(transactions) => transactions
@@ -116,7 +117,12 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
         transactions?
     };
     // ⚠️ Kakarot does not support omners or withdrawals and returns default values for those fields ⚠️
-    Ok(reth_primitives::Block { header, body, ommers: Default::default(), withdrawals: Some(Withdrawals::default()) })
+    Ok(reth_primitives::Block {
+        header: rpc_to_primitive_header(block.header)?,
+        body,
+        ommers: Default::default(),
+        withdrawals: Some(Withdrawals::default()),
+    })
 }
 
 #[cfg(test)]

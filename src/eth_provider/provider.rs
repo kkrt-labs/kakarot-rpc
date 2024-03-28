@@ -9,7 +9,7 @@ use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::{
-    other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Index,
+    other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index,
     RichBlock, TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
@@ -48,6 +48,8 @@ pub type EthProviderResult<T> = Result<T, EthApiError>;
 #[async_trait]
 #[auto_impl(Arc, &)]
 pub trait EthereumProvider {
+    /// Get header by block id
+    async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>>;
     /// Returns the latest block number.
     async fn block_number(&self) -> EthProviderResult<U64>;
     /// Returns the syncing status.
@@ -130,6 +132,19 @@ impl<SP> EthereumProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
+    async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>> {
+        let block = match block_id {
+            BlockId::Hash(hash) => BlockHashOrNumber::Hash((*hash).into()),
+            BlockId::Number(number_or_tag) => {
+                BlockHashOrNumber::Number(self.tag_into_block_number(*number_or_tag).await?.to::<u64>())
+            }
+        };
+
+        let stored_header = self.header(block).await?;
+
+        Ok(stored_header.map(|h| h.header))
+    }
+
     async fn block_number(&self) -> EthProviderResult<U64> {
         let filter = doc! {};
         let sort = doc! { "header.number": -1 };
