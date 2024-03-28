@@ -139,9 +139,8 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     async fn block_number(&self) -> EthProviderResult<U64> {
-        let filter = doc! {};
         let sort = doc! { "header.number": -1 };
-        let header: Option<StoredHeader> = self.database.get_one("headers", filter, sort).await?;
+        let header: Option<StoredHeader> = self.database.get_one("headers", None, sort).await?;
         let block_number = match header {
             None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?), // in case the database is empty, use the starknet provider
             Some(header) => {
@@ -632,8 +631,10 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    pub const fn new(database: Database, starknet_provider: SP, chain_id: u64) -> Self {
-        Self { database, starknet_provider, chain_id }
+    pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
+        let chain_id = starknet_provider.chain_id().await?;
+        let chain_id = (FieldElement::from(u64::MAX) & chain_id).try_into().unwrap(); // safe unwrap
+        Ok(Self { database, starknet_provider, chain_id })
     }
 
     #[cfg(feature = "testing")]

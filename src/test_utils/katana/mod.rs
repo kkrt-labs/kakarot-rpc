@@ -11,7 +11,7 @@ use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use reth_primitives::B256;
 use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::{JsonRpcClient, Provider};
+use starknet::providers::JsonRpcClient;
 
 use crate::eth_provider::provider::EthDataProvider;
 use crate::test_utils::eoa::KakarotEOA;
@@ -68,9 +68,9 @@ impl Katana {
 
         // Create a Kakarot client
         let database = mock_database().await;
-        let chain_id = starknet_provider.chain_id().await.unwrap_or_default();
-        let chain_id: u64 = chain_id.try_into().unwrap_or_default();
-        let eth_provider = Arc::new(EthDataProvider::new(database, starknet_provider, chain_id));
+        let eth_provider = Arc::new(
+            EthDataProvider::new(database, starknet_provider).await.expect("Failed to create EthDataProvider"),
+        );
 
         let eoa = KakarotEOA::new(pk, eth_provider);
 
