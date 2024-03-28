@@ -28,7 +28,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .eth_provider
             .header(&block_id)
             .await?
-            .map(|header_rpc| rpc_to_primitive_header(header_rpc))
+            .map(rpc_to_primitive_header)
             .transpose()
             .map_err(|_| EthApiError::HeaderError(HeaderError::ConversionError))?
         {
