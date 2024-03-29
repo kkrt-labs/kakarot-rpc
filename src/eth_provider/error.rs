@@ -1,8 +1,6 @@
 use jsonrpsee::types::ErrorObject;
 use thiserror::Error;
 
-use crate::models::ConversionError;
-
 /// List of JSON-RPC error codes from ETH rpc spec.
 /// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md
 #[derive(Debug, Copy, PartialEq, Eq, Clone)]
@@ -91,9 +89,6 @@ pub enum KakarotError {
     /// Error related to a starknet call.
     #[error(transparent)]
     CallError(#[from] cainome::cairo_serde::Error),
-    /// Error related to starknet to eth conversion or vice versa.
-    #[error(transparent)]
-    ConversionError(#[from] ConversionError),
 }
 
 impl From<KakarotError> for EthApiError {
@@ -227,6 +222,9 @@ pub enum EthereumDataFormatError {
     /// Error related to conversion in transaction.
     #[error("transaction conversion error")]
     TransactionConversionError,
+    /// Error related to starknet to eth conversion or vice versa.
+    #[error("primitive conversion error")]
+    PrimitiveError,
 }
 
 #[cfg(test)]
