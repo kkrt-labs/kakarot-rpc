@@ -36,15 +36,6 @@ pub enum EthApiError {
     /// When an invalid block range is provided
     #[error("invalid block range")]
     InvalidBlockRange,
-    /// Conversion error.
-    #[error("transaction conversion error")]
-    TransactionConversionError,
-    /// Error related to receipt
-    #[error("receipt error: {0}")]
-    ReceiptError(#[from] ReceiptError),
-    /// Error related to header
-    #[error("header error: {0}")]
-    HeaderError(#[from] HeaderError),
     /// Error related to transaction
     #[error("transaction error: {0}")]
     TransactionError(#[from] TransactionError),
@@ -57,6 +48,9 @@ pub enum EthApiError {
     /// Other internal error
     #[error("internal error: {0}")]
     Internal(KakarotError),
+    /// Ethereum data format error
+    #[error("ethereum data format error: {0}")]
+    EthereumDataFormatError(#[from] EthereumDataFormatError),
 }
 
 impl From<EthApiError> for ErrorObject<'static> {
@@ -66,11 +60,9 @@ impl From<EthApiError> for ErrorObject<'static> {
             EthApiError::UnknownBlock => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
             EthApiError::UnknownBlockNumber => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
             EthApiError::InvalidBlockRange => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::TransactionConversionError => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::TransactionError(err) => rpc_err(err.error_code(), msg),
             EthApiError::SignatureError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::ReceiptError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::HeaderError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
+            EthApiError::EthereumDataFormatError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::Unsupported(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
             EthApiError::Internal(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
         }
@@ -213,24 +205,23 @@ pub enum SignatureError {
     /// Thrown when signing fails.
     #[error("failed to sign")]
     SignError,
+    /// Thrown when signature is missing.
     #[error("missing signature")]
     MissingSignature,
 }
 
-/// Error related to receipts.
+/// Error related to Ethereum data format.
 #[derive(Debug, Error)]
-pub enum ReceiptError {
-    /// Error related to conversion.
-    #[error("conversion error")]
-    ConversionError,
-}
-
-/// Error related to headers.
-#[derive(Debug, Error)]
-pub enum HeaderError {
-    /// Error related to conversion.
-    #[error("conversion error")]
-    ConversionError,
+pub enum EthereumDataFormatError {
+    /// Error related to conversion in header.
+    #[error("header conversion error")]
+    HeaderConversionError,
+    /// Error related to conversion in receipt.
+    #[error("header conversion error")]
+    ReceiptConversionError,
+    /// Error related to conversion in transaction.
+    #[error("transaction conversion error")]
+    TransactionConversionError,
 }
 
 #[cfg(test)]

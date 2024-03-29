@@ -1,4 +1,4 @@
-use crate::eth_provider::error::{EthApiError, HeaderError, ReceiptError, SignatureError};
+use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::models::block::rpc_to_primitive_block;
 use crate::models::block::rpc_to_primitive_header;
@@ -30,7 +30,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .await?
             .map(rpc_to_primitive_header)
             .transpose()
-            .map_err(|_| EthApiError::HeaderError(HeaderError::ConversionError))?
+            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::HeaderConversionError))?
         {
             header.encode(&mut res);
         }
@@ -92,13 +92,21 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             // Converts the transaction type to a u8 and then tries to convert it into TxType
             let tx_type = match receipt.transaction_type.to::<u8>().try_into() {
                 Ok(tx_type) => tx_type,
-                Err(_) => return Err(EthApiError::ReceiptError(ReceiptError::ConversionError).into()),
+                Err(_) => {
+                    return Err(
+                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::ReceiptConversionError).into()
+                    )
+                }
             };
 
             // Tries to convert the cumulative gas used to u64
             let cumulative_gas_used = match TryInto::<u64>::try_into(receipt.cumulative_gas_used) {
                 Ok(cumulative_gas_used) => cumulative_gas_used,
-                Err(_) => return Err(EthApiError::ReceiptError(ReceiptError::ConversionError).into()),
+                Err(_) => {
+                    return Err(
+                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::ReceiptConversionError).into()
+                    )
+                }
             };
 
             // Creates a ReceiptWithBloom from the receipt data

@@ -24,7 +24,7 @@ use super::database::types::{
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
-use super::error::{EthApiError, EvmError, KakarotError, SignatureError, TransactionError};
+use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
 use super::starknet::kakarot_core::{
     self,
     contract_account::ContractAccountReader,
@@ -481,8 +481,8 @@ where
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
         let mut data = transaction.0.as_ref();
-        let transaction_signed =
-            TransactionSigned::decode(&mut data).map_err(|_| EthApiError::TransactionConversionError)?;
+        let transaction_signed = TransactionSigned::decode(&mut data)
+            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
 
         let chain_id =
             self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
@@ -541,7 +541,9 @@ where
                     .nonce(current_nonce)
                     .max_fee(FieldElement::from(u64::MAX))
                     .prepared()
-                    .map_err(|_| EthApiError::TransactionConversionError)?
+                    .map_err(|_| {
+                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError)
+                    })?
                     .get_invoke_request(false)
                     .await
                     .map_err(|_| SignatureError::SignError)?;
