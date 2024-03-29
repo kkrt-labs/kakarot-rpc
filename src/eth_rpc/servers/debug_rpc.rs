@@ -1,6 +1,7 @@
-use crate::eth_provider::error::{EthApiError, ReceiptError, SignatureError};
+use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::models::block::rpc_to_primitive_block;
+use crate::models::block::rpc_to_primitive_header;
 use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
@@ -21,8 +22,20 @@ impl<P: EthereumProvider> DebugRpc<P> {
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P> {
     /// Returns an RLP-encoded header.
-    async fn raw_header(&self, _block_id: BlockId) -> Result<Bytes> {
-        Err(EthApiError::Unsupported("debug_rawHeader").into())
+    async fn raw_header(&self, block_id: BlockId) -> Result<Bytes> {
+        let mut res = Vec::new();
+        if let Some(header) = self
+            .eth_provider
+            .header(&block_id)
+            .await?
+            .map(rpc_to_primitive_header)
+            .transpose()
+            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::HeaderConversionError))?
+        {
+            header.encode(&mut res);
+        }
+
+        Ok(res.into())
     }
 
     /// Returns an RLP-encoded block.
@@ -99,13 +112,21 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             // Converts the transaction type to a u8 and then tries to convert it into TxType
             let tx_type = match receipt.transaction_type.to::<u8>().try_into() {
                 Ok(tx_type) => tx_type,
-                Err(_) => return Err(EthApiError::ReceiptError(ReceiptError::ConversionError).into()),
+                Err(_) => {
+                    return Err(
+                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::ReceiptConversionError).into()
+                    )
+                }
             };
 
             // Tries to convert the cumulative gas used to u64
             let cumulative_gas_used = match TryInto::<u64>::try_into(receipt.cumulative_gas_used) {
                 Ok(cumulative_gas_used) => cumulative_gas_used,
-                Err(_) => return Err(EthApiError::ReceiptError(ReceiptError::ConversionError).into()),
+                Err(_) => {
+                    return Err(
+                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::ReceiptConversionError).into()
+                    )
+                }
             };
 
             // Creates a ReceiptWithBloom from the receipt data

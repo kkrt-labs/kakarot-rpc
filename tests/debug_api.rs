@@ -457,3 +457,82 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     // Stop the Kakarot RPC server.
     drop(server_handle);
 }
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
+    // Start Kakarot RPC server and get its address and handle.
+    let (server_addr, server_handle) =
+        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+    // Create a reqwest client.
+    let reqwest_client = reqwest::Client::new();
+
+    // Fetch raw header by block hash.
+    let res_by_block_hash = reqwest_client
+        .post(format!("http://localhost:{}", server_addr.port()))
+        .header("Content-Type", "application/json")
+        .body(
+            json!(
+                {
+                    "jsonrpc":"2.0",
+                    "method":"debug_getRawHeader",
+                    "params":[format!("0x{:064x}", *BLOCK_HASH)],
+                    "id":1,
+                }
+            )
+            .to_string(),
+        )
+        .send()
+        .await
+        .expect("Failed to call Debug RPC");
+    let response_by_block_hash = res_by_block_hash.text().await.expect("Failed to get response body");
+
+    // Deserialize response body and extract RLP bytes.
+    let raw_by_block_hash: Value =
+        serde_json::from_str(&response_by_block_hash).expect("Failed to deserialize response body");
+    let rlp_bytes_by_block_hash: Bytes =
+        serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
+
+    // Fetch raw header by block number.
+    let res_by_block_number = reqwest_client
+        .post(format!("http://localhost:{}", server_addr.port()))
+        .header("Content-Type", "application/json")
+        .body(
+            json!(
+                {
+                    "jsonrpc":"2.0",
+                    "method":"debug_getRawHeader",
+                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "id":1,
+                }
+            )
+            .to_string(),
+        )
+        .send()
+        .await
+        .expect("Failed to call Debug RPC");
+    let response_by_block_number = res_by_block_number.text().await.expect("Failed to get response body");
+    let raw_by_block_number: Value =
+        serde_json::from_str(&response_by_block_number).expect("Failed to deserialize response body");
+    let rlp_bytes_by_block_number: Bytes =
+        serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
+
+    // Assert equality of header fetched by block hash and block number.
+    assert_eq!(rlp_bytes_by_block_number, rlp_bytes_by_block_hash);
+
+    // Get eth provider.
+    let eth_provider = katana.eth_provider();
+
+    // Fetch the transaction receipt for the current receipt hash.
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(BLOCK_NUMBER), true).await.unwrap().unwrap();
+
+    // Encode header into RLP bytes and assert equality with RLP bytes fetched by block number.
+    let mut data = vec![];
+    rpc_to_primitive_block(block.inner).unwrap().header.encode(&mut data);
+    assert_eq!(rlp_bytes_by_block_number, data);
+
+    // Stop the Kakarot RPC server.
+    drop(server_handle);
+}

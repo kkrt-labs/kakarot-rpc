@@ -9,7 +9,7 @@ use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::{
-    other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Index,
+    other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index,
     RichBlock, TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
@@ -24,7 +24,7 @@ use super::database::types::{
     transaction::StoredTransactionHash,
 };
 use super::database::Database;
-use super::error::{EthApiError, EvmError, KakarotError, SignatureError, TransactionError};
+use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
 use super::starknet::kakarot_core::{
     self,
     contract_account::ContractAccountReader,
@@ -48,6 +48,8 @@ pub type EthProviderResult<T> = Result<T, EthApiError>;
 #[async_trait]
 #[auto_impl(Arc, &)]
 pub trait EthereumProvider {
+    /// Get header by block id
+    async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>>;
     /// Returns the latest block number.
     async fn block_number(&self) -> EthProviderResult<U64>;
     /// Returns the syncing status.
@@ -138,6 +140,19 @@ impl<SP> EthereumProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
+    async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>> {
+        let block = match block_id {
+            BlockId::Hash(hash) => BlockHashOrNumber::Hash((*hash).into()),
+            BlockId::Number(number_or_tag) => {
+                BlockHashOrNumber::Number(self.tag_into_block_number(*number_or_tag).await?.to::<u64>())
+            }
+        };
+
+        let stored_header = self.header(block).await?;
+
+        Ok(stored_header.map(|h| h.header))
+    }
+
     async fn block_number(&self) -> EthProviderResult<U64> {
         let sort = doc! { "header.number": -1 };
         let header: Option<StoredHeader> = self.database.get_one("headers", None, sort).await?;
@@ -470,8 +485,8 @@ where
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
         let mut data = transaction.0.as_ref();
-        let transaction_signed =
-            TransactionSigned::decode(&mut data).map_err(|_| EthApiError::TransactionConversionError)?;
+        let transaction_signed = TransactionSigned::decode(&mut data)
+            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
 
         let chain_id =
             self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
@@ -530,7 +545,9 @@ where
                     .nonce(current_nonce)
                     .max_fee(FieldElement::from(u64::MAX))
                     .prepared()
-                    .map_err(|_| EthApiError::TransactionConversionError)?
+                    .map_err(|_| {
+                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError)
+                    })?
                     .get_invoke_request(false)
                     .await
                     .map_err(|_| SignatureError::SignError)?;

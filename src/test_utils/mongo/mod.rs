@@ -66,6 +66,7 @@ pub async fn mock_database() -> Database {
     let hash_256_zero = format!("0x{:064x}", 0);
     let address_zero = format!("0x{:040x}", 0);
     let bloom_zero = format!("0x{:0512x}", 0);
+    let nonce_zero = format!("0x{:016x}", 0);
 
     let zero = format!("0x{:064x}", 0);
     let one = format!("0x{:064x}", 1);
@@ -78,6 +79,7 @@ pub async fn mock_database() -> Database {
         mongodb.collection("headers"),
         vec![
             doc! {"header": doc! {
+                "nonce": &nonce_zero,
                 "hash": &hash_256_zero,
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
@@ -96,6 +98,7 @@ pub async fn mock_database() -> Database {
                 "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
+                "nonce": &nonce_zero,
                 "hash": &hash_256_zero,
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
@@ -115,6 +118,7 @@ pub async fn mock_database() -> Database {
                 "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
+                "nonce": &nonce_zero,
                 "hash": &hash_256_zero,
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
@@ -134,6 +138,7 @@ pub async fn mock_database() -> Database {
                 "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
+                "nonce": &nonce_zero,
                 "hash": &hash_256_zero,
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
@@ -153,6 +158,7 @@ pub async fn mock_database() -> Database {
                 "withdrawalsRoot": &empty_root_hash,
             }},
             doc! {"header": doc! {
+                "nonce": &nonce_zero,
                 "hash": format!("0x{:064x}", *BLOCK_HASH),
                 "parentHash": &hash_256_zero,
                 "sha3Uncles": &hash_256_zero,
