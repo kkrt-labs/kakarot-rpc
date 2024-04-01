@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ef_testing::evm_sequencer::account::{AccountType, KakarotAccount};
+use ef_testing::evm_sequencer::account::KakarotAccount;
 use ethers::types::U256 as EthersU256;
 use katana_primitives::{
     contract::ContractAddress,
@@ -55,9 +55,8 @@ impl HiveGenesisConfig {
 
         // Get the current state of the builder.
         let kakarot_address = builder.cache_load("kakarot_address")?;
-        let proxy_class_hash = ClassHash(builder.proxy_class_hash()?.into());
-        let eoa_class_hash = ClassHash(builder.eoa_class_hash()?.into());
-        let contract_account_class_hash = ClassHash(builder.contract_account_class_hash()?.into());
+        let uninitialized_account_contract = ClassHash(builder.uninitialized_account_class_hash()?.into());
+        let account_contract_class_hash = ClassHash(builder.account_contract_class_hash()?.into());
 
         // Fetch the contracts from the alloc field.
         let mut additional_kakarot_storage = HashMap::with_capacity(self.alloc.len()); // 1 mapping per contract
@@ -80,24 +79,18 @@ impl HiveGenesisConfig {
                 let is_eoa = code.is_empty() & storage.is_empty();
                 let kakarot_account = KakarotAccount::new(&address, &code, U256::ZERO, &storage, is_eoa)?;
 
-                let account_type = kakarot_account.account_type();
                 let mut kakarot_account_storage: Vec<(FieldElement, FieldElement)> =
                     kakarot_account.storage().iter().map(|(k, v)| ((*k.0.key()).into(), (*v).into())).collect();
 
                 // Add the implementation and the kakarot address to the storage.
-                let implementation_key = get_storage_var_address("_implementation", &[])?;
-                match account_type {
-                    AccountType::Contract => {
-                        kakarot_account_storage.append(&mut vec![
-                            (implementation_key, contract_account_class_hash.0.into()),
-                            (get_storage_var_address("nonce", &[])?, FieldElement::ONE),
-                            (get_storage_var_address("Ownable_owner", &[])?, kakarot_address),
-                        ]);
-                    }
-                    AccountType::EOA => kakarot_account_storage.push((implementation_key, eoa_class_hash.0.into())),
-                    _ => unreachable!("Invalid account type"),
-                };
-                kakarot_account_storage.push((get_storage_var_address("kakarot_address", &[])?, kakarot_address));
+                let implementation_key = get_storage_var_address("Account_implementation", &[])?;
+                kakarot_account_storage.append(&mut vec![
+                    (implementation_key, account_contract_class_hash.0.into()),
+                    (get_storage_var_address("Account_nonce", &[])?, FieldElement::ONE),
+                    (get_storage_var_address("Ownable_owner", &[])?, kakarot_address),
+                ]);
+                kakarot_account_storage
+                    .push((get_storage_var_address("Account_kakarot_address", &[])?, kakarot_address));
 
                 let key = get_storage_var_address("ERC20_allowances", &[starknet_address, kakarot_address])?;
                 fee_token_storage.insert(key, FieldElement::from(u128::MAX));
@@ -106,7 +99,7 @@ impl HiveGenesisConfig {
                 Ok((
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
-                        class: Some(proxy_class_hash.0.into()),
+                        class: Some(uninitialized_account_contract.0.into()),
                         balance: Some(EthersU256::from_big_endian(&info.balance.to_be_bytes::<32>())),
                         nonce: None,
                         storage: Some(kakarot_account_storage.into_iter().collect()),

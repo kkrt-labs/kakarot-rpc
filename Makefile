@@ -20,9 +20,8 @@ deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py && cd ..
 
 load-env:
-	$(eval PROXY_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.proxy' $(MANIFEST)))
-	$(eval CONTRACT_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.contract_account' $(MANIFEST)))
-	$(eval EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.externally_owned_account' $(MANIFEST)))
+	$(eval UNINITIALIZED_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.uninitialized_account' $(MANIFEST)))
+	$(eval ACCOUNT_CONTRACT_CLASS_HASH=$(shell jq -r '.declarations.account_contract' $(MANIFEST)))
 	$(eval KAKAROT_ADDRESS=$(shell jq -r '.deployments.kakarot_address' $(MANIFEST)))
 
 run-dev: load-env

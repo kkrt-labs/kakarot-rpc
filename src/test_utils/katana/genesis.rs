@@ -121,16 +121,12 @@ impl<T> KatanaGenesisBuilder<T> {
         self.class_hashes.get("kakarot").cloned().ok_or(eyre!("Missing Kakarot class hash"))
     }
 
-    pub fn contract_account_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("contract_account").cloned().ok_or(eyre!("Missing contract account class hash"))
+    pub fn account_contract_class_hash(&self) -> Result<FieldElement> {
+        self.class_hashes.get("account_contract").cloned().ok_or(eyre!("Missing account contract class hash"))
     }
 
-    pub fn eoa_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("externally_owned_account").cloned().ok_or(eyre!("Missing eoa account class hash"))
-    }
-
-    pub fn proxy_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("proxy").cloned().ok_or(eyre!("Missing proxy class hash"))
+    pub fn uninitialized_account_class_hash(&self) -> Result<FieldElement> {
+        self.class_hashes.get("uninitialized_account").cloned().ok_or(eyre!("Missing uninitialized account class hash"))
     }
 
     pub fn precompiles_class_hash(&self) -> Result<FieldElement> {
@@ -198,9 +194,8 @@ impl KatanaGenesisBuilder<Loaded> {
     pub fn with_kakarot(mut self, coinbase_address: FieldElement) -> Result<KatanaGenesisBuilder<Initialized>> {
         let kakarot_class_hash = self.kakarot_class_hash()?;
 
-        let contract_account_class_hash = self.contract_account_class_hash()?;
-        let eoa_class_hash = self.eoa_class_hash()?;
-        let proxy_class_hash = self.proxy_class_hash()?;
+        let account_contract_class_hash = self.account_contract_class_hash()?;
+        let uninitialized_account_class_hash = self.uninitialized_account_class_hash()?;
         let precompiles_class_hash = self.precompiles_class_hash()?;
 
         let block_gas_limit = FieldElement::from(20_000_000u64);
@@ -214,9 +209,8 @@ impl KatanaGenesisBuilder<Loaded> {
             &[
                 FieldElement::ZERO,
                 DEFAULT_FEE_TOKEN_ADDRESS.0,
-                contract_account_class_hash,
-                eoa_class_hash,
-                proxy_class_hash,
+                account_contract_class_hash,
+                uninitialized_account_class_hash,
                 precompiles_class_hash,
                 block_gas_limit,
             ],
@@ -226,15 +220,14 @@ impl KatanaGenesisBuilder<Loaded> {
 
         // Construct the kakarot contract storage.
         let kakarot_storage = [
-            (storage_addr("native_token_address")?, *DEFAULT_FEE_TOKEN_ADDRESS),
-            (storage_addr("contract_account_class_hash")?, contract_account_class_hash),
-            (storage_addr("externally_owned_account_class_hash")?, eoa_class_hash),
-            (storage_addr("account_proxy_class_hash")?, proxy_class_hash),
-            (storage_addr("precompiles_class_hash")?, precompiles_class_hash),
-            (storage_addr("coinbase")?, coinbase_address),
-            (storage_addr("base_fee")?, FieldElement::ZERO),
-            (storage_addr("prev_randao")?, FieldElement::ZERO),
-            (storage_addr("block_gas_limit")?, block_gas_limit),
+            (storage_addr("Kakarot_native_token_address")?, *DEFAULT_FEE_TOKEN_ADDRESS),
+            (storage_addr("Kakarot_account_contract_class_hash")?, account_contract_class_hash),
+            (storage_addr("Kakarot_uninitialized_account_class_hash")?, uninitialized_account_class_hash),
+            (storage_addr("Kakarot_precompiles_class_hash")?, precompiles_class_hash),
+            (storage_addr("Kakarot_coinbase")?, coinbase_address),
+            (storage_addr("Kakarot_base_fee")?, FieldElement::ZERO),
+            (storage_addr("Kakarot_prev_randao")?, FieldElement::ZERO),
+            (storage_addr("Kakarot_block_gas_limit")?, block_gas_limit),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
@@ -259,20 +252,20 @@ impl KatanaGenesisBuilder<Initialized> {
         let evm_address = self.evm_address(private_key)?;
 
         let kakarot_address = self.cache_load("kakarot_address")?;
-        let eoa_class_hash = self.eoa_class_hash()?;
-        let proxy_class_hash = self.proxy_class_hash()?;
+        let account_contract_class_hash = self.account_contract_class_hash()?;
 
         // Set the eoa storage
         let eoa_storage = [
-            (storage_addr("evm_address")?, evm_address),
-            (storage_addr("kakarot_address")?, kakarot_address),
-            (storage_addr("_implementation")?, eoa_class_hash),
+            (storage_addr("Account_evm_address")?, evm_address),
+            (storage_addr("Account_kakarot_address")?, kakarot_address),
+            (storage_addr("Ownable_owner")?, kakarot_address),
+            (storage_addr("Account_implementation")?, account_contract_class_hash),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
 
         let eoa = GenesisContractJson {
-            class: Some(proxy_class_hash),
+            class: Some(account_contract_class_hash),
             balance: None,
             nonce: None,
             storage: Some(eoa_storage),
@@ -290,10 +283,10 @@ impl KatanaGenesisBuilder<Initialized> {
         // Write the address to the Kakarot evm to starknet mapping
         let kakarot_address = ContractAddress::new(kakarot_address);
         let kakarot_contract = self.contracts.get_mut(&kakarot_address).ok_or(eyre!("Kakarot contract missing"))?;
-        kakarot_contract
-            .storage
-            .get_or_insert_with(HashMap::new)
-            .extend([(get_storage_var_address("evm_to_starknet_address", &[evm_address])?, starknet_address.0)]);
+        kakarot_contract.storage.get_or_insert_with(HashMap::new).extend([(
+            get_storage_var_address("Kakarot_evm_to_starknet_address", &[evm_address])?,
+            starknet_address.0,
+        )]);
 
         Ok(self)
     }
@@ -353,9 +346,14 @@ impl KatanaGenesisBuilder<Initialized> {
     /// Compute the Starknet address for the given Ethereum address.
     pub fn compute_starknet_address(&self, evm_address: FieldElement) -> Result<ContractAddress> {
         let kakarot_address = self.cache_load("kakarot_address")?;
-        let proxy_class_hash = self.proxy_class_hash()?;
+        let uninitialized_account_class_hash = self.uninitialized_account_class_hash()?;
 
-        Ok(ContractAddress::new(get_contract_address(evm_address, proxy_class_hash, &[], kakarot_address)))
+        Ok(ContractAddress::new(get_contract_address(
+            evm_address,
+            uninitialized_account_class_hash,
+            &[kakarot_address, evm_address],
+            kakarot_address,
+        )))
     }
 
     fn evm_address(&self, pk: B256) -> Result<FieldElement> {

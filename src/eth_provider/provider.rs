@@ -27,11 +27,9 @@ use super::database::Database;
 use super::error::{EthApiError, EvmError, KakarotError, SignatureError, TransactionError};
 use super::starknet::kakarot_core::{
     self,
-    contract_account::ContractAccountReader,
+    account_contract::AccountContractReader,
     core::{KakarotCoreReader, Uint256},
-    proxy::ProxyReader,
-    starknet_address, to_starknet_transaction, CONTRACT_ACCOUNT_CLASS_HASH, EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH,
-    KAKAROT_ADDRESS,
+    starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
 use super::utils::{
@@ -293,10 +291,10 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
-        let contract = ContractAccountReader::new(address, &self.starknet_provider);
+        let contract = AccountContractReader::new(address, &self.starknet_provider);
 
         let keys = split_u256::<FieldElement>(index.0);
-        let storage_address = get_storage_var_address("storage_", &keys).expect("Storage var name is not ASCII");
+        let storage_address = get_storage_var_address("Account_storage", &keys).expect("Storage var name is not ASCII");
 
         let storage = contract
             .storage(&storage_address)
@@ -317,22 +315,14 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
-        let proxy = ProxyReader::new(address, &self.starknet_provider);
-        let maybe_class_hash = proxy.get_implementation().block_id(starknet_block_id).call().await;
+        let account_contract = AccountContractReader::new(address, &self.starknet_provider);
+        let maybe_nonce = account_contract.get_nonce().block_id(starknet_block_id).call().await;
 
-        if contract_not_found(&maybe_class_hash) {
+        if contract_not_found(&maybe_nonce) {
             return Ok(U256::ZERO);
         }
-        let class_hash = maybe_class_hash.map_err(KakarotError::from)?.implementation;
+        let nonce = maybe_nonce.map_err(KakarotError::from)?.nonce;
 
-        let nonce = if class_hash == *EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH {
-            self.starknet_provider.get_nonce(starknet_block_id, address).await.map_err(KakarotError::from)?
-        } else if class_hash == *CONTRACT_ACCOUNT_CLASS_HASH {
-            let contract = ContractAccountReader::new(address, &self.starknet_provider);
-            contract.get_nonce().block_id(starknet_block_id).call().await.map_err(KakarotError::from)?.nonce
-        } else {
-            FieldElement::ZERO
-        };
         Ok(into_via_wrapper!(nonce))
     }
 
@@ -340,8 +330,8 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
-        let contract = ContractAccountReader::new(address, &self.starknet_provider);
-        let bytecode = contract.bytecode().block_id(starknet_block_id).call().await;
+        let account_contract = AccountContractReader::new(address, &self.starknet_provider);
+        let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().await;
 
         if contract_not_found(&bytecode) || entrypoint_not_found(&bytecode) {
             return Ok(Bytes::default());
@@ -509,11 +499,14 @@ where
             use starknet::core::types::BlockTag;
             use starknet::core::utils::get_selector_from_name;
             let sender = transaction.sender_address;
-            let proxy = ProxyReader::new(sender, &self.starknet_provider);
-            let maybe_class_hash =
-                proxy.get_implementation().block_id(starknet::core::types::BlockId::Tag(BlockTag::Latest)).call().await;
+            let account_contract = AccountContractReader::new(sender, &self.starknet_provider);
+            let maybe_is_initialized = account_contract
+                .is_initialized()
+                .block_id(starknet::core::types::BlockId::Tag(BlockTag::Latest))
+                .call()
+                .await;
 
-            if contract_not_found(&maybe_class_hash) {
+            if contract_not_found(&maybe_is_initialized) {
                 let execution = Execution::new(
                     vec![Call {
                         to: *KAKAROT_ADDRESS,
