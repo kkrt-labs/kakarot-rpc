@@ -55,7 +55,6 @@ impl HiveGenesisConfig {
 
         // Get the current state of the builder.
         let kakarot_address = builder.cache_load("kakarot_address")?;
-        let uninitialized_account_contract = ClassHash(builder.uninitialized_account_class_hash()?.into());
         let account_contract_class_hash = ClassHash(builder.account_contract_class_hash()?.into());
 
         // Fetch the contracts from the alloc field.
@@ -69,8 +68,10 @@ impl HiveGenesisConfig {
                 let starknet_address = builder.compute_starknet_address(evm_address)?.0;
 
                 // Store the mapping from EVM to Starknet address.
-                additional_kakarot_storage
-                    .insert(get_storage_var_address("evm_to_starknet_address", &[evm_address])?, starknet_address);
+                additional_kakarot_storage.insert(
+                    get_storage_var_address("Kakarot_evm_to_starknet_address", &[evm_address])?,
+                    starknet_address,
+                );
 
                 // Get the Kakarot account in order to have the account type and storage.
                 let code = info.code.unwrap_or_default();
@@ -99,7 +100,7 @@ impl HiveGenesisConfig {
                 Ok((
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
-                        class: Some(uninitialized_account_contract.0.into()),
+                        class: Some(account_contract_class_hash.0.into()),
                         balance: Some(EthersU256::from_big_endian(&info.balance.to_be_bytes::<32>())),
                         nonce: None,
                         storage: Some(kakarot_account_storage.into_iter().collect()),
@@ -170,7 +171,7 @@ mod tests {
             assert_eq!(contract.balance, Some(EthersU256::from_big_endian(&account.balance.to_be_bytes::<32>())));
             // Check the storage
             for (key, value) in account.storage.unwrap_or_default() {
-                let key = get_storage_var_address("storage_", &split_u256::<FieldElement>(key)).unwrap();
+                let key = get_storage_var_address("Account_storage", &split_u256::<FieldElement>(key)).unwrap();
                 let low =
                     U256::from_be_slice(contract.storage.as_ref().unwrap().get(&key).unwrap().to_bytes_be().as_slice());
                 let high = U256::from_be_slice(

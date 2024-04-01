@@ -111,11 +111,11 @@ COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/
 
 
 RUN cargo build \
-    --features hive --target-dir /usr/src/rpc/target && \
+    --features hive --release --target-dir /usr/src/rpc/target && \
     cargo build \
-    --bin hive_genesis --features testing --target-dir /usr/src/rpc/target && \
+    --bin hive_genesis --release --features testing --target-dir /usr/src/rpc/target && \
     cargo build \ 
-    --bin hive_chain --features testing --target-dir /usr/src/rpc/target
+    --bin hive_chain --release --features testing --target-dir /usr/src/rpc/target
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
@@ -174,9 +174,9 @@ RUN mkdir -p /data/db
 
 
 # Generate the genesis
-COPY --from=builder /usr/src/rpc/target/debug/kakarot-rpc /usr/local/bin/kakarot-rpc
-COPY --from=builder /usr/src/rpc/target/debug/hive_genesis /usr/local/bin/hive_genesis
-COPY --from=builder /usr/src/rpc/target/debug/hive_chain /usr/local/bin/hive_chain
+COPY --from=builder /usr/src/rpc/target/release/kakarot-rpc /usr/local/bin/kakarot-rpc
+COPY --from=builder /usr/src/rpc/target/release/hive_genesis /usr/local/bin/hive_genesis
+COPY --from=builder /usr/src/rpc/target/release/hive_chain /usr/local/bin/hive_chain
 RUN mkdir -p /genesis/contracts
 COPY --from=compiler /usr/src/compiler/.kakarot/build /genesis/contracts
 

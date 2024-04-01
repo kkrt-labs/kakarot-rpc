@@ -129,7 +129,6 @@ impl JsonRpcClientBuilder<HttpTransport> {
     ///     FieldElement::default(),
     ///     FieldElement::default(),
     ///     FieldElement::default(),
-    ///     FieldElement::default(),
     /// );
     /// let starknet_provider: JsonRpcClient<HttpTransport> =
     ///     JsonRpcClientBuilder::with_http(&config).unwrap().build();
