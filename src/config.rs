@@ -53,29 +53,20 @@ pub struct KakarotRpcConfig {
     pub network: Network,
     /// Kakarot contract address.
     pub kakarot_address: FieldElement,
-    /// Proxy account class hash.
-    pub proxy_account_class_hash: FieldElement,
-    /// Eoa class hash.
-    pub externally_owned_account_class_hash: FieldElement,
-    /// Contract Account class hash.
-    pub contract_account_class_hash: FieldElement,
+    /// Uninitialized account class hash.
+    pub uninitialized_account_class_hash: FieldElement,
+    /// Account contract class hash.
+    pub account_contract_class_hash: FieldElement,
 }
 
 impl KakarotRpcConfig {
     pub const fn new(
         network: Network,
         kakarot_address: FieldElement,
-        proxy_account_class_hash: FieldElement,
-        externally_owned_account_class_hash: FieldElement,
-        contract_account_class_hash: FieldElement,
+        uninitialized_account_class_hash: FieldElement,
+        account_contract_class_hash: FieldElement,
     ) -> Self {
-        Self {
-            network,
-            kakarot_address,
-            proxy_account_class_hash,
-            externally_owned_account_class_hash,
-            contract_account_class_hash,
-        }
+        Self { network, kakarot_address, uninitialized_account_class_hash, account_contract_class_hash }
     }
 
     /// Create a new `StarknetConfig` from environment variables.
@@ -96,17 +87,10 @@ impl KakarotRpcConfig {
         };
 
         let kakarot_address = env_var_to_field_element("KAKAROT_ADDRESS")?;
-        let proxy_account_class_hash = env_var_to_field_element("PROXY_ACCOUNT_CLASS_HASH")?;
-        let externally_owned_account_class_hash = env_var_to_field_element("EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH")?;
-        let contract_account_class_hash = env_var_to_field_element("CONTRACT_ACCOUNT_CLASS_HASH")?;
+        let uninitialized_account_class_hash = env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH")?;
+        let account_contract_class_hash = env_var_to_field_element("ACCOUNT_CONTRACT_CLASS_HASH")?;
 
-        Ok(Self::new(
-            network,
-            kakarot_address,
-            proxy_account_class_hash,
-            externally_owned_account_class_hash,
-            contract_account_class_hash,
-        ))
+        Ok(Self::new(network, kakarot_address, uninitialized_account_class_hash, account_contract_class_hash))
     }
 }
 
@@ -142,7 +126,6 @@ impl JsonRpcClientBuilder<HttpTransport> {
     /// let url = "http://0.0.0.0:1234/rpc";
     /// let config = KakarotRpcConfig::new(
     ///     Network::JsonRpcProvider(Url::parse(url).unwrap()),
-    ///     FieldElement::default(),
     ///     FieldElement::default(),
     ///     FieldElement::default(),
     ///     FieldElement::default(),

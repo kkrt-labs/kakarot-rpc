@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::models::felt::Felt252Wrapper;
+use crate::{into_via_try_wrapper, models::felt::Felt252Wrapper};
 use alloy_rlp::Encodable;
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
@@ -19,14 +19,9 @@ use crate::{
 
 // Contract ABIs
 
-pub mod proxy {
+pub mod account_contract {
     use super::*;
-    abigen_legacy!(Proxy, "./.kakarot/artifacts/proxy.json");
-}
-
-pub mod contract_account {
-    use super::*;
-    abigen_legacy!(ContractAccount, "./.kakarot/artifacts/contract_account.json");
+    abigen_legacy!(AccountContract, "./.kakarot/artifacts/account_contract.json");
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -47,9 +42,7 @@ lazy_static! {
     pub static ref KAKAROT_ADDRESS: FieldElement = env_var_to_field_element("KAKAROT_ADDRESS");
 
     // Contract class hashes
-    pub static ref PROXY_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("PROXY_ACCOUNT_CLASS_HASH");
-    pub static ref EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH: FieldElement =
-        env_var_to_field_element("EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH");
+    pub static ref UNINITIALIZED_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH");
     pub static ref CONTRACT_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("CONTRACT_ACCOUNT_CLASS_HASH");
 
     // Contract selectors
@@ -60,7 +53,13 @@ lazy_static! {
 /// Compute the starknet address given a eth address
 #[inline]
 pub fn starknet_address(address: Address) -> FieldElement {
-    get_contract_address(into_via_wrapper!(address), *PROXY_ACCOUNT_CLASS_HASH, &[], *KAKAROT_ADDRESS)
+    let evm_address = into_via_try_wrapper!(address).unwrap();
+    get_contract_address(
+        into_via_wrapper!(address),
+        *UNINITIALIZED_ACCOUNT_CLASS_HASH,
+        &[*KAKAROT_ADDRESS, evm_address],
+        *KAKAROT_ADDRESS,
+    )
 }
 
 /// Convert a Ethereum transaction into a Starknet transaction

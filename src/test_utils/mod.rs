@@ -1,3 +1,4 @@
+pub mod constants;
 pub mod eoa;
 pub mod evm_contract;
 pub mod fixtures;
