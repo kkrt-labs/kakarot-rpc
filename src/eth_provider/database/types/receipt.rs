@@ -1,4 +1,6 @@
+#[cfg(any(test, feature = "arbitrary"))]
 use arbitrary::Arbitrary;
+#[cfg(any(test, feature = "arbitrary"))]
 use reth_primitives::{Address, Bloom, Receipt, B256, U128, U256, U64, U8};
 use reth_rpc_types::TransactionReceipt;
 use serde::Deserialize;
