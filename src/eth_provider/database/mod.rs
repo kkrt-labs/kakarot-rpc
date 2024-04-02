@@ -1,5 +1,6 @@
 pub mod types;
 
+use super::error::KakarotError;
 use futures::TryStreamExt;
 use mongodb::{
     bson::Document,
@@ -7,9 +8,6 @@ use mongodb::{
     Database as MongoDatabase,
 };
 use serde::de::DeserializeOwned;
-use std::ops::{Deref, DerefMut};
-
-use super::error::KakarotError;
 
 type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 
@@ -20,6 +18,16 @@ pub struct Database(MongoDatabase);
 impl Database {
     pub const fn new(database: MongoDatabase) -> Self {
         Self(database)
+    }
+
+    /// Get a reference to the inner MongoDatabase
+    pub fn inner(&self) -> &MongoDatabase {
+        &self.0
+    }
+
+    /// Get a mutable reference to the inner MongoDatabase
+    pub fn inner_mut(&mut self) -> &mut MongoDatabase {
+        &mut self.0
     }
 
     /// Get a list of documents from a collection
@@ -59,20 +67,6 @@ impl Database {
         let collection = self.0.collection::<Document>(collection);
         let count = collection.count_documents(filter, None).await?;
         Ok(count)
-    }
-}
-
-impl Deref for Database {
-    type Target = MongoDatabase;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for Database {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
 

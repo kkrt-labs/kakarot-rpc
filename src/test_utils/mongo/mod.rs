@@ -508,7 +508,7 @@ impl<'a> MongoFuzzer<'a> {
             }
         };
 
-        let collection: Collection<Document> = self.mongodb.collection(collection_name);
+        let collection: Collection<Document> = self.mongodb.inner().collection(collection_name);
         let key = [doc, value].join(".");
 
         if let Some(updates) = updates {
