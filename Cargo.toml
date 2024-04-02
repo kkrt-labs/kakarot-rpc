@@ -102,6 +102,7 @@ katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-
   "serde",
 ] }
 
+rand = "0.8.5"
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979" }

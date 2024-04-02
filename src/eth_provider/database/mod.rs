@@ -7,21 +7,21 @@ use mongodb::{
     Database as MongoDatabase,
 };
 use serde::de::DeserializeOwned;
+use std::ops::{Deref, DerefMut};
 
 use super::error::KakarotError;
 
 type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 
 /// Wrapper around a MongoDB database
+#[derive(Clone, Debug)]
 pub struct Database(MongoDatabase);
 
 impl Database {
     pub const fn new(database: MongoDatabase) -> Self {
         Self(database)
     }
-}
 
-impl Database {
     /// Get a list of documents from a collection
     pub async fn get<T>(
         &self,
@@ -59,5 +59,25 @@ impl Database {
         let collection = self.0.collection::<Document>(collection);
         let count = collection.count_documents(filter, None).await?;
         Ok(count)
+    }
+}
+
+impl Deref for Database {
+    type Target = MongoDatabase;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for Database {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<MongoDatabase> for Database {
+    fn from(database: MongoDatabase) -> Self {
+        Self(database)
     }
 }
