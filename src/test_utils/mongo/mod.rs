@@ -504,12 +504,12 @@ impl<R: Rng + Clone> MongoFuzzer<R> {
         match collection {
             CollectionDB::Transactions | CollectionDB::Receipts => {
                 let (tx, receipt) = self.transaction_documents();
-                self.documents.entry(CollectionDB::Transactions).or_insert_with(Vec::new).push(tx);
-                self.documents.entry(CollectionDB::Receipts).or_insert_with(Vec::new).push(receipt);
+                self.documents.entry(CollectionDB::Transactions).or_default().push(tx);
+                self.documents.entry(CollectionDB::Receipts).or_default().push(receipt);
             }
             CollectionDB::Headers => {
                 let header = self.header_document();
-                self.documents.entry(CollectionDB::Headers).or_insert_with(Vec::new).push(header);
+                self.documents.entry(CollectionDB::Headers).or_default().push(header);
             }
         }
     }
@@ -571,7 +571,7 @@ impl<R: Rng + Clone> MongoFuzzer<R> {
                 let u = doc! {doc: u};
                 collection
                     .update_one(
-                        doc! {&key: u.get_document(&doc).unwrap().get_str(&value).unwrap()},
+                        doc! {&key: u.get_document(doc).unwrap().get_str(value).unwrap()},
                         UpdateModifications::Document(doc! {"$set": u}),
                         UpdateOptions::builder().upsert(true).build(),
                     )
