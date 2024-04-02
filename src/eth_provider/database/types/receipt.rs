@@ -3,10 +3,10 @@ use arbitrary::Arbitrary;
 #[cfg(any(test, feature = "arbitrary"))]
 use reth_primitives::{Address, Bloom, Receipt, B256, U128, U256, U64, U8};
 use reth_rpc_types::TransactionReceipt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// A transaction receipt as stored in the database
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredTransactionReceipt {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub receipt: TransactionReceipt,

@@ -4,10 +4,10 @@ use reth_primitives::B256;
 #[cfg(any(test, feature = "arbitrary"))]
 use reth_primitives::{Address, TransactionSigned, U128, U256, U64};
 use reth_rpc_types::Transaction;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// A full transaction as stored in the database
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredTransaction {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
@@ -44,7 +44,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                 nonce: U64::from(transaction.nonce()),
                 block_hash: Some(B256::arbitrary(u)?),
                 block_number: Some(U256::arbitrary(u)?),
-                transaction_index: Some(U256::arbitrary(u)?),
+                transaction_index: Some(U256::from(U64::arbitrary(u)?)),
                 from: Address::arbitrary(u)?,
                 to: transaction.to(),
                 value: transaction.value(),

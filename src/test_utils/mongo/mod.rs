@@ -1,15 +1,24 @@
-use std::str::FromStr;
-
+use crate::eth_provider::database::types::{
+    header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+};
 use crate::eth_provider::database::Database;
+#[cfg(any(test, feature = "arbitrary"))]
+use arbitrary::Arbitrary;
 use lazy_static::lazy_static;
+#[cfg(any(test, feature = "arbitrary"))]
+use mongodb::bson;
 use mongodb::{
     bson::{doc, Document},
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
-use rand::Rng;
+#[cfg(any(test, feature = "arbitrary"))]
+use reth_primitives::U8;
 use reth_primitives::{constants::EMPTY_ROOT_HASH, Address, B256, U128, U256, U64};
+use serde::{Serialize, Serializer};
+#[cfg(any(test, feature = "arbitrary"))]
 use std::collections::HashMap;
+use std::str::FromStr;
 use testcontainers::{
     clients::{self, Cli},
     core::WaitFor,
@@ -351,19 +360,45 @@ pub enum CollectionDB {
     Receipts,
 }
 
-/// Struct representing a data generator for MongoDB.
-pub struct MongoFuzzer<R: Rng + Clone> {
-    /// Random number generator.
-    rng: R,
-    /// Documents to insert into each collection.
-    documents: HashMap<CollectionDB, Vec<Document>>,
-    /// Connection to the MongoDB database.
-    mongodb: Database,
+/// Type alias for the different types of stored data associated with each CollectionDB.
+#[derive(Eq, PartialEq, Clone)]
+pub enum StoredData {
+    StoredHeader(StoredHeader),
+    StoredTransaction(StoredTransaction),
+    StoredTransactionReceipt(StoredTransactionReceipt),
 }
 
-impl<R: Rng + Clone> MongoFuzzer<R> {
+impl Serialize for StoredData {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            StoredData::StoredHeader(header) => header.serialize(serializer),
+            StoredData::StoredTransaction(transaction) => transaction.serialize(serializer),
+            StoredData::StoredTransactionReceipt(receipt) => receipt.serialize(serializer),
+        }
+    }
+}
+
+/// Struct representing a data generator for MongoDB.
+#[cfg(any(test, feature = "arbitrary"))]
+pub struct MongoFuzzer<'a> {
+    /// Documents to insert into each collection.
+    documents: HashMap<CollectionDB, Vec<StoredData>>,
+    /// Connection to the MongoDB database.
+    mongodb: Database,
+    /// Unstructured data
+    u: &'a mut arbitrary::Unstructured<'a>,
+}
+
+#[cfg(any(test, feature = "arbitrary"))]
+impl<'a> MongoFuzzer<'a> {
     /// Creates a new instance of `MongoFuzzer` with the specified random number generator.
-    pub async fn new(rng: R) -> Self {
+    pub async fn new<'b>(u: &'b mut arbitrary::Unstructured<'a>) -> Self
+    where
+        'b: 'a,
+    {
         let port = CONTAINER.get_host_port_ipv4(27017);
 
         let mongo_client = Client::with_uri_str(format!("mongodb://root:root@localhost:{}", port))
@@ -380,7 +415,7 @@ impl<R: Rng + Clone> MongoFuzzer<R> {
             )
             .into();
 
-        Self { rng, documents: Default::default(), mongodb }
+        Self { u, documents: Default::default(), mongodb }
     }
 
     /// Finalizes the data generation and returns the MongoDB database.
@@ -393,157 +428,64 @@ impl<R: Rng + Clone> MongoFuzzer<R> {
     }
 
     /// Mocks a database with the given number of headers and transactions.
-    pub async fn mock_database(rng: R, n_headers: usize, n_transactions: usize) -> Database {
-        let mut mongo_fuzzer = Self::new(rng).await;
+    pub async fn mock_database<'b>(
+        u: &'b mut arbitrary::Unstructured<'a>,
+        n_headers: usize,
+        n_transactions: usize,
+    ) -> Database
+    where
+        'b: 'a,
+    {
+        let mut mongo_fuzzer = MongoFuzzer::new(u).await;
         mongo_fuzzer.add_headers(n_headers);
         mongo_fuzzer.add_transactions(n_transactions);
         mongo_fuzzer.finalize().await
     }
 
-    /// Generates a document representing a block header.
-    pub fn header_document(&mut self) -> Document {
-        doc! {
-            "nonce": self.generate_random_hex_string(16),
-            "hash": self.generate_random_hex_string(64),
-            "parentHash": self.generate_random_hex_string(64),
-            "sha3Uncles": self.generate_random_hex_string(64),
-            "miner": self.generate_random_hex_string(40),
-            "stateRoot": self.generate_random_hex_string(64),
-            "transactionsRoot": self.generate_random_hex_string(64),
-            "receiptsRoot": self.generate_random_hex_string(64),
-            "logsBloom": self.generate_random_hex_string(512),
-            "difficulty": self.generate_random_hex_string(64),
-            "number": self.generate_random_hex_string(16),
-            "gasLimit": self.generate_random_hex_string(16),
-            "gasUsed": self.generate_random_hex_string(16),
-            "timestamp": self.generate_random_hex_string(16),
-            "extraData": self.generate_random_hex_string(64),
-            "mixHash": self.generate_random_hex_string(64),
-            "withdrawalsRoot": self.generate_random_hex_string(64),
-        }
-    }
-
-    /// Generates documents representing a transaction and its receipt.
-    pub fn transaction_documents(&mut self) -> (Document, Document) {
-        let tx_hash = self.generate_random_hex_string(64);
-        let tx_index = self.generate_random_hex_string(16);
-        let from = self.generate_random_hex_string(40);
-        let to = self.generate_random_hex_string(40);
-        let block_number = self.generate_random_hex_string(16);
-        let block_hash = self.generate_random_hex_string(64);
-        let tx_type = self.generate_random_hex_string_to(3);
-
-        let access_list: Vec<_> = (0..=self.rng.gen_range(0..=10))
-            .map(|_| {
-                let storage_keys =
-                    (0..=self.rng.gen_range(0..=10)).map(|_| self.generate_random_hex_string(64)).collect::<Vec<_>>();
-                doc! {
-                    "address": self.generate_random_hex_string(40),
-                    "storageKeys": storage_keys
-                }
-            })
-            .collect();
-
-        let tx = doc! {
-            "hash": tx_hash.clone(),
-            "nonce": self.generate_random_hex_string(16),
-            "blockHash": block_hash.clone(),
-            "blockNumber": block_number.clone(),
-            "transactionIndex": tx_index.clone(),
-            "from": from.clone(),
-            "to": to.clone(),
-            "accessList": access_list.clone(),
-            "value": self.generate_random_hex_string(64),
-            "gas": self.generate_random_hex_string(32),
-            "gasPrice": self.generate_random_hex_string(32),
-            "maxFeePerGas": self.generate_random_hex_string(32),
-            "maxPriorityFeePerGas": self.generate_random_hex_string(32),
-            "type": tx_type.clone(),
-            "chainId": self.generate_random_hex_string(16),
-            "input": self.generate_random_hex_string(64),
-            "v": self.generate_random_hex_string(64),
-            "r": self.generate_random_hex_string(64),
-            "s": self.generate_random_hex_string(64),
-            "yParity": self.generate_random_hex_string_to(1),
-        };
-
-        let logs: Vec<_> = (0..=self.rng.gen_range(0..=10))
-            .map(|_| {
-                let topics =
-                    (0..=self.rng.gen_range(0..=10)).map(|_| self.generate_random_hex_string(64)).collect::<Vec<_>>();
-                doc! {
-                    "address": self.generate_random_hex_string(40),
-                    "topics": topics,
-                    "data": self.generate_random_hex_string(64),
-                }
-            })
-            .collect();
-
-        let receipt = doc! {
-            "transactionHash": tx_hash.clone(),
-            "transactionIndex": tx_index.clone(),
-            "blockHash": block_hash.clone(),
-            "blockNumber": block_number.clone(),
-            "from": from.clone(),
-            "to": to.clone(),
-            "cumulativeGasUsed": self.generate_random_hex_string(16),
-            "effectiveGasPrice": self.generate_random_hex_string(32),
-            "gasUsed": self.generate_random_hex_string(64),
-            "contractAddress": self.generate_random_hex_string(40),
-            "logs": logs.clone(),
-            "logsBloom": self.generate_random_hex_string(512),
-            "type": tx_type.clone(),
-            "status": self.generate_random_hex_string_to(1),
-        };
-
-        (tx, receipt)
-    }
-
     /// Adds a document to the specified collection.
-    pub fn add_document(&mut self, collection: CollectionDB) {
+    pub fn add_document(&mut self, collection: CollectionDB) -> Result<(), Box<dyn std::error::Error>> {
         match collection {
             CollectionDB::Transactions | CollectionDB::Receipts => {
-                let (tx, receipt) = self.transaction_documents();
-                self.documents.entry(CollectionDB::Transactions).or_default().push(tx);
-                self.documents.entry(CollectionDB::Receipts).or_default().push(receipt);
+                let transaction = StoredTransaction::arbitrary(self.u)?;
+                let mut receipt = StoredTransactionReceipt::arbitrary(self.u)?;
+                receipt.receipt.transaction_hash = Some(transaction.tx.hash);
+                receipt.receipt.transaction_index = U64::from(transaction.tx.transaction_index.unwrap_or_default());
+                receipt.receipt.from = transaction.tx.from;
+                receipt.receipt.to = transaction.tx.to;
+                receipt.receipt.block_number = transaction.tx.block_number;
+                receipt.receipt.block_hash = transaction.tx.block_hash;
+                receipt.receipt.transaction_type = U8::from(transaction.tx.transaction_type.unwrap_or_default());
+
+                self.documents
+                    .entry(CollectionDB::Transactions)
+                    .or_default()
+                    .push(StoredData::StoredTransaction(transaction));
+                self.documents
+                    .entry(CollectionDB::Receipts)
+                    .or_default()
+                    .push(StoredData::StoredTransactionReceipt(receipt));
             }
             CollectionDB::Headers => {
-                let header = self.header_document();
-                self.documents.entry(CollectionDB::Headers).or_default().push(header);
+                let header = StoredHeader::arbitrary(self.u)?;
+                self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
             }
         }
+
+        Ok(())
     }
 
     /// Adds multiple transactions to the database.
     pub fn add_transactions(&mut self, n_transactions: usize) {
         for _ in 0..n_transactions {
-            self.add_document(CollectionDB::Transactions);
+            self.add_document(CollectionDB::Transactions).expect("Failed to add transaction");
         }
     }
 
     /// Adds multiple headers to the database.
     pub fn add_headers(&mut self, n_headers: usize) {
         for _ in 0..n_headers {
-            self.add_document(CollectionDB::Headers);
+            self.add_document(CollectionDB::Headers).expect("Failed to add header");
         }
-    }
-
-    /// Generates a random hexadecimal string of the specified length.
-    fn generate_random_hex_string(&mut self, length: usize) -> String {
-        const HEX_CHARS: &[u8] = b"0123456789abcdef";
-        let chars: String = (0..length)
-            .map(|_| {
-                let idx = self.rng.gen_range(0..HEX_CHARS.len());
-                HEX_CHARS[idx] as char
-            })
-            .collect();
-        format!("0x{}", chars)
-    }
-
-    /// Generates a random hexadecimal string up to the specified value.
-    fn generate_random_hex_string_to(&mut self, to: usize) -> String {
-        let random_number = self.rng.gen_range(0..=to);
-        format!("0x{:x}", random_number)
     }
 
     /// Updates multiple documents in the specified collection.
@@ -568,11 +510,13 @@ impl<R: Rng + Clone> MongoFuzzer<R> {
 
         if let Some(updates) = updates {
             for u in updates {
-                let u = doc! {doc: u};
+                // Serialize the StoredData into BSON
+                let serialized_data = bson::to_document(u).expect("Failed to serialize StoredData");
+
                 collection
                     .update_one(
-                        doc! {&key: u.get_document(doc).unwrap().get_str(value).unwrap()},
-                        UpdateModifications::Document(doc! {"$set": u}),
+                        doc! {&key: serialized_data.get_document(doc).unwrap().get_str(value).unwrap()},
+                        UpdateModifications::Document(doc! {"$set": serialized_data}),
                         UpdateOptions::builder().upsert(true).build(),
                     )
                     .await
@@ -588,6 +532,7 @@ mod tests {
     use crate::eth_provider::database::types::{
         header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     };
+    use rand::Rng;
 
     #[tokio::test]
     async fn test_mongo_connection() {
@@ -597,8 +542,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_mongo_fuzzer() {
+        let mut bytes = [0u8; 1024];
+        rand::thread_rng().fill(bytes.as_mut_slice());
+
         // Mocks a database with 10 headers and 10 transactions.
-        let database = MongoFuzzer::mock_database(rand::thread_rng(), 10, 10).await;
+        let database = MongoFuzzer::mock_database(&mut arbitrary::Unstructured::new(&bytes), 1, 1).await;
 
         // Retrieves stored headers from the database.
         let _ = database.get::<StoredHeader>("headers", None, None).await.unwrap();
@@ -615,7 +563,7 @@ mod tests {
             assert_eq!(transaction.tx.block_hash, receipt.receipt.block_hash);
 
             // Asserts equality between transaction block number and receipt block number.
-            assert_eq!(transaction.tx.block_number.unwrap(), receipt.receipt.block_number.unwrap());
+            assert_eq!(transaction.tx.block_number, receipt.receipt.block_number);
 
             // Asserts equality between transaction hash and receipt transaction hash.
             assert_eq!(transaction.tx.hash, receipt.receipt.transaction_hash.unwrap());
@@ -627,7 +575,7 @@ mod tests {
             assert_eq!(transaction.tx.from, receipt.receipt.from);
 
             // Asserts equality between transaction recipient and receipt recipient.
-            assert_eq!(transaction.tx.to.unwrap(), receipt.receipt.to.unwrap());
+            assert_eq!(transaction.tx.to, receipt.receipt.to);
 
             // Asserts equality between transaction type and receipt type.
             assert_eq!(transaction.tx.transaction_type.unwrap(), U64::from(receipt.receipt.transaction_type));

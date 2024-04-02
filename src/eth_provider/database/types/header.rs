@@ -3,10 +3,10 @@ use arbitrary::Arbitrary;
 #[cfg(any(test, feature = "arbitrary"))]
 use reth_primitives::{SealedHeader, B64, U256, U64};
 use reth_rpc_types::Header;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// A header as stored in the database
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
 pub struct StoredHeader {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub header: Header,
