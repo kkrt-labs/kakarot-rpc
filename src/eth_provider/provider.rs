@@ -794,6 +794,8 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
+    /// Deploy the EVM transaction signer if a corresponding contract is not found on
+    /// Starknet.
     async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
         use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::accounts::{Call, Execution};
