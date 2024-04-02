@@ -756,15 +756,20 @@ where
         }
     }
 
-    /// Convert the given BlockNumberOrTag into a block number
+    /// Converts the given `BlockNumberOrTag` into a block number.
     async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<U64> {
         match tag {
+            // Converts the tag representing the earliest block into block number 0.
             BlockNumberOrTag::Earliest => Ok(U64::ZERO),
+            // Converts the tag containing a specific block number into a `U64`.
             BlockNumberOrTag::Number(number) => Ok(U64::from(number)),
-            BlockNumberOrTag::Latest
-            | BlockNumberOrTag::Finalized
-            | BlockNumberOrTag::Safe
-            | BlockNumberOrTag::Pending => self.block_number().await,
+            // Deducts 1 from the current block number to represent the latest, finalized, or safe block.
+            // There is a pending block after
+            BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe => {
+                Ok(self.block_number().await? - U64::from(1))
+            }
+            // Retrieves the block number representing the latest pending block.
+            BlockNumberOrTag::Pending => self.block_number().await,
         }
     }
 }
