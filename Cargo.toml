@@ -102,7 +102,6 @@ katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-
   "serde",
 ] }
 
-rand = "0.8.5"
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979" }
@@ -117,6 +116,7 @@ starknet_api = { git = "https://github.com/starkware-libs/starknet-api.git", tag
 [dev-dependencies]
 rstest = { version = "0.18.1", default-features = false }
 toml = { version = "0.7.5", default-features = false }
+rand = { version = "0.8.5", default-features = false }
 
 [features]
 testing = [
