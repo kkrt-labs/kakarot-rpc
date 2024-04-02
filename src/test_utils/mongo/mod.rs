@@ -539,8 +539,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_mongo_connection() {
+        // Create a mock database.
         let database = mock_database().await;
+
+        // Retrieve a single document from the "headers" collection.
         let _ = database.get_one::<StoredHeader>("headers", None, None).await.unwrap();
+
+        // Drop the inner MongoDB database.
+        database.inner().drop(None).await.unwrap();
     }
 
     #[tokio::test]
@@ -548,8 +554,8 @@ mod tests {
         let mut bytes = [0u8; 1024];
         rand::thread_rng().fill(bytes.as_mut_slice());
 
-        // Mocks a database with 10 headers and 10 transactions.
-        let database = MongoFuzzer::mock_database(&mut arbitrary::Unstructured::new(&bytes), 1, 1).await;
+        // Mocks a database with 100 headers and 100 transactions.
+        let database = MongoFuzzer::mock_database(&mut arbitrary::Unstructured::new(&bytes), 100, 100).await;
 
         // Retrieves stored headers from the database.
         let _ = database.get::<StoredHeader>("headers", None, None).await.unwrap();
@@ -583,5 +589,8 @@ mod tests {
             // Asserts equality between transaction type and receipt type.
             assert_eq!(transaction.tx.transaction_type.unwrap(), U64::from(receipt.receipt.transaction_type));
         }
+
+        // Drop the inner MongoDB database.
+        database.inner().drop(None).await.unwrap();
     }
 }
