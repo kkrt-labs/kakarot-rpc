@@ -67,10 +67,15 @@ async fn main() -> eyre::Result<()> {
             let chain_id = transaction.chain_id().ok_or_eyre("failed to recover chain id")?;
             let starknet_tx = to_starknet_transaction(&transaction, chain_id, signer, u64::MAX)?;
 
-            // Stop if the nonce is incorrect
-            assert_eq!(starknet_tx.nonce, current_nonce);
+            let nonce = match &starknet_tx {
+                BroadcastedInvokeTransaction::V1(starknet_tx) => starknet_tx.nonce,
+                BroadcastedInvokeTransaction::V3(starknet_tx) => starknet_tx.nonce,
+            };
 
-            provider.add_invoke_transaction(BroadcastedInvokeTransaction::V1(starknet_tx)).await?;
+            // Stop if the nonce is incorrect
+            assert_eq!(nonce, current_nonce);
+
+            provider.add_invoke_transaction(starknet_tx).await?;
 
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             current_nonce += 1u8.into();
