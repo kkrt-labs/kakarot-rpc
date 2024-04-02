@@ -31,9 +31,8 @@ do
 	sleep 1
 done
 
-export PROXY_ACCOUNT_CLASS_HASH=$(jq -r '.declarations.proxy' manifest.json)
-export CONTRACT_ACCOUNT_CLASS_HASH=$(jq -r '.declarations.contract_account' manifest.json)
-export EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=$(jq -r '.declarations.externally_owned_account' manifest.json)
+export UNINITIALIZED_ACCOUNT_CLASS_HASH=$(jq -r '.declarations.uninitialized_account' manifest.json)
+export ACCOUNT_CONTRACT_CLASS_HASH=$(jq -r '.declarations.account_contract' manifest.json)
 export KAKAROT_ADDRESS=$(jq -r '.deployments.kakarot_address' manifest.json)
 
 # Only launch the Hive Chain if the chain file exists

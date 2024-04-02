@@ -23,10 +23,9 @@ cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5",
   "abigen-rs",
 ] }
 cairo-lang-starknet = { version = "2.5.4", default-features = false }
-ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "5d0b86e", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "c94e9a", default-features = false, features = [
   "v0",
 ], optional = true }
-sequencer = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "5d0b86e", default-features = false, optional = true }
 starknet = { version = "0.9.0", default-features = false }
 starknet-crypto = { version = "0.6.1", default-features = false }
 starknet_api = { version = "0.7.0-dev.0", default-features = false }
@@ -122,7 +121,6 @@ toml = { version = "0.7.5", default-features = false }
 testing = [
   "testcontainers",
   "rayon",
-  "sequencer",
   "ef-testing",
   "tokio-util",
   "tokio-stream",
