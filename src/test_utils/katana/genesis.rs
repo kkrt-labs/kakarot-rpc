@@ -8,7 +8,7 @@ use cairo_lang_starknet::contract_class::ContractClass;
 use ethers::signers::LocalWallet;
 use ethers::signers::Signer;
 use ethers::types::U256;
-use eyre::{eyre, Result};
+use eyre::{eyre, OptionExt, Result};
 use katana_primitives::block::GasPrices;
 use katana_primitives::contract::{StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
@@ -31,6 +31,13 @@ use starknet::core::types::contract::legacy::LegacyContractClass;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness};
 use walkdir::WalkDir;
+
+use crate::test_utils::constants::{
+    ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION, ACCOUNT_KAKAROT_ADDRESS, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH,
+    KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
+    KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PRECOMPILES_CLASS_HASH, KAKAROT_PREV_RANDAO,
+    KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+};
 
 lazy_static! {
     static ref SALT: FieldElement = FieldElement::from_bytes_be(&[0u8; 32]).unwrap();
@@ -118,19 +125,19 @@ impl<T> KatanaGenesisBuilder<T> {
     }
 
     fn kakarot_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("kakarot").cloned().ok_or(eyre!("Missing Kakarot class hash"))
+        self.class_hashes.get("kakarot").cloned().ok_or_eyre("Missing Kakarot class hash")
     }
 
     pub fn account_contract_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("account_contract").cloned().ok_or(eyre!("Missing account contract class hash"))
+        self.class_hashes.get("account_contract").cloned().ok_or_eyre("Missing account contract class hash")
     }
 
     pub fn uninitialized_account_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("uninitialized_account").cloned().ok_or(eyre!("Missing uninitialized account class hash"))
+        self.class_hashes.get("uninitialized_account").cloned().ok_or_eyre("Missing uninitialized account class hash")
     }
 
     pub fn precompiles_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("precompiles").cloned().ok_or(eyre!("Missing precompiles class hash"))
+        self.class_hashes.get("precompiles").cloned().ok_or_eyre("Missing precompiles class hash")
     }
 }
 
@@ -220,14 +227,14 @@ impl KatanaGenesisBuilder<Loaded> {
 
         // Construct the kakarot contract storage.
         let kakarot_storage = [
-            (storage_addr("Kakarot_native_token_address")?, *DEFAULT_FEE_TOKEN_ADDRESS),
-            (storage_addr("Kakarot_account_contract_class_hash")?, account_contract_class_hash),
-            (storage_addr("Kakarot_uninitialized_account_class_hash")?, uninitialized_account_class_hash),
-            (storage_addr("Kakarot_precompiles_class_hash")?, precompiles_class_hash),
-            (storage_addr("Kakarot_coinbase")?, coinbase_address),
-            (storage_addr("Kakarot_base_fee")?, FieldElement::ZERO),
-            (storage_addr("Kakarot_prev_randao")?, FieldElement::ZERO),
-            (storage_addr("Kakarot_block_gas_limit")?, block_gas_limit),
+            (storage_addr(KAKAROT_NATIVE_TOKEN_ADDRESS)?, *DEFAULT_FEE_TOKEN_ADDRESS),
+            (storage_addr(KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH)?, account_contract_class_hash),
+            (storage_addr(KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH)?, uninitialized_account_class_hash),
+            (storage_addr(KAKAROT_PRECOMPILES_CLASS_HASH)?, precompiles_class_hash),
+            (storage_addr(KAKAROT_COINBASE)?, coinbase_address),
+            (storage_addr(KAKAROT_BASE_FEE)?, FieldElement::ZERO),
+            (storage_addr(KAKAROT_PREV_RANDAO)?, FieldElement::ZERO),
+            (storage_addr(KAKAROT_BLOCK_GAS_LIMIT)?, block_gas_limit),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
@@ -256,10 +263,10 @@ impl KatanaGenesisBuilder<Initialized> {
 
         // Set the eoa storage
         let eoa_storage = [
-            (storage_addr("Account_evm_address")?, evm_address),
-            (storage_addr("Account_kakarot_address")?, kakarot_address),
-            (storage_addr("Ownable_owner")?, kakarot_address),
-            (storage_addr("Account_implementation")?, account_contract_class_hash),
+            (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
+            (storage_addr(ACCOUNT_KAKAROT_ADDRESS)?, kakarot_address),
+            (storage_addr(OWNABLE_OWNER)?, kakarot_address),
+            (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
@@ -282,11 +289,11 @@ impl KatanaGenesisBuilder<Initialized> {
 
         // Write the address to the Kakarot evm to starknet mapping
         let kakarot_address = ContractAddress::new(kakarot_address);
-        let kakarot_contract = self.contracts.get_mut(&kakarot_address).ok_or(eyre!("Kakarot contract missing"))?;
-        kakarot_contract.storage.get_or_insert_with(HashMap::new).extend([(
-            get_storage_var_address("Kakarot_evm_to_starknet_address", &[evm_address])?,
-            starknet_address.0,
-        )]);
+        let kakarot_contract = self.contracts.get_mut(&kakarot_address).ok_or_eyre("Kakarot contract missing")?;
+        kakarot_contract
+            .storage
+            .get_or_insert_with(HashMap::new)
+            .extend([(get_storage_var_address(KAKAROT_EVM_TO_STARKNET_ADDRESS, &[evm_address])?, starknet_address.0)]);
 
         Ok(self)
     }
@@ -296,7 +303,7 @@ impl KatanaGenesisBuilder<Initialized> {
     pub fn fund(mut self, pk: B256, amount: U256) -> Result<Self> {
         let evm_address = self.evm_address(pk)?;
         let starknet_address = self.compute_starknet_address(evm_address)?;
-        let eoa = self.contracts.get_mut(&starknet_address).ok_or(eyre!("Missing EOA contract"))?;
+        let eoa = self.contracts.get_mut(&starknet_address).ok_or_eyre("Missing EOA contract")?;
 
         let key = get_storage_var_address("ERC20_balances", &[*starknet_address])?;
         let low = amount & U256::from(u128::MAX);

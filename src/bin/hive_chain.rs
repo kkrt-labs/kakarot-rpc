@@ -1,5 +1,5 @@
 use alloy_rlp::Decodable;
-use eyre::eyre;
+use eyre::OptionExt;
 use kakarot_rpc::eth_provider::starknet::kakarot_core::to_starknet_transaction;
 use reth_primitives::{bytes::Buf, Block, BlockBody, BytesMut};
 use starknet::{
@@ -63,8 +63,8 @@ async fn main() -> eyre::Result<()> {
         // TODO(HIVE): Set the block gas limit in kakarot
 
         for transaction in body.transactions {
-            let signer = transaction.recover_signer().ok_or(eyre!("Failed to recover signer"))?;
-            let chain_id = transaction.chain_id().ok_or(eyre!("Failed to recover chain id"))?;
+            let signer = transaction.recover_signer().ok_or_eyre("failed to recover signer")?;
+            let chain_id = transaction.chain_id().ok_or_eyre("failed to recover chain id")?;
             let starknet_tx = to_starknet_transaction(&transaction, chain_id, signer, u64::MAX)?;
 
             // Stop if the nonce is incorrect

@@ -12,7 +12,12 @@ use starknet::core::utils::get_storage_var_address;
 use starknet_api::core::ClassHash;
 use starknet_crypto::FieldElement;
 
-use super::katana::genesis::{KatanaGenesisBuilder, Loaded};
+use super::{
+    constants::{
+        ACCOUNT_IMPLEMENTATION, ACCOUNT_KAKAROT_ADDRESS, ACCOUNT_NONCE, KAKAROT_EVM_TO_STARKNET_ADDRESS, OWNABLE_OWNER,
+    },
+    katana::genesis::{KatanaGenesisBuilder, Loaded},
+};
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
 #[derive(Serialize, Deserialize, Clone)]
@@ -69,7 +74,7 @@ impl HiveGenesisConfig {
 
                 // Store the mapping from EVM to Starknet address.
                 additional_kakarot_storage.insert(
-                    get_storage_var_address("Kakarot_evm_to_starknet_address", &[evm_address])?,
+                    get_storage_var_address(KAKAROT_EVM_TO_STARKNET_ADDRESS, &[evm_address])?,
                     starknet_address,
                 );
 
@@ -84,14 +89,13 @@ impl HiveGenesisConfig {
                     kakarot_account.storage().iter().map(|(k, v)| ((*k.0.key()).into(), (*v).into())).collect();
 
                 // Add the implementation and the kakarot address to the storage.
-                let implementation_key = get_storage_var_address("Account_implementation", &[])?;
+                let implementation_key = get_storage_var_address(ACCOUNT_IMPLEMENTATION, &[])?;
                 kakarot_account_storage.append(&mut vec![
                     (implementation_key, account_contract_class_hash.0.into()),
-                    (get_storage_var_address("Account_nonce", &[])?, FieldElement::ONE),
-                    (get_storage_var_address("Ownable_owner", &[])?, kakarot_address),
+                    (get_storage_var_address(ACCOUNT_NONCE, &[])?, FieldElement::ONE),
+                    (get_storage_var_address(OWNABLE_OWNER, &[])?, kakarot_address),
                 ]);
-                kakarot_account_storage
-                    .push((get_storage_var_address("Account_kakarot_address", &[])?, kakarot_address));
+                kakarot_account_storage.push((get_storage_var_address(ACCOUNT_KAKAROT_ADDRESS, &[])?, kakarot_address));
 
                 let key = get_storage_var_address("ERC20_allowances", &[starknet_address, kakarot_address])?;
                 fee_token_storage.insert(key, FieldElement::from(u128::MAX));
@@ -131,7 +135,10 @@ impl HiveGenesisConfig {
 mod tests {
     use lazy_static::lazy_static;
 
-    use crate::{eth_provider::utils::split_u256, test_utils::katana::genesis::Initialized};
+    use crate::{
+        eth_provider::utils::split_u256,
+        test_utils::{constants::ACCOUNT_STORAGE, katana::genesis::Initialized},
+    };
 
     use super::*;
     use std::path::{Path, PathBuf};
@@ -171,7 +178,7 @@ mod tests {
             assert_eq!(contract.balance, Some(EthersU256::from_big_endian(&account.balance.to_be_bytes::<32>())));
             // Check the storage
             for (key, value) in account.storage.unwrap_or_default() {
-                let key = get_storage_var_address("Account_storage", &split_u256::<FieldElement>(key)).unwrap();
+                let key = get_storage_var_address(ACCOUNT_STORAGE, &split_u256::<FieldElement>(key)).unwrap();
                 let low =
                     U256::from_be_slice(contract.storage.as_ref().unwrap().get(&key).unwrap().to_bytes_be().as_slice());
                 let high = U256::from_be_slice(
