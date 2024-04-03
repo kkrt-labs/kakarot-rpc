@@ -35,7 +35,7 @@ alloy-rlp = { version = "0.3", default-features = false }
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.3", default-features = false }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.3", default-features = false, features = ["arbitrary"]}
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.3", default-features = false }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.3", default-features = false }
 alloy-primitives = "0.6.4"
@@ -100,7 +100,7 @@ katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.
 katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.6", default-features = false, features = [
   "serde",
 ] }
-
+arbitrary = { version = "1", features = ["derive"] }
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979" }
@@ -115,6 +115,7 @@ starknet_api = { git = "https://github.com/starkware-libs/starknet-api.git", tag
 [dev-dependencies]
 rstest = { version = "0.18.1", default-features = false }
 toml = { version = "0.7.5", default-features = false }
+rand = { version = "0.8.5", default-features = false }
 
 [features]
 testing = [
