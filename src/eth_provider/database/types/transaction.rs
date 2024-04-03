@@ -1,10 +1,11 @@
-#[cfg(any(test, feature = "arbitrary"))]
-use arbitrary::Arbitrary;
 use reth_primitives::B256;
-#[cfg(any(test, feature = "arbitrary"))]
-use reth_primitives::{Address, TransactionSigned, U128, U256, U64};
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
+#[cfg(any(test, feature = "arbitrary"))]
+use {
+    arbitrary::Arbitrary,
+    reth_primitives::{Address, TransactionSigned, U128, U256, U64},
+};
 
 /// A full transaction as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]

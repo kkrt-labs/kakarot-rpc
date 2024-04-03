@@ -1,9 +1,10 @@
-#[cfg(any(test, feature = "arbitrary"))]
-use arbitrary::Arbitrary;
-#[cfg(any(test, feature = "arbitrary"))]
-use reth_primitives::{SealedHeader, B64, U256, U64};
 use reth_rpc_types::Header;
 use serde::{Deserialize, Serialize};
+#[cfg(any(test, feature = "arbitrary"))]
+use {
+    arbitrary::Arbitrary,
+    reth_primitives::{SealedHeader, B64, U256, U64},
+};
 
 /// A header as stored in the database
 #[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
