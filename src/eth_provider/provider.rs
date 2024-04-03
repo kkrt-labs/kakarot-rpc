@@ -13,7 +13,6 @@ use reth_rpc_types::{
     RichBlock, TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
-use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
@@ -483,9 +482,9 @@ where
 
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
 
-        let max_fee: u64;
-        #[cfg(not(feature = "hive"))]
-        {
+        let max_fee = if cfg!(feature = "hive") {
+            u64::MAX
+        } else {
             // TODO(Kakarot Fee Mechanism): When we no longer need to use the Starknet fees, remove this line.
             // We need to get the balance (in Kakarot/Starknet native Token) of the signer to compute the Starknet maximum `max_fee`.
             // We used to set max_fee = u64::MAX, but it'll fail if the signer doesn't have enough balance to pay the fees.
@@ -493,89 +492,26 @@ where
                 transaction_signed.effective_gas_price(Some(transaction_signed.max_fee_per_gas() as u64)) as u64;
             let eth_fees = eth_fees_per_gas.saturating_mul(transaction_signed.gas_limit());
             let balance = self.balance(signer, None).await?;
-            max_fee = {
-                let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
-                max_fee.saturating_sub(eth_fees)
-            };
-        }
+            let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
+            max_fee.saturating_sub(eth_fees)
+        };
+
         #[cfg(feature = "hive")]
-        {
-            max_fee = u64::MAX;
-        }
+        self.deploy_evm_transaction_signer(signer).await?;
 
         let transaction = to_starknet_transaction(&transaction_signed, chain_id, signer, max_fee)?;
+        let res = self.starknet_provider.add_invoke_transaction(transaction).await.map_err(KakarotError::from)?;
 
-        // If the contract is not found, we need to deploy it.
-        #[cfg(feature = "hive")]
-        {
-            use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
-            use starknet::accounts::Call;
-            use starknet::accounts::Execution;
-            use starknet::core::types::BlockTag;
-            use starknet::core::utils::get_selector_from_name;
-            let sender = transaction.sender_address;
-            let account_contract = AccountContractReader::new(sender, &self.starknet_provider);
-            let maybe_is_initialized = account_contract
-                .is_initialized()
-                .block_id(starknet::core::types::BlockId::Tag(BlockTag::Latest))
-                .call()
-                .await;
-
-            if contract_not_found(&maybe_is_initialized) {
-                let execution = Execution::new(
-                    vec![Call {
-                        to: *KAKAROT_ADDRESS,
-                        selector: get_selector_from_name("deploy_externally_owned_account").unwrap(),
-                        calldata: vec![into_via_wrapper!(signer)],
-                    }],
-                    &*DEPLOY_WALLET,
-                );
-
-                let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
-                let current_nonce = *nonce;
-
-                let tx = execution
-                    .nonce(current_nonce)
-                    .max_fee(FieldElement::from(u64::MAX))
-                    .prepared()
-                    .map_err(|_| {
-                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError)
-                    })?
-                    .get_invoke_request(false)
-                    .await
-                    .map_err(|_| SignatureError::SignError)?;
-                self.starknet_provider.add_invoke_transaction(tx).await.map_err(KakarotError::from)?;
-
-                *nonce += 1u8.into();
-                drop(nonce);
-            };
-        }
-
-        #[cfg(not(feature = "testing"))]
-        {
+        if cfg!(feature = "testing") {
+            return Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]));
+        } else {
             let hash = transaction_signed.hash();
-            let tx = self
-                .starknet_provider
-                .add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction))
-                .await
-                .map_err(KakarotError::from)?;
             tracing::info!(
                 "Fired a transaction: Starknet Hash: {:?} --- Ethereum Hash: {:?}",
-                tx.transaction_hash,
+                res.transaction_hash,
                 hash
             );
             Ok(hash)
-        }
-        // If we are currently testing, we need to return the starknet hash in order
-        // to be able to wait for the transaction to be mined.
-        #[cfg(feature = "testing")]
-        {
-            let res = self
-                .starknet_provider
-                .add_invoke_transaction(BroadcastedInvokeTransaction::V1(transaction))
-                .await
-                .map_err(KakarotError::from)?;
-            Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]))
         }
     }
 
@@ -848,5 +784,57 @@ where
             | BlockNumberOrTag::Safe
             | BlockNumberOrTag::Pending => self.block_number().await,
         }
+    }
+}
+
+#[cfg(feature = "hive")]
+impl<SP> EthDataProvider<SP>
+where
+    SP: starknet::providers::Provider + Send + Sync,
+{
+    /// Deploy the EVM transaction signer if a corresponding contract is not found on
+    /// Starknet.
+    async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
+        use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+        use starknet::accounts::{Call, Execution};
+        use starknet::core::types::BlockTag;
+        use starknet::core::utils::get_selector_from_name;
+
+        let signer_starknet_address = starknet_address(signer);
+        let account_contract = AccountContractReader::new(signer_starknet_address, &self.starknet_provider);
+        let maybe_is_initialized = account_contract
+            .is_initialized()
+            .block_id(starknet::core::types::BlockId::Tag(BlockTag::Latest))
+            .call()
+            .await;
+
+        if contract_not_found(&maybe_is_initialized) {
+            let execution = Execution::new(
+                vec![Call {
+                    to: *KAKAROT_ADDRESS,
+                    selector: get_selector_from_name("deploy_externally_owned_account").unwrap(),
+                    calldata: vec![into_via_wrapper!(signer)],
+                }],
+                &*DEPLOY_WALLET,
+            );
+
+            let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
+            let current_nonce = *nonce;
+
+            let tx = execution
+                .nonce(current_nonce)
+                .max_fee(FieldElement::from(u64::MAX))
+                .prepared()
+                .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?
+                .get_invoke_request(false)
+                .await
+                .map_err(|_| SignatureError::SignError)?;
+            self.starknet_provider.add_invoke_transaction(tx).await.map_err(KakarotError::from)?;
+
+            *nonce += 1u8.into();
+            drop(nonce);
+        };
+
+        Ok(())
     }
 }
