@@ -766,7 +766,7 @@ where
             // Deducts 1 from the current block number to represent the latest, finalized, or safe block.
             // There is a pending block after
             BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe => {
-                Ok(self.block_number().await? - U64::from(1))
+                Ok(self.block_number().await?.saturating_sub(U64::from(1)))
             }
             // Retrieves the block number representing the latest pending block.
             BlockNumberOrTag::Pending => self.block_number().await,
