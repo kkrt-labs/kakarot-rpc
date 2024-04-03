@@ -756,7 +756,7 @@ where
         }
     }
 
-    /// Converts the given `BlockNumberOrTag` into a block number.
+    /// Converts the given [`BlockNumberOrTag`] into a block number.
     async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<U64> {
         match tag {
             // Converts the tag representing the earliest block into block number 0.
