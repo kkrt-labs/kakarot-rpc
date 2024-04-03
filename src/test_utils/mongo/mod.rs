@@ -2,28 +2,22 @@ use crate::eth_provider::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
 };
 use crate::eth_provider::database::Database;
-#[cfg(any(test, feature = "arbitrary"))]
-use arbitrary::Arbitrary;
 use lazy_static::lazy_static;
-#[cfg(any(test, feature = "arbitrary"))]
-use mongodb::bson;
 use mongodb::{
     bson::{doc, Document},
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
-#[cfg(any(test, feature = "arbitrary"))]
-use reth_primitives::U8;
 use reth_primitives::{constants::EMPTY_ROOT_HASH, Address, B256, U128, U256, U64};
 use serde::{Serialize, Serializer};
-#[cfg(any(test, feature = "arbitrary"))]
-use std::collections::HashMap;
 use std::str::FromStr;
 use testcontainers::{
     clients::{self, Cli},
     core::WaitFor,
     Container, GenericImage,
 };
+#[cfg(any(test, feature = "arbitrary"))]
+use {arbitrary::Arbitrary, reth_primitives::U8, mongodb::bson, std::collections::HashMap};
 
 lazy_static! {
     static ref DOCKER_CLI: Cli = clients::Cli::default();
@@ -397,7 +391,7 @@ pub struct MongoFuzzer<'a> {
 
 #[cfg(any(test, feature = "arbitrary"))]
 impl<'a> MongoFuzzer<'a> {
-    /// Creates a new instance of `MongoFuzzer` with the specified random number generator.
+    /// Creates a new instance of `MongoFuzzer` with a mutable reference to the arbitrary `Unstructured` instance, used for generating random data.
     pub async fn new<'b>(u: &'b mut arbitrary::Unstructured<'a>) -> Self
     where
         'b: 'a,

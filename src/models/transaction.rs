@@ -70,15 +70,6 @@ pub fn rpc_transaction_to_primitive(
     }
 }
 
-// pub fn primitive_receipt_to_rpc(
-//     receipt: reth_primitives::Receipt,
-// ) -> Result<reth_rpc_types::TransactionReceipt, KakarotError> {
-//     Ok(reth_rpc_types::TransactionReceipt {
-
-//         transaction_hash: receipt
-//     })
-// }
-
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;

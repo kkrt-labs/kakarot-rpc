@@ -24,20 +24,6 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let transaction = TransactionSigned::arbitrary(u)?;
 
-        let mut access_list: Option<Vec<reth_rpc_types::AccessListItem>> = Default::default();
-
-        if let Some(list) = transaction.access_list() {
-            access_list = Some(Default::default());
-            for item in &list.0 {
-                let address = item.address;
-                let storage_keys = &item.storage_keys;
-                access_list
-                    .as_mut()
-                    .unwrap()
-                    .push(reth_rpc_types::AccessListItem { address, storage_keys: storage_keys.to_vec() });
-            }
-        }
-
         Ok(StoredTransaction {
             tx: Transaction {
                 hash: transaction.hash,
@@ -62,7 +48,15 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                 }),
                 chain_id: transaction.chain_id().map(U64::from),
                 blob_versioned_hashes: transaction.blob_versioned_hashes().unwrap_or_default(),
-                access_list,
+                access_list: transaction.access_list().map(|list| {
+                    list.0
+                        .iter()
+                        .map(|item| reth_rpc_types::AccessListItem {
+                            address: item.address,
+                            storage_keys: item.storage_keys.clone(),
+                        })
+                        .collect()
+                }),
                 transaction_type: Some(U64::from::<u8>(transaction.tx_type().into())),
                 other: Default::default(),
             },
