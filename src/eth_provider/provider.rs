@@ -673,8 +673,7 @@ where
         let data = request.input.into_input().unwrap_or_default();
         let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
 
-        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(CALL_REQUEST_GAS_LIMIT)))
-            .map_err(KakarotError::from)?;
+        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(CALL_REQUEST_GAS_LIMIT)))?;
 
         // We cannot unwrap_or_default() here because Kakarot.eth_call will
         // Reject transactions with gas_price < Kakarot.base_fee
@@ -683,10 +682,10 @@ where
                 Some(gas_price) => gas_price,
                 None => self.gas_price().await?,
             };
-            into_via_try_wrapper!(gas_price).map_err(KakarotError::from)?
+            into_via_try_wrapper!(gas_price)?
         };
 
-        let value = into_via_try_wrapper!(request.value.unwrap_or_default()).map_err(KakarotError::from)?;
+        let value = into_via_try_wrapper!(request.value.unwrap_or_default())?;
 
         // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
         //  when we can simulate the transaction instead of calling `eth_call`
@@ -695,8 +694,7 @@ where
                 Some(nonce) => into_via_wrapper!(nonce),
                 None => match request.from {
                     None => FieldElement::ZERO,
-                    Some(address) => into_via_try_wrapper!(self.transaction_count(address, block_id).await?)
-                        .map_err(KakarotError::from)?,
+                    Some(address) => into_via_try_wrapper!(self.transaction_count(address, block_id).await?)?,
                 },
             }
         };
@@ -812,7 +810,7 @@ where
     ) -> EthProviderResult<starknet::core::types::BlockId> {
         match block_id.into() {
             Some(BlockId::Hash(hash)) => {
-                Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(KakarotError::from)?)
+                Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(EthereumDataFormatError::from)?)
             }
             Some(BlockId::Number(number_or_tag)) => {
                 // There is a need to separate the BlockNumberOrTag case into three subcases

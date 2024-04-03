@@ -1,8 +1,8 @@
 use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
-use super::{transaction::rpc_transaction_to_primitive, ConversionError};
-use crate::{eth_provider::error::KakarotError, into_via_try_wrapper};
+use super::transaction::rpc_transaction_to_primitive;
+use crate::{eth_provider::error::EthereumDataFormatError, into_via_try_wrapper};
 
 pub struct EthBlockId(EthereumBlockId);
 
@@ -13,7 +13,7 @@ impl EthBlockId {
 }
 
 impl TryFrom<EthBlockId> for StarknetBlockId {
-    type Error = ConversionError;
+    type Error = EthereumDataFormatError;
     fn try_from(eth_block_id: EthBlockId) -> Result<Self, Self::Error> {
         match eth_block_id.0 {
             EthereumBlockId::Hash(hash) => Ok(Self::Hash(into_via_try_wrapper!(hash.block_hash)?)),
@@ -61,41 +61,47 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
     }
 }
 
-pub fn rpc_to_primitive_header(header: reth_rpc_types::Header) -> Result<reth_primitives::Header, KakarotError> {
+pub fn rpc_to_primitive_header(
+    header: reth_rpc_types::Header,
+) -> Result<reth_primitives::Header, EthereumDataFormatError> {
     Ok(reth_primitives::Header {
         base_fee_per_gas: header
             .base_fee_per_gas
-            .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| ConversionError))
+            .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
             .transpose()?,
         beneficiary: header.miner,
         blob_gas_used: header.blob_gas_used.map(|blob_gas_used| blob_gas_used.to::<u64>()),
         difficulty: header.difficulty,
         excess_blob_gas: header.excess_blob_gas.map(|excess_blob_gas| excess_blob_gas.to::<u64>()),
         extra_data: header.extra_data,
-        gas_limit: header.gas_limit.try_into().map_err(|_| ConversionError)?,
-        gas_used: header.gas_used.try_into().map_err(|_| ConversionError)?,
+        gas_limit: header.gas_limit.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+        gas_used: header.gas_used.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
         logs_bloom: header.logs_bloom,
         mix_hash: header.mix_hash.unwrap_or_default(),
         nonce: u64::from_be_bytes(header.nonce.unwrap_or_default().0),
-        number: header.number.ok_or(ConversionError)?.try_into().map_err(|_| ConversionError)?,
+        number: header
+            .number
+            .ok_or(EthereumDataFormatError::PrimitiveError)?
+            .try_into()
+            .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
         ommers_hash: header.uncles_hash,
         parent_beacon_block_root: header.parent_beacon_block_root,
         parent_hash: header.parent_hash,
         receipts_root: header.receipts_root,
         state_root: header.state_root,
-        timestamp: header.timestamp.try_into().map_err(|_| ConversionError)?,
+        timestamp: header.timestamp.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
         transactions_root: header.transactions_root,
         withdrawals_root: header.withdrawals_root,
     })
 }
 
-pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, KakarotError> {
+pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, EthereumDataFormatError> {
     let body = {
-        let transactions: Result<Vec<TransactionSigned>, KakarotError> = match block.transactions {
+        let transactions: Result<Vec<TransactionSigned>, EthereumDataFormatError> = match block.transactions {
             reth_rpc_types::BlockTransactions::Full(transactions) => transactions
                 .into_iter()
                 .map(|tx| {
-                    let signature = tx.signature.ok_or(ConversionError)?;
+                    let signature = tx.signature.ok_or(EthereumDataFormatError::PrimitiveError)?;
                     let tx_signed = TransactionSigned::from_transaction_and_signature(
                         rpc_transaction_to_primitive(tx)?,
                         reth_primitives::Signature {
@@ -108,10 +114,10 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
                 })
                 .collect(),
             reth_rpc_types::BlockTransactions::Hashes(_transaction_hashes) => {
-                return Err(ConversionError.into());
+                return Err(EthereumDataFormatError::PrimitiveError);
             }
             reth_rpc_types::BlockTransactions::Uncle => {
-                return Err(ConversionError.into());
+                return Err(EthereumDataFormatError::PrimitiveError);
             }
         };
         transactions?

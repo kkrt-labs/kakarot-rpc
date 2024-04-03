@@ -2,7 +2,7 @@ use reth_primitives::{Address, B256, U256, U64};
 use starknet::core::types::{EthAddress, FieldElement};
 use std::ops::{Deref, DerefMut};
 
-use super::ConversionError;
+use crate::eth_provider::error::EthereumDataFormatError;
 
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);
@@ -34,28 +34,28 @@ impl From<U64> for Felt252Wrapper {
 }
 
 impl TryFrom<Felt252Wrapper> for Address {
-    type Error = ConversionError;
+    type Error = EthereumDataFormatError;
 
     fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
         EthAddress::from_felt(&felt)
             .map(|eth_address| Self::from_slice(eth_address.as_bytes()))
-            .map_err(|_| ConversionError)
+            .map_err(|_| EthereumDataFormatError::PrimitiveError)
     }
 }
 
 impl TryFrom<B256> for Felt252Wrapper {
-    type Error = ConversionError;
+    type Error = EthereumDataFormatError;
 
     fn try_from(value: B256) -> Result<Self, Self::Error> {
-        Ok(Self(FieldElement::from_bytes_be(value.as_ref()).map_err(|_| ConversionError)?))
+        Ok(Self(FieldElement::from_bytes_be(value.as_ref()).map_err(|_| EthereumDataFormatError::PrimitiveError)?))
     }
 }
 
 impl TryFrom<U256> for Felt252Wrapper {
-    type Error = ConversionError;
+    type Error = EthereumDataFormatError;
 
     fn try_from(u256: U256) -> Result<Self, Self::Error> {
-        Ok(Self(FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| ConversionError)?))
+        Ok(Self(FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| EthereumDataFormatError::PrimitiveError)?))
     }
 }
 
@@ -96,9 +96,9 @@ macro_rules! into_via_wrapper {
 #[macro_export]
 macro_rules! into_via_try_wrapper {
     ($val: expr) => {{
-        let intermediate: Result<_, $crate::models::ConversionError> =
+        let intermediate: Result<_, $crate::eth_provider::error::EthereumDataFormatError> =
             TryInto::<$crate::models::felt::Felt252Wrapper>::try_into($val)
-                .map_err(|_| $crate::models::ConversionError)
+                .map_err(|_| $crate::eth_provider::error::EthereumDataFormatError::PrimitiveError)
                 .map(Into::into);
         intermediate
     }};
@@ -134,7 +134,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "ConversionError")]
+    #[should_panic(expected = "PrimitiveError")]
     fn test_address_try_from_felt_should_fail() {
         // Given
         let address: Felt252Wrapper = FieldElement::from_hex_be(OVERFLOW_ADDRESS).unwrap().into();
@@ -157,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "ConversionError")]
+    #[should_panic(expected = "PrimitiveError")]
     fn test_felt_try_from_b256_should_fail() {
         // Given
         let hash = B256::from_str(OVERFLOW_FELT).unwrap();
@@ -180,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "ConversionError")]
+    #[should_panic(expected = "PrimitiveError")]
     fn test_felt_try_from_u256_should_fail() {
         // Given
         let hash = U256::from_str_radix(OVERFLOW_FELT, 16).unwrap();
