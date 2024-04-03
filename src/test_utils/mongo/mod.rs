@@ -17,7 +17,7 @@ use testcontainers::{
     Container, GenericImage,
 };
 #[cfg(any(test, feature = "arbitrary"))]
-use {arbitrary::Arbitrary, reth_primitives::U8, mongodb::bson, std::collections::HashMap};
+use {arbitrary::Arbitrary, mongodb::bson, reth_primitives::U8, std::collections::HashMap};
 
 lazy_static! {
     static ref DOCKER_CLI: Cli = clients::Cli::default();
