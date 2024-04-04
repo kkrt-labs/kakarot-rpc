@@ -1,22 +1,27 @@
 pub mod genesis;
 
 use std::path::Path;
-use std::str::FromStr as _;
 use std::sync::Arc;
 
-use dojo_test_utils::sequencer::{Environment, SequencerConfig, StarknetConfig, TestSequencer};
+use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
 use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
-use reth_primitives::B256;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
 use crate::eth_provider::provider::EthDataProvider;
 use crate::test_utils::eoa::KakarotEOA;
+use std::collections::HashMap;
 
-use super::mongo::mock_database;
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+use {
+    super::mongo::{CollectionDB, MongoFuzzer, StoredData},
+    dojo_test_utils::sequencer::SequencerConfig,
+    reth_primitives::B256,
+    std::str::FromStr as _,
+};
 
 fn load_genesis() -> Genesis {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(".katana/genesis.json");
@@ -42,6 +47,7 @@ pub fn katana_config() -> StarknetConfig {
 }
 
 /// Returns a `TestSequencer` configured for Kakarot.
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 async fn katana_sequencer() -> TestSequencer {
     TestSequencer::start(SequencerConfig { no_mining: false, block_time: None, messaging: None }, katana_config()).await
 }
@@ -49,32 +55,51 @@ async fn katana_sequencer() -> TestSequencer {
 pub struct Katana {
     pub sequencer: TestSequencer,
     pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
+    pub mock_data: HashMap<CollectionDB, Vec<StoredData>>,
 }
 
-impl Katana {
-    pub async fn new() -> Self {
+impl<'a> Katana {
+    #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+    pub async fn new<'b>(u: &'b mut arbitrary::Unstructured<'a>) -> Self
+    where
+        'b: 'a,
+    {
         let sequencer = katana_sequencer().await;
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-        Self::initialize(sequencer, starknet_provider).await
+        Self::initialize(sequencer, starknet_provider, u).await
     }
 
     /// Initializes the Katana test environment.
-    async fn initialize(sequencer: TestSequencer, starknet_provider: Arc<JsonRpcClient<HttpTransport>>) -> Self {
+    #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+    async fn initialize<'b>(
+        sequencer: TestSequencer,
+        starknet_provider: Arc<JsonRpcClient<HttpTransport>>,
+        u: &'b mut arbitrary::Unstructured<'a>,
+    ) -> Self
+    where
+        'b: 'a,
+    {
         // Load PK
         dotenvy::dotenv().expect("Failed to load .env file");
         let pk = std::env::var("EVM_PRIVATE_KEY").expect("Failed to get EVM private key");
         let pk = B256::from_str(&pk).expect("Failed to parse EVM private key");
 
         // Create a Kakarot client
-        let database = mock_database().await;
+        // let database = MongoFuzzer::mock_database(u, 10, 10).await;
+
+        let mut mongo_fuzzer = MongoFuzzer::new(u).await;
+        mongo_fuzzer.add_document(10).expect("Failed to add documents in the database");
+        let database = mongo_fuzzer.finalize().await;
+        let mock_data = (*mongo_fuzzer.documents()).clone();
+
         let eth_provider = Arc::new(
             EthDataProvider::new(database, starknet_provider).await.expect("Failed to create EthDataProvider"),
         );
 
         let eoa = KakarotEOA::new(pk, eth_provider);
 
-        Self { sequencer, eoa }
+        Self { sequencer, eoa, mock_data }
     }
 
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {

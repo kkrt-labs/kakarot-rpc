@@ -1,10 +1,7 @@
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+use reth_primitives::{Address, Bloom, Receipt, B256, U128, U256, U64, U8};
 use reth_rpc_types::TransactionReceipt;
 use serde::{Deserialize, Serialize};
-#[cfg(any(test, feature = "arbitrary"))]
-use {
-    arbitrary::Arbitrary,
-    reth_primitives::{Address, Bloom, Receipt, B256, U128, U256, U64, U8},
-};
 
 /// A transaction receipt as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -19,7 +16,7 @@ impl From<StoredTransactionReceipt> for TransactionReceipt {
     }
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let receipt = Receipt::arbitrary(u)?;
@@ -68,6 +65,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arbitrary::Arbitrary;
     use rand::Rng;
 
     #[test]

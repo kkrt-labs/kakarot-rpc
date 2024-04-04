@@ -16,7 +16,7 @@ use testcontainers::{
     core::WaitFor,
     Container, GenericImage,
 };
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {arbitrary::Arbitrary, mongodb::bson, reth_primitives::U8, std::collections::HashMap};
 
 lazy_static! {
@@ -344,7 +344,7 @@ async fn update_many(doc: String, value: String, collection: Collection<Document
 }
 
 /// Enumeration of collections in the database.
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Eq, Hash, PartialEq, Clone)]
 pub enum CollectionDB {
     /// Collection of block headers.
     Headers,
@@ -365,6 +365,32 @@ pub enum StoredData {
     StoredTransactionReceipt(StoredTransactionReceipt),
 }
 
+impl StoredData {
+    /// Extracts the stored header if it exists, otherwise returns None.
+    pub fn extract_stored_header(&self) -> Option<&StoredHeader> {
+        match self {
+            StoredData::StoredHeader(header) => Some(header),
+            _ => None,
+        }
+    }
+
+    /// Extracts the stored transaction if it exists, otherwise returns None.
+    pub fn extract_stored_transaction(&self) -> Option<&StoredTransaction> {
+        match self {
+            StoredData::StoredTransaction(transaction) => Some(transaction),
+            _ => None,
+        }
+    }
+
+    /// Extracts the stored transaction receipt if it exists, otherwise returns None.
+    pub fn extract_stored_transaction_receipt(&self) -> Option<&StoredTransactionReceipt> {
+        match self {
+            StoredData::StoredTransactionReceipt(receipt) => Some(receipt),
+            _ => None,
+        }
+    }
+}
+
 impl Serialize for StoredData {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -379,7 +405,7 @@ impl Serialize for StoredData {
 }
 
 /// Struct representing a data generator for MongoDB.
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 pub struct MongoFuzzer<'a> {
     /// Documents to insert into each collection.
     documents: HashMap<CollectionDB, Vec<StoredData>>,
@@ -389,7 +415,7 @@ pub struct MongoFuzzer<'a> {
     u: &'a mut arbitrary::Unstructured<'a>,
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> MongoFuzzer<'a> {
     /// Creates a new instance of `MongoFuzzer` with a mutable reference to the arbitrary `Unstructured` instance, used for generating random data.
     pub async fn new<'b>(u: &'b mut arbitrary::Unstructured<'a>) -> Self
@@ -415,6 +441,11 @@ impl<'a> MongoFuzzer<'a> {
         Self { u, documents: Default::default(), mongodb }
     }
 
+    /// Obtains an immutable reference to the documents HashMap.
+    pub fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
+        &self.documents
+    }
+
     /// Finalizes the data generation and returns the MongoDB database.
     pub async fn finalize(&self) -> Database {
         self.update_many(CollectionDB::Headers).await;
@@ -425,64 +456,44 @@ impl<'a> MongoFuzzer<'a> {
     }
 
     /// Mocks a database with the given number of headers and transactions.
-    pub async fn mock_database<'b>(
-        u: &'b mut arbitrary::Unstructured<'a>,
-        n_headers: usize,
-        n_transactions: usize,
-    ) -> Database
+    pub async fn mock_database<'b>(u: &'b mut arbitrary::Unstructured<'a>, n_documents: usize) -> Database
     where
         'b: 'a,
     {
         let mut mongo_fuzzer = MongoFuzzer::new(u).await;
-        mongo_fuzzer.add_headers(n_headers);
-        mongo_fuzzer.add_transactions(n_transactions);
+        mongo_fuzzer.add_document(n_documents).expect("Failed to add documents");
         mongo_fuzzer.finalize().await
     }
 
     /// Adds a document to the specified collection.
-    pub fn add_document(&mut self, collection: CollectionDB) -> Result<(), Box<dyn std::error::Error>> {
-        match collection {
-            CollectionDB::Transactions | CollectionDB::Receipts => {
-                let transaction = StoredTransaction::arbitrary(self.u)?;
-                let mut receipt = StoredTransactionReceipt::arbitrary(self.u)?;
-                receipt.receipt.transaction_hash = Some(transaction.tx.hash);
-                receipt.receipt.transaction_index = U64::from(transaction.tx.transaction_index.unwrap_or_default());
-                receipt.receipt.from = transaction.tx.from;
-                receipt.receipt.to = transaction.tx.to;
-                receipt.receipt.block_number = transaction.tx.block_number;
-                receipt.receipt.block_hash = transaction.tx.block_hash;
-                receipt.receipt.transaction_type = U8::from(transaction.tx.transaction_type.unwrap_or_default());
+    pub fn add_document(&mut self, n_documents: usize) -> Result<(), Box<dyn std::error::Error>> {
+        for _ in 0..n_documents {
+            let transaction = StoredTransaction::arbitrary(self.u)?;
 
-                self.documents
-                    .entry(CollectionDB::Transactions)
-                    .or_default()
-                    .push(StoredData::StoredTransaction(transaction));
-                self.documents
-                    .entry(CollectionDB::Receipts)
-                    .or_default()
-                    .push(StoredData::StoredTransactionReceipt(receipt));
-            }
-            CollectionDB::Headers => {
-                let header = StoredHeader::arbitrary(self.u)?;
-                self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
-            }
+            let mut receipt = StoredTransactionReceipt::arbitrary(self.u)?;
+            receipt.receipt.transaction_hash = Some(transaction.tx.hash);
+            receipt.receipt.transaction_index = U64::from(transaction.tx.transaction_index.unwrap_or_default());
+            receipt.receipt.from = transaction.tx.from;
+            receipt.receipt.to = transaction.tx.to;
+            receipt.receipt.block_number = transaction.tx.block_number;
+            receipt.receipt.block_hash = transaction.tx.block_hash;
+            receipt.receipt.transaction_type = U8::from(transaction.tx.transaction_type.unwrap_or_default());
+
+            let mut header = StoredHeader::arbitrary(self.u)?;
+            header.header.hash = transaction.tx.block_hash;
+            header.header.number = transaction.tx.block_number;
+
+            self.documents
+                .entry(CollectionDB::Transactions)
+                .or_default()
+                .push(StoredData::StoredTransaction(transaction));
+            self.documents
+                .entry(CollectionDB::Receipts)
+                .or_default()
+                .push(StoredData::StoredTransactionReceipt(receipt));
+            self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
         }
-
         Ok(())
-    }
-
-    /// Adds multiple transactions to the database.
-    pub fn add_transactions(&mut self, n_transactions: usize) {
-        for _ in 0..n_transactions {
-            self.add_document(CollectionDB::Transactions).expect("Failed to add transaction");
-        }
-    }
-
-    /// Adds multiple headers to the database.
-    pub fn add_headers(&mut self, n_headers: usize) {
-        for _ in 0..n_headers {
-            self.add_document(CollectionDB::Headers).expect("Failed to add header");
-        }
     }
 
     /// Updates multiple documents in the specified collection.
@@ -545,11 +556,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_mongo_fuzzer() {
-        let mut bytes = [0u8; 1024];
+        let mut bytes = [0u8; 100024];
         rand::thread_rng().fill(bytes.as_mut_slice());
 
         // Mocks a database with 100 headers and 100 transactions.
-        let database = MongoFuzzer::mock_database(&mut arbitrary::Unstructured::new(&bytes), 100, 100).await;
+        let database = MongoFuzzer::mock_database(&mut arbitrary::Unstructured::new(&bytes), 100).await;
 
         // Retrieves stored headers from the database.
         let _ = database.get::<StoredHeader>("headers", None, None).await.unwrap();

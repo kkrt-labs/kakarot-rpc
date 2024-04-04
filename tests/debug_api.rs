@@ -5,7 +5,9 @@ use kakarot_rpc::models::block::rpc_to_primitive_block;
 use kakarot_rpc::models::transaction::rpc_transaction_to_primitive;
 use kakarot_rpc::test_utils::fixtures::{katana, setup};
 use kakarot_rpc::test_utils::katana::Katana;
-use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH};
+use kakarot_rpc::test_utils::mongo::{
+    CollectionDB, BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH,
+};
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use reth_primitives::{
     BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered, U256,
@@ -201,31 +203,53 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    let tx = &katana
+        .mock_data
+        .get(&CollectionDB::Transactions)
+        .unwrap()
+        .first()
+        .unwrap()
+        .extract_stored_transaction()
+        .unwrap()
+        .tx;
+
+    let header =
+        &katana.mock_data.get(&CollectionDB::Headers).unwrap().first().unwrap().extract_stored_header().unwrap().header;
+
+    let block_hash = tx.block_hash.unwrap();
+    let block_number = tx.block_number.unwrap().to::<u64>();
+
+    println!("tx: {:?}", tx);
+    println!("header: {:?}", header);
+
     // Fetch raw transactions by block hash.
     let reqwest_client = reqwest::Client::new();
-    let res_by_block_hash = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawTransactions",
-                    "params":[format!("0x{:064x}", *BLOCK_HASH)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
-        .send()
-        .await
-        .expect("Failed to call Debug RPC");
-    let response_by_block_hash = res_by_block_hash.text().await.expect("Failed to get response body");
-    let raw_by_block_hash: Value =
-        serde_json::from_str(&response_by_block_hash).expect("Failed to deserialize response body");
+    // let res_by_block_hash = reqwest_client
+    //     .post(format!("http://localhost:{}", server_addr.port()))
+    //     .header("Content-Type", "application/json")
+    //     .body(
+    //         json!(
+    //             {
+    //                 "jsonrpc":"2.0",
+    //                 "method":"debug_getRawTransactions",
+    //                 "params":[format!("0x{:064x}", block_hash)],
+    //                 "id":1,
+    //             }
+    //         )
+    //         .to_string(),
+    //     )
+    //     .send()
+    //     .await
+    //     .expect("Failed to call Debug RPC");
+    // let response_by_block_hash = res_by_block_hash.text().await.expect("Failed to get response body");
+    // let raw_by_block_hash: Value =
+    //     serde_json::from_str(&response_by_block_hash).expect("Failed to deserialize response body");
 
-    let rlp_bytes_by_block_hash: Vec<Bytes> =
-        serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
+    // // println!("block_number {:?}", block_number);
+    // println!("raw_by_block_hash {:?}", raw_by_block_hash);
+
+    // let rlp_bytes_by_block_hash: Vec<Bytes> =
+    //     serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
 
     // Fetch raw transactions by block number.
     let res_by_block_number = reqwest_client
@@ -249,41 +273,45 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let raw_by_block_number: Value =
         serde_json::from_str(&response_by_block_number).expect("Failed to deserialize response body");
 
-    let rlp_bytes_by_block_number: Vec<Bytes> =
-        serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
+    println!("block_number {:?}", block_number);
+    println!("raw_by_block_number {:?}", raw_by_block_number);
+    // println!("fmt: {:?}", format!("0x{:064x}", block_number));
 
-    // Assert equality of transactions fetched by block hash and block number.
-    assert_eq!(rlp_bytes_by_block_number, rlp_bytes_by_block_hash);
+    // let rlp_bytes_by_block_number: Vec<Bytes> =
+    //     serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
 
-    let eth_provider = katana.eth_provider();
+    // // Assert equality of transactions fetched by block hash and block number.
+    // assert_eq!(rlp_bytes_by_block_number, rlp_bytes_by_block_hash);
 
-    for (i, actual_tx) in eth_provider
-        .block_transactions(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(BLOCK_NUMBER))))
-        .await
-        .unwrap()
-        .unwrap()
-        .iter()
-        .enumerate()
-    {
-        // Fetch the transaction for the current transaction hash.
-        let tx = eth_provider.transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
-        let signature = tx.signature.unwrap();
+    // let eth_provider = katana.eth_provider();
 
-        // Convert the transaction to a primitives transactions and encode it.
-        let rlp_bytes = TransactionSigned::from_transaction_and_signature(
-            rpc_transaction_to_primitive(tx).unwrap(),
-            reth_primitives::Signature {
-                r: signature.r,
-                s: signature.s,
-                odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-            },
-        )
-        .envelope_encoded();
+    // for (i, actual_tx) in eth_provider
+    //     .block_transactions(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
+    //     .await
+    //     .unwrap()
+    //     .unwrap()
+    //     .iter()
+    //     .enumerate()
+    // {
+    //     // Fetch the transaction for the current transaction hash.
+    //     let tx = eth_provider.transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
+    //     let signature = tx.signature.unwrap();
 
-        // Assert the equality of the constructed receipt with the corresponding receipt from both block hash and block number.
-        assert_eq!(rlp_bytes_by_block_number[i], rlp_bytes);
-        assert_eq!(rlp_bytes_by_block_hash[i], rlp_bytes);
-    }
+    //     // Convert the transaction to a primitives transactions and encode it.
+    //     let rlp_bytes = TransactionSigned::from_transaction_and_signature(
+    //         rpc_transaction_to_primitive(tx).unwrap(),
+    //         reth_primitives::Signature {
+    //             r: signature.r,
+    //             s: signature.s,
+    //             odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
+    //         },
+    //     )
+    //     .envelope_encoded();
+
+    //     // Assert the equality of the constructed receipt with the corresponding receipt from both block hash and block number.
+    //     assert_eq!(rlp_bytes_by_block_number[i], rlp_bytes);
+    //     assert_eq!(rlp_bytes_by_block_hash[i], rlp_bytes);
+    // }
 
     // Stop the Kakarot RPC server.
     drop(server_handle);

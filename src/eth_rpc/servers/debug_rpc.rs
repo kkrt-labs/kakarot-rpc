@@ -80,6 +80,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
         let transactions = self.eth_provider.block_transactions(Some(block_id)).await?.unwrap_or_default();
 
+        // println!("transactions: {:?}", transactions);
+
         let mut raw_transactions = Vec::with_capacity(transactions.len());
 
         for t in transactions {
@@ -96,6 +98,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .envelope_encoded();
             raw_transactions.push(bytes);
         }
+
+        // println!("transactions fin: {:?}", raw_transactions.clone());
 
         Ok(raw_transactions)
     }

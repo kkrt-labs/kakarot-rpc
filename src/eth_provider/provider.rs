@@ -560,7 +560,12 @@ where
             BlockId::Hash(hash) => BlockHashOrNumber::Hash(hash.block_hash),
         };
 
+        println!("block_id après étape 2 {:?}", block_id);
+
         let block_exists = self.block_exists(block_id).await?;
+
+        println!("est ce que block existe {:?}", block_exists);
+
         if !block_exists {
             return Ok(None);
         }
@@ -675,6 +680,20 @@ where
             BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
             BlockHashOrNumber::Number(number) => into_filter("header.number", number, 64),
         };
+
+        // ################################
+        // ################################
+        // ################################
+
+        println!("filter: {:?}", filter);
+
+        let toto = self.database.get_one::<StoredHeader>("headers", None, None).await?.unwrap();
+
+        println!("toto: {:?}", toto);
+        // ################################
+        // ################################
+        // ################################
+
         self.database
             .get_one("headers", filter, None)
             .await
