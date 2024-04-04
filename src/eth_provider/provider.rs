@@ -13,7 +13,6 @@ use reth_rpc_types::{
     TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
-use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;

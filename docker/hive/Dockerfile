@@ -15,16 +15,16 @@ RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
 # These values need to be updated if the version of ApiBara Starknet or Sink change.
 # platform: linux/amd64:
 #   - APIBARA_STARKNET_BIN_DIR: dsrifc349xgnwsv661shqljxb8pbxx2j
-#   - APIBARA_SINK_BIN_DIR: vr6f0crii7571q19j122dfqb1ha1m4i9
+#   - APIBARA_SINK_BIN_DIR: sci7y4a8r7yz05094pl88h3d7vv1s98f
 # platform: linux/arm64
 #   - APIBARA_STARKNET_BIN_DIR: f7va4mjqww1kkpp4il6y295dgcwq147v
-#   - APIBARA_SINK_BIN_DIR: 3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc
+#   - APIBARA_SINK_BIN_DIR: 5p0wgpyfsk19v8rrprnykiv5inzx8zag
 ARG APIBARA_STARKNET_BIN_DIR
 ARG APIBARA_SINK_BIN_DIR
-# Run `docker image inspect apibara/starknet:1.4.1-x86-64` to get the exact path
+# Run `docker image inspect apibara/starknet:1.4.1-x86_64` to get the exact path
 # ⚠️ This path is subject to change, so it's important to check it before building the image ⚠️
 COPY --from=apibara /nix/store/${APIBARA_STARKNET_BIN_DIR}-apibara-starknet-1.4.1/bin/apibara-starknet /usr/local/bin/starknet
-COPY --from=indexer /nix/store/${APIBARA_SINK_BIN_DIR}-apibara-sink-mongo-0.5.3/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
+COPY --from=indexer /nix/store/${APIBARA_SINK_BIN_DIR}-apibara-sink-mongo-0.7.0/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
 # Change the interpreter path.
 ARG BUILDPLATFORM
 RUN case $BUILDPLATFORM in \

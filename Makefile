@@ -50,7 +50,7 @@ test-target: load-env
 	cargo test --tests --features "testing,hive" $(TARGET) -- --nocapture
 
 benchmark:
-	cd benchmarks && bun i && bun run benchmark-katana
+	cd benchmarks && bun i && bun run benchmark
 
 
 ### Running the Kakarot stack locally:
