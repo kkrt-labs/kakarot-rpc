@@ -216,7 +216,7 @@ impl KatanaGenesisBuilder<Loaded> {
                 DEFAULT_FEE_TOKEN_ADDRESS.0,
                 account_contract_class_hash,
                 uninitialized_account_class_hash,
-                cario1_helpers_class_hash,
+                cairo1_helpers_class_hash,
                 block_gas_limit,
             ],
         ));
