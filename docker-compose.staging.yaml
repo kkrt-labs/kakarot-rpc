@@ -103,13 +103,13 @@ services:
       service: clone-repo
 
   indexer:
-    image: quay.io/apibara/sink-mongo
+    image: quay.io/apibara/sink-mongo:0.7.0
     command:
       - run
       - /code/kakarot-indexer/src/main.ts
     environment:
       # Whitelist environment variables
-      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET
+      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET,MONGO_REPLACE_DATA_INSIDE_TRANSACTION
       - DEBUG=""
       - APIBARA_AUTH_TOKEN=""
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
@@ -119,6 +119,7 @@ services:
       - SINK_TYPE=mongo
       - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
+      - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=true
       - KAKAROT_ADDRESS=0x05def47dc1141d9647ce4e655aed3a67878291122d88dd1b20721fc7df7513
     restart: on-failure
     volumes:

@@ -6,7 +6,7 @@ FROM ghcr.io/dojoengine/dojo:v0.6.0-alpha.2 as katana
 # Indexer service
 ### Apibara DNA indexer and indexer
 FROM quay.io/apibara/starknet:1.4.1 as apibara
-FROM quay.io/apibara/sink-mongo:0.5.3 as indexer
+FROM quay.io/apibara/sink-mongo:0.7.0 as indexer
 FROM debian:bookworm as apibara-build
 RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
 
