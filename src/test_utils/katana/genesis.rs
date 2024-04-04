@@ -133,8 +133,8 @@ impl<T> KatanaGenesisBuilder<T> {
         self.class_hashes.get("proxy").cloned().ok_or(eyre!("Missing proxy class hash"))
     }
 
-    pub fn precompiles_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("precompiles").cloned().ok_or(eyre!("Missing precompiles class hash"))
+    pub fn cairo1_helpers_class_hash(&self) -> Result<FieldElement> {
+        self.class_hashes.get("cairo1_helpers").cloned().ok_or(eyre!("Missing cairo1 helpers class hash"))
     }
 }
 
@@ -201,8 +201,7 @@ impl KatanaGenesisBuilder<Loaded> {
         let contract_account_class_hash = self.contract_account_class_hash()?;
         let eoa_class_hash = self.eoa_class_hash()?;
         let proxy_class_hash = self.proxy_class_hash()?;
-        let precompiles_class_hash = self.precompiles_class_hash()?;
-
+        let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
         let block_gas_limit = FieldElement::from(20_000_000u64);
 
         // Construct the kakarot contract address. Based on the constructor args from
@@ -217,7 +216,7 @@ impl KatanaGenesisBuilder<Loaded> {
                 contract_account_class_hash,
                 eoa_class_hash,
                 proxy_class_hash,
-                precompiles_class_hash,
+                cairo1_helpers_class_hash,
                 block_gas_limit,
             ],
         ));
@@ -230,7 +229,8 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr("contract_account_class_hash")?, contract_account_class_hash),
             (storage_addr("externally_owned_account_class_hash")?, eoa_class_hash),
             (storage_addr("account_proxy_class_hash")?, proxy_class_hash),
-            (storage_addr("precompiles_class_hash")?, precompiles_class_hash),
+            // TODO rename precompiles_class_hash in https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/kakarot.cairo
+            (storage_addr("precompiles_class_hash")?, cairo1_helpers_class_hash),
             (storage_addr("coinbase")?, coinbase_address),
             (storage_addr("base_fee")?, FieldElement::ZERO),
             (storage_addr("prev_randao")?, FieldElement::ZERO),
