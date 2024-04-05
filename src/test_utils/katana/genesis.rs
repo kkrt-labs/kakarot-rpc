@@ -3,8 +3,6 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
 use ethers::signers::LocalWallet;
 use ethers::signers::Signer;
 use ethers::types::U256;
@@ -28,6 +26,7 @@ use serde_json::Value;
 use serde_with::serde_as;
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::contract::legacy::LegacyContractClass;
+use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness};
 use walkdir::WalkDir;
@@ -382,11 +381,8 @@ impl KatanaGenesisBuilder<Initialized> {
 }
 
 fn compute_class_hash(class: &Value) -> Result<FieldElement> {
-    match serde_json::from_value::<ContractClass>(class.clone()) {
-        Ok(casm) => {
-            let casm = CasmContractClass::from_contract_class(casm, true).expect("Failed to convert class");
-            Ok(FieldElement::from_bytes_be(&casm.compiled_class_hash().to_be_bytes())?)
-        }
+    match serde_json::from_value::<SierraClass>(class.clone()) {
+        Ok(sierra) => Ok(sierra.class_hash()?),
         Err(_) => {
             let casm: LegacyContractClass =
                 serde_json::from_value(class.clone()).expect("Failed to parse class code v0");
