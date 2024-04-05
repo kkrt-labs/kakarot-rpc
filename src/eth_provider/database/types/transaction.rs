@@ -55,7 +55,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                         })
                         .collect()
                 }),
-                transaction_type: Some(U64::from::<u8>(transaction.tx_type().into())),
+                transaction_type: Some(U64::from::<u8>(Into::<u8>::into(transaction.tx_type()) % 3)),
                 other: Default::default(),
             },
         })

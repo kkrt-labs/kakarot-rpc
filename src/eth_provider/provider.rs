@@ -233,7 +233,7 @@ where
             return Ok(None);
         }
 
-        let filter = into_filter("tx.blockNumber", block_number, 64);
+        let filter = into_filter("tx.blockNumber", block_number, 16);
         let count = self.database.count("transactions", filter).await?;
         Ok(Some(U256::from(count)))
     }
@@ -263,7 +263,7 @@ where
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let mut filter = into_filter("tx.blockNumber", block_number, 64);
+        let mut filter = into_filter("tx.blockNumber", block_number, 16);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
@@ -531,7 +531,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockNumber", block_number, 64);
+                let filter = into_filter("receipt.blockNumber", block_number, 16);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -678,21 +678,42 @@ where
     async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
         let filter = match id {
             BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
-            BlockHashOrNumber::Number(number) => into_filter("header.number", number, 64),
+            BlockHashOrNumber::Number(number) => into_filter("header.number", number, 16),
         };
 
-        // ################################
-        // ################################
-        // ################################
+        // // ################################
+        // // ################################
+        // // ################################
 
-        println!("filter: {:?}", filter);
+        // println!("filter: {:?}", filter.clone());
 
-        let toto = self.database.get_one::<StoredHeader>("headers", None, None).await?.unwrap();
+        // let toto = self.database.get_one::<StoredHeader>("headers", None, None).await?.unwrap();
 
-        println!("toto: {:?}", toto);
-        // ################################
-        // ################################
-        // ################################
+        // println!("toto: {:?}", toto);
+
+        // use futures::StreamExt;
+
+        // // Obtenez une poignée sur la collection
+        // let collection = self.database.inner().collection::<mongodb::bson::Document>("headers");
+
+        // // Récupérer tous les documents de la collection
+        // let mut cursor = collection.find(None, None).await.expect("toto");
+
+        // // Parcourir les résultats et les imprimer
+        // while let Some(result) = cursor.next().await {
+        //     match result {
+        //         Ok(document) => {
+        //             // Imprimer le document brut
+        //             println!("Document: {:?}", document);
+        //         }
+        //         Err(e) => {
+        //             eprintln!("Erreur lors de la récupération du document : {}", e);
+        //         }
+        //     }
+        // }
+        // // ################################
+        // // ################################
+        // // ################################
 
         self.database
             .get_one("headers", filter, None)
@@ -711,7 +732,7 @@ where
     ) -> EthProviderResult<BlockTransactions> {
         let transactions_filter = match block_id {
             BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, 64),
-            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, 64),
+            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, 16),
         };
 
         let block_transactions = if full {

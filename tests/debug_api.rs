@@ -203,6 +203,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the first transaction from the mock data.
     let tx = &katana
         .mock_data
         .get(&CollectionDB::Transactions)
@@ -213,43 +214,38 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         .unwrap()
         .tx;
 
-    let header =
-        &katana.mock_data.get(&CollectionDB::Headers).unwrap().first().unwrap().extract_stored_header().unwrap().header;
-
+    // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
+    // Get the block number from the transaction and convert it to a u64.
     let block_number = tx.block_number.unwrap().to::<u64>();
-
-    println!("tx: {:?}", tx);
-    println!("header: {:?}", header);
 
     // Fetch raw transactions by block hash.
     let reqwest_client = reqwest::Client::new();
-    // let res_by_block_hash = reqwest_client
-    //     .post(format!("http://localhost:{}", server_addr.port()))
-    //     .header("Content-Type", "application/json")
-    //     .body(
-    //         json!(
-    //             {
-    //                 "jsonrpc":"2.0",
-    //                 "method":"debug_getRawTransactions",
-    //                 "params":[format!("0x{:064x}", block_hash)],
-    //                 "id":1,
-    //             }
-    //         )
-    //         .to_string(),
-    //     )
-    //     .send()
-    //     .await
-    //     .expect("Failed to call Debug RPC");
-    // let response_by_block_hash = res_by_block_hash.text().await.expect("Failed to get response body");
-    // let raw_by_block_hash: Value =
-    //     serde_json::from_str(&response_by_block_hash).expect("Failed to deserialize response body");
-
-    // // println!("block_number {:?}", block_number);
-    // println!("raw_by_block_hash {:?}", raw_by_block_hash);
-
-    // let rlp_bytes_by_block_hash: Vec<Bytes> =
-    //     serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
+    let res_by_block_hash = reqwest_client
+        .post(format!("http://localhost:{}", server_addr.port()))
+        .header("Content-Type", "application/json")
+        .body(
+            json!(
+                {
+                    "jsonrpc":"2.0",
+                    "method":"debug_getRawTransactions",
+                    "params":[format!("0x{:064x}", block_hash)],
+                    "id":1,
+                }
+            )
+            .to_string(),
+        )
+        .send()
+        .await
+        .expect("Failed to call Debug RPC");
+    // Get the response body text from the block hash request.
+    let response_by_block_hash = res_by_block_hash.text().await.expect("Failed to get response body");
+    // Deserialize the response body into a JSON value.
+    let raw_by_block_hash: Value =
+        serde_json::from_str(&response_by_block_hash).expect("Failed to deserialize response body");
+    // Deserialize the "result" field of the JSON value into a vector of bytes.
+    let rlp_bytes_by_block_hash: Vec<Bytes> =
+        serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
 
     // Fetch raw transactions by block number.
     let res_by_block_number = reqwest_client
@@ -260,7 +256,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawTransactions",
-                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "params":[format!("0x{:016x}", block_number)],
                     "id":1,
                 }
             )
@@ -269,49 +265,48 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         .send()
         .await
         .expect("Failed to call Debug RPC");
+    // Get the response body text from the block number request.
     let response_by_block_number = res_by_block_number.text().await.expect("Failed to get response body");
+    // Deserialize the response body into a JSON value.
     let raw_by_block_number: Value =
         serde_json::from_str(&response_by_block_number).expect("Failed to deserialize response body");
+    // Deserialize the "result" field of the JSON value into a vector of bytes.
+    let rlp_bytes_by_block_number: Vec<Bytes> =
+        serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
 
-    println!("block_number {:?}", block_number);
-    println!("raw_by_block_number {:?}", raw_by_block_number);
-    // println!("fmt: {:?}", format!("0x{:064x}", block_number));
+    // Assert equality of transactions fetched by block hash and block number.
+    assert_eq!(rlp_bytes_by_block_number, rlp_bytes_by_block_hash);
 
-    // let rlp_bytes_by_block_number: Vec<Bytes> =
-    //     serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
+    // Get the Ethereum provider from the Katana instance.
+    let eth_provider = katana.eth_provider();
 
-    // // Assert equality of transactions fetched by block hash and block number.
-    // assert_eq!(rlp_bytes_by_block_number, rlp_bytes_by_block_hash);
+    for (i, actual_tx) in eth_provider
+        .block_transactions(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
+        .await
+        .unwrap()
+        .unwrap()
+        .iter()
+        .enumerate()
+    {
+        // Fetch the transaction for the current transaction hash.
+        let tx = eth_provider.transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
+        let signature = tx.signature.unwrap();
 
-    // let eth_provider = katana.eth_provider();
+        // Convert the transaction to a primitives transactions and encode it.
+        let rlp_bytes = TransactionSigned::from_transaction_and_signature(
+            rpc_transaction_to_primitive(tx).unwrap(),
+            reth_primitives::Signature {
+                r: signature.r,
+                s: signature.s,
+                odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
+            },
+        )
+        .envelope_encoded();
 
-    // for (i, actual_tx) in eth_provider
-    //     .block_transactions(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
-    //     .await
-    //     .unwrap()
-    //     .unwrap()
-    //     .iter()
-    //     .enumerate()
-    // {
-    //     // Fetch the transaction for the current transaction hash.
-    //     let tx = eth_provider.transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
-    //     let signature = tx.signature.unwrap();
-
-    //     // Convert the transaction to a primitives transactions and encode it.
-    //     let rlp_bytes = TransactionSigned::from_transaction_and_signature(
-    //         rpc_transaction_to_primitive(tx).unwrap(),
-    //         reth_primitives::Signature {
-    //             r: signature.r,
-    //             s: signature.s,
-    //             odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-    //         },
-    //     )
-    //     .envelope_encoded();
-
-    //     // Assert the equality of the constructed receipt with the corresponding receipt from both block hash and block number.
-    //     assert_eq!(rlp_bytes_by_block_number[i], rlp_bytes);
-    //     assert_eq!(rlp_bytes_by_block_hash[i], rlp_bytes);
-    // }
+        // Assert the equality of the constructed receipt with the corresponding receipt from both block hash and block number.
+        assert_eq!(rlp_bytes_by_block_number[i], rlp_bytes);
+        assert_eq!(rlp_bytes_by_block_hash[i], rlp_bytes);
+    }
 
     // Stop the Kakarot RPC server.
     drop(server_handle);
@@ -326,6 +321,22 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the first transaction from the mock data.
+    let tx = &katana
+        .mock_data
+        .get(&CollectionDB::Transactions)
+        .unwrap()
+        .first()
+        .unwrap()
+        .extract_stored_transaction()
+        .unwrap()
+        .tx;
+
+    // Get the block hash from the transaction.
+    let block_hash = tx.block_hash.unwrap();
+    // Get the block number from the transaction and convert it to a u64.
+    let block_number = tx.block_number.unwrap().to::<u64>();
+
     // Fetch raw receipts by block hash.
     let reqwest_client = reqwest::Client::new();
     let res_by_block_hash = reqwest_client
@@ -336,7 +347,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawReceipts",
-                    "params":[format!("0x{:064x}", *BLOCK_HASH)],
+                    "params":[format!("0x{:064x}", block_hash)],
                     "id":1,
                 }
             )
@@ -345,10 +356,12 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         .send()
         .await
         .expect("Failed to call Debug RPC");
+    // Get the response body text from the block hash request.
     let response_by_block_hash = res_by_block_hash.text().await.expect("Failed to get response body");
+    // Deserialize the response body into a JSON value.
     let raw_by_block_hash: Value =
         serde_json::from_str(&response_by_block_hash).expect("Failed to deserialize response body");
-
+    // Deserialize the "result" field of the JSON value into a vector of bytes.
     let rlp_bytes_by_block_hash: Vec<Bytes> =
         serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
 
@@ -361,7 +374,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawReceipts",
-                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "params":[format!("0x{:016x}", block_number)],
                     "id":1,
                 }
             )
@@ -370,10 +383,12 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         .send()
         .await
         .expect("Failed to call Debug RPC");
+    // Get the response body text from the block number request.
     let response_by_block_number = res_by_block_number.text().await.expect("Failed to get response body");
+    // Deserialize the response body into a JSON value.
     let raw_by_block_number: Value =
         serde_json::from_str(&response_by_block_number).expect("Failed to deserialize response body");
-
+    // Deserialize the "result" field of the JSON value into a vector of bytes.
     let rlp_bytes_by_block_number: Vec<Bytes> =
         serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
 
@@ -384,7 +399,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     for (i, receipt) in eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(BLOCK_NUMBER))))
+        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
         .await
         .unwrap()
         .unwrap()

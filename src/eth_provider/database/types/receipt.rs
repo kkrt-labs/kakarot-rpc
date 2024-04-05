@@ -55,7 +55,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
                 logs_bloom: Bloom::arbitrary(u)?,
                 state_root: Some(B256::arbitrary(u)?),
                 status_code: Some(U64::from(receipt.success as u8)),
-                transaction_type: U8::from::<u8>(receipt.tx_type.into()),
+                transaction_type: U8::from::<u8>(Into::<u8>::into(receipt.tx_type) % 3),
                 other: Default::default(),
             },
         })
