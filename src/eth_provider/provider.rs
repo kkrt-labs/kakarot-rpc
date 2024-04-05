@@ -9,8 +9,8 @@ use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::{
-    other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index,
-    RichBlock, TransactionReceipt, TransactionRequest, ValueOrArray,
+    Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
+    TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::SyncStatusType;
@@ -711,31 +711,29 @@ where
     /// Get a block from the database based on a block hash or number.
     /// If full is true, the block will contain the full transactions, otherwise just the hashes
     async fn block(&self, block_id: BlockHashOrNumber, full: bool) -> EthProviderResult<Option<RichBlock>> {
-        let header = self.header(block_id).await?;
-        let header = match header {
-            Some(header) => header,
+        let header = match self.header(block_id).await? {
+            Some(h) => h.header,
             None => return Ok(None),
         };
 
-        let transactions = self.transactions(block_id, full).await?;
-
         // The withdrawals are not supported, hence the withdrawals_root should always be empty.
-        if let Some(withdrawals_root) = header.header.withdrawals_root {
+        if let Some(withdrawals_root) = header.withdrawals_root {
             if withdrawals_root != EMPTY_ROOT_HASH {
                 return Err(EthApiError::Unsupported("withdrawals"));
             }
         }
 
-        let block = Block {
-            header: header.header,
-            transactions,
-            uncles: Vec::new(),
-            size: None,
-            withdrawals: Some(vec![]),
-            other: OtherFields::default(),
-        };
-
-        Ok(Some(block.into()))
+        Ok(Some(
+            Block {
+                header,
+                transactions: self.transactions(block_id, full).await?,
+                uncles: Default::default(),
+                size: Default::default(),
+                withdrawals: Some(Default::default()),
+                other: Default::default(),
+            }
+            .into(),
+        ))
     }
 
     /// Convert the given block id into a Starknet block id
