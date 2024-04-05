@@ -88,6 +88,9 @@ prometheus = { version = "0.13.0", default-features = false }
 hyper = { version = "0.14.16", default-features = false }
 pin-project = { version = "1.1.3", default-features = false }
 
+# Debug
+clap = { version = "4.5", default-features = false, optional = true }
+
 
 # In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
@@ -126,6 +129,11 @@ testing = [
   "tokio-stream",
 ]
 hive = []
+debug = ["clap"]
+
+[[bin]]
+name = "debug"
+required-features = ["debug"]
 
 [[bin]]
 name = "katana_genesis"
