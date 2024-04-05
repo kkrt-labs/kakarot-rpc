@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::{into_via_try_wrapper, models::felt::Felt252Wrapper};
+use crate::models::felt::Felt252Wrapper;
 use alloy_rlp::Encodable;
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
@@ -56,12 +56,12 @@ lazy_static! {
 /// Compute the starknet address given a eth address
 #[inline]
 pub fn starknet_address(address: Address) -> FieldElement {
-    let evm_address = into_via_try_wrapper!(address).unwrap();
+    let evm_address = into_via_wrapper!(address);
     get_contract_address(
-        into_via_wrapper!(address),
+        evm_address,
         *UNINITIALIZED_ACCOUNT_CLASS_HASH,
         &[*KAKAROT_ADDRESS, evm_address],
-        *KAKAROT_ADDRESS,
+        FieldElement::ZERO,
     )
 }
 
