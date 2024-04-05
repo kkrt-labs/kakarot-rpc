@@ -656,9 +656,7 @@ where
 
         let return_data = call_output.return_data;
         if call_output.success == FieldElement::ZERO {
-            let revert_reason =
-                return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
-            return Err(KakarotError::from(EvmError::from(revert_reason)).into());
+            return Err(KakarotError::from(EvmError::from(return_data.0)).into());
         }
         let gas_used = call_output.gas_used.try_into().map_err(|_| TransactionError::GasOverflow)?;
         Ok((return_data, gas_used))
