@@ -55,6 +55,7 @@ lazy_static! {
 }
 
 pub const BLOCK_NUMBER: u64 = 0x1234;
+pub const RANDOM_BYTES_SIZE: usize = 100024;
 
 /// Enumeration of collections in the database.
 #[derive(Eq, Hash, PartialEq, Clone)]
@@ -181,7 +182,7 @@ impl MongoFuzzer {
 
     /// Adds a hardcoded transaction to the collection of transactions.
     pub fn add_hardcoded_transaction(&mut self, tx_type: Option<TxType>) -> Result<(), Box<dyn std::error::Error>> {
-        let builder = TransactionBuilder::default().tx_type(tx_type.unwrap_or_default());
+        let builder = TransactionBuilder::default().with_tx_type(tx_type.unwrap_or_default());
         self.add_custom_transaction(builder)
     }
 
@@ -283,7 +284,7 @@ pub struct TransactionBuilder {
 
 impl TransactionBuilder {
     /// Specifies the type of transaction to build.
-    pub fn tx_type(mut self, tx_type: TxType) -> Self {
+    pub fn with_tx_type(mut self, tx_type: TxType) -> Self {
         self.tx_type = Some(tx_type);
         self
     }
@@ -380,8 +381,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_mongo_fuzzer() {
-        // Mocks a database with 100 headers and 100 transactions.
-        let database = MongoFuzzer::mock_database(100024, 100).await;
+        // Mocks a database with 100 transactions, receipts and headers.
+        let database = MongoFuzzer::mock_database(RANDOM_BYTES_SIZE, 100).await;
 
         // Retrieves stored headers from the database.
         let _ = database.get::<StoredHeader>("headers", None, None).await.unwrap();
