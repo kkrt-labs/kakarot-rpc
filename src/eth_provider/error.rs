@@ -25,7 +25,7 @@ pub enum EthRpcErrorCode {
 }
 
 /// Error that can occur when interacting with the ETH Api.
-#[derive(Debug, Error)]
+#[derive(Error)]
 pub enum EthApiError {
     /// When a block is not found
     #[error("unknown block")]
@@ -53,18 +53,29 @@ pub enum EthApiError {
     KakarotError(KakarotError),
 }
 
+impl std::fmt::Debug for EthApiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::KakarotError(KakarotError::ProviderError(err)) => {
+                write!(f, "starknet provider error: {:?}", err)
+            }
+            _ => write!(f, "{}", self),
+        }
+    }
+}
+
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
-        let msg = format!("{}", value);
+        let msg = format!("{:?}", value);
         match value {
             EthApiError::UnknownBlock => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
             EthApiError::UnknownBlockNumber => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
             EthApiError::InvalidBlockRange => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::TransactionError(err) => rpc_err(err.error_code(), msg),
+            EthApiError::TransactionError(err) => rpc_err(err.into(), msg),
             EthApiError::SignatureError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::Unsupported(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
             EthApiError::EthereumDataFormatError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::KakarotError(err) => rpc_err(err.error_code(), msg),
+            EthApiError::KakarotError(err) => rpc_err(err.into(), msg),
         }
     }
 }
@@ -99,10 +110,10 @@ impl From<KakarotError> for EthApiError {
     }
 }
 
-impl KakarotError {
-    fn error_code(&self) -> EthRpcErrorCode {
-        match self {
-            Self::ExecutionError(_) => EthRpcErrorCode::ExecutionError,
+impl From<KakarotError> for EthRpcErrorCode {
+    fn from(value: KakarotError) -> Self {
+        match value {
+            KakarotError::ExecutionError(_) => EthRpcErrorCode::ExecutionError,
             _ => EthRpcErrorCode::InternalError,
         }
     }
@@ -155,10 +166,10 @@ impl From<EvmError> for KakarotError {
 
 impl From<Vec<FieldElement>> for EvmError {
     fn from(value: Vec<FieldElement>) -> Self {
-        let bytes: Bytes = value.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<_>>().into();
-        let maybe_revert_reason = String::from_utf8(bytes.clone().to_vec());
+        let bytes = value.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<_>>();
+        let maybe_revert_reason = String::from_utf8(bytes.clone());
         if maybe_revert_reason.is_err() {
-            return EvmError::Other(format!("{}", bytes));
+            return EvmError::Other(format!("{}", Bytes::from(bytes)));
         }
 
         let revert_reason = maybe_revert_reason.unwrap(); // safe unwrap
@@ -184,7 +195,7 @@ impl From<Vec<FieldElement>> for EvmError {
             "transfer amount exceeds balance" => EvmError::BalanceError,
             "AddressCollision" => EvmError::AddressCollision,
             s if s.contains("outOfGas") => EvmError::OutOfGas,
-            _ => EvmError::Other(format!("{}", bytes)),
+            _ => EvmError::Other(format!("{}", Bytes::from(bytes))),
         }
     }
 }
@@ -204,12 +215,12 @@ pub enum TransactionError {
     ExpectedFullTransactions,
 }
 
-impl TransactionError {
-    fn error_code(&self) -> EthRpcErrorCode {
-        match self {
-            Self::InvalidChainId => EthRpcErrorCode::InvalidInput,
-            Self::GasOverflow => EthRpcErrorCode::TransactionRejected,
-            Self::ExpectedFullTransactions => EthRpcErrorCode::InternalError,
+impl From<TransactionError> for EthRpcErrorCode {
+    fn from(error: TransactionError) -> Self {
+        match error {
+            TransactionError::InvalidChainId => EthRpcErrorCode::InvalidInput,
+            TransactionError::GasOverflow => EthRpcErrorCode::TransactionRejected,
+            TransactionError::ExpectedFullTransactions => EthRpcErrorCode::InternalError,
         }
     }
 }
@@ -258,6 +269,6 @@ mod tests {
         let eth_err: EthApiError = err.into();
         let json_err: ErrorObject<'static> = eth_err.into();
 
-        assert_eq!(json_err.message(), "Internal(ProviderError(StarknetError(UnexpectedError(\"test\"))))");
+        assert_eq!(json_err.message(), "starknet provider error: StarknetError(UnexpectedError(\"test\"))");
     }
 }
