@@ -81,8 +81,6 @@ impl<'a> Katana {
         let pk = B256::from_str(&pk).expect("Failed to parse EVM private key");
 
         // Create a Kakarot client
-        // let database = MongoFuzzer::mock_database(u, 10, 10).await;
-
         let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
         mongo_fuzzer
