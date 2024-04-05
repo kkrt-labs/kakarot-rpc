@@ -722,9 +722,10 @@ where
         let transactions = self.transactions(block_id, full).await?;
 
         // The withdrawals are not supported, hence the withdrawals_root should always be empty.
-        let withdrawal_root = header.header.withdrawals_root.unwrap_or_default();
-        if withdrawal_root != EMPTY_ROOT_HASH {
-            return Err(EthApiError::Unsupported("withdrawals"));
+        if let Some(withdrawals_root) = header.header.withdrawals_root {
+            if withdrawals_root != EMPTY_ROOT_HASH {
+                return Err(EthApiError::Unsupported("withdrawals"));
+            }
         }
 
         let block = Block {
