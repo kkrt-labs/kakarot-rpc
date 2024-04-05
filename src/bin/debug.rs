@@ -93,9 +93,9 @@ fn rpc_tx_to_signed_tx(transaction: Transaction, nonce: u64) -> Result<Transacti
     let mut transaction = rpc_transaction_to_primitive(transaction)?;
     transaction.set_nonce(nonce);
     match transaction {
-        reth_primitives::Transaction::Legacy(ref mut tx) => tx.gas_limit = tx.gas_limit * 2,
-        reth_primitives::Transaction::Eip1559(ref mut tx) => tx.gas_limit = tx.gas_limit * 2,
-        reth_primitives::Transaction::Eip2930(ref mut tx) => tx.gas_limit = tx.gas_limit * 2,
+        reth_primitives::Transaction::Legacy(ref mut tx) => tx.gas_limit *= 2,
+        reth_primitives::Transaction::Eip1559(ref mut tx) => tx.gas_limit *= 2,
+        reth_primitives::Transaction::Eip2930(ref mut tx) => tx.gas_limit *= 2,
         _ => unreachable!("unexpected transaction type"),
     };
 
