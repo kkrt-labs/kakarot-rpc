@@ -61,26 +61,20 @@ pub struct Katana {
 
 impl<'a> Katana {
     #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-    pub async fn new<'b>(u: &'b mut arbitrary::Unstructured<'a>) -> Self
-    where
-        'b: 'a,
-    {
+    pub async fn new(rnd_bytes_size: usize) -> Self {
         let sequencer = katana_sequencer().await;
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
 
-        Self::initialize(sequencer, starknet_provider, u).await
+        Self::initialize(sequencer, starknet_provider, rnd_bytes_size).await
     }
 
     /// Initializes the Katana test environment.
     #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-    async fn initialize<'b>(
+    async fn initialize(
         sequencer: TestSequencer,
         starknet_provider: Arc<JsonRpcClient<HttpTransport>>,
-        u: &'b mut arbitrary::Unstructured<'a>,
-    ) -> Self
-    where
-        'b: 'a,
-    {
+        rnd_bytes_size: usize,
+    ) -> Self {
         // Load PK
         dotenvy::dotenv().expect("Failed to load .env file");
         let pk = std::env::var("EVM_PRIVATE_KEY").expect("Failed to get EVM private key");
@@ -89,16 +83,16 @@ impl<'a> Katana {
         // Create a Kakarot client
         // let database = MongoFuzzer::mock_database(u, 10, 10).await;
 
-        let mut mongo_fuzzer = MongoFuzzer::new(u).await;
-        mongo_fuzzer.add_document(10).expect("Failed to add documents in the database");
+        let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;
+        mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
         mongo_fuzzer
-            .add_harcoded_transaction(Some(TxType::Eip1559))
+            .add_hardcoded_transaction(Some(TxType::Eip1559))
             .expect("Failed to add Eip1559 transaction in the database");
         mongo_fuzzer
-            .add_harcoded_transaction(Some(TxType::Eip2930))
+            .add_hardcoded_transaction(Some(TxType::Eip2930))
             .expect("Failed to add Eip2930 transaction in the database");
         mongo_fuzzer
-            .add_harcoded_transaction(Some(TxType::Legacy))
+            .add_hardcoded_transaction(Some(TxType::Legacy))
             .expect("Failed to add Legacy transaction in the database");
         let database = mongo_fuzzer.finalize().await;
         let mock_data = (*mongo_fuzzer.documents()).clone();

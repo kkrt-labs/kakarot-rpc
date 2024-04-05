@@ -1,7 +1,7 @@
 use rstest::*;
 use tracing_subscriber::{filter, FmtSubscriber};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use {super::katana::Katana, crate::test_utils::evm_contract::KakarotEvmContract, ethers::abi::Token, rand::Rng};
+use {super::katana::Katana, crate::test_utils::evm_contract::KakarotEvmContract, ethers::abi::Token};
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
@@ -35,11 +35,8 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 pub async fn katana() -> Katana {
-    let mut bytes = [0u8; 100024];
-    rand::thread_rng().fill(bytes.as_mut_slice());
-
     // Create a new test environment on Katana
-    Katana::new(&mut arbitrary::Unstructured::new(&bytes)).await
+    Katana::new(100024).await
 }
 
 /// This fixture configures the tests. The following setup
