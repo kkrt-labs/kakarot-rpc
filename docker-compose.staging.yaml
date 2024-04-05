@@ -70,9 +70,9 @@ services:
       # These values are unique to Sepolia Testnet
       # They'll need to be manually changed in case the testnet is reset
       # To add robustness: parse the `deployments/starknet-sepolia` folder in `kkrt-labs/kakarot` repo
-      - KAKAROT_ADDRESS=0x37e28466e1828707e76857cbd62503d27a362e05668a510acb45f8d47c6990a
+      - KAKAROT_ADDRESS=0x537782064f644911513bec708d60726f51365c345b00c2af3259435e7c5f085
       - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x3db0d95f29a50a48363b673e914b55019904b275d63cb95a4b0c4fac5cfdb32
-      - ACCOUNT_CONTRACT_CLASS_HASH=0xc32d1d64f4e23d6bd8d96a8f860c7952035ad5cf6fde2ab17abadc75f6ea5e
+      - ACCOUNT_CONTRACT_CLASS_HASH=0x5095d618fe502b6612f8e13571a9e15d6339f74e62d8f362bc3a5eb548b381b
     restart: on-failure
     depends_on:
       starknet:
@@ -119,7 +119,7 @@ services:
       - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=true
-      - KAKAROT_ADDRESS=0x37e28466e1828707e76857cbd62503d27a362e05668a510acb45f8d47c6990a
+      - KAKAROT_ADDRESS=0x537782064f644911513bec708d60726f51365c345b00c2af3259435e7c5f085
     restart: on-failure
     volumes:
       - indexer_code:/code
