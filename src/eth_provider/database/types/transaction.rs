@@ -35,7 +35,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                 gas_price: Some(U128::arbitrary(u)?),
                 gas: U256::from(U64::arbitrary(u)?),
                 max_fee_per_gas: Some(U128::from(transaction.max_fee_per_gas())),
-                max_priority_fee_per_gas: transaction.max_priority_fee_per_gas().map(U128::from),
+                max_priority_fee_per_gas: Some(U128::from(transaction.max_priority_fee_per_gas().unwrap_or_default())),
                 max_fee_per_blob_gas: transaction.max_fee_per_blob_gas().map(U128::from),
                 input: transaction.input().clone(),
                 signature: Some(reth_rpc_types::Signature {

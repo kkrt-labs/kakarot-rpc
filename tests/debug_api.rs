@@ -441,6 +441,20 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the first transaction from the mock data.
+    let tx = &katana
+        .mock_data
+        .get(&CollectionDB::Transactions)
+        .unwrap()
+        .first()
+        .unwrap()
+        .extract_stored_transaction()
+        .unwrap()
+        .tx;
+
+    // Get the block number from the transaction and convert it to a u64.
+    let block_number = tx.block_number.unwrap().to::<u64>();
+
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -450,7 +464,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawBlock",
-                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "params":[format!("0x{:016x}", block_number)],
                     "id":1,
                 }
             )
@@ -461,6 +475,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
         .expect("Failed to call Debug RPC");
     let response = res.text().await.expect("Failed to get response body");
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
+
     let rlp_bytes: Option<Bytes> = serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
     assert!(rlp_bytes.is_some());
 
@@ -473,7 +488,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"eth_getBlockByNumber",
-                    "params":[format!("0x{:x}", BLOCK_NUMBER), true],
+                    "params":[format!("0x{:x}", block_number), true],
                     "id":1,
                 }
             )
@@ -509,6 +524,22 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the first transaction from the mock data.
+    let tx = &katana
+        .mock_data
+        .get(&CollectionDB::Transactions)
+        .unwrap()
+        .first()
+        .unwrap()
+        .extract_stored_transaction()
+        .unwrap()
+        .tx;
+
+    // Get the block hash from the transaction.
+    let block_hash = tx.block_hash.unwrap();
+    // Get the block number from the transaction and convert it to a u64.
+    let block_number = tx.block_number.unwrap().to::<u64>();
+
     // Create a reqwest client.
     let reqwest_client = reqwest::Client::new();
 
@@ -521,7 +552,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawHeader",
-                    "params":[format!("0x{:064x}", *BLOCK_HASH)],
+                    "params":[format!("0x{:064x}", block_hash)],
                     "id":1,
                 }
             )
@@ -547,7 +578,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawHeader",
-                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "params":[format!("0x{:016x}", block_number)],
                     "id":1,
                 }
             )
@@ -569,7 +600,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // Fetch the transaction receipt for the current receipt hash.
-    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(BLOCK_NUMBER), true).await.unwrap().unwrap();
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), true).await.unwrap().unwrap();
 
     // Encode header into RLP bytes and assert equality with RLP bytes fetched by block number.
     let mut data = vec![];

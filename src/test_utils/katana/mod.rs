@@ -18,8 +18,9 @@ use std::collections::HashMap;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     super::mongo::{CollectionDB, MongoFuzzer, StoredData},
+    crate::eth_provider::database::types::transaction::StoredTransaction,
     dojo_test_utils::sequencer::SequencerConfig,
-    reth_primitives::B256,
+    reth_primitives::{TxType, B256, U64},
     std::str::FromStr as _,
 };
 
@@ -90,6 +91,15 @@ impl<'a> Katana {
 
         let mut mongo_fuzzer = MongoFuzzer::new(u).await;
         mongo_fuzzer.add_document(10).expect("Failed to add documents in the database");
+        mongo_fuzzer
+            .add_harcoded_transaction(Some(TxType::Eip1559))
+            .expect("Failed to add Eip1559 transaction in the database");
+        mongo_fuzzer
+            .add_harcoded_transaction(Some(TxType::Eip2930))
+            .expect("Failed to add Eip2930 transaction in the database");
+        mongo_fuzzer
+            .add_harcoded_transaction(Some(TxType::Legacy))
+            .expect("Failed to add Legacy transaction in the database");
         let database = mongo_fuzzer.finalize().await;
         let mock_data = (*mongo_fuzzer.documents()).clone();
 
@@ -115,5 +125,28 @@ impl<'a> Katana {
     #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
+    }
+
+    /// Retrieves the first stored transaction of the specified type from the `Transactions` collection in the MongoDB database.
+    pub fn get_transaction(&self, tx_type: TxType) -> Option<StoredTransaction> {
+        // Retrieve the vector of stored data associated with the `Transactions` collection.
+        if let Some(transactions) = self.mock_data.get(&CollectionDB::Transactions) {
+            let tx_type = U64::from(Into::<u8>::into(tx_type));
+            // Iterate through the stored data to find the first transaction of the specified type.
+            for data in transactions {
+                // Match the stored data to find a stored transaction.
+                if let StoredData::StoredTransaction(transaction) = data {
+                    // Check if the transaction type matches the specified type.
+                    if let Some(transaction_type) = transaction.tx.transaction_type {
+                        if transaction_type == tx_type {
+                            // Return the stored transaction if the transaction type matches.
+                            return Some(transaction.clone());
+                        }
+                    }
+                }
+            }
+        }
+        // Return None if no transaction of the specified type is found.
+        None
     }
 }

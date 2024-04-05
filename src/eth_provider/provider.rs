@@ -559,13 +559,7 @@ where
             }
             BlockId::Hash(hash) => BlockHashOrNumber::Hash(hash.block_hash),
         };
-
-        println!("block_id après étape 2 {:?}", block_id);
-
         let block_exists = self.block_exists(block_id).await?;
-
-        println!("est ce que block existe {:?}", block_exists);
-
         if !block_exists {
             return Ok(None);
         }
@@ -680,41 +674,6 @@ where
             BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
             BlockHashOrNumber::Number(number) => into_filter("header.number", number, 16),
         };
-
-        // // ################################
-        // // ################################
-        // // ################################
-
-        // println!("filter: {:?}", filter.clone());
-
-        // let toto = self.database.get_one::<StoredHeader>("headers", None, None).await?.unwrap();
-
-        // println!("toto: {:?}", toto);
-
-        // use futures::StreamExt;
-
-        // // Obtenez une poignée sur la collection
-        // let collection = self.database.inner().collection::<mongodb::bson::Document>("headers");
-
-        // // Récupérer tous les documents de la collection
-        // let mut cursor = collection.find(None, None).await.expect("toto");
-
-        // // Parcourir les résultats et les imprimer
-        // while let Some(result) = cursor.next().await {
-        //     match result {
-        //         Ok(document) => {
-        //             // Imprimer le document brut
-        //             println!("Document: {:?}", document);
-        //         }
-        //         Err(e) => {
-        //             eprintln!("Erreur lors de la récupération du document : {}", e);
-        //         }
-        //     }
-        // }
-        // // ################################
-        // // ################################
-        // // ################################
-
         self.database
             .get_one("headers", filter, None)
             .await

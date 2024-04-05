@@ -60,7 +60,9 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         if let Some(tx) = transaction {
             let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
+            println!("avaaaaaaant: {:?}", tx);
             let tx = rpc_transaction_to_primitive(tx).map_err(EthApiError::from)?;
+            println!("apreeeeees: {:?}", tx);
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
@@ -78,12 +80,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
     async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
-        println!("block_id debuuuuut {:?}", block_id);
-
         let transactions = self.eth_provider.block_transactions(Some(block_id)).await?.unwrap_or_default();
-
-        // println!("transactions: {:?}", transactions);
-
         let mut raw_transactions = Vec::with_capacity(transactions.len());
 
         for t in transactions {
@@ -100,8 +97,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .envelope_encoded();
             raw_transactions.push(bytes);
         }
-
-        // println!("transactions fin: {:?}", raw_transactions.clone());
 
         Ok(raw_transactions)
     }
