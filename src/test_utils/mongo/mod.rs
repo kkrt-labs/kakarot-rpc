@@ -181,13 +181,13 @@ impl MongoFuzzer {
 
     /// Adds a hardcoded transaction to the collection of transactions.
     pub fn add_hardcoded_transaction(&mut self, tx_type: Option<TxType>) -> Result<(), Box<dyn std::error::Error>> {
-        let builder = TransactionBuilder::new().tx_type(tx_type.unwrap_or_default());
+        let builder = TransactionBuilder::default().tx_type(tx_type.unwrap_or_default());
         self.add_custom_transaction(builder)
     }
 
     /// Adds a hardcoded transaction to the collection of transactions.
     pub fn add_random_transaction(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let builder = TransactionBuilder::new();
+        let builder = TransactionBuilder::default();
         self.add_custom_transaction(builder)
     }
 
@@ -275,17 +275,13 @@ impl MongoFuzzer {
 }
 
 /// Builder for constructing transactions with custom values.
+#[derive(Default, Clone, Debug)]
 pub struct TransactionBuilder {
     /// The type of transaction to construct.
     tx_type: Option<TxType>,
 }
 
 impl TransactionBuilder {
-    /// Creates a new instance of `TransactionBuilder` with default values.
-    pub fn new() -> Self {
-        Self { tx_type: Default::default() }
-    }
-
     /// Specifies the type of transaction to build.
     pub fn tx_type(mut self, tx_type: TxType) -> Self {
         self.tx_type = Some(tx_type);
