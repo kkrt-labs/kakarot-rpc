@@ -18,9 +18,9 @@ use std::collections::HashMap;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     super::mongo::{CollectionDB, MongoFuzzer, StoredData},
-    crate::eth_provider::database::types::transaction::StoredTransaction,
     dojo_test_utils::sequencer::SequencerConfig,
-    reth_primitives::{TxType, B256, U64},
+    reth_primitives::{TxType, B256},
+    reth_rpc_types::Transaction,
     std::str::FromStr as _,
 };
 
@@ -119,26 +119,12 @@ impl<'a> Katana {
         &self.sequencer
     }
 
-    /// Retrieves the first stored transaction of the specified type from the `Transactions` collection in the MongoDB database.
-    pub fn get_transaction(&self, tx_type: TxType) -> Option<StoredTransaction> {
-        // Retrieve the vector of stored data associated with the `Transactions` collection.
-        if let Some(transactions) = self.mock_data.get(&CollectionDB::Transactions) {
-            let tx_type = U64::from(Into::<u8>::into(tx_type));
-            // Iterate through the stored data to find the first transaction of the specified type.
-            for data in transactions {
-                // Match the stored data to find a stored transaction.
-                if let StoredData::StoredTransaction(transaction) = data {
-                    // Check if the transaction type matches the specified type.
-                    if let Some(transaction_type) = transaction.tx.transaction_type {
-                        if transaction_type == tx_type {
-                            // Return the stored transaction if the transaction type matches.
-                            return Some(transaction.clone());
-                        }
-                    }
-                }
-            }
-        }
-        // Return None if no transaction of the specified type is found.
-        None
+    /// Retrieves the first stored transaction
+    pub fn get_first_transaction(&self) -> Option<Transaction> {
+        self.mock_data
+            .get(&CollectionDB::Transactions)
+            .and_then(|transactions| transactions.first())
+            .and_then(|data| data.extract_stored_transaction())
+            .map(|stored_tx| stored_tx.tx.clone())
     }
 }
