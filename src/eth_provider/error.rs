@@ -53,7 +53,7 @@ pub enum EthApiError {
 
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
-        let msg = format!("{:?}", value);
+        let msg = format!("{}", value);
         match value {
             EthApiError::UnknownBlock => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
             EthApiError::UnknownBlockNumber => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
