@@ -223,10 +223,7 @@ mod tests {
         assert_eq!(primitive_block.header.state_root, B256::from_str(&format!("0x{:0>64}", "04")).unwrap());
         assert_eq!(primitive_block.header.transactions_root, B256::from_str(&format!("0x{:0>64}", "05")).unwrap());
         assert_eq!(primitive_block.header.receipts_root, B256::from_str(&format!("0x{:0>64}", "06")).unwrap());
-        assert_eq!(
-            primitive_block.header.withdrawals_root.unwrap(),
-            B256::from_str(&format!("0x{:0>64}", "07")).unwrap()
-        );
+        assert!(primitive_block.header.withdrawals_root.is_none());
         assert_eq!(primitive_block.header.logs_bloom, Bloom::ZERO);
         assert_eq!(primitive_block.header.difficulty, U256::ZERO);
         assert_eq!(primitive_block.header.base_fee_per_gas, Some(8));
