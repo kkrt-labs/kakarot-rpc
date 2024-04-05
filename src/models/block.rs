@@ -91,7 +91,8 @@ pub fn rpc_to_primitive_header(
         state_root: header.state_root,
         timestamp: header.timestamp.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
         transactions_root: header.transactions_root,
-        withdrawals_root: header.withdrawals_root,
+        // Withdrawals are not allowed so we push a None value
+        withdrawals_root: Default::default(),
     })
 }
 
