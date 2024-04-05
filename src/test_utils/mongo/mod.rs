@@ -17,7 +17,9 @@ use testcontainers::{
     Container, GenericImage,
 };
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use {arbitrary::Arbitrary, mongodb::bson, reth_primitives::U8, std::collections::HashMap};
+use {
+    arbitrary::Arbitrary, mongodb::bson, reth_primitives::U8, reth_rpc_types::Transaction, std::collections::HashMap,
+};
 
 lazy_static! {
     static ref DOCKER_CLI: Cli = clients::Cli::default();
@@ -122,13 +124,13 @@ pub struct MongoFuzzer {
     documents: HashMap<CollectionDB, Vec<StoredData>>,
     /// Connection to the MongoDB database.
     mongodb: Database,
-    /// Random bytes size
+    /// Random bytes size.
     rnd_bytes_size: usize,
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl MongoFuzzer {
-    /// Creates a new instance of `MongoFuzzer` with a mutable reference to the arbitrary `Unstructured` instance, used for generating random data.
+    /// Creates a new instance of `MongoFuzzer` with a bytes size used for generating random data.
     pub async fn new(rnd_bytes_size: usize) -> Self {
         let port = CONTAINER.get_host_port_ipv4(27017);
 
@@ -156,17 +158,17 @@ impl MongoFuzzer {
 
     /// Finalizes the data generation and returns the MongoDB database.
     pub async fn finalize(&self) -> Database {
-        self.update_many(CollectionDB::Headers).await;
-        self.update_many(CollectionDB::Transactions).await;
-        self.update_many(CollectionDB::Receipts).await;
+        self.update_collection(CollectionDB::Headers).await;
+        self.update_collection(CollectionDB::Transactions).await;
+        self.update_collection(CollectionDB::Receipts).await;
 
         self.mongodb.clone()
     }
 
-    /// Mocks a database with the given number of headers and transactions.
-    pub async fn mock_database(rnd_bytes_size: usize, n_documents: usize) -> Database {
+    /// Mocks a database with the given number of transactions.
+    pub async fn mock_database(rnd_bytes_size: usize, n_transactions: usize) -> Database {
         let mut mongo_fuzzer = Self::new(rnd_bytes_size).await;
-        mongo_fuzzer.add_random_transactions(n_documents).expect("Failed to add documents");
+        mongo_fuzzer.add_random_transactions(n_transactions).expect("Failed to add documents");
         mongo_fuzzer.finalize().await
     }
 
@@ -177,41 +179,19 @@ impl MongoFuzzer {
         Ok(())
     }
 
+    /// Adds a hardcoded transaction to the collection of transactions.
     pub fn add_hardcoded_transaction(&mut self, tx_type: Option<TxType>) -> Result<(), Box<dyn std::error::Error>> {
         let builder = TransactionBuilder::new().tx_type(tx_type.unwrap_or_default());
         self.add_custom_transaction(builder)
     }
 
-    /// Adds a random transaction to the collection of transactions.
+    /// Adds a hardcoded transaction to the collection of transactions.
     pub fn add_random_transaction(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let builder = TransactionBuilder::new();
         self.add_custom_transaction(builder)
     }
 
-    /// Adds a transaction to the collections of transactions, receipts, and headers.
-    fn add_transaction_to_collections(&mut self, transaction: StoredTransaction) {
-        let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
-
-        let mut unstructured = arbitrary::Unstructured::new(&bytes);
-
-        let mut receipt = StoredTransactionReceipt::arbitrary(&mut unstructured).unwrap();
-        receipt.receipt.transaction_hash = Some(transaction.tx.hash);
-        receipt.receipt.transaction_index = U64::from(transaction.tx.transaction_index.unwrap_or_default());
-        receipt.receipt.from = transaction.tx.from;
-        receipt.receipt.to = transaction.tx.to;
-        receipt.receipt.block_number = transaction.tx.block_number;
-        receipt.receipt.block_hash = transaction.tx.block_hash;
-        receipt.receipt.transaction_type = U8::from(transaction.tx.transaction_type.unwrap_or_default());
-
-        let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
-        header.header.hash = transaction.tx.block_hash;
-        header.header.number = transaction.tx.block_number;
-
-        self.documents.entry(CollectionDB::Transactions).or_default().push(StoredData::StoredTransaction(transaction));
-        self.documents.entry(CollectionDB::Receipts).or_default().push(StoredData::StoredTransactionReceipt(receipt));
-        self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
-    }
-
+    /// Adds random transactions to the collection of transactions.
     pub fn add_random_transactions(&mut self, n_transactions: usize) -> Result<(), Box<dyn std::error::Error>> {
         for _ in 0..n_transactions {
             self.add_random_transaction()?;
@@ -219,8 +199,45 @@ impl MongoFuzzer {
         Ok(())
     }
 
+    /// Adds a transaction to the collections of transactions, receipts, and headers.
+    fn add_transaction_to_collections(&mut self, transaction: StoredTransaction) {
+        let receipt = self.generate_transaction_receipt(&transaction.tx);
+        let header = self.generate_transaction_header(&transaction.tx);
+
+        self.documents.entry(CollectionDB::Transactions).or_default().push(StoredData::StoredTransaction(transaction));
+        self.documents.entry(CollectionDB::Receipts).or_default().push(StoredData::StoredTransactionReceipt(receipt));
+        self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
+    }
+
+    /// Generates a transaction receipt based on the given transaction.
+    fn generate_transaction_receipt(&self, transaction: &Transaction) -> StoredTransactionReceipt {
+        let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+        let mut unstructured = arbitrary::Unstructured::new(&bytes);
+        let mut receipt = StoredTransactionReceipt::arbitrary(&mut unstructured).unwrap();
+
+        receipt.receipt.transaction_hash = Some(transaction.hash);
+        receipt.receipt.transaction_index = U64::from(transaction.transaction_index.unwrap_or_default());
+        receipt.receipt.from = transaction.from;
+        receipt.receipt.to = transaction.to;
+        receipt.receipt.block_number = transaction.block_number;
+        receipt.receipt.block_hash = transaction.block_hash;
+        receipt.receipt.transaction_type = U8::from(transaction.transaction_type.unwrap_or_default());
+        receipt
+    }
+
+    /// Generates a block header based on the given transaction.
+    fn generate_transaction_header(&self, transaction: &Transaction) -> StoredHeader {
+        let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+        let mut unstructured = arbitrary::Unstructured::new(&bytes);
+        let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
+
+        header.header.hash = transaction.block_hash;
+        header.header.number = transaction.block_number;
+        header
+    }
+
     /// Updates multiple documents in the specified collection.
-    async fn update_many(&self, collection: CollectionDB) {
+    async fn update_collection(&self, collection: CollectionDB) {
         let (doc, value, collection_name, updates) = match collection {
             CollectionDB::Headers => {
                 let updates = self.documents.get(&CollectionDB::Headers);
@@ -259,21 +276,23 @@ impl MongoFuzzer {
 
 /// Builder for constructing transactions with custom values.
 pub struct TransactionBuilder {
+    /// The type of transaction to construct.
     tx_type: Option<TxType>,
 }
 
 impl TransactionBuilder {
-    fn new() -> Self {
+    /// Creates a new instance of `TransactionBuilder` with default values.
+    pub fn new() -> Self {
         Self { tx_type: Default::default() }
     }
 
-    /// Spécifie le type de transaction à construire.
-    fn tx_type(mut self, tx_type: TxType) -> Self {
+    /// Specifies the type of transaction to build.
+    pub fn tx_type(mut self, tx_type: TxType) -> Self {
         self.tx_type = Some(tx_type);
         self
     }
 
-    /// Construit la transaction en fonction des valeurs spécifiées dans le constructeur.
+    /// Builds the transaction based on the specified values.
     fn build(self, rnd_bytes_size: usize) -> Result<StoredTransaction, Box<dyn std::error::Error>> {
         if let Some(tx_type) = self.tx_type {
             return Ok(match tx_type {
