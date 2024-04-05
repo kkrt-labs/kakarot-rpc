@@ -60,9 +60,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         if let Some(tx) = transaction {
             let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            println!("avaaaaaaant: {:?}", tx);
             let tx = rpc_transaction_to_primitive(tx).map_err(EthApiError::from)?;
-            println!("apreeeeees: {:?}", tx);
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
