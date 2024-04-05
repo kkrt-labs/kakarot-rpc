@@ -33,10 +33,9 @@ use starknet::core::utils::{get_contract_address, get_storage_var_address, get_u
 use walkdir::WalkDir;
 
 use crate::test_utils::constants::{
-    ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION, ACCOUNT_KAKAROT_ADDRESS, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH,
-    KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
-    KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PRECOMPILES_CLASS_HASH, KAKAROT_PREV_RANDAO,
-    KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+    ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE,
+    KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS,
+    KAKAROT_PRECOMPILES_CLASS_HASH, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
 };
 
 lazy_static! {
@@ -219,6 +218,7 @@ impl KatanaGenesisBuilder<Loaded> {
                 account_contract_class_hash,
                 uninitialized_account_class_hash,
                 precompiles_class_hash,
+                coinbase_address,
                 block_gas_limit,
             ],
         ));
@@ -264,7 +264,6 @@ impl KatanaGenesisBuilder<Initialized> {
         // Set the eoa storage
         let eoa_storage = [
             (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
-            (storage_addr(ACCOUNT_KAKAROT_ADDRESS)?, kakarot_address),
             (storage_addr(OWNABLE_OWNER)?, kakarot_address),
             (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
         ]
@@ -359,7 +358,7 @@ impl KatanaGenesisBuilder<Initialized> {
             evm_address,
             uninitialized_account_class_hash,
             &[kakarot_address, evm_address],
-            kakarot_address,
+            FieldElement::ZERO,
         )))
     }
 
