@@ -32,7 +32,8 @@ use super::starknet::kakarot_core::{
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
 use super::utils::{
-    contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator,
+    contract_not_found, entrypoint_not_found, into_filter, into_filter_without_pad, iter_into, split_u256,
+    try_from_u8_iterator,
 };
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
@@ -127,7 +128,7 @@ pub trait EthereumProvider {
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
-    database: Database,
+    pub database: Database,
     starknet_provider: SP,
     chain_id: u64,
 }
@@ -233,7 +234,7 @@ where
             return Ok(None);
         }
 
-        let filter = into_filter("tx.blockNumber", block_number, 16);
+        let filter = into_filter_without_pad("tx.blockNumber", block_number);
         let count = self.database.count("transactions", filter).await?;
         Ok(Some(U256::from(count)))
     }
@@ -263,7 +264,7 @@ where
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let mut filter = into_filter("tx.blockNumber", block_number, 16);
+        let mut filter = into_filter_without_pad("tx.blockNumber", block_number);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
@@ -531,7 +532,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockNumber", block_number, 16);
+                let filter = into_filter_without_pad("receipt.blockNumber", block_number);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -672,7 +673,7 @@ where
     async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
         let filter = match id {
             BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
-            BlockHashOrNumber::Number(number) => into_filter("header.number", number, 16),
+            BlockHashOrNumber::Number(number) => into_filter_without_pad("header.number", number),
         };
         self.database
             .get_one("headers", filter, None)
@@ -691,7 +692,7 @@ where
     ) -> EthProviderResult<BlockTransactions> {
         let transactions_filter = match block_id {
             BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, 64),
-            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, 16),
+            BlockHashOrNumber::Number(number) => into_filter_without_pad("tx.blockNumber", number),
         };
 
         let block_transactions = if full {
