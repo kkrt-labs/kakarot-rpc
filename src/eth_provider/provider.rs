@@ -566,7 +566,10 @@ where
 {
     pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
         let chain_id = starknet_provider.chain_id().await?;
-        let chain_id = (FieldElement::from(u64::MAX) & chain_id).try_into().unwrap(); // safe unwrap
+        // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
+        // see: https://github.com/ethereum/EIPs/issues/2294
+        // Note: Metamask is breaking for a chain_id = u64::MAX - 1
+        let chain_id = (FieldElement::from(u32::MAX) & chain_id).try_into().unwrap(); // safe unwrap
         Ok(Self { database, starknet_provider, chain_id })
     }
 
