@@ -7,7 +7,7 @@ services:
     ports:
       - 6060:6060
     volumes:
-      - juno_files_staging:/var/lib/juno
+      - ${HOME}/code/kkrt-labs/snapshots/juno_sepolia:/var/lib/juno
     command: >
       --pending-poll-interval "1s"
       --http
@@ -54,7 +54,7 @@ services:
       - POSTGRES_DB=starknet_explorer_dev
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - starknet-explorer:/var/lib/postgresql/data/
+      - starknet_explorer_staging:/var/lib/postgresql/data/
 
   kakarot-rpc:
     image: eliastazartes/kakarot-rpc:v0.5.0
@@ -144,5 +144,5 @@ volumes:
   mongo_data:
   indexer_code:
   pgadmin_data:
-  starknet-explorer:
+  starknet_explorer_staging:
   juno_files_staging:
