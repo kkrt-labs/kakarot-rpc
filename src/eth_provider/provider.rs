@@ -17,7 +17,7 @@ use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
-use super::constant::CALL_REQUEST_GAS_LIMIT;
+use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
 use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
@@ -32,8 +32,7 @@ use super::starknet::kakarot_core::{
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
 use super::utils::{
-    contract_not_found, entrypoint_not_found, into_filter, into_filter_without_pad, iter_into, split_u256,
-    try_from_u8_iterator,
+    contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator,
 };
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
@@ -219,7 +218,7 @@ where
             return Ok(None);
         }
 
-        let filter = into_filter("tx.blockHash", hash, 64);
+        let filter = into_filter("tx.blockHash", hash, HASH_PADDING);
         let count = self.database.count("transactions", filter).await?;
         Ok(Some(U256::from(count)))
     }
@@ -234,13 +233,13 @@ where
             return Ok(None);
         }
 
-        let filter = into_filter_without_pad("tx.blockNumber", block_number);
+        let filter = into_filter("tx.blockNumber", block_number, U64_PADDING);
         let count = self.database.count("transactions", filter).await?;
         Ok(Some(U256::from(count)))
     }
 
     async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
-        let filter = into_filter("tx.hash", hash, 64);
+        let filter = into_filter("tx.hash", hash, HASH_PADDING);
         let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
         Ok(tx.map(Into::into))
     }
@@ -250,7 +249,7 @@ where
         hash: B256,
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
-        let mut filter = into_filter("tx.blockHash", hash, 64);
+        let mut filter = into_filter("tx.blockHash", hash, HASH_PADDING);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
@@ -264,7 +263,7 @@ where
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let mut filter = into_filter_without_pad("tx.blockNumber", block_number);
+        let mut filter = into_filter("tx.blockNumber", block_number, U64_PADDING);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
@@ -273,7 +272,7 @@ where
     }
 
     async fn transaction_receipt(&self, hash: B256) -> EthProviderResult<Option<TransactionReceipt>> {
-        let filter = into_filter("receipt.transactionHash", hash, 64);
+        let filter = into_filter("receipt.transactionHash", hash, HASH_PADDING);
         let tx: Option<StoredTransactionReceipt> = self.database.get_one("receipts", filter, None).await?;
         Ok(tx.map(Into::into))
     }
@@ -439,8 +438,7 @@ where
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
         // This means we need to introduce a new type for the StoredHeader.
-        let header_filter =
-            doc! {"header.number": {"$gte": format_hex(start_block, 64), "$lte": format_hex(end_block, 64)}};
+        let header_filter = doc! {"$and": [ { "header.number": { "$gte": format_hex(start_block, U64_PADDING) } }, { "header.number": { "$lte": format_hex(end_block, U64_PADDING) } } ] };
         let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
 
         if blocks.is_empty() {
@@ -532,7 +530,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter_without_pad("receipt.blockNumber", block_number);
+                let filter = into_filter("receipt.blockNumber", block_number, U64_PADDING);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -542,7 +540,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockHash", hash.block_hash, 64);
+                let filter = into_filter("receipt.blockHash", hash.block_hash, HASH_PADDING);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -672,8 +670,8 @@ where
     /// Get a header from the database based on the filter.
     async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
         let filter = match id {
-            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
-            BlockHashOrNumber::Number(number) => into_filter_without_pad("header.number", number),
+            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, HASH_PADDING),
+            BlockHashOrNumber::Number(number) => into_filter("header.number", number, U64_PADDING),
         };
         self.database
             .get_one("headers", filter, None)
@@ -691,8 +689,8 @@ where
         full: bool,
     ) -> EthProviderResult<BlockTransactions> {
         let transactions_filter = match block_id {
-            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, 64),
-            BlockHashOrNumber::Number(number) => into_filter_without_pad("tx.blockNumber", number),
+            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, HASH_PADDING),
+            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, U64_PADDING),
         };
 
         let block_transactions = if full {

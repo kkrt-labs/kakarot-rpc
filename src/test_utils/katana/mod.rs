@@ -83,6 +83,7 @@ impl<'a> Katana {
         // Create a Kakarot client
         let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
+        mongo_fuzzer.add_hardcoded_block_header_range(0..4).expect("Failed to add block range in the database");
         mongo_fuzzer
             .add_hardcoded_transaction(Some(TxType::Eip1559))
             .expect("Failed to add Eip1559 transaction in the database");

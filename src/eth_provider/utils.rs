@@ -40,23 +40,6 @@ where
     doc! {key: format_hex(value, width)}
 }
 
-pub(crate) fn format_hex_without_pad(value: impl LowerHex) -> String {
-    let s = format!("{:x}", value);
-    if format!("{:x}", value).starts_with("0x") {
-        format!("0x{}", &s[2..].trim_start_matches('0'))
-    } else {
-        format!("0x{}", s.trim_start_matches('0'))
-    }
-}
-
-/// Converts a key and value into a MongoDB filter without padding.
-pub(crate) fn into_filter_without_pad<T>(key: &str, value: T) -> Document
-where
-    T: LowerHex,
-{
-    doc! {key: format_hex_without_pad(value)}
-}
-
 /// Splits a U256 value into two generic values implementing the From<u128> trait
 #[inline]
 pub fn split_u256<T: From<u128>>(value: impl Into<U256>) -> [T; 2] {
@@ -110,26 +93,6 @@ mod tests {
         assert_eq!(
             into_filter::<B256>("test_key", B256::default(), 64),
             doc! {"test_key": format!("0x{}", "0".repeat(64))}
-        );
-    }
-
-    #[test]
-    fn test_into_filter_without_padding() {
-        assert_eq!(into_filter_without_pad::<u64>("test_key", 0x1234), doc! {"test_key": "0x1234"});
-        assert_eq!(
-            into_filter_without_pad::<B256>(
-                "test_key",
-                B256::from_str("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3").unwrap(),
-            ),
-            doc! {"test_key": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3"}
-        );
-        assert_eq!(into_filter_without_pad::<B256>("test_key", B256::default()), doc! {"test_key": "0x"});
-        assert_eq!(
-            into_filter_without_pad::<B256>(
-                "test_key",
-                B256::from_str("0x0000000000000000000000000000000000000000000000000000000000000002").unwrap()
-            ),
-            doc! {"test_key": "0x2"}
         );
     }
 }

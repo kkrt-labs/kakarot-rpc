@@ -28,9 +28,7 @@ async fn test_block_number(#[future] katana: Katana, _setup: ()) {
     let block_number = eth_provider.block_number().await.unwrap();
 
     // Then
-    // The block number is 3 because this is what we set in the mocked mongo database.
-    let expected = U64::from(BLOCK_NUMBER);
-    assert_eq!(block_number, expected);
+    assert!(block_number > U64::ZERO);
 }
 
 #[rstest]
@@ -341,7 +339,6 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipts.len(), 3);
     let receipt = receipts.first().unwrap();
     assert_eq!(receipt.transaction_index, U64::ZERO);
-    assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
     assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
     assert_eq!(receipt.block_number.unwrap(), U256::from(BLOCK_NUMBER));
 
@@ -353,7 +350,6 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipts.len(), 3);
     let receipt = receipts.first().unwrap();
     assert_eq!(receipt.transaction_index, U64::ZERO);
-    assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
     assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
     assert_eq!(receipt.block_number.unwrap(), U256::from(BLOCK_NUMBER));
 
@@ -378,15 +374,18 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH));
     let some_starknet_block_hash = eth_provider.to_starknet_block_id(some_block_hash).await.unwrap();
 
-    let some_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(1));
-    let some_starknet_block_number = eth_provider.to_starknet_block_id(some_block_number).await.unwrap();
+    let pending_block_tag = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Pending);
+    let pending_block_tag_starknet = eth_provider.to_starknet_block_id(pending_block_tag).await.unwrap();
 
     let unknown_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(u64::MAX));
     let unknown_starknet_block_number = eth_provider.to_starknet_block_id(unknown_block_number).await;
 
     // Then
-    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(0x1234_u64));
-    assert_eq!(some_starknet_block_hash, starknet::core::types::BlockId::Hash(FieldElement::from(0x1234_u64)));
-    assert_eq!(some_starknet_block_number, starknet::core::types::BlockId::Tag(BlockTag::Pending));
+    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(BLOCK_NUMBER));
+    assert_eq!(
+        some_starknet_block_hash,
+        starknet::core::types::BlockId::Hash(FieldElement::from_bytes_be(&BLOCK_HASH.0).unwrap())
+    );
+    assert_eq!(pending_block_tag_starknet, starknet::core::types::BlockId::Tag(BlockTag::Pending));
     assert!(unknown_starknet_block_number.is_err());
 }

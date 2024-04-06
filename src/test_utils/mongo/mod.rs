@@ -1,3 +1,4 @@
+use crate::eth_provider::constant::U64_PADDING;
 use crate::eth_provider::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
 };
@@ -10,6 +11,7 @@ use mongodb::{
 };
 use reth_primitives::{Address, TxType, B256, U128, U256, U64};
 use serde::{Serialize, Serializer};
+use std::ops::Range;
 use std::str::FromStr;
 use testcontainers::{
     clients::{self, Cli},
@@ -180,6 +182,19 @@ impl MongoFuzzer {
         Ok(())
     }
 
+    pub fn add_hardcoded_block_header_range(&mut self, range: Range<usize>) -> Result<(), Box<dyn std::error::Error>> {
+        for i in range {
+            let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+            let mut unstructured = arbitrary::Unstructured::new(&bytes);
+            let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
+
+            header.header.number = Some(U256::from(i as u64));
+
+            self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
+        }
+        Ok(())
+    }
+
     /// Adds a hardcoded transaction to the collection of transactions.
     pub fn add_hardcoded_transaction(&mut self, tx_type: Option<TxType>) -> Result<(), Box<dyn std::error::Error>> {
         let builder = TransactionBuilder::default().with_tx_type(tx_type.unwrap_or_default());
@@ -239,33 +254,48 @@ impl MongoFuzzer {
 
     /// Updates multiple documents in the specified collection.
     async fn update_collection(&self, collection: CollectionDB) {
-        let (doc, value, collection_name, updates) = match collection {
+        let (doc, value, collection_name, updates, block_number) = match collection {
             CollectionDB::Headers => {
                 let updates = self.documents.get(&CollectionDB::Headers);
-                ("header", "number", "headers", updates)
+                ("header", "number", "headers", updates, "number")
             }
             CollectionDB::Transactions => {
                 let updates = self.documents.get(&CollectionDB::Transactions);
-                ("tx", "hash", "transactions", updates)
+                ("tx", "hash", "transactions", updates, "blockNumber")
             }
             CollectionDB::Receipts => {
                 let updates = self.documents.get(&CollectionDB::Receipts);
-                ("receipt", "transactionHash", "receipts", updates)
+                ("receipt", "transactionHash", "receipts", updates, "blockNumber")
             }
         };
 
         let collection: Collection<Document> = self.mongodb.inner().collection(collection_name);
         let key = [doc, value].join(".");
+        let block_key = [doc, block_number].join(".");
 
         if let Some(updates) = updates {
             for u in updates {
                 // Serialize the StoredData into BSON
                 let serialized_data = bson::to_document(u).expect("Failed to serialize StoredData");
 
+                // Insert the document in the collection
                 collection
                     .update_one(
                         doc! {&key: serialized_data.get_document(doc).unwrap().get_str(value).unwrap()},
-                        UpdateModifications::Document(doc! {"$set": serialized_data}),
+                        UpdateModifications::Document(doc! {"$set": serialized_data.clone()}),
+                        UpdateOptions::builder().upsert(true).build(),
+                    )
+                    .await
+                    .expect("Failed to insert documents");
+
+                let number = serialized_data.get_document(doc).unwrap().get_str(block_number).unwrap();
+                let padded_number = format!("0x{:0>width$}", &number[2..], width = U64_PADDING);
+
+                // Update the document by padding the block number to U64_PADDING value.
+                collection
+                    .update_one(
+                        doc! {&block_key: &number},
+                        UpdateModifications::Document(doc! {"$set": {&block_key: padded_number}}),
                         UpdateOptions::builder().upsert(true).build(),
                     )
                     .await
