@@ -46,7 +46,7 @@ RUN case $BUILDPLATFORM in \
 #### First, clone the indexer repository
 FROM docker.io/alpine/git:latest as indexer-cloner
 WORKDIR /code
-RUN git clone "https://github.com/kkrt-labs/kakarot-indexer.git"
+RUN git clone -b fix/block-number-padding "https://github.com/kkrt-labs/kakarot-indexer.git"
 
 #### MongoDB
 FROM mongo:6.0.8 as mongo
@@ -92,14 +92,14 @@ FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-FROM chef AS builder 
+FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
 # Build application
 COPY . .
 # Install system dependencies
 RUN apt-get update && \
-    apt-get -y upgrade && \ 
+    apt-get -y upgrade && \
     apt-get install -y gcc-aarch64-linux-gnu libssl-dev clang libclang-dev
 
 # Set working directory
@@ -114,7 +114,7 @@ RUN cargo build \
     --features hive --release --target-dir /usr/src/rpc/target && \
     cargo build \
     --bin hive_genesis --release --features testing --target-dir /usr/src/rpc/target && \
-    cargo build \ 
+    cargo build \
     --bin hive_chain --release --features testing --target-dir /usr/src/rpc/target
 
 FROM debian:bookworm-slim as base
