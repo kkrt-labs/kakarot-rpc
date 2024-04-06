@@ -121,7 +121,7 @@ services:
     command:
       - -c
       # clone the repository in `/code`, removing any old copy.
-      - cd /code && rm -rf kakarot-indexer && git clone -b fix/block-number-padding -v https://github.com/kkrt-labs/kakarot-indexer.git
+      - cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git
     volumes:
       - indexer_code:/code
     restart: on-failure
