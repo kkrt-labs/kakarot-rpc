@@ -57,7 +57,7 @@ services:
       - starknet_explorer_staging:/var/lib/postgresql/data/
 
   kakarot-rpc:
-    image: eliastazartes/kakarot-rpc:v0.5.0
+    image: eliastazartes/kakarot-rpc:v0.5.1
     pull_policy: always
     ports:
       - 3030:3030
