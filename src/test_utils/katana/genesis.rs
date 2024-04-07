@@ -229,7 +229,7 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr(KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH)?, account_contract_class_hash),
             (storage_addr(KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH)?, uninitialized_account_class_hash),
             //TODO: rename the precompiles class hash to cario1_helpers_class_hash in kakarot
-            //https://github.com/kkrt-labs/kakarot/blob/d965e918ffe90671272839d3a8e5035e7bf259e7/src/kakarot/kakarot.cairo#L24-L32
+            //https://github.com/kkrt-labs/kakarot/issues/1080
             (storage_addr(KAKAROT_PRECOMPILES_CLASS_HASH)?, cairo1_helpers_class_hash),
             (storage_addr(KAKAROT_COINBASE)?, coinbase_address),
             (storage_addr(KAKAROT_BASE_FEE)?, FieldElement::ZERO),
