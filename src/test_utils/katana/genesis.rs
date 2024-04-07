@@ -3,8 +3,6 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 
-use cairo_lang_starknet::casm_contract_class::CasmContractClass;
-use cairo_lang_starknet::contract_class::ContractClass;
 use ethers::signers::LocalWallet;
 use ethers::signers::Signer;
 use ethers::types::U256;
@@ -28,15 +26,15 @@ use serde_json::Value;
 use serde_with::serde_as;
 use starknet::core::serde::unsigned_field_element::UfeHex;
 use starknet::core::types::contract::legacy::LegacyContractClass;
+use starknet::core::types::contract::SierraClass;
 use starknet::core::types::FieldElement;
 use starknet::core::utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness};
 use walkdir::WalkDir;
 
 use crate::test_utils::constants::{
-    ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION, ACCOUNT_KAKAROT_ADDRESS, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH,
-    KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
-    KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PRECOMPILES_CLASS_HASH, KAKAROT_PREV_RANDAO,
-    KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+    ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE,
+    KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS,
+    KAKAROT_PRECOMPILES_CLASS_HASH, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
 };
 
 lazy_static! {
@@ -217,6 +215,7 @@ impl KatanaGenesisBuilder<Loaded> {
                 account_contract_class_hash,
                 uninitialized_account_class_hash,
                 cairo1_helpers_class_hash,
+                coinbase_address,
                 block_gas_limit,
             ],
         ));
@@ -264,7 +263,6 @@ impl KatanaGenesisBuilder<Initialized> {
         // Set the eoa storage
         let eoa_storage = [
             (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
-            (storage_addr(ACCOUNT_KAKAROT_ADDRESS)?, kakarot_address),
             (storage_addr(OWNABLE_OWNER)?, kakarot_address),
             (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
         ]
@@ -359,7 +357,7 @@ impl KatanaGenesisBuilder<Initialized> {
             evm_address,
             uninitialized_account_class_hash,
             &[kakarot_address, evm_address],
-            kakarot_address,
+            FieldElement::ZERO,
         )))
     }
 
@@ -383,11 +381,8 @@ impl KatanaGenesisBuilder<Initialized> {
 }
 
 fn compute_class_hash(class: &Value) -> Result<FieldElement> {
-    match serde_json::from_value::<ContractClass>(class.clone()) {
-        Ok(casm) => {
-            let casm = CasmContractClass::from_contract_class(casm, true).expect("Failed to convert class");
-            Ok(FieldElement::from_bytes_be(&casm.compiled_class_hash().to_be_bytes())?)
-        }
+    match serde_json::from_value::<SierraClass>(class.clone()) {
+        Ok(sierra) => Ok(sierra.class_hash()?),
         Err(_) => {
             let casm: LegacyContractClass =
                 serde_json::from_value(class.clone()).expect("Failed to parse class code v0");
