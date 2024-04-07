@@ -1,5 +1,4 @@
 #![cfg(feature = "testing")]
-use std::cmp::min;
 use std::str::FromStr;
 
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
@@ -28,7 +27,9 @@ async fn test_block_number(#[future] katana: Katana, _setup: ()) {
     let block_number = eth_provider.block_number().await.unwrap();
 
     // Then
-    assert!(block_number > U64::ZERO);
+    // Catch the most recent block number of the mocked Mongo Database
+    let expected = U64::from(katana.get_most_recent_transaction().unwrap().block_number.unwrap());
+    assert_eq!(block_number, expected);
 }
 
 #[rstest]
@@ -258,21 +259,33 @@ async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _set
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
-    // Given
+    // Retrieve the Ethereum provider from the Katana instance.
     let eth_provider = katana.eth_provider();
-    let newest_block = 3;
-    let block_count = 100u64;
 
-    // When
+    // Retrieve the most recent block number.
+    let newest_block = katana.get_most_recent_transaction().unwrap().block_number.unwrap().to::<u64>();
+
+    // To ensure that the range includes all mocked blocks.
+    let block_count = u64::MAX;
+
+    // Get the total number of blocks in the database.
+    let nbr_blocks = katana.count_block();
+
+    // Call the fee_history method of the Ethereum provider.
     let fee_history = eth_provider
         .fee_history(U64HexOrNumber::from(block_count), BlockNumberOrTag::Number(newest_block), None)
         .await
         .unwrap();
 
-    // Then
-    let actual_block_count = min(block_count, newest_block + 1);
-    assert_eq!(fee_history.base_fee_per_gas.len(), actual_block_count as usize + 1);
-    assert_eq!(fee_history.gas_used_ratio.len(), actual_block_count as usize);
+    // Verify that the length of the base_fee_per_gas list in the fee history is equal
+    // to the total number of blocks plus one.
+    assert_eq!(fee_history.base_fee_per_gas.len(), nbr_blocks + 1);
+
+    // Verify that the length of the gas_used_ratio list in the fee history is equal
+    // to the total number of blocks.
+    assert_eq!(fee_history.gas_used_ratio.len(), nbr_blocks);
+
+    // Verify that the oldest block in the fee history is equal to zero.
     assert_eq!(fee_history.oldest_block, U256::ZERO);
 }
 

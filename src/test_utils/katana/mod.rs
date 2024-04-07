@@ -128,4 +128,22 @@ impl<'a> Katana {
             .and_then(|data| data.extract_stored_transaction())
             .map(|stored_tx| stored_tx.tx.clone())
     }
+
+    /// Retrieves the most recent stored transaction based on block number
+    pub fn get_most_recent_transaction(&self) -> Option<Transaction> {
+        self.mock_data
+            .get(&CollectionDB::Transactions)
+            .and_then(|transactions| {
+                transactions.iter().max_by_key(|data| {
+                    data.extract_stored_transaction().map(|stored_tx| stored_tx.tx.block_number).unwrap_or_default()
+                })
+            })
+            .and_then(|data| data.extract_stored_transaction())
+            .map(|stored_tx| stored_tx.tx.clone())
+    }
+
+    /// Retrieves the number of blocks in the database
+    pub fn count_block(&self) -> usize {
+        self.mock_data.get(&CollectionDB::Headers).map_or(0, |headers| headers.len())
+    }
 }
