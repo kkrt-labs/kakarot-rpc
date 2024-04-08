@@ -1,5 +1,4 @@
 #![cfg(feature = "testing")]
-use std::cmp::min;
 use std::str::FromStr;
 
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
@@ -28,8 +27,8 @@ async fn test_block_number(#[future] katana: Katana, _setup: ()) {
     let block_number = eth_provider.block_number().await.unwrap();
 
     // Then
-    // The block number is 3 because this is what we set in the mocked mongo database.
-    let expected = U64::from(BLOCK_NUMBER);
+    // Catch the most recent block number of the mocked Mongo Database
+    let expected = U64::from(katana.most_recent_transaction().unwrap().block_number.unwrap());
     assert_eq!(block_number, expected);
 }
 
@@ -260,21 +259,33 @@ async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _set
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
-    // Given
+    // Retrieve the Ethereum provider from the Katana instance.
     let eth_provider = katana.eth_provider();
-    let newest_block = 3;
-    let block_count = 100u64;
 
-    // When
+    // Retrieve the most recent block number.
+    let newest_block = katana.most_recent_transaction().unwrap().block_number.unwrap().to::<u64>();
+
+    // To ensure that the range includes all mocked blocks.
+    let block_count = u64::MAX;
+
+    // Get the total number of blocks in the database.
+    let nbr_blocks = katana.count_block();
+
+    // Call the fee_history method of the Ethereum provider.
     let fee_history = eth_provider
         .fee_history(U64HexOrNumber::from(block_count), BlockNumberOrTag::Number(newest_block), None)
         .await
         .unwrap();
 
-    // Then
-    let actual_block_count = min(block_count, newest_block + 1);
-    assert_eq!(fee_history.base_fee_per_gas.len(), actual_block_count as usize + 1);
-    assert_eq!(fee_history.gas_used_ratio.len(), actual_block_count as usize);
+    // Verify that the length of the base_fee_per_gas list in the fee history is equal
+    // to the total number of blocks plus one.
+    assert_eq!(fee_history.base_fee_per_gas.len(), nbr_blocks + 1);
+
+    // Verify that the length of the gas_used_ratio list in the fee history is equal
+    // to the total number of blocks.
+    assert_eq!(fee_history.gas_used_ratio.len(), nbr_blocks);
+
+    // Verify that the oldest block in the fee history is equal to zero.
     assert_eq!(fee_history.oldest_block, U256::ZERO);
 }
 
@@ -341,7 +352,6 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipts.len(), 3);
     let receipt = receipts.first().unwrap();
     assert_eq!(receipt.transaction_index, U64::ZERO);
-    assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
     assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
     assert_eq!(receipt.block_number.unwrap(), U256::from(BLOCK_NUMBER));
 
@@ -353,7 +363,6 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipts.len(), 3);
     let receipt = receipts.first().unwrap();
     assert_eq!(receipt.transaction_index, U64::ZERO);
-    assert_eq!(receipt.transaction_hash.unwrap(), B256::ZERO);
     assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
     assert_eq!(receipt.block_number.unwrap(), U256::from(BLOCK_NUMBER));
 
@@ -378,15 +387,18 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH));
     let some_starknet_block_hash = eth_provider.to_starknet_block_id(some_block_hash).await.unwrap();
 
-    let some_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(1));
-    let some_starknet_block_number = eth_provider.to_starknet_block_id(some_block_number).await.unwrap();
+    let pending_block_tag = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Pending);
+    let pending_block_tag_starknet = eth_provider.to_starknet_block_id(pending_block_tag).await.unwrap();
 
     let unknown_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(u64::MAX));
     let unknown_starknet_block_number = eth_provider.to_starknet_block_id(unknown_block_number).await;
 
     // Then
-    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(0x1234_u64));
-    assert_eq!(some_starknet_block_hash, starknet::core::types::BlockId::Hash(FieldElement::from(0x1234_u64)));
-    assert_eq!(some_starknet_block_number, starknet::core::types::BlockId::Tag(BlockTag::Pending));
+    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(BLOCK_NUMBER));
+    assert_eq!(
+        some_starknet_block_hash,
+        starknet::core::types::BlockId::Hash(FieldElement::from_bytes_be(&BLOCK_HASH.0).unwrap())
+    );
+    assert_eq!(pending_block_tag_starknet, starknet::core::types::BlockId::Tag(BlockTag::Pending));
     assert!(unknown_starknet_block_number.is_err());
 }

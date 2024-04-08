@@ -72,3 +72,27 @@ pub(crate) fn entrypoint_not_found<T>(err: &Result<T, Error>) -> bool {
         ),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use reth_primitives::B256;
+    use std::str::FromStr;
+
+    #[test]
+    fn test_into_filter_with_padding() {
+        assert_eq!(into_filter::<u64>("test_key", 0x1234, 10), doc! {"test_key": "0x0000001234"});
+        assert_eq!(
+            into_filter::<B256>(
+                "test_key",
+                B256::from_str("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3").unwrap(),
+                64
+            ),
+            doc! {"test_key": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3"}
+        );
+        assert_eq!(
+            into_filter::<B256>("test_key", B256::default(), 64),
+            doc! {"test_key": format!("0x{}", "0".repeat(64))}
+        );
+    }
+}

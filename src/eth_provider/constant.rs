@@ -5,6 +5,8 @@ lazy_static! {
 }
 
 pub const CALL_REQUEST_GAS_LIMIT: u64 = 5_000_000;
+pub const HASH_PADDING: usize = 64;
+pub const U64_PADDING: usize = 16;
 
 #[cfg(feature = "hive")]
 use {

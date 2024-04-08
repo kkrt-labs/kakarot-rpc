@@ -1,10 +1,12 @@
-use ethers::abi::Token;
 use rstest::*;
 use tracing_subscriber::{filter, FmtSubscriber};
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+use {
+    super::katana::Katana, super::mongo::RANDOM_BYTES_SIZE, crate::test_utils::evm_contract::KakarotEvmContract,
+    ethers::abi::Token,
+};
 
-use super::katana::Katana;
-use crate::test_utils::evm_contract::KakarotEvmContract;
-
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
 pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
@@ -13,6 +15,7 @@ pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     (katana, contract)
 }
 
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
 pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
@@ -32,10 +35,11 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 }
 
 /// This fixture creates a new test environment on Katana.
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 pub async fn katana() -> Katana {
     // Create a new test environment on Katana
-    Katana::new().await
+    Katana::new(RANDOM_BYTES_SIZE).await
 }
 
 /// This fixture configures the tests. The following setup

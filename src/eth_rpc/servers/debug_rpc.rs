@@ -79,7 +79,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
     async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
         let transactions = self.eth_provider.block_transactions(Some(block_id)).await?.unwrap_or_default();
-
         let mut raw_transactions = Vec::with_capacity(transactions.len());
 
         for t in transactions {
