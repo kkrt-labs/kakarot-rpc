@@ -75,9 +75,6 @@ impl KakarotRpcConfig {
     /// starknet provider, e.g. https://starknet-goerli.g.alchemy.com/v2/some_key.
     pub fn from_env() -> Result<Self, eyre::Error> {
         let network = var("STARKNET_NETWORK")?;
-
-        println!("tototototototto: {:?}", network);
-
         let network = match network.to_lowercase().as_str() {
             "katana" => Network::Katana,
             "madara" => Network::Madara,

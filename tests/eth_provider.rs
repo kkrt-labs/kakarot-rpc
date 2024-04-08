@@ -11,7 +11,9 @@ use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
-use reth_primitives::{hex, Address, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
+use reth_primitives::transaction::Signature;
+use reth_primitives::{sign_message, Transaction, TransactionKind, TxEip1559};
+use reth_primitives::{Address, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::{RpcBlockHash, TransactionRequest};
 use rstest::*;
@@ -399,10 +401,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
 
-    // let tx_bytes = hex!("b901f202f901ee05228459682f008459682f11830209bf8080b90195608060405234801561001057600080fd5b50610175806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80630c49c36c14610030575b600080fd5b61003861004e565b604051610045919061011d565b60405180910390f35b60606020600052600f6020527f68656c6c6f2073746174656d696e64000000000000000000000000000000000060405260406000f35b600081519050919050565b600082825260208201905092915050565b60005b838110156100be5780820151818401526020810190506100a3565b838111156100cd576000848401525b50505050565b6000601f19601f8301169050919050565b60006100ef82610084565b6100f9818561008f565b93506101098185602086016100a0565b610112816100d3565b840191505092915050565b6000602082019050818103600083015261013781846100e4565b90509291505056fea264697066735822122051449585839a4ea5ac23cae4552ef8a96b64ff59d0668f76bfac3796b2bdbb3664736f6c63430008090033c080a0136ebffaa8fc8b9fda9124de9ccb0b1f64e90fbd44251b4c4ac2501e60b104f9a07eb2999eec6d185ef57e91ed099afb0a926c5b536f0155dd67e537c7476e1471");
-
-    use reth_primitives::{sign_message, Transaction, TransactionKind, TxEip1559};
-
+    // Create a sample transaction
     let transaction = Transaction::Eip1559(TxEip1559 {
         chain_id: 1,
         nonce: 0,
@@ -415,33 +414,70 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         access_list: Default::default(),
     });
 
-    // let signature = sign_message(
-    //     B256::from_str("02bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a")
-    //         .expect("failed to generate private key"),
-    //     transaction.signature_hash(),
-    // )
-    // .unwrap();
-
+    // Sign the transaction
     let signature = sign_message(
-        B256::from_str("0x02a8846878b6ad1f54f6ba46f5f40e11cee755c677f130b2c4b60566c9003f1f")
+        B256::from_str("0x02bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a")
             .expect("failed to generate private key"),
         transaction.signature_hash(),
     )
     .unwrap();
-
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
-    println!("tx: {:?}", transaction_signed);
-
-    let res = eth_provider
+    // Send the transaction
+    let _ = eth_provider
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
 
-    println!("res: {:?}", res);
+    // Retrieve the transaction from the database
+    let tx: Option<StoredTransaction> =
+        eth_provider.database.get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
+    let tx = tx.unwrap().tx;
 
+    // Assert the transaction hash and block number
+    assert_eq!(tx.hash, transaction_signed.hash());
+    assert!(tx.block_number.is_none());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // Create a sample transaction
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id: 1,
+        nonce: 0,
+        gas_limit: 21000,
+        to: TransactionKind::Call(Address::random()),
+        value: U256::from(1000),
+        input: Bytes::default(),
+        max_fee_per_gas: 875000000,
+        max_priority_fee_per_gas: 0,
+        access_list: Default::default(),
+    });
+
+    // Sign the transaction
+    let signature = sign_message(
+        B256::from_str("0x02bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a")
+            .expect("failed to generate private key"),
+        transaction.signature_hash(),
+    )
+    .unwrap();
+    let mut transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Set an incorrect signature
+    transaction_signed.signature = Signature::default();
+
+    // Send the transaction
+    let _ = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+
+    // Retrieve the transaction from the database
     let tx: Option<StoredTransaction> =
         eth_provider.database.get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
 
-    println!("tx: {:?}", tx);
+    // Assert that no transaction is found
+    assert!(tx.is_none());
 }

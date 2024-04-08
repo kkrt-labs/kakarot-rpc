@@ -478,18 +478,18 @@ where
     }
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
-        println!("totototototototototo");
-        let mut data = transaction.0.as_ref();
-        let transaction_signed = TransactionSigned::decode(&mut data)
-            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
-
-        println!("decoded: {:?}", transaction_signed);
-
+        // Get the chain ID
         let chain_id =
             self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
 
+        // Decode the transaction data
+        let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
+            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
+
+        // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
 
+        // Determine the maximum fee
         let max_fee = if cfg!(feature = "hive") {
             u64::MAX
         } else {
@@ -504,12 +504,35 @@ where
             max_fee.saturating_sub(eth_fees)
         };
 
+        // Deploy EVM transaction signer if Hive feature is enabled
         #[cfg(feature = "hive")]
         self.deploy_evm_transaction_signer(signer).await?;
 
+        // Convert the transaction to a Starknet transaction
         let transaction = to_starknet_transaction(&transaction_signed, chain_id, signer, max_fee)?;
+
+        // Add the transaction to the Starknet provider
         let res = self.starknet_provider.add_invoke_transaction(transaction).await.map_err(KakarotError::from)?;
 
+        // Serialize transaction document
+        let transaction_document = doc! {"tx":  mongodb::bson::to_document(&from_recovered(
+            TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer),
+        ))
+        .expect("Failed to serialize signed transaction") };
+
+        // Update pending transactions collection
+        self.database
+            .inner()
+            .collection::<StoredTransaction>("transactions_pending")
+            .update_one(
+                doc! {"tx.hash": transaction_document.get_document("tx").unwrap().get_str("hash").unwrap()},
+                UpdateModifications::Document(doc! {"$set": transaction_document}),
+                UpdateOptions::builder().upsert(true).build(),
+            )
+            .await
+            .expect("Failed to insert pending signed transaction");
+
+        // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
             return Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]));
         } else {
@@ -519,22 +542,6 @@ where
                 res.transaction_hash,
                 hash
             );
-
-            let serialized_data = mongodb::bson::to_document(&from_recovered(
-                TransactionSignedEcRecovered::from_signed_transaction(transaction_signed, signer),
-            ))
-            .expect("Failed to serialize signed transaction");
-
-            self.database
-                .inner()
-                .collection::<StoredTransaction>("transactions_pending")
-                .update_one(
-                    doc! {"tx.hash": serialized_data.get_document("tx").unwrap().get_str("hash").unwrap()},
-                    UpdateModifications::Document(doc! {"$set": serialized_data}),
-                    UpdateOptions::builder().upsert(true).build(),
-                )
-                .await
-                .expect("Failed to insert pending signed transaction");
 
             Ok(hash)
         }
