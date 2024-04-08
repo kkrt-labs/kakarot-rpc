@@ -431,7 +431,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
 
     // Retrieve the transaction from the database
     let tx: Option<StoredTransaction> =
-        eth_provider.database.get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
+        eth_provider.database().get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
     let tx = tx.unwrap().tx;
 
     // Assert the transaction hash and block number
@@ -476,7 +476,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 
     // Retrieve the transaction from the database
     let tx: Option<StoredTransaction> =
-        eth_provider.database.get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
+        eth_provider.database().get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
 
     // Assert that no transaction is found
     assert!(tx.is_none());

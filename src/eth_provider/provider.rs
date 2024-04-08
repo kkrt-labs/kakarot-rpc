@@ -132,9 +132,16 @@ pub trait EthereumProvider {
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
-    pub database: Database,
+    database: Database,
     starknet_provider: SP,
     chain_id: u64,
+}
+
+impl<SP: starknet::providers::Provider> EthDataProvider<SP> {
+    /// Returns a reference to the database.
+    pub fn database(&self) -> &Database {
+        &self.database
+    }
 }
 
 #[async_trait]
