@@ -126,7 +126,7 @@ services:
       - SINK_TYPE=mongo
       - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
-      - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=true
+      - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
       - KAKAROT_ADDRESS=0x464f7e37179d2f93ea208795bdb2d0912e8257f6fb5f67ae2559251523aee19
     restart: on-failure
     volumes:
