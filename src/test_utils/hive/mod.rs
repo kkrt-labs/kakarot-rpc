@@ -13,9 +13,7 @@ use starknet_api::core::ClassHash;
 use starknet_crypto::FieldElement;
 
 use super::{
-    constants::{
-        ACCOUNT_IMPLEMENTATION, ACCOUNT_KAKAROT_ADDRESS, ACCOUNT_NONCE, KAKAROT_EVM_TO_STARKNET_ADDRESS, OWNABLE_OWNER,
-    },
+    constants::{ACCOUNT_IMPLEMENTATION, ACCOUNT_NONCE, KAKAROT_EVM_TO_STARKNET_ADDRESS, OWNABLE_OWNER},
     katana::genesis::{KatanaGenesisBuilder, Loaded},
 };
 
@@ -88,14 +86,13 @@ impl HiveGenesisConfig {
                 let mut kakarot_account_storage: Vec<(FieldElement, FieldElement)> =
                     kakarot_account.storage().iter().map(|(k, v)| ((*k.0.key()).into(), (*v).into())).collect();
 
-                // Add the implementation and the kakarot address to the storage.
+                // Add the implementation to the storage.
                 let implementation_key = get_storage_var_address(ACCOUNT_IMPLEMENTATION, &[])?;
                 kakarot_account_storage.append(&mut vec![
                     (implementation_key, account_contract_class_hash.0.into()),
                     (get_storage_var_address(ACCOUNT_NONCE, &[])?, FieldElement::ONE),
                     (get_storage_var_address(OWNABLE_OWNER, &[])?, kakarot_address),
                 ]);
-                kakarot_account_storage.push((get_storage_var_address(ACCOUNT_KAKAROT_ADDRESS, &[])?, kakarot_address));
 
                 let key = get_storage_var_address("ERC20_allowances", &[starknet_address, kakarot_address])?;
                 fee_token_storage.insert(key, FieldElement::from(u128::MAX));
