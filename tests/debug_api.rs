@@ -202,7 +202,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     // Get the first transaction from the mock data.
-    let tx = &katana.get_first_transaction().unwrap();
+    let tx = &katana.first_transaction().unwrap();
 
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
@@ -312,7 +312,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     // Get the first transaction from the mock data.
-    let tx = &katana.get_first_transaction().unwrap();
+    let tx = &katana.first_transaction().unwrap();
 
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
@@ -424,7 +424,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     // Get the first transaction from the mock data.
-    let tx = &katana.get_first_transaction().unwrap();
+    let tx = &katana.first_transaction().unwrap();
 
     // Get the block number from the transaction and convert it to a u64.
     let block_number = tx.block_number.unwrap().to::<u64>();
@@ -499,7 +499,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     // Get the first transaction from the mock data.
-    let tx = &katana.get_first_transaction().unwrap();
+    let tx = &katana.first_transaction().unwrap();
 
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();

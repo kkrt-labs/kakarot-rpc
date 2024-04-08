@@ -96,7 +96,7 @@ impl<'a> Katana {
         let port = mongo_fuzzer.port();
 
         // Run a Docker container with the MongoDB image.
-        let container = DOCKER_CLI.run(mongo_fuzzer.get_mongo_image());
+        let container = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
 
         // Add random transactions to the MongoDB database.
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
@@ -147,7 +147,7 @@ impl<'a> Katana {
     }
 
     /// Retrieves the first stored transaction
-    pub fn get_first_transaction(&self) -> Option<Transaction> {
+    pub fn first_transaction(&self) -> Option<Transaction> {
         self.mock_data
             .get(&CollectionDB::Transactions)
             .and_then(|transactions| transactions.first())
@@ -156,7 +156,7 @@ impl<'a> Katana {
     }
 
     /// Retrieves the most recent stored transaction based on block number
-    pub fn get_most_recent_transaction(&self) -> Option<Transaction> {
+    pub fn most_recent_transaction(&self) -> Option<Transaction> {
         self.mock_data
             .get(&CollectionDB::Transactions)
             .and_then(|transactions| {

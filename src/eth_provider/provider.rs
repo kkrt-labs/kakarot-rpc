@@ -127,7 +127,7 @@ pub trait EthereumProvider {
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
-    pub database: Database,
+    database: Database,
     starknet_provider: SP,
     chain_id: u64,
 }
@@ -196,7 +196,9 @@ where
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
         Ok(if self.block_exists(BlockHashOrNumber::Hash(hash)).await? {
-            Some(U256::from(self.database.count("transactions", into_filter("tx.blockHash", hash, HASH_PADDING)).await?))
+            Some(U256::from(
+                self.database.count("transactions", into_filter("tx.blockHash", hash, HASH_PADDING)).await?,
+            ))
         } else {
             None
         })
@@ -253,7 +255,11 @@ where
     async fn transaction_receipt(&self, hash: B256) -> EthProviderResult<Option<TransactionReceipt>> {
         Ok(self
             .database
-            .get_one::<StoredTransactionReceipt>("receipts", into_filter("receipt.transactionHash", hash, HASH_PADDING), None)
+            .get_one::<StoredTransactionReceipt>(
+                "receipts",
+                into_filter("receipt.transactionHash", hash, HASH_PADDING),
+                None,
+            )
             .await?
             .map(Into::into))
     }

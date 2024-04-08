@@ -162,7 +162,7 @@ impl MongoFuzzer {
     }
 
     /// Get MongoDB image
-    pub fn get_mongo_image(&self) -> RunnableImage<GenericImage> {
+    pub fn mongo_image(&self) -> RunnableImage<GenericImage> {
         let image = GenericImage::new("mongo".to_string(), "6.0.13".to_string());
         RunnableImage::from(image).with_mapped_port((self.port, 27017))
     }
@@ -427,7 +427,7 @@ mod tests {
         let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
 
         // Run docker
-        let _c = DOCKER_CLI.run(mongo_fuzzer.get_mongo_image());
+        let _c = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
 
         // Mocks a database with 100 transactions, receipts and headers.
         let database = mongo_fuzzer.mock_database(100).await;
