@@ -135,7 +135,7 @@ impl<T> KatanaGenesisBuilder<T> {
     }
 
     pub fn cairo1_helpers_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("cairo1_helpers").cloned().ok_or(eyre!("Missing cairo1 helpers class hash"))
+        self.class_hashes.get("cairo1_helpers").cloned().ok_or_eyre("Missing cairo1 helpers class hash")
     }
 }
 
