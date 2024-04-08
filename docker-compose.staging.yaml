@@ -92,9 +92,17 @@ services:
 
   ### MongoDB with Mongo Express
   mongo:
-    extends:
-      file: docker-compose.yaml
-      service: mongo
+    image: mongo:6.0.8
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo_data_staging:/data/db
+    networks:
+      - internal
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
 
   clone-repo:
     extends:
@@ -141,7 +149,7 @@ networks:
 
 volumes:
   apibara:
-  mongo_data:
+  mongo_data_staging:
   indexer_code:
   pgadmin_data:
   starknet_explorer_staging:
