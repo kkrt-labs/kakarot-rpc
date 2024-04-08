@@ -22,7 +22,7 @@ use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
 };
-use super::database::Database;
+use super::database::{CollectionName, Database};
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
 use super::starknet::kakarot_core::{
     self,
@@ -150,18 +150,19 @@ where
 
     async fn block_number(&self) -> EthProviderResult<U64> {
         let sort = doc! { "header.number": -1 };
-        let block_number = match self.database.get_one::<StoredHeader>("headers", None, sort).await? {
-            // In case the database is empty, use the starknet provider
-            None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
-            Some(header) => {
-                let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber)?;
-                let number: u64 = number
-                    .try_into()
-                    .inspect_err(|err| tracing::error!("internal error: {:?}", err))
-                    .map_err(|_| EthApiError::UnknownBlockNumber)?;
-                U64::from(number)
-            }
-        };
+        let block_number =
+            match self.database.get_one::<StoredHeader>(CollectionName::Headers.as_str(), None, sort).await? {
+                // In case the database is empty, use the starknet provider
+                None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
+                Some(header) => {
+                    let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber)?;
+                    let number: u64 = number
+                        .try_into()
+                        .inspect_err(|err| tracing::error!("internal error: {:?}", err))
+                        .map_err(|_| EthApiError::UnknownBlockNumber)?;
+                    U64::from(number)
+                }
+            };
         Ok(block_number)
     }
 
@@ -197,7 +198,9 @@ where
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
         Ok(if self.block_exists(BlockHashOrNumber::Hash(hash)).await? {
             Some(U256::from(
-                self.database.count("transactions", into_filter("tx.blockHash", hash, HASH_PADDING)).await?,
+                self.database
+                    .count(CollectionName::Transactions.as_str(), into_filter("tx.blockHash", hash, HASH_PADDING))
+                    .await?,
             ))
         } else {
             None
@@ -215,14 +218,18 @@ where
         }
 
         let filter = into_filter("tx.blockNumber", block_number, U64_PADDING);
-        let count = self.database.count("transactions", filter).await?;
+        let count = self.database.count(CollectionName::Transactions.as_str(), filter).await?;
         Ok(Some(U256::from(count)))
     }
 
     async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         Ok(self
             .database
-            .get_one::<StoredTransaction>("transactions", into_filter("tx.hash", hash, HASH_PADDING), None)
+            .get_one::<StoredTransaction>(
+                CollectionName::Transactions.as_str(),
+                into_filter("tx.hash", hash, HASH_PADDING),
+                None,
+            )
             .await?
             .map(Into::into))
     }
@@ -236,7 +243,11 @@ where
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
-        Ok(self.database.get_one::<StoredTransaction>("transactions", filter, None).await?.map(Into::into))
+        Ok(self
+            .database
+            .get_one::<StoredTransaction>(CollectionName::Transactions.as_str(), filter, None)
+            .await?
+            .map(Into::into))
     }
 
     async fn transaction_by_block_number_and_index(
@@ -249,14 +260,18 @@ where
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
-        Ok(self.database.get_one::<StoredTransaction>("transactions", filter, None).await?.map(Into::into))
+        Ok(self
+            .database
+            .get_one::<StoredTransaction>(CollectionName::Transactions.as_str(), filter, None)
+            .await?
+            .map(Into::into))
     }
 
     async fn transaction_receipt(&self, hash: B256) -> EthProviderResult<Option<TransactionReceipt>> {
         Ok(self
             .database
             .get_one::<StoredTransactionReceipt>(
-                "receipts",
+                CollectionName::Receipts.as_str(),
                 into_filter("receipt.transactionHash", hash, HASH_PADDING),
                 None,
             )
@@ -426,7 +441,8 @@ where
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
         // This means we need to introduce a new type for the StoredHeader.
         let header_filter = doc! {"$and": [ { "header.number": { "$gte": format_hex(start_block, U64_PADDING) } }, { "header.number": { "$lte": format_hex(end_block, U64_PADDING) } } ] };
-        let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
+        let blocks: Vec<StoredHeader> =
+            self.database.get(CollectionName::Headers.as_str(), header_filter, None).await?;
 
         if blocks.is_empty() {
             return Err(EthApiError::UnknownBlock);
@@ -518,7 +534,8 @@ where
                 }
 
                 let filter = into_filter("receipt.blockNumber", block_number, U64_PADDING);
-                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
+                let tx: Vec<StoredTransactionReceipt> =
+                    self.database.get(CollectionName::Receipts.as_str(), filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
             BlockId::Hash(hash) => {
@@ -528,7 +545,8 @@ where
                 }
 
                 let filter = into_filter("receipt.blockHash", hash.block_hash, HASH_PADDING);
-                let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
+                let tx: Vec<StoredTransactionReceipt> =
+                    self.database.get(CollectionName::Receipts.as_str(), filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
         }
@@ -659,7 +677,7 @@ where
             BlockHashOrNumber::Number(number) => into_filter("header.number", number, U64_PADDING),
         };
         self.database
-            .get_one("headers", filter, None)
+            .get_one(CollectionName::Headers.as_str(), filter, None)
             .await
             .inspect_err(|err| {
                 tracing::error!("internal error: {:?}", err);
@@ -680,12 +698,18 @@ where
 
         let block_transactions = if full {
             BlockTransactions::Full(iter_into(
-                self.database.get::<StoredTransaction>("transactions", transactions_filter, None).await?,
+                self.database
+                    .get::<StoredTransaction>(CollectionName::Transactions.as_str(), transactions_filter, None)
+                    .await?,
             ))
         } else {
             BlockTransactions::Hashes(iter_into(
                 self.database
-                    .get::<StoredTransactionHash>("transactions", transactions_filter, doc! {"tx.hash": 1})
+                    .get::<StoredTransactionHash>(
+                        CollectionName::Transactions.as_str(),
+                        transactions_filter,
+                        doc! {"tx.hash": 1},
+                    )
                     .await?,
             ))
         };

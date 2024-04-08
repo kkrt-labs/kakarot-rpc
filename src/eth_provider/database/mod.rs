@@ -75,3 +75,28 @@ impl From<MongoDatabase> for Database {
         Self(database)
     }
 }
+
+/// Enum representing different collection names.
+#[derive(Debug, Copy, Clone)]
+pub enum CollectionName {
+    /// Collection for storing transactions.
+    Transactions,
+    /// Collection for storing headers.
+    Headers,
+    /// Collection for storing receipts.
+    Receipts,
+    /// Collection for storing pending transactions.
+    PendingTransactions,
+}
+
+impl CollectionName {
+    /// Returns the name of the collection as a static string slice.
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Transactions => "transactions",
+            Self::Headers => "headers",
+            Self::Receipts => "receipts",
+            Self::PendingTransactions => "transactions_pending",
+        }
+    }
+}
