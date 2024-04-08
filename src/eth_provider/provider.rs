@@ -5,16 +5,14 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
-use mongodb::options::UpdateModifications;
-use mongodb::options::UpdateOptions;
+use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
-use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256, U256, U64,
 };
 use reth_rpc_types::{
-    other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index,
-    RichBlock, TransactionReceipt, TransactionRequest, ValueOrArray,
+    Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
+    TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
@@ -22,7 +20,7 @@ use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
-use super::constant::CALL_REQUEST_GAS_LIMIT;
+use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
 use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     transaction::StoredTransactionHash,
@@ -157,16 +155,14 @@ where
             }
         };
 
-        let stored_header = self.header(block).await?;
-
-        Ok(stored_header.map(|h| h.header))
+        Ok(self.header(block).await?.map(|h| h.header))
     }
 
     async fn block_number(&self) -> EthProviderResult<U64> {
         let sort = doc! { "header.number": -1 };
-        let header: Option<StoredHeader> = self.database.get_one("headers", None, sort).await?;
-        let block_number = match header {
-            None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?), // in case the database is empty, use the starknet provider
+        let block_number = match self.database.get_one::<StoredHeader>("headers", None, sort).await? {
+            // In case the database is empty, use the starknet provider
+            None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
             Some(header) => {
                 let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber)?;
                 let number: u64 = number
@@ -180,27 +176,15 @@ where
     }
 
     async fn syncing(&self) -> EthProviderResult<SyncStatus> {
-        let syncing_status = self.starknet_provider.syncing().await.map_err(KakarotError::from)?;
-
-        match syncing_status {
-            SyncStatusType::NotSyncing => Ok(SyncStatus::None),
-
-            SyncStatusType::Syncing(data) => {
-                let starting_block: U256 = U256::from(data.starting_block_num);
-                let current_block: U256 = U256::from(data.current_block_num);
-                let highest_block: U256 = U256::from(data.highest_block_num);
-
-                let status_info = SyncInfo {
-                    starting_block,
-                    current_block,
-                    highest_block,
-                    warp_chunks_amount: None,
-                    warp_chunks_processed: None,
-                };
-
-                Ok(SyncStatus::Info(status_info))
-            }
-        }
+        Ok(match self.starknet_provider.syncing().await.map_err(KakarotError::from)? {
+            SyncStatusType::NotSyncing => SyncStatus::None,
+            SyncStatusType::Syncing(data) => SyncStatus::Info(SyncInfo {
+                starting_block: U256::from(data.starting_block_num),
+                current_block: U256::from(data.current_block_num),
+                highest_block: U256::from(data.highest_block_num),
+                ..Default::default()
+            }),
+        })
     }
 
     async fn chain_id(&self) -> EthProviderResult<Option<U64>> {
@@ -208,9 +192,7 @@ where
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
-        let block = self.block(BlockHashOrNumber::Hash(hash), full).await?;
-
-        Ok(block)
+        Ok(self.block(BlockHashOrNumber::Hash(hash), full).await?)
     }
 
     async fn block_by_number(
@@ -219,20 +201,17 @@ where
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let block = self.block(BlockHashOrNumber::Number(block_number.to::<u64>()), full).await?;
-
-        Ok(block)
+        Ok(self.block(BlockHashOrNumber::Number(block_number.to::<u64>()), full).await?)
     }
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
-        let block_exists = self.block_exists(BlockHashOrNumber::Hash(hash)).await?;
-        if !block_exists {
-            return Ok(None);
-        }
-
-        let filter = into_filter("tx.blockHash", hash, 64);
-        let count = self.database.count("transactions", filter).await?;
-        Ok(Some(U256::from(count)))
+        Ok(if self.block_exists(BlockHashOrNumber::Hash(hash)).await? {
+            Some(U256::from(
+                self.database.count("transactions", into_filter("tx.blockHash", hash, HASH_PADDING)).await?,
+            ))
+        } else {
+            None
+        })
     }
 
     async fn block_transaction_count_by_number(
@@ -245,15 +224,17 @@ where
             return Ok(None);
         }
 
-        let filter = into_filter("tx.blockNumber", block_number, 64);
+        let filter = into_filter("tx.blockNumber", block_number, U64_PADDING);
         let count = self.database.count("transactions", filter).await?;
         Ok(Some(U256::from(count)))
     }
 
     async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
-        let filter = into_filter("tx.hash", hash, 64);
-        let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
-        Ok(tx.map(Into::into))
+        Ok(self
+            .database
+            .get_one::<StoredTransaction>("transactions", into_filter("tx.hash", hash, HASH_PADDING), None)
+            .await?
+            .map(Into::into))
     }
 
     async fn transaction_by_block_hash_and_index(
@@ -261,12 +242,11 @@ where
         hash: B256,
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
-        let mut filter = into_filter("tx.blockHash", hash, 64);
+        let mut filter = into_filter("tx.blockHash", hash, HASH_PADDING);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
-        let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
-        Ok(tx.map(Into::into))
+        Ok(self.database.get_one::<StoredTransaction>("transactions", filter, None).await?.map(Into::into))
     }
 
     async fn transaction_by_block_number_and_index(
@@ -275,18 +255,23 @@ where
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let mut filter = into_filter("tx.blockNumber", block_number, 64);
+        let mut filter = into_filter("tx.blockNumber", block_number, U64_PADDING);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
-        let tx: Option<StoredTransaction> = self.database.get_one("transactions", filter, None).await?;
-        Ok(tx.map(Into::into))
+        Ok(self.database.get_one::<StoredTransaction>("transactions", filter, None).await?.map(Into::into))
     }
 
     async fn transaction_receipt(&self, hash: B256) -> EthProviderResult<Option<TransactionReceipt>> {
-        let filter = into_filter("receipt.transactionHash", hash, 64);
-        let tx: Option<StoredTransactionReceipt> = self.database.get_one("receipts", filter, None).await?;
-        Ok(tx.map(Into::into))
+        Ok(self
+            .database
+            .get_one::<StoredTransactionReceipt>(
+                "receipts",
+                into_filter("receipt.transactionHash", hash, HASH_PADDING),
+                None,
+            )
+            .await?
+            .map(Into::into))
     }
 
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
@@ -450,8 +435,7 @@ where
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
         // This means we need to introduce a new type for the StoredHeader.
-        let header_filter =
-            doc! {"header.number": {"$gte": format_hex(start_block, 64), "$lte": format_hex(end_block, 64)}};
+        let header_filter = doc! {"$and": [ { "header.number": { "$gte": format_hex(start_block, U64_PADDING) } }, { "header.number": { "$lte": format_hex(end_block, U64_PADDING) } } ] };
         let blocks: Vec<StoredHeader> = self.database.get("headers", header_filter, None).await?;
 
         if blocks.is_empty() {
@@ -570,7 +554,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockNumber", block_number, 64);
+                let filter = into_filter("receipt.blockNumber", block_number, U64_PADDING);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -580,7 +564,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockHash", hash.block_hash, 64);
+                let filter = into_filter("receipt.blockHash", hash.block_hash, HASH_PADDING);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get("receipts", filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -598,7 +582,6 @@ where
             }
             BlockId::Hash(hash) => BlockHashOrNumber::Hash(hash.block_hash),
         };
-
         let block_exists = self.block_exists(block_id).await?;
         if !block_exists {
             return Ok(None);
@@ -695,9 +678,7 @@ where
 
         let return_data = call_output.return_data;
         if call_output.success == FieldElement::ZERO {
-            let revert_reason =
-                return_data.0.into_iter().filter_map(|x| u8::try_from(x).ok()).map(|x| x as char).collect::<String>();
-            return Err(KakarotError::from(EvmError::from(revert_reason)).into());
+            return Err(KakarotError::from(EvmError::from(return_data.0)).into());
         }
         let gas_used = call_output.gas_used.try_into().map_err(|_| TransactionError::GasOverflow)?;
         Ok((return_data, gas_used))
@@ -711,8 +692,8 @@ where
     /// Get a header from the database based on the filter.
     async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
         let filter = match id {
-            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, 64),
-            BlockHashOrNumber::Number(number) => into_filter("header.number", number, 64),
+            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, HASH_PADDING),
+            BlockHashOrNumber::Number(number) => into_filter("header.number", number, U64_PADDING),
         };
         self.database
             .get_one("headers", filter, None)
@@ -730,8 +711,8 @@ where
         full: bool,
     ) -> EthProviderResult<BlockTransactions> {
         let transactions_filter = match block_id {
-            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, 64),
-            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, 64),
+            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, HASH_PADDING),
+            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, U64_PADDING),
         };
 
         let block_transactions = if full {
@@ -752,31 +733,29 @@ where
     /// Get a block from the database based on a block hash or number.
     /// If full is true, the block will contain the full transactions, otherwise just the hashes
     async fn block(&self, block_id: BlockHashOrNumber, full: bool) -> EthProviderResult<Option<RichBlock>> {
-        let header = self.header(block_id).await?;
-        let header = match header {
-            Some(header) => header,
+        let header = match self.header(block_id).await? {
+            Some(h) => h.header,
             None => return Ok(None),
         };
 
-        let transactions = self.transactions(block_id, full).await?;
-
         // The withdrawals are not supported, hence the withdrawals_root should always be empty.
-        if let Some(withdrawals_root) = header.header.withdrawals_root {
+        if let Some(withdrawals_root) = header.withdrawals_root {
             if withdrawals_root != EMPTY_ROOT_HASH {
                 return Err(EthApiError::Unsupported("withdrawals"));
             }
         }
 
-        let block = Block {
-            header: header.header,
-            transactions,
-            uncles: Vec::new(),
-            size: None,
-            withdrawals: Some(vec![]),
-            other: OtherFields::default(),
-        };
-
-        Ok(Some(block.into()))
+        Ok(Some(
+            Block {
+                header,
+                transactions: self.transactions(block_id, full).await?,
+                uncles: Default::default(),
+                size: Default::default(),
+                withdrawals: Some(Default::default()),
+                other: Default::default(),
+            }
+            .into(),
+        ))
     }
 
     /// Convert the given block id into a Starknet block id
@@ -801,7 +780,7 @@ where
                             .await?
                             .ok_or(EthApiError::UnknownBlockNumber)?;
                         // If the block hash is zero, then the block corresponds to a Starknet pending block
-                        if header.header.hash.ok_or(EthApiError::UnknownBlock)? == FixedBytes::ZERO {
+                        if header.header.hash.ok_or(EthApiError::UnknownBlock)?.is_zero() {
                             Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
                         } else {
                             Ok(starknet::core::types::BlockId::Number(number))

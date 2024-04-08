@@ -1,3 +1,4 @@
+use crate::eth_provider::constant::U64_PADDING;
 use crate::eth_provider::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
 };
@@ -8,28 +9,23 @@ use mongodb::{
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
-use reth_primitives::{constants::EMPTY_ROOT_HASH, Address, B256, U128, U256, U64};
+use reth_primitives::{Address, TxType, B256, U128, U256, U64};
 use serde::{Serialize, Serializer};
+use std::ops::Range;
 use std::str::FromStr;
-use testcontainers::{
-    clients::{self, Cli},
-    core::WaitFor,
-    Container, GenericImage,
+use testcontainers::clients::{self, Cli};
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+use {
+    arbitrary::Arbitrary,
+    mongodb::bson,
+    reth_primitives::U8,
+    reth_rpc_types::Transaction,
+    std::collections::HashMap,
+    testcontainers::{GenericImage, RunnableImage},
 };
-#[cfg(any(test, feature = "arbitrary"))]
-use {arbitrary::Arbitrary, mongodb::bson, reth_primitives::U8, std::collections::HashMap};
 
 lazy_static! {
-    static ref DOCKER_CLI: Cli = clients::Cli::default();
-    static ref IMAGE: GenericImage = GenericImage::new("mongo", "6.0.13")
-        .with_wait_for(WaitFor::message_on_stdout("server is ready"))
-        .with_env_var("MONGO_INITDB_DATABASE", "kakarot")
-        .with_env_var("MONGO_INITDB_ROOT_USERNAME", "root")
-        .with_env_var("MONGO_INITDB_ROOT_PASSWORD", "root")
-        .with_exposed_port(27017);
-    // The container is made static to avoid dropping it before the tests are finished.
-    static ref CONTAINER: Container<'static, GenericImage> = DOCKER_CLI.run(IMAGE.clone());
-
+    pub static ref DOCKER_CLI: Cli = clients::Cli::default();
     pub static ref CHAIN_ID: U256 = U256::from(1);
 
     pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
@@ -48,303 +44,20 @@ lazy_static! {
     pub static ref RECOVERED_EIP2930_TX_ADDRESS: Address = Address::from_str("0x753925d9bbd7682e4b77f102c47d24ee0580aa8d").unwrap();
     // Recovered address from the above R, S, V, with Legacy transaction
     pub static ref RECOVERED_LEGACY_TX_ADDRESS: Address = Address::from_str("0x05ac0c7c5930a6f9003a709042dbb136e98220f2").unwrap();
-
-
 }
 
 pub const BLOCK_NUMBER: u64 = 0x1234;
+pub const RANDOM_BYTES_SIZE: usize = 100024;
 
-pub async fn mock_database() -> Database {
-    let port = CONTAINER.get_host_port_ipv4(27017);
-
-    let mongo_client = Client::with_uri_str(format!("mongodb://root:root@localhost:{}", port))
-        .await
-        .expect("Failed to init mongo Client");
-
-    let mongodb = mongo_client.database_with_options(
-        "kakarot",
-        DatabaseOptions::builder().read_concern(ReadConcern::MAJORITY).write_concern(WriteConcern::MAJORITY).build(),
-    );
-
-    // Insert one document to create collection
-    let empty_root_hash = format!("{:064x}", EMPTY_ROOT_HASH);
-    let hash_256_zero = format!("0x{:064x}", 0);
-    let address_zero = format!("0x{:040x}", 0);
-    let bloom_zero = format!("0x{:0512x}", 0);
-    let nonce_zero = format!("0x{:016x}", 0);
-
-    let zero = format!("0x{:064x}", 0);
-    let one = format!("0x{:064x}", 1);
-    let two = format!("0x{:064x}", 2);
-    let three = format!("0x{:064x}", 3);
-
-    update_many(
-        "header".to_string(),
-        "number".to_string(),
-        mongodb.collection("headers"),
-        vec![
-            doc! {"header": doc! {
-                "nonce": &nonce_zero,
-                "hash": &hash_256_zero,
-                "parentHash": &hash_256_zero,
-                "sha3Uncles": &hash_256_zero,
-                "miner": &address_zero,
-                "stateRoot": &hash_256_zero,
-                "transactionsRoot": &hash_256_zero,
-                "receiptsRoot": &hash_256_zero,
-                "logsBloom": &bloom_zero,
-                "difficulty": &hash_256_zero,
-                "number": &hash_256_zero,
-                "gasLimit": &one,
-                "gasUsed": &one,
-                "timestamp": &hash_256_zero,
-                "extraData": "0x",
-                "mixHash": &hash_256_zero,
-                "withdrawalsRoot": &empty_root_hash,
-            }},
-            doc! {"header": doc! {
-                "nonce": &nonce_zero,
-                "hash": &hash_256_zero,
-                "parentHash": &hash_256_zero,
-                "sha3Uncles": &hash_256_zero,
-                "miner": &address_zero,
-                "stateRoot": &hash_256_zero,
-                "transactionsRoot": &hash_256_zero,
-                "receiptsRoot": &hash_256_zero,
-                "logsBloom": &bloom_zero,
-                "difficulty": &hash_256_zero,
-                "number": &one,
-                "gasLimit": &one,
-                "gasUsed": &one,
-                "timestamp": &hash_256_zero,
-                "extraData": "0x",
-                "mixHash": &hash_256_zero,
-                "baseFeePerGas": &one,
-                "withdrawalsRoot": &empty_root_hash,
-            }},
-            doc! {"header": doc! {
-                "nonce": &nonce_zero,
-                "hash": &hash_256_zero,
-                "parentHash": &hash_256_zero,
-                "sha3Uncles": &hash_256_zero,
-                "miner": &address_zero,
-                "stateRoot": &hash_256_zero,
-                "transactionsRoot": &hash_256_zero,
-                "receiptsRoot": &hash_256_zero,
-                "logsBloom": &bloom_zero,
-                "difficulty": &hash_256_zero,
-                "number": &two,
-                "gasLimit": &one,
-                "gasUsed": &one,
-                "timestamp": &hash_256_zero,
-                "extraData": "0x",
-                "mixHash": &hash_256_zero,
-                "baseFeePerGas": &one,
-                "withdrawalsRoot": &empty_root_hash,
-            }},
-            doc! {"header": doc! {
-                "nonce": &nonce_zero,
-                "hash": &hash_256_zero,
-                "parentHash": &hash_256_zero,
-                "sha3Uncles": &hash_256_zero,
-                "miner": &address_zero,
-                "stateRoot": &hash_256_zero,
-                "transactionsRoot": &hash_256_zero,
-                "receiptsRoot": &hash_256_zero,
-                "logsBloom": &bloom_zero,
-                "difficulty": &hash_256_zero,
-                "number": &three,
-                "gasLimit": &one,
-                "gasUsed": &one,
-                "timestamp": &hash_256_zero,
-                "extraData": "0x",
-                "mixHash": &hash_256_zero,
-                "baseFeePerGas": &one,
-                "withdrawalsRoot": &empty_root_hash,
-            }},
-            doc! {"header": doc! {
-                "nonce": &nonce_zero,
-                "hash": format!("0x{:064x}", *BLOCK_HASH),
-                "parentHash": &hash_256_zero,
-                "sha3Uncles": &hash_256_zero,
-                "miner": &address_zero,
-                "stateRoot": &hash_256_zero,
-                "transactionsRoot": &hash_256_zero,
-                "receiptsRoot": &hash_256_zero,
-                "logsBloom": &bloom_zero,
-                "difficulty": &hash_256_zero,
-                "number": format!("0x{:064x}", BLOCK_NUMBER),
-                "gasLimit": &one,
-                "gasUsed": &one,
-                "timestamp": &hash_256_zero,
-                "extraData": "0x",
-                "mixHash": &hash_256_zero,
-                "baseFeePerGas": &one,
-                "withdrawalsRoot": &empty_root_hash,
-            }},
-        ],
-    )
-    .await;
-
-    let gas_price_ten = format!("0x{:032x}", U128::from(10));
-    let gas_hundred = format!("0x{:064x}", U256::from(100));
-    let max_fee_per_gas_ten = format!("0x{:032x}", U128::from(10));
-    let max_priority_fee_per_gas_ten = format!("0x{:032x}", U128::from(1));
-    let chain_id = format!("0x{:064x}", *CHAIN_ID);
-    let tx_eip1559 = format!("0x{:016x}", U64::from(2));
-    let tx_eip2930 = format!("0x{:016x}", U64::from(1));
-    let tx_legacy = format!("0x{:016x}", U64::from(0));
-
-    let r = format!("0x{:064x}", *TEST_SIG_R);
-    let s = format!("0x{:064x}", *TEST_SIG_S);
-    let v = format!("0x{:064x}", *TEST_SIG_V);
-
-    update_many(
-        "tx".to_string(),
-        "hash".to_string(),
-        mongodb.collection("transactions"),
-        vec![
-            doc! {"tx": doc! {
-                "hash": format!("0x{:064x}", *EIP1599_TX_HASH),
-                "nonce": &zero,
-                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
-                "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
-                "transactionIndex": &zero,
-                "from": &format!("0x{:040x}", *RECOVERED_EIP1599_TX_ADDRESS),
-                "to": &address_zero,
-                "accessList": [],
-                "value": &zero,
-                "gas": &gas_hundred,
-                "gasPrice": &gas_price_ten,
-                "maxFeePerGas": &max_fee_per_gas_ten,
-                "maxPriorityFeePerGas": &max_priority_fee_per_gas_ten,
-                "type": &tx_eip1559,
-                "chainId": &chain_id,
-                "input": "0x",
-                "v": &v,
-                "r": &r,
-                "s": &s,
-                "yParity": "0x1",
-            }},
-            doc! {"tx": doc! {
-                "hash": format!("0x{:064x}", *EIP2930_TX_HASH),
-                "nonce": &zero,
-                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
-                "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
-                "transactionIndex": &zero,
-                "from": format!("0x{:040x}", *RECOVERED_EIP2930_TX_ADDRESS),
-                "accessList": [],
-                "to": &address_zero,
-                "value": &zero,
-                "gas": &gas_hundred,
-                "gasPrice": &gas_price_ten,
-                "type": &tx_eip2930,
-                "chainId": &chain_id,
-                "input": "0x",
-                "v": &v,
-                "r": &r,
-                "s": &s,
-                "yParity": "0x1",
-            }},
-            doc! {"tx": doc! {
-                "hash": format!("0x{:064x}", *LEGACY_TX_HASH),
-                "nonce": &zero,
-                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
-                "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
-                "transactionIndex": &zero,
-                "from": &format!("0x{:040x}", *RECOVERED_LEGACY_TX_ADDRESS),
-                "to": &address_zero,
-                "value": &zero,
-                "gas": &gas_hundred,
-                "gasPrice": &gas_price_ten,
-                "type": &tx_legacy,
-                "chainId": &chain_id,
-                "input": "0x",
-                // EIP-155 legacy transaction: v = {0,1} + CHAIN_ID * 2 + 35
-                "v": &format!("0x{:064x}", CHAIN_ID.saturating_mul(U256::from(2)).saturating_add(U256::from(35))),
-                "r": &r,
-                "s": &s,
-            }},
-        ],
-    )
-    .await;
-
-    update_many(
-        "receipt".to_string(),
-        "transactionHash".to_string(),
-        mongodb.collection("receipts"),
-        vec![
-            doc! {"receipt": doc! {
-                "transactionHash": &zero,
-                "transactionIndex": &zero,
-                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
-                "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
-                "from": &address_zero,
-                "to": &address_zero,
-                "cumulativeGasUsed": &zero,
-                "effectiveGasPrice": &zero,
-                "gasUsed": &zero,
-                "contractAddress": None::<String>,
-                "logs":Vec::<Document>::new(),
-                "logsBloom": &bloom_zero,
-                "type": &zero,
-                "status": &zero,
-            }},
-            doc! {"receipt": doc! {
-                "transactionHash": &one,
-                "transactionIndex": &zero,
-                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
-                "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
-                "from": &address_zero,
-                "to": &address_zero,
-                "cumulativeGasUsed": &zero,
-                "effectiveGasPrice": &zero,
-                "gasUsed": &zero,
-                "contractAddress": None::<String>,
-                "logs": Vec::<Document>::new(),
-                "logsBloom": &bloom_zero,
-                "type": &zero,
-                "status": &zero,
-            }},
-            doc! {"receipt": doc! {
-                "transactionHash": &two,
-                "transactionIndex": &zero,
-                "blockHash": format!("0x{:064x}", *BLOCK_HASH),
-                "blockNumber": format!("0x{:064x}", BLOCK_NUMBER),
-                "from": &address_zero,
-                "to": &address_zero,
-                "cumulativeGasUsed": &zero,
-                "effectiveGasPrice": &zero,
-                "gasUsed": &zero,
-                "contractAddress": None::<String>,
-                "logs": Vec::<Document>::new(),
-                "logsBloom": &bloom_zero,
-                "type": &zero,
-                "status": &zero,
-            }},
-        ],
-    )
-    .await;
-
-    Database::new(mongodb)
-}
-
-async fn update_many(doc: String, value: String, collection: Collection<Document>, updates: Vec<Document>) {
-    let key = [doc.as_str(), value.as_str()].join(".");
-    for u in updates {
-        collection
-            .update_one(
-                doc! {&key: u.get_document(&doc).unwrap().get_str(&value).unwrap()},
-                UpdateModifications::Document(doc! {"$set": u}),
-                UpdateOptions::builder().upsert(true).build(),
-            )
-            .await
-            .expect("Failed to insert documents");
-    }
+pub fn generate_port_number() -> u16 {
+    let address = "0.0.0.0:0";
+    let socket = std::net::UdpSocket::bind(address).expect("Cannot bind to socket");
+    let local_addr = socket.local_addr().expect("Cannot get local address");
+    local_addr.port()
 }
 
 /// Enumeration of collections in the database.
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Eq, Hash, PartialEq, Clone)]
 pub enum CollectionDB {
     /// Collection of block headers.
     Headers,
@@ -365,6 +78,32 @@ pub enum StoredData {
     StoredTransactionReceipt(StoredTransactionReceipt),
 }
 
+impl StoredData {
+    /// Extracts the stored header if it exists, otherwise returns None.
+    pub fn extract_stored_header(&self) -> Option<&StoredHeader> {
+        match self {
+            StoredData::StoredHeader(header) => Some(header),
+            _ => None,
+        }
+    }
+
+    /// Extracts the stored transaction if it exists, otherwise returns None.
+    pub fn extract_stored_transaction(&self) -> Option<&StoredTransaction> {
+        match self {
+            StoredData::StoredTransaction(transaction) => Some(transaction),
+            _ => None,
+        }
+    }
+
+    /// Extracts the stored transaction receipt if it exists, otherwise returns None.
+    pub fn extract_stored_transaction_receipt(&self) -> Option<&StoredTransactionReceipt> {
+        match self {
+            StoredData::StoredTransactionReceipt(receipt) => Some(receipt),
+            _ => None,
+        }
+    }
+}
+
 impl Serialize for StoredData {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -379,29 +118,31 @@ impl Serialize for StoredData {
 }
 
 /// Struct representing a data generator for MongoDB.
-#[cfg(any(test, feature = "arbitrary"))]
-pub struct MongoFuzzer<'a> {
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+pub struct MongoFuzzer {
     /// Documents to insert into each collection.
     documents: HashMap<CollectionDB, Vec<StoredData>>,
     /// Connection to the MongoDB database.
     mongodb: Database,
-    /// Unstructured data
-    u: &'a mut arbitrary::Unstructured<'a>,
+    /// Random bytes size.
+    rnd_bytes_size: usize,
+    // Port number
+    port: u16,
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
-impl<'a> MongoFuzzer<'a> {
-    /// Creates a new instance of `MongoFuzzer` with a mutable reference to the arbitrary `Unstructured` instance, used for generating random data.
-    pub async fn new<'b>(u: &'b mut arbitrary::Unstructured<'a>) -> Self
-    where
-        'b: 'a,
-    {
-        let port = CONTAINER.get_host_port_ipv4(27017);
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+impl MongoFuzzer {
+    /// Asynchronously creates a new instance of `MongoFuzzer`.
+    pub async fn new(rnd_bytes_size: usize) -> Self {
+        // Generate a random port number.
+        let port = generate_port_number();
 
-        let mongo_client = Client::with_uri_str(format!("mongodb://root:root@localhost:{}", port))
+        // Initialize a MongoDB client with the generated port number.
+        let mongo_client = Client::with_uri_str(format!("mongodb://{}:{}", "0.0.0.0", port))
             .await
             .expect("Failed to init mongo Client");
 
+        // Create a MongoDB database named "kakarot" with specified options.
         let mongodb = mongo_client
             .database_with_options(
                 "kakarot",
@@ -412,108 +153,161 @@ impl<'a> MongoFuzzer<'a> {
             )
             .into();
 
-        Self { u, documents: Default::default(), mongodb }
+        Self { documents: Default::default(), mongodb, rnd_bytes_size, port }
+    }
+
+    /// Obtains an immutable reference to the documents HashMap.
+    pub fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
+        &self.documents
+    }
+
+    /// Get MongoDB image
+    pub fn mongo_image(&self) -> RunnableImage<GenericImage> {
+        let image = GenericImage::new("mongo".to_string(), "6.0.13".to_string());
+        RunnableImage::from(image).with_mapped_port((self.port, 27017))
+    }
+
+    /// Get port number
+    pub fn port(&self) -> u16 {
+        self.port
     }
 
     /// Finalizes the data generation and returns the MongoDB database.
     pub async fn finalize(&self) -> Database {
-        self.update_many(CollectionDB::Headers).await;
-        self.update_many(CollectionDB::Transactions).await;
-        self.update_many(CollectionDB::Receipts).await;
+        self.update_collection(CollectionDB::Headers).await;
+        self.update_collection(CollectionDB::Transactions).await;
+        self.update_collection(CollectionDB::Receipts).await;
 
         self.mongodb.clone()
     }
 
-    /// Mocks a database with the given number of headers and transactions.
-    pub async fn mock_database<'b>(
-        u: &'b mut arbitrary::Unstructured<'a>,
-        n_headers: usize,
-        n_transactions: usize,
-    ) -> Database
-    where
-        'b: 'a,
-    {
-        let mut mongo_fuzzer = MongoFuzzer::new(u).await;
-        mongo_fuzzer.add_headers(n_headers);
-        mongo_fuzzer.add_transactions(n_transactions);
-        mongo_fuzzer.finalize().await
+    /// Mocks a database with the given number of transactions.
+    pub async fn mock_database(&mut self, n_transactions: usize) -> Database {
+        self.add_random_transactions(n_transactions).expect("Failed to add documents");
+        self.finalize().await
     }
 
-    /// Adds a document to the specified collection.
-    pub fn add_document(&mut self, collection: CollectionDB) -> Result<(), Box<dyn std::error::Error>> {
-        match collection {
-            CollectionDB::Transactions | CollectionDB::Receipts => {
-                let transaction = StoredTransaction::arbitrary(self.u)?;
-                let mut receipt = StoredTransactionReceipt::arbitrary(self.u)?;
-                receipt.receipt.transaction_hash = Some(transaction.tx.hash);
-                receipt.receipt.transaction_index = U64::from(transaction.tx.transaction_index.unwrap_or_default());
-                receipt.receipt.from = transaction.tx.from;
-                receipt.receipt.to = transaction.tx.to;
-                receipt.receipt.block_number = transaction.tx.block_number;
-                receipt.receipt.block_hash = transaction.tx.block_hash;
-                receipt.receipt.transaction_type = U8::from(transaction.tx.transaction_type.unwrap_or_default());
-
-                self.documents
-                    .entry(CollectionDB::Transactions)
-                    .or_default()
-                    .push(StoredData::StoredTransaction(transaction));
-                self.documents
-                    .entry(CollectionDB::Receipts)
-                    .or_default()
-                    .push(StoredData::StoredTransactionReceipt(receipt));
-            }
-            CollectionDB::Headers => {
-                let header = StoredHeader::arbitrary(self.u)?;
-                self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
-            }
-        }
-
+    /// Adds a transaction to the collection of transactions with custom values.
+    pub fn add_custom_transaction(&mut self, builder: TransactionBuilder) -> Result<(), Box<dyn std::error::Error>> {
+        let transaction = builder.build(self.rnd_bytes_size)?;
+        self.add_transaction_to_collections(transaction);
         Ok(())
     }
 
-    /// Adds multiple transactions to the database.
-    pub fn add_transactions(&mut self, n_transactions: usize) {
-        for _ in 0..n_transactions {
-            self.add_document(CollectionDB::Transactions).expect("Failed to add transaction");
+    pub fn add_hardcoded_block_header_range(&mut self, range: Range<usize>) -> Result<(), Box<dyn std::error::Error>> {
+        for i in range {
+            let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+            let mut unstructured = arbitrary::Unstructured::new(&bytes);
+            let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
+
+            header.header.number = Some(U256::from(i as u64));
+
+            self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
         }
+        Ok(())
     }
 
-    /// Adds multiple headers to the database.
-    pub fn add_headers(&mut self, n_headers: usize) {
-        for _ in 0..n_headers {
-            self.add_document(CollectionDB::Headers).expect("Failed to add header");
+    /// Adds a hardcoded transaction to the collection of transactions.
+    pub fn add_hardcoded_transaction(&mut self, tx_type: Option<TxType>) -> Result<(), Box<dyn std::error::Error>> {
+        let builder = TransactionBuilder::default().with_tx_type(tx_type.unwrap_or_default());
+        self.add_custom_transaction(builder)
+    }
+
+    /// Adds a hardcoded transaction to the collection of transactions.
+    pub fn add_random_transaction(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let builder = TransactionBuilder::default();
+        self.add_custom_transaction(builder)
+    }
+
+    /// Adds random transactions to the collection of transactions.
+    pub fn add_random_transactions(&mut self, n_transactions: usize) -> Result<(), Box<dyn std::error::Error>> {
+        for _ in 0..n_transactions {
+            self.add_random_transaction()?;
         }
+        Ok(())
+    }
+
+    /// Adds a transaction to the collections of transactions, receipts, and headers.
+    fn add_transaction_to_collections(&mut self, transaction: StoredTransaction) {
+        let receipt = self.generate_transaction_receipt(&transaction.tx);
+        let header = self.generate_transaction_header(&transaction.tx);
+
+        self.documents.entry(CollectionDB::Transactions).or_default().push(StoredData::StoredTransaction(transaction));
+        self.documents.entry(CollectionDB::Receipts).or_default().push(StoredData::StoredTransactionReceipt(receipt));
+        self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
+    }
+
+    /// Generates a transaction receipt based on the given transaction.
+    fn generate_transaction_receipt(&self, transaction: &Transaction) -> StoredTransactionReceipt {
+        let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+        let mut unstructured = arbitrary::Unstructured::new(&bytes);
+        let mut receipt = StoredTransactionReceipt::arbitrary(&mut unstructured).unwrap();
+
+        receipt.receipt.transaction_hash = Some(transaction.hash);
+        receipt.receipt.transaction_index = U64::from(transaction.transaction_index.unwrap_or_default());
+        receipt.receipt.from = transaction.from;
+        receipt.receipt.to = transaction.to;
+        receipt.receipt.block_number = transaction.block_number;
+        receipt.receipt.block_hash = transaction.block_hash;
+        receipt.receipt.transaction_type = U8::from(transaction.transaction_type.unwrap_or_default());
+        receipt
+    }
+
+    /// Generates a block header based on the given transaction.
+    fn generate_transaction_header(&self, transaction: &Transaction) -> StoredHeader {
+        let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+        let mut unstructured = arbitrary::Unstructured::new(&bytes);
+        let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
+
+        header.header.hash = transaction.block_hash;
+        header.header.number = transaction.block_number;
+        header
     }
 
     /// Updates multiple documents in the specified collection.
-    async fn update_many(&self, collection: CollectionDB) {
-        let (doc, value, collection_name, updates) = match collection {
+    async fn update_collection(&self, collection: CollectionDB) {
+        let (doc, value, collection_name, updates, block_number) = match collection {
             CollectionDB::Headers => {
                 let updates = self.documents.get(&CollectionDB::Headers);
-                ("header", "number", "headers", updates)
+                ("header", "number", "headers", updates, "number")
             }
             CollectionDB::Transactions => {
                 let updates = self.documents.get(&CollectionDB::Transactions);
-                ("tx", "hash", "transactions", updates)
+                ("tx", "hash", "transactions", updates, "blockNumber")
             }
             CollectionDB::Receipts => {
                 let updates = self.documents.get(&CollectionDB::Receipts);
-                ("receipt", "transactionHash", "receipts", updates)
+                ("receipt", "transactionHash", "receipts", updates, "blockNumber")
             }
         };
 
         let collection: Collection<Document> = self.mongodb.inner().collection(collection_name);
         let key = [doc, value].join(".");
+        let block_key = [doc, block_number].join(".");
 
         if let Some(updates) = updates {
             for u in updates {
                 // Serialize the StoredData into BSON
                 let serialized_data = bson::to_document(u).expect("Failed to serialize StoredData");
 
+                // Insert the document in the collection
                 collection
                     .update_one(
                         doc! {&key: serialized_data.get_document(doc).unwrap().get_str(value).unwrap()},
-                        UpdateModifications::Document(doc! {"$set": serialized_data}),
+                        UpdateModifications::Document(doc! {"$set": serialized_data.clone()}),
+                        UpdateOptions::builder().upsert(true).build(),
+                    )
+                    .await
+                    .expect("Failed to insert documents");
+
+                let number = serialized_data.get_document(doc).unwrap().get_str(block_number).unwrap();
+                let padded_number = format!("0x{:0>width$}", &number[2..], width = U64_PADDING);
+
+                // Update the document by padding the block number to U64_PADDING value.
+                collection
+                    .update_one(
+                        doc! {&block_key: &number},
+                        UpdateModifications::Document(doc! {"$set": {&block_key: padded_number}}),
                         UpdateOptions::builder().upsert(true).build(),
                     )
                     .await
@@ -523,33 +317,120 @@ impl<'a> MongoFuzzer<'a> {
     }
 }
 
+/// Builder for constructing transactions with custom values.
+#[derive(Default, Clone, Debug)]
+pub struct TransactionBuilder {
+    /// The type of transaction to construct.
+    tx_type: Option<TxType>,
+}
+
+impl TransactionBuilder {
+    /// Specifies the type of transaction to build.
+    pub fn with_tx_type(mut self, tx_type: TxType) -> Self {
+        self.tx_type = Some(tx_type);
+        self
+    }
+
+    /// Builds the transaction based on the specified values.
+    fn build(self, rnd_bytes_size: usize) -> Result<StoredTransaction, Box<dyn std::error::Error>> {
+        if let Some(tx_type) = self.tx_type {
+            return Ok(match tx_type {
+                TxType::Eip1559 => StoredTransaction {
+                    tx: reth_rpc_types::Transaction {
+                        hash: *EIP1599_TX_HASH,
+                        block_hash: Some(*BLOCK_HASH),
+                        block_number: Some(U256::from(BLOCK_NUMBER)),
+                        transaction_index: Some(U256::ZERO),
+                        from: *RECOVERED_EIP1599_TX_ADDRESS,
+                        to: Some(Address::ZERO),
+                        gas_price: Some(U128::from(10)),
+                        gas: U256::from(100),
+                        max_fee_per_gas: Some(U128::from(10)),
+                        max_priority_fee_per_gas: Some(U128::from(1)),
+                        signature: Some(reth_rpc_types::Signature {
+                            r: *TEST_SIG_R,
+                            s: *TEST_SIG_S,
+                            v: *TEST_SIG_V,
+                            y_parity: Some(reth_rpc_types::Parity(true)),
+                        }),
+                        chain_id: Some(U64::from(1)),
+                        access_list: Some(Default::default()),
+                        transaction_type: Some(U64::from(Into::<u8>::into(TxType::Eip1559))),
+                        ..Default::default()
+                    },
+                },
+                TxType::Legacy => StoredTransaction {
+                    tx: reth_rpc_types::Transaction {
+                        hash: *LEGACY_TX_HASH,
+                        block_hash: Some(*BLOCK_HASH),
+                        block_number: Some(U256::from(BLOCK_NUMBER)),
+                        transaction_index: Some(U256::ZERO),
+                        from: *RECOVERED_LEGACY_TX_ADDRESS,
+                        to: Some(Address::ZERO),
+                        gas_price: Some(U128::from(10)),
+                        gas: U256::from(100),
+                        signature: Some(reth_rpc_types::Signature {
+                            r: *TEST_SIG_R,
+                            s: *TEST_SIG_S,
+                            // EIP-155 legacy transaction: v = {0,1} + CHAIN_ID * 2 + 35
+                            v: CHAIN_ID.saturating_mul(U256::from(2)).saturating_add(U256::from(35)),
+                            y_parity: Default::default(),
+                        }),
+                        chain_id: Some(U64::from(1)),
+                        blob_versioned_hashes: Default::default(),
+                        transaction_type: Some(U64::from(Into::<u8>::into(TxType::Legacy))),
+                        ..Default::default()
+                    },
+                },
+                TxType::Eip2930 => StoredTransaction {
+                    tx: reth_rpc_types::Transaction {
+                        hash: *EIP2930_TX_HASH,
+                        block_hash: Some(*BLOCK_HASH),
+                        block_number: Some(U256::from(BLOCK_NUMBER)),
+                        transaction_index: Some(U256::ZERO),
+                        from: *RECOVERED_EIP2930_TX_ADDRESS,
+                        to: Some(Address::ZERO),
+                        gas_price: Some(U128::from(10)),
+                        gas: U256::from(100),
+                        signature: Some(reth_rpc_types::Signature {
+                            r: *TEST_SIG_R,
+                            s: *TEST_SIG_S,
+                            v: *TEST_SIG_V,
+                            y_parity: Some(reth_rpc_types::Parity(true)),
+                        }),
+                        chain_id: Some(U64::from(1)),
+                        access_list: Some(Default::default()),
+                        transaction_type: Some(U64::from(Into::<u8>::into(TxType::Eip2930))),
+                        ..Default::default()
+                    },
+                },
+                _ => unimplemented!(),
+            });
+        }
+
+        Ok(StoredTransaction::arbitrary(&mut arbitrary::Unstructured::new(&{
+            (0..rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>()
+        }))?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::eth_provider::database::types::{
         header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     };
-    use rand::Rng;
-
-    #[tokio::test]
-    async fn test_mongo_connection() {
-        // Create a mock database.
-        let database = mock_database().await;
-
-        // Retrieve a single document from the "headers" collection.
-        let _ = database.get_one::<StoredHeader>("headers", None, None).await.unwrap();
-
-        // Drop the inner MongoDB database.
-        database.inner().drop(None).await.unwrap();
-    }
 
     #[tokio::test]
     async fn test_mongo_fuzzer() {
-        let mut bytes = [0u8; 1024];
-        rand::thread_rng().fill(bytes.as_mut_slice());
+        // Generate a MongoDB fuzzer
+        let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
 
-        // Mocks a database with 100 headers and 100 transactions.
-        let database = MongoFuzzer::mock_database(&mut arbitrary::Unstructured::new(&bytes), 100, 100).await;
+        // Run docker
+        let _c = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
+
+        // Mocks a database with 100 transactions, receipts and headers.
+        let database = mongo_fuzzer.mock_database(100).await;
 
         // Retrieves stored headers from the database.
         let _ = database.get::<StoredHeader>("headers", None, None).await.unwrap();

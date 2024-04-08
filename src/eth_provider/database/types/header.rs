@@ -1,10 +1,7 @@
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+use reth_primitives::{constants::EMPTY_ROOT_HASH, SealedHeader, B64, U256, U64};
 use reth_rpc_types::Header;
 use serde::{Deserialize, Serialize};
-#[cfg(any(test, feature = "arbitrary"))]
-use {
-    arbitrary::Arbitrary,
-    reth_primitives::{SealedHeader, B64, U256, U64},
-};
 
 /// A header as stored in the database
 #[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
@@ -13,7 +10,7 @@ pub struct StoredHeader {
     pub header: Header,
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> arbitrary::Arbitrary<'a> for StoredHeader {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let header = SealedHeader::arbitrary(u)?;
@@ -38,7 +35,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredHeader {
                 mix_hash: Some(header.mix_hash),
                 nonce: Some(B64::from(header.nonce)),
                 base_fee_per_gas: header.base_fee_per_gas.map(U256::from),
-                withdrawals_root: header.withdrawals_root,
+                withdrawals_root: Some(EMPTY_ROOT_HASH),
                 blob_gas_used: header.blob_gas_used.map(U64::from),
                 excess_blob_gas: header.excess_blob_gas.map(U64::from),
                 parent_beacon_block_root: header.parent_beacon_block_root,
@@ -50,6 +47,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredHeader {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arbitrary::Arbitrary;
     use rand::Rng;
 
     #[test]
