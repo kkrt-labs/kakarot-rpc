@@ -5,14 +5,19 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
+use mongodb::options::UpdateModifications;
+use mongodb::options::UpdateOptions;
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{constants::EMPTY_ROOT_HASH, revm_primitives::FixedBytes};
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
+use reth_primitives::{
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256, U256, U64,
+};
 use reth_rpc_types::{
     other::OtherFields, Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index,
     RichBlock, TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
+use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
@@ -511,6 +516,23 @@ where
                 res.transaction_hash,
                 hash
             );
+
+            let serialized_data = mongodb::bson::to_document(&from_recovered(
+                TransactionSignedEcRecovered::from_signed_transaction(transaction_signed, signer),
+            ))
+            .expect("Failed to serialize signed transaction");
+
+            self.database
+                .inner()
+                .collection::<StoredTransaction>("transactions_pending")
+                .update_one(
+                    doc! {"tx.hash": serialized_data.get_document("tx").unwrap().get_str("hash").unwrap()},
+                    UpdateModifications::Document(doc! {"$set": serialized_data}),
+                    UpdateOptions::builder().upsert(true).build(),
+                )
+                .await
+                .expect("Failed to insert pending signed transaction");
+
             Ok(hash)
         }
     }
