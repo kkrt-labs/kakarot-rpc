@@ -23,7 +23,7 @@ services:
     restart: on-failure
 
   kakarot-deployer:
-    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.6.1
+    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.6.2
     # Always pull the latest image, until we use release tags
     pull_policy: always
     environment:
