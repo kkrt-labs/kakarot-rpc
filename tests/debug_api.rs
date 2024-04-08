@@ -201,6 +201,14 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the first transaction from the mock data.
+    let tx = &katana.first_transaction().unwrap();
+
+    // Get the block hash from the transaction.
+    let block_hash = tx.block_hash.unwrap();
+    // Get the block number from the transaction and convert it to a u64.
+    let block_number = tx.block_number.unwrap().to::<u64>();
+
     // Fetch raw transactions by block hash.
     let reqwest_client = reqwest::Client::new();
     let res_by_block_hash = reqwest_client
@@ -211,7 +219,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawTransactions",
-                    "params":[format!("0x{:064x}", *BLOCK_HASH)],
+                    "params":[format!("0x{:064x}", block_hash)],
                     "id":1,
                 }
             )
@@ -220,10 +228,12 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         .send()
         .await
         .expect("Failed to call Debug RPC");
+    // Get the response body text from the block hash request.
     let response_by_block_hash = res_by_block_hash.text().await.expect("Failed to get response body");
+    // Deserialize the response body into a JSON value.
     let raw_by_block_hash: Value =
         serde_json::from_str(&response_by_block_hash).expect("Failed to deserialize response body");
-
+    // Deserialize the "result" field of the JSON value into a vector of bytes.
     let rlp_bytes_by_block_hash: Vec<Bytes> =
         serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
 
@@ -236,7 +246,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawTransactions",
-                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "params":[format!("0x{:016x}", block_number)],
                     "id":1,
                 }
             )
@@ -245,20 +255,23 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         .send()
         .await
         .expect("Failed to call Debug RPC");
+    // Get the response body text from the block number request.
     let response_by_block_number = res_by_block_number.text().await.expect("Failed to get response body");
+    // Deserialize the response body into a JSON value.
     let raw_by_block_number: Value =
         serde_json::from_str(&response_by_block_number).expect("Failed to deserialize response body");
-
+    // Deserialize the "result" field of the JSON value into a vector of bytes.
     let rlp_bytes_by_block_number: Vec<Bytes> =
         serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
 
     // Assert equality of transactions fetched by block hash and block number.
     assert_eq!(rlp_bytes_by_block_number, rlp_bytes_by_block_hash);
 
+    // Get the Ethereum provider from the Katana instance.
     let eth_provider = katana.eth_provider();
 
     for (i, actual_tx) in eth_provider
-        .block_transactions(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(BLOCK_NUMBER))))
+        .block_transactions(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
         .await
         .unwrap()
         .unwrap()
@@ -298,6 +311,14 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the first transaction from the mock data.
+    let tx = &katana.first_transaction().unwrap();
+
+    // Get the block hash from the transaction.
+    let block_hash = tx.block_hash.unwrap();
+    // Get the block number from the transaction and convert it to a u64.
+    let block_number = tx.block_number.unwrap().to::<u64>();
+
     // Fetch raw receipts by block hash.
     let reqwest_client = reqwest::Client::new();
     let res_by_block_hash = reqwest_client
@@ -308,7 +329,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawReceipts",
-                    "params":[format!("0x{:064x}", *BLOCK_HASH)],
+                    "params":[format!("0x{:064x}", block_hash)],
                     "id":1,
                 }
             )
@@ -317,10 +338,12 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         .send()
         .await
         .expect("Failed to call Debug RPC");
+    // Get the response body text from the block hash request.
     let response_by_block_hash = res_by_block_hash.text().await.expect("Failed to get response body");
+    // Deserialize the response body into a JSON value.
     let raw_by_block_hash: Value =
         serde_json::from_str(&response_by_block_hash).expect("Failed to deserialize response body");
-
+    // Deserialize the "result" field of the JSON value into a vector of bytes.
     let rlp_bytes_by_block_hash: Vec<Bytes> =
         serde_json::from_value(raw_by_block_hash["result"].clone()).expect("Failed to deserialize result");
 
@@ -333,7 +356,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawReceipts",
-                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "params":[format!("0x{:016x}", block_number)],
                     "id":1,
                 }
             )
@@ -342,10 +365,12 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         .send()
         .await
         .expect("Failed to call Debug RPC");
+    // Get the response body text from the block number request.
     let response_by_block_number = res_by_block_number.text().await.expect("Failed to get response body");
+    // Deserialize the response body into a JSON value.
     let raw_by_block_number: Value =
         serde_json::from_str(&response_by_block_number).expect("Failed to deserialize response body");
-
+    // Deserialize the "result" field of the JSON value into a vector of bytes.
     let rlp_bytes_by_block_number: Vec<Bytes> =
         serde_json::from_value(raw_by_block_number["result"].clone()).expect("Failed to deserialize result");
 
@@ -356,7 +381,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     for (i, receipt) in eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(BLOCK_NUMBER))))
+        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
         .await
         .unwrap()
         .unwrap()
@@ -398,6 +423,12 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the first transaction from the mock data.
+    let tx = &katana.first_transaction().unwrap();
+
+    // Get the block number from the transaction and convert it to a u64.
+    let block_number = tx.block_number.unwrap().to::<u64>();
+
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -407,7 +438,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawBlock",
-                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "params":[format!("0x{:016x}", block_number)],
                     "id":1,
                 }
             )
@@ -418,6 +449,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
         .expect("Failed to call Debug RPC");
     let response = res.text().await.expect("Failed to get response body");
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
+
     let rlp_bytes: Option<Bytes> = serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
     assert!(rlp_bytes.is_some());
 
@@ -430,7 +462,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"eth_getBlockByNumber",
-                    "params":[format!("0x{:x}", BLOCK_NUMBER), true],
+                    "params":[format!("0x{:x}", block_number), true],
                     "id":1,
                 }
             )
@@ -466,6 +498,14 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the first transaction from the mock data.
+    let tx = &katana.first_transaction().unwrap();
+
+    // Get the block hash from the transaction.
+    let block_hash = tx.block_hash.unwrap();
+    // Get the block number from the transaction and convert it to a u64.
+    let block_number = tx.block_number.unwrap().to::<u64>();
+
     // Create a reqwest client.
     let reqwest_client = reqwest::Client::new();
 
@@ -478,7 +518,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawHeader",
-                    "params":[format!("0x{:064x}", *BLOCK_HASH)],
+                    "params":[format!("0x{:064x}", block_hash)],
                     "id":1,
                 }
             )
@@ -504,7 +544,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
                 {
                     "jsonrpc":"2.0",
                     "method":"debug_getRawHeader",
-                    "params":[format!("0x{:064x}", BLOCK_NUMBER)],
+                    "params":[format!("0x{:016x}", block_number)],
                     "id":1,
                 }
             )
@@ -526,7 +566,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // Fetch the transaction receipt for the current receipt hash.
-    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(BLOCK_NUMBER), true).await.unwrap().unwrap();
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), true).await.unwrap().unwrap();
 
     // Encode header into RLP bytes and assert equality with RLP bytes fetched by block number.
     let mut data = vec![];

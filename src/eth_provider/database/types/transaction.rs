@@ -1,11 +1,8 @@
 use reth_primitives::B256;
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+use reth_primitives::{Address, TransactionSigned, U128, U256, U64};
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
-#[cfg(any(test, feature = "arbitrary"))]
-use {
-    arbitrary::Arbitrary,
-    reth_primitives::{Address, TransactionSigned, U128, U256, U64},
-};
 
 /// A full transaction as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -20,7 +17,7 @@ impl From<StoredTransaction> for Transaction {
     }
 }
 
-#[cfg(any(test, feature = "arbitrary"))]
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let transaction = TransactionSigned::arbitrary(u)?;
@@ -30,15 +27,15 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                 hash: transaction.hash,
                 nonce: U64::from(transaction.nonce()),
                 block_hash: Some(B256::arbitrary(u)?),
-                block_number: Some(U256::arbitrary(u)?),
+                block_number: Some(U256::from(U64::arbitrary(u)?)),
                 transaction_index: Some(U256::from(U64::arbitrary(u)?)),
                 from: Address::arbitrary(u)?,
                 to: transaction.to(),
                 value: transaction.value(),
                 gas_price: Some(U128::arbitrary(u)?),
-                gas: U256::arbitrary(u)?,
+                gas: U256::from(U64::arbitrary(u)?),
                 max_fee_per_gas: Some(U128::from(transaction.max_fee_per_gas())),
-                max_priority_fee_per_gas: transaction.max_priority_fee_per_gas().map(U128::from),
+                max_priority_fee_per_gas: Some(U128::from(transaction.max_priority_fee_per_gas().unwrap_or_default())),
                 max_fee_per_blob_gas: transaction.max_fee_per_blob_gas().map(U128::from),
                 input: transaction.input().clone(),
                 signature: Some(reth_rpc_types::Signature {
@@ -58,7 +55,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                         })
                         .collect()
                 }),
-                transaction_type: Some(U64::from::<u8>(transaction.tx_type().into())),
+                transaction_type: Some(U64::from::<u8>(Into::<u8>::into(transaction.tx_type()) % 3)),
                 other: Default::default(),
             },
         })
@@ -91,6 +88,7 @@ impl From<StoredTransactionHash> for B256 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use arbitrary::Arbitrary;
     use rand::Rng;
 
     #[test]
