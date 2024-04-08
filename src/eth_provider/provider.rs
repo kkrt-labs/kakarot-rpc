@@ -132,7 +132,7 @@ pub trait EthereumProvider {
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
-    database: Database,
+    pub database: Database,
     starknet_provider: SP,
     chain_id: u64,
 }
@@ -478,9 +478,12 @@ where
     }
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
+        println!("totototototototototo");
         let mut data = transaction.0.as_ref();
         let transaction_signed = TransactionSigned::decode(&mut data)
             .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
+
+        println!("decoded: {:?}", transaction_signed);
 
         let chain_id =
             self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
