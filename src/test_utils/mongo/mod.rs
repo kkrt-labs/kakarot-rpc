@@ -13,27 +13,19 @@ use reth_primitives::{Address, TxType, B256, U128, U256, U64};
 use serde::{Serialize, Serializer};
 use std::ops::Range;
 use std::str::FromStr;
-use testcontainers::{
-    clients::{self, Cli},
-    core::WaitFor,
-    Container, GenericImage,
-};
+use testcontainers::clients::{self, Cli};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    arbitrary::Arbitrary, mongodb::bson, reth_primitives::U8, reth_rpc_types::Transaction, std::collections::HashMap,
+    arbitrary::Arbitrary,
+    mongodb::bson,
+    reth_primitives::U8,
+    reth_rpc_types::Transaction,
+    std::collections::HashMap,
+    testcontainers::{GenericImage, RunnableImage},
 };
 
 lazy_static! {
-    static ref DOCKER_CLI: Cli = clients::Cli::default();
-    static ref IMAGE: GenericImage = GenericImage::new("mongo", "6.0.13")
-        .with_wait_for(WaitFor::message_on_stdout("server is ready"))
-        .with_env_var("MONGO_INITDB_DATABASE", "kakarot")
-        .with_env_var("MONGO_INITDB_ROOT_USERNAME", "root")
-        .with_env_var("MONGO_INITDB_ROOT_PASSWORD", "root")
-        .with_exposed_port(27017);
-    // The container is made static to avoid dropping it before the tests are finished.
-    static ref CONTAINER: Container<'static, GenericImage> = DOCKER_CLI.run(IMAGE.clone());
-
+    pub static ref DOCKER_CLI: Cli = clients::Cli::default();
     pub static ref CHAIN_ID: U256 = U256::from(1);
 
     pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
@@ -52,12 +44,17 @@ lazy_static! {
     pub static ref RECOVERED_EIP2930_TX_ADDRESS: Address = Address::from_str("0x753925d9bbd7682e4b77f102c47d24ee0580aa8d").unwrap();
     // Recovered address from the above R, S, V, with Legacy transaction
     pub static ref RECOVERED_LEGACY_TX_ADDRESS: Address = Address::from_str("0x05ac0c7c5930a6f9003a709042dbb136e98220f2").unwrap();
-
-
 }
 
 pub const BLOCK_NUMBER: u64 = 0x1234;
 pub const RANDOM_BYTES_SIZE: usize = 100024;
+
+pub fn generate_port_number() -> u16 {
+    let address = "0.0.0.0:0";
+    let socket = std::net::UdpSocket::bind(address).expect("Cannot bind to socket");
+    let local_addr = socket.local_addr().expect("Cannot get local address");
+    local_addr.port()
+}
 
 /// Enumeration of collections in the database.
 #[derive(Eq, Hash, PartialEq, Clone)]
@@ -129,18 +126,23 @@ pub struct MongoFuzzer {
     mongodb: Database,
     /// Random bytes size.
     rnd_bytes_size: usize,
+    // Port number
+    port: u16,
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl MongoFuzzer {
-    /// Creates a new instance of `MongoFuzzer` with a bytes size used for generating random data.
+    /// Asynchronously creates a new instance of `MongoFuzzer`.
     pub async fn new(rnd_bytes_size: usize) -> Self {
-        let port = CONTAINER.get_host_port_ipv4(27017);
+        // Generate a random port number.
+        let port = generate_port_number();
 
-        let mongo_client = Client::with_uri_str(format!("mongodb://root:root@localhost:{}", port))
+        // Initialize a MongoDB client with the generated port number.
+        let mongo_client = Client::with_uri_str(format!("mongodb://{}:{}", "0.0.0.0", port))
             .await
             .expect("Failed to init mongo Client");
 
+        // Create a MongoDB database named "kakarot" with specified options.
         let mongodb = mongo_client
             .database_with_options(
                 "kakarot",
@@ -151,12 +153,23 @@ impl MongoFuzzer {
             )
             .into();
 
-        Self { documents: Default::default(), mongodb, rnd_bytes_size }
+        Self { documents: Default::default(), mongodb, rnd_bytes_size, port }
     }
 
     /// Obtains an immutable reference to the documents HashMap.
     pub fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
         &self.documents
+    }
+
+    /// Get MongoDB image
+    pub fn get_mongo_image(&self) -> RunnableImage<GenericImage> {
+        let image = GenericImage::new("mongo".to_string(), "6.0.13".to_string());
+        RunnableImage::from(image).with_mapped_port((self.port, 27017))
+    }
+
+    /// Get port number
+    pub fn port(&self) -> u16 {
+        self.port
     }
 
     /// Finalizes the data generation and returns the MongoDB database.
@@ -169,10 +182,9 @@ impl MongoFuzzer {
     }
 
     /// Mocks a database with the given number of transactions.
-    pub async fn mock_database(rnd_bytes_size: usize, n_transactions: usize) -> Database {
-        let mut mongo_fuzzer = Self::new(rnd_bytes_size).await;
-        mongo_fuzzer.add_random_transactions(n_transactions).expect("Failed to add documents");
-        mongo_fuzzer.finalize().await
+    pub async fn mock_database(&mut self, n_transactions: usize) -> Database {
+        self.add_random_transactions(n_transactions).expect("Failed to add documents");
+        self.finalize().await
     }
 
     /// Adds a transaction to the collection of transactions with custom values.
@@ -411,8 +423,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_mongo_fuzzer() {
+        // Generate a MongoDB fuzzer
+        let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
+
+        // Run docker
+        let _c = DOCKER_CLI.run(mongo_fuzzer.get_mongo_image());
+
         // Mocks a database with 100 transactions, receipts and headers.
-        let database = MongoFuzzer::mock_database(RANDOM_BYTES_SIZE, 100).await;
+        let database = mongo_fuzzer.mock_database(100).await;
 
         // Retrieves stored headers from the database.
         let _ = database.get::<StoredHeader>("headers", None, None).await.unwrap();
