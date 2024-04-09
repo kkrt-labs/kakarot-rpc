@@ -25,7 +25,7 @@ EXPOSE 9545
 EXPOSE 3030
 
 # Expose prometheus endpoint
-EXPOSE 9545
+EXPOSE 9615
 
 # this is required to have exposing ports work from docker, the default is not this.
 ENV KAKAROT_RPC_URL="0.0.0.0:3030"
