@@ -62,6 +62,18 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+pub struct StoredPendingTransaction {
+    #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
+    pub tx: Transaction,
+}
+
+impl From<StoredPendingTransaction> for Transaction {
+    fn from(tx: StoredPendingTransaction) -> Self {
+        tx.tx
+    }
+}
+
 /// A transaction hash as stored in the database
 /// This wrapper is used to deserialize a transaction
 /// from the database, on which a projection was

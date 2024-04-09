@@ -5,7 +5,7 @@ use crate::eth_provider::database::types::{
     header::StoredHeader,
     log::StoredLog,
     receipt::StoredTransactionReceipt,
-    transaction::{StoredTransaction, StoredTransactionHash},
+    transaction::{StoredPendingTransaction, StoredTransaction, StoredTransactionHash},
 };
 use futures::TryStreamExt;
 use mongodb::{
@@ -103,6 +103,13 @@ impl CollectionName for StoredHeader {
 impl CollectionName for StoredTransaction {
     fn collection_name() -> &'static str {
         "transactions"
+    }
+}
+
+/// Implement [`CollectionName`] for [`StoredPendingTransaction`]
+impl CollectionName for StoredPendingTransaction {
+    fn collection_name() -> &'static str {
+        "transactions_pending"
     }
 }
 
