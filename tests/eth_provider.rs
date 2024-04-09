@@ -1,6 +1,7 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 
+use kakarot_rpc::eth_provider::database::types::transaction::StoredTransaction;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
@@ -9,7 +10,9 @@ use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
-use reth_primitives::{Address, BlockNumberOrTag, Bytes, B256, U256, U64};
+use reth_primitives::transaction::Signature;
+use reth_primitives::{sign_message, Transaction, TransactionKind, TxEip1559};
+use reth_primitives::{Address, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::{RpcBlockHash, TransactionRequest};
 use rstest::*;
@@ -402,4 +405,82 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     );
     assert_eq!(pending_block_tag_starknet, starknet::core::types::BlockId::Tag(BlockTag::Pending));
     assert!(unknown_starknet_block_number.is_err());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // Create a sample transaction
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id: 1,
+        nonce: 0,
+        gas_limit: 21000,
+        to: TransactionKind::Call(Address::random()),
+        value: U256::from(1000),
+        input: Bytes::default(),
+        max_fee_per_gas: 875000000,
+        max_priority_fee_per_gas: 0,
+        access_list: Default::default(),
+    });
+
+    // Sign the transaction
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
+    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Send the transaction
+    let _ = eth_provider
+        .send_raw_transaction(transaction_signed.envelope_encoded())
+        .await
+        .expect("failed to send transaction");
+
+    // Retrieve the transaction from the database
+    let tx: Option<StoredTransaction> =
+        eth_provider.database().get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
+    let tx = tx.unwrap().tx;
+
+    // Assert the transaction hash and block number
+    assert_eq!(tx.hash, transaction_signed.hash());
+    assert!(tx.block_number.is_none());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // Create a sample transaction
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id: 1,
+        nonce: 0,
+        gas_limit: 21000,
+        to: TransactionKind::Call(Address::random()),
+        value: U256::from(1000),
+        input: Bytes::default(),
+        max_fee_per_gas: 875000000,
+        max_priority_fee_per_gas: 0,
+        access_list: Default::default(),
+    });
+
+    // Sign the transaction
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
+    let mut transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Set an incorrect signature
+    transaction_signed.signature = Signature::default();
+
+    // Send the transaction
+    let _ = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+
+    // Retrieve the transaction from the database
+    let tx: Option<StoredTransaction> =
+        eth_provider.database().get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
+
+    // Assert that no transaction is found
+    assert!(tx.is_none());
 }
