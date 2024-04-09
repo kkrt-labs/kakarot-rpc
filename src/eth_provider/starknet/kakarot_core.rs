@@ -31,6 +31,16 @@ pub mod account_contract {
 pub mod core {
     use super::*;
     abigen_legacy!(KakarotCore, "./.kakarot/artifacts/kakarot.json");
+
+    pub struct CallInput {
+        pub(crate) nonce: FieldElement,
+        pub(crate) from: FieldElement,
+        pub(crate) to: self::Option,
+        pub(crate) gas_limit: FieldElement,
+        pub(crate) gas_price: FieldElement,
+        pub(crate) value: Uint256,
+        pub(crate) calldata: Vec<FieldElement>,
+    }
 }
 
 fn env_var_to_field_element(var_name: &str) -> FieldElement {
