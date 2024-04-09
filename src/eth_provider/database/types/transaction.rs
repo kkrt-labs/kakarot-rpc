@@ -1,6 +1,6 @@
 use reth_primitives::B256;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use reth_primitives::{Address, TransactionSigned, U128, U256, U64};
+use reth_primitives::{Address, TransactionSigned, U256, U64, U8};
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
 
@@ -25,18 +25,18 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
         Ok(StoredTransaction {
             tx: Transaction {
                 hash: transaction.hash,
-                nonce: U64::from(transaction.nonce()),
+                nonce: transaction.nonce(),
                 block_hash: Some(B256::arbitrary(u)?),
                 block_number: Some(U256::from(U64::arbitrary(u)?)),
                 transaction_index: Some(U256::from(U64::arbitrary(u)?)),
                 from: Address::arbitrary(u)?,
                 to: transaction.to(),
                 value: transaction.value(),
-                gas_price: Some(U128::arbitrary(u)?),
+                gas_price: Some(U256::arbitrary(u)?),
                 gas: U256::from(U64::arbitrary(u)?),
-                max_fee_per_gas: Some(U128::from(transaction.max_fee_per_gas())),
-                max_priority_fee_per_gas: Some(U128::from(transaction.max_priority_fee_per_gas().unwrap_or_default())),
-                max_fee_per_blob_gas: transaction.max_fee_per_blob_gas().map(U128::from),
+                max_fee_per_gas: Some(U256::from(transaction.max_fee_per_gas())),
+                max_priority_fee_per_gas: Some(U256::from(transaction.max_priority_fee_per_gas().unwrap_or_default())),
+                max_fee_per_blob_gas: transaction.max_fee_per_blob_gas().map(U256::from),
                 input: transaction.input().clone(),
                 signature: Some(reth_rpc_types::Signature {
                     r: transaction.signature.r,
@@ -44,18 +44,21 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                     v: U256::arbitrary(u)?,
                     y_parity: Some(reth_rpc_types::Parity(bool::arbitrary(u)?)),
                 }),
-                chain_id: transaction.chain_id().map(U64::from),
-                blob_versioned_hashes: transaction.blob_versioned_hashes().unwrap_or_default(),
+                chain_id: transaction.chain_id(),
+                blob_versioned_hashes: transaction.blob_versioned_hashes(),
                 access_list: transaction.access_list().map(|list| {
-                    list.0
-                        .iter()
-                        .map(|item| reth_rpc_types::AccessListItem {
-                            address: item.address,
-                            storage_keys: item.storage_keys.clone(),
-                        })
-                        .collect()
+                    reth_rpc_types::AccessList(
+                        list.0
+                            .iter()
+                            .map(|item| reth_rpc_types::AccessListItem {
+                                address: item.address,
+                                storage_keys: item.storage_keys.clone(),
+                            })
+                            .collect(),
+                    )
                 }),
-                transaction_type: Some(U64::from::<u8>(Into::<u8>::into(transaction.tx_type()) % 3)),
+
+                transaction_type: Some(U8::from(Into::<u8>::into(transaction.tx_type()) % 3)),
                 other: Default::default(),
             },
         })

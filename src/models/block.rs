@@ -138,7 +138,7 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
 mod tests {
     use std::str::FromStr;
 
-    use reth_primitives::{Address, Bloom, Bytes, B256, B64, U128, U256, U64};
+    use reth_primitives::{Address, Bloom, Bytes, B256, B64, U256, U64, U8};
     use reth_rpc_types::{other::OtherFields, Parity, Signature};
 
     use super::*;
@@ -173,17 +173,17 @@ mod tests {
     fn base_rpc_transaction() -> reth_rpc_types::Transaction {
         reth_rpc_types::Transaction {
             hash: B256::default(),
-            nonce: U64::from(1),
+            nonce: 1,
             block_hash: None,
             block_number: None,
             transaction_index: Some(U256::ZERO),
             from: Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
             to: Some(Address::from_str("0x0000000000000000000000000000000000000002").unwrap()),
             value: U256::from(100),
-            gas_price: Some(U128::from(20)),
+            gas_price: Some(U256::from(20)),
             gas: U256::from(21000),
-            max_fee_per_gas: Some(U128::from(30)),
-            max_priority_fee_per_gas: Some(U128::from(10)),
+            max_fee_per_gas: Some(U256::from(30)),
+            max_priority_fee_per_gas: Some(U256::from(10)),
             max_fee_per_blob_gas: None,
             input: Bytes::from("1234"),
             signature: Some(Signature {
@@ -192,10 +192,10 @@ mod tests {
                 v: U256::from(1),
                 y_parity: Some(Parity(true)),
             }),
-            chain_id: Some(U64::from(1)),
-            blob_versioned_hashes: vec![],
+            chain_id: Some(1),
+            blob_versioned_hashes: Some(vec![]),
             access_list: None,
-            transaction_type: Some(U64::from(2)),
+            transaction_type: Some(U8::from(2)),
             other: serde_json::from_str("{}").unwrap(),
         }
     }
