@@ -25,44 +25,30 @@ use {
 };
 
 lazy_static! {
-    /// Reference to the Docker CLI client.
     pub static ref DOCKER_CLI: Cli = clients::Cli::default();
-    /// Reference to the chain ID.
     pub static ref CHAIN_ID: U256 = U256::from(1);
-    /// Reference to the block hash.
+
     pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
-    /// Reference to the transaction hash for EIP-1599.
     pub static ref EIP1599_TX_HASH: B256 = B256::from(U256::from_str("0xc92a4e464caa049999cb2073cc4d8586bebb42b518115f631710b2597155c962").unwrap());
-    /// Reference to the transaction hash for EIP-2930.
     pub static ref EIP2930_TX_HASH: B256 = B256::from(U256::from_str("0x972ba18c780c31bade31873d6f076a3be4e6d314776e2ad50a30eda861acab79").unwrap());
-    /// Reference to the transaction hash for Legacy transactions.
     pub static ref LEGACY_TX_HASH: B256 = B256::from(U256::from_str("0x38c7e066854c56932100b896320a37adbab32713cca46d1e06307fe5d6062b7d").unwrap());
-    /// Reference to the test signature R.
+
     pub static ref TEST_SIG_R: U256 = U256::from_str("0x1ae9d63d9152a0f628cc5c843c9d0edc6cb705b027d12d30b871365d7d9c8ed5").unwrap();
-    /// Reference to the test signature S.
     pub static ref TEST_SIG_S: U256 = U256::from_str("0x0d9fa834b490259ad6aa62a49d926053ca1b52acbb59a5e1cf8ecabd65304606").unwrap();
-    /// Reference to the test signature V.
     pub static ref TEST_SIG_V: U256 = U256::from(1);
-    /// Given constant r, s, v and transaction fields, we can derive the `Transaction.from` field "a posteriori"
-    /// ⚠️ If the transaction fields change, the below addresses should be updated accordingly ⚠️
-    /// Recovered address from the above R, S, V, with EIP1559 transaction
+    // Given constant r, s, v and transaction fields, we can derive the `Transaction.from` field "a posteriori"
+    // ⚠️ If the transaction fields change, the below addresses should be updated accordingly ⚠️
+    // Recovered address from the above R, S, V, with EIP1559 transaction
     pub static ref RECOVERED_EIP1599_TX_ADDRESS: Address = Address::from_str("0x520666a744f86a09c2a794b8d56501c109afba2d").unwrap();
-    /// Recovered address from the above R, S, V, with EIP2930 transaction
+    // Recovered address from the above R, S, V, with EIP2930 transaction
     pub static ref RECOVERED_EIP2930_TX_ADDRESS: Address = Address::from_str("0x753925d9bbd7682e4b77f102c47d24ee0580aa8d").unwrap();
-    /// Recovered address from the above R, S, V, with Legacy transaction
+    // Recovered address from the above R, S, V, with Legacy transaction
     pub static ref RECOVERED_LEGACY_TX_ADDRESS: Address = Address::from_str("0x05ac0c7c5930a6f9003a709042dbb136e98220f2").unwrap();
 }
 
-/// Constant representing the block number.
 pub const BLOCK_NUMBER: u64 = 0x1234;
-
-/// Constant representing the size of random bytes.
 pub const RANDOM_BYTES_SIZE: usize = 100024;
 
-/// Generates a random port number.
-///
-/// This function binds to a local UDP socket with address "0.0.0.0:0" to obtain a port number.
-/// It returns the port number that was successfully bound to by the socket.
 pub fn generate_port_number() -> u16 {
     let address = "0.0.0.0:0";
     let socket = std::net::UdpSocket::bind(address).expect("Cannot bind to socket");
@@ -209,7 +195,6 @@ impl MongoFuzzer {
         Ok(())
     }
 
-    /// Adds hardcoded block headers within the specified range to the MongoDB data generator.
     pub fn add_hardcoded_block_header_range(&mut self, range: Range<usize>) -> Result<(), Box<dyn std::error::Error>> {
         for i in range {
             let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();

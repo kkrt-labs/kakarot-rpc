@@ -14,7 +14,6 @@ pub struct AlchemyRpc<P: EthereumProvider> {
 }
 
 impl<P: EthereumProvider> AlchemyRpc<P> {
-    /// Creates a new instance of [`AlchemyRpc`] with the provided Ethereum provider.
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }

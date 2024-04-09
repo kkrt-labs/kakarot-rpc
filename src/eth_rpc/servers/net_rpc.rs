@@ -12,7 +12,6 @@ pub struct NetRpc<P: EthereumProvider> {
 }
 
 impl<P: EthereumProvider> NetRpc<P> {
-    /// Creates a new instance of [`NetRpc`] with the provided Ethereum provider.
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }

@@ -1,9 +1,3 @@
-//! # Katana Genesis
-//!
-//! Katana Genesis is a tool for generating the genesis block and manifest file for the Kakarot zk EVM.
-//!
-//! It provides functionality to load environment variables, set up Kakarot configurations, build the genesis block, and write the generated files to disk.
-
 use dotenvy::dotenv;
 use ethers::types::U256;
 use kakarot_rpc::test_utils::katana::genesis::KatanaGenesisBuilder;

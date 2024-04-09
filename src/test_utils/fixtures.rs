@@ -1,5 +1,3 @@
-#![allow(missing_docs)]
-
 use rstest::*;
 use tracing_subscriber::{filter, FmtSubscriber};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]

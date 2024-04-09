@@ -12,9 +12,7 @@ use crate::root_project_path;
 
 use super::eoa::TX_GAS_LIMIT;
 
-/// Represents an EVM contract trait.
 pub trait EvmContract {
-    /// Loads the bytecode of a contract from the compiled Solidity output.
     fn load_contract_bytecode(contract_name: &str) -> Result<CompactContractBytecode, eyre::Error> {
         let dot_sol = format!("{contract_name}.sol");
         let dot_json = format!("{contract_name}.json");
@@ -27,7 +25,6 @@ pub trait EvmContract {
         Ok(serde_json::from_str(&compiled_solidity_file_content)?)
     }
 
-    /// Prepares a create transaction for deploying a contract on the EVM.
     fn prepare_create_transaction<T: Tokenize>(
         contract_bytecode: &CompactContractBytecode,
         constructor_args: T,
@@ -61,7 +58,6 @@ pub trait EvmContract {
         }))
     }
 
-    /// Prepares a call transaction for invoking a method on an existing contract.
     fn prepare_call_transaction<T: Tokenize>(
         &self,
         selector: &str,
@@ -72,19 +68,14 @@ pub trait EvmContract {
     ) -> Result<Transaction, eyre::Error>;
 }
 
-/// Represents a Kakarot EVM contract.
 #[derive(Default, Debug)]
 pub struct KakarotEvmContract {
-    /// The bytecode of the contract.
     pub bytecode: CompactContractBytecode,
-    /// The StarkNet address of the contract.
     pub starknet_address: FieldElement,
-    /// The EVM address of the contract.
     pub evm_address: FieldElement,
 }
 
 impl KakarotEvmContract {
-    /// Creates a new instance of `KakarotEvmContract`.
     pub const fn new(
         bytecode: CompactContractBytecode,
         starknet_address: FieldElement,

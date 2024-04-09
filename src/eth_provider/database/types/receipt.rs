@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 /// A transaction receipt as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredTransactionReceipt {
-    /// The transaction receipt.
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub receipt: TransactionReceipt,
 }

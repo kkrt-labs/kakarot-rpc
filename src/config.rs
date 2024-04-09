@@ -11,28 +11,19 @@ fn env_var_to_field_element(var_name: &str) -> Result<FieldElement, eyre::Error>
     Ok(FieldElement::from_hex_be(&env_var)?)
 }
 
-/// Enum representing different network configurations.
 #[derive(Default, Clone, Debug)]
 pub enum Network {
-    /// Represents the Katana test network.
     #[default]
     Katana,
-    /// Represents the Madara test network.
     Madara,
-    /// Represents the Sharingan test network.
     Sharingan,
-    /// Represents the mainnet gateway network.
     MainnetGateway,
-    /// Represents the Goerli1 gateway network.
     Goerli1Gateway,
-    /// Represents the Goerli2 gateway network.
     Goerli2Gateway,
-    /// Represents a JSON-RPC provider with a custom URL.
     JsonRpcProvider(Url),
 }
 
 impl Network {
-    /// Retrieves the gateway URL for the network.
     pub fn gateway_url(&self) -> Result<Url, eyre::Error> {
         match self {
             Self::MainnetGateway => Ok(Url::parse("https://alpha-mainnet.starknet.io/feeder_gateway/")?),
@@ -42,7 +33,6 @@ impl Network {
         }
     }
 
-    /// Retrieves the provider URL for the network.
     pub fn provider_url(&self) -> Result<Url, eyre::Error> {
         match self {
             Self::Katana => Ok(Url::parse("http://0.0.0.0:5050")?),
@@ -56,8 +46,8 @@ impl Network {
     }
 }
 
-/// Configuration for the Starknet RPC client.
 #[derive(Default, Clone, Debug)]
+/// Configuration for the Starknet RPC client.
 pub struct KakarotRpcConfig {
     /// Starknet network.
     pub network: Network,
@@ -70,7 +60,6 @@ pub struct KakarotRpcConfig {
 }
 
 impl KakarotRpcConfig {
-    /// Creates a new [`KakarotRpcConfig`].
     pub const fn new(
         network: Network,
         kakarot_address: FieldElement,

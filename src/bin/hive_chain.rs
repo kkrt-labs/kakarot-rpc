@@ -1,10 +1,3 @@
-//! # Hive Chain
-//!
-//! Hive Chain is a tool for importing blocks into Starknet from a file.
-//!
-//! It provides functionality to read blocks from a file, convert them to Starknet transactions,
-//! and broadcast these transactions to the Starknet network.
-
 use alloy_rlp::Decodable;
 use eyre::OptionExt;
 use kakarot_rpc::eth_provider::starknet::kakarot_core::to_starknet_transaction;

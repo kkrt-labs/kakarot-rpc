@@ -4,12 +4,10 @@ use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 use super::transaction::rpc_transaction_to_primitive;
 use crate::{eth_provider::error::EthereumDataFormatError, into_via_try_wrapper};
 
-/// Wrapper struct for Ethereum block identifiers.
 #[derive(Debug)]
 pub struct EthBlockId(EthereumBlockId);
 
 impl EthBlockId {
-    /// Creates a new instance of [`EthBlockId`] with the provided Ethereum block identifier.
     pub const fn new(block_id: EthereumBlockId) -> Self {
         Self(block_id)
     }
@@ -34,7 +32,6 @@ impl From<EthBlockId> for EthereumBlockId {
     }
 }
 
-/// Wrapper struct for Ethereum block numbers or tags.
 #[derive(Debug)]
 pub struct EthBlockNumberOrTag(BlockNumberOrTag);
 
@@ -66,7 +63,6 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
     }
 }
 
-/// Converts a RPC header into a primitive header format.
 pub fn rpc_to_primitive_header(
     header: reth_rpc_types::Header,
 ) -> Result<reth_primitives::Header, EthereumDataFormatError> {
@@ -102,7 +98,6 @@ pub fn rpc_to_primitive_header(
     })
 }
 
-/// Converts a RPC block into a primitive block format.
 pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, EthereumDataFormatError> {
     let body = {
         let transactions: Result<Vec<TransactionSigned>, EthereumDataFormatError> = match block.transactions {

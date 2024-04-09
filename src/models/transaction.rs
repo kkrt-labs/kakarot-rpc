@@ -2,7 +2,6 @@ use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, Tx
 
 use crate::eth_provider::error::EthereumDataFormatError;
 
-/// Converts an RPC transaction into a primitive transaction.
 pub fn rpc_transaction_to_primitive(
     rpc_transaction: reth_rpc_types::Transaction,
 ) -> Result<reth_primitives::Transaction, EthereumDataFormatError> {

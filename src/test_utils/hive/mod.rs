@@ -17,56 +17,35 @@ use super::{
     katana::genesis::{KatanaGenesisBuilder, Loaded},
 };
 
-/// Represents the configuration for Hive genesis.
-///
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct HiveGenesisConfig {
-    /// The general configuration parameters.
     pub config: Config,
-    /// The address to which mining rewards are attributed.
     pub coinbase: Address,
-    /// The difficulty value.
     pub difficulty: U64,
-    /// Extra data included in the genesis block.
     pub extra_data: Bytes,
-    /// The gas limit for blocks in the genesis.
     pub gas_limit: U64,
-    /// The nonce value.
     pub nonce: U64,
-    /// The timestamp of the genesis block.
     pub timestamp: U64,
-    /// Initial account allocations.
     pub alloc: HashMap<Address, AccountInfo>,
 }
 
-/// Represents the general configuration parameters for Hive genesis.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
-    /// The unique identifier for the blockchain.
     pub chain_id: i128,
-    /// The Homestead block number.
     pub homestead_block: i128,
-    /// The EIP-150 block number.
     pub eip150_block: i128,
-    /// The EIP-150 hash.
     pub eip150_hash: Option<B256>,
-    /// The EIP-155 block number.
     pub eip155_block: i128,
-    /// The EIP-158 block number.
     pub eip158_block: i128,
 }
 
-/// Represents the account information in the Hive genesis.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AccountInfo {
-    /// The initial balance of the account.
     pub balance: U256,
-    /// The bytecode of the account's contract, if any.
     pub code: Option<Bytes>,
-    /// The initial storage state of the account.
     pub storage: Option<HashMap<U256, U256>>,
 }
 

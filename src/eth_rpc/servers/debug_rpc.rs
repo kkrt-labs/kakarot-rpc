@@ -8,15 +8,13 @@ use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
 use reth_rpc_types::BlockId;
 
-/// The RPC module for implementing the Net API.
+/// The RPC module for the implementing Net api
 #[derive(Debug)]
 pub struct DebugRpc<P: EthereumProvider> {
-    /// The Ethereum provider used by the DebugRpc module.
     eth_provider: P,
 }
 
 impl<P: EthereumProvider> DebugRpc<P> {
-    /// Creates a new instance of DebugRpc with the specified Ethereum provider.
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }

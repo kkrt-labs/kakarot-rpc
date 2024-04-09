@@ -18,30 +18,21 @@ use crate::test_utils::evm_contract::EvmContract;
 use crate::test_utils::evm_contract::KakarotEvmContract;
 use crate::test_utils::tx_waiter::watch_tx;
 
-/// Transaction gas limit
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
 
 /// EOA is an Ethereum-like Externally Owned Account (EOA) that can sign transactions and send them to the underlying Starknet provider.
 #[async_trait]
 pub trait Eoa<P: Provider + Send + Sync> {
-    /// Computes the StarkNet address corresponding to the EOA's Ethereum address.
     fn starknet_address(&self) -> Result<FieldElement, eyre::Error> {
         Ok(starknet_address(self.evm_address()?))
     }
-
-    /// Retrieves the Ethereum address of the EOA.
     fn evm_address(&self) -> Result<Address, eyre::Error> {
         let wallet = LocalWallet::from_bytes(self.private_key().as_slice())?;
         Ok(Address::from_slice(wallet.address().as_bytes()))
     }
-
-    /// Retrieves the private key of the EOA.
     fn private_key(&self) -> B256;
-
-    /// Retrieves a reference to the Ethereum data provider associated with the EOA.
     fn eth_provider(&self) -> &EthDataProvider<P>;
 
-    /// Retrieves the current nonce (transaction count) of the EOA.
     async fn nonce(&self) -> Result<U256, eyre::Error> {
         let eth_provider = self.eth_provider();
         let evm_address = self.evm_address()?;
@@ -49,14 +40,12 @@ pub trait Eoa<P: Provider + Send + Sync> {
         Ok(eth_provider.transaction_count(evm_address, None).await?)
     }
 
-    /// Signs a transaction using the EOA's private key.
     fn sign_transaction(&self, tx: Transaction) -> Result<TransactionSigned, eyre::Error> {
         let pk = self.private_key();
         let signature = sign_message(pk, tx.signature_hash())?;
         Ok(TransactionSigned::from_transaction_and_signature(tx, signature))
     }
 
-    /// Sends a signed transaction to the Ethereum network.
     async fn send_transaction(&self, tx: TransactionSigned) -> Result<B256, eyre::Error> {
         let eth_provider = self.eth_provider();
         let mut v = Vec::new();
@@ -65,17 +54,13 @@ pub trait Eoa<P: Provider + Send + Sync> {
     }
 }
 
-/// Represents a Kakarot Externally Owned Account (EOA).
 #[derive(Clone, Debug)]
 pub struct KakarotEOA<P: Provider> {
-    /// The private key associated with the EOA.
     pub private_key: B256,
-    /// The Ethereum data provider associated with the EOA.
     pub eth_provider: Arc<EthDataProvider<P>>,
 }
 
 impl<P: Provider> KakarotEOA<P> {
-    /// Creates a new instance of KakarotEOA.
     pub const fn new(private_key: B256, eth_provider: Arc<EthDataProvider<P>>) -> Self {
         Self { private_key, eth_provider }
     }
@@ -96,7 +81,6 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         self.eth_provider.starknet_provider()
     }
 
-    /// Asynchronously deploys an EVM contract on the Kakarot environment.
     pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
         contract_name: &str,

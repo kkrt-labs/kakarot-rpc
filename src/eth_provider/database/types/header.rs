@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 /// A header as stored in the database
 #[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
 pub struct StoredHeader {
-    /// The block header representation.
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub header: Header,
 }
