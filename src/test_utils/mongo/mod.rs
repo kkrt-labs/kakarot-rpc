@@ -2,7 +2,7 @@ use crate::eth_provider::constant::U64_PADDING;
 use crate::eth_provider::database::types::{
     header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
 };
-use crate::eth_provider::database::{CollectionName, Database};
+use crate::eth_provider::database::Database;
 use lazy_static::lazy_static;
 use mongodb::{
     bson::{doc, Document},
@@ -16,6 +16,7 @@ use std::str::FromStr;
 use testcontainers::clients::{self, Cli};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
+    crate::eth_provider::database::CollectionName,
     arbitrary::Arbitrary,
     mongodb::bson,
     reth_primitives::U8,
@@ -269,15 +270,15 @@ impl MongoFuzzer {
         let (doc, value, collection_name, updates, block_number) = match collection {
             CollectionDB::Headers => {
                 let updates = self.documents.get(&CollectionDB::Headers);
-                ("header", "number", CollectionName::Headers.as_str(), updates, "number")
+                ("header", "number", StoredHeader::collection_name(), updates, "number")
             }
             CollectionDB::Transactions => {
                 let updates = self.documents.get(&CollectionDB::Transactions);
-                ("tx", "hash", CollectionName::Transactions.as_str(), updates, "blockNumber")
+                ("tx", "hash", StoredTransaction::collection_name(), updates, "blockNumber")
             }
             CollectionDB::Receipts => {
                 let updates = self.documents.get(&CollectionDB::Receipts);
-                ("receipt", "transactionHash", CollectionName::Receipts.as_str(), updates, "blockNumber")
+                ("receipt", "transactionHash", StoredTransactionReceipt::collection_name(), updates, "blockNumber")
             }
         };
 
@@ -433,15 +434,13 @@ mod tests {
         let database = mongo_fuzzer.mock_database(100).await;
 
         // Retrieves stored headers from the database.
-        let _ = database.get::<StoredHeader>(CollectionName::Headers.as_str(), None, None).await.unwrap();
+        let _ = database.get::<StoredHeader>(None, None).await.unwrap();
 
         // Retrieves stored transactions from the database.
-        let transactions =
-            database.get::<StoredTransaction>(CollectionName::Transactions.as_str(), None, None).await.unwrap();
+        let transactions = database.get::<StoredTransaction>(None, None).await.unwrap();
 
         // Retrieves stored receipts from the database.
-        let receipts =
-            database.get::<StoredTransactionReceipt>(CollectionName::Receipts.as_str(), None, None).await.unwrap();
+        let receipts = database.get::<StoredTransactionReceipt>(None, None).await.unwrap();
 
         // Iterates through transactions and receipts in parallel.
         for (transaction, receipt) in transactions.iter().zip(receipts.iter()) {
