@@ -17,7 +17,7 @@ setup: .gitmodules
 	./scripts/extract_abi.sh
 
 deploy-kakarot:
-	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./scripts/deploy_kakarot.py && cd ..
+	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./kakarot_scripts/deploy_kakarot.py && cd ..
 
 load-env:
 	$(eval UNINITIALIZED_ACCOUNT_CLASS_HASH=$(shell jq -r '.declarations.uninitialized_account' $(MANIFEST)))

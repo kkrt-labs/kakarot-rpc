@@ -168,7 +168,7 @@ STARKNET_NETWORK=katana make run-dev
 Some notes on this local devnet:
 
 - this will run a devnet by running katana, **with contracts automatically
-  deployed**, so you don't have to do them manually (see in `./lib/kakarot/scripts/deploy_kakarot.py` for the list of contracts).
+  deployed**, so you don't have to do them manually (see in `./lib/kakarot/kakarot_scripts/deploy_kakarot.py` for the list of contracts).
 
 - the deployments and declarations for the devnet will be written to the
   `deployments/katana` folder inside your project root after a successful run of
