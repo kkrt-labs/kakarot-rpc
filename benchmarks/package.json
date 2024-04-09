@@ -12,7 +12,6 @@
     "ethers": "^6.9.2"
   },
   "scripts": {
-    "benchmark-katana": "INTER_TRANSACTION_MS_DELAY=50 bun run index.ts",
-    "benchmark-madara": "INTER_TRANSACTION_MS_DELAY=250 bun run index.ts"
+    "benchmark": "INTER_TRANSACTION_MS_DELAY=200 bun run index.ts"
   }
 }

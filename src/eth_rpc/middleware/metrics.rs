@@ -29,7 +29,7 @@ use crate::prometheus_handler::{
     register, CounterVec, HistogramOpts, HistogramVec, Opts, PrometheusError, Registry, U64,
 };
 use jsonrpsee::{server::middleware::rpc::RpcServiceT, types::Request, MethodResponse};
-use pin_project::pin_project;
+use pin_project_lite::pin_project;
 
 /// Histogram time buckets in microseconds.
 const HISTOGRAM_BUCKETS: [f64; 11] =
@@ -149,15 +149,16 @@ where
     }
 }
 
-/// Response future for metrics.
-#[pin_project]
-pub struct ResponseFuture<'a, F> {
-    #[pin]
-    fut: F,
-    metrics: RpcMetrics,
-    req: Request<'a>,
-    now: Instant,
-    transport_label: &'static str,
+pin_project! {
+    /// Response future for metrics.
+    pub struct ResponseFuture<'a, F> {
+        #[pin]
+        fut: F,
+        metrics: RpcMetrics,
+        req: Request<'a>,
+        now: Instant,
+        transport_label: &'static str,
+    }
 }
 
 impl<'a, F> std::fmt::Debug for ResponseFuture<'a, F> {

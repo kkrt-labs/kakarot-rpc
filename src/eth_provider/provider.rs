@@ -160,7 +160,9 @@ where
                     .try_into()
                     .inspect_err(|err| tracing::error!("internal error: {:?}", err))
                     .map_err(|_| EthApiError::UnknownBlockNumber)?;
-                U64::from(number)
+
+                let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
+                U64::from(if is_pending_block { number - 1 } else { number })
             }
         };
         Ok(block_number)
@@ -565,7 +567,10 @@ where
 {
     pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
         let chain_id = starknet_provider.chain_id().await?;
-        let chain_id = (FieldElement::from(u64::MAX) & chain_id).try_into().unwrap(); // safe unwrap
+        // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
+        // see: https://github.com/ethereum/EIPs/issues/2294
+        // Note: Metamask is breaking for a chain_id = u64::MAX - 1
+        let chain_id = (FieldElement::from(u32::MAX) & chain_id).try_into().unwrap(); // safe unwrap
         Ok(Self { database, starknet_provider, chain_id })
     }
 
@@ -757,15 +762,19 @@ where
         }
     }
 
-    /// Convert the given BlockNumberOrTag into a block number
+    /// Converts the given [`BlockNumberOrTag`] into a block number.
     async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<U64> {
         match tag {
+            // Converts the tag representing the earliest block into block number 0.
             BlockNumberOrTag::Earliest => Ok(U64::ZERO),
+            // Converts the tag containing a specific block number into a `U64`.
             BlockNumberOrTag::Number(number) => Ok(U64::from(number)),
-            BlockNumberOrTag::Latest
-            | BlockNumberOrTag::Finalized
-            | BlockNumberOrTag::Safe
-            | BlockNumberOrTag::Pending => self.block_number().await,
+            // Returns `self.block_number()` which is the block number of the latest finalized block.
+            BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe => {
+                self.block_number().await
+            }
+            // Adds 1 to the block number of the latest finalized block.
+            BlockNumberOrTag::Pending => Ok(self.block_number().await?.saturating_add(U64::from(1))),
         }
     }
 }
