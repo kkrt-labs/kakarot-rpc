@@ -8,6 +8,7 @@ use crate::models::balance::FutureTokenBalance;
 use crate::{eth_provider::provider::EthereumProvider, models::balance::TokenBalances};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
+#[derive(Debug)]
 pub struct AlchemyRpc<P: EthereumProvider> {
     eth_provider: P,
 }

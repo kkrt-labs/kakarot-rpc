@@ -85,7 +85,7 @@ impl RpcMetrics {
 }
 
 /// Metrics layer.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MetricsLayer {
     inner: RpcMetrics,
     transport_label: &'static str,
@@ -107,7 +107,7 @@ impl<S> tower::Layer<S> for MetricsLayer {
 }
 
 /// Metrics middleware.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Metrics<S> {
     service: S,
     metrics: RpcMetrics,

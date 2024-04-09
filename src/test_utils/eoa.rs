@@ -54,7 +54,7 @@ pub trait Eoa<P: Provider + Send + Sync> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct KakarotEOA<P: Provider> {
     pub private_key: B256,
     pub eth_provider: Arc<EthDataProvider<P>>,

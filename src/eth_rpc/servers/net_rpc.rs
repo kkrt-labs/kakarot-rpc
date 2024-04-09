@@ -6,6 +6,7 @@ use reth_rpc_types::PeerCount;
 use crate::eth_rpc::api::net_api::NetApiServer;
 
 /// The RPC module for the implementing Net api
+#[derive(Debug)]
 pub struct NetRpc<P: EthereumProvider> {
     eth_provider: P,
 }

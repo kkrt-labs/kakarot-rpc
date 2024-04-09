@@ -56,6 +56,7 @@ async fn katana_sequencer() -> TestSequencer {
 }
 
 /// Represents the Katana test environment.
+#[allow(missing_debug_implementations)]
 pub struct Katana {
     /// The test sequencer instance for managing test execution.
     pub sequencer: TestSequencer,

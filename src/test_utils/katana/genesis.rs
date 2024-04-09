@@ -42,10 +42,10 @@ lazy_static! {
 }
 
 #[serde_as]
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Hex(#[serde_as(as = "UfeHex")] pub FieldElement);
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct KatanaManifest {
     pub declarations: HashMap<String, Hex>,
     pub deployments: HashMap<String, Hex>,

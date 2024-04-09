@@ -68,7 +68,7 @@ pub trait EvmContract {
     ) -> Result<Transaction, eyre::Error>;
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct KakarotEvmContract {
     pub bytecode: CompactContractBytecode,
     pub starknet_address: FieldElement,

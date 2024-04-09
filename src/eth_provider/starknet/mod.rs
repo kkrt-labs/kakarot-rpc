@@ -1,4 +1,4 @@
-#![allow(non_snake_case)]
+#![allow(non_snake_case, clippy::derive_partial_eq_without_eq)]
 pub mod kakarot_core;
 
 use cainome::rs::abigen_legacy;

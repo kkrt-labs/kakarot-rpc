@@ -46,7 +46,7 @@ impl Network {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 /// Configuration for the Starknet RPC client.
 pub struct KakarotRpcConfig {
     /// Starknet network.
@@ -95,6 +95,7 @@ impl KakarotRpcConfig {
 }
 
 /// A builder for a `JsonRpcClient`.
+#[derive(Debug)]
 pub struct JsonRpcClientBuilder<T: JsonRpcTransport>(JsonRpcClient<T>);
 
 impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
@@ -141,6 +142,7 @@ impl JsonRpcClientBuilder<HttpTransport> {
 }
 
 /// A builder for a `SequencerGatewayProvider`.
+#[derive(Debug)]
 pub struct SequencerGatewayProviderBuilder(SequencerGatewayProvider);
 
 impl SequencerGatewayProviderBuilder {

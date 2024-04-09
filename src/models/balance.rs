@@ -22,6 +22,7 @@ pub struct TokenBalances {
 
 type BalanceOfResult = Result<U256, EthApiError>;
 
+#[derive(Debug)]
 pub struct FutureTokenBalance<F: Future<Output = BalanceOfResult>> {
     pub balance: F,
     pub token_address: Address,

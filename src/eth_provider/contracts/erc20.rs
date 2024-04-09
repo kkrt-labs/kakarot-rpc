@@ -22,6 +22,7 @@ abigen!(
 );
 
 /// Abstraction for a Kakarot ERC20 contract.
+#[derive(Debug)]
 pub struct EthereumErc20<P: EthereumProvider> {
     pub address: Address,
     pub provider: P,

@@ -15,6 +15,7 @@ use crate::eth_provider::provider::EthereumProvider;
 use crate::eth_rpc::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
+#[derive(Debug)]
 pub struct KakarotEthRpc<P>
 where
     P: EthereumProvider,

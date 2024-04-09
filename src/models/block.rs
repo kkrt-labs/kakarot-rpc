@@ -4,6 +4,7 @@ use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 use super::transaction::rpc_transaction_to_primitive;
 use crate::{eth_provider::error::EthereumDataFormatError, into_via_try_wrapper};
 
+#[derive(Debug)]
 pub struct EthBlockId(EthereumBlockId);
 
 impl EthBlockId {
@@ -31,6 +32,7 @@ impl From<EthBlockId> for EthereumBlockId {
     }
 }
 
+#[derive(Debug)]
 pub struct EthBlockNumberOrTag(BlockNumberOrTag);
 
 impl From<BlockNumberOrTag> for EthBlockNumberOrTag {
