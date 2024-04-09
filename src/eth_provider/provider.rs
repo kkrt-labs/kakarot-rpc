@@ -765,25 +765,12 @@ where
             BlockNumberOrTag::Earliest => Ok(U64::ZERO),
             // Converts the tag containing a specific block number into a `U64`.
             BlockNumberOrTag::Number(number) => Ok(U64::from(number)),
-            // Deducts 1 from the current block number to represent the latest, finalized, or safe block.
+            // Returns `self.block_number()` which is the block number of the latest finalized block.
             BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe => {
-                let block_number = self.block_number().await?;
-                Ok(match self.block(BlockHashOrNumber::Number(block_number.to::<u64>()), false).await? {
-                    Some(block) => {
-                        // If the block hash is null then we have a pending block
-                        // We must subtract one
-                        if block.header.hash.unwrap_or_default().is_zero() {
-                            block_number.saturating_sub(U64::from(1))
-                        } else {
-                            block_number
-                        }
-                    }
-                    // If block is not recognized, then subtract one
-                    None => block_number.saturating_sub(U64::from(1)),
-                })
+                self.block_number().await
             }
-            // Retrieves the block number representing the latest pending block.
-            BlockNumberOrTag::Pending => self.block_number().await,
+            // Adds 1 to the block number of the latest finalized block.
+            BlockNumberOrTag::Pending => Ok(self.block_number().await?.saturating_add(U64::from(1))),
         }
     }
 }
