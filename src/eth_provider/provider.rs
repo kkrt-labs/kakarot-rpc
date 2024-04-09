@@ -159,7 +159,9 @@ where
                     .try_into()
                     .inspect_err(|err| tracing::error!("internal error: {:?}", err))
                     .map_err(|_| EthApiError::UnknownBlockNumber)?;
-                U64::from(number)
+
+                let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
+                U64::from(if is_pending_block { number - 1 } else { number })
             }
         };
         Ok(block_number)
