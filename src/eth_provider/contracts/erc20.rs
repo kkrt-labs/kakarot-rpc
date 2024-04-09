@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use ethers::abi::AbiEncode;
 use ethers::core::types::Address as EthersAddress;
 use ethers::prelude::abigen;
@@ -22,16 +24,21 @@ abigen!(
 );
 
 /// Abstraction for a Kakarot ERC20 contract.
+#[derive(Debug)]
 pub struct EthereumErc20<P: EthereumProvider> {
+    /// The address of the ERC20 contract.
     pub address: Address,
+    /// The Ethereum provider used to interact with the blockchain.
     pub provider: P,
 }
 
 impl<P: EthereumProvider> EthereumErc20<P> {
+    /// Creates a new [`EthereumErc20`] instance.
     pub const fn new(address: Address, provider: P) -> Self {
         Self { address, provider }
     }
 
+    /// Retrieves the balance of an account from the ERC20 contract.
     pub async fn balance_of(self, evm_address: Address, block_id: BlockId) -> EthProviderResult<U256> {
         // Prepare the calldata for the bytecode function call
         let address = EthersAddress::from_slice(evm_address.as_slice());

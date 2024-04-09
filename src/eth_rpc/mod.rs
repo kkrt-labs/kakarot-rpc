@@ -1,36 +1,55 @@
 // //! Kakarot RPC module for Ethereum.
 // //! It is an adapter layer to interact with Kakarot ZK-EVM.
-use std::net::{AddrParseError, Ipv4Addr, SocketAddr};
 
-use config::RPCConfig;
+/// Contains modules related to API functionality.
 pub mod api;
+
+/// Contains modules related to configuration settings.
 pub mod config;
+
+/// Contains modules related to middleware.
 pub mod middleware;
+
+/// Contains modules related to RPC (Remote Procedure Call).
 pub mod rpc;
+
+/// Contains modules related to server implementations.
 pub mod servers;
 
 use crate::eth_rpc::middleware::metrics::RpcMetrics;
 use crate::eth_rpc::middleware::MetricsLayer;
 use crate::prometheus_handler::init_prometheus;
+use config::RPCConfig;
 use eyre::Result;
 use jsonrpsee::server::middleware::http::{InvalidPath, ProxyGetRequestLayer};
 use jsonrpsee::server::{RpcServiceBuilder, ServerBuilder, ServerHandle};
 use jsonrpsee::RpcModule;
 use prometheus::Registry;
+use std::net::{AddrParseError, Ipv4Addr, SocketAddr};
 use thiserror::Error;
 
 use tower_http::cors::{Any, CorsLayer};
 
+/// Enum representing various errors that can occur during RPC operations.
 #[derive(Error, Debug)]
 pub enum RpcError {
+    /// IO error.
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+
+    /// Error occurred during parsing.
     #[error(transparent)]
     ParseError(#[from] AddrParseError),
+
+    /// Error related to JSON-RPC.
     #[error(transparent)]
     JsonRpcError(#[from] InvalidPath),
+
+    /// Error related to Prometheus handler.
     #[error(transparent)]
     PrometheusHandlerError(#[from] crate::prometheus_handler::Error),
+
+    /// Error related to Prometheus.
     #[error(transparent)]
     PrometheusError(#[from] prometheus::Error),
 }

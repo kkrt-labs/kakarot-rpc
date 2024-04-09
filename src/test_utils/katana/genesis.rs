@@ -41,32 +41,56 @@ lazy_static! {
     static ref SALT: FieldElement = FieldElement::from_bytes_be(&[0u8; 32]).unwrap();
 }
 
+/// A wrapper struct for serializing `FieldElement` as hexadecimal.
 #[serde_as]
-#[derive(Serialize)]
-pub struct Hex(#[serde_as(as = "UfeHex")] pub FieldElement);
+#[derive(Serialize, Debug)]
+pub struct Hex(
+    /// The inner `FieldElement` serialized as hexadecimal.
+    #[serde_as(as = "UfeHex")]
+    pub FieldElement,
+);
 
-#[derive(Serialize)]
+/// Represents a manifest for Katana.
+#[derive(Serialize, Debug)]
 pub struct KatanaManifest {
+    /// Declarations in the manifest, mapping strings to hexadecimal values.
     pub declarations: HashMap<String, Hex>,
+    /// Deployments in the manifest, mapping strings to hexadecimal values.
     pub deployments: HashMap<String, Hex>,
 }
 
+/// Represents the uninitialized state.
 #[derive(Debug, Clone)]
 pub struct Uninitialized;
+
+/// Represents the loaded state.
 #[derive(Debug, Clone)]
 pub struct Loaded;
+
+/// Represents the initialized state.
 #[derive(Debug, Clone)]
 pub struct Initialized;
 
+/// Represents a builder for creating Katana Genesis configurations.
+///
+/// This builder allows for constructing a Katana Genesis configuration with various parameters.
 #[derive(Debug, Clone)]
 pub struct KatanaGenesisBuilder<T> {
+    /// The coinbase address for the Genesis block.
     coinbase: FieldElement,
+    /// The list of Genesis class configurations.
     classes: Vec<GenesisClassJson>,
+    /// A map containing class hashes indexed by class names.
     class_hashes: HashMap<String, FieldElement>,
+    /// A map containing Genesis contract configurations indexed by contract addresses.
     contracts: HashMap<ContractAddress, GenesisContractJson>,
+    /// A map containing Genesis account configurations indexed by account addresses.
     accounts: HashMap<ContractAddress, GenesisAccountJson>,
+    /// A map representing storage for fee tokens.
     fee_token_storage: HashMap<StorageKey, StorageValue>,
+    /// A map representing cache storage.
     cache: HashMap<String, FieldElement>,
+    /// A phantom data marker for the builder's status type.
     status: PhantomData<T>,
 }
 
@@ -85,6 +109,7 @@ fn parse_seed(seed: &str) -> [u8; 32] {
 }
 
 impl<T> KatanaGenesisBuilder<T> {
+    /// Updates the state of the [`KatanaGenesisBuilder`] to a new state.
     pub fn update_state<State>(self) -> KatanaGenesisBuilder<State> {
         KatanaGenesisBuilder {
             coinbase: self.coinbase,
@@ -98,6 +123,7 @@ impl<T> KatanaGenesisBuilder<T> {
         }
     }
 
+    /// Adds a developer allocation to the genesis builder.
     pub fn with_dev_allocation(mut self, amount: u16) -> Self {
         let dev_allocations = DevAllocationsGenerator::new(amount)
             .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
@@ -122,18 +148,22 @@ impl<T> KatanaGenesisBuilder<T> {
         self
     }
 
+    /// Retrieves the class hash for the Kakarot class.
     fn kakarot_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("kakarot").cloned().ok_or_eyre("Missing Kakarot class hash")
     }
 
+    /// Retrieves the class hash for the account contract.
     pub fn account_contract_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("account_contract").cloned().ok_or_eyre("Missing account contract class hash")
     }
 
+    /// Retrieves the class hash for the uninitialized account.
     pub fn uninitialized_account_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("uninitialized_account").cloned().ok_or_eyre("Missing uninitialized account class hash")
     }
 
+    /// Retrieves the class hash for the precompiles.
     pub fn precompiles_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("precompiles").cloned().ok_or_eyre("Missing precompiles class hash")
     }
@@ -367,14 +397,17 @@ impl KatanaGenesisBuilder<Initialized> {
         Ok(FieldElement::from_byte_slice_be(evm_address.as_bytes())?)
     }
 
+    /// Retrieve a value from the cache.
     pub fn cache_load(&self, key: &str) -> Result<FieldElement> {
         self.cache.get(key).cloned().ok_or(eyre!("Cache miss for {key} address"))
     }
 
+    /// Returns a reference to the cache.
     pub fn cache(&self) -> &HashMap<String, FieldElement> {
         &self.cache
     }
 
+    /// Returns a reference to the class hashes.
     pub fn class_hashes(&self) -> &HashMap<String, FieldElement> {
         &self.class_hashes
     }

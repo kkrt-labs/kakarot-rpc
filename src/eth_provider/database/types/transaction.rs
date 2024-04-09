@@ -4,9 +4,10 @@ use reth_primitives::{Address, TransactionSigned, U128, U256, U64};
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
 
-/// A full transaction as stored in the database
+/// Represents a full transaction as stored in the database.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredTransaction {
+    /// The transaction representation.
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
 }
@@ -69,13 +70,16 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
 /// hash (e.g. {tx: {hash: "0x1234"}})
 #[derive(Debug, Deserialize)]
 pub struct StoredTransactionHash {
+    /// Transaction hash
     #[serde(rename = "tx")]
     pub tx_hash: Hash,
 }
 
+/// Represents a hash.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hash {
+    /// The hash value.
     pub hash: B256,
 }
 

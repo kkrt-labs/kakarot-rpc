@@ -4,10 +4,11 @@ use reth_primitives::{keccak256, Bytes, B256};
 use crate::eth_rpc::api::web3_api::Web3ApiServer;
 
 /// The RPC module for the implementing Web3 Api { i.e rpc endpoints prefixed with web3_ }
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Web3Rpc {}
 
 impl Web3Rpc {
+    /// Creates a new instance of the Web3 RPC module.
     pub const fn new() -> Self {
         Self {}
     }

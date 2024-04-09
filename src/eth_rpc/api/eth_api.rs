@@ -13,6 +13,7 @@ use reth_rpc_types::{
 #[rpc(server, namespace = "eth")]
 #[async_trait]
 pub trait EthApi {
+    /// Returns block number
     #[method(name = "blockNumber")]
     async fn block_number(&self) -> Result<U64>;
 

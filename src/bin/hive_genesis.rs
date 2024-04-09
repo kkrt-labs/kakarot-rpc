@@ -1,3 +1,10 @@
+//! # Hive Genesis
+//!
+//! Hive Genesis is a tool for converting Hive genesis configuration to Katana genesis configuration.
+//!
+//! It provides functionality to load environment variables, read Hive genesis configuration from a file,
+//! convert it to Katana genesis configuration, and write the generated genesis block and manifest file to disk.
+
 use dotenvy::dotenv;
 use kakarot_rpc::test_utils::{hive::HiveGenesisConfig, katana::genesis::KatanaGenesisBuilder};
 use starknet_crypto::FieldElement;

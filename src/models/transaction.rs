@@ -2,6 +2,7 @@ use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, Tx
 
 use crate::eth_provider::error::EthereumDataFormatError;
 
+/// Converts an RPC transaction into a primitive transaction.
 pub fn rpc_transaction_to_primitive(
     rpc_transaction: reth_rpc_types::Transaction,
 ) -> Result<reth_primitives::Transaction, EthereumDataFormatError> {
@@ -116,7 +117,7 @@ mod tests {
         let mut rpc_tx = base_rpc_transaction();
         rpc_tx.transaction_type = Some(U64::from(0));
 
-        let result = rpc_transaction_to_primitive(rpc_tx.clone());
+        let result = rpc_transaction_to_primitive(rpc_tx);
         assert!(matches!(result, Ok(reth_primitives::Transaction::Legacy(_))));
         if let Ok(reth_primitives::Transaction::Legacy(tx)) = result {
             assert_eq!(tx.nonce, 1);
@@ -141,7 +142,7 @@ mod tests {
             storage_keys: vec![U256::from(123).into(), U256::from(456).into()],
         }]);
 
-        let result = rpc_transaction_to_primitive(rpc_tx.clone());
+        let result = rpc_transaction_to_primitive(rpc_tx);
         assert!(matches!(result, Ok(reth_primitives::Transaction::Eip2930(_))));
         if let Ok(reth_primitives::Transaction::Eip2930(tx)) = result {
             assert_eq!(tx.chain_id, 1);
@@ -175,7 +176,7 @@ mod tests {
             storage_keys: vec![U256::from(123).into(), U256::from(456).into()],
         }]);
 
-        let result = rpc_transaction_to_primitive(rpc_tx.clone());
+        let result = rpc_transaction_to_primitive(rpc_tx);
         assert!(matches!(result, Ok(reth_primitives::Transaction::Eip1559(_))));
         if let Ok(reth_primitives::Transaction::Eip1559(tx)) = result {
             assert_eq!(tx.chain_id, 1);
@@ -205,6 +206,6 @@ mod tests {
         let mut rpc_tx = base_rpc_transaction();
         rpc_tx.transaction_type = Some(U64::from(99)); // Invalid type
 
-        let _ = rpc_transaction_to_primitive(rpc_tx.clone()).unwrap();
+        let _ = rpc_transaction_to_primitive(rpc_tx).unwrap();
     }
 }

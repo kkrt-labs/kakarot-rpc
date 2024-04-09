@@ -9,18 +9,31 @@ use thiserror::Error;
 pub enum EthRpcErrorCode {
     /// Custom geth error code, <https://github.com/vapory-legacy/wiki/blob/master/JSON-RPC-Error-Codes-Improvement-Proposal.md>
     Unknown,
+    /// Execution error.
     ExecutionError = 3,
+    /// Parse error.
     ParseError = -32700,
+    /// Invalid request error.
     InvalidRequest = -32600,
+    /// Method not found error.
     MethodNotFound = -32601,
+    /// Invalid parameters error.
     InvalidParams = -32602,
+    /// Internal error.
     InternalError = -32603,
+    /// Invalid input error.
     InvalidInput = -32000,
+    /// Resource not found error.
     ResourceNotFound = -32001,
+    /// Resource unavailable error.
     ResourceUnavailable = -32002,
+    /// Transaction rejected error.
     TransactionRejected = -32003,
+    /// Method not supported error.
     MethodNotSupported = -32004,
+    /// Request limit exceeded error.
     RequestLimitExceeded = -32005,
+    /// JSON-RPC version unsupported error.
     JsonRpcVersionUnsupported = -32006,
 }
 
@@ -122,38 +135,55 @@ impl From<KakarotError> for EthRpcErrorCode {
 /// Error related to EVM execution.
 #[derive(Debug, Error)]
 pub enum EvmError {
+    /// Validation failed error.
     #[error("validation failed")]
     ValidationError,
+    /// State modification error.
     #[error("state modification error")]
     StateModificationError,
+    /// Unknown opcode error.
     #[error("unknown opcode")]
     UnknownOpcode,
+    /// Invalid jump destination error.
     #[error("invalid jump dest")]
     InvalidJumpDest,
+    /// Invalid caller error.
     #[error("invalid caller")]
     NotKakarotEoaCaller,
+    /// View function error.
     #[error("view function error")]
     ViewFunctionError,
+    /// Stack overflow error.
     #[error("stack overflow")]
     StackOverflow,
+    /// Stack underflow error.
     #[error("stack underflow")]
     StackUnderflow,
+    /// Out of bounds read error.
     #[error("out of bounds read")]
     OutOfBoundsRead,
+    /// Unknown precompile error with a specific identifier.
     #[error("unknown precompile {0}")]
     UnknownPrecompile(String),
+    /// Not implemented precompile error with a specific identifier.
     #[error("not implemented precompile {0}")]
     NotImplementedPrecompile(String),
+    /// Precompile input error.
     #[error("precompile input error")]
     PrecompileInputError,
+    /// Precompile flag error.
     #[error("precompile flag error")]
     PrecompileFlagError,
+    /// Balance error.
     #[error("balance error")]
     BalanceError,
+    /// Address collision error.
     #[error("address collision")]
     AddressCollision,
+    /// Out of gas error.
     #[error("out of gas")]
     OutOfGas,
+    /// Other error with a custom message.
     #[error("{0}")]
     Other(String),
 }

@@ -15,10 +15,12 @@ use crate::eth_provider::provider::EthereumProvider;
 use crate::eth_rpc::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
+#[derive(Debug)]
 pub struct KakarotEthRpc<P>
 where
     P: EthereumProvider,
 {
+    /// The Ethereum provider used by Kakarot.
     eth_provider: P,
 }
 
@@ -26,6 +28,7 @@ impl<P> KakarotEthRpc<P>
 where
     P: EthereumProvider,
 {
+    /// Creates a new instance of [`KakarotEthRpc`] with the specified Ethereum provider.
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }

@@ -1,3 +1,10 @@
+//! # Kakarot RPC
+//!
+//! Kakarot RPC is a RPC node for the Kakarot zk EVM.
+//!
+//! It provides an interface for interacting with the Kakarot network and Ethereum network,
+//! handling HTTP requests and responses, and managing database connections.
+
 use std::env::var;
 use std::sync::Arc;
 

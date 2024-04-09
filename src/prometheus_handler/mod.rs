@@ -36,11 +36,13 @@ mod sourced;
 
 pub use sourced::{MetricSource, SourcedCounter, SourcedGauge, SourcedMetric};
 
+/// Registers a metric in the provided Prometheus registry.
 pub fn register<T: Clone + Collector + 'static>(metric: T, registry: &Registry) -> Result<T, PrometheusError> {
     registry.register(Box::new(metric.clone()))?;
     Ok(metric)
 }
 
+/// Enum representing various errors that can occur for Prometheus handler.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     /// Hyper internal error.
@@ -55,6 +57,7 @@ pub enum Error {
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
+    /// Error indicating that a Prometheus port is already in use.
     #[error("Prometheus port {0} already in use.")]
     PortInUse(SocketAddr),
 }

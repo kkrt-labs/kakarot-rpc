@@ -17,16 +17,23 @@ use crate::eth_rpc::servers::eth_rpc::KakarotEthRpc;
 use crate::eth_rpc::servers::net_rpc::NetRpc;
 use crate::eth_rpc::servers::web3_rpc::Web3Rpc;
 
-/// Represents RPC modules that are supported by reth
+/// Represents RPC modules that are supported by reth.
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum KakarotRpcModule {
+    /// Ethereum RPC module.
     Eth,
+    /// Alchemy RPC module.
     Alchemy,
+    /// Web3 RPC module.
     Web3,
+    /// Net RPC module.
     Net,
+    /// Debug RPC module.
     Debug,
 }
 
+/// Builder for Kakarot RPC modules.
+#[derive(Debug)]
 pub struct KakarotRpcModuleBuilder<P>
 where
     P: EthereumProvider + Send + Sync,
@@ -39,6 +46,7 @@ impl<P> KakarotRpcModuleBuilder<P>
 where
     P: EthereumProvider + Send + Sync + 'static,
 {
+    /// Creates a new Kakarot RPC module builder.
     pub fn new(eth_provider: P) -> Self {
         let eth_provider = Arc::new(eth_provider);
         let eth_rpc_module = KakarotEthRpc::new(eth_provider.clone()).into_rpc();
@@ -58,6 +66,7 @@ where
         Self { modules, _phantom: PhantomData }
     }
 
+    /// Returns the RPC module.
     pub fn rpc_module(&self) -> Result<RpcModule<()>, RegisterMethodError> {
         let mut rpc_module = RpcModule::new(());
 

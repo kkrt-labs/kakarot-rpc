@@ -22,12 +22,15 @@ use crate::{
 
 // Contract ABIs
 
+/// Module containing bindings for the [`AccountContract`] contract.
+#[allow(missing_docs)]
 pub mod account_contract {
     use super::*;
     abigen_legacy!(AccountContract, "./.kakarot/artifacts/account_contract.json");
 }
 
-#[allow(clippy::too_many_arguments)]
+/// Core functionality module for Kakarot.
+#[allow(clippy::too_many_arguments, missing_docs)]
 pub mod core {
     use super::*;
     abigen_legacy!(KakarotCore, "./.kakarot/artifacts/kakarot.json");
@@ -41,14 +44,16 @@ fn env_var_to_field_element(var_name: &str) -> FieldElement {
 }
 
 lazy_static! {
-    // Contract addresses
+    /// Contract address for Kakarot.
     pub static ref KAKAROT_ADDRESS: FieldElement = env_var_to_field_element("KAKAROT_ADDRESS");
 
-    // Contract class hashes
+    /// Class hash for uninitialized accounts.
     pub static ref UNINITIALIZED_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH");
+
+    /// Class hash for contract accounts.
     pub static ref CONTRACT_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("CONTRACT_ACCOUNT_CLASS_HASH");
 
-    // Contract selectors
+    /// Selector for the `eth_send_transaction` function.
     pub static ref ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
 }
 

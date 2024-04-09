@@ -1,3 +1,4 @@
+/// Database types
 pub mod types;
 
 use super::error::KakarotError;
@@ -16,6 +17,7 @@ type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 pub struct Database(MongoDatabase);
 
 impl Database {
+    /// Creates a new [`Database`] instance.
     pub const fn new(database: MongoDatabase) -> Self {
         Self(database)
     }

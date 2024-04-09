@@ -4,6 +4,7 @@ use std::ops::{Deref, DerefMut};
 
 use crate::eth_provider::error::EthereumDataFormatError;
 
+/// Wrapper for a [`FieldElement`] to provide a more specialized type.
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);
 

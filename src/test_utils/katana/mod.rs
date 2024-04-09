@@ -1,3 +1,4 @@
+/// A module containing functionality related to Katana genesis configuration.
 pub mod genesis;
 
 use std::path::Path;
@@ -55,6 +56,7 @@ async fn katana_sequencer() -> TestSequencer {
 }
 
 /// Represents the Katana test environment.
+#[allow(missing_debug_implementations)]
 pub struct Katana {
     /// The test sequencer instance for managing test execution.
     pub sequencer: TestSequencer,
@@ -70,6 +72,7 @@ pub struct Katana {
 }
 
 impl<'a> Katana {
+    /// Creates a new instance of Katana, initializing the test environment.
     #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
     pub async fn new(rnd_bytes_size: usize) -> Self {
         let sequencer = katana_sequencer().await;
@@ -131,10 +134,12 @@ impl<'a> Katana {
         Self { sequencer, eoa, mock_data, port, container: Some(container) }
     }
 
+    /// Returns a cloned reference to the Ethereum data provider used by the Katana instance.
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {
         self.eoa.eth_provider.clone()
     }
 
+    /// Returns a clone of the Kakarot EOA (Externally Owned Account) instance used by the Katana instance.
     pub fn eoa(&self) -> KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
         self.eoa.clone()
     }

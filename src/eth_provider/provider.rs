@@ -39,6 +39,7 @@ use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
+/// Result type used in Ethereum provider operations.
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
 /// Ethereum provider trait. Used to abstract away the database and the network.
@@ -126,6 +127,7 @@ pub trait EthereumProvider {
 /// Structure that implements the EthereumProvider trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
+#[derive(Debug)]
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
     database: Database,
     starknet_provider: SP,
@@ -562,17 +564,20 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
+    /// Creates a new instance of [`EthDataProvider`].
     pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
         let chain_id = starknet_provider.chain_id().await?;
         let chain_id = (FieldElement::from(u64::MAX) & chain_id).try_into().unwrap(); // safe unwrap
         Ok(Self { database, starknet_provider, chain_id })
     }
 
+    /// Retrieves the starknet provider.
     #[cfg(feature = "testing")]
     pub fn starknet_provider(&self) -> &SP {
         &self.starknet_provider
     }
 
+    /// Helper function for making a call to the smart contract.
     async fn call_helper(
         &self,
         request: TransactionRequest,
