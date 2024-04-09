@@ -134,8 +134,8 @@ impl<T> KatanaGenesisBuilder<T> {
         self.class_hashes.get("uninitialized_account").cloned().ok_or_eyre("Missing uninitialized account class hash")
     }
 
-    pub fn precompiles_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("precompiles").cloned().ok_or_eyre("Missing precompiles class hash")
+    pub fn cairo1_helpers_class_hash(&self) -> Result<FieldElement> {
+        self.class_hashes.get("cairo1_helpers").cloned().ok_or_eyre("Missing cairo1 helpers class hash")
     }
 }
 
@@ -201,10 +201,8 @@ impl KatanaGenesisBuilder<Loaded> {
 
         let account_contract_class_hash = self.account_contract_class_hash()?;
         let uninitialized_account_class_hash = self.uninitialized_account_class_hash()?;
-        let precompiles_class_hash = self.precompiles_class_hash()?;
-
+        let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
         let block_gas_limit = FieldElement::from(20_000_000u64);
-
         // Construct the kakarot contract address. Based on the constructor args from
         // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/kakarot.cairo#L23
         let kakarot_address = ContractAddress::new(get_udc_deployed_address(
@@ -216,7 +214,7 @@ impl KatanaGenesisBuilder<Loaded> {
                 DEFAULT_FEE_TOKEN_ADDRESS.0,
                 account_contract_class_hash,
                 uninitialized_account_class_hash,
-                precompiles_class_hash,
+                cairo1_helpers_class_hash,
                 coinbase_address,
                 block_gas_limit,
             ],
@@ -229,7 +227,7 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr(KAKAROT_NATIVE_TOKEN_ADDRESS)?, *DEFAULT_FEE_TOKEN_ADDRESS),
             (storage_addr(KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH)?, account_contract_class_hash),
             (storage_addr(KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH)?, uninitialized_account_class_hash),
-            (storage_addr(KAKAROT_CAIRO1_HELPERS_CLASS_HASH)?, precompiles_class_hash),
+            (storage_addr(KAKAROT_CAIRO1_HELPERS_CLASS_HASH)?, cairo1_helpers_class_hash),
             (storage_addr(KAKAROT_COINBASE)?, coinbase_address),
             (storage_addr(KAKAROT_BASE_FEE)?, FieldElement::ZERO),
             (storage_addr(KAKAROT_PREV_RANDAO)?, FieldElement::ZERO),
