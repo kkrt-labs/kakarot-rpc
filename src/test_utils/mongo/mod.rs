@@ -58,7 +58,7 @@ pub fn generate_port_number() -> u16 {
 }
 
 /// Enumeration of collections in the database.
-#[derive(Eq, Hash, PartialEq, Clone)]
+#[derive(Eq, Hash, PartialEq, Clone, Debug)]
 pub enum CollectionDB {
     /// Collection of block headers.
     Headers,
@@ -69,7 +69,7 @@ pub enum CollectionDB {
 }
 
 /// Type alias for the different types of stored data associated with each CollectionDB.
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Clone, Debug)]
 pub enum StoredData {
     /// Represents a stored header associated with a CollectionDB.
     StoredHeader(StoredHeader),
@@ -120,6 +120,7 @@ impl Serialize for StoredData {
 
 /// Struct representing a data generator for MongoDB.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+#[derive(Debug)]
 pub struct MongoFuzzer {
     /// Documents to insert into each collection.
     documents: HashMap<CollectionDB, Vec<StoredData>>,

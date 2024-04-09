@@ -1,5 +1,6 @@
 use eyre::{eyre, Result};
 
+#[derive(Debug)]
 pub struct RPCConfig {
     pub socket_addr: String,
 }

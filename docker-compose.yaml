@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   starknet:
-    image: ghcr.io/dojoengine/dojo:v0.6.0-alpha.2
+    image: ghcr.io/dojoengine/dojo:v0.6.0-alpha.6
     command:
       - katana
       - --disable-fee
@@ -23,7 +23,7 @@ services:
     restart: on-failure
 
   kakarot-deployer:
-    image: ghcr.io/kkrt-labs/kakarot/deployer:latest
+    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.6.2
     # Always pull the latest image, until we use release tags
     pull_policy: always
     environment:
@@ -127,13 +127,13 @@ services:
     restart: on-failure
 
   indexer:
-    image: quay.io/apibara/sink-mongo
+    image: quay.io/apibara/sink-mongo:0.7.0
     command:
       - run
       - /code/kakarot-indexer/src/main.ts
     environment:
       # Whitelist environment variables
-      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET
+      - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET,MONGO_REPLACE_DATA_INSIDE_TRANSACTION
       - DEBUG=""
       - APIBARA_AUTH_TOKEN=""
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
@@ -143,6 +143,7 @@ services:
       - SINK_TYPE=mongo
       - STARKNET_NETWORK=http://starknet:5050
       - ALLOW_NET=
+      - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
       - ALLOW_ENV=/deployments/.env
     restart: on-failure
     volumes:

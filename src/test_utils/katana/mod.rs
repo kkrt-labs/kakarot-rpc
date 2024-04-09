@@ -38,7 +38,8 @@ pub fn katana_config() -> StarknetConfig {
     StarknetConfig {
         disable_fee: true,
         env: Environment {
-            chain_id: ChainId::parse("kakatest").unwrap(),
+            // Since kaka_test > u32::MAX, we should return the last 4 bytes of the chain_id: test
+            chain_id: ChainId::parse("kaka_test").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
             gas_price: GasPrices { eth: 1, strk: 0 },
@@ -55,6 +56,7 @@ async fn katana_sequencer() -> TestSequencer {
 }
 
 /// Represents the Katana test environment.
+#[allow(missing_debug_implementations)]
 pub struct Katana {
     /// The test sequencer instance for managing test execution.
     pub sequencer: TestSequencer,

@@ -5,14 +5,18 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
+use mongodb::options::{UpdateModifications, UpdateOptions};
 use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
+use reth_primitives::{
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256, U256, U64,
+};
 use reth_rpc_types::{
     Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
     TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
+use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
@@ -24,11 +28,10 @@ use super::database::types::{
 };
 use super::database::Database;
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
+use super::starknet::kakarot_core::core::{CallInput, Uint256};
 use super::starknet::kakarot_core::{
-    self,
-    account_contract::AccountContractReader,
-    core::{KakarotCoreReader, Uint256},
-    starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
+    self, account_contract::AccountContractReader, core::KakarotCoreReader, starknet_address, to_starknet_transaction,
+    KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
 use super::utils::{
@@ -126,10 +129,18 @@ pub trait EthereumProvider {
 /// Structure that implements the EthereumProvider trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
+#[derive(Debug)]
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
     database: Database,
     starknet_provider: SP,
     chain_id: u64,
+}
+
+impl<SP: starknet::providers::Provider> EthDataProvider<SP> {
+    /// Returns a reference to the database.
+    pub fn database(&self) -> &Database {
+        &self.database
+    }
 }
 
 #[async_trait]
@@ -159,7 +170,9 @@ where
                     .try_into()
                     .inspect_err(|err| tracing::error!("internal error: {:?}", err))
                     .map_err(|_| EthApiError::UnknownBlockNumber)?;
-                U64::from(number)
+
+                let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
+                U64::from(if is_pending_block { number - 1 } else { number })
             }
         };
         Ok(block_number)
@@ -390,7 +403,7 @@ where
     }
 
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
-        let (output, _) = self.call_helper(request, block_id).await?;
+        let output = self.call_helper(request, block_id).await?;
         Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(output.0)))
     }
 
@@ -398,7 +411,7 @@ where
         // Set a high gas limit to make sure the transaction will not fail due to gas.
         let request = TransactionRequest { gas: Some(U256::from(u64::MAX)), ..request };
 
-        let (_, gas_used) = self.call_helper(request, block_id).await?;
+        let gas_used = self.estimate_gas_helper(request, block_id).await?;
         Ok(U256::from(gas_used))
     }
 
@@ -455,15 +468,18 @@ where
     }
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
-        let mut data = transaction.0.as_ref();
-        let transaction_signed = TransactionSigned::decode(&mut data)
-            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
-
+        // Get the chain ID
         let chain_id =
             self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
 
+        // Decode the transaction data
+        let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
+            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
+
+        // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
 
+        // Determine the maximum fee
         let max_fee = if cfg!(feature = "hive") {
             u64::MAX
         } else {
@@ -478,12 +494,35 @@ where
             max_fee.saturating_sub(eth_fees)
         };
 
+        // Deploy EVM transaction signer if Hive feature is enabled
         #[cfg(feature = "hive")]
         self.deploy_evm_transaction_signer(signer).await?;
 
+        // Convert the transaction to a Starknet transaction
         let transaction = to_starknet_transaction(&transaction_signed, chain_id, signer, max_fee)?;
+
+        // Add the transaction to the Starknet provider
         let res = self.starknet_provider.add_invoke_transaction(transaction).await.map_err(KakarotError::from)?;
 
+        // Serialize transaction document
+        let transaction_document = doc! {"tx":  mongodb::bson::to_document(&from_recovered(
+            TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer),
+        ))
+        .expect("Failed to serialize signed transaction") };
+
+        // Update pending transactions collection
+        self.database
+            .inner()
+            .collection::<StoredTransaction>("transactions_pending")
+            .update_one(
+                doc! {"tx.hash": transaction_document.get_document("tx").unwrap().get_str("hash").unwrap()},
+                UpdateModifications::Document(doc! {"$set": transaction_document}),
+                UpdateOptions::builder().upsert(true).build(),
+            )
+            .await
+            .expect("Failed to insert pending signed transaction");
+
+        // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
             return Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]));
         } else {
@@ -493,6 +532,7 @@ where
                 res.transaction_hash,
                 hash
             );
+
             Ok(hash)
         }
     }
@@ -560,7 +600,10 @@ where
 {
     pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
         let chain_id = starknet_provider.chain_id().await?;
-        let chain_id = (FieldElement::from(u64::MAX) & chain_id).try_into().unwrap(); // safe unwrap
+        // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
+        // see: https://github.com/ethereum/EIPs/issues/2294
+        // Note: Metamask is breaking for a chain_id = u64::MAX - 1
+        let chain_id = (FieldElement::from(u32::MAX) & chain_id).try_into().unwrap(); // safe unwrap
         Ok(Self { database, starknet_provider, chain_id })
     }
 
@@ -569,13 +612,12 @@ where
         &self.starknet_provider
     }
 
-    async fn call_helper(
+    /// Prepare the call input for an estimate gas or call from a transaction request.
+    async fn prepare_call_input(
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<(CairoArrayLegacy<FieldElement>, u128)> {
-        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
-
+    ) -> EthProviderResult<CallInput> {
         // unwrap option
         let to: kakarot_core::core::Option = {
             match request.to {
@@ -602,7 +644,8 @@ where
             into_via_try_wrapper!(gas_price)?
         };
 
-        let value = into_via_try_wrapper!(request.value.unwrap_or_default())?;
+        let value =
+            Uint256 { low: into_via_try_wrapper!(request.value.unwrap_or_default())?, high: FieldElement::ZERO };
 
         // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
         //  when we can simulate the transaction instead of calling `eth_call`
@@ -616,17 +659,29 @@ where
             }
         };
 
+        Ok(CallInput { nonce, from, to, gas_limit, gas_price, value, calldata })
+    }
+
+    /// Call the Kakarot contract with the given request.
+    async fn call_helper(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<CairoArrayLegacy<FieldElement>> {
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
+        let call_input = self.prepare_call_input(request, block_id).await?;
+
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let call_output = kakarot_contract
             .eth_call(
-                &nonce,
-                &from,
-                &to,
-                &gas_limit,
-                &gas_price,
-                &Uint256 { low: value, high: FieldElement::ZERO },
-                &calldata.len().into(),
-                &CairoArrayLegacy(calldata),
+                &call_input.nonce,
+                &call_input.from,
+                &call_input.to,
+                &call_input.gas_limit,
+                &call_input.gas_price,
+                &call_input.value,
+                &call_input.calldata.len().into(),
+                &CairoArrayLegacy(call_input.calldata),
                 &FieldElement::ZERO,
                 &CairoArrayLegacy(vec![]),
             )
@@ -639,8 +694,43 @@ where
         if call_output.success == FieldElement::ZERO {
             return Err(KakarotError::from(EvmError::from(return_data.0)).into());
         }
-        let gas_used = call_output.gas_used.try_into().map_err(|_| TransactionError::GasOverflow)?;
-        Ok((return_data, gas_used))
+        Ok(return_data)
+    }
+
+    /// Estimate the gas used in Kakarot for the given request.
+    async fn estimate_gas_helper(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<u128> {
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
+        let call_input = self.prepare_call_input(request, block_id).await?;
+
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let estimate_gas_output = kakarot_contract
+            .eth_estimate_gas(
+                &call_input.nonce,
+                &call_input.from,
+                &call_input.to,
+                &call_input.gas_limit,
+                &call_input.gas_price,
+                &call_input.value,
+                &call_input.calldata.len().into(),
+                &CairoArrayLegacy(call_input.calldata),
+                &FieldElement::ZERO,
+                &CairoArrayLegacy(vec![]),
+            )
+            .block_id(starknet_block_id)
+            .call()
+            .await
+            .map_err(KakarotError::from)?;
+
+        let return_data = estimate_gas_output.return_data;
+        if estimate_gas_output.success == FieldElement::ZERO {
+            return Err(KakarotError::from(EvmError::from(return_data.0)).into());
+        }
+        let required_gas = estimate_gas_output.required_gas.try_into().map_err(|_| TransactionError::GasOverflow)?;
+        Ok(required_gas)
     }
 
     /// Check if a block exists in the database.
@@ -748,15 +838,19 @@ where
         }
     }
 
-    /// Convert the given BlockNumberOrTag into a block number
+    /// Converts the given [`BlockNumberOrTag`] into a block number.
     async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<U64> {
         match tag {
+            // Converts the tag representing the earliest block into block number 0.
             BlockNumberOrTag::Earliest => Ok(U64::ZERO),
+            // Converts the tag containing a specific block number into a `U64`.
             BlockNumberOrTag::Number(number) => Ok(U64::from(number)),
-            BlockNumberOrTag::Latest
-            | BlockNumberOrTag::Finalized
-            | BlockNumberOrTag::Safe
-            | BlockNumberOrTag::Pending => self.block_number().await,
+            // Returns `self.block_number()` which is the block number of the latest finalized block.
+            BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe => {
+                self.block_number().await
+            }
+            // Adds 1 to the block number of the latest finalized block.
+            BlockNumberOrTag::Pending => Ok(self.block_number().await?.saturating_add(U64::from(1))),
         }
     }
 }

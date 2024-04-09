@@ -9,6 +9,7 @@ use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, 
 use reth_rpc_types::BlockId;
 
 /// The RPC module for the implementing Net api
+#[derive(Debug)]
 pub struct DebugRpc<P: EthereumProvider> {
     eth_provider: P,
 }

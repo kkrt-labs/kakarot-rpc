@@ -66,6 +66,7 @@ while (isRunningFlag) {
       to: recipient,
       nonce,
       value: SEND_AMOUNT,
+      gasPrice: 0,
     });
   } catch (e) {
     // We expect to get an error:

@@ -27,6 +27,7 @@ pub enum KakarotRpcModule {
     Debug,
 }
 
+#[derive(Debug)]
 pub struct KakarotRpcModuleBuilder<P>
 where
     P: EthereumProvider + Send + Sync,

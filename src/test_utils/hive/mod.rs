@@ -18,7 +18,7 @@ use super::{
 };
 
 /// Types from https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct HiveGenesisConfig {
     pub config: Config,
@@ -31,7 +31,7 @@ pub struct HiveGenesisConfig {
     pub alloc: HashMap<Address, AccountInfo>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
     pub chain_id: i128,
@@ -42,7 +42,7 @@ pub struct Config {
     pub eip158_block: i128,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AccountInfo {
     pub balance: U256,
     pub code: Option<Bytes>,
