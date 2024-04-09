@@ -159,7 +159,9 @@ where
                     .try_into()
                     .inspect_err(|err| tracing::error!("internal error: {:?}", err))
                     .map_err(|_| EthApiError::UnknownBlockNumber)?;
-                U64::from(number)
+
+                let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
+                U64::from(if is_pending_block { number - 1 } else { number })
             }
         };
         Ok(block_number)
@@ -756,15 +758,19 @@ where
         }
     }
 
-    /// Convert the given BlockNumberOrTag into a block number
+    /// Converts the given [`BlockNumberOrTag`] into a block number.
     async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<U64> {
         match tag {
+            // Converts the tag representing the earliest block into block number 0.
             BlockNumberOrTag::Earliest => Ok(U64::ZERO),
+            // Converts the tag containing a specific block number into a `U64`.
             BlockNumberOrTag::Number(number) => Ok(U64::from(number)),
-            BlockNumberOrTag::Latest
-            | BlockNumberOrTag::Finalized
-            | BlockNumberOrTag::Safe
-            | BlockNumberOrTag::Pending => self.block_number().await,
+            // Returns `self.block_number()` which is the block number of the latest finalized block.
+            BlockNumberOrTag::Latest | BlockNumberOrTag::Finalized | BlockNumberOrTag::Safe => {
+                self.block_number().await
+            }
+            // Adds 1 to the block number of the latest finalized block.
+            BlockNumberOrTag::Pending => Ok(self.block_number().await?.saturating_add(U64::from(1))),
         }
     }
 }
