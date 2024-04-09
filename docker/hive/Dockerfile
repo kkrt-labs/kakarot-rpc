@@ -46,7 +46,7 @@ RUN case $BUILDPLATFORM in \
 #### First, clone the indexer repository
 FROM docker.io/alpine/git:latest as indexer-cloner
 WORKDIR /code
-RUN git clone -b feat/handle-pending-block "https://github.com/kkrt-labs/kakarot-indexer.git"
+RUN git clone "https://github.com/kkrt-labs/kakarot-indexer.git"
 
 #### MongoDB
 FROM mongo:6.0.8 as mongo
