@@ -32,6 +32,7 @@ pub mod core {
     use super::*;
     abigen_legacy!(KakarotCore, "./.kakarot/artifacts/kakarot.json");
 
+    #[derive(Debug)]
     pub struct CallInput {
         pub(crate) nonce: FieldElement,
         pub(crate) from: FieldElement,
