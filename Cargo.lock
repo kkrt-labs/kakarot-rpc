@@ -6689,7 +6689,7 @@ dependencies = [
  "lazy_static",
  "log",
  "mongodb",
- "pin-project",
+ "pin-project-lite",
  "prometheus",
  "rand 0.8.5",
  "rayon",
