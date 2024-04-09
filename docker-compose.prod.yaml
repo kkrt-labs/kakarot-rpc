@@ -3,7 +3,7 @@ version: "3.8"
 
 services:
   starknet:
-    image: nethermind/juno:v0.9.4
+    image: nethermind/juno:v0.11.1
     ports:
       - 6060:6060
     volumes:
@@ -76,10 +76,9 @@ services:
       # These values are unique to Sepolia Testnet
       # They'll need to be manually changed in case the testnet is reset
       # To add robustness: parse the `deployments/kakarot-sepolia` folder in `kkrt-labs/kakarot` repo
-      - KAKAROT_ADDRESS=0x1a18210c20241ea7a06224246264a59add11c8358d69826e8bd51f4ba6d3be7
-      - PROXY_ACCOUNT_CLASS_HASH=0x5bcd4d02cfe3aeb836f2ef4bd21b2020793e52a8269dbef9cd883fbddd2963c
-      - EXTERNALLY_OWNED_ACCOUNT_CLASS_HASH=0x2ab68b7f5cea86752714b499f602cdb8c36e8cdf270f04b6a275b609baf7aea
-      - CONTRACT_ACCOUNT_CLASS_HASH=0x34e8e05a28a6ac98118860ae0cca56487e2f0a3589a4b713a0f19ccda3386d9
+      - KAKAROT_ADDRESS=0x612fb5de32723a19b073b3aba348e48a3d9f51448426d8931694e51db5795e6
+      - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x1d8b8047e26b484d3f6262d1967217d980d0f2dfc69afa5661492bd5bfe2954
+      - ACCOUNT_CONTRACT_CLASS_HASH=0x56d311021950bf65ee500426e007b9e3ced0db97f9c1e0d29a9e03d79a9bf6c
     restart: on-failure
     depends_on:
       starknet:
@@ -134,7 +133,7 @@ services:
       - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
-      - KAKAROT_ADDRESS=0x1a18210c20241ea7a06224246264a59add11c8358d69826e8bd51f4ba6d3be7
+      - KAKAROT_ADDRESS=0x612fb5de32723a19b073b3aba348e48a3d9f51448426d8931694e51db5795e6
     restart: on-failure
     volumes:
       - indexer_code:/code
