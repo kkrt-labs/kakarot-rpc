@@ -427,12 +427,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     });
 
     // Sign the transaction
-    let signature = sign_message(
-        B256::from_str("0x02bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a")
-            .expect("failed to generate private key"),
-        transaction.signature_hash(),
-    )
-    .unwrap();
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     // Send the transaction
@@ -472,12 +467,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
     });
 
     // Sign the transaction
-    let signature = sign_message(
-        B256::from_str("0x02bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a")
-            .expect("failed to generate private key"),
-        transaction.signature_hash(),
-    )
-    .unwrap();
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
     let mut transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     // Set an incorrect signature
