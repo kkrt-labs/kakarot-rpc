@@ -110,24 +110,14 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         // Iterates through the receipts of the block using the `block_receipts` method of the Ethereum API
         for receipt in receipts {
             // Converts the transaction type to a u8 and then tries to convert it into TxType
-            let tx_type = match receipt.transaction_type.to::<u8>().try_into() {
-                Ok(tx_type) => tx_type,
-                Err(_) => {
-                    return Err(
-                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::ReceiptConversionError).into()
-                    )
-                }
-            };
+            let tx_type =
+                receipt.transaction_type.to::<u8>().try_into().map_err(|_| {
+                    EthApiError::EthereumDataFormatError(EthereumDataFormatError::ReceiptConversionError)
+                })?;
 
             // Tries to convert the cumulative gas used to u64
-            let cumulative_gas_used = match TryInto::<u64>::try_into(receipt.cumulative_gas_used) {
-                Ok(cumulative_gas_used) => cumulative_gas_used,
-                Err(_) => {
-                    return Err(
-                        EthApiError::EthereumDataFormatError(EthereumDataFormatError::ReceiptConversionError).into()
-                    )
-                }
-            };
+            let cumulative_gas_used = TryInto::<u64>::try_into(receipt.cumulative_gas_used)
+                .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::ReceiptConversionError))?;
 
             // Creates a ReceiptWithBloom from the receipt data
             raw_receipts.push(

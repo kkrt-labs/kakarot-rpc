@@ -5,29 +5,25 @@ use crate::eth_provider::error::EthereumDataFormatError;
 pub fn rpc_transaction_to_primitive(
     rpc_transaction: reth_rpc_types::Transaction,
 ) -> Result<reth_primitives::Transaction, EthereumDataFormatError> {
-    let tx_type = match rpc_transaction.transaction_type {
-        Some(transaction_type) => {
-            let transaction_type: u8 =
-                transaction_type.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?;
-
-            transaction_type.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?
-        }
-        _ => return Err(EthereumDataFormatError::PrimitiveError),
-    };
-
-    match tx_type {
+    match rpc_transaction
+        .transaction_type
+        .ok_or(EthereumDataFormatError::PrimitiveError)?
+        .to::<u64>()
+        .try_into()
+        .map_err(|_| EthereumDataFormatError::PrimitiveError)?
+    {
         TxType::Legacy => Ok(reth_primitives::Transaction::Legacy(TxLegacy {
-            nonce: rpc_transaction.nonce.to::<u64>(),
+            nonce: rpc_transaction.nonce,
             gas_price: rpc_transaction.gas_price.ok_or(EthereumDataFormatError::PrimitiveError)?.to::<u128>(),
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
             value: rpc_transaction.value,
             input: rpc_transaction.input,
-            chain_id: rpc_transaction.chain_id.map(|id| id.to::<u64>()),
+            chain_id: rpc_transaction.chain_id.map(|id| id),
         })),
         TxType::Eip2930 => Ok(reth_primitives::Transaction::Eip2930(TxEip2930 {
-            chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?.to::<u64>(),
-            nonce: rpc_transaction.nonce.to::<u64>(),
+            chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?,
+            nonce: rpc_transaction.nonce,
             gas_price: rpc_transaction.gas_price.ok_or(EthereumDataFormatError::PrimitiveError)?.to::<u128>(),
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
@@ -36,6 +32,7 @@ pub fn rpc_transaction_to_primitive(
                 rpc_transaction
                     .access_list
                     .unwrap_or_default()
+                    .0
                     .into_iter()
                     .map(|access_list| AccessListItem {
                         address: access_list.address,
@@ -46,8 +43,8 @@ pub fn rpc_transaction_to_primitive(
             input: rpc_transaction.input,
         })),
         TxType::Eip1559 => Ok(reth_primitives::Transaction::Eip1559(TxEip1559 {
-            chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?.to::<u64>(),
-            nonce: rpc_transaction.nonce.to::<u64>(),
+            chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?,
+            nonce: rpc_transaction.nonce,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
             max_fee_per_gas: rpc_transaction
                 .max_fee_per_gas
@@ -63,6 +60,7 @@ pub fn rpc_transaction_to_primitive(
                 rpc_transaction
                     .access_list
                     .unwrap_or_default()
+                    .0
                     .into_iter()
                     .map(|access_list| AccessListItem {
                         address: access_list.address,
