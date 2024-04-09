@@ -24,11 +24,10 @@ use super::database::types::{
 };
 use super::database::Database;
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
+use super::starknet::kakarot_core::core::{CallInput, Uint256};
 use super::starknet::kakarot_core::{
-    self,
-    account_contract::AccountContractReader,
-    core::{KakarotCoreReader, Uint256},
-    starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
+    self, account_contract::AccountContractReader, core::KakarotCoreReader, starknet_address, to_starknet_transaction,
+    KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
 use super::utils::{
@@ -396,7 +395,7 @@ where
     }
 
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
-        let (output, _) = self.call_helper(request, block_id).await?;
+        let output = self.call_helper(request, block_id).await?;
         Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(output.0)))
     }
 
@@ -404,7 +403,7 @@ where
         // Set a high gas limit to make sure the transaction will not fail due to gas.
         let request = TransactionRequest { gas: Some(U256::from(u64::MAX)), ..request };
 
-        let (_, gas_used) = self.call_helper(request, block_id).await?;
+        let gas_used = self.estimate_gas_helper(request, block_id).await?;
         Ok(U256::from(gas_used))
     }
 
@@ -578,13 +577,12 @@ where
         &self.starknet_provider
     }
 
-    async fn call_helper(
+    /// Prepare the call input for an estimate gas or call from a transaction request.
+    async fn prepare_call_input(
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<(CairoArrayLegacy<FieldElement>, u128)> {
-        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
-
+    ) -> EthProviderResult<CallInput> {
         // unwrap option
         let to: kakarot_core::core::Option = {
             match request.to {
@@ -611,7 +609,8 @@ where
             into_via_try_wrapper!(gas_price)?
         };
 
-        let value = into_via_try_wrapper!(request.value.unwrap_or_default())?;
+        let value =
+            Uint256 { low: into_via_try_wrapper!(request.value.unwrap_or_default())?, high: FieldElement::ZERO };
 
         // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
         //  when we can simulate the transaction instead of calling `eth_call`
@@ -625,17 +624,29 @@ where
             }
         };
 
+        Ok(CallInput { nonce, from, to, gas_limit, gas_price, value, calldata })
+    }
+
+    /// Call the Kakarot contract with the given request.
+    async fn call_helper(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<CairoArrayLegacy<FieldElement>> {
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
+        let call_input = self.prepare_call_input(request, block_id).await?;
+
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
         let call_output = kakarot_contract
             .eth_call(
-                &nonce,
-                &from,
-                &to,
-                &gas_limit,
-                &gas_price,
-                &Uint256 { low: value, high: FieldElement::ZERO },
-                &calldata.len().into(),
-                &CairoArrayLegacy(calldata),
+                &call_input.nonce,
+                &call_input.from,
+                &call_input.to,
+                &call_input.gas_limit,
+                &call_input.gas_price,
+                &call_input.value,
+                &call_input.calldata.len().into(),
+                &CairoArrayLegacy(call_input.calldata),
                 &FieldElement::ZERO,
                 &CairoArrayLegacy(vec![]),
             )
@@ -648,8 +659,43 @@ where
         if call_output.success == FieldElement::ZERO {
             return Err(KakarotError::from(EvmError::from(return_data.0)).into());
         }
-        let gas_used = call_output.gas_used.try_into().map_err(|_| TransactionError::GasOverflow)?;
-        Ok((return_data, gas_used))
+        Ok(return_data)
+    }
+
+    /// Estimate the gas used in Kakarot for the given request.
+    async fn estimate_gas_helper(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<u128> {
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
+        let call_input = self.prepare_call_input(request, block_id).await?;
+
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let estimate_gas_output = kakarot_contract
+            .eth_estimate_gas(
+                &call_input.nonce,
+                &call_input.from,
+                &call_input.to,
+                &call_input.gas_limit,
+                &call_input.gas_price,
+                &call_input.value,
+                &call_input.calldata.len().into(),
+                &CairoArrayLegacy(call_input.calldata),
+                &FieldElement::ZERO,
+                &CairoArrayLegacy(vec![]),
+            )
+            .block_id(starknet_block_id)
+            .call()
+            .await
+            .map_err(KakarotError::from)?;
+
+        let return_data = estimate_gas_output.return_data;
+        if estimate_gas_output.success == FieldElement::ZERO {
+            return Err(KakarotError::from(EvmError::from(return_data.0)).into());
+        }
+        let required_gas = estimate_gas_output.required_gas.try_into().map_err(|_| TransactionError::GasOverflow)?;
+        Ok(required_gas)
     }
 
     /// Check if a block exists in the database.
