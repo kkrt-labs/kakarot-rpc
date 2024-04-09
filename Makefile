@@ -27,20 +27,8 @@ load-env:
 run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
 
-docker-build: setup
-	docker build -t kakarot-rpc . -f docker/rpc/Dockerfile
 
-# Run Katana, Deploy Kakarot, Run Kakarot RPC
-katana-rpc-up:
-	docker compose up -d --force-recreate
-
-# Run Madara, Deploy Kakarot, Run Kakarot RPC
-madara-rpc-up:
-	docker compose -f docker-compose.madara.yaml up -d --force-recreate
-
-docker-down:
-	docker compose down -v --remove-orphans && docker compose rm
-
+### Kakarot tests and local development:
 install-katana:
 	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.0-alpha.6 katana
 
@@ -52,18 +40,43 @@ katana-genesis: install-katana
 run-katana: katana-genesis
 	katana --disable-fee --chain-id=kkrt --genesis .katana/genesis.json
 
+# Total test suite.
 test: katana-genesis load-env
 	cargo test --all --features testing
 
-# Make sure to have a Kakarot RPC running and the correct port set in your .env and an underlying Starknet client running.
-benchmark-madara:
-	cd benchmarks && bun i && bun run benchmark-madara
-
+# Run a specific test target. Need to run make katana-genesis once first.
+# Example: `make test-target TARGET=test_raw_transaction`
 test-target: load-env
 	cargo test --tests --features "testing,hive" $(TARGET) -- --nocapture
 
-benchmark-katana:
-	cd benchmarks && bun i && bun run benchmark-katana
+benchmark:
+	cd benchmarks && bun i && bun run benchmark
+
+
+### Running the Kakarot stack locally:
+
+docker-build: setup
+	docker build -t kakarot-rpc . -f docker/rpc/Dockerfile
+
+# Runs a local instance of the entire Kakarot stack: RPC, Indexer, Starknet client, Kakarot contracts deployed.
+# This is equivalent to running a local anvil.
+local-rpc-up:
+	docker compose up -d --force-recreate
+
+# Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Sepolia Testnet in production
+# This is equivalent to locally running a Geth instance that syncs with Sepolia.
+testnet-rpc-up:
+	docker compose -f docker-compose.prod.yaml up -d --force-recreate
+
+# Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Staging environment.
+# The staging environment is in all things equivalent to the production environment, but with a different chain ID.
+# It is meant to be used for testing and development before pushing things to the public production-ready Testnet.
+staging-rpc-up:
+	docker compose -f docker-compose.staging.yaml up -d --force-recreate
+
+# To stop the dockerized local instances, run: docker compose -f <NAME OF THE FILE> down
+# To delete volumes, add the `--volumes` flag to the command above.
+# Example: docker compose -f docker-compose.prod.yaml down --remove-orphans --volumes
 
 
 .PHONY: test
