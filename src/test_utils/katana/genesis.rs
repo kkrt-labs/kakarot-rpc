@@ -33,8 +33,8 @@ use walkdir::WalkDir;
 
 use crate::test_utils::constants::{
     ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE,
-    KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS,
-    KAKAROT_PRECOMPILES_CLASS_HASH, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+    KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
+    KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
 };
 
 lazy_static! {
@@ -227,9 +227,7 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr(KAKAROT_NATIVE_TOKEN_ADDRESS)?, *DEFAULT_FEE_TOKEN_ADDRESS),
             (storage_addr(KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH)?, account_contract_class_hash),
             (storage_addr(KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH)?, uninitialized_account_class_hash),
-            //TODO: rename the precompiles class hash to cario1_helpers_class_hash in kakarot
-            //https://github.com/kkrt-labs/kakarot/issues/1080
-            (storage_addr(KAKAROT_PRECOMPILES_CLASS_HASH)?, cairo1_helpers_class_hash),
+            (storage_addr(KAKAROT_CAIRO1_HELPERS_CLASS_HASH)?, cairo1_helpers_class_hash),
             (storage_addr(KAKAROT_COINBASE)?, coinbase_address),
             (storage_addr(KAKAROT_BASE_FEE)?, FieldElement::ZERO),
             (storage_addr(KAKAROT_PREV_RANDAO)?, FieldElement::ZERO),
