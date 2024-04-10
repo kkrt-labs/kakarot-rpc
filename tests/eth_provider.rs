@@ -233,8 +233,6 @@ async fn test_get_code_empty(#[future] contract_empty: (Katana, KakarotEvmContra
     // When
     let bytecode = eth_provider.get_code(counter_address, None).await.unwrap();
 
-    println!("bytecode {:?}", bytecode);
-
     // Then
     assert_eq!(bytecode, Bytes::default());
 }
