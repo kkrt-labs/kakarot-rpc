@@ -523,15 +523,13 @@ where
 
         // Update pending transactions collection
         self.database
-            .inner()
-            .collection::<StoredTransaction>("transactions_pending")
-            .update_one(
+            .update_one::<StoredTransaction>(
+                "transactions_pending",
                 doc! {"tx.hash": transaction_document.get_document("tx").unwrap().get_str("hash").unwrap()},
                 UpdateModifications::Document(doc! {"$set": transaction_document}),
                 UpdateOptions::builder().upsert(true).build(),
             )
-            .await
-            .expect("Failed to insert pending signed transaction");
+            .await?;
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {

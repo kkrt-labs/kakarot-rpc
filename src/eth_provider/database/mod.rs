@@ -4,7 +4,7 @@ use super::error::KakarotError;
 use futures::TryStreamExt;
 use mongodb::{
     bson::Document,
-    options::{FindOneOptions, FindOptions},
+    options::{FindOneOptions, FindOptions, UpdateModifications, UpdateOptions},
     Database as MongoDatabase,
 };
 use serde::de::DeserializeOwned;
@@ -60,6 +60,21 @@ impl Database {
         let collection = self.0.collection::<T>(collection);
         let result = collection.find_one(filter, find_one_option).await?;
         Ok(result)
+    }
+
+    /// Update a single document in a collection
+    pub async fn update_one<T>(
+        &self,
+        collection: &str,
+        query: Document,
+        update: impl Into<UpdateModifications>,
+        options: impl Into<Option<UpdateOptions>>,
+    ) -> DatabaseResult<()>
+    where
+        T: DeserializeOwned,
+    {
+        self.0.collection::<T>(collection).update_one(query, update, options.into()).await?;
+        Ok(())
     }
 
     /// Count the number of documents in a collection matching the filter
