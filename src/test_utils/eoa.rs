@@ -91,6 +91,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let nonce: u64 = nonce.try_into()?;
         let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
 
+        // Empty bytecode if contract_name is None
         let bytecode = if let Some(name) = contract_name {
             <KakarotEvmContract as EvmContract>::load_contract_bytecode(name)?
         } else {
