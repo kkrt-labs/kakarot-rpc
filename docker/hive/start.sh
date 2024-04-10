@@ -50,7 +50,7 @@ echo "Launching DNA..."
 starknet start --rpc=http://localhost:5050 --wait-for-rpc --head-refresh-interval-ms=500 --data=/data &
 # ## Indexer
 echo "Launching indexer..."
-sink-mongo run /usr/src/app/code/kakarot-indexer/src/main.ts &
+sink-mongo run /usr/src/app/code/indexer/src/main.ts &
 
 ### 3.5. Await the Indexer to be healthy
 echo "Waiting for the indexer to start..."
