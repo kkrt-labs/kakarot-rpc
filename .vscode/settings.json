@@ -4,5 +4,12 @@
     "**/.git": false
   },
   "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.cargo.features": ["testing", "hive"]
+  "rust-analyzer.cargo.features": ["testing", "hive"],
+  "deno.enable": true,
+  "deno.suggest.imports.autoDiscover": true,
+  "[typescript]": {
+    "editor.defaultFormatter": "trunk.io"
+  },
+  "deno.lint": true,
+  "deno.unstable": true
 }
