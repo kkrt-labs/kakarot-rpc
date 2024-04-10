@@ -42,12 +42,6 @@ RUN case $BUILDPLATFORM in \
     ;; \
     esac
 
-### Indexer transform plugin
-#### First, clone the indexer repository
-FROM docker.io/alpine/git:latest as indexer-cloner
-WORKDIR /code
-RUN git clone "https://github.com/kkrt-labs/kakarot-indexer.git"
-
 #### MongoDB
 FROM mongo:6.0.8 as mongo
 
@@ -165,7 +159,7 @@ COPY --from=katana /usr/local/bin/katana /usr/local/bin
 COPY --from=apibara-build /usr/local/bin/starknet /usr/local/bin/starknet
 
 #### We need the indexer typescript code and the binary that knows how to run it
-COPY --from=indexer-cloner /code /usr/src/app/code
+COPY ./indexer /usr/src/app/code/indexer
 COPY --from=apibara-build /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
 
 #### We need the mongo binary

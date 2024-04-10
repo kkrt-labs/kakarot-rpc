@@ -389,7 +389,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         .enumerate()
     {
         // Fetch the transaction receipt for the current receipt hash.
-        let tx_receipt = eth_provider.transaction_receipt(receipt.transaction_hash.unwrap()).await.unwrap().unwrap();
+        let tx_receipt = eth_provider.transaction_receipt(receipt.transaction_hash).await.unwrap().unwrap();
 
         // Construct a Receipt instance from the transaction receipt data.
         let r = ReceiptWithBloom {

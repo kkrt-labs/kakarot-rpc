@@ -79,6 +79,8 @@ services:
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app
+      # Mount the indexer code
+      - indexer_code:/usr/src/indexer
     depends_on:
       deployments-parser:
         condition: service_completed_successfully
@@ -115,22 +117,11 @@ services:
       MONGO_INITDB_ROOT_USERNAME: mongo
       MONGO_INITDB_ROOT_PASSWORD: mongo
 
-  clone-repo:
-    image: docker.io/alpine/git:latest
-    entrypoint: /bin/sh
-    command:
-      - -c
-      # clone the repository in `/code`, removing any old copy.
-      - cd /code && rm -rf kakarot-indexer && git clone -v https://github.com/kkrt-labs/kakarot-indexer.git
-    volumes:
-      - indexer_code:/code
-    restart: on-failure
-
   indexer:
     image: quay.io/apibara/sink-mongo:0.7.0
     command:
       - run
-      - /code/kakarot-indexer/src/main.ts
+      - /indexer/src/main.ts
     environment:
       # Whitelist environment variables
       - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET,MONGO_REPLACE_DATA_INSIDE_TRANSACTION
@@ -147,13 +138,11 @@ services:
       - ALLOW_ENV=/deployments/.env
     restart: on-failure
     volumes:
-      - indexer_code:/code
+      - indexer_code:/indexer
       - deployments:/deployments
     networks:
       - internal
     depends_on:
-      clone-repo:
-        condition: service_completed_successfully
       starknet:
         condition: service_started
       deployments-parser:

@@ -29,7 +29,13 @@ impl From<Address> for Felt252Wrapper {
 
 impl From<U64> for Felt252Wrapper {
     fn from(value: U64) -> Self {
-        Self(FieldElement::from(value.to::<u64>()))
+        value.to::<u64>().into()
+    }
+}
+
+impl From<u64> for Felt252Wrapper {
+    fn from(value: u64) -> Self {
+        Self(FieldElement::from(value))
     }
 }
 
