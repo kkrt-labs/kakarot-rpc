@@ -80,6 +80,9 @@ services:
       - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x1d8b8047e26b484d3f6262d1967217d980d0f2dfc69afa5661492bd5bfe2954
       - ACCOUNT_CONTRACT_CLASS_HASH=0x56d311021950bf65ee500426e007b9e3ced0db97f9c1e0d29a9e03d79a9bf6c
     restart: on-failure
+    volumes:
+      # Mount the indexer code
+      - indexer_code:/usr/src/app/code
     depends_on:
       starknet:
         condition: service_started
@@ -109,11 +112,6 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: mongo
       MONGO_INITDB_ROOT_PASSWORD: mongo
-
-  clone-repo:
-    extends:
-      file: docker-compose.yaml
-      service: clone-repo
 
   indexer:
     image: quay.io/apibara/sink-mongo:0.7.0
