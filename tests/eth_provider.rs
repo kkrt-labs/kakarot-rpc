@@ -1,7 +1,7 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 
-use kakarot_rpc::eth_provider::database::types::transaction::StoredTransaction;
+use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
@@ -438,8 +438,8 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .expect("failed to send transaction");
 
     // Retrieve the transaction from the database
-    let tx: Option<StoredTransaction> =
-        eth_provider.database().get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
+    let tx: Option<StoredPendingTransaction> =
+        eth_provider.database().get_one(None, None).await.expect("Failed to get transaction");
     let tx = tx.unwrap().tx;
 
     // Assert the transaction hash and block number
@@ -478,8 +478,8 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
     let _ = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
 
     // Retrieve the transaction from the database
-    let tx: Option<StoredTransaction> =
-        eth_provider.database().get_one("transactions_pending", None, None).await.expect("Failed to get transaction");
+    let tx: Option<StoredPendingTransaction> =
+        eth_provider.database().get_one(None, None).await.expect("Failed to get transaction");
 
     // Assert that no transaction is found
     assert!(tx.is_none());
