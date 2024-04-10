@@ -5,7 +5,6 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
-use mongodb::options::{UpdateModifications, UpdateOptions};
 use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{
@@ -23,8 +22,8 @@ use starknet_crypto::FieldElement;
 
 use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
 use super::database::types::{
-    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
-    transaction::StoredTransactionHash,
+    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
+    transaction::StoredTransaction, transaction::StoredTransactionHash,
 };
 use super::database::Database;
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
@@ -210,7 +209,7 @@ where
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
         Ok(if self.block_exists(BlockHashOrNumber::Hash(hash)).await? {
             Some(U256::from(
-                self.database.count::<StoredTransaction>(into_filter("tx.blockHash", hash, HASH_PADDING)).await?,
+                self.database.count::<StoredTransaction>(into_filter("tx.blockHash", &hash, HASH_PADDING)).await?,
             ))
         } else {
             None
@@ -227,7 +226,7 @@ where
             return Ok(None);
         }
 
-        let filter = into_filter("tx.blockNumber", block_number, U64_PADDING);
+        let filter = into_filter("tx.blockNumber", &block_number, U64_PADDING);
         let count = self.database.count::<StoredTransaction>(filter).await?;
         Ok(Some(U256::from(count)))
     }
@@ -235,7 +234,7 @@ where
     async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         Ok(self
             .database
-            .get_one::<StoredTransaction>(into_filter("tx.hash", hash, HASH_PADDING), None)
+            .get_one::<StoredTransaction>(into_filter("tx.hash", &hash, HASH_PADDING), None)
             .await?
             .map(Into::into))
     }
@@ -245,7 +244,7 @@ where
         hash: B256,
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
-        let mut filter = into_filter("tx.blockHash", hash, HASH_PADDING);
+        let mut filter = into_filter("tx.blockHash", &hash, HASH_PADDING);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
@@ -258,7 +257,7 @@ where
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let mut filter = into_filter("tx.blockNumber", block_number, U64_PADDING);
+        let mut filter = into_filter("tx.blockNumber", &block_number, U64_PADDING);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, 64));
@@ -268,7 +267,7 @@ where
     async fn transaction_receipt(&self, hash: B256) -> EthProviderResult<Option<TransactionReceipt>> {
         Ok(self
             .database
-            .get_one::<StoredTransactionReceipt>(into_filter("receipt.transactionHash", hash, HASH_PADDING), None)
+            .get_one::<StoredTransactionReceipt>(into_filter("receipt.transactionHash", &hash, HASH_PADDING), None)
             .await?
             .map(Into::into))
     }
@@ -512,22 +511,12 @@ where
         let res = self.starknet_provider.add_invoke_transaction(transaction).await.map_err(KakarotError::from)?;
 
         // Serialize transaction document
-        let transaction_document = doc! {"tx":  mongodb::bson::to_document(&from_recovered(
-            TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer),
-        ))
-        .expect("Failed to serialize signed transaction") };
+        let transaction =
+            from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
 
         // Update pending transactions collection
-        self.database
-            .inner()
-            .collection::<StoredTransaction>("transactions_pending")
-            .update_one(
-                doc! {"tx.hash": transaction_document.get_document("tx").unwrap().get_str("hash").unwrap()},
-                UpdateModifications::Document(doc! {"$set": transaction_document}),
-                UpdateOptions::builder().upsert(true).build(),
-            )
-            .await
-            .expect("Failed to insert pending signed transaction");
+        let filter = into_filter("tx.hash", &transaction.hash, HASH_PADDING);
+        self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
@@ -560,7 +549,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockNumber", block_number, U64_PADDING);
+                let filter = into_filter("receipt.blockNumber", &block_number, U64_PADDING);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get(filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -570,7 +559,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockHash", hash.block_hash, HASH_PADDING);
+                let filter = into_filter("receipt.blockHash", &hash.block_hash, HASH_PADDING);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get(filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -748,8 +737,8 @@ where
     /// Get a header from the database based on the filter.
     async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
         let filter = match id {
-            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", hash, HASH_PADDING),
-            BlockHashOrNumber::Number(number) => into_filter("header.number", number, U64_PADDING),
+            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", &hash, HASH_PADDING),
+            BlockHashOrNumber::Number(number) => into_filter("header.number", &number, U64_PADDING),
         };
         self.database
             .get_one(filter, None)
@@ -767,8 +756,8 @@ where
         full: bool,
     ) -> EthProviderResult<BlockTransactions> {
         let transactions_filter = match block_id {
-            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", hash, HASH_PADDING),
-            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", number, U64_PADDING),
+            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", &hash, HASH_PADDING),
+            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", &number, U64_PADDING),
         };
 
         let block_transactions = if full {

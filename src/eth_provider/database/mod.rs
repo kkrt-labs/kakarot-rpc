@@ -9,11 +9,11 @@ use crate::eth_provider::database::types::{
 };
 use futures::TryStreamExt;
 use mongodb::{
-    bson::Document,
-    options::{FindOneOptions, FindOptions},
+    bson::{doc, Document},
+    options::{FindOneOptions, FindOptions, UpdateModifications, UpdateOptions},
     Database as MongoDatabase,
 };
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 
 type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 
@@ -66,6 +66,26 @@ impl Database {
         let collection = self.0.collection::<T>(collection_name);
         let result = collection.find_one(filter, find_one_option).await?;
         Ok(result)
+    }
+
+    /// Update a single document in a collection
+    pub async fn update_one<T>(&self, doc: T, filter: impl Into<Document>, upsert: bool) -> DatabaseResult<()>
+    where
+        T: Serialize + CollectionName,
+    {
+        let collection_name = T::collection_name();
+        let doc = mongodb::bson::to_document(&doc).map_err(mongodb::error::Error::custom)?;
+
+        self.0
+            .collection::<T>(collection_name)
+            .update_one(
+                filter.into(),
+                UpdateModifications::Document(doc! {"$set": doc}),
+                UpdateOptions::builder().upsert(upsert).build(),
+            )
+            .await?;
+
+        Ok(())
     }
 
     /// Count the number of documents in a collection matching the filter

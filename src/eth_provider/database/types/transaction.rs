@@ -71,9 +71,9 @@ pub struct StoredPendingTransaction {
     pub tx: Transaction,
 }
 
-impl From<StoredPendingTransaction> for Transaction {
-    fn from(tx: StoredPendingTransaction) -> Self {
-        tx.tx
+impl From<Transaction> for StoredPendingTransaction {
+    fn from(tx: Transaction) -> Self {
+        Self { tx }
     }
 }
 
