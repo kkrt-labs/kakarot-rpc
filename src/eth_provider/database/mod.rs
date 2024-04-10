@@ -9,7 +9,7 @@ use crate::eth_provider::database::types::{
 };
 use futures::TryStreamExt;
 use mongodb::{
-    bson::Document,
+    bson::{doc, Document},
     options::{FindOneOptions, FindOptions, UpdateModifications, UpdateOptions},
     Database as MongoDatabase,
 };
@@ -71,15 +71,25 @@ impl Database {
     /// Update a single document in a collection
     pub async fn update_one<T>(
         &self,
-        query: Document,
-        update: impl Into<UpdateModifications>,
-        options: impl Into<Option<UpdateOptions>>,
+        filter_field: &str,
+        filter_value: &str,
+        update_document: Document,
+        upsert: bool,
     ) -> DatabaseResult<()>
     where
         T: DeserializeOwned + CollectionName,
     {
         let collection_name = T::collection_name();
-        self.0.collection::<T>(collection_name).update_one(query, update, options.into()).await?;
+
+        self.0
+            .collection::<T>(collection_name)
+            .update_one(
+                doc! {filter_field: filter_value},
+                UpdateModifications::Document(doc! {"$set": update_document}),
+                UpdateOptions::builder().upsert(upsert).build(),
+            )
+            .await?;
+
         Ok(())
     }
 

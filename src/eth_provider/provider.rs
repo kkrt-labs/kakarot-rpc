@@ -5,7 +5,6 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
-use mongodb::options::{UpdateModifications, UpdateOptions};
 use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{
@@ -517,13 +516,12 @@ where
         ))
         .expect("Failed to serialize signed transaction") };
 
+        // Extract filter value
+        let filter_value = transaction_document.get_document("tx").unwrap().get_str("hash").unwrap().to_string();
+
         // Update pending transactions collection
         self.database
-            .update_one::<StoredPendingTransaction>(
-                doc! {"tx.hash": transaction_document.get_document("tx").unwrap().get_str("hash").unwrap()},
-                UpdateModifications::Document(doc! {"$set": transaction_document}),
-                UpdateOptions::builder().upsert(true).build(),
-            )
+            .update_one::<StoredPendingTransaction>("tx.hash", &filter_value, transaction_document.clone(), true)
             .await?;
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
