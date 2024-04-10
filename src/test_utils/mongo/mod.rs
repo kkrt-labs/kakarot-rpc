@@ -9,7 +9,7 @@ use mongodb::{
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
-use reth_primitives::{Address, TxType, B256, U128, U256, U64};
+use reth_primitives::{Address, TxType, B256, U256, U64};
 use serde::{Serialize, Serializer};
 use std::ops::Range;
 use std::str::FromStr;
@@ -245,7 +245,7 @@ impl MongoFuzzer {
         let mut unstructured = arbitrary::Unstructured::new(&bytes);
         let mut receipt = StoredTransactionReceipt::arbitrary(&mut unstructured).unwrap();
 
-        receipt.receipt.transaction_hash = Some(transaction.hash);
+        receipt.receipt.transaction_hash = transaction.hash;
         receipt.receipt.transaction_index = U64::from(transaction.transaction_index.unwrap_or_default());
         receipt.receipt.from = transaction.from;
         receipt.receipt.to = transaction.to;
@@ -345,19 +345,19 @@ impl TransactionBuilder {
                         transaction_index: Some(U256::ZERO),
                         from: *RECOVERED_EIP1599_TX_ADDRESS,
                         to: Some(Address::ZERO),
-                        gas_price: Some(U128::from(10)),
+                        gas_price: Some(U256::from(10)),
                         gas: U256::from(100),
-                        max_fee_per_gas: Some(U128::from(10)),
-                        max_priority_fee_per_gas: Some(U128::from(1)),
+                        max_fee_per_gas: Some(U256::from(10)),
+                        max_priority_fee_per_gas: Some(U256::from(1)),
                         signature: Some(reth_rpc_types::Signature {
                             r: *TEST_SIG_R,
                             s: *TEST_SIG_S,
                             v: *TEST_SIG_V,
                             y_parity: Some(reth_rpc_types::Parity(true)),
                         }),
-                        chain_id: Some(U64::from(1)),
+                        chain_id: Some(1),
                         access_list: Some(Default::default()),
-                        transaction_type: Some(U64::from(Into::<u8>::into(TxType::Eip1559))),
+                        transaction_type: Some(TxType::Eip1559.into()),
                         ..Default::default()
                     },
                 },
@@ -369,7 +369,7 @@ impl TransactionBuilder {
                         transaction_index: Some(U256::ZERO),
                         from: *RECOVERED_LEGACY_TX_ADDRESS,
                         to: Some(Address::ZERO),
-                        gas_price: Some(U128::from(10)),
+                        gas_price: Some(U256::from(10)),
                         gas: U256::from(100),
                         signature: Some(reth_rpc_types::Signature {
                             r: *TEST_SIG_R,
@@ -378,9 +378,9 @@ impl TransactionBuilder {
                             v: CHAIN_ID.saturating_mul(U256::from(2)).saturating_add(U256::from(35)),
                             y_parity: Default::default(),
                         }),
-                        chain_id: Some(U64::from(1)),
+                        chain_id: Some(1),
                         blob_versioned_hashes: Default::default(),
-                        transaction_type: Some(U64::from(Into::<u8>::into(TxType::Legacy))),
+                        transaction_type: Some(TxType::Legacy.into()),
                         ..Default::default()
                     },
                 },
@@ -392,7 +392,7 @@ impl TransactionBuilder {
                         transaction_index: Some(U256::ZERO),
                         from: *RECOVERED_EIP2930_TX_ADDRESS,
                         to: Some(Address::ZERO),
-                        gas_price: Some(U128::from(10)),
+                        gas_price: Some(U256::from(10)),
                         gas: U256::from(100),
                         signature: Some(reth_rpc_types::Signature {
                             r: *TEST_SIG_R,
@@ -400,9 +400,9 @@ impl TransactionBuilder {
                             v: *TEST_SIG_V,
                             y_parity: Some(reth_rpc_types::Parity(true)),
                         }),
-                        chain_id: Some(U64::from(1)),
+                        chain_id: Some(1),
                         access_list: Some(Default::default()),
-                        transaction_type: Some(U64::from(Into::<u8>::into(TxType::Eip2930))),
+                        transaction_type: Some(TxType::Eip2930.into()),
                         ..Default::default()
                     },
                 },
@@ -452,7 +452,7 @@ mod tests {
             assert_eq!(transaction.tx.block_number, receipt.receipt.block_number);
 
             // Asserts equality between transaction hash and receipt transaction hash.
-            assert_eq!(transaction.tx.hash, receipt.receipt.transaction_hash.unwrap());
+            assert_eq!(transaction.tx.hash, receipt.receipt.transaction_hash);
 
             // Asserts equality between transaction index and receipt transaction index.
             assert_eq!(transaction.tx.transaction_index.unwrap(), U256::from(receipt.receipt.transaction_index));
@@ -464,7 +464,7 @@ mod tests {
             assert_eq!(transaction.tx.to, receipt.receipt.to);
 
             // Asserts equality between transaction type and receipt type.
-            assert_eq!(transaction.tx.transaction_type.unwrap(), U64::from(receipt.receipt.transaction_type));
+            assert_eq!(transaction.tx.transaction_type.unwrap(), U8::from(receipt.receipt.transaction_type));
         }
 
         // Drop the inner MongoDB database.

@@ -39,7 +39,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
 
         Ok(Self {
             receipt: TransactionReceipt {
-                transaction_hash: Some(B256::arbitrary(u)?),
+                transaction_hash: B256::arbitrary(u)?,
                 transaction_index: U64::arbitrary(u)?,
                 block_hash: Some(B256::arbitrary(u)?),
                 block_number: Some(U256::arbitrary(u)?),
