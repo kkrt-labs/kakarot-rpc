@@ -52,7 +52,7 @@
 
 ## About
 
-Kakarot RPC fits in the three-part architecture of the Kakarot zkEVM rollup ([Kakarot EVM Cairo Programs](https://github.com/kkrt-labs/kakarot), Kakarot RPC, [Kakarot Indexer](https://github.com/kkrt-labs/kakarot-indexer)). It is the implementation of the Ethereum JSON-RPC specification made to interact with Kakarot zkEVM in a fully Ethereum-compatible way.
+Kakarot RPC fits in the three-part architecture of the Kakarot zkEVM rollup ([Kakarot EVM Cairo Programs](https://github.com/kkrt-labs/kakarot), Kakarot RPC, [Kakarot Indexer](indexer/README.md)). It is the implementation of the Ethereum JSON-RPC specification made to interact with Kakarot zkEVM in a fully Ethereum-compatible way.
 
 ![Kakarot zkEVM architecture](./docs/images/Kakarot%20zkEVM.png)
 
@@ -107,7 +107,7 @@ TL;DR:
 
 ### Setup the project
 
-To set up the repository (pulling git submodule and building Cairo dependencies), run:
+To set up the repository (pulling git submodule and building Cairo dependencies),run:
 
 ```console
 make setup
