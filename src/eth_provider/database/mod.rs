@@ -71,15 +71,15 @@ impl Database {
     /// Update a single document in a collection
     pub async fn update_one<T>(
         &self,
-        collection: &str,
         query: Document,
         update: impl Into<UpdateModifications>,
         options: impl Into<Option<UpdateOptions>>,
     ) -> DatabaseResult<()>
     where
-        T: DeserializeOwned,
+        T: DeserializeOwned + CollectionName,
     {
-        self.0.collection::<T>(collection).update_one(query, update, options.into()).await?;
+        let collection_name = T::collection_name();
+        self.0.collection::<T>(collection_name).update_one(query, update, options.into()).await?;
         Ok(())
     }
 

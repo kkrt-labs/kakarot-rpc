@@ -23,8 +23,8 @@ use starknet_crypto::FieldElement;
 
 use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
 use super::database::types::{
-    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
-    transaction::StoredTransactionHash,
+    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
+    transaction::StoredTransaction, transaction::StoredTransactionHash,
 };
 use super::database::Database;
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
@@ -519,8 +519,7 @@ where
 
         // Update pending transactions collection
         self.database
-            .update_one::<StoredTransaction>(
-                "transactions_pending",
+            .update_one::<StoredPendingTransaction>(
                 doc! {"tx.hash": transaction_document.get_document("tx").unwrap().get_str("hash").unwrap()},
                 UpdateModifications::Document(doc! {"$set": transaction_document}),
                 UpdateOptions::builder().upsert(true).build(),
