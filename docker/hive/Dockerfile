@@ -159,7 +159,7 @@ COPY --from=katana /usr/local/bin/katana /usr/local/bin
 COPY --from=apibara-build /usr/local/bin/starknet /usr/local/bin/starknet
 
 #### We need the indexer typescript code and the binary that knows how to run it
-COPY ./indexer /usr/src/app/code
+COPY ./indexer /usr/src/app/code/indexer
 COPY --from=apibara-build /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
 
 #### We need the mongo binary
