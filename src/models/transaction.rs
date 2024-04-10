@@ -19,7 +19,7 @@ pub fn rpc_transaction_to_primitive(
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
             value: rpc_transaction.value,
             input: rpc_transaction.input,
-            chain_id: rpc_transaction.chain_id.map(|id| id),
+            chain_id: rpc_transaction.chain_id,
         })),
         TxType::Eip2930 => Ok(reth_primitives::Transaction::Eip2930(TxEip2930 {
             chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?,
