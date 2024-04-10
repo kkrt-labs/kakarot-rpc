@@ -13,7 +13,7 @@ use mongodb::{
     options::{FindOneOptions, FindOptions, UpdateModifications, UpdateOptions},
     Database as MongoDatabase,
 };
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 
 type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 
@@ -69,23 +69,18 @@ impl Database {
     }
 
     /// Update a single document in a collection
-    pub async fn update_one<T>(
-        &self,
-        filter_field: &str,
-        filter_value: &str,
-        update_document: Document,
-        upsert: bool,
-    ) -> DatabaseResult<()>
+    pub async fn update_one<T>(&self, doc: T, filter: impl Into<Document>, upsert: bool) -> DatabaseResult<()>
     where
-        T: DeserializeOwned + CollectionName,
+        T: Serialize + CollectionName,
     {
         let collection_name = T::collection_name();
+        let doc = mongodb::bson::to_document(&doc).map_err(mongodb::error::Error::custom)?;
 
         self.0
             .collection::<T>(collection_name)
             .update_one(
-                doc! {filter_field: filter_value},
-                UpdateModifications::Document(doc! {"$set": update_document}),
+                filter.into(),
+                UpdateModifications::Document(doc! {"$set": doc}),
                 UpdateOptions::builder().upsert(upsert).build(),
             )
             .await?;
