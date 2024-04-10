@@ -76,7 +76,7 @@ services:
     restart: on-failure
     volumes:
       # Mount the indexer code
-      - indexer_code:/usr/src/app/code
+      - indexer_code:/usr/src/indexer
     depends_on:
       starknet:
         condition: service_started
@@ -111,7 +111,7 @@ services:
     image: quay.io/apibara/sink-mongo:0.7.0
     command:
       - run
-      - /code/kakarot-indexer/src/main.ts
+      - /indexer/src/main.ts
     environment:
       # Whitelist environment variables
       - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET,MONGO_REPLACE_DATA_INSIDE_TRANSACTION
@@ -128,12 +128,10 @@ services:
       - KAKAROT_ADDRESS=0x464f7e37179d2f93ea208795bdb2d0912e8257f6fb5f67ae2559251523aee19
     restart: on-failure
     volumes:
-      - indexer_code:/code
+      - indexer_code:/indexer
     networks:
       - internal
     depends_on:
-      clone-repo:
-        condition: service_completed_successfully
       starknet:
         condition: service_started
 

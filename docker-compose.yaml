@@ -80,7 +80,7 @@ services:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app
       # Mount the indexer code
-      - indexer_code:/usr/src/app/code
+      - indexer_code:/usr/src/indexer
     depends_on:
       deployments-parser:
         condition: service_completed_successfully
@@ -121,7 +121,7 @@ services:
     image: quay.io/apibara/sink-mongo:0.7.0
     command:
       - run
-      - /code/kakarot-indexer/src/main.ts
+      - /indexer/src/main.ts
     environment:
       # Whitelist environment variables
       - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET,MONGO_REPLACE_DATA_INSIDE_TRANSACTION
@@ -138,13 +138,11 @@ services:
       - ALLOW_ENV=/deployments/.env
     restart: on-failure
     volumes:
-      - indexer_code:/code
+      - indexer_code:/indexer
       - deployments:/deployments
     networks:
       - internal
     depends_on:
-      clone-repo:
-        condition: service_completed_successfully
       starknet:
         condition: service_started
       deployments-parser:

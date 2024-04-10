@@ -42,7 +42,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the indexer code into the RPC
-COPY ./indexer /usr/src/app/code/indexer
+COPY ./indexer /usr/src/indexer
 
 # Seen in https://github.com/eqlabs/pathfinder/blob/4ab915a830953ed6f02af907937b46cb447d9a92/Dockerfile#L120 - 
 # Allows for passing args down to the underlying binary easily
