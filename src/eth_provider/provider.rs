@@ -350,7 +350,11 @@ where
         let account_contract = AccountContractReader::new(address, &self.starknet_provider);
         let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().await;
 
-        if contract_not_found(&bytecode) || entrypoint_not_found(&bytecode) {
+        if contract_not_found(&bytecode)
+            || entrypoint_not_found(&bytecode)
+            || account_contract.bytecode_len().block_id(starknet_block_id).call().await.map_err(KakarotError::from)?.len
+                == FieldElement::ZERO
+        {
             return Ok(Bytes::default());
         }
 

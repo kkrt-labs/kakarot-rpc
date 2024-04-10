@@ -6,7 +6,7 @@ use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
 use kakarot_rpc::test_utils::evm_contract::EvmContract;
-use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
+use kakarot_rpc::test_utils::fixtures::{contract_empty, counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
@@ -216,6 +216,27 @@ async fn test_get_code(#[future] counter: (Katana, KakarotEvmContract), _setup: 
     let expected =
         counter_bytecode.deployed_bytecode.unwrap().bytecode.unwrap().object.into_bytes().unwrap().as_ref().to_vec();
     assert_eq!(bytecode, Bytes::from(expected));
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_code_empty(#[future] contract_empty: (Katana, KakarotEvmContract), _setup: ()) {
+    // Given
+    let katana: Katana = contract_empty.0;
+
+    let counter = contract_empty.1;
+    let eth_provider = katana.eth_provider();
+    let counter_address: Felt252Wrapper = counter.evm_address.into();
+    let counter_address = counter_address.try_into().expect("Failed to convert EVM address");
+
+    // When
+    let bytecode = eth_provider.get_code(counter_address, None).await.unwrap();
+
+    println!("bytecode {:?}", bytecode);
+
+    // Then
+    assert_eq!(bytecode, Bytes::default());
 }
 
 #[rstest]
