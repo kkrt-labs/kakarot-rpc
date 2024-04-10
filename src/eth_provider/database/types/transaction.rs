@@ -1,6 +1,6 @@
 use reth_primitives::B256;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use reth_primitives::{Address, TransactionSigned, U256, U64, U8};
+use reth_primitives::{Address, TransactionSigned, U128, U256, U64, U8};
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
 
