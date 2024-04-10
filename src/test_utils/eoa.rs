@@ -91,20 +91,19 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let nonce: u64 = nonce.try_into()?;
         let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
 
-        let is_empty_bytecode = contract_name.is_none();
-
-        let bytecode = if is_empty_bytecode {
-            CompactContractBytecode::default()
+        let bytecode = if let Some(name) = contract_name {
+            <KakarotEvmContract as EvmContract>::load_contract_bytecode(name)?
         } else {
-            <KakarotEvmContract as EvmContract>::load_contract_bytecode(contract_name.unwrap())?
+            CompactContractBytecode::default()
         };
+
         let expected_address = {
             let expected_eth_address = self.evm_address().expect("Failed to get EVM address").create(nonce);
             FieldElement::from_byte_slice_be(expected_eth_address.as_slice())
                 .expect("Failed to convert address to field element")
         };
 
-        let tx = if is_empty_bytecode {
+        let tx = if contract_name.is_none() {
             Transaction::Eip1559(TxEip1559 {
                 chain_id: chain_id.try_into()?,
                 nonce,
