@@ -16,6 +16,7 @@ use std::str::FromStr;
 use testcontainers::clients::{self, Cli};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
+    crate::eth_provider::database::CollectionName,
     arbitrary::Arbitrary,
     mongodb::bson,
     reth_primitives::U8,
@@ -270,15 +271,15 @@ impl MongoFuzzer {
         let (doc, value, collection_name, updates, block_number) = match collection {
             CollectionDB::Headers => {
                 let updates = self.documents.get(&CollectionDB::Headers);
-                ("header", "number", "headers", updates, "number")
+                ("header", "number", StoredHeader::collection_name(), updates, "number")
             }
             CollectionDB::Transactions => {
                 let updates = self.documents.get(&CollectionDB::Transactions);
-                ("tx", "hash", "transactions", updates, "blockNumber")
+                ("tx", "hash", StoredTransaction::collection_name(), updates, "blockNumber")
             }
             CollectionDB::Receipts => {
                 let updates = self.documents.get(&CollectionDB::Receipts);
-                ("receipt", "transactionHash", "receipts", updates, "blockNumber")
+                ("receipt", "transactionHash", StoredTransactionReceipt::collection_name(), updates, "blockNumber")
             }
         };
 
@@ -434,13 +435,13 @@ mod tests {
         let database = mongo_fuzzer.mock_database(100).await;
 
         // Retrieves stored headers from the database.
-        let _ = database.get::<StoredHeader>("headers", None, None).await.unwrap();
+        let _ = database.get::<StoredHeader>(None, None).await.unwrap();
 
         // Retrieves stored transactions from the database.
-        let transactions = database.get::<StoredTransaction>("transactions", None, None).await.unwrap();
+        let transactions = database.get::<StoredTransaction>(None, None).await.unwrap();
 
         // Retrieves stored receipts from the database.
-        let receipts = database.get::<StoredTransactionReceipt>("receipts", None, None).await.unwrap();
+        let receipts = database.get::<StoredTransactionReceipt>(None, None).await.unwrap();
 
         // Iterates through transactions and receipts in parallel.
         for (transaction, receipt) in transactions.iter().zip(receipts.iter()) {
