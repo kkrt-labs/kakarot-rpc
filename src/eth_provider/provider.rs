@@ -17,7 +17,8 @@ use reth_rpc_types::{
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
-use starknet::core::types::SyncStatusType;
+use starknet::core::types::{FunctionCall, SyncStatusType};
+use starknet::core::utils::get_selector_from_name;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
@@ -350,11 +351,27 @@ where
         let account_contract = AccountContractReader::new(address, &self.starknet_provider);
         let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().await;
 
-        if contract_not_found(&bytecode)
-            || entrypoint_not_found(&bytecode)
-            || account_contract.bytecode_len().block_id(starknet_block_id).call().await.map_err(KakarotError::from)?.len
-                == FieldElement::ZERO
-        {
+        if contract_not_found(&bytecode) || entrypoint_not_found(&bytecode) {
+            return Ok(Bytes::default());
+        }
+
+        // TODO: temporary fix to handle empty bytecode until
+        // https://github.com/cartridge-gg/cainome/issues/24 is solved
+        let raw_bytecode = self
+            .starknet_provider
+            .call(
+                FunctionCall {
+                    contract_address: address,
+                    entry_point_selector: get_selector_from_name("bytecode").unwrap(),
+                    calldata: Default::default(),
+                },
+                starknet_block_id,
+            )
+            .await
+            .map_err(KakarotError::from)?;
+
+        // If the bytecode is empty, return an empty Bytes
+        if raw_bytecode.len() == 1 && raw_bytecode[0] == FieldElement::ZERO {
             return Ok(Bytes::default());
         }
 
@@ -877,7 +894,6 @@ where
         use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::accounts::{Call, Execution};
         use starknet::core::types::BlockTag;
-        use starknet::core::utils::get_selector_from_name;
 
         let signer_starknet_address = starknet_address(signer);
         let account_contract = AccountContractReader::new(signer_starknet_address, &self.starknet_provider);
