@@ -68,6 +68,17 @@ impl Database {
         Ok(result)
     }
 
+    /// Get a single document from aggregated collections
+    pub async fn get_one_aggregate<T>(&self, pipeline: impl IntoIterator<Item = Document>) -> DatabaseResult<Option<T>>
+    where
+        T: DeserializeOwned + CollectionName,
+    {
+        let collection = self.0.collection::<T>(T::collection_name());
+        let mut cursor = collection.aggregate(pipeline, None).await?;
+
+        Ok(cursor.try_next().await?.map(|doc| mongodb::bson::de::from_document(doc)).transpose()?)
+    }
+
     /// Update a single document in a collection
     pub async fn update_one<T>(&self, doc: T, filter: impl Into<Document>, upsert: bool) -> DatabaseResult<()>
     where

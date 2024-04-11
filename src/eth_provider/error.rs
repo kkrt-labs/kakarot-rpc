@@ -96,6 +96,9 @@ pub enum KakarotError {
     /// Error related to the database.
     #[error(transparent)]
     DatabaseError(#[from] mongodb::error::Error),
+    /// Error related to the database deserialization.
+    #[error(transparent)]
+    DatabaseDeserializationError(#[from] mongodb::bson::de::Error),
     /// Error related to the evm execution.
     #[error(transparent)]
     ExecutionError(EvmError),
