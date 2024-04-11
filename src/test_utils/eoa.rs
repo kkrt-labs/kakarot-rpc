@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
+use ethers_solc::artifacts::CompactContractBytecode;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256,
 };
@@ -83,26 +84,43 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
     pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
-        contract_name: &str,
+        contract_name: Option<&str>,
         constructor_args: T,
     ) -> Result<KakarotEvmContract, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
         let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
 
-        let bytecode = <KakarotEvmContract as EvmContract>::load_contract_bytecode(contract_name)?;
+        // Empty bytecode if contract_name is None
+        let bytecode = if let Some(name) = contract_name {
+            <KakarotEvmContract as EvmContract>::load_contract_bytecode(name)?
+        } else {
+            CompactContractBytecode::default()
+        };
+
         let expected_address = {
             let expected_eth_address = self.evm_address().expect("Failed to get EVM address").create(nonce);
             FieldElement::from_byte_slice_be(expected_eth_address.as_slice())
                 .expect("Failed to convert address to field element")
         };
 
-        let tx = <KakarotEvmContract as EvmContract>::prepare_create_transaction(
-            &bytecode,
-            constructor_args,
-            nonce,
-            chain_id.try_into()?,
-        )?;
+        let tx = if contract_name.is_none() {
+            Transaction::Eip1559(TxEip1559 {
+                chain_id: chain_id.try_into()?,
+                nonce,
+                gas_limit: TX_GAS_LIMIT,
+                to: TransactionKind::Create,
+                value: U256::ZERO,
+                ..Default::default()
+            })
+        } else {
+            <KakarotEvmContract as EvmContract>::prepare_create_transaction(
+                &bytecode,
+                constructor_args,
+                nonce,
+                chain_id.try_into()?,
+            )?
+        };
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
         let tx_hash: Felt252Wrapper = tx_hash.try_into().expect("Tx Hash should fit into Felt252Wrapper");
