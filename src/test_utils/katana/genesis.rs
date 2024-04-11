@@ -5,7 +5,6 @@ use std::path::PathBuf;
 
 use ethers::signers::LocalWallet;
 use ethers::signers::Signer;
-use ethers::types::U256;
 use eyre::{eyre, OptionExt, Result};
 use katana_primitives::block::GasPrices;
 use katana_primitives::contract::{StorageKey, StorageValue};
@@ -20,7 +19,7 @@ use katana_primitives::{
 };
 use lazy_static::lazy_static;
 use rayon::prelude::*;
-use reth_primitives::B256;
+use reth_primitives::{B256, U256};
 use serde::Serialize;
 use serde_json::Value;
 use serde_with::serde_as;
@@ -100,7 +99,7 @@ impl<T> KatanaGenesisBuilder<T> {
 
     pub fn with_dev_allocation(mut self, amount: u16) -> Self {
         let dev_allocations = DevAllocationsGenerator::new(amount)
-            .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+            .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
             .with_seed(parse_seed("0"))
             .generate()
             .into_iter()
