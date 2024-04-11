@@ -1,7 +1,9 @@
+use crate::eth_provider::starknet::kakarot_core::account_contract::BytecodeOutput;
 use alloy_rlp::Decodable as _;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
+use cainome::cairo_serde::CairoSerde;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
@@ -345,38 +347,36 @@ where
     }
 
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
-        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
-
-        let address = starknet_address(address);
-        let account_contract = AccountContractReader::new(address, &self.starknet_provider);
-        let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().await;
+        // TODO: temporary fix to handle empty bytecode until
+        // https://github.com/cartridge-gg/cainome/issues/24 is solved
+        let bytecode = self
+            .starknet_provider
+            .call(
+                FunctionCall {
+                    contract_address: starknet_address(address),
+                    entry_point_selector: get_selector_from_name("bytecode").unwrap(),
+                    calldata: Default::default(),
+                },
+                self.to_starknet_block_id(block_id).await?,
+            )
+            .await
+            .map_err(cainome::cairo_serde::Error::Provider);
 
         if contract_not_found(&bytecode) || entrypoint_not_found(&bytecode) {
             return Ok(Bytes::default());
         }
 
-        // TODO: temporary fix to handle empty bytecode until
-        // https://github.com/cartridge-gg/cainome/issues/24 is solved
-        let raw_bytecode = self
-            .starknet_provider
-            .call(
-                FunctionCall {
-                    contract_address: address,
-                    entry_point_selector: get_selector_from_name("bytecode").unwrap(),
-                    calldata: Default::default(),
-                },
-                starknet_block_id,
-            )
-            .await
-            .map_err(KakarotError::from)?;
+        let bytecode_raw = bytecode.map_err(KakarotError::from)?;
 
         // If the bytecode is empty, return an empty Bytes
-        if raw_bytecode.len() == 1 && raw_bytecode[0] == FieldElement::ZERO {
+        if bytecode_raw.len() == 1 && bytecode_raw[0] == FieldElement::ZERO {
             return Ok(Bytes::default());
         }
 
-        let bytecode = bytecode.map_err(KakarotError::from)?.bytecode.0;
-        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode)))
+        // Deserialize the bytecode
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(
+            BytecodeOutput::cairo_deserialize(&bytecode_raw, 0).map_err(KakarotError::from)?.bytecode.0,
+        )))
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
