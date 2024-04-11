@@ -33,7 +33,7 @@ pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
 }
 
 /// Converts a key and value into a MongoDB filter.
-pub(crate) fn into_filter<T>(key: &str, value: &T, width: usize) -> Document
+pub fn into_filter<T>(key: &str, value: &T, width: usize) -> Document
 where
     T: LowerHex,
 {

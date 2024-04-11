@@ -1,18 +1,16 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 
+use kakarot_rpc::eth_provider::constant::HASH_PADDING;
 use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
-use kakarot_rpc::eth_provider::database::CollectionName;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
+use kakarot_rpc::eth_provider::utils::into_filter;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
 use kakarot_rpc::test_utils::evm_contract::EvmContract;
 use kakarot_rpc::test_utils::fixtures::{counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
-use mongodb::bson::doc;
-use mongodb::options::UpdateModifications;
-use mongodb::options::UpdateOptions;
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::transaction::Signature;
 use reth_primitives::{sign_message, Transaction, TransactionKind, TxEip1559};
@@ -542,20 +540,11 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     // Modify the block number of the pending transaction
     stored_transaction.tx.block_number = Some(U256::from(1111));
 
-    // Serialize the `StoredData` into BSON
-    let serialized_data =
-        mongodb::bson::to_document(&stored_transaction).expect("Failed to serialize stored transaction");
-
     // Insert the transaction into the final transaction collection
+    let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_PADDING);
     eth_provider
         .database()
-        .inner()
-        .collection::<StoredTransaction>(StoredTransaction::collection_name())
-        .update_one(
-            doc! {"tx.hash": serialized_data.get_document("tx").unwrap().get_str("hash").unwrap()},
-            UpdateModifications::Document(doc! {"$set": serialized_data.clone()}),
-            UpdateOptions::builder().upsert(true).build(),
-        )
+        .update_one::<StoredTransaction>(stored_transaction.tx.into(), filter, true)
         .await
         .expect("Failed to insert documents");
 
