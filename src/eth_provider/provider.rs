@@ -252,6 +252,10 @@ where
                     "tx.hash": format_hex(hash, HASH_PADDING)
                 }
             },
+            // Sort in descending order by block number as pending transactions have null block number
+            doc! {
+                "$sort": { "tx.blockNumber" : -1 }
+            },
             // Only one document in the final result with priority to the final transactions collection if available
             doc! {
                 "$limit": 1
