@@ -58,7 +58,7 @@ pub struct Loaded;
 pub struct Initialized;
 
 #[derive(Debug, Clone, Default)]
-pub struct KatanaGenesisBuilder<T> {
+pub struct KatanaGenesisBuilder<T = Uninitialized> {
     coinbase: FieldElement,
     classes: Vec<GenesisClassJson>,
     class_hashes: HashMap<String, FieldElement>,
