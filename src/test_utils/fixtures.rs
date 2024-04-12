@@ -11,7 +11,16 @@ use {
 #[awt]
 pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     let eoa = katana.eoa();
-    let contract = eoa.deploy_evm_contract("Counter", ()).await.expect("Failed to deploy Counter contract");
+    let contract = eoa.deploy_evm_contract(Some("Counter"), ()).await.expect("Failed to deploy Counter contract");
+    (katana, contract)
+}
+
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+#[fixture]
+#[awt]
+pub async fn contract_empty(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana.eoa();
+    let contract = eoa.deploy_evm_contract(None, ()).await.expect("Failed to deploy empty contract");
     (katana, contract)
 }
 
@@ -23,7 +32,7 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 
     let contract = eoa
         .deploy_evm_contract(
-            "ERC20",
+            Some("ERC20"),
             (
                 Token::String("Test".into()),               // name
                 Token::String("TT".into()),                 // symbol
