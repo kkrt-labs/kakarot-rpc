@@ -3,6 +3,7 @@ use std::sync::Arc;
 use alloy_signer_wallet::LocalWallet;
 use async_trait::async_trait;
 use ethers::abi::Tokenize;
+use ethers_solc::artifacts::CompactContractBytecode;
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256,
 };
