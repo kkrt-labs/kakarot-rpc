@@ -7565,6 +7565,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-primitives 0.6.4",
  "alloy-rlp",
+ "alloy-signer-wallet",
  "anyhow",
  "arbitrary",
  "async-trait",

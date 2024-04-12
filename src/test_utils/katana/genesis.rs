@@ -3,8 +3,8 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 
-use ethers::signers::LocalWallet;
-use ethers::signers::Signer;
+use crate::eth_provider::utils::split_u256;
+use alloy_signer_wallet::LocalWallet;
 use eyre::{eyre, OptionExt, Result};
 use katana_primitives::block::GasPrices;
 use katana_primitives::contract::{StorageKey, StorageValue};
@@ -50,14 +50,14 @@ pub struct KatanaManifest {
     pub deployments: HashMap<String, Hex>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Uninitialized;
 #[derive(Debug, Clone)]
 pub struct Loaded;
 #[derive(Debug, Clone)]
 pub struct Initialized;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct KatanaGenesisBuilder<T> {
     coinbase: FieldElement,
     classes: Vec<GenesisClassJson>,
@@ -117,7 +117,6 @@ impl<T> KatanaGenesisBuilder<T> {
                 )
             });
         self.accounts.extend(dev_allocations);
-
         self
     }
 
@@ -135,21 +134,6 @@ impl<T> KatanaGenesisBuilder<T> {
 
     pub fn cairo1_helpers_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("cairo1_helpers").cloned().ok_or_eyre("Missing cairo1 helpers class hash")
-    }
-}
-
-impl Default for KatanaGenesisBuilder<Uninitialized> {
-    fn default() -> Self {
-        KatanaGenesisBuilder {
-            coinbase: FieldElement::ZERO,
-            classes: vec![],
-            class_hashes: HashMap::new(),
-            contracts: HashMap::new(),
-            accounts: HashMap::new(),
-            fee_token_storage: HashMap::new(),
-            cache: HashMap::new(),
-            status: PhantomData::<Uninitialized>,
-        }
     }
 }
 
@@ -301,12 +285,11 @@ impl KatanaGenesisBuilder<Initialized> {
         let eoa = self.contracts.get_mut(&starknet_address).ok_or_eyre("Missing EOA contract")?;
 
         let key = get_storage_var_address("ERC20_balances", &[*starknet_address])?;
-        let low = amount & U256::from(u128::MAX);
-        let low: u128 = low.try_into().unwrap(); // safe to unwrap
-        let high = amount >> U256::from(128);
-        let high: u128 = high.try_into().unwrap(); // safe to unwrap
+        let amount_split = split_u256::<u128>(amount);
 
-        let storage = [(key, FieldElement::from(low)), (key + 1u8.into(), FieldElement::from(high))].into_iter();
+        let storage =
+            [(key, FieldElement::from(amount_split[0])), (key + 1u8.into(), FieldElement::from(amount_split[1]))]
+                .into_iter();
         self.fee_token_storage.extend(storage);
 
         eoa.balance = Some(amount);
@@ -359,9 +342,7 @@ impl KatanaGenesisBuilder<Initialized> {
     }
 
     fn evm_address(&self, pk: B256) -> Result<FieldElement> {
-        let wallet = LocalWallet::from_bytes(pk.as_slice())?;
-        let evm_address = wallet.address();
-        Ok(FieldElement::from_byte_slice_be(evm_address.as_bytes())?)
+        Ok(FieldElement::from_byte_slice_be(&LocalWallet::from_bytes(&pk)?.address().into_array())?)
     }
 
     pub fn cache_load(&self, key: &str) -> Result<FieldElement> {
