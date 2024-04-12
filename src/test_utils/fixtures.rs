@@ -20,6 +20,7 @@ pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 #[awt]
 pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     let eoa = katana.eoa();
+
     let contract = eoa
         .deploy_evm_contract(
             "ERC20",

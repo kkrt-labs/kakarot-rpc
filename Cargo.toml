@@ -170,6 +170,8 @@ katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-
 ] }
 arbitrary = { version = "1", features = ["derive"] }
 
+alloy-signer-wallet = { version = "0.1.0", default-features = false }
+
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979" }
 

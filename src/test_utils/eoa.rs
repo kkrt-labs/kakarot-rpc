@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use alloy_signer_wallet::LocalWallet;
 use async_trait::async_trait;
 use ethers::abi::Tokenize;
-use ethers::signers::{LocalWallet, Signer};
 use reth_primitives::{
     sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256,
 };
@@ -27,8 +27,8 @@ pub trait Eoa<P: Provider + Send + Sync> {
         Ok(starknet_address(self.evm_address()?))
     }
     fn evm_address(&self) -> Result<Address, eyre::Error> {
-        let wallet = LocalWallet::from_bytes(self.private_key().as_slice())?;
-        Ok(Address::from_slice(wallet.address().as_bytes()))
+        let wallet = LocalWallet::from_bytes(&self.private_key())?;
+        Ok(wallet.address())
     }
     fn private_key(&self) -> B256;
     fn eth_provider(&self) -> &EthDataProvider<P>;
