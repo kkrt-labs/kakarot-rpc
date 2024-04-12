@@ -17,6 +17,12 @@ impl From<StoredTransaction> for Transaction {
     }
 }
 
+impl From<Transaction> for StoredTransaction {
+    fn from(tx: Transaction) -> Self {
+        Self { tx }
+    }
+}
+
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {

@@ -1,8 +1,10 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 
-use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
+use kakarot_rpc::eth_provider::constant::HASH_PADDING;
+use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
+use kakarot_rpc::eth_provider::utils::into_filter;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
 use kakarot_rpc::test_utils::evm_contract::EvmContract;
@@ -502,4 +504,69 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 
     // Assert that no transaction is found
     assert!(tx.is_none());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
+    // Given
+    // Retrieve an instance of the Ethereum provider from the test environment
+    let eth_provider = katana.eth_provider();
+
+    // Retrieve the first transaction from the test environment
+    let first_transaction = katana.first_transaction().unwrap();
+
+    // Check if the first transaction is returned correctly by the `transaction_by_hash` method
+    assert_eq!(eth_provider.transaction_by_hash(first_transaction.hash).await.unwrap().unwrap(), first_transaction);
+
+    // Check if a non-existent transaction returns None
+    assert!(eth_provider.transaction_by_hash(B256::random()).await.unwrap().is_none());
+
+    // Generate a pending transaction to be stored in the pending transactions collection
+    // Create a sample transaction
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id: 1,
+        nonce: 0,
+        gas_limit: 21000,
+        to: TransactionKind::Call(Address::random()),
+        value: U256::from(1000),
+        input: Bytes::default(),
+        max_fee_per_gas: 875000000,
+        max_priority_fee_per_gas: 0,
+        access_list: Default::default(),
+    });
+
+    // Sign the transaction
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
+    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Send the transaction
+    let _ = eth_provider
+        .send_raw_transaction(transaction_signed.envelope_encoded())
+        .await
+        .expect("failed to send transaction");
+
+    // Retrieve the pending transaction from the database
+    let mut stored_transaction: StoredPendingTransaction =
+        eth_provider.database().get_one(None, None).await.expect("Failed to get transaction").unwrap();
+
+    let tx = stored_transaction.clone().tx;
+
+    // Check if the pending transaction is returned correctly by the `transaction_by_hash` method
+    assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap(), tx);
+
+    // Modify the block number of the pending transaction
+    stored_transaction.tx.block_number = Some(U256::from(1111));
+
+    // Insert the transaction into the final transaction collection
+    let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_PADDING);
+    eth_provider
+        .database()
+        .update_one::<StoredTransaction>(stored_transaction.tx.into(), filter, true)
+        .await
+        .expect("Failed to insert documents");
+
+    // Check if the final transaction is returned correctly by the `transaction_by_hash` method
+    assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(U256::from(1111)));
 }
