@@ -147,27 +147,21 @@ impl KatanaGenesisBuilder<Uninitialized> {
             .map(|entry| {
                 let path = entry.unwrap().path().to_path_buf();
                 let artifact = fs::read_to_string(&path).expect("Failed to read artifact");
-                (
-                    path,
-                    GenesisClassJson {
-                        class: PathOrFullArtifact::Artifact(
-                            serde_json::from_str(&artifact).expect("Failed to parse artifact"),
-                        ),
-                        class_hash: None,
-                    },
-                )
+                let artifact = serde_json::from_str(&artifact).expect("Failed to parse artifact");
+                let class_hash = compute_class_hash(&artifact)
+                    .inspect_err(|e| eprint!("Failed to compute class hash: {:?}", e))
+                    .ok();
+                (path, GenesisClassJson { class: PathOrFullArtifact::Artifact(artifact), class_hash })
             })
             .collect::<Vec<_>>();
 
         self.class_hashes = classes
-            .par_iter()
-            .filter_map(|(path, class)| {
-                let artifact = match &class.class {
-                    PathOrFullArtifact::Artifact(artifact) => artifact,
-                    PathOrFullArtifact::Path(_) => unreachable!("Expected artifact"),
-                };
-                let class_hash = compute_class_hash(artifact).ok()?;
-                Some((path.file_stem().unwrap().to_str().unwrap().to_string(), class_hash))
+            .iter()
+            .map(|(path, class)| {
+                (
+                    path.file_stem().unwrap().to_str().unwrap().to_string(),
+                    class.class_hash.expect("all class hashes should be computed"),
+                )
             })
             .collect::<HashMap<_, _>>();
         self.classes = classes.into_iter().map(|(_, class)| class).collect();
