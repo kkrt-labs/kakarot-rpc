@@ -33,7 +33,7 @@ pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
 }
 
 /// Converts a key and value into a MongoDB filter.
-pub(crate) fn into_filter<T>(key: &str, value: &T, width: usize) -> Document
+pub fn into_filter<T>(key: &str, value: &T, width: usize) -> Document
 where
     T: LowerHex,
 {
@@ -51,11 +51,21 @@ pub fn split_u256<T: From<u128>>(value: impl Into<U256>) -> [T; 2] {
 }
 
 /// Checks if the error is a contract not found error.
+/// Some providers return a contract not found error when the contract is not deployed.
+/// Katana returns a contract error with a revert message containing "is not deployed".
 #[inline]
-pub(crate) const fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
+pub(crate) fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
     match err {
         Ok(_) => false,
-        Err(err) => matches!(err, Error::Provider(ProviderError::StarknetError(StarknetError::ContractNotFound))),
+        Err(err) => {
+            matches!(err, Error::Provider(ProviderError::StarknetError(StarknetError::ContractNotFound)))
+                || matches!(
+                    err,
+                    Error::Provider(ProviderError::StarknetError(StarknetError::ContractError(ContractErrorData {
+                        revert_error: reason
+                    }))) if reason.contains("is not deployed")
+                )
+        }
     }
 }
 

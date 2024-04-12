@@ -28,7 +28,7 @@ use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
     transaction::StoredTransaction, transaction::StoredTransactionHash,
 };
-use super::database::Database;
+use super::database::{CollectionName, Database};
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
 use super::starknet::kakarot_core::core::{CallInput, Uint256};
 use super::starknet::kakarot_core::{
@@ -235,11 +235,37 @@ where
     }
 
     async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
-        Ok(self
-            .database
-            .get_one::<StoredTransaction>(into_filter("tx.hash", &hash, HASH_PADDING), None)
-            .await?
-            .map(Into::into))
+        let pipeline = vec![
+            doc! {
+                // Union with pending transactions with only specified hash
+                "$unionWith": {
+                    "coll": StoredPendingTransaction::collection_name(),
+                    "pipeline": [
+                        {
+                            "$match": {
+                                "tx.hash": format_hex(hash, HASH_PADDING)
+                            }
+                        }
+                    ]
+                },
+            },
+            // Only specified hash in the transactions collection
+            doc! {
+                "$match": {
+                    "tx.hash": format_hex(hash, HASH_PADDING)
+                }
+            },
+            // Sort in descending order by block number as pending transactions have null block number
+            doc! {
+                "$sort": { "tx.blockNumber" : -1 }
+            },
+            // Only one document in the final result with priority to the final transactions collection if available
+            doc! {
+                "$limit": 1
+            },
+        ];
+
+        Ok(self.database.get_one_aggregate::<StoredTransaction>(pipeline).await?.map(Into::into))
     }
 
     async fn transaction_by_block_hash_and_index(
