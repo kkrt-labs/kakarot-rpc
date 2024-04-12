@@ -7407,6 +7407,8 @@ dependencies = [
  "reth-primitives",
  "reth-rpc-types",
  "reth-rpc-types-compat",
+ "revm",
+ "revm-inspectors",
  "rstest",
  "serde",
  "serde_json",
