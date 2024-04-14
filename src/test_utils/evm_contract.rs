@@ -51,8 +51,6 @@ pub trait EvmContract {
             chain_id,
             nonce,
             gas_limit: TX_GAS_LIMIT,
-            to: TransactionKind::Create,
-            value: U256::ZERO,
             input: deploy_data.into(),
             ..Default::default()
         }))
