@@ -197,6 +197,6 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
         let tx_signed = self.sign_transaction(tx)?;
 
-        Ok(self.send_transaction(tx_signed).await?)
+        self.send_transaction(tx_signed).await
     }
 }
