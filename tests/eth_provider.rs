@@ -1,7 +1,7 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 
-use kakarot_rpc::eth_provider::constant::HASH_PADDING;
+use kakarot_rpc::eth_provider::constant::{HASH_PADDING, STARKNET_MODULUS};
 use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::eth_provider::utils::into_filter;
@@ -454,7 +454,7 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let pending_starknet_block_id = eth_provider.to_starknet_block_id(block_id).await.unwrap();
 
     // When: Convert block hash identifier to StarkNet block identifier
-    let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH));
+    let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(transaction.block_hash.unwrap()));
     let some_starknet_block_hash = eth_provider.to_starknet_block_id(some_block_hash).await.unwrap();
 
     // When: Convert block tag identifier to StarkNet block identifier
@@ -472,7 +472,14 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     );
     assert_eq!(
         some_starknet_block_hash,
-        starknet::core::types::BlockId::Hash(FieldElement::from_bytes_be(&BLOCK_HASH.0).unwrap())
+        starknet::core::types::BlockId::Hash(
+            FieldElement::from_bytes_be(
+                &U256::from_be_slice(transaction.block_hash.unwrap().as_slice())
+                    .wrapping_rem(STARKNET_MODULUS)
+                    .to_be_bytes()
+            )
+            .unwrap()
+        )
     );
     assert_eq!(pending_block_tag_starknet, starknet::core::types::BlockId::Tag(BlockTag::Pending));
     assert!(unknown_starknet_block_number.is_err());
