@@ -108,46 +108,45 @@ reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag =
 alloy-primitives = "0.6.4"
 
 # Serde
-serde = { version = "1.0.188", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0", default-features = false }
+serde = { version = "1.0.197", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.115", default-features = false }
 serde_with = { version = "2.3.1", default-features = false }
 
 # Others
-anyhow = { version = "1.0.68", default-features = false }
-async-trait = { version = "0.1.58", default-features = false }
+anyhow = { version = "1.0.82", default-features = false }
+async-trait = { version = "0.1.80", default-features = false }
 auto_impl = { version = "1.1.0", default-features = false }
-bytes = { version = "1", default-features = false }
-dotenvy = { version = "0.15", default-features = false }
-env_logger = { version = "0.10.0", default-features = false }
-eyre = { version = "0.6.8", default-features = false }
+bytes = { version = "1.6.0", default-features = false }
+dotenvy = { version = "0.15.7", default-features = false }
+env_logger = { version = "0.11.3", default-features = false }
+eyre = { version = "0.6.12", default-features = false }
 
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master" }
-futures = { version = "0.3.26", default-features = false }
-hex = { version = "0.4", default-features = false }
-itertools = { version = "0.12", default-features = false }
+futures = { version = "0.3.30", default-features = false }
+hex = { version = "0.4.3", default-features = false }
+itertools = { version = "0.12.1", default-features = false }
 lazy_static = { version = "1.4.0", default-features = false }
-log = { version = "0.4.17", default-features = false }
-mongodb = { version = "2.8.0", default-features = false, features = [
+log = { version = "0.4.21", default-features = false }
+mongodb = { version = "2.8.2", default-features = false, features = [
   "tokio-runtime",
 ] }
-rayon = { version = "1.8.1", default-features = false, optional = true }
-reqwest = { version = "0.11.13", default-features = false }
-ruint = { version = "1.9.0", default-features = false, features = ["serde"] }
-rstest = { version = "0.18.1", default-features = false }
+rayon = { version = "1.10.0", default-features = false, optional = true }
+reqwest = { version = "0.12.3", default-features = false }
+rstest = { version = "0.19.0", default-features = false }
 
 testcontainers = { version = "0.15.0", default-features = false, optional = true }
-thiserror = { version = "1.0.38", default-features = false }
-tokio = { version = "1.21.2", features = ["macros"] }
+thiserror = { version = "1.0.58", default-features = false }
+tokio = { version = "1.37.0", features = ["macros"] }
 tokio-util = { version = "0.7.10", features = [
   "codec",
 ], default-features = false, optional = true }
-tokio-stream = { version = "0.1.14", default-features = false, optional = true }
-tower = { version = "0.4.12", default-features = false }
+tokio-stream = { version = "0.1.15", default-features = false, optional = true }
+tower = { version = "0.4.13", default-features = false }
 tower-http = { version = "0.4.4", default-features = false }
-tracing = { version = "0.1.37", default-features = false }
-tracing-subscriber = { version = "0.3.3", features = ["env-filter"] }
-url = { version = "2.3.1", default-features = false }
-walkdir = { version = "2.3.3", default-features = false }
+tracing = { version = "0.1.40", default-features = false }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+url = { version = "2.5.0", default-features = false }
+walkdir = { version = "2.5.0", default-features = false }
 rand = { version = "0.8.5", default-features = false, optional = true }
 
 # Prometheus
