@@ -1,4 +1,5 @@
 use lazy_static::lazy_static;
+use reth_primitives::U256;
 
 lazy_static! {
     pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
@@ -7,6 +8,8 @@ lazy_static! {
 pub const CALL_REQUEST_GAS_LIMIT: u64 = 5_000_000;
 pub const HASH_PADDING: usize = 64;
 pub const U64_PADDING: usize = 16;
+// Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
+pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x800000000000011]);
 
 #[cfg(feature = "hive")]
 use {

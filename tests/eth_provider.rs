@@ -1,7 +1,7 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 
-use kakarot_rpc::eth_provider::constant::HASH_PADDING;
+use kakarot_rpc::eth_provider::constant::{HASH_PADDING, STARKNET_MODULUS};
 use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::eth_provider::utils::into_filter;
@@ -73,12 +73,38 @@ async fn test_block_by_hash(#[future] katana: Katana, _setup: ()) {
 async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
+    let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
 
-    // When
-    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(BLOCK_NUMBER), false).await.unwrap().unwrap();
+    // When: Retrieving block by specific block number
+    let block =
+        eth_provider.block_by_number(BlockNumberOrTag::Number(block_number.to::<u64>()), false).await.unwrap().unwrap();
 
-    // Then
-    assert_eq!(block.header.number, Some(U256::from(BLOCK_NUMBER)));
+    // Then: Ensure the retrieved block has the expected block number
+    assert_eq!(block.header.number, Some(block_number));
+
+    // When: Retrieving earliest block
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Earliest, false).await.unwrap().unwrap();
+
+    // Then: Ensure the retrieved block has block number zero
+    assert_eq!(block.header.number, Some(U256::ZERO));
+
+    // When: Retrieving latest block
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Latest, false).await.unwrap().unwrap();
+
+    // Then: Ensure the retrieved block has the same block number as the most recent transaction
+    assert_eq!(block.header.number, Some(block_number));
+
+    // When: Retrieving finalized block
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Finalized, false).await.unwrap().unwrap();
+
+    // Then: Ensure the retrieved block has the same block number as the most recent transaction
+    assert_eq!(block.header.number, Some(block_number));
+
+    // When: Retrieving safe block
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Safe, false).await.unwrap().unwrap();
+
+    // Then: Ensure the retrieved block has the same block number as the most recent transaction
+    assert_eq!(block.header.number, Some(block_number));
 }
 
 #[rstest]
@@ -99,15 +125,26 @@ async fn test_block_transaction_count_by_hash(#[future] katana: Katana, _setup: 
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_block_transaction_count_by_number(#[future] katana: Katana, _setup: ()) {
-    // Given
+    // Given: Ethereum provider instance
     let eth_provider = katana.eth_provider();
 
-    // When
+    // When: Retrieving transaction count for a specific block number
     let count =
         eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(BLOCK_NUMBER)).await.unwrap().unwrap();
 
-    // Then
+    // Then: Ensure the retrieved transaction count matches the expected value
     assert_eq!(count, U256::from(3));
+
+    // When: Retrieving transaction count for the block of the most recent transaction
+    let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
+    let count = eth_provider
+        .block_transaction_count_by_number(BlockNumberOrTag::Number(block_number.to::<u64>()))
+        .await
+        .unwrap()
+        .unwrap();
+
+    // Then: Ensure the retrieved transaction count matches the expected value
+    assert_eq!(count, U256::from(1));
 }
 
 #[rstest]
@@ -365,32 +402,37 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
-    // Given
+    // Given: Ethereum provider instance and the most recent transaction
     let eth_provider = katana.eth_provider();
+    let transaction = katana.most_recent_transaction().unwrap();
 
-    // Then
+    // Then: Retrieve receipts by block number
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(BLOCK_NUMBER))))
+        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(
+            transaction.block_number.unwrap().to::<u64>(),
+        ))))
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(receipts.len(), 3);
+    assert_eq!(receipts.len(), 1);
     let receipt = receipts.first().unwrap();
-    assert_eq!(receipt.transaction_index, U64::ZERO);
-    assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
-    assert_eq!(receipt.block_number.unwrap(), U256::from(BLOCK_NUMBER));
+    assert_eq!(receipt.transaction_index, transaction.transaction_index.unwrap().to::<U64>());
+    assert_eq!(receipt.block_hash, transaction.block_hash);
+    assert_eq!(receipt.block_number, transaction.block_number);
 
+    // Then: Retrieve receipts by block hash
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH))))
+        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(transaction.block_hash.unwrap()))))
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(receipts.len(), 3);
+    assert_eq!(receipts.len(), 1);
     let receipt = receipts.first().unwrap();
-    assert_eq!(receipt.transaction_index, U64::ZERO);
-    assert_eq!(receipt.block_hash.unwrap(), *BLOCK_HASH);
-    assert_eq!(receipt.block_number.unwrap(), U256::from(BLOCK_NUMBER));
+    assert_eq!(receipt.transaction_index, transaction.transaction_index.unwrap().to::<U64>());
+    assert_eq!(receipt.block_hash, transaction.block_hash);
+    assert_eq!(receipt.block_number, transaction.block_number);
 
+    // Then: Attempt to retrieve receipts for a non-existing block
     let receipts = eth_provider
         .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::from(U256::from(0xc0fefe))))))
         .await
@@ -402,27 +444,42 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
-    // Given
+    // Given: Ethereum provider instance and the most recent transaction
     let eth_provider = katana.eth_provider();
+    let transaction = katana.most_recent_transaction().unwrap();
 
-    // When
-    let block_id = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(BLOCK_NUMBER));
+    // When: Convert block number identifier to StarkNet block identifier
+    let block_id =
+        reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(transaction.block_number.unwrap().to::<u64>()));
     let pending_starknet_block_id = eth_provider.to_starknet_block_id(block_id).await.unwrap();
 
-    let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(*BLOCK_HASH));
+    // When: Convert block hash identifier to StarkNet block identifier
+    let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(transaction.block_hash.unwrap()));
     let some_starknet_block_hash = eth_provider.to_starknet_block_id(some_block_hash).await.unwrap();
 
+    // When: Convert block tag identifier to StarkNet block identifier
     let pending_block_tag = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Pending);
     let pending_block_tag_starknet = eth_provider.to_starknet_block_id(pending_block_tag).await.unwrap();
 
+    // When: Attempt to convert an unknown block number identifier to StarkNet block identifier
     let unknown_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(u64::MAX));
     let unknown_starknet_block_number = eth_provider.to_starknet_block_id(unknown_block_number).await;
 
-    // Then
-    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(BLOCK_NUMBER));
+    // Then: Ensure the converted StarkNet block identifiers match the expected values
+    assert_eq!(
+        pending_starknet_block_id,
+        starknet::core::types::BlockId::Number(transaction.block_number.unwrap().to::<u64>())
+    );
     assert_eq!(
         some_starknet_block_hash,
-        starknet::core::types::BlockId::Hash(FieldElement::from_bytes_be(&BLOCK_HASH.0).unwrap())
+        starknet::core::types::BlockId::Hash(
+            FieldElement::from_bytes_be(
+                &U256::from_be_slice(transaction.block_hash.unwrap().as_slice())
+                    .wrapping_rem(STARKNET_MODULUS)
+                    .to_be_bytes()
+            )
+            .unwrap()
+        )
     );
     assert_eq!(pending_block_tag_starknet, starknet::core::types::BlockId::Tag(BlockTag::Pending));
     assert!(unknown_starknet_block_number.is_err());
