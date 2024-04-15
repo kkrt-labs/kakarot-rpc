@@ -110,21 +110,17 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
                 .into_iter()
                 .map(|tx| {
                     let signature = tx.signature.ok_or(EthereumDataFormatError::PrimitiveError)?;
-                    let tx_signed = TransactionSigned::from_transaction_and_signature(
+                    Ok(TransactionSigned::from_transaction_and_signature(
                         rpc_transaction_to_primitive(tx)?,
                         reth_primitives::Signature {
                             r: signature.r,
                             s: signature.s,
                             odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
                         },
-                    );
-                    Ok(tx_signed)
+                    ))
                 })
                 .collect(),
-            reth_rpc_types::BlockTransactions::Hashes(_transaction_hashes) => {
-                return Err(EthereumDataFormatError::PrimitiveError);
-            }
-            reth_rpc_types::BlockTransactions::Uncle => {
+            reth_rpc_types::BlockTransactions::Hashes(_) | reth_rpc_types::BlockTransactions::Uncle => {
                 return Err(EthereumDataFormatError::PrimitiveError);
             }
         };
