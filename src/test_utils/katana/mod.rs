@@ -175,7 +175,7 @@ impl<'a> Katana {
         self.mock_data.get(&CollectionDB::Headers).and_then(|headers| {
             headers.iter().find_map(|data| {
                 data.extract_stored_header()
-                    .and_then(|stored_header| Some(stored_header.header.clone()))
+                    .map(|stored_header| stored_header.header.clone())
                     .filter(|header| header.hash == Some(hash))
             })
         })
