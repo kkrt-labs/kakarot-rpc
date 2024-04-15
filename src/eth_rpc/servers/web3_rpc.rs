@@ -20,7 +20,6 @@ impl Web3ApiServer for Web3Rpc {
     }
 
     fn sha3(&self, input: Bytes) -> Result<B256> {
-        let hash = keccak256(input);
-        Ok(hash)
+        Ok(keccak256(input))
     }
 }

@@ -4,9 +4,7 @@ use async_trait::async_trait;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
 use ethers_solc::artifacts::CompactContractBytecode;
-use reth_primitives::{
-    sign_message, Address, Bytes, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256,
-};
+use reth_primitives::{sign_message, Address, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256};
 use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -109,8 +107,6 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
                 chain_id: chain_id.try_into()?,
                 nonce,
                 gas_limit: TX_GAS_LIMIT,
-                to: TransactionKind::Create,
-                value: U256::ZERO,
                 ..Default::default()
             })
         } else {
@@ -170,8 +166,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         args: T,
         value: u128,
     ) -> Result<FieldElement, eyre::Error> {
-        let nonce = self.nonce().await?;
-        let nonce: u64 = nonce.try_into()?;
+        let nonce: u64 = self.nonce().await?.try_into()?;
         let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
 
         let tx = contract.prepare_call_transaction(function, args, nonce, value, chain_id.try_into()?)?;
@@ -190,28 +185,18 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
     /// Transfers value to the given address
     /// The transaction is signed and sent by the EOA
-    ///
-    /// allow(dead_code) is used because this function is used in tests,
-    /// and each test is compiled separately, so the compiler thinks this function is unused
     pub async fn transfer(&self, to: Address, value: u128) -> Result<B256, eyre::Error> {
-        let nonce = self.nonce().await?;
-        let nonce: u64 = nonce.try_into()?;
-
         let tx = Transaction::Eip1559(TxEip1559 {
             chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().try_into()?,
-            nonce,
-            max_priority_fee_per_gas: Default::default(),
-            max_fee_per_gas: Default::default(),
+            nonce: self.nonce().await?.try_into()?,
             gas_limit: TX_GAS_LIMIT,
             to: TransactionKind::Call(to),
             value: U256::from(value),
-            input: Bytes::default(),
-            access_list: Default::default(),
+            ..Default::default()
         });
 
         let tx_signed = self.sign_transaction(tx)?;
-        let tx_hash = self.send_transaction(tx_signed).await?;
 
-        Ok(tx_hash)
+        self.send_transaction(tx_signed).await
     }
 }
