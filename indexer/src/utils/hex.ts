@@ -2,6 +2,8 @@
 import { bigIntToHex, bytesToHex } from "../deps.ts";
 import { PrefixedHexString, stripHexPrefix } from "../deps.ts";
 
+export const NULL_BLOCK_HASH = padString("0x", 32);
+
 /**
  * @param hex - A decimal string.
  */
@@ -20,7 +22,7 @@ export function padString(
   hex: PrefixedHexString | undefined,
   length: number,
 ): PrefixedHexString {
-  return "0x" + (stripHexPrefix(hex ?? "0x").padStart(2 * length, "0"));
+  return "0x" + stripHexPrefix(hex ?? "0x").padStart(2 * length, "0");
 }
 
 /**
@@ -31,8 +33,7 @@ export function padBigint(
   b: bigint | undefined,
   length: number,
 ): PrefixedHexString {
-  return "0x" +
-    (stripHexPrefix(bigIntToHex(b ?? 0n)).padStart(2 * length, "0"));
+  return "0x" + stripHexPrefix(bigIntToHex(b ?? 0n)).padStart(2 * length, "0");
 }
 
 /**

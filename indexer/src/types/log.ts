@@ -1,5 +1,5 @@
 // Utils
-import { padBigint } from "../utils/hex.ts";
+import { NULL_BLOCK_HASH, padBigint } from "../utils/hex.ts";
 
 // Starknet
 import { Event, hash } from "../deps.ts";
@@ -83,7 +83,7 @@ export function toEthLog({
     logIndex: null,
     transactionIndex: bigIntToHex(BigInt(transaction.transactionIndex ?? 0)),
     transactionHash: transaction.hash,
-    blockHash: isPendingBlock ? null : blockHash,
+    blockHash: isPendingBlock ? NULL_BLOCK_HASH : blockHash,
     blockNumber,
     address,
     data: `0x${paddedData}`,

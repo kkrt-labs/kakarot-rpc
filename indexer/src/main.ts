@@ -1,5 +1,5 @@
 // Utils
-import { padString, toHexString } from "./utils/hex.ts";
+import { NULL_BLOCK_HASH, padString, toHexString } from "./utils/hex.ts";
 
 // Types
 import { toEthTx, toTypedEthTx } from "./types/transaction.ts";
@@ -94,8 +94,6 @@ const isKakarotTransaction = (transaction: Transaction) => {
   }
   return true;
 };
-
-const NULL_BLOCK_HASH = padString("0x", 32);
 
 export default async function transform({
   header,
