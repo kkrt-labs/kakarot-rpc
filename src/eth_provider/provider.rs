@@ -154,7 +154,7 @@ where
         let block = match block_id {
             BlockId::Hash(hash) => BlockHashOrNumber::Hash((*hash).into()),
             BlockId::Number(number_or_tag) => {
-                BlockHashOrNumber::Number(self.tag_into_block_number(*number_or_tag).await?.to::<u64>())
+                BlockHashOrNumber::Number(self.tag_into_block_number(*number_or_tag).await?.to())
             }
         };
 

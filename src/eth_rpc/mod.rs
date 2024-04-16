@@ -76,10 +76,7 @@ pub async fn run_server(
         .build(socket_addr.parse::<SocketAddr>()?)
         .await?;
 
-    let addr = server.local_addr()?;
-    let handle = server.start(kakarot_rpc_module);
-
-    Ok((addr, handle))
+    Ok((server.local_addr()?, server.start(kakarot_rpc_module)))
 }
 
 fn get_env_or_default(name: &str, default: &str) -> String {
