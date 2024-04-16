@@ -1,5 +1,5 @@
 // Utils
-import { padString, toHexString } from "./utils/hex.ts";
+import { NULL_BLOCK_HASH, padString, toHexString } from "./utils/hex.ts";
 
 // Types
 import { toEthTx, toTypedEthTx } from "./types/transaction.ts";
@@ -95,8 +95,6 @@ const isKakarotTransaction = (transaction: Transaction) => {
   return true;
 };
 
-const NULL_BLOCK_HASH = padString("0x", 32);
-
 export default async function transform({
   header,
   events,
@@ -120,6 +118,10 @@ export default async function transform({
     (events ?? []).map(async ({ transaction, receipt, event }) => {
       // Can be false if the transaction is not related to a specific instance of the Kakarot contract.
       // This is typically the case if there are multiple Kakarot contracts on the same chain.
+      console.log(
+        "🔍 Processing transaction with Starknet hash: ",
+        transaction.meta.hash,
+      );
       const isKakarotTx = isKakarotTransaction(transaction);
       if (!isKakarotTx) {
         return null;

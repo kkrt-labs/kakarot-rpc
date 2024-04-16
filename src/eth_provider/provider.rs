@@ -276,7 +276,7 @@ where
         let mut filter = into_filter("tx.blockHash", &hash, HASH_PADDING);
         let index: usize = index.into();
 
-        filter.insert("tx.transactionIndex", format_hex(index, 64));
+        filter.insert("tx.transactionIndex", format_hex(index, U64_PADDING));
         Ok(self.database.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
@@ -289,7 +289,7 @@ where
         let mut filter = into_filter("tx.blockNumber", &block_number, U64_PADDING);
         let index: usize = index.into();
 
-        filter.insert("tx.transactionIndex", format_hex(index, 64));
+        filter.insert("tx.transactionIndex", format_hex(index, U64_PADDING));
         Ok(self.database.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
