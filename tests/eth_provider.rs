@@ -59,12 +59,13 @@ async fn test_chain_id(#[future] katana: Katana, _setup: ()) {
 async fn test_block_by_hash(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
+    let block_hash = katana.most_recent_transaction().unwrap().block_hash.unwrap();
 
     // When
-    let block = eth_provider.block_by_hash(*BLOCK_HASH, false).await.unwrap().unwrap();
+    let block = eth_provider.block_by_hash(block_hash, false).await.unwrap().unwrap();
 
     // Then
-    assert_eq!(block.header.hash, Some(*BLOCK_HASH));
+    assert_eq!(block.inner.header, katana.header_by_hash(block_hash).unwrap());
 }
 
 #[rstest]
@@ -119,6 +120,16 @@ async fn test_block_transaction_count_by_hash(#[future] katana: Katana, _setup: 
 
     // Then
     assert_eq!(count, U256::from(3));
+
+    // When
+    let count = eth_provider
+        .block_transaction_count_by_hash(katana.most_recent_transaction().unwrap().block_hash.unwrap())
+        .await
+        .unwrap()
+        .unwrap();
+
+    // Then
+    assert_eq!(count, U256::from(1));
 }
 
 #[rstest]
