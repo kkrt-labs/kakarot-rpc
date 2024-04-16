@@ -1,5 +1,5 @@
 // Utils
-import { NULL_BLOCK_HASH, padBigint, padBytes } from "../utils/hex.ts";
+import { padBigint, padBytes } from "../utils/hex.ts";
 
 // Starknet
 import { Transaction, TransactionReceipt, uint256 } from "../deps.ts";
@@ -80,7 +80,7 @@ export function toEthTx({
       : txJSON.chainId;
 
   const result: JsonRpcTx & { yParity?: string } = {
-    blockHash: isPendingBlock ? NULL_BLOCK_HASH : blockHash,
+    blockHash: isPendingBlock ? null : blockHash,
     blockNumber,
     from: transaction.getSenderAddress().toString(),
     gas: txJSON.gasLimit!,
@@ -94,7 +94,7 @@ export function toEthTx({
     input: txJSON.data!,
     nonce: txJSON.nonce!,
     to: transaction.to?.toString() ?? null,
-    transactionIndex: padBigint(BigInt(index ?? 0), 32),
+    transactionIndex: isPendingBlock ? null : padBigint(BigInt(index ?? 0), 8),
     value: txJSON.value!,
     v: txJSON.v,
     r: txJSON.r,
