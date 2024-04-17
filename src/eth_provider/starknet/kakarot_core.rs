@@ -83,29 +83,29 @@ pub fn to_starknet_transaction(
     signer: Address,
     max_fee: u64,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
-    let starknet_address = starknet_address(signer);
-
-    let nonce = FieldElement::from(transaction.nonce());
+    let sender_address = starknet_address(signer);
 
     // Step: Signature
     // Extract the signature from the Ethereum Transaction
     // and place it in the Starknet signature InvokeTransaction vector
-    let mut signature: Vec<FieldElement> = {
-        let r = split_u256(transaction.signature().r);
-        let s = split_u256(transaction.signature().s);
+    let signature: Vec<FieldElement> = {
+        let transaction_signature = transaction.signature();
+
         let mut signature = Vec::with_capacity(5);
-        signature.extend_from_slice(&r);
-        signature.extend_from_slice(&s);
+        signature.extend_from_slice(&split_u256(transaction_signature.r));
+        signature.extend_from_slice(&split_u256(transaction_signature.s));
+
+        // Push the last element of the signature
+        // In case of a Legacy Transaction, it is v := {0, 1} + chain_id * 2 + 35
+        // Else, it is odd_y_parity
+        if let Transaction::Legacy(_) = transaction.transaction {
+            signature.push(transaction_signature.v(Some(chain_id)).into());
+        } else {
+            signature.push((transaction_signature.odd_y_parity as u64).into());
+        }
+
         signature
     };
-    // Push the last element of the signature
-    // In case of a Legacy Transaction, it is v := {0, 1} + chain_id * 2 + 35
-    // Else, it is odd_y_parity
-    if let Transaction::Legacy(_) = transaction.transaction {
-        signature.push(transaction.signature().v(Some(chain_id)).into());
-    } else {
-        signature.push((transaction.signature().odd_y_parity as u64).into());
-    }
 
     // Step: Calldata
     // RLP encode the transaction without the signature
@@ -115,23 +115,23 @@ pub fn to_starknet_transaction(
 
     // Prepare the calldata for the Starknet invoke transaction
     let capacity = 6 + signed_data.len();
-    let mut execute_calldata = Vec::with_capacity(capacity);
-    execute_calldata.append(&mut vec![
-        FieldElement::ONE,                     // call array length
-        *KAKAROT_ADDRESS,                      // contract address
-        *ETH_SEND_TRANSACTION,                 // selector
-        FieldElement::ZERO,                    // data offset
-        FieldElement::from(signed_data.len()), // data length
-        FieldElement::from(signed_data.len()), // calldata length
+    let mut calldata = Vec::with_capacity(capacity);
+    calldata.append(&mut vec![
+        FieldElement::ONE,        // call array length
+        *KAKAROT_ADDRESS,         // contract address
+        *ETH_SEND_TRANSACTION,    // selector
+        FieldElement::ZERO,       // data offset
+        signed_data.len().into(), // data length
+        signed_data.len().into(), // calldata length
     ]);
-    execute_calldata.append(&mut signed_data.into_iter().map(FieldElement::from).collect());
+    calldata.append(&mut signed_data.into_iter().map(Into::into).collect());
 
     Ok(BroadcastedInvokeTransaction::V1(BroadcastedInvokeTransactionV1 {
         max_fee: max_fee.into(),
         signature,
-        nonce,
-        sender_address: starknet_address,
-        calldata: execute_calldata,
+        nonce: transaction.nonce().into(),
+        sender_address,
+        calldata,
         is_query: false,
     }))
 }

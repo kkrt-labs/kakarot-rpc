@@ -78,7 +78,7 @@ async fn main() -> eyre::Result<()> {
             provider.add_invoke_transaction(starknet_tx).await?;
 
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            current_nonce += 1u8.into();
+            current_nonce += FieldElement::ONE;
         }
     }
 
