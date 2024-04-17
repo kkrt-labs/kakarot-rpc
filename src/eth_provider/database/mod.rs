@@ -11,7 +11,7 @@ use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, Document},
     options::{FindOneOptions, FindOptions, UpdateModifications, UpdateOptions},
-    Database as MongoDatabase,
+    Collection, Database as MongoDatabase,
 };
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -34,6 +34,14 @@ impl Database {
     /// Get a mutable reference to the inner MongoDatabase
     pub fn inner_mut(&mut self) -> &mut MongoDatabase {
         &mut self.0
+    }
+
+    /// Returns a collection from the database.
+    pub fn collection<T>(&self) -> Collection<T>
+    where
+        T: CollectionName,
+    {
+        self.0.collection::<T>(T::collection_name())
     }
 
     /// Get a list of documents from a collection
