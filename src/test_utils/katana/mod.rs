@@ -1,5 +1,6 @@
 pub mod genesis;
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -8,12 +9,19 @@ use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
+use mongodb::bson::doc;
+use mongodb::options::{UpdateModifications, UpdateOptions};
+use reth_primitives::U256;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::eth_provider::provider::EthDataProvider;
+use crate::eth_provider::database::types::{header::StoredHeader, transaction::StoredTransaction};
+use crate::eth_provider::utils::into_filter;
+use crate::eth_provider::{
+    constant::{HASH_PADDING, U64_PADDING},
+    provider::EthDataProvider,
+};
 use crate::test_utils::eoa::KakarotEOA;
-use std::collections::HashMap;
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
@@ -146,6 +154,69 @@ impl<'a> Katana {
     #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
+    }
+
+    // TODO: improve
+    pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, bn: u64) {
+        let provider = self.eth_provider();
+        let database = provider.database();
+
+        let block_number = format!("0x{:x}", bn);
+        let base_fee_per_gas = txs.iter().map(|tx| tx.max_fee_per_gas.unwrap_or_default()).max();
+        let padded_block_number = format!("0x{:0>width$}", &block_number[2..], width = U64_PADDING);
+
+        let tx_collection = database.inner().collection::<StoredTransaction>("transactions");
+        for tx in txs {
+            let filter = into_filter("tx.hash", &tx.hash, HASH_PADDING);
+            database
+                .update_one::<StoredTransaction>(tx.into(), filter, true)
+                .await
+                .expect("Failed to update transaction in database");
+        }
+        tx_collection
+            .update_many(
+                doc! {"tx.blockNumber": &block_number},
+                UpdateModifications::Document(doc! {"$set": {"tx.blockNumber": &padded_block_number}}),
+                UpdateOptions::builder().upsert(true).build(),
+            )
+            .await
+            .expect("Failed to update block number");
+
+        let header_collection = database.inner().collection::<StoredHeader>("headers");
+        let header = reth_rpc_types::Header {
+            number: Some(U256::from(bn)),
+            hash: Some(B256::random()),
+            parent_hash: Default::default(),
+            nonce: Default::default(),
+            logs_bloom: Default::default(),
+            transactions_root: Default::default(),
+            state_root: Default::default(),
+            receipts_root: Default::default(),
+            difficulty: Default::default(),
+            total_difficulty: Default::default(),
+            extra_data: Default::default(),
+            gas_limit: U256::MAX,
+            gas_used: Default::default(),
+            timestamp: Default::default(),
+            uncles_hash: Default::default(),
+            miner: Default::default(),
+            mix_hash: Default::default(),
+            base_fee_per_gas,
+            withdrawals_root: Default::default(),
+            excess_blob_gas: Default::default(),
+            parent_beacon_block_root: Default::default(),
+            blob_gas_used: Default::default(),
+        };
+        let filter = into_filter("header.number", &bn, U64_PADDING);
+        database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
+        header_collection
+            .update_one(
+                doc! {"header.number": block_number},
+                UpdateModifications::Document(doc! {"$set": {"header.number": padded_block_number}}),
+                UpdateOptions::builder().upsert(true).build(),
+            )
+            .await
+            .expect("Failed to update block number");
     }
 
     /// Retrieves the first stored transaction
