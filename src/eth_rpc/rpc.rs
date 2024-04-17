@@ -48,7 +48,7 @@ where
         let net_rpc_module = NetRpc::new(eth_provider.clone()).into_rpc();
         let debug_rpc_module = DebugRpc::new(eth_provider).into_rpc();
 
-        let mut modules: HashMap<KakarotRpcModule, Methods> = HashMap::new();
+        let mut modules = HashMap::new();
 
         modules.insert(KakarotRpcModule::Eth, eth_rpc_module.into());
         modules.insert(KakarotRpcModule::Alchemy, alchemy_rpc_module.into());
