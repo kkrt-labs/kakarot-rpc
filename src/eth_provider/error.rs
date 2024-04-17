@@ -217,7 +217,7 @@ pub enum TransactionError {
     #[error("expected full transactions")]
     ExpectedFullTransactions,
     /// Thrown if the tracing fails
-    #[error(transparent)]
+    #[error("tracing error: {0}")]
     TracingError(Box<dyn std::error::Error + Send + Sync>),
 }
 

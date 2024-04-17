@@ -1,4 +1,4 @@
-use super::transaction::rpc_transaction_to_primitive;
+use super::transaction::rpc_to_primitive_transaction;
 use crate::eth_provider::constant::STARKNET_MODULUS;
 use crate::{eth_provider::error::EthereumDataFormatError, into_via_try_wrapper};
 use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals, U256};
@@ -110,7 +110,7 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
                 .map(|tx| {
                     let signature = tx.signature.ok_or(EthereumDataFormatError::PrimitiveError)?;
                     Ok(TransactionSigned::from_transaction_and_signature(
-                        rpc_transaction_to_primitive(tx)?,
+                        rpc_to_primitive_transaction(tx)?,
                         reth_primitives::Signature {
                             r: signature.r,
                             s: signature.s,
@@ -244,7 +244,7 @@ mod tests {
             primitive_block.body,
             vec![
                 TransactionSigned::from_transaction_and_signature(
-                    rpc_transaction_to_primitive(base_rpc_transaction()).unwrap(),
+                    rpc_to_primitive_transaction(base_rpc_transaction()).unwrap(),
                     reth_primitives::Signature {
                         r: base_rpc_transaction().signature.unwrap().r,
                         s: base_rpc_transaction().signature.unwrap().s,
@@ -252,7 +252,7 @@ mod tests {
                     },
                 ),
                 TransactionSigned::from_transaction_and_signature(
-                    rpc_transaction_to_primitive(base_rpc_transaction()).unwrap(),
+                    rpc_to_primitive_transaction(base_rpc_transaction()).unwrap(),
                     reth_primitives::Signature {
                         r: base_rpc_transaction().signature.unwrap().r,
                         s: base_rpc_transaction().signature.unwrap().s,
@@ -260,7 +260,7 @@ mod tests {
                     },
                 ),
                 TransactionSigned::from_transaction_and_signature(
-                    rpc_transaction_to_primitive(base_rpc_transaction()).unwrap(),
+                    rpc_to_primitive_transaction(base_rpc_transaction()).unwrap(),
                     reth_primitives::Signature {
                         r: base_rpc_transaction().signature.unwrap().r,
                         s: base_rpc_transaction().signature.unwrap().s,

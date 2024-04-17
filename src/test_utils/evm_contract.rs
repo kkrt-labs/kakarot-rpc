@@ -56,6 +56,7 @@ pub trait EvmContract {
         }))
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn prepare_call_transaction<T: Tokenize>(
         &self,
         selector: &str,
@@ -63,6 +64,8 @@ pub trait EvmContract {
         nonce: u64,
         value: u128,
         chain_id: u64,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: u128,
     ) -> Result<Transaction, eyre::Error>;
 }
 
@@ -91,6 +94,8 @@ impl EvmContract for KakarotEvmContract {
         nonce: u64,
         value: u128,
         chain_id: u64,
+        max_fee_per_gas: u128,
+        max_priority_fee_per_gas: u128,
     ) -> Result<Transaction, eyre::Error> {
         let abi = self.bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
         let params = args.into_tokens();
@@ -105,6 +110,8 @@ impl EvmContract for KakarotEvmContract {
             to: TransactionKind::Call(evm_address.try_into()?),
             value: U256::from(value),
             input: data.into(),
+            max_fee_per_gas,
+            max_priority_fee_per_gas,
             ..Default::default()
         }))
     }
