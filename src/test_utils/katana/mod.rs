@@ -160,9 +160,7 @@ impl<'a> Katana {
         let Header { number, .. } = header;
         let block_number = number.expect("Failed to get block number").to::<u64>();
 
-        let unpadded_block_number = format_hex(block_number, 0);
-        let padded_block_number = format_hex(block_number, U64_PADDING);
-
+        // Add the transactions to the database.
         let tx_collection = database.collection::<StoredTransaction>();
         for tx in txs {
             let filter = into_filter("tx.hash", &tx.hash, HASH_PADDING);
@@ -171,6 +169,14 @@ impl<'a> Katana {
                 .await
                 .expect("Failed to update transaction in database");
         }
+
+        // We use the unpadded block number to filter the transactions in the database and
+        // the padded block number to update the block number in the database.
+        let unpadded_block_number = format_hex(block_number, 0);
+        let padded_block_number = format_hex(block_number, U64_PADDING);
+
+        // The transactions get added in the database with the unpadded block number (due to U256 serialization using `human_readable`).
+        // We need to update the block number to the padded version.
         tx_collection
             .update_many(
                 doc! {"tx.blockNumber": &unpadded_block_number},
@@ -180,6 +186,8 @@ impl<'a> Katana {
             .await
             .expect("Failed to update block number");
 
+        // Same issue as the transactions, we need to update the block number to the padded version once added
+        // to the database.
         let header_collection = database.collection::<StoredHeader>();
         let filter = into_filter("header.number", &block_number, U64_PADDING);
         database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
