@@ -7,24 +7,55 @@ use kakarot_rpc::test_utils::evm_contract::{
 use kakarot_rpc::test_utils::fixtures::{plain_opcodes, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use reth_primitives::{U256, U8};
+use reth_primitives::{B256, U256, U8};
 use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
 use reth_rpc_types::Signature;
 use rstest::*;
 use serde_json::{json, Value};
+use starknet::core::types::MaybePendingBlockWithTxHashes;
+use starknet::providers::Provider;
 
-const TRACING_BLOCK_NUMBER: u64 = 0x2;
-const TRANSACTIONS_COUNT: usize = 2;
+const TRACING_BLOCK_NUMBER: u64 = 0x3;
+const TRANSACTIONS_COUNT: usize = 5;
+
+fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> reth_rpc_types::Header {
+    reth_rpc_types::Header {
+        number: Some(U256::from(block_number)),
+        hash: Some(hash),
+        parent_hash,
+        nonce: Default::default(),
+        logs_bloom: Default::default(),
+        transactions_root: Default::default(),
+        state_root: Default::default(),
+        receipts_root: Default::default(),
+        difficulty: Default::default(),
+        total_difficulty: Default::default(),
+        extra_data: Default::default(),
+        gas_limit: U256::MAX,
+        gas_used: Default::default(),
+        timestamp: Default::default(),
+        uncles_hash: Default::default(),
+        miner: Default::default(),
+        mix_hash: Default::default(),
+        base_fee_per_gas: Some(U256::from(base_fee)),
+        withdrawals_root: Default::default(),
+        excess_blob_gas: Default::default(),
+        parent_beacon_block_root: Default::default(),
+        blob_gas_used: Default::default(),
+    }
+}
 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Setup the Kakarot RPC server.
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // Get the EOA address, nonce, and chain id.
     let eoa = katana.eoa();
     let eoa_address = eoa.evm_address().expect("Failed to get eoa address");
     let nonce: u64 = eoa.nonce().await.expect("Failed to get nonce").to();
@@ -73,8 +104,27 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
         };
         txs.push(tx);
     }
-    katana.add_transactions_with_header_to_database(txs, TRACING_BLOCK_NUMBER).await;
 
+    // Add a block header pointing to a parent hash header in the database for these transactions.
+    // This is required since tracing will start on the previous block.
+    let maybe_parent_block = katana
+        .eth_provider()
+        .starknet_provider()
+        .get_block_with_tx_hashes(starknet::core::types::BlockId::Number(TRACING_BLOCK_NUMBER - 1))
+        .await
+        .expect("Failed to get block");
+    let parent_block_hash = match maybe_parent_block {
+        MaybePendingBlockWithTxHashes::PendingBlock(_) => panic!("Pending block found"),
+        MaybePendingBlockWithTxHashes::Block(block) => block.block_hash,
+    };
+    let parent_block_hash = B256::from_slice(&parent_block_hash.to_bytes_be()[..]);
+
+    let parent_header = header(TRACING_BLOCK_NUMBER - 1, parent_block_hash, B256::random(), max_fee_per_gas);
+    let header = header(TRACING_BLOCK_NUMBER, B256::random(), parent_block_hash, max_fee_per_gas);
+    katana.add_transactions_with_header_to_database(vec![], parent_header).await;
+    katana.add_transactions_with_header_to_database(txs, header).await;
+
+    // Send the trace_block RPC request.
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -99,6 +149,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
         serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
 
     assert!(traces.is_some());
-
+    // We expect 3 traces per transaction: CALL, CREATE, and CALL.
+    assert!(traces.unwrap().len() == TRANSACTIONS_COUNT * 3);
     drop(server_handle);
 }

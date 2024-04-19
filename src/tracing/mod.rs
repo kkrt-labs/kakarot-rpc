@@ -2,15 +2,15 @@ mod database;
 
 use crate::{
     eth_provider::{
-        error::{EthApiError, SignatureError, TransactionError},
+        error::{EthApiError, EthereumDataFormatError, TransactionError},
         provider::EthereumProvider,
     },
-    models::transaction::rpc_to_primitive_transaction,
+    models::transaction::rpc_to_ec_recovered_transaction,
 };
 use reth_primitives::{
     revm::env::tx_env_with_recovered,
     revm_primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, SpecId},
-    Signature, TransactionSigned, B256, U256,
+    B256,
 };
 use reth_revm::tracing::{TracingInspector, TracingInspectorConfig};
 use reth_revm::{primitives::HandlerCfg, DatabaseCommit};
@@ -36,7 +36,6 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     }
 
     pub async fn trace_block(&self, block_id: BlockId) -> TracerResult<Option<Vec<LocalizedTransactionTrace>>> {
-        // TODO: split the function in smaller batches.
         let maybe_block = match block_id {
             BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.block_hash, true).await?,
             BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
@@ -51,26 +50,14 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             return Err(EthApiError::UnknownBlock);
         }
 
-        let Header { number, timestamp, gas_limit, miner, base_fee_per_gas, difficulty, .. } = block.header;
+        // DB should use the state of the parent block
+        let parent_block_hash = block.header.parent_hash;
+        let db = database::EthDatabaseSnapshot::new(self.eth_provider.clone(), BlockId::Hash(parent_block_hash.into()));
 
-        // TODO: should block env be the previous block?
-        let block_env = BlockEnv {
-            number: number.unwrap_or_default().to(),
-            timestamp,
-            gas_limit,
-            coinbase: miner,
-            basefee: base_fee_per_gas.unwrap_or_default(),
-            difficulty: U256::ZERO,
-            prevrandao: Some(B256::from_slice(&difficulty.to_be_bytes::<32>()[..])),
-            ..Default::default()
-        };
-        let mut env = self.env.clone();
-        env.block = block_env;
+        let env = Box::new(self.setup_env(block.header.clone()).await);
+        let ctx = reth_revm::Context::new(reth_revm::EvmContext::new_with_env(db, env.clone()), self.inspector.clone());
 
-        let db = database::EthDatabaseSnapshot::new(self.eth_provider.clone(), block_id);
-        let ctx = reth_revm::Context::new(reth_revm::EvmContext::new_with_env(db, env.into()), self.inspector.clone());
-
-        let env = EnvWithHandlerCfg::new(self.env.clone().into(), HandlerCfg::new(SpecId::CANCUN));
+        let env = EnvWithHandlerCfg::new(env, HandlerCfg::new(SpecId::CANCUN));
         let mut handler = reth_revm::Handler::new(env.handler_cfg);
         handler.append_handler_register_plain(reth_revm::inspector_handle_register);
         let mut evm = reth_revm::Evm::new(ctx, handler);
@@ -84,38 +71,35 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             let mut traces = Vec::with_capacity(block.transactions.len());
 
             while let Some(tx) = transactions.next() {
-                // Recover the transaction
-                let transaction = rpc_to_primitive_transaction(tx.clone())?;
-                let signature = tx.signature.ok_or(SignatureError::MissingSignature)?;
-                let tx_signed = TransactionSigned::from_transaction_and_signature(
-                    transaction,
-                    Signature {
-                        r: signature.r,
-                        s: signature.s,
-                        odd_y_parity: signature.y_parity.ok_or(SignatureError::RecoveryError)?.0,
-                    },
-                );
-                let tx_ec_recovered = tx_signed.try_into_ecrecovered().map_err(|_| SignatureError::RecoveryError)?;
+                // Convert the transaction to an ec recovered transaction and update the evm env with it
+                let tx_ec_recovered = rpc_to_ec_recovered_transaction(tx.clone())?;
                 let tx_env = tx_env_with_recovered(&tx_ec_recovered);
-                // Update the transaction environment
                 evm = evm.modify().modify_tx_env(|env| *env = tx_env).build();
 
                 // Transact the transaction
-                let result = evm.transact().map_err(|err| TransactionError::TracingError(err.into()))?;
+                let result = evm.transact().map_err(|err| TransactionError::Tracing(err.into()))?;
 
-                // Accumulate the traces
-                // TODO: it looks like for now the traces get accumulated in the context, which causes subsequent
-                // transactions to be added as subtraces of the previous ones. This is not the desired behavior.
+                // Convert the traces to a parity trace and accumulate them
                 let parity_builder = evm.context.external.clone().into_parity_builder();
+
+                // Extract the base fee from the transaction based on the transaction type
+                let base_fee = match tx.transaction_type.map(|typ| typ.to::<u8>()) {
+                    Some(0) | Some(1) => tx.gas_price,
+                    Some(2) => tx
+                        .max_fee_per_gas
+                        .map(|fee| fee.saturating_sub(tx.max_priority_fee_per_gas.unwrap_or_default())),
+                    _ => return Err(EthereumDataFormatError::TransactionConversionError.into()),
+                }
+                .map(|fee| fee.try_into())
+                .transpose()
+                .map_err(|_| EthereumDataFormatError::PrimitiveError)?;
+
                 let transaction_info = TransactionInfo {
                     hash: Some(tx.hash),
                     index: tx.transaction_index.map(|i| i.to()),
                     block_hash: tx.block_hash,
                     block_number: tx.block_number.map(|bn| bn.to()),
-                    // TODO: only for EIP1559 transactions?
-                    base_fee: tx
-                        .max_fee_per_gas
-                        .map(|fee| (fee - tx.max_priority_fee_per_gas.unwrap_or_default()).to()),
+                    base_fee,
                 };
                 traces.extend(parity_builder.into_localized_transaction_traces(transaction_info));
 
@@ -123,11 +107,31 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 if transactions.peek().is_some() {
                     evm.context.evm.inner.db.commit(result.state);
                 }
+
+                // Update the evm env with a new inspector
+                evm = evm.modify().modify_external_context(|insp| *insp = self.inspector.clone()).build();
             }
 
             Result::<_, EthApiError>::Ok(traces)
         })?;
 
         Ok(Some(traces))
+    }
+
+    async fn setup_env(&self, block_header: Header) -> Env {
+        let mut env = self.env.clone();
+
+        let Header { number, timestamp, gas_limit, miner, base_fee_per_gas, difficulty, .. } = block_header;
+        let block_env = BlockEnv {
+            number: number.unwrap_or_default(),
+            timestamp,
+            gas_limit,
+            coinbase: miner,
+            basefee: base_fee_per_gas.unwrap_or_default(),
+            prevrandao: Some(B256::from_slice(&difficulty.to_be_bytes::<32>()[..])),
+            ..Default::default()
+        };
+        env.block = block_env;
+        env
     }
 }
