@@ -125,7 +125,7 @@ pub fn to_starknet_transaction(
 
     // Check if call data is too large
     if capacity > *MAX_FELTS_IN_CALLDATA {
-        return Err(EthApiError::TooLargCallData);
+        return Err(EthApiError::TooLargeCallData);
     }
 
     let mut calldata = Vec::with_capacity(capacity);
@@ -169,14 +169,14 @@ mod tests {
         // Attempt to convert the transaction into a Starknet transaction
         match to_starknet_transaction(&transaction, 1, transaction.recover_signer().unwrap(), 100000000) {
             // If the result is an error indicating the call data is too large
-            Err(EthApiError::TooLargCallData) => {
+            Err(EthApiError::TooLargeCallData) => {
                 // Print a message indicating that the call data is too large
                 println!("Calldata too large error confirmed");
             }
             // If the result is any other error or a successful result
             _ => {
                 // Panic with a message indicating that an error indicating too large call data was expected
-                panic!("Expected error EthApiError::TooLargCallData");
+                panic!("Expected error EthApiError::TooLargeCallData");
             }
         }
     }
