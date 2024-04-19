@@ -1,8 +1,8 @@
-use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals};
-use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
-
 use super::transaction::rpc_transaction_to_primitive;
+use crate::eth_provider::constant::STARKNET_MODULUS;
 use crate::{eth_provider::error::EthereumDataFormatError, into_via_try_wrapper};
+use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals, U256};
+use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
 #[derive(Debug)]
 pub struct EthBlockId(EthereumBlockId);
@@ -17,7 +17,12 @@ impl TryFrom<EthBlockId> for StarknetBlockId {
     type Error = EthereumDataFormatError;
     fn try_from(eth_block_id: EthBlockId) -> Result<Self, Self::Error> {
         match eth_block_id.0 {
-            EthereumBlockId::Hash(hash) => Ok(Self::Hash(into_via_try_wrapper!(hash.block_hash)?)),
+            // TODO: the conversion currently relies on a modulo operation to ensure compatibility with the StarkNet modulus.
+            // A revisit of this line is suggested when hash values are calculated as specified in the Ethereum specification.error
+            EthereumBlockId::Hash(hash) => Ok(Self::Hash(into_via_try_wrapper!(U256::from_be_slice(
+                hash.block_hash.as_slice()
+            )
+            .wrapping_rem(STARKNET_MODULUS))?)),
             EthereumBlockId::Number(block_number_or_tag) => {
                 let block_number_or_tag: EthBlockNumberOrTag = block_number_or_tag.into();
                 Ok(block_number_or_tag.into())
@@ -49,8 +54,7 @@ impl From<EthBlockNumberOrTag> for BlockNumberOrTag {
 
 impl From<EthBlockNumberOrTag> for StarknetBlockId {
     fn from(block_number_or_tag: EthBlockNumberOrTag) -> Self {
-        let block_number_or_tag = block_number_or_tag.into();
-        match block_number_or_tag {
+        match block_number_or_tag.into() {
             BlockNumberOrTag::Latest | BlockNumberOrTag::Pending => {
                 // We set to pending because in Starknet, a pending block is an unsealed block,
                 // With a centralized sequencer, the latest block is the pending block being filled.
@@ -105,21 +109,17 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
                 .into_iter()
                 .map(|tx| {
                     let signature = tx.signature.ok_or(EthereumDataFormatError::PrimitiveError)?;
-                    let tx_signed = TransactionSigned::from_transaction_and_signature(
+                    Ok(TransactionSigned::from_transaction_and_signature(
                         rpc_transaction_to_primitive(tx)?,
                         reth_primitives::Signature {
                             r: signature.r,
                             s: signature.s,
                             odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
                         },
-                    );
-                    Ok(tx_signed)
+                    ))
                 })
                 .collect(),
-            reth_rpc_types::BlockTransactions::Hashes(_transaction_hashes) => {
-                return Err(EthereumDataFormatError::PrimitiveError);
-            }
-            reth_rpc_types::BlockTransactions::Uncle => {
+            reth_rpc_types::BlockTransactions::Hashes(_) | reth_rpc_types::BlockTransactions::Uncle => {
                 return Err(EthereumDataFormatError::PrimitiveError);
             }
         };

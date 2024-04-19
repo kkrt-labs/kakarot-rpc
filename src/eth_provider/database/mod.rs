@@ -11,7 +11,7 @@ use futures::TryStreamExt;
 use mongodb::{
     bson::{doc, Document},
     options::{FindOneOptions, FindOptions, UpdateModifications, UpdateOptions},
-    Database as MongoDatabase,
+    Collection, Database as MongoDatabase,
 };
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -36,6 +36,14 @@ impl Database {
         &mut self.0
     }
 
+    /// Returns a collection from the database.
+    pub fn collection<T>(&self) -> Collection<T>
+    where
+        T: CollectionName,
+    {
+        self.0.collection::<T>(T::collection_name())
+    }
+
     /// Get a list of documents from a collection
     pub async fn get<T>(
         &self,
@@ -46,10 +54,7 @@ impl Database {
         T: DeserializeOwned + CollectionName,
     {
         let find_options = FindOptions::builder().projection(project).build();
-        let collection_name = T::collection_name();
-        let collection = self.0.collection::<T>(collection_name);
-        let result = collection.find(filter, find_options).await?.try_collect().await?;
-        Ok(result)
+        Ok(self.collection::<T>().find(filter, find_options).await?.try_collect().await?)
     }
 
     /// Get a single document from a collection
@@ -62,10 +67,7 @@ impl Database {
         T: DeserializeOwned + Unpin + Send + Sync + CollectionName,
     {
         let find_one_option = FindOneOptions::builder().sort(sort).build();
-        let collection_name = T::collection_name();
-        let collection = self.0.collection::<T>(collection_name);
-        let result = collection.find_one(filter, find_one_option).await?;
-        Ok(result)
+        Ok(self.collection::<T>().find_one(filter, find_one_option).await?)
     }
 
     /// Get a single document from aggregated collections
@@ -73,8 +75,7 @@ impl Database {
     where
         T: DeserializeOwned + CollectionName,
     {
-        let collection = self.0.collection::<T>(T::collection_name());
-        let mut cursor = collection.aggregate(pipeline, None).await?;
+        let mut cursor = self.collection::<T>().aggregate(pipeline, None).await?;
 
         Ok(cursor.try_next().await?.map(|doc| mongodb::bson::de::from_document(doc)).transpose()?)
     }
@@ -84,11 +85,9 @@ impl Database {
     where
         T: Serialize + CollectionName,
     {
-        let collection_name = T::collection_name();
         let doc = mongodb::bson::to_document(&doc).map_err(mongodb::error::Error::custom)?;
 
-        self.0
-            .collection::<T>(collection_name)
+        self.collection::<T>()
             .update_one(
                 filter.into(),
                 UpdateModifications::Document(doc! {"$set": doc}),
@@ -104,10 +103,7 @@ impl Database {
     where
         T: CollectionName,
     {
-        let collection_name = T::collection_name();
-        let collection = self.0.collection::<Document>(collection_name);
-        let count = collection.count_documents(filter, None).await?;
-        Ok(count)
+        Ok(self.collection::<T>().count_documents(filter, None).await?)
     }
 }
 

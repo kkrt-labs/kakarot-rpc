@@ -51,8 +51,6 @@ FROM python:3.10.13 as compiler
 # install poetry
 ENV POETRY_VERSION=1.7.1
 ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin"
-ARG GITHUB_TOKEN
-ENV GITHUB_TOKEN=$GITHUB_TOKEN
 
 RUN curl -sSL https://install.python-poetry.org | python3 -
 RUN poetry config virtualenvs.create false

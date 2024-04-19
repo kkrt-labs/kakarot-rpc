@@ -154,7 +154,7 @@ where
         let block = match block_id {
             BlockId::Hash(hash) => BlockHashOrNumber::Hash((*hash).into()),
             BlockId::Number(number_or_tag) => {
-                BlockHashOrNumber::Number(self.tag_into_block_number(*number_or_tag).await?.to::<u64>())
+                BlockHashOrNumber::Number(self.tag_into_block_number(*number_or_tag).await?.to())
             }
         };
 
@@ -276,7 +276,7 @@ where
         let mut filter = into_filter("tx.blockHash", &hash, HASH_PADDING);
         let index: usize = index.into();
 
-        filter.insert("tx.transactionIndex", format_hex(index, 64));
+        filter.insert("tx.transactionIndex", format_hex(index, U64_PADDING));
         Ok(self.database.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
@@ -289,7 +289,7 @@ where
         let mut filter = into_filter("tx.blockNumber", &block_number, U64_PADDING);
         let index: usize = index.into();
 
-        filter.insert("tx.transactionIndex", format_hex(index, 64));
+        filter.insert("tx.transactionIndex", format_hex(index, U64_PADDING));
         Ok(self.database.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
@@ -451,7 +451,7 @@ where
                 .insert("log.address", doc! {"$in": adds.into_iter().map(|a| format_hex(a, 40)).collect::<Vec<_>>()})
         });
 
-        let logs: Vec<StoredLog> = self.database.get(database_filter, None).await?;
+        let logs = self.database.get::<StoredLog>(database_filter, None).await?;
         Ok(FilterChanges::Logs(logs.into_iter().map_into().collect()))
     }
 
@@ -504,7 +504,7 @@ where
                 };
                 gas_used / gas_limit
             })
-            .collect::<Vec<_>>();
+            .collect();
 
         let mut base_fee_per_gas =
             blocks.iter().map(|header| header.header.base_fee_per_gas.unwrap_or_default()).collect::<Vec<_>>();
@@ -617,20 +617,17 @@ where
         &self,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        let block_id = match block_id {
+        let block_id = match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
             BlockId::Number(maybe_number) => {
                 BlockHashOrNumber::Number(self.tag_into_block_number(maybe_number).await?.to())
             }
             BlockId::Hash(hash) => BlockHashOrNumber::Hash(hash.block_hash),
         };
-        let block_exists = self.block_exists(block_id).await?;
-        if !block_exists {
+        if !self.block_exists(block_id).await? {
             return Ok(None);
         }
 
-        let transactions = self.transactions(block_id, true).await?;
-        match transactions {
+        match self.transactions(block_id, true).await? {
             BlockTransactions::Full(transactions) => Ok(Some(transactions)),
             _ => Err(TransactionError::ExpectedFullTransactions.into()),
         }

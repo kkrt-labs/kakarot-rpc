@@ -50,7 +50,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             let block = rpc_to_primitive_block(block.inner).map_err(EthApiError::from)?;
             block.encode(&mut raw_block);
         }
-        Ok(Bytes::from(raw_block))
+        Ok(raw_block.into())
     }
 
     /// Returns a EIP-2718 binary-encoded transaction.

@@ -1,5 +1,5 @@
 // Utils
-import { padBytes } from "../utils/hex.ts";
+import { NULL_BLOCK_HASH, padBytes } from "../utils/hex.ts";
 
 // Types
 import { fromJsonRpcLog, JsonRpcLog } from "./log.ts";
@@ -68,7 +68,7 @@ export function toEthReceipt({
   return {
     transactionHash: transaction.hash,
     transactionIndex: bigIntToHex(BigInt(transaction.transactionIndex ?? 0)),
-    blockHash: isPendingBlock ? null : blockHash,
+    blockHash: isPendingBlock ? NULL_BLOCK_HASH : blockHash,
     blockNumber,
     from: transaction.from,
     to: transaction.to,
