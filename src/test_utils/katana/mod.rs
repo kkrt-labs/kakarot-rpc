@@ -11,7 +11,6 @@ use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use mongodb::bson::doc;
 use mongodb::options::{UpdateModifications, UpdateOptions};
-use reth_primitives::U256;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
@@ -155,12 +154,13 @@ impl<'a> Katana {
     }
 
     /// Adds transactions to the database along with a corresponding header.
-    pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, block_number: u64) {
+    pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, header: Header) {
         let provider = self.eth_provider();
         let database = provider.database();
+        let Header { number, .. } = header;
+        let block_number = number.expect("Failed to get block number").to::<u64>();
 
         let unpadded_block_number = format_hex(block_number, 0);
-        let base_fee_per_gas = txs.iter().map(|tx| tx.max_fee_per_gas.unwrap_or_default()).max();
         let padded_block_number = format_hex(block_number, U64_PADDING);
 
         let tx_collection = database.collection::<StoredTransaction>();
@@ -181,30 +181,6 @@ impl<'a> Katana {
             .expect("Failed to update block number");
 
         let header_collection = database.collection::<StoredHeader>();
-        let header = reth_rpc_types::Header {
-            number: Some(U256::from(block_number)),
-            hash: Some(B256::random()),
-            parent_hash: Default::default(),
-            nonce: Default::default(),
-            logs_bloom: Default::default(),
-            transactions_root: Default::default(),
-            state_root: Default::default(),
-            receipts_root: Default::default(),
-            difficulty: Default::default(),
-            total_difficulty: Default::default(),
-            extra_data: Default::default(),
-            gas_limit: U256::MAX,
-            gas_used: Default::default(),
-            timestamp: Default::default(),
-            uncles_hash: Default::default(),
-            miner: Default::default(),
-            mix_hash: Default::default(),
-            base_fee_per_gas,
-            withdrawals_root: Default::default(),
-            excess_blob_gas: Default::default(),
-            parent_beacon_block_root: Default::default(),
-            blob_gas_used: Default::default(),
-        };
         let filter = into_filter("header.number", &block_number, U64_PADDING);
         database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
         header_collection
