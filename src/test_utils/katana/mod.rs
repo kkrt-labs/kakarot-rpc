@@ -16,7 +16,7 @@ use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
 use crate::eth_provider::database::types::{header::StoredHeader, transaction::StoredTransaction};
-use crate::eth_provider::utils::into_filter;
+use crate::eth_provider::utils::{format_hex, into_filter};
 use crate::eth_provider::{
     constant::{HASH_PADDING, U64_PADDING},
     provider::EthDataProvider,
@@ -149,23 +149,21 @@ impl<'a> Katana {
         self.eoa.clone()
     }
 
-    /// allow(dead_code) is used because this function is used in tests,
-    /// and each test is compiled separately, so the compiler thinks this function is unused
     #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
     }
 
-    // TODO: improve
-    pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, bn: u64) {
+    /// Adds transactions to the database along with a corresponding header.
+    pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, block_number: u64) {
         let provider = self.eth_provider();
         let database = provider.database();
 
-        let block_number = format!("0x{:x}", bn);
+        let unpadded_block_number = format_hex(block_number, 0);
         let base_fee_per_gas = txs.iter().map(|tx| tx.max_fee_per_gas.unwrap_or_default()).max();
-        let padded_block_number = format!("0x{:0>width$}", &block_number[2..], width = U64_PADDING);
+        let padded_block_number = format_hex(block_number, U64_PADDING);
 
-        let tx_collection = database.inner().collection::<StoredTransaction>("transactions");
+        let tx_collection = database.collection::<StoredTransaction>();
         for tx in txs {
             let filter = into_filter("tx.hash", &tx.hash, HASH_PADDING);
             database
@@ -175,16 +173,16 @@ impl<'a> Katana {
         }
         tx_collection
             .update_many(
-                doc! {"tx.blockNumber": &block_number},
+                doc! {"tx.blockNumber": &unpadded_block_number},
                 UpdateModifications::Document(doc! {"$set": {"tx.blockNumber": &padded_block_number}}),
                 UpdateOptions::builder().upsert(true).build(),
             )
             .await
             .expect("Failed to update block number");
 
-        let header_collection = database.inner().collection::<StoredHeader>("headers");
+        let header_collection = database.collection::<StoredHeader>();
         let header = reth_rpc_types::Header {
-            number: Some(U256::from(bn)),
+            number: Some(U256::from(block_number)),
             hash: Some(B256::random()),
             parent_hash: Default::default(),
             nonce: Default::default(),
@@ -207,11 +205,11 @@ impl<'a> Katana {
             parent_beacon_block_root: Default::default(),
             blob_gas_used: Default::default(),
         };
-        let filter = into_filter("header.number", &bn, U64_PADDING);
+        let filter = into_filter("header.number", &block_number, U64_PADDING);
         database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
         header_collection
             .update_one(
-                doc! {"header.number": block_number},
+                doc! {"header.number": unpadded_block_number},
                 UpdateModifications::Document(doc! {"$set": {"header.number": padded_block_number}}),
                 UpdateOptions::builder().upsert(true).build(),
             )

@@ -13,8 +13,9 @@ use starknet_crypto::FieldElement;
 use crate::eth_provider::provider::{EthDataProvider, EthereumProvider};
 use crate::eth_provider::starknet::kakarot_core::starknet_address;
 use crate::models::felt::Felt252Wrapper;
-use crate::test_utils::evm_contract::EvmContract;
-use crate::test_utils::evm_contract::KakarotEvmContract;
+use crate::test_utils::evm_contract::{
+    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
+};
 use crate::test_utils::tx_waiter::watch_tx;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
@@ -115,8 +116,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             <KakarotEvmContract as EvmContract>::prepare_create_transaction(
                 &bytecode,
                 constructor_args,
-                nonce,
-                chain_id.try_into()?,
+                &TxCommonInfo { nonce, chain_id: chain_id.try_into()?, ..Default::default() },
             )?
         };
         let tx_signed = self.sign_transaction(tx)?;
@@ -165,9 +165,16 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         value: u128,
     ) -> Result<Transaction, eyre::Error> {
         let nonce: u64 = self.nonce().await?.try_into()?;
-        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
+        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default().to();
 
-        let tx = contract.prepare_call_transaction(function, args, nonce, value, chain_id.try_into()?, 0, 0)?;
+        let tx = contract.prepare_call_transaction(
+            function,
+            args,
+            &TransactionInfo::FeeMarketInfo(TxFeeMarketInfo {
+                common: TxCommonInfo { chain_id, nonce, value },
+                ..Default::default()
+            }),
+        )?;
         let tx_signed = self.sign_transaction(tx.clone())?;
         let tx_hash = self.send_transaction(tx_signed).await?;
 

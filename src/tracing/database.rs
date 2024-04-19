@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::eth_provider::{error::EthApiError, provider::EthereumProvider};
+use crate::eth_provider::{
+    error::{EthApiError, EthereumDataFormatError},
+    provider::EthereumProvider,
+};
 use reth_primitives::{Address, B256, U256};
 use reth_revm::{
     db::{AccountState, CacheDB, DbAccount},
@@ -46,10 +49,7 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
     }
 
     fn code_by_hash(&mut self, code_hash: B256) -> Result<Bytecode, Self::Error> {
-        if let Some(bytecode) = self.cache.contracts.get(&code_hash) {
-            return Ok(bytecode.clone());
-        }
-        Ok(Bytecode::default())
+        Ok(self.cache.contracts.get(&code_hash).cloned().unwrap_or_default())
     }
 
     fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
@@ -79,10 +79,11 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
             return Ok(*hash);
         }
 
+        let block_number = number.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?;
         let hash = Handle::current().block_on(async {
             let hash = cache
                 .db
-                .block_by_number(BlockNumberOrTag::Number(number.to()), false)
+                .block_by_number(BlockNumberOrTag::Number(block_number), false)
                 .await?
                 .ok_or(EthApiError::UnknownBlock)?
                 .header
