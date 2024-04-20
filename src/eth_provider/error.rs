@@ -67,22 +67,21 @@ impl std::fmt::Debug for EthApiError {
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
         let msg = format!("{:?}", value);
-        match value {
-            EthApiError::UnknownBlock => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
-            EthApiError::UnknownBlockNumber => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
-            EthApiError::InvalidBlockRange => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::TransactionError(err) => rpc_err(err.into(), msg),
-            EthApiError::SignatureError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::Unsupported(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
-            EthApiError::EthereumDataFormatError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::KakarotError(err) => rpc_err(err.into(), msg),
-        }
+        ErrorObject::owned(
+            match value {
+                EthApiError::UnknownBlock => EthRpcErrorCode::ResourceNotFound,
+                EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
+                EthApiError::InvalidBlockRange
+                | EthApiError::SignatureError(_)
+                | EthApiError::EthereumDataFormatError(_) => EthRpcErrorCode::InvalidParams,
+                EthApiError::TransactionError(err) => err.into(),
+                EthApiError::Unsupported(_) => EthRpcErrorCode::InternalError,
+                EthApiError::KakarotError(err) => err.into(),
+            } as i32,
+            msg,
+            None::<()>,
+        )
     }
-}
-
-/// Constructs a JSON-RPC error object, consisting of `code` and `message`.
-pub fn rpc_err(code: EthRpcErrorCode, msg: impl Into<String>) -> jsonrpsee::types::error::ErrorObject<'static> {
-    jsonrpsee::types::error::ErrorObject::owned(code as i32, msg.into(), None::<()>)
 }
 
 /// Error related to the Kakarot eth provider
