@@ -342,7 +342,7 @@ dependencies = [
  "dashmap",
  "futures",
  "lru 0.12.2",
- "reqwest",
+ "reqwest 0.11.27",
  "serde_json",
  "tokio",
  "tracing",
@@ -380,7 +380,7 @@ dependencies = [
  "alloy-transport-http",
  "futures",
  "pin-project",
- "reqwest",
+ "reqwest 0.11.27",
  "serde",
  "serde_json",
  "tokio",
@@ -591,7 +591,7 @@ source = "git+https://github.com/alloy-rs/alloy?rev=98e9012c95a12d67b012dfee6f0d
 dependencies = [
  "alloy-json-rpc",
  "alloy-transport",
- "reqwest",
+ "reqwest 0.11.27",
  "serde_json",
  "tower",
  "url",
@@ -4080,7 +4080,7 @@ version = "0.6.1-alpha.3"
 source = "git+https://github.com/dojoengine/dojo?tag=v0.6.1-alpha.3#a2412b3258a978d6a22aff67843d17f10619a00b"
 dependencies = [
  "anyhow",
- "hyper",
+ "hyper 0.14.28",
  "jemalloc-ctl",
  "jemallocator",
  "metrics",
@@ -4698,7 +4698,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "reqwest 0.11.27",
  "serde",
  "serde_json",
  "syn 2.0.58",
@@ -4781,22 +4780,6 @@ dependencies = [
  "thiserror",
  "tiny-keccak",
  "unicode-xid",
-]
-
-[[package]]
-name = "ethers-etherscan"
-version = "2.0.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16d45b981f5fa769e1d0343ebc2a44cfa88c9bc312eb681b676318b40cef6fb1"
-dependencies = [
- "chrono",
- "ethers-core 2.0.13",
- "reqwest 0.11.27",
- "semver 1.0.21",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
 ]
 
 [[package]]
@@ -7764,7 +7747,7 @@ dependencies = [
  "metrics",
  "parking_lot 0.12.1",
  "rand 0.8.5",
- "reqwest",
+ "reqwest 0.11.27",
  "serde",
  "serde_json",
  "serde_with 2.3.3",
@@ -14025,26 +14008,6 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
-
-[[package]]
-name = "tungstenite"
-version = "0.20.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e3dac10fd62eaf6617d3a904ae222845979aec67c615d1c842b4002c7666fb9"
-dependencies = [
- "byteorder",
- "bytes",
- "data-encoding",
- "http 0.2.11",
- "httparse",
- "log",
- "rand 0.8.5",
- "rustls",
- "sha1",
- "thiserror",
- "url",
- "utf-8",
-]
 
 [[package]]
 name = "typed-builder"
