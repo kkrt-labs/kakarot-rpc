@@ -79,6 +79,7 @@ impl std::fmt::Debug for EthApiError {
     }
 }
 
+/// Constructs a JSON-RPC error object, consisting of `code` and `message`.
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
         let msg = format!("{:?}", value);
