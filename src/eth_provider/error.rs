@@ -52,8 +52,8 @@ pub enum EthApiError {
     #[error("kakarot error: {0}")]
     KakarotError(KakarotError),
     /// Error related to transaction calldata being too large.
-    #[error("too large calldata")]
-    TooLargeCallData,
+    #[error("calldata exceeded limit of {0}: {1}")]
+    CalldataExceededLimit(u64, u64),
 }
 
 impl std::fmt::Debug for EthApiError {
