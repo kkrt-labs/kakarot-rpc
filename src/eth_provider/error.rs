@@ -24,6 +24,21 @@ pub enum EthRpcErrorCode {
     JsonRpcVersionUnsupported = -32006,
 }
 
+impl From<EthApiError> for EthRpcErrorCode {
+    fn from(error: EthApiError) -> Self {
+        match error {
+            EthApiError::UnknownBlock => EthRpcErrorCode::ResourceNotFound,
+            EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
+            EthApiError::InvalidBlockRange | EthApiError::Signature(_) | EthApiError::EthereumDataFormat(_) => {
+                EthRpcErrorCode::InvalidParams
+            }
+            EthApiError::Transaction(err) => err.into(),
+            EthApiError::Unsupported(_) => EthRpcErrorCode::InternalError,
+            EthApiError::Kakarot(err) => err.into(),
+        }
+    }
+}
+
 /// Error that can occur when interacting with the ETH Api.
 #[derive(Error)]
 pub enum EthApiError {
@@ -38,25 +53,25 @@ pub enum EthApiError {
     InvalidBlockRange,
     /// Error related to transaction
     #[error("transaction error: {0}")]
-    TransactionError(#[from] TransactionError),
+    Transaction(#[from] TransactionError),
     /// Error related to signing
     #[error("signature error: {0}")]
-    SignatureError(#[from] SignatureError),
+    Signature(#[from] SignatureError),
     /// Unsupported feature
     #[error("unsupported: {0}")]
     Unsupported(&'static str),
     /// Ethereum data format error
     #[error("ethereum data format error: {0}")]
-    EthereumDataFormatError(#[from] EthereumDataFormatError),
+    EthereumDataFormat(#[from] EthereumDataFormatError),
     /// Other Kakarot error
     #[error("kakarot error: {0}")]
-    KakarotError(KakarotError),
+    Kakarot(KakarotError),
 }
 
 impl std::fmt::Debug for EthApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::KakarotError(KakarotError::ProviderError(err)) => {
+            Self::Kakarot(KakarotError::ProviderError(err)) => {
                 write!(f, "starknet provider error: {:?}", err)
             }
             _ => write!(f, "{}", self),
@@ -67,20 +82,7 @@ impl std::fmt::Debug for EthApiError {
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
         let msg = format!("{:?}", value);
-        ErrorObject::owned(
-            match value {
-                EthApiError::UnknownBlock => EthRpcErrorCode::ResourceNotFound,
-                EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
-                EthApiError::InvalidBlockRange
-                | EthApiError::SignatureError(_)
-                | EthApiError::EthereumDataFormatError(_) => EthRpcErrorCode::InvalidParams,
-                EthApiError::TransactionError(err) => err.into(),
-                EthApiError::Unsupported(_) => EthRpcErrorCode::InternalError,
-                EthApiError::KakarotError(err) => err.into(),
-            } as i32,
-            msg,
-            None::<()>,
-        )
+        ErrorObject::owned(EthRpcErrorCode::from(value) as i32, msg, None::<()>)
     }
 }
 
@@ -108,7 +110,7 @@ pub enum KakarotError {
 
 impl From<KakarotError> for EthApiError {
     fn from(value: KakarotError) -> Self {
-        EthApiError::KakarotError(value)
+        EthApiError::Kakarot(value)
     }
 }
 
