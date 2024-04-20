@@ -30,7 +30,7 @@ run-dev: load-env
 
 ### Kakarot tests and local development:
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.1-alpha.0 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.1-alpha.3 katana
 
 katana-genesis: install-katana
 	rm -fr .katana/ && mkdir .katana
