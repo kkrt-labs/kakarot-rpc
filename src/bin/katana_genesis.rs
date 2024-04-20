@@ -1,8 +1,8 @@
 use dotenvy::dotenv;
-use ethers::types::U256;
 use kakarot_rpc::test_utils::katana::genesis::KatanaGenesisBuilder;
 use lazy_static::lazy_static;
 use reth_primitives::B256;
+use reth_primitives::U256;
 use starknet_crypto::FieldElement;
 use std::{
     env::var,

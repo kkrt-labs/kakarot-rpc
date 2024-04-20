@@ -35,6 +35,8 @@ fn load_genesis() -> Genesis {
 /// If `with_dumped_state` is true, the config will be initialized with the dumped state.
 pub fn katana_config() -> StarknetConfig {
     let max_steps = std::u32::MAX;
+    let mut genesis = load_genesis();
+    genesis.gas_prices = GasPrices { eth: 1, strk: 0 };
     StarknetConfig {
         disable_fee: true,
         env: Environment {
@@ -42,9 +44,8 @@ pub fn katana_config() -> StarknetConfig {
             chain_id: ChainId::parse("kaka_test").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
-            gas_price: GasPrices { eth: 1, strk: 0 },
         },
-        genesis: load_genesis(),
+        genesis,
         ..Default::default()
     }
 }

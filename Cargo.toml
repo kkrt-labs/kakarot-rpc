@@ -3,13 +3,13 @@ name = "kakarot-rpc"
 version = "0.1.0"
 edition = "2021"
 authors = [
-  "Abdelhamid Bakhta <@abdelhamidbakhta>",
-  "Elias Tazartes <@eikix>",
-  "Clement Walter <@clementwalter>",
-  "Gregory Edison <@greged93>",
-  "Johann Bestowrous <@jobez>",
-  "Harsh Bajpai <@bajpai244>",
-  "Danilo Kim <@danilowhk>",
+    "Abdelhamid Bakhta <@abdelhamidbakhta>",
+    "Elias Tazartes <@eikix>",
+    "Clement Walter <@clementwalter>",
+    "Gregory Edison <@greged93>",
+    "Johann Bestowrous <@jobez>",
+    "Harsh Bajpai <@bajpai244>",
+    "Danilo Kim <@danilowhk>",
 ]
 description = "RPC node for the Kakarot zk EVM"
 homepage = "https://github.com/kkrt-labs"
@@ -85,11 +85,11 @@ use_self = "allow"
 [dependencies]
 # Starknet dependencies
 cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5", default-features = false, features = [
-  "abigen-rs",
+    "abigen-rs",
 ] }
 cairo-lang-starknet = { version = "2.5.4", default-features = false }
 ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "6189392", default-features = false, features = [
-  "v0",
+    "v0",
 ], optional = true }
 starknet = { version = "0.9.0", default-features = false }
 starknet-crypto = { version = "0.6.1", default-features = false }
@@ -101,7 +101,7 @@ ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false, features = [
-  "arbitrary",
+    "arbitrary",
 ] }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
@@ -128,7 +128,7 @@ itertools = { version = "0.12.1", default-features = false }
 lazy_static = { version = "1.4.0", default-features = false }
 log = { version = "0.4.21", default-features = false }
 mongodb = { version = "2.8.2", default-features = false, features = [
-  "tokio-runtime",
+    "tokio-runtime",
 ] }
 rayon = { version = "1.10.0", default-features = false, optional = true }
 reqwest = { version = "0.12.3", default-features = false }
@@ -138,7 +138,7 @@ testcontainers = { version = "0.15.0", default-features = false, optional = true
 thiserror = { version = "1.0.58", default-features = false }
 tokio = { version = "1.37.0", features = ["macros"] }
 tokio-util = { version = "0.7.10", features = [
-  "codec",
+    "codec",
 ], default-features = false, optional = true }
 tokio-stream = { version = "0.1.15", default-features = false, optional = true }
 tower = { version = "0.4.13", default-features = false }
@@ -160,12 +160,12 @@ pin-project-lite = { version = "0.2", default-features = false }
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.6", default-features = false }
-katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.6", features = [
-  "messaging",
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.3", default-features = false }
+katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.3", features = [
+    "messaging",
 ] }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.6", default-features = false, features = [
-  "serde",
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.3", default-features = false, features = [
+    "serde",
 ] }
 arbitrary = { version = "1", features = ["derive"] }
 
@@ -179,18 +179,34 @@ cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381"
 # we need v0.7.0-rc.0 to be compatible with dojo.
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api.git", tag = "v0.7.0-rc.0" }
 
+alloy-sol-macro = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-primitives = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-sol-types = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-json-abi = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-dyn-abi = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+syn-solidity = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "98e9012c95a12d67b012dfee6f0d928797426e79" }
+
 [dev-dependencies]
 rstest = { version = "0.19.0", default-features = false }
 toml = { version = "0.8.12", default-features = false }
 
 [features]
+default = ["rand"]
 testing = [
-  "testcontainers",
-  "rayon",
-  "ef-testing",
-  "tokio-util",
-  "tokio-stream",
-  "rand",
+    "testcontainers",
+    "rayon",
+    "ef-testing",
+    "tokio-util",
+    "tokio-stream",
+    "rand",
 ]
 hive = []
 arbitrary = ["rand"]

@@ -3,11 +3,10 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 
+use alloy_primitives::U256;
 use ethers::signers::LocalWallet;
 use ethers::signers::Signer;
-use ethers::types::U256;
 use eyre::{eyre, OptionExt, Result};
-use katana_primitives::block::GasPrices;
 use katana_primitives::contract::{StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
@@ -100,7 +99,7 @@ impl<T> KatanaGenesisBuilder<T> {
 
     pub fn with_dev_allocation(mut self, amount: u16) -> Self {
         let dev_allocations = DevAllocationsGenerator::new(amount)
-            .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+            .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
             .with_seed(parse_seed("0"))
             .generate()
             .into_iter()
@@ -318,24 +317,18 @@ impl KatanaGenesisBuilder<Initialized> {
     /// Consume the [KatanaGenesisBuilder] and returns the corresponding [GenesisJson].
     pub fn build(self) -> Result<GenesisJson> {
         Ok(GenesisJson {
-            parent_hash: FieldElement::ZERO,
-            state_root: FieldElement::ZERO,
-            number: 0,
-            timestamp: 0,
             sequencer_address: self.compute_starknet_address(self.coinbase)?,
-            gas_prices: GasPrices::default(),
             classes: self.classes,
             fee_token: FeeTokenConfigJson {
                 name: "Ether".to_string(),
                 symbol: "ETH".to_string(),
                 decimals: 18,
                 storage: Some(self.fee_token_storage),
-                address: None,
-                class: None,
+                ..Default::default()
             },
-            universal_deployer: None,
             accounts: self.accounts,
             contracts: self.contracts,
+            ..Default::default()
         })
     }
 
