@@ -68,7 +68,7 @@ impl Database {
     ) -> DatabaseResult<Vec<D>>
     where
         T: DeserializeOwned + CollectionName,
-        D: DeserializeOwned + From<T>,
+        D: From<T>,
     {
         let stored_data: Vec<T> = self.get(filter, project).await?;
         Ok(stored_data.into_iter().map_into().collect())
