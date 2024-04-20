@@ -23,7 +23,7 @@ services:
       --cn-core-contract-address 0x9DAd05893305352cDd142F79e36bc39393F23770
       --cn-unverifiable-range 0,1000000
     networks:
-      - internal
+      - internal_prod
   starknet-explorer:
     image: public.ecr.aws/o5q6k5w4/stark_compass_explorer:latest
     ports:
@@ -31,9 +31,9 @@ services:
     environment:
       - PHX_HOST=localhost
       - PORT=4000
-      - RPC_API_HOST=http://host.docker.internal:6060
-      - TESTNET_RPC_API_HOST=http://host.docker.internal:6060
-      - SEPOLIA_RPC_API_HOST=http://host.docker.internal:6060
+      - RPC_API_HOST=http://host.docker.internal_prod:6060
+      - TESTNET_RPC_API_HOST=http://host.docker.internal_prod:6060
+      - SEPOLIA_RPC_API_HOST=http://host.docker.internal_prod:6060
       - DISABLE_MAINNET_SYNC=true
       - DISABLE_SEPOLIA_SYNC=true
       - DATABASE_PATH=ecto://postgres:postgres@starknet-explorer-db:5432/starknet_explorer_dev
@@ -46,9 +46,9 @@ services:
       starknet:
         condition: service_started
     extra_hosts:
-      - host.docker.internal:172.17.0.1
+      - host.docker.internal_prod:172.17.0.1
     networks:
-      - internal
+      - internal_prod
 
   starknet-explorer-db:
     image: postgres:15.3
@@ -87,7 +87,7 @@ services:
       starknet:
         condition: service_started
     networks:
-      - internal
+      - internal_prod
 
   apibara-dna:
     extends:
@@ -108,7 +108,7 @@ services:
     volumes:
       - mongo_data_prod:/data/db
     networks:
-      - internal
+      - internal_prod
     environment:
       MONGO_INITDB_ROOT_USERNAME: mongo
       MONGO_INITDB_ROOT_PASSWORD: mongo
@@ -136,13 +136,13 @@ services:
     volumes:
       - indexer_code:/indexer
     networks:
-      - internal
+      - internal_prod
     depends_on:
       starknet:
         condition: service_started
 
 networks:
-  internal:
+  internal_prod:
     driver: bridge
   default:
     driver: bridge
@@ -150,9 +150,9 @@ networks:
     driver: bridge
 
 volumes:
-  apibara:
+  apibara_prod:
   mongo_data_prod:
-  indexer_code:
-  pgadmin_data:
-  juno_files:
-  starknet-explorer:
+  indexer_code_prod:
+  pgadmin_data_prod:
+  juno_files_prod:
+  starknet-explorer_prod:
