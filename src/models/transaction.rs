@@ -108,7 +108,7 @@ pub fn rpc_to_ec_recovered_transaction(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reth_primitives::{Address, Bytes, B256, U256, U8};
+    use reth_primitives::{Address, Bytes, U256, U8};
     use reth_rpc_types::AccessListItem as RpcAccessListItem;
     use std::str::FromStr;
 
@@ -120,19 +120,12 @@ mod tests {
         fn new() -> Self {
             Self {
                 tx: reth_rpc_types::Transaction {
-                    hash: B256::default(),
                     nonce: 1,
-                    block_hash: None,
-                    block_number: None,
-                    transaction_index: None,
                     from: Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
                     to: Some(Address::from_str("0x0000000000000000000000000000000000000002").unwrap()),
                     value: U256::from(100),
                     gas_price: Some(U256::from(20)),
                     gas: U256::from(21000),
-                    max_fee_per_gas: None,
-                    max_priority_fee_per_gas: None,
-                    max_fee_per_blob_gas: None,
                     input: Bytes::from("1234"),
                     signature: Some(reth_rpc_types::Signature {
                         r: U256::from(1),
@@ -141,16 +134,14 @@ mod tests {
                         y_parity: Some(reth_rpc_types::Parity(true)),
                     }),
                     chain_id: Some(1),
-                    blob_versioned_hashes: Some(vec![]),
-                    access_list: None,
                     transaction_type: Some(U8::from(0)),
-                    other: serde_json::from_str("{}").unwrap(),
+                    ..Default::default()
                 },
             }
         }
 
-        fn with_transaction_type(mut self, tx_type: u8) -> Self {
-            self.tx.transaction_type = Some(U8::from(tx_type));
+        fn with_transaction_type(mut self, tx_type: TxType) -> Self {
+            self.tx.transaction_type = Some(U8::from(tx_type as u8));
             self
         }
 
@@ -175,17 +166,17 @@ mod tests {
 
     // Helper to create a legacy transaction
     fn legacy_rpc_transaction() -> reth_rpc_types::Transaction {
-        RpcTxBuilder::new().with_transaction_type(0).build()
+        RpcTxBuilder::new().with_transaction_type(TxType::Legacy).build()
     }
 
     // Helper to create an EIP-2930 transaction
     fn eip2930_rpc_transaction() -> reth_rpc_types::Transaction {
-        RpcTxBuilder::new().with_transaction_type(1).with_access_list().build()
+        RpcTxBuilder::new().with_transaction_type(TxType::Eip2930).with_access_list().build()
     }
 
     // Helper to create an EIP-1559 transaction
     fn eip1559_rpc_transaction() -> reth_rpc_types::Transaction {
-        RpcTxBuilder::new().with_transaction_type(2).with_access_list().with_fee_market().build()
+        RpcTxBuilder::new().with_transaction_type(TxType::Eip1559).with_access_list().with_fee_market().build()
     }
 
     macro_rules! assert_common_fields {

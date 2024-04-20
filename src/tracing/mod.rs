@@ -10,7 +10,7 @@ use crate::{
 use reth_primitives::{
     revm::env::tx_env_with_recovered,
     revm_primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, SpecId},
-    B256,
+    TxType, B256,
 };
 use reth_revm::tracing::{TracingInspector, TracingInspectorConfig};
 use reth_revm::{primitives::HandlerCfg, DatabaseCommit};
@@ -83,9 +83,9 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 let parity_builder = evm.context.external.clone().into_parity_builder();
 
                 // Extract the base fee from the transaction based on the transaction type
-                let base_fee = match tx.transaction_type.map(|typ| typ.to::<u8>()) {
-                    Some(0) | Some(1) => tx.gas_price,
-                    Some(2) => tx
+                let base_fee = match tx.transaction_type.and_then(|typ| typ.to::<u8>().try_into().ok()) {
+                    Some(TxType::Legacy) | Some(TxType::Eip2930) => tx.gas_price,
+                    Some(TxType::Eip1559) => tx
                         .max_fee_per_gas
                         .map(|fee| fee.saturating_sub(tx.max_priority_fee_per_gas.unwrap_or_default())),
                     _ => return Err(EthereumDataFormatError::TransactionConversionError.into()),

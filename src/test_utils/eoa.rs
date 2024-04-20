@@ -164,7 +164,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         args: T,
         value: u128,
     ) -> Result<Transaction, eyre::Error> {
-        let nonce: u64 = self.nonce().await?.try_into()?;
+        let nonce = self.nonce().await?.try_into()?;
         let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default().to();
 
         let tx = contract.prepare_call_transaction(
