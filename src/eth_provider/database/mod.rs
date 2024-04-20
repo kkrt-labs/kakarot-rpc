@@ -8,6 +8,7 @@ use crate::eth_provider::database::types::{
     transaction::{StoredPendingTransaction, StoredTransaction, StoredTransactionHash},
 };
 use futures::TryStreamExt;
+use itertools::Itertools;
 use mongodb::{
     bson::{doc, Document},
     options::{FindOneOptions, FindOptions, UpdateModifications, UpdateOptions},
@@ -55,6 +56,22 @@ impl Database {
     {
         let find_options = FindOptions::builder().projection(project).build();
         Ok(self.collection::<T>().find(filter, find_options).await?.try_collect().await?)
+    }
+
+    /// Retrieves documents from a collection and converts them into another type.
+    ///
+    /// Returns a vector of documents of type `D` if successful, or an error.
+    pub async fn get_and_map_to<D, T>(
+        &self,
+        filter: impl Into<Option<Document>>,
+        project: impl Into<Option<Document>>,
+    ) -> DatabaseResult<Vec<D>>
+    where
+        T: DeserializeOwned + CollectionName,
+        D: DeserializeOwned + From<T>,
+    {
+        let stored_data: Vec<T> = self.get(filter, project).await?;
+        Ok(stored_data.into_iter().map_into().collect())
     }
 
     /// Get a single document from a collection

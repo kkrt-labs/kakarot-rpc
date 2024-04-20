@@ -36,9 +36,7 @@ use super::starknet::kakarot_core::{
     KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{
-    contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator,
-};
+use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, try_from_u8_iterator};
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
@@ -805,11 +803,15 @@ where
         };
 
         let block_transactions = if full {
-            BlockTransactions::Full(iter_into(self.database.get::<StoredTransaction>(transactions_filter, None).await?))
+            BlockTransactions::Full(
+                self.database.get_and_map_to::<_, StoredTransaction>(transactions_filter, None).await?,
+            )
         } else {
-            BlockTransactions::Hashes(iter_into(
-                self.database.get::<StoredTransactionHash>(transactions_filter, doc! {"tx.hash": 1}).await?,
-            ))
+            BlockTransactions::Hashes(
+                self.database
+                    .get_and_map_to::<_, StoredTransactionHash>(transactions_filter, doc! {"tx.hash": 1})
+                    .await?,
+            )
         };
 
         Ok(block_transactions)
