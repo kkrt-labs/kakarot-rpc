@@ -73,10 +73,11 @@ export function toEthTx({
   }
   // If the transaction is a legacy, we can calculate it from the v value.
   // v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
-  const chainId = isLegacyTx(transaction) &&
-      transaction.supports(Capability.EIP155ReplayProtection)
-    ? bigIntToHex((BigInt(txJSON.v) - 35n) / 2n)
-    : txJSON.chainId;
+  const chainId =
+    isLegacyTx(transaction) &&
+    transaction.supports(Capability.EIP155ReplayProtection)
+      ? bigIntToHex((BigInt(txJSON.v) - 35n) / 2n)
+      : txJSON.chainId;
 
   const result: JsonRpcTx & { yParity?: string } = {
     blockHash: isPendingBlock ? null : blockHash,
@@ -93,7 +94,7 @@ export function toEthTx({
     input: txJSON.data!,
     nonce: txJSON.nonce!,
     to: transaction.to?.toString() ?? null,
-    transactionIndex: isPendingBlock ? null : padBigint(BigInt(index ?? 0), 32),
+    transactionIndex: isPendingBlock ? null : padBigint(BigInt(index ?? 0), 8),
     value: txJSON.value!,
     v: txJSON.v,
     r: txJSON.r,
@@ -166,6 +167,7 @@ export function toTypedEthTx({
       throw e;
     }
     // TODO: Ping alert webhooks
+    console.error(e);
     return null;
   }
 }

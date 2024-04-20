@@ -311,7 +311,7 @@ If you which to run our hive test suite locally, the following steps should be t
 - Build a local docker image of the RPC:
 
   ```shell
-  docker build --build-arg APIBARA_STARKNET_BIN_DIR=f7va4mjqww1kkpp4il6y295dgcwq147v --build-arg APIBARA_SINK_BIN_DIR=3iqnrcirqpg4s7zdy1wdh0dq17jwzmlc  -t hive . -f docker/hive/Dockerfile
+  docker build --build-arg APIBARA_STARKNET_BIN_DIR=f7va4mjqww1kkpp4il6y295dgcwq147v --build-arg APIBARA_SINK_BIN_DIR=5p0wgpyfsk19v8rrprnykiv5inzx8zag  -t hive . -f docker/hive/Dockerfile
   ```
 
 - Checkout the Kakarot fork of hive: `git clone https://github.com/kkrt-labs/hive`

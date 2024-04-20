@@ -19,7 +19,7 @@ use {
     super::mongo::{CollectionDB, MongoFuzzer, StoredData, DOCKER_CLI},
     dojo_test_utils::sequencer::SequencerConfig,
     reth_primitives::{TxType, B256},
-    reth_rpc_types::Transaction,
+    reth_rpc_types::{Header, Transaction},
     std::str::FromStr as _,
     testcontainers::{Container, GenericImage},
 };
@@ -166,6 +166,17 @@ impl<'a> Katana {
             })
             .and_then(|data| data.extract_stored_transaction())
             .map(|stored_tx| stored_tx.tx.clone())
+    }
+
+    /// Retrieves the stored header by hash
+    pub fn header_by_hash(&self, hash: B256) -> Option<Header> {
+        self.mock_data.get(&CollectionDB::Headers).and_then(|headers| {
+            headers.iter().find_map(|data| {
+                data.extract_stored_header()
+                    .map(|stored_header| stored_header.header.clone())
+                    .filter(|header| header.hash == Some(hash))
+            })
+        })
     }
 
     /// Retrieves the number of blocks in the database
