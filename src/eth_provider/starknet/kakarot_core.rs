@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+#[cfg(not(feature = "hive"))]
 use crate::eth_provider::error::EthApiError;
 use crate::models::felt::Felt252Wrapper;
 use alloy_rlp::Encodable;
@@ -124,6 +125,7 @@ pub fn to_starknet_transaction(
     let capacity = 6 + signed_data.len();
 
     // Check if call data is too large
+    #[cfg(not(feature = "hive"))]
     if capacity > *MAX_FELTS_IN_CALLDATA {
         return Err(EthApiError::CalldataExceededLimit(*MAX_FELTS_IN_CALLDATA as u64, capacity as u64));
     }
