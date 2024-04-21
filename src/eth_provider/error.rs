@@ -29,7 +29,7 @@ impl From<EthApiError> for EthRpcErrorCode {
         match error {
             EthApiError::UnknownBlock => EthRpcErrorCode::ResourceNotFound,
             EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
-            EthApiError::InvalidBlockRange | EthApiError::Signature(_) | EthApiError::EthereumDataFormat(_) => {
+            EthApiError::InvalidBlockRange | EthApiError::Signature(_) | EthApiError::EthereumDataFormat(_) | EthApiError::CalldataExceededLimit(_, _) => {
                 EthRpcErrorCode::InvalidParams
             }
             EthApiError::Transaction(err) => err.into(),
@@ -66,6 +66,9 @@ pub enum EthApiError {
     /// Other Kakarot error
     #[error("kakarot error: {0}")]
     Kakarot(KakarotError),
+    /// Error related to transaction calldata being too large.
+    #[error("calldata exceeded limit of {0}: {1}")]
+    CalldataExceededLimit(u64, u64),
 }
 
 impl std::fmt::Debug for EthApiError {
@@ -218,6 +221,9 @@ pub enum TransactionError {
     /// BlockTransactions::FullTransactions variant.
     #[error("expected full transactions")]
     ExpectedFullTransactions,
+    /// Thrown if the tracing fails
+    #[error("tracing error: {0}")]
+    Tracing(Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl From<TransactionError> for EthRpcErrorCode {
@@ -226,6 +232,7 @@ impl From<TransactionError> for EthRpcErrorCode {
             TransactionError::InvalidChainId => EthRpcErrorCode::InvalidInput,
             TransactionError::GasOverflow => EthRpcErrorCode::TransactionRejected,
             TransactionError::ExpectedFullTransactions => EthRpcErrorCode::InternalError,
+            TransactionError::Tracing(_) => EthRpcErrorCode::InternalError,
         }
     }
 }

@@ -5,3 +5,4 @@ pub mod models;
 pub mod prometheus_handler;
 #[cfg(feature = "testing")]
 pub mod test_utils;
+pub mod tracing;

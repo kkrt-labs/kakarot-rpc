@@ -96,6 +96,7 @@ starknet-crypto = { version = "0.6.1", default-features = false }
 starknet_api = { version = "0.7.0-dev.0", default-features = false }
 
 # Ethereum dependencies
+alloy-primitives = "0.6.4"
 alloy-rlp = { version = "0.3.4", default-features = false }
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
@@ -105,7 +106,8 @@ reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2
 ] }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
-alloy-primitives = "0.6.4"
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
+revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "0ad0338" }
 
 # Serde
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }
