@@ -22,7 +22,7 @@ lint:
     - git-diff-check
     - hadolint@2.12.0
     - markdownlint@0.39.0
-    - osv-scanner@1.7.0
+    - osv-scanner@1.7.2
     - oxipng@9.0.0
     - prettier@3.2.5
     - rustfmt@1.65.0

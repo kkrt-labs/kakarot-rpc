@@ -2,7 +2,7 @@ use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, Signature
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::models::block::rpc_to_primitive_block;
 use crate::models::block::rpc_to_primitive_header;
-use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_transaction_to_primitive};
+use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_to_primitive_transaction};
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
@@ -61,7 +61,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         if let Some(tx) = transaction {
             let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx = rpc_transaction_to_primitive(tx).map_err(EthApiError::from)?;
+            let tx = rpc_to_primitive_transaction(tx).map_err(EthApiError::from)?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
@@ -84,7 +84,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         for t in transactions {
             let signature = t.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx = rpc_transaction_to_primitive(t).map_err(EthApiError::from)?;
+            let tx = rpc_to_primitive_transaction(t).map_err(EthApiError::from)?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {

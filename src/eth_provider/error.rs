@@ -220,6 +220,9 @@ pub enum TransactionError {
     /// BlockTransactions::FullTransactions variant.
     #[error("expected full transactions")]
     ExpectedFullTransactions,
+    /// Thrown if the tracing fails
+    #[error("tracing error: {0}")]
+    Tracing(Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl From<TransactionError> for EthRpcErrorCode {
@@ -228,6 +231,7 @@ impl From<TransactionError> for EthRpcErrorCode {
             TransactionError::InvalidChainId => EthRpcErrorCode::InvalidInput,
             TransactionError::GasOverflow => EthRpcErrorCode::TransactionRejected,
             TransactionError::ExpectedFullTransactions => EthRpcErrorCode::InternalError,
+            TransactionError::Tracing(_) => EthRpcErrorCode::InternalError,
         }
     }
 }

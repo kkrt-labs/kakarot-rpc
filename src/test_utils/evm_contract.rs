@@ -4,13 +4,55 @@ use std::path::Path;
 use ethers::abi::Tokenize;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::{find_project_root_path, load_config};
-use reth_primitives::{Transaction, TransactionKind, TxEip1559, U256};
+use reth_primitives::{Transaction, TransactionKind, TxEip1559, TxLegacy, U256};
 use starknet_crypto::FieldElement;
 
 use crate::models::felt::Felt252Wrapper;
 use crate::root_project_path;
 
 use super::eoa::TX_GAS_LIMIT;
+
+#[derive(Clone, Debug)]
+pub enum TransactionInfo {
+    FeeMarketInfo(TxFeeMarketInfo),
+    LegacyInfo(TxLegacyInfo),
+}
+
+macro_rules! impl_common_info {
+    ($field: ident, $type: ty) => {
+        pub fn $field(&self) -> $type {
+            match self {
+                TransactionInfo::FeeMarketInfo(info) => info.common.$field,
+                TransactionInfo::LegacyInfo(info) => info.common.$field,
+            }
+        }
+    };
+}
+impl TransactionInfo {
+    impl_common_info!(chain_id, u64);
+    impl_common_info!(nonce, u64);
+    impl_common_info!(value, u128);
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct TxCommonInfo {
+    pub chain_id: u64,
+    pub nonce: u64,
+    pub value: u128,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct TxFeeMarketInfo {
+    pub common: TxCommonInfo,
+    pub max_fee_per_gas: u128,
+    pub max_priority_fee_per_gas: u128,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct TxLegacyInfo {
+    pub common: TxCommonInfo,
+    pub gas_price: u128,
+}
 
 pub trait EvmContract {
     fn load_contract_bytecode(contract_name: &str) -> Result<CompactContractBytecode, eyre::Error> {
@@ -28,8 +70,7 @@ pub trait EvmContract {
     fn prepare_create_transaction<T: Tokenize>(
         contract_bytecode: &CompactContractBytecode,
         constructor_args: T,
-        nonce: u64,
-        chain_id: u64,
+        tx_info: &TxCommonInfo,
     ) -> Result<Transaction, eyre::Error> {
         let abi = contract_bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
         let bytecode = contract_bytecode
@@ -48,21 +89,20 @@ pub trait EvmContract {
         };
 
         Ok(Transaction::Eip1559(TxEip1559 {
-            chain_id,
-            nonce,
+            chain_id: tx_info.chain_id,
+            nonce: tx_info.nonce,
             gas_limit: TX_GAS_LIMIT,
             input: deploy_data.into(),
             ..Default::default()
         }))
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn prepare_call_transaction<T: Tokenize>(
         &self,
         selector: &str,
         constructor_args: T,
-        nonce: u64,
-        value: u128,
-        chain_id: u64,
+        tx_info: &TransactionInfo,
     ) -> Result<Transaction, eyre::Error>;
 }
 
@@ -88,9 +128,7 @@ impl EvmContract for KakarotEvmContract {
         &self,
         selector: &str,
         args: T,
-        nonce: u64,
-        value: u128,
-        chain_id: u64,
+        tx_info: &TransactionInfo,
     ) -> Result<Transaction, eyre::Error> {
         let abi = self.bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
         let params = args.into_tokens();
@@ -98,14 +136,29 @@ impl EvmContract for KakarotEvmContract {
         let data = abi.function(selector).and_then(|function| function.encode_input(&params))?;
 
         let evm_address: Felt252Wrapper = self.evm_address.into();
-        Ok(Transaction::Eip1559(TxEip1559 {
-            chain_id,
-            nonce,
-            gas_limit: TX_GAS_LIMIT,
-            to: TransactionKind::Call(evm_address.try_into()?),
-            value: U256::from(value),
-            input: data.into(),
-            ..Default::default()
-        }))
+
+        let tx = match tx_info {
+            TransactionInfo::FeeMarketInfo(fee_market) => Transaction::Eip1559(TxEip1559 {
+                chain_id: tx_info.chain_id(),
+                nonce: tx_info.nonce(),
+                gas_limit: TX_GAS_LIMIT,
+                to: TransactionKind::Call(evm_address.try_into()?),
+                value: U256::from(tx_info.value()),
+                input: data.into(),
+                max_fee_per_gas: fee_market.max_fee_per_gas,
+                max_priority_fee_per_gas: fee_market.max_priority_fee_per_gas,
+                ..Default::default()
+            }),
+            TransactionInfo::LegacyInfo(legacy) => Transaction::Legacy(TxLegacy {
+                chain_id: Some(tx_info.chain_id()),
+                nonce: tx_info.nonce(),
+                gas_limit: TX_GAS_LIMIT,
+                to: TransactionKind::Call(evm_address.try_into()?),
+                value: U256::from(tx_info.value()),
+                input: data.into(),
+                gas_price: legacy.gas_price,
+            }),
+        };
+        Ok(tx)
     }
 }
