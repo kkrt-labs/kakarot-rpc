@@ -1,19 +1,12 @@
 use std::fmt::LowerHex;
 
 use cainome::cairo_serde::Error;
-use itertools::Itertools;
 use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
 use starknet::{
     core::types::{ContractErrorData, StarknetError},
     providers::ProviderError,
 };
-
-/// Converts an iterator of `Into<D>` into a `Vec<D>`.
-#[inline]
-pub(crate) fn iter_into<D, S: Into<D>>(iter: impl IntoIterator<Item = S>) -> Vec<D> {
-    iter.into_iter().map_into().collect()
-}
 
 /// Converts an iterator of `TryInto<u8>` into a `FromIterator<u8>`.
 #[inline]
