@@ -29,9 +29,10 @@ impl From<EthApiError> for EthRpcErrorCode {
         match error {
             EthApiError::UnknownBlock => EthRpcErrorCode::ResourceNotFound,
             EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
-            EthApiError::InvalidBlockRange | EthApiError::Signature(_) | EthApiError::EthereumDataFormat(_) | EthApiError::CalldataExceededLimit(_, _) => {
-                EthRpcErrorCode::InvalidParams
-            }
+            EthApiError::InvalidBlockRange
+            | EthApiError::Signature(_)
+            | EthApiError::EthereumDataFormat(_)
+            | EthApiError::CalldataExceededLimit(_, _) => EthRpcErrorCode::InvalidParams,
             EthApiError::Transaction(err) => err.into(),
             EthApiError::Unsupported(_) => EthRpcErrorCode::InternalError,
             EthApiError::Kakarot(err) => err.into(),
