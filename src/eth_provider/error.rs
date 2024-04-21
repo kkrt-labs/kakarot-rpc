@@ -51,6 +51,9 @@ pub enum EthApiError {
     /// Other Kakarot error
     #[error("kakarot error: {0}")]
     KakarotError(KakarotError),
+    /// Error related to transaction calldata being too large.
+    #[error("calldata exceeded limit of {0}: {1}")]
+    CalldataExceededLimit(u64, u64),
 }
 
 impl std::fmt::Debug for EthApiError {
@@ -73,6 +76,7 @@ impl From<EthApiError> for ErrorObject<'static> {
             EthApiError::InvalidBlockRange => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::TransactionError(err) => rpc_err(err.into(), msg),
             EthApiError::SignatureError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
+            EthApiError::CalldataExceededLimit(_, _) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::Unsupported(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
             EthApiError::EthereumDataFormatError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
             EthApiError::KakarotError(err) => rpc_err(err.into(), msg),

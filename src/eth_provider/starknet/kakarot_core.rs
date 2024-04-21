@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+#[cfg(not(feature = "hive"))]
+use crate::eth_provider::error::EthApiError;
 use crate::models::felt::Felt252Wrapper;
 use alloy_rlp::Encodable;
 use cainome::rs::abigen_legacy;
@@ -61,6 +63,12 @@ lazy_static! {
 
     // Contract selectors
     pub static ref ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
+
+    // Maximum number of felts (bytes) in calldata
+    pub static ref MAX_FELTS_IN_CALLDATA: usize = usize::from_str(
+        &std::env::var("MAX_FELTS_IN_CALLDATA")
+            .unwrap_or_else(|_| panic!("Missing environment variable MAX_FELTS_IN_CALLDATA"))
+    ).expect("failing to parse MAX_FELTS_IN_CALLDATA");
 }
 
 // Kakarot utils
@@ -115,6 +123,13 @@ pub fn to_starknet_transaction(
 
     // Prepare the calldata for the Starknet invoke transaction
     let capacity = 6 + signed_data.len();
+
+    // Check if call data is too large
+    #[cfg(not(feature = "hive"))]
+    if capacity > *MAX_FELTS_IN_CALLDATA {
+        return Err(EthApiError::CalldataExceededLimit(*MAX_FELTS_IN_CALLDATA as u64, capacity as u64));
+    }
+
     let mut calldata = Vec::with_capacity(capacity);
     calldata.append(&mut vec![
         FieldElement::ONE,        // call array length
@@ -134,4 +149,27 @@ pub fn to_starknet_transaction(
         calldata,
         is_query: false,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_rlp::Decodable;
+    use reth_primitives::hex;
+
+    #[test]
+    #[should_panic(expected = "calldata exceeded limit of 22500: 30032")]
+    fn to_starknet_transaction_too_large_calldata_test() {
+        // Test that an example create transaction from goerli decodes properly
+        let tx_bytes = hex!("b901f202f901ee05228459682f008459682f11830209bf8080b90195608060405234801561001057600080fd5b50610175806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80630c49c36c14610030575b600080fd5b61003861004e565b604051610045919061011d565b60405180910390f35b60606020600052600f6020527f68656c6c6f2073746174656d696e64000000000000000000000000000000000060405260406000f35b600081519050919050565b600082825260208201905092915050565b60005b838110156100be5780820151818401526020810190506100a3565b838111156100cd576000848401525b50505050565b6000601f19601f8301169050919050565b60006100ef82610084565b6100f9818561008f565b93506101098185602086016100a0565b610112816100d3565b840191505092915050565b6000602082019050818103600083015261013781846100e4565b90509291505056fea264697066735822122051449585839a4ea5ac23cae4552ef8a96b64ff59d0668f76bfac3796b2bdbb3664736f6c63430008090033c080a0136ebffaa8fc8b9fda9124de9ccb0b1f64e90fbd44251b4c4ac2501e60b104f9a07eb2999eec6d185ef57e91ed099afb0a926c5b536f0155dd67e537c7476e1471");
+
+        // Decode the transaction from the provided bytes
+        let mut transaction = TransactionSigned::decode(&mut &tx_bytes[..]).unwrap();
+
+        // Set the input of the transaction to be a vector of 30,000 zero bytes
+        transaction.transaction.set_input(vec![0; 30000].into());
+
+        // Attempt to convert the transaction into a Starknet transaction
+        to_starknet_transaction(&transaction, 1, transaction.recover_signer().unwrap(), 100000000).unwrap();
+    }
 }
