@@ -1,7 +1,7 @@
 # trunk-ignore-all(terrascan/AC_DOCKER_0047)
 
 # CairoVM Chain
-FROM ghcr.io/dojoengine/dojo:v0.6.0-alpha.6 as katana
+FROM ghcr.io/dojoengine/dojo:v0.6.0-alpha.10 as katana
 
 # Indexer service
 ### Apibara DNA indexer and indexer
