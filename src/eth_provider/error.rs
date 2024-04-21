@@ -24,6 +24,22 @@ pub enum EthRpcErrorCode {
     JsonRpcVersionUnsupported = -32006,
 }
 
+impl From<EthApiError> for EthRpcErrorCode {
+    fn from(error: EthApiError) -> Self {
+        match error {
+            EthApiError::UnknownBlock => EthRpcErrorCode::ResourceNotFound,
+            EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
+            EthApiError::InvalidBlockRange
+            | EthApiError::Signature(_)
+            | EthApiError::EthereumDataFormat(_)
+            | EthApiError::CalldataExceededLimit(_, _) => EthRpcErrorCode::InvalidParams,
+            EthApiError::Transaction(err) => err.into(),
+            EthApiError::Unsupported(_) => EthRpcErrorCode::InternalError,
+            EthApiError::Kakarot(err) => err.into(),
+        }
+    }
+}
+
 /// Error that can occur when interacting with the ETH Api.
 #[derive(Error)]
 pub enum EthApiError {
@@ -38,19 +54,19 @@ pub enum EthApiError {
     InvalidBlockRange,
     /// Error related to transaction
     #[error("transaction error: {0}")]
-    TransactionError(#[from] TransactionError),
+    Transaction(#[from] TransactionError),
     /// Error related to signing
     #[error("signature error: {0}")]
-    SignatureError(#[from] SignatureError),
+    Signature(#[from] SignatureError),
     /// Unsupported feature
     #[error("unsupported: {0}")]
     Unsupported(&'static str),
     /// Ethereum data format error
     #[error("ethereum data format error: {0}")]
-    EthereumDataFormatError(#[from] EthereumDataFormatError),
+    EthereumDataFormat(#[from] EthereumDataFormatError),
     /// Other Kakarot error
     #[error("kakarot error: {0}")]
-    KakarotError(KakarotError),
+    Kakarot(KakarotError),
     /// Error related to transaction calldata being too large.
     #[error("calldata exceeded limit of {0}: {1}")]
     CalldataExceededLimit(u64, u64),
@@ -59,7 +75,7 @@ pub enum EthApiError {
 impl std::fmt::Debug for EthApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::KakarotError(KakarotError::ProviderError(err)) => {
+            Self::Kakarot(KakarotError::ProviderError(err)) => {
                 write!(f, "starknet provider error: {:?}", err)
             }
             _ => write!(f, "{}", self),
@@ -67,26 +83,12 @@ impl std::fmt::Debug for EthApiError {
     }
 }
 
+/// Constructs a JSON-RPC error object, consisting of `code` and `message`.
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
         let msg = format!("{:?}", value);
-        match value {
-            EthApiError::UnknownBlock => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
-            EthApiError::UnknownBlockNumber => rpc_err(EthRpcErrorCode::ResourceNotFound, msg),
-            EthApiError::InvalidBlockRange => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::TransactionError(err) => rpc_err(err.into(), msg),
-            EthApiError::SignatureError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::CalldataExceededLimit(_, _) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::Unsupported(_) => rpc_err(EthRpcErrorCode::InternalError, msg),
-            EthApiError::EthereumDataFormatError(_) => rpc_err(EthRpcErrorCode::InvalidParams, msg),
-            EthApiError::KakarotError(err) => rpc_err(err.into(), msg),
-        }
+        ErrorObject::owned(EthRpcErrorCode::from(value) as i32, msg, None::<()>)
     }
-}
-
-/// Constructs a JSON-RPC error object, consisting of `code` and `message`.
-pub fn rpc_err(code: EthRpcErrorCode, msg: impl Into<String>) -> jsonrpsee::types::error::ErrorObject<'static> {
-    jsonrpsee::types::error::ErrorObject::owned(code as i32, msg.into(), None::<()>)
 }
 
 /// Error related to the Kakarot eth provider
@@ -113,7 +115,7 @@ pub enum KakarotError {
 
 impl From<KakarotError> for EthApiError {
     fn from(value: KakarotError) -> Self {
-        EthApiError::KakarotError(value)
+        EthApiError::Kakarot(value)
     }
 }
 

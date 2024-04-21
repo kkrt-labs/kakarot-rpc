@@ -525,7 +525,7 @@ where
 
         // Decode the transaction data
         let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
-            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
+            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?;
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
@@ -934,7 +934,7 @@ where
                 .nonce(current_nonce)
                 .max_fee(FieldElement::from(u64::MAX))
                 .prepared()
-                .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?
+                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?
                 .get_invoke_request(false)
                 .await
                 .map_err(|_| SignatureError::SignError)?;
