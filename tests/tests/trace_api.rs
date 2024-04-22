@@ -31,7 +31,7 @@ fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> r
         difficulty: Default::default(),
         total_difficulty: Default::default(),
         extra_data: Default::default(),
-        gas_limit: U256::MAX,
+        gas_limit: U256::from(u64::MAX),
         gas_used: Default::default(),
         timestamp: Default::default(),
         uncles_hash: Default::default(),
