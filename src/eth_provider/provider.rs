@@ -151,9 +151,7 @@ where
     async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>> {
         let block = match block_id {
             BlockId::Hash(hash) => BlockHashOrNumber::Hash((*hash).into()),
-            BlockId::Number(number_or_tag) => {
-                BlockHashOrNumber::Number(self.tag_into_block_number(*number_or_tag).await?.to())
-            }
+            BlockId::Number(number_or_tag) => self.tag_into_block_number(*number_or_tag).await?.to::<u64>().into(),
         };
 
         Ok(self.header(block).await?.map(|h| h.header))
@@ -195,7 +193,7 @@ where
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
-        Ok(self.block(BlockHashOrNumber::Hash(hash), full).await?)
+        Ok(self.block(hash.into(), full).await?)
     }
 
     async fn block_by_number(
@@ -204,11 +202,11 @@ where
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        Ok(self.block(BlockHashOrNumber::Number(block_number.to::<u64>()), full).await?)
+        Ok(self.block(block_number.to::<u64>().into(), full).await?)
     }
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
-        Ok(if self.block_exists(BlockHashOrNumber::Hash(hash)).await? {
+        Ok(if self.block_exists(hash.into()).await? {
             Some(U256::from(
                 self.database.count::<StoredTransaction>(into_filter("tx.blockHash", &hash, HASH_PADDING)).await?,
             ))
@@ -222,7 +220,7 @@ where
         number_or_tag: BlockNumberOrTag,
     ) -> EthProviderResult<Option<U256>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let block_exists = self.block_exists(BlockHashOrNumber::Number(block_number.to::<u64>())).await?;
+        let block_exists = self.block_exists(block_number.to::<u64>().into()).await?;
         if !block_exists {
             return Ok(None);
         }
@@ -589,7 +587,7 @@ where
         match block_id {
             BlockId::Number(maybe_number) => {
                 let block_number = self.tag_into_block_number(maybe_number).await?;
-                let block_exists = self.block_exists(BlockHashOrNumber::Number(block_number.to())).await?;
+                let block_exists = self.block_exists(block_number.to::<u64>().into()).await?;
                 if !block_exists {
                     return Ok(None);
                 }
@@ -599,7 +597,7 @@ where
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
             BlockId::Hash(hash) => {
-                let block_exists = self.block_exists(BlockHashOrNumber::Hash(hash.block_hash)).await?;
+                let block_exists = self.block_exists(hash.block_hash.into()).await?;
                 if !block_exists {
                     return Ok(None);
                 }
@@ -616,10 +614,8 @@ where
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
         let block_id = match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
-            BlockId::Number(maybe_number) => {
-                BlockHashOrNumber::Number(self.tag_into_block_number(maybe_number).await?.to())
-            }
-            BlockId::Hash(hash) => BlockHashOrNumber::Hash(hash.block_hash),
+            BlockId::Number(maybe_number) => self.tag_into_block_number(maybe_number).await?.to::<u64>().into(),
+            BlockId::Hash(hash) => hash.block_hash.into(),
         };
         if !self.block_exists(block_id).await? {
             return Ok(None);
@@ -862,10 +858,7 @@ where
                 // 3. The block number is not found, then we return an error
                 match number_or_tag {
                     BlockNumberOrTag::Number(number) => {
-                        let header = self
-                            .header(BlockHashOrNumber::Number(number))
-                            .await?
-                            .ok_or(EthApiError::UnknownBlockNumber)?;
+                        let header = self.header(number.into()).await?.ok_or(EthApiError::UnknownBlockNumber)?;
                         // If the block hash is zero, then the block corresponds to a Starknet pending block
                         if header.header.hash.ok_or(EthApiError::UnknownBlock)?.is_zero() {
                             Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
