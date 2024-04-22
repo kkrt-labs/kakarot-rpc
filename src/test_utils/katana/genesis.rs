@@ -222,6 +222,7 @@ impl KatanaGenesisBuilder<Loaded> {
         ));
         // Cache the address for later use.
         self.cache.insert("kakarot_address".to_string(), kakarot_address.0);
+        self.cache.insert("cairo1_helpers".to_string(), cairo1_helpers_class_hash);
 
         // Construct the kakarot contract storage.
         let kakarot_storage = [
