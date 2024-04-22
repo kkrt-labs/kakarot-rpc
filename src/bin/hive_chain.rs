@@ -45,11 +45,11 @@ async fn main() -> eyre::Result<()> {
     file.read_to_end(&mut reader).await.unwrap();
     let mut stream = FramedRead::with_capacity(&reader[..], BlockFileCodec, file_len as usize);
 
-    let mut bodies = Vec::new();
+    let mut bodies: Vec<BlockBody> = Vec::new();
     while let Some(block_res) = stream.next().await {
         let block = block_res?;
 
-        bodies.push(BlockBody { transactions: block.body, ommers: block.ommers, withdrawals: block.withdrawals });
+        bodies.push(block.into());
     }
 
     let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str(&std::env::var("STARKNET_NETWORK")?)?));
