@@ -265,7 +265,7 @@ impl KatanaGenesisBuilder<Initialized> {
             (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
             (storage_addr(OWNABLE_OWNER)?, kakarot_address),
             (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
-            (storage_addr(ACCOUNT_CAIRO1_HELPERS_CLASS)?, cairo1_helpers_class_hash),
+            (storage_addr(ACCOUNT_CAIRO1_HELPERS_CLASS_HASH)?, cairo1_helpers_class_hash),
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
