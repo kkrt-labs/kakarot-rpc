@@ -13,7 +13,10 @@ use starknet_api::core::ClassHash;
 use starknet_crypto::FieldElement;
 
 use super::{
-    constants::{ACCOUNT_IMPLEMENTATION, ACCOUNT_NONCE, KAKAROT_EVM_TO_STARKNET_ADDRESS, OWNABLE_OWNER},
+    constants::{
+        ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_IMPLEMENTATION, ACCOUNT_NONCE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
+        OWNABLE_OWNER,
+    },
     katana::genesis::{KatanaGenesisBuilder, Loaded},
 };
 
@@ -92,6 +95,10 @@ impl HiveGenesisConfig {
                     (implementation_key, account_contract_class_hash.0.into()),
                     (get_storage_var_address(ACCOUNT_NONCE, &[])?, FieldElement::ONE),
                     (get_storage_var_address(OWNABLE_OWNER, &[])?, kakarot_address),
+                    (
+                        get_storage_var_address(ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, &[])?,
+                        builder.cache_load("cairo1_helpers")?,
+                    ),
                 ]);
 
                 let key = get_storage_var_address("ERC20_allowances", &[starknet_address, kakarot_address])?;
