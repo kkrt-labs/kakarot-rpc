@@ -10,7 +10,6 @@ pub fn rpc_to_primitive_transaction(
     match rpc_transaction
         .transaction_type
         .ok_or(EthereumDataFormatError::PrimitiveError)?
-        .to::<u64>()
         .try_into()
         .map_err(|_| EthereumDataFormatError::PrimitiveError)?
     {

@@ -96,17 +96,17 @@ starknet-crypto = { version = "0.6.1", default-features = false }
 starknet_api = { version = "0.7.0-dev.0", default-features = false }
 
 # Ethereum dependencies
-alloy-primitives = "0.6.4"
+alloy-primitives = "0.7.0"
 alloy-rlp = { version = "0.3.4", default-features = false }
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false, features = [
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false, features = [
   "arbitrary",
 ] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
 
 # Serde
 serde = { version = "1.0.197", default-features = false, features = ["derive"] }

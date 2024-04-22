@@ -76,9 +76,15 @@ pub fn rpc_to_primitive_header(
             .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
             .transpose()?,
         beneficiary: header.miner,
-        blob_gas_used: header.blob_gas_used.map(|blob_gas_used| blob_gas_used.to::<u64>()),
+        blob_gas_used: header
+            .blob_gas_used
+            .map(|blob_gas_used| blob_gas_used.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
+            .transpose()?,
         difficulty: header.difficulty,
-        excess_blob_gas: header.excess_blob_gas.map(|excess_blob_gas| excess_blob_gas.to::<u64>()),
+        excess_blob_gas: header
+            .excess_blob_gas
+            .map(|excess_blob_gas| excess_blob_gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
+            .transpose()?,
         extra_data: header.extra_data,
         gas_limit: header.gas_limit.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
         gas_used: header.gas_used.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,

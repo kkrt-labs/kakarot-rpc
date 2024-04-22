@@ -110,14 +110,12 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         // Iterates through the receipts of the block using the `block_receipts` method of the Ethereum API
         for receipt in receipts {
             // Converts the transaction type to a u8 and then tries to convert it into TxType
-            let tx_type = receipt
-                .transaction_type
-                .to::<u8>()
+            let tx_type = Into::<u8>::into(receipt.transaction_type())
                 .try_into()
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversionError))?;
 
             // Tries to convert the cumulative gas used to u64
-            let cumulative_gas_used = TryInto::<u64>::try_into(receipt.cumulative_gas_used)
+            let cumulative_gas_used = TryInto::<u64>::try_into(receipt.inner.cumulative_gas_used())
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversionError))?;
 
             // Creates a ReceiptWithBloom from the receipt data
@@ -125,15 +123,16 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
                 ReceiptWithBloom {
                     receipt: Receipt {
                         tx_type,
-                        success: receipt.status_code.unwrap_or_default().to::<u64>() == 1,
+                        success: receipt.inner.status(),
                         cumulative_gas_used,
                         logs: receipt
-                            .logs
+                            .inner
+                            .logs()
                             .into_iter()
-                            .map(|log| Log { address: log.address, topics: log.topics, data: log.data })
+                            .filter_map(|log| Log::new(log.address(), log.topics().to_vec(), log.data().data.clone()))
                             .collect(),
                     },
-                    bloom: receipt.logs_bloom,
+                    bloom: *receipt.inner.logs_bloom(),
                 }
                 .envelope_encoded(),
             );
