@@ -1,5 +1,6 @@
 use crate::eth_provider::starknet::kakarot_core::account_contract::BytecodeOutput;
-use alloy_rlp::Decodable as _;
+use crate::models::block::rpc_to_primitive_header;
+use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
@@ -19,8 +20,7 @@ use reth_rpc_types::{
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::types::{FunctionCall, SyncStatusType};
-use starknet::core::utils::get_selector_from_name;
-use starknet::core::utils::get_storage_var_address;
+use starknet::core::utils::{get_selector_from_name, get_storage_var_address};
 use starknet_crypto::FieldElement;
 
 use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
@@ -30,10 +30,12 @@ use super::database::types::{
 };
 use super::database::{CollectionName, Database};
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
-use super::starknet::kakarot_core::core::{CallInput, Uint256};
 use super::starknet::kakarot_core::{
-    self, account_contract::AccountContractReader, core::KakarotCoreReader, starknet_address, to_starknet_transaction,
-    KAKAROT_ADDRESS,
+    self,
+    account_contract::AccountContractReader,
+    core::KakarotCoreReader,
+    core::{CallInput, Uint256},
+    starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
 use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, try_from_u8_iterator};
@@ -832,12 +834,15 @@ where
             }
         }
 
+        // This is how reth computes the block size.
+        // `https://github.com/paradigmxyz/reth/blob/v0.2.0-beta.5/crates/rpc/rpc-types-compat/src/block.rs#L66`
+        let size = rpc_to_primitive_header(header.clone())?.length();
         Ok(Some(
             Block {
                 header,
                 transactions: self.transactions(block_id, full).await?,
                 uncles: Default::default(),
-                size: Default::default(),
+                size: Some(U256::from(size)),
                 withdrawals: Some(Default::default()),
                 other: Default::default(),
             }
