@@ -1,5 +1,6 @@
 use crate::eth_provider::starknet::kakarot_core::account_contract::BytecodeOutput;
 use crate::models::block::rpc_to_primitive_header;
+use crate::models::transaction::rpc_to_primitive_transaction;
 use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -23,7 +24,7 @@ use starknet::core::types::{FunctionCall, SyncStatusType};
 use starknet::core::utils::{get_selector_from_name, get_storage_var_address};
 use starknet_crypto::FieldElement;
 
-use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
+use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, MAX_RETRIES, U64_PADDING};
 use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
     transaction::StoredTransaction, transaction::StoredTransactionHash,
@@ -138,10 +139,104 @@ pub struct EthDataProvider<SP: starknet::providers::Provider> {
     chain_id: u64,
 }
 
-impl<SP: starknet::providers::Provider> EthDataProvider<SP> {
+impl<SP> EthDataProvider<SP>
+where
+    SP: starknet::providers::Provider + Send + Sync,
+{
     /// Returns a reference to the database.
     pub fn database(&self) -> &Database {
         &self.database
+    }
+
+    pub async fn retry_transactions(&self) -> EthProviderResult<Vec<B256>> {
+        // Initialize an empty vector to store the hashes of retried transactions
+        let mut transactions_retried = Vec::new();
+
+        // Iterate over pending transactions fetched from the database
+        for tx in self.database.get::<StoredPendingTransaction>(None, None).await? {
+            // Increment the number of retries for the current transaction
+            let retries = tx.retries + 1;
+
+            // Create a filter to query the database for an existing stored transaction
+            let hash_filter = into_filter("tx.hash", &tx.tx.hash, HASH_PADDING);
+
+            // Check if the number of retries exceeds the maximum allowed retries
+            // or if the transaction already exists in the database of finalized transactions
+            if retries > MAX_RETRIES
+                || self.database.get_one::<StoredTransaction>(hash_filter.clone(), None).await?.is_some()
+            {
+                // Delete the pending transaction from the database
+                self.database
+                    .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_PADDING))
+                    .await?;
+
+                // Continue to the next iteration of the loop
+                continue;
+            }
+
+            // Extract the signature from the transaction
+            let transaction_signature = tx.tx.signature.unwrap();
+
+            // Create a signed transaction object from the pending transaction
+            let transaction_signed = TransactionSigned::from_transaction_and_signature(
+                rpc_to_primitive_transaction(tx.tx.clone())?,
+                reth_primitives::Signature {
+                    r: transaction_signature.r,
+                    s: transaction_signature.s,
+                    odd_y_parity: transaction_signature.y_parity.unwrap().0,
+                },
+            );
+
+            // Recover the signer address from the signed transaction
+            let signer = transaction_signed.recover_signer().unwrap();
+
+            // Determine the maximum fee for the transaction
+            let max_fee = {
+                let eth_fees_per_gas =
+                    transaction_signed.effective_gas_price(Some(transaction_signed.max_fee_per_gas() as u64)) as u64;
+                let eth_fees = eth_fees_per_gas.saturating_mul(transaction_signed.gas_limit());
+                let balance = self.balance(signer, None).await?;
+                let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
+                max_fee.saturating_sub(eth_fees)
+            };
+
+            // Convert the transaction to a Starknet transaction
+            let starknet_transaction =
+                to_starknet_transaction(&transaction_signed, tx.tx.chain_id.unwrap(), signer, max_fee)?;
+
+            // Add the transaction to the Starknet provider
+            let res = self
+                .starknet_provider
+                .add_invoke_transaction(starknet_transaction)
+                .await
+                .map_err(KakarotError::from)?;
+
+            // Update the pending transaction in the database with the new number of retries
+            self.database
+                .update_one::<StoredPendingTransaction>(
+                    StoredPendingTransaction::new(tx.clone().tx, retries),
+                    hash_filter,
+                    true,
+                )
+                .await?;
+
+            // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
+            if cfg!(feature = "testing") {
+                transactions_retried.push(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]));
+            } else {
+                let hash = transaction_signed.hash();
+                tracing::info!(
+                    "Fired a transaction: Starknet Hash: {:?} --- Ethereum Hash: {:?}",
+                    res.transaction_hash,
+                    hash
+                );
+
+                transactions_retried.push(hash);
+            }
+        }
+
+        // Return the hashes of retried transactions
+        Ok(transactions_retried)
     }
 }
 
@@ -204,7 +299,7 @@ where
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        Ok(self.block(block_number.to::<u64>().into(), full).await?)
+        Ok(self.block(block_number.into(), full).await?)
     }
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
@@ -930,7 +1025,7 @@ where
 
             let tx = execution
                 .nonce(current_nonce)
-                .max_fee(FieldElement::from(u64::MAX))
+                .max_fee(u64::MAX.into())
                 .prepared()
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?
                 .get_invoke_request(false)
