@@ -299,7 +299,7 @@ impl KatanaGenesisBuilder<Initialized> {
             number: 0,
             timestamp: 0,
             sequencer_address: self.compute_starknet_address(self.coinbase)?,
-            gas_prices: GasPrices::default(),
+            gas_prices: GasPrices { eth: 1, strk: 0 },
             classes: self.classes,
             fee_token: FeeTokenConfigJson {
                 name: "Ether".to_string(),

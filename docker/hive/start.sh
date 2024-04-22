@@ -13,16 +13,16 @@ mv /genesis/hive-genesis.json /hive-genesis.json && rm -fr /genesis
 # 2. Start Katana
 echo "Launching Katana..."
 chain_id=$(printf '%x' $(jq -r '.config.chainId' hive-genesis.json))
-RUST_LOG=warn katana --block-time 2000 --disable-fee --chain-id=0x$chain_id --genesis genesis.json &
+RUST_LOG=warn katana --block-time 20000 --disable-fee --chain-id=0x$chain_id --genesis genesis.json &
 ###### 2.5. Await Katana to be healthy
 # Loop until the curl command succeeds
 until
 	curl --silent --request POST \
 		--header "Content-Type: application/json" \
 		--data '{
-           "jsonrpc": "2.0", 
-           "method": "starknet_blockNumber", 
-           "params": [], 
+           "jsonrpc": "2.0",
+           "method": "starknet_blockNumber",
+           "params": [],
            "id": 1
        }' \
 		"${STARKNET_NETWORK}" # Use the provided network address
