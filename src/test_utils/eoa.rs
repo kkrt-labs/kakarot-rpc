@@ -134,7 +134,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
         let maybe_receipt = self
             .starknet_provider()
-            .get_transaction_receipt(tx_hash.into())
+            .get_transaction_receipt(FieldElement::from(tx_hash))
             .await
             .expect("Failed to get transaction receipt after retries");
 
