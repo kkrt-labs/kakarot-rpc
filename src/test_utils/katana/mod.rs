@@ -4,6 +4,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
+use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
@@ -25,9 +26,15 @@ use {
 };
 
 fn load_genesis() -> Genesis {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(".katana/genesis.json");
-    let genesis_json = GenesisJson::load(path).expect("Failed to load genesis.json, run `make katana-genesis`");
-    Genesis::try_from(genesis_json).expect("Failed to convert GenesisJson to Genesis")
+    let mut genesis = Genesis::try_from(
+        GenesisJson::load(Path::new(env!("CARGO_MANIFEST_DIR")).join(".katana/genesis.json"))
+            .expect("Failed to load genesis.json, run `make katana-genesis`"),
+    )
+    .expect("Failed to convert GenesisJson to Genesis");
+
+    genesis.gas_prices = GasPrices { eth: 1, strk: 0 };
+
+    genesis
 }
 
 /// Returns a `StarknetConfig` instance customized for Kakarot.
