@@ -222,7 +222,7 @@ where
         number_or_tag: BlockNumberOrTag,
     ) -> EthProviderResult<Option<U256>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let block_exists = self.block_exists(block_number.to::<u64>().into()).await?;
+        let block_exists = self.block_exists(block_number.into()).await?;
         if !block_exists {
             return Ok(None);
         }
@@ -589,7 +589,7 @@ where
         match block_id {
             BlockId::Number(maybe_number) => {
                 let block_number = self.tag_into_block_number(maybe_number).await?;
-                let block_exists = self.block_exists(block_number.to::<u64>().into()).await?;
+                let block_exists = self.block_exists(block_number.into()).await?;
                 if !block_exists {
                     return Ok(None);
                 }
