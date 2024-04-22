@@ -1,5 +1,6 @@
 pub mod genesis;
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -8,12 +9,18 @@ use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
+use mongodb::bson::doc;
+use mongodb::options::{UpdateModifications, UpdateOptions};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::eth_provider::provider::EthDataProvider;
+use crate::eth_provider::database::types::{header::StoredHeader, transaction::StoredTransaction};
+use crate::eth_provider::utils::{format_hex, into_filter};
+use crate::eth_provider::{
+    constant::{HASH_PADDING, U64_PADDING},
+    provider::EthDataProvider,
+};
 use crate::test_utils::eoa::KakarotEOA;
-use std::collections::HashMap;
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
@@ -146,11 +153,57 @@ impl<'a> Katana {
         self.eoa.clone()
     }
 
-    /// allow(dead_code) is used because this function is used in tests,
-    /// and each test is compiled separately, so the compiler thinks this function is unused
     #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
+    }
+
+    /// Adds transactions to the database along with a corresponding header.
+    pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, header: Header) {
+        let provider = self.eth_provider();
+        let database = provider.database();
+        let Header { number, .. } = header;
+        let block_number = number.expect("Failed to get block number").to::<u64>();
+
+        // Add the transactions to the database.
+        let tx_collection = database.collection::<StoredTransaction>();
+        for tx in txs {
+            let filter = into_filter("tx.hash", &tx.hash, HASH_PADDING);
+            database
+                .update_one::<StoredTransaction>(tx.into(), filter, true)
+                .await
+                .expect("Failed to update transaction in database");
+        }
+
+        // We use the unpadded block number to filter the transactions in the database and
+        // the padded block number to update the block number in the database.
+        let unpadded_block_number = format_hex(block_number, 0);
+        let padded_block_number = format_hex(block_number, U64_PADDING);
+
+        // The transactions get added in the database with the unpadded block number (due to U256 serialization using `human_readable`).
+        // We need to update the block number to the padded version.
+        tx_collection
+            .update_many(
+                doc! {"tx.blockNumber": &unpadded_block_number},
+                UpdateModifications::Document(doc! {"$set": {"tx.blockNumber": &padded_block_number}}),
+                UpdateOptions::builder().upsert(true).build(),
+            )
+            .await
+            .expect("Failed to update block number");
+
+        // Same issue as the transactions, we need to update the block number to the padded version once added
+        // to the database.
+        let header_collection = database.collection::<StoredHeader>();
+        let filter = into_filter("header.number", &block_number, U64_PADDING);
+        database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
+        header_collection
+            .update_one(
+                doc! {"header.number": unpadded_block_number},
+                UpdateModifications::Document(doc! {"$set": {"header.number": padded_block_number}}),
+                UpdateOptions::builder().upsert(true).build(),
+            )
+            .await
+            .expect("Failed to update block number");
     }
 
     /// Retrieves the first stored transaction

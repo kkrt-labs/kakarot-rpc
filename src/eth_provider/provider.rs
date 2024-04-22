@@ -1,5 +1,6 @@
 use crate::eth_provider::starknet::kakarot_core::account_contract::BytecodeOutput;
-use alloy_rlp::Decodable as _;
+use crate::models::block::rpc_to_primitive_header;
+use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
@@ -19,8 +20,7 @@ use reth_rpc_types::{
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::types::{FunctionCall, SyncStatusType};
-use starknet::core::utils::get_selector_from_name;
-use starknet::core::utils::get_storage_var_address;
+use starknet::core::utils::{get_selector_from_name, get_storage_var_address};
 use starknet_crypto::FieldElement;
 
 use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
@@ -30,15 +30,15 @@ use super::database::types::{
 };
 use super::database::{CollectionName, Database};
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
-use super::starknet::kakarot_core::core::{CallInput, Uint256};
 use super::starknet::kakarot_core::{
-    self, account_contract::AccountContractReader, core::KakarotCoreReader, starknet_address, to_starknet_transaction,
-    KAKAROT_ADDRESS,
+    self,
+    account_contract::AccountContractReader,
+    core::KakarotCoreReader,
+    core::{CallInput, Uint256},
+    starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{
-    contract_not_found, entrypoint_not_found, into_filter, iter_into, split_u256, try_from_u8_iterator,
-};
+use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, try_from_u8_iterator};
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
@@ -153,9 +153,7 @@ where
     async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>> {
         let block = match block_id {
             BlockId::Hash(hash) => BlockHashOrNumber::Hash((*hash).into()),
-            BlockId::Number(number_or_tag) => {
-                BlockHashOrNumber::Number(self.tag_into_block_number(*number_or_tag).await?.to())
-            }
+            BlockId::Number(number_or_tag) => self.tag_into_block_number(*number_or_tag).await?.to::<u64>().into(),
         };
 
         Ok(self.header(block).await?.map(|h| h.header))
@@ -197,7 +195,7 @@ where
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
-        Ok(self.block(BlockHashOrNumber::Hash(hash), full).await?)
+        Ok(self.block(hash.into(), full).await?)
     }
 
     async fn block_by_number(
@@ -206,11 +204,11 @@ where
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        Ok(self.block(BlockHashOrNumber::Number(block_number.to::<u64>()), full).await?)
+        Ok(self.block(block_number.to::<u64>().into(), full).await?)
     }
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
-        Ok(if self.block_exists(BlockHashOrNumber::Hash(hash)).await? {
+        Ok(if self.block_exists(hash.into()).await? {
             Some(U256::from(
                 self.database.count::<StoredTransaction>(into_filter("tx.blockHash", &hash, HASH_PADDING)).await?,
             ))
@@ -224,7 +222,7 @@ where
         number_or_tag: BlockNumberOrTag,
     ) -> EthProviderResult<Option<U256>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let block_exists = self.block_exists(BlockHashOrNumber::Number(block_number.to::<u64>())).await?;
+        let block_exists = self.block_exists(block_number.to::<u64>().into()).await?;
         if !block_exists {
             return Ok(None);
         }
@@ -527,7 +525,7 @@ where
 
         // Decode the transaction data
         let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
-            .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?;
+            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?;
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
@@ -591,7 +589,7 @@ where
         match block_id {
             BlockId::Number(maybe_number) => {
                 let block_number = self.tag_into_block_number(maybe_number).await?;
-                let block_exists = self.block_exists(BlockHashOrNumber::Number(block_number.to())).await?;
+                let block_exists = self.block_exists(block_number.to::<u64>().into()).await?;
                 if !block_exists {
                     return Ok(None);
                 }
@@ -601,7 +599,7 @@ where
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
             BlockId::Hash(hash) => {
-                let block_exists = self.block_exists(BlockHashOrNumber::Hash(hash.block_hash)).await?;
+                let block_exists = self.block_exists(hash.block_hash.into()).await?;
                 if !block_exists {
                     return Ok(None);
                 }
@@ -618,10 +616,8 @@ where
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
         let block_id = match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
-            BlockId::Number(maybe_number) => {
-                BlockHashOrNumber::Number(self.tag_into_block_number(maybe_number).await?.to())
-            }
-            BlockId::Hash(hash) => BlockHashOrNumber::Hash(hash.block_hash),
+            BlockId::Number(maybe_number) => self.tag_into_block_number(maybe_number).await?.to::<u64>().into(),
+            BlockId::Hash(hash) => hash.block_hash.into(),
         };
         if !self.block_exists(block_id).await? {
             return Ok(None);
@@ -805,11 +801,15 @@ where
         };
 
         let block_transactions = if full {
-            BlockTransactions::Full(iter_into(self.database.get::<StoredTransaction>(transactions_filter, None).await?))
+            BlockTransactions::Full(
+                self.database.get_and_map_to::<_, StoredTransaction>(transactions_filter, None).await?,
+            )
         } else {
-            BlockTransactions::Hashes(iter_into(
-                self.database.get::<StoredTransactionHash>(transactions_filter, doc! {"tx.hash": 1}).await?,
-            ))
+            BlockTransactions::Hashes(
+                self.database
+                    .get_and_map_to::<_, StoredTransactionHash>(transactions_filter, doc! {"tx.hash": 1})
+                    .await?,
+            )
         };
 
         Ok(block_transactions)
@@ -830,12 +830,15 @@ where
             }
         }
 
+        // This is how reth computes the block size.
+        // `https://github.com/paradigmxyz/reth/blob/v0.2.0-beta.5/crates/rpc/rpc-types-compat/src/block.rs#L66`
+        let size = rpc_to_primitive_header(header.clone())?.length();
         Ok(Some(
             Block {
                 header,
                 transactions: self.transactions(block_id, full).await?,
                 uncles: Default::default(),
-                size: Default::default(),
+                size: Some(U256::from(size)),
                 withdrawals: Some(Default::default()),
                 other: Default::default(),
             }
@@ -860,10 +863,7 @@ where
                 // 3. The block number is not found, then we return an error
                 match number_or_tag {
                     BlockNumberOrTag::Number(number) => {
-                        let header = self
-                            .header(BlockHashOrNumber::Number(number))
-                            .await?
-                            .ok_or(EthApiError::UnknownBlockNumber)?;
+                        let header = self.header(number.into()).await?.ok_or(EthApiError::UnknownBlockNumber)?;
                         // If the block hash is zero, then the block corresponds to a Starknet pending block
                         if header.header.hash.ok_or(EthApiError::UnknownBlock)?.is_zero() {
                             Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
@@ -932,7 +932,7 @@ where
                 .nonce(current_nonce)
                 .max_fee(FieldElement::from(u64::MAX))
                 .prepared()
-                .map_err(|_| EthApiError::EthereumDataFormatError(EthereumDataFormatError::TransactionConversionError))?
+                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?
                 .get_invoke_request(false)
                 .await
                 .map_err(|_| SignatureError::SignError)?;

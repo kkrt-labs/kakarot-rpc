@@ -13,8 +13,9 @@ use starknet_crypto::FieldElement;
 use crate::eth_provider::provider::{EthDataProvider, EthereumProvider};
 use crate::eth_provider::starknet::kakarot_core::starknet_address;
 use crate::models::felt::Felt252Wrapper;
-use crate::test_utils::evm_contract::EvmContract;
-use crate::test_utils::evm_contract::KakarotEvmContract;
+use crate::test_utils::evm_contract::{
+    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
+};
 use crate::test_utils::tx_waiter::watch_tx;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
@@ -80,6 +81,8 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         self.eth_provider.starknet_provider()
     }
 
+    /// Deploys an EVM contract given a contract name and constructor arguments
+    /// Returns a KakarotEvmContract instance
     pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
         contract_name: Option<&str>,
@@ -113,8 +116,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             <KakarotEvmContract as EvmContract>::prepare_create_transaction(
                 &bytecode,
                 constructor_args,
-                nonce,
-                chain_id.try_into()?,
+                &TxCommonInfo { nonce, chain_id: chain_id.try_into()?, ..Default::default() },
             )?
         };
         let tx_signed = self.sign_transaction(tx)?;
@@ -155,22 +157,25 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     /// Calls a KakarotEvmContract function and returns the Starknet transaction hash
     /// The transaction is signed and sent by the EOA
     /// The transaction is waited for until it is confirmed
-    ///
-    /// allow(dead_code) is used because this function is used in tests,
-    /// and each test is compiled separately, so the compiler thinks this function is unused
-    #[allow(dead_code)]
     pub async fn call_evm_contract<T: Tokenize>(
         &self,
         contract: &KakarotEvmContract,
         function: &str,
         args: T,
         value: u128,
-    ) -> Result<FieldElement, eyre::Error> {
-        let nonce: u64 = self.nonce().await?.try_into()?;
-        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
+    ) -> Result<Transaction, eyre::Error> {
+        let nonce = self.nonce().await?.try_into()?;
+        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default().to();
 
-        let tx = contract.prepare_call_transaction(function, args, nonce, value, chain_id.try_into()?)?;
-        let tx_signed = self.sign_transaction(tx)?;
+        let tx = contract.prepare_call_transaction(
+            function,
+            args,
+            &TransactionInfo::FeeMarketInfo(TxFeeMarketInfo {
+                common: TxCommonInfo { chain_id, nonce, value },
+                ..Default::default()
+            }),
+        )?;
+        let tx_signed = self.sign_transaction(tx.clone())?;
         let tx_hash = self.send_transaction(tx_signed).await?;
 
         let bytes = tx_hash.0;
@@ -180,12 +185,12 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             .await
             .expect("Tx polling failed");
 
-        Ok(starknet_tx_hash)
+        Ok(tx)
     }
 
     /// Transfers value to the given address
     /// The transaction is signed and sent by the EOA
-    pub async fn transfer(&self, to: Address, value: u128) -> Result<B256, eyre::Error> {
+    pub async fn transfer(&self, to: Address, value: u128) -> Result<Transaction, eyre::Error> {
         let tx = Transaction::Eip1559(TxEip1559 {
             chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().try_into()?,
             nonce: self.nonce().await?.try_into()?,
@@ -195,8 +200,9 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             ..Default::default()
         });
 
-        let tx_signed = self.sign_transaction(tx)?;
+        let tx_signed = self.sign_transaction(tx.clone())?;
 
-        self.send_transaction(tx_signed).await
+        let _ = self.send_transaction(tx_signed).await;
+        Ok(tx)
     }
 }

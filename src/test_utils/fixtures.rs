@@ -44,6 +44,28 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     (katana, contract)
 }
 
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+#[fixture]
+#[awt]
+pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (Katana, KakarotEvmContract) {
+    use ethers::abi::Address;
+
+    let katana = counter.0;
+    let counter = counter.1;
+    let eoa = katana.eoa();
+    let counter_address = Address::from_slice(&counter.evm_address.to_bytes_be()[12..]);
+    let contract = eoa
+        .deploy_evm_contract(
+            Some("PlainOpcodes"),
+            (
+                Token::Address(counter_address), // counter address
+            ),
+        )
+        .await
+        .expect("Failed to deploy ERC20 contract");
+    (katana, contract)
+}
+
 /// This fixture creates a new test environment on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
