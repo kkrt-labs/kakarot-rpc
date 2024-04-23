@@ -158,7 +158,7 @@ impl<'a> Katana {
         let provider = self.eth_provider();
         let database = provider.database();
         let Header { number, .. } = header;
-        let block_number = number.expect("Failed to get block number").to::<u64>();
+        let block_number = number.expect("Failed to get block number");
 
         // Add the transactions to the database.
         let tx_collection = database.collection::<StoredTransaction>();

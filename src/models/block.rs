@@ -144,7 +144,7 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
 mod tests {
     use std::str::FromStr;
 
-    use reth_primitives::{Address, Bloom, Bytes, B256, B64, U256, U64, U8};
+    use reth_primitives::{Address, Bloom, Bytes, B256, B64, U256};
     use reth_rpc_types::{other::OtherFields, Parity, Signature};
 
     use super::*;
@@ -160,18 +160,18 @@ mod tests {
             withdrawals_root: Some(B256::from_str(&format!("0x{:0>64}", "07")).unwrap()),
             logs_bloom: Bloom::ZERO,
             difficulty: U256::ZERO,
-            base_fee_per_gas: Some(U256::from(8)),
-            blob_gas_used: Some(U64::from(9)),
-            excess_blob_gas: Some(U64::from(10)),
+            base_fee_per_gas: Some(8),
+            blob_gas_used: Some(9),
+            excess_blob_gas: Some(10),
             extra_data: Bytes::default(),
-            gas_limit: U256::from(11),
-            gas_used: U256::from(12),
+            gas_limit: 11,
+            gas_used: 12,
             hash: Some(B256::from_str(&format!("0x{:0>64}", "D")).unwrap()),
             mix_hash: Some(B256::from_str(&format!("0x{:0>64}", "E")).unwrap()),
             parent_beacon_block_root: Some(B256::from_str(&format!("0x{:0>64}", "F")).unwrap()),
             nonce: Some(B64::from_str(&format!("0x{:0>16}", "10")).unwrap()),
-            number: Some(U256::from(17)),
-            timestamp: U256::from(18),
+            number: Some(17),
+            timestamp: 18,
             total_difficulty: None,
         }
     }
@@ -182,14 +182,14 @@ mod tests {
             nonce: 1,
             block_hash: None,
             block_number: None,
-            transaction_index: Some(U256::ZERO),
+            transaction_index: Some(0),
             from: Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
             to: Some(Address::from_str("0x0000000000000000000000000000000000000002").unwrap()),
             value: U256::from(100),
-            gas_price: Some(U256::from(20)),
-            gas: U256::from(21000),
-            max_fee_per_gas: Some(U256::from(30)),
-            max_priority_fee_per_gas: Some(U256::from(10)),
+            gas_price: Some(20),
+            gas: 21000,
+            max_fee_per_gas: Some(30),
+            max_priority_fee_per_gas: Some(10),
             max_fee_per_blob_gas: None,
             input: Bytes::from("1234"),
             signature: Some(Signature {
@@ -201,7 +201,7 @@ mod tests {
             chain_id: Some(1),
             blob_versioned_hashes: Some(vec![]),
             access_list: None,
-            transaction_type: Some(U8::from(2)),
+            transaction_type: Some(2),
             other: serde_json::from_str("{}").unwrap(),
         }
     }

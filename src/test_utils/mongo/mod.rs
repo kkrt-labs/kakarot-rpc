@@ -9,7 +9,7 @@ use mongodb::{
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
-use reth_primitives::{Address, TxType, B256, U256, U64};
+use reth_primitives::{Address, TxType, B256, U256};
 use serde::{Serialize, Serializer};
 use std::ops::Range;
 use std::str::FromStr;
@@ -19,7 +19,6 @@ use {
     crate::eth_provider::database::CollectionName,
     arbitrary::Arbitrary,
     mongodb::bson,
-    reth_primitives::U8,
     reth_rpc_types::Transaction,
     std::collections::HashMap,
     testcontainers::{GenericImage, RunnableImage},
@@ -202,7 +201,7 @@ impl MongoFuzzer {
             let mut unstructured = arbitrary::Unstructured::new(&bytes);
             let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
 
-            header.header.number = Some(U256::from(i as u64));
+            header.header.number = Some(i as u64);
 
             self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
         }
@@ -246,12 +245,26 @@ impl MongoFuzzer {
         let mut receipt = StoredTransactionReceipt::arbitrary(&mut unstructured).unwrap();
 
         receipt.receipt.transaction_hash = transaction.hash;
-        receipt.receipt.transaction_index = U64::from(transaction.transaction_index.unwrap_or_default());
+        receipt.receipt.transaction_index = Some(transaction.transaction_index.unwrap_or_default());
         receipt.receipt.from = transaction.from;
         receipt.receipt.to = transaction.to;
         receipt.receipt.block_number = transaction.block_number;
         receipt.receipt.block_hash = transaction.block_hash;
-        receipt.receipt.transaction_type = U8::from(transaction.transaction_type.unwrap_or_default());
+        receipt.receipt.inner = match transaction.transaction_type.unwrap_or_default().try_into() {
+            Ok(TxType::Legacy) => reth_rpc_types::ReceiptEnvelope::Legacy(
+                (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone(),
+            ),
+            Ok(TxType::Eip2930) => reth_rpc_types::ReceiptEnvelope::Eip2930(
+                (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone(),
+            ),
+            Ok(TxType::Eip1559) => reth_rpc_types::ReceiptEnvelope::Eip1559(
+                (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone(),
+            ),
+            Ok(TxType::Eip4844) => reth_rpc_types::ReceiptEnvelope::Eip4844(
+                (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone(),
+            ),
+            Err(_) => unreachable!(),
+        };
         receipt
     }
 
@@ -341,14 +354,14 @@ impl TransactionBuilder {
                     tx: reth_rpc_types::Transaction {
                         hash: *EIP1599_TX_HASH,
                         block_hash: Some(*BLOCK_HASH),
-                        block_number: Some(U256::from(BLOCK_NUMBER)),
-                        transaction_index: Some(U256::ZERO),
+                        block_number: Some(BLOCK_NUMBER),
+                        transaction_index: Some(0),
                         from: *RECOVERED_EIP1599_TX_ADDRESS,
                         to: Some(Address::ZERO),
-                        gas_price: Some(U256::from(10)),
-                        gas: U256::from(100),
-                        max_fee_per_gas: Some(U256::from(10)),
-                        max_priority_fee_per_gas: Some(U256::from(1)),
+                        gas_price: Some(10),
+                        gas: 100,
+                        max_fee_per_gas: Some(10),
+                        max_priority_fee_per_gas: Some(1),
                         signature: Some(reth_rpc_types::Signature {
                             r: *TEST_SIG_R,
                             s: *TEST_SIG_S,
@@ -365,12 +378,12 @@ impl TransactionBuilder {
                     tx: reth_rpc_types::Transaction {
                         hash: *LEGACY_TX_HASH,
                         block_hash: Some(*BLOCK_HASH),
-                        block_number: Some(U256::from(BLOCK_NUMBER)),
-                        transaction_index: Some(U256::ZERO),
+                        block_number: Some(BLOCK_NUMBER),
+                        transaction_index: Some(0),
                         from: *RECOVERED_LEGACY_TX_ADDRESS,
                         to: Some(Address::ZERO),
-                        gas_price: Some(U256::from(10)),
-                        gas: U256::from(100),
+                        gas_price: Some(10),
+                        gas: 100,
                         signature: Some(reth_rpc_types::Signature {
                             r: *TEST_SIG_R,
                             s: *TEST_SIG_S,
@@ -388,12 +401,12 @@ impl TransactionBuilder {
                     tx: reth_rpc_types::Transaction {
                         hash: *EIP2930_TX_HASH,
                         block_hash: Some(*BLOCK_HASH),
-                        block_number: Some(U256::from(BLOCK_NUMBER)),
-                        transaction_index: Some(U256::ZERO),
+                        block_number: Some(BLOCK_NUMBER),
+                        transaction_index: Some(0),
                         from: *RECOVERED_EIP2930_TX_ADDRESS,
                         to: Some(Address::ZERO),
-                        gas_price: Some(U256::from(10)),
-                        gas: U256::from(100),
+                        gas_price: Some(10),
+                        gas: 100,
                         signature: Some(reth_rpc_types::Signature {
                             r: *TEST_SIG_R,
                             s: *TEST_SIG_S,
@@ -455,7 +468,7 @@ mod tests {
             assert_eq!(transaction.tx.hash, receipt.receipt.transaction_hash);
 
             // Asserts equality between transaction index and receipt transaction index.
-            assert_eq!(transaction.tx.transaction_index.unwrap(), U256::from(receipt.receipt.transaction_index));
+            assert_eq!(transaction.tx.transaction_index, receipt.receipt.transaction_index);
 
             // Asserts equality between transaction sender and receipt sender.
             assert_eq!(transaction.tx.from, receipt.receipt.from);
@@ -464,7 +477,7 @@ mod tests {
             assert_eq!(transaction.tx.to, receipt.receipt.to);
 
             // Asserts equality between transaction type and receipt type.
-            assert_eq!(transaction.tx.transaction_type.unwrap(), U8::from(receipt.receipt.transaction_type));
+            assert_eq!(transaction.tx.transaction_type.unwrap(), Into::<u8>::into(receipt.receipt.transaction_type()));
         }
 
         // Drop the inner MongoDB database.

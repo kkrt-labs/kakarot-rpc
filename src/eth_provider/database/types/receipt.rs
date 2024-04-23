@@ -1,5 +1,5 @@
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use reth_primitives::{Address, Bloom, Receipt, B256, U128, U256, U64, U8};
+use reth_primitives::{Address, Bloom, Receipt, B256};
 use reth_rpc_types::TransactionReceipt;
 use serde::{Deserialize, Serialize};
 
@@ -25,38 +25,47 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
 
         for log in receipt.logs {
             rpc_logs.push(reth_rpc_types::Log {
-                address: log.address,
-                topics: log.topics,
-                data: log.data,
-                block_hash: Some(B256::arbitrary(u)?),
-                block_number: Some(U256::arbitrary(u)?),
-                transaction_hash: Some(B256::arbitrary(u)?),
-                transaction_index: Some(U256::arbitrary(u)?),
-                log_index: Some(U256::arbitrary(u)?),
+                transaction_index: Some(u64::arbitrary(u)?),
+                log_index: Some(u64::arbitrary(u)?),
                 removed: bool::arbitrary(u)?,
+                inner: log,
+                block_hash: Some(B256::arbitrary(u)?),
+                block_number: Some(u64::arbitrary(u)?),
+                block_timestamp: Some(u64::arbitrary(u)?),
+                transaction_hash: Some(B256::arbitrary(u)?),
             })
         }
+
+        let receipt = reth_rpc_types::ReceiptWithBloom {
+            receipt: reth_rpc_types::Receipt {
+                status: bool::arbitrary(u)?,
+                cumulative_gas_used: u128::arbitrary(u)?,
+                logs: rpc_logs,
+            },
+            logs_bloom: Bloom::arbitrary(u)?,
+        };
 
         Ok(Self {
             receipt: TransactionReceipt {
                 transaction_hash: B256::arbitrary(u)?,
-                transaction_index: U64::arbitrary(u)?,
+                transaction_index: Some(u64::arbitrary(u)?),
                 block_hash: Some(B256::arbitrary(u)?),
-                block_number: Some(U256::arbitrary(u)?),
-                cumulative_gas_used: U256::from(receipt.cumulative_gas_used),
-                gas_used: Some(U256::arbitrary(u)?),
-                effective_gas_price: U128::arbitrary(u)?,
-                blob_gas_used: Some(U128::arbitrary(u)?),
-                blob_gas_price: Some(U128::arbitrary(u)?),
+                block_number: Some(u64::arbitrary(u)?),
+                gas_used: u128::arbitrary(u)?,
+                effective_gas_price: u128::arbitrary(u)?,
+                blob_gas_used: Some(u128::arbitrary(u)?),
+                blob_gas_price: Some(u128::arbitrary(u)?),
                 from: Address::arbitrary(u)?,
                 to: Some(Address::arbitrary(u)?),
                 contract_address: Some(Address::arbitrary(u)?),
-                logs: rpc_logs,
-                logs_bloom: Bloom::arbitrary(u)?,
                 state_root: Some(B256::arbitrary(u)?),
-                status_code: Some(U64::from(receipt.success as u8)),
-                transaction_type: U8::from::<u8>(Into::<u8>::into(receipt.tx_type) % 3),
-                other: Default::default(),
+                inner: match u.int_in_range(0..=3)? {
+                    0 => reth_rpc_types::ReceiptEnvelope::Legacy(receipt),
+                    1 => reth_rpc_types::ReceiptEnvelope::Eip2930(receipt),
+                    2 => reth_rpc_types::ReceiptEnvelope::Eip1559(receipt),
+                    3 => reth_rpc_types::ReceiptEnvelope::Eip4844(receipt),
+                    _ => unreachable!(),
+                },
             },
         })
     }

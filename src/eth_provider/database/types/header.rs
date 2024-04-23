@@ -1,5 +1,5 @@
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use reth_primitives::{constants::EMPTY_ROOT_HASH, SealedHeader, B64, U256, U64};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, SealedHeader, B64, U256};
 use reth_rpc_types::Header;
 use serde::{Deserialize, Serialize};
 
@@ -26,18 +26,18 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredHeader {
                 receipts_root: header.receipts_root,
                 logs_bloom: header.logs_bloom,
                 difficulty: header.difficulty,
-                number: Some(U256::from(header.number)),
-                gas_limit: U256::from(header.gas_limit),
-                gas_used: U256::from(header.gas_used),
-                timestamp: U256::from(header.timestamp),
+                number: Some(header.number),
+                gas_limit: u128::from(header.gas_limit),
+                gas_used: u128::from(header.gas_used),
+                timestamp: u64::from(header.timestamp),
                 total_difficulty: Some(U256::arbitrary(u)?),
                 extra_data: header.extra_data.clone(),
                 mix_hash: Some(header.mix_hash),
                 nonce: Some(B64::from(header.nonce)),
-                base_fee_per_gas: header.base_fee_per_gas.map(U256::from),
+                base_fee_per_gas: header.base_fee_per_gas.map(|base_fee_per_gas| base_fee_per_gas as u128),
                 withdrawals_root: Some(EMPTY_ROOT_HASH),
-                blob_gas_used: header.blob_gas_used.map(U64::from),
-                excess_blob_gas: header.excess_blob_gas.map(U64::from),
+                blob_gas_used: header.blob_gas_used.map(|blob_gas_used| blob_gas_used as u128),
+                excess_blob_gas: header.excess_blob_gas.map(|excess_blob_gas| excess_blob_gas as u128),
                 parent_beacon_block_root: header.parent_beacon_block_root,
             },
         })
