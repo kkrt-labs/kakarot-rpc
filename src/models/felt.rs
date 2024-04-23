@@ -39,6 +39,12 @@ impl From<u64> for Felt252Wrapper {
     }
 }
 
+impl From<u128> for Felt252Wrapper {
+    fn from(value: u128) -> Self {
+        Self(FieldElement::from(value))
+    }
+}
+
 impl TryFrom<Felt252Wrapper> for Address {
     type Error = EthereumDataFormatError;
 
