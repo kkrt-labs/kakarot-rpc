@@ -10,7 +10,7 @@ use crate::{
 use reth_primitives::{
     revm::env::tx_env_with_recovered,
     revm_primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, SpecId},
-    TxType, B256,
+    TxType, B256, U256,
 };
 use reth_revm::tracing::{TracingInspector, TracingInspectorConfig};
 use reth_revm::{primitives::HandlerCfg, DatabaseCommit};
@@ -83,22 +83,19 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 let parity_builder = evm.context.external.clone().into_parity_builder();
 
                 // Extract the base fee from the transaction based on the transaction type
-                let base_fee = match tx.transaction_type.and_then(|typ| typ.to::<u8>().try_into().ok()) {
+                let base_fee = match tx.transaction_type.and_then(|typ| typ.try_into().ok()) {
                     Some(TxType::Legacy) | Some(TxType::Eip2930) => tx.gas_price,
                     Some(TxType::Eip1559) => tx
                         .max_fee_per_gas
                         .map(|fee| fee.saturating_sub(tx.max_priority_fee_per_gas.unwrap_or_default())),
                     _ => return Err(EthereumDataFormatError::TransactionConversionError.into()),
-                }
-                .map(|fee| fee.try_into())
-                .transpose()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?;
+                };
 
                 let transaction_info = TransactionInfo {
                     hash: Some(tx.hash),
-                    index: tx.transaction_index.map(|i| i.to()),
+                    index: tx.transaction_index,
                     block_hash: tx.block_hash,
-                    block_number: tx.block_number.map(|bn| bn.to()),
+                    block_number: tx.block_number,
                     base_fee,
                 };
                 traces.extend(parity_builder.into_localized_transaction_traces(transaction_info));
@@ -123,11 +120,11 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
         let Header { number, timestamp, gas_limit, miner, base_fee_per_gas, difficulty, .. } = block_header;
         let block_env = BlockEnv {
-            number: number.unwrap_or_default(),
-            timestamp,
-            gas_limit,
+            number: U256::from(number.unwrap_or_default()),
+            timestamp: U256::from(timestamp),
+            gas_limit: U256::from(gas_limit),
             coinbase: miner,
-            basefee: base_fee_per_gas.unwrap_or_default(),
+            basefee: U256::from(base_fee_per_gas.unwrap_or_default()),
             prevrandao: Some(B256::from_slice(&difficulty.to_be_bytes::<32>()[..])),
             ..Default::default()
         };

@@ -10,17 +10,12 @@ pub fn rpc_to_primitive_transaction(
     match rpc_transaction
         .transaction_type
         .ok_or(EthereumDataFormatError::PrimitiveError)?
-        .to::<u64>()
         .try_into()
         .map_err(|_| EthereumDataFormatError::PrimitiveError)?
     {
         TxType::Legacy => Ok(reth_primitives::Transaction::Legacy(TxLegacy {
             nonce: rpc_transaction.nonce,
-            gas_price: rpc_transaction
-                .gas_price
-                .ok_or(EthereumDataFormatError::PrimitiveError)?
-                .try_into()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+            gas_price: rpc_transaction.gas_price.ok_or(EthereumDataFormatError::PrimitiveError)?,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
             value: rpc_transaction.value,
@@ -30,11 +25,7 @@ pub fn rpc_to_primitive_transaction(
         TxType::Eip2930 => Ok(reth_primitives::Transaction::Eip2930(TxEip2930 {
             chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?,
             nonce: rpc_transaction.nonce,
-            gas_price: rpc_transaction
-                .gas_price
-                .ok_or(EthereumDataFormatError::PrimitiveError)?
-                .try_into()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+            gas_price: rpc_transaction.gas_price.ok_or(EthereumDataFormatError::PrimitiveError)?,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
             value: rpc_transaction.value,
@@ -56,16 +47,10 @@ pub fn rpc_to_primitive_transaction(
             chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?,
             nonce: rpc_transaction.nonce,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
-            max_fee_per_gas: rpc_transaction
-                .max_fee_per_gas
-                .ok_or(EthereumDataFormatError::PrimitiveError)?
-                .try_into()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+            max_fee_per_gas: rpc_transaction.max_fee_per_gas.ok_or(EthereumDataFormatError::PrimitiveError)?,
             max_priority_fee_per_gas: rpc_transaction
                 .max_priority_fee_per_gas
-                .ok_or(EthereumDataFormatError::PrimitiveError)?
-                .try_into()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+                .ok_or(EthereumDataFormatError::PrimitiveError)?,
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
             value: rpc_transaction.value,
             access_list: AccessList(
@@ -108,7 +93,7 @@ pub fn rpc_to_ec_recovered_transaction(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reth_primitives::{Address, Bytes, U256, U8};
+    use reth_primitives::{Address, Bytes, U256};
     use reth_rpc_types::AccessListItem as RpcAccessListItem;
     use std::str::FromStr;
 
@@ -124,8 +109,8 @@ mod tests {
                     from: Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
                     to: Some(Address::from_str("0x0000000000000000000000000000000000000002").unwrap()),
                     value: U256::from(100),
-                    gas_price: Some(U256::from(20)),
-                    gas: U256::from(21000),
+                    gas_price: Some(20),
+                    gas: 21000,
                     input: Bytes::from("1234"),
                     signature: Some(reth_rpc_types::Signature {
                         r: U256::from(1),
@@ -134,14 +119,14 @@ mod tests {
                         y_parity: Some(reth_rpc_types::Parity(true)),
                     }),
                     chain_id: Some(1),
-                    transaction_type: Some(U8::from(0)),
+                    transaction_type: Some(0),
                     ..Default::default()
                 },
             }
         }
 
         fn with_transaction_type(mut self, tx_type: TxType) -> Self {
-            self.tx.transaction_type = Some(U8::from(tx_type as u8));
+            self.tx.transaction_type = Some(tx_type as u8);
             self
         }
 
@@ -154,8 +139,8 @@ mod tests {
         }
 
         fn with_fee_market(mut self) -> Self {
-            self.tx.max_fee_per_gas = Some(U256::from(30));
-            self.tx.max_priority_fee_per_gas = Some(U256::from(10));
+            self.tx.max_fee_per_gas = Some(30);
+            self.tx.max_priority_fee_per_gas = Some(10);
             self
         }
 
@@ -183,9 +168,9 @@ mod tests {
         ($tx: expr, $rpc_tx: expr, $gas_price_field: ident, $has_access_list: expr) => {
             assert_eq!($tx.chain_id(), $rpc_tx.chain_id);
             assert_eq!($tx.nonce(), $rpc_tx.nonce);
-            assert_eq!($tx.max_fee_per_gas(), $rpc_tx.$gas_price_field.unwrap().to());
-            assert_eq!($tx.max_priority_fee_per_gas(), $rpc_tx.max_priority_fee_per_gas.map(|fee| fee.to()));
-            assert_eq!($tx.gas_limit(), $rpc_tx.gas.to::<u64>());
+            assert_eq!($tx.max_fee_per_gas(), $rpc_tx.$gas_price_field.unwrap());
+            assert_eq!($tx.max_priority_fee_per_gas(), $rpc_tx.max_priority_fee_per_gas);
+            assert_eq!($tx.gas_limit() as u128, $rpc_tx.gas);
             assert_eq!($tx.value(), $rpc_tx.value);
             assert_eq!($tx.input().clone(), $rpc_tx.input);
             assert_eq!($tx.to().unwrap(), $rpc_tx.to.unwrap());
@@ -258,6 +243,7 @@ mod tests {
         gas_price,
         false
     );
+
     test_rpc_to_ec_recovered_conversion!(
         test_legacy_transaction_conversion_to_ec_recovered,
         legacy_rpc_transaction,
@@ -284,6 +270,7 @@ mod tests {
         max_fee_per_gas,
         true
     );
+
     test_rpc_to_ec_recovered_conversion!(
         test_eip1559_transaction_conversion_to_ec_recovered,
         eip1559_rpc_transaction,
@@ -295,7 +282,7 @@ mod tests {
     #[should_panic(expected = "PrimitiveError")]
     fn test_invalid_transaction_type() {
         let mut rpc_tx = RpcTxBuilder::new().build();
-        rpc_tx.transaction_type = Some(U8::from(99)); // Invalid type
+        rpc_tx.transaction_type = Some(99); // Invalid type
 
         let _ = rpc_to_primitive_transaction(rpc_tx).unwrap();
     }

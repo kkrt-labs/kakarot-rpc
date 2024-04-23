@@ -170,11 +170,6 @@ where
             None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
             Some(header) => {
                 let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber)?;
-                let number: u64 = number
-                    .try_into()
-                    .inspect_err(|err| tracing::error!("internal error: {:?}", err))
-                    .map_err(|_| EthApiError::UnknownBlockNumber)?;
-
                 let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
                 U64::from(if is_pending_block { number - 1 } else { number })
             }
@@ -226,7 +221,7 @@ where
         number_or_tag: BlockNumberOrTag,
     ) -> EthProviderResult<Option<U256>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let block_exists = self.block_exists(block_number.to::<u64>().into()).await?;
+        let block_exists = self.block_exists(block_number.into()).await?;
         if !block_exists {
             return Ok(None);
         }
@@ -453,8 +448,7 @@ where
                 .insert("log.address", doc! {"$in": adds.into_iter().map(|a| format_hex(a, 40)).collect::<Vec<_>>()})
         });
 
-        let logs = self.database.get::<StoredLog>(database_filter, None).await?;
-        Ok(FilterChanges::Logs(logs.into_iter().map_into().collect()))
+        Ok(FilterChanges::Logs(self.database.get_and_map_to::<_, StoredLog>(database_filter, None).await?))
     }
 
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
@@ -464,7 +458,7 @@ where
 
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
         // Set a high gas limit to make sure the transaction will not fail due to gas.
-        let request = TransactionRequest { gas: Some(U256::from(u64::MAX)), ..request };
+        let request = TransactionRequest { gas: Some(u64::MAX as u128), ..request };
 
         let gas_used = self.estimate_gas_helper(request, block_id).await?;
         Ok(U256::from(gas_used))
@@ -499,8 +493,8 @@ where
         let gas_used_ratio = blocks
             .iter()
             .map(|header| {
-                let gas_used = header.header.gas_used.as_limbs()[0] as f64;
-                let mut gas_limit = header.header.gas_limit.as_limbs()[0] as f64;
+                let gas_used = header.header.gas_used as f64;
+                let mut gas_limit = header.header.gas_limit as f64;
                 if gas_limit == 0. {
                     gas_limit = 1.;
                 };
@@ -516,7 +510,7 @@ where
         Ok(FeeHistory {
             base_fee_per_gas,
             gas_used_ratio,
-            oldest_block: U256::from(start_block),
+            oldest_block: start_block,
             reward: Some(vec![]),
             ..Default::default()
         })
@@ -606,7 +600,7 @@ where
         match block_id {
             BlockId::Number(maybe_number) => {
                 let block_number = self.tag_into_block_number(maybe_number).await?;
-                let block_exists = self.block_exists(block_number.to::<u64>().into()).await?;
+                let block_exists = self.block_exists(block_number.into()).await?;
                 if !block_exists {
                     return Ok(None);
                 }
@@ -685,13 +679,13 @@ where
         let data = request.input.into_input().unwrap_or_default();
         let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
 
-        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| U256::from(CALL_REQUEST_GAS_LIMIT)))?;
+        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or(CALL_REQUEST_GAS_LIMIT as u128))?;
 
         // We cannot unwrap_or_default() here because Kakarot.eth_call will
         // Reject transactions with gas_price < Kakarot.base_fee
         let gas_price = {
             let gas_price = match request.gas_price {
-                Some(gas_price) => gas_price,
+                Some(gas_price) => U256::from(gas_price),
                 None => self.gas_price().await?,
             };
             into_via_try_wrapper!(gas_price)?
