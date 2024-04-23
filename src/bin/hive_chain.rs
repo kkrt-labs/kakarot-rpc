@@ -48,7 +48,6 @@ async fn main() -> eyre::Result<()> {
     let mut bodies: Vec<BlockBody> = Vec::new();
     while let Some(block_res) = stream.next().await {
         let block = block_res?;
-
         bodies.push(block.into());
     }
 
