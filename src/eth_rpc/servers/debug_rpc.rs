@@ -1,11 +1,10 @@
 use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::models::block::rpc_to_primitive_block;
-use crate::models::block::rpc_to_primitive_header;
 use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_to_primitive_transaction};
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
+use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256, Header};
 use reth_rpc_types::BlockId;
 
 /// The RPC module for the implementing Net api
@@ -29,7 +28,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .eth_provider
             .header(&block_id)
             .await?
-            .map(rpc_to_primitive_header)
+            .map(Header::try_from)
             .transpose()
             .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::HeaderConversionError))?
         {

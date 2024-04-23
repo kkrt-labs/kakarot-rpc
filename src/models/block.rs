@@ -1,7 +1,7 @@
 use super::transaction::rpc_to_primitive_transaction;
 use crate::eth_provider::constant::STARKNET_MODULUS;
 use crate::{eth_provider::error::EthereumDataFormatError, into_via_try_wrapper};
-use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals, U256};
+use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, Header, TransactionSigned, Withdrawals, U256};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
 #[derive(Debug)]
@@ -67,43 +67,6 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
     }
 }
 
-pub fn rpc_to_primitive_header(
-    header: reth_rpc_types::Header,
-) -> Result<reth_primitives::Header, EthereumDataFormatError> {
-    Ok(reth_primitives::Header {
-        base_fee_per_gas: header
-            .base_fee_per_gas
-            .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
-            .transpose()?,
-        beneficiary: header.miner,
-        blob_gas_used: header
-            .blob_gas_used
-            .map(|blob_gas_used| blob_gas_used.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
-            .transpose()?,
-        difficulty: header.difficulty,
-        excess_blob_gas: header
-            .excess_blob_gas
-            .map(|excess_blob_gas| excess_blob_gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
-            .transpose()?,
-        extra_data: header.extra_data,
-        gas_limit: header.gas_limit.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
-        gas_used: header.gas_used.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
-        logs_bloom: header.logs_bloom,
-        mix_hash: header.mix_hash.unwrap_or_default(),
-        nonce: u64::from_be_bytes(header.nonce.unwrap_or_default().0),
-        number: header.number.ok_or(EthereumDataFormatError::PrimitiveError)?,
-        ommers_hash: header.uncles_hash,
-        parent_beacon_block_root: header.parent_beacon_block_root,
-        parent_hash: header.parent_hash,
-        receipts_root: header.receipts_root,
-        state_root: header.state_root,
-        timestamp: header.timestamp,
-        transactions_root: header.transactions_root,
-        // Withdrawals are not allowed so we push a None value
-        withdrawals_root: Default::default(),
-    })
-}
-
 pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, EthereumDataFormatError> {
     let body = {
         let transactions: Result<Vec<TransactionSigned>, EthereumDataFormatError> = match block.transactions {
@@ -129,7 +92,7 @@ pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primi
     };
     // ⚠️ Kakarot does not support omners or withdrawals and returns default values for those fields ⚠️
     Ok(reth_primitives::Block {
-        header: rpc_to_primitive_header(block.header)?,
+        header: Header::try_from(block.header).ok().ok_or(EthereumDataFormatError::PrimitiveError)?,
         body,
         ommers: Default::default(),
         withdrawals: Some(Withdrawals::default()),
