@@ -444,8 +444,7 @@ where
                 .insert("log.address", doc! {"$in": adds.into_iter().map(|a| format_hex(a, 40)).collect::<Vec<_>>()})
         });
 
-        let logs = self.database.get::<StoredLog>(database_filter, None).await?;
-        Ok(FilterChanges::Logs(logs.into_iter().map_into().collect()))
+        Ok(FilterChanges::Logs(self.database.get_and_map_to::<_, StoredLog>(database_filter, None).await?))
     }
 
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
