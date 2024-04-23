@@ -8,7 +8,7 @@ use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH};
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use reth_primitives::{
-    BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered, U256,
+    BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered,
 };
 use reth_rpc_types_compat::transaction::from_recovered_with_block_context;
 use rstest::*;
@@ -52,7 +52,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         *BLOCK_HASH,
         BLOCK_NUMBER,
         None,
-        U256::ZERO,
+        0,
     );
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -108,7 +108,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         *BLOCK_HASH,
         BLOCK_NUMBER,
         None,
-        U256::ZERO,
+        0,
     );
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -164,7 +164,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         *BLOCK_HASH,
         BLOCK_NUMBER,
         None,
-        U256::ZERO,
+        0,
     );
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -207,7 +207,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
     // Get the block number from the transaction and convert it to a u64.
-    let block_number = tx.block_number.unwrap().to::<u64>();
+    let block_number = tx.block_number.unwrap();
 
     // Fetch raw transactions by block hash.
     let reqwest_client = reqwest::Client::new();
@@ -317,7 +317,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
     // Get the block number from the transaction and convert it to a u64.
-    let block_number = tx.block_number.unwrap().to::<u64>();
+    let block_number = tx.block_number.unwrap();
 
     // Fetch raw receipts by block hash.
     let reqwest_client = reqwest::Client::new();
@@ -394,16 +394,17 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         // Construct a Receipt instance from the transaction receipt data.
         let r = ReceiptWithBloom {
             receipt: Receipt {
-                tx_type: tx_receipt.transaction_type.to::<u8>().try_into().unwrap(),
-                success: tx_receipt.status_code.unwrap_or_default().to::<u64>() == 1,
-                cumulative_gas_used: tx_receipt.cumulative_gas_used.to::<u64>(),
+                tx_type: Into::<u8>::into(tx_receipt.transaction_type()).try_into().unwrap(),
+                success: tx_receipt.inner.status(),
+                cumulative_gas_used: TryInto::<u64>::try_into(tx_receipt.inner.cumulative_gas_used()).unwrap(),
                 logs: tx_receipt
-                    .logs
-                    .into_iter()
-                    .map(|log| Log { address: log.address, topics: log.topics, data: log.data })
+                    .inner
+                    .logs()
+                    .iter()
+                    .filter_map(|log| Log::new(log.address(), log.topics().to_vec(), log.data().data.clone()))
                     .collect(),
             },
-            bloom: tx_receipt.logs_bloom,
+            bloom: *receipt.inner.logs_bloom(),
         }
         .envelope_encoded();
 
@@ -427,7 +428,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     let tx = &katana.first_transaction().unwrap();
 
     // Get the block number from the transaction and convert it to a u64.
-    let block_number = tx.block_number.unwrap().to::<u64>();
+    let block_number = tx.block_number.unwrap();
 
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
@@ -504,7 +505,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
     // Get the block number from the transaction and convert it to a u64.
-    let block_number = tx.block_number.unwrap().to::<u64>();
+    let block_number = tx.block_number.unwrap();
 
     // Create a reqwest client.
     let reqwest_client = reqwest::Client::new();

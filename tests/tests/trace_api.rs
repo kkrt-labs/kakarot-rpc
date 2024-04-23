@@ -7,7 +7,7 @@ use kakarot_rpc::test_utils::evm_contract::{
 use kakarot_rpc::test_utils::fixtures::{plain_opcodes, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use reth_primitives::{B256, U256, U8};
+use reth_primitives::{B256, U256};
 use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
 use reth_rpc_types::Signature;
 use rstest::*;
@@ -20,7 +20,7 @@ const TRANSACTIONS_COUNT: usize = 5;
 
 fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> reth_rpc_types::Header {
     reth_rpc_types::Header {
-        number: Some(U256::from(block_number)),
+        number: Some(block_number),
         hash: Some(hash),
         parent_hash,
         nonce: Default::default(),
@@ -31,13 +31,13 @@ fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> r
         difficulty: Default::default(),
         total_difficulty: Default::default(),
         extra_data: Default::default(),
-        gas_limit: U256::MAX,
+        gas_limit: u64::MAX as u128,
         gas_used: Default::default(),
         timestamp: Default::default(),
         uncles_hash: Default::default(),
         miner: Default::default(),
         mix_hash: Default::default(),
-        base_fee_per_gas: Some(U256::from(base_fee)),
+        base_fee_per_gas: Some(base_fee),
         withdrawals_root: Default::default(),
         excess_blob_gas: Default::default(),
         parent_beacon_block_root: Default::default(),
@@ -81,14 +81,14 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
         // Sign the transaction and convert it to a RPC transaction.
         let tx_signed = eoa.sign_transaction(tx.clone()).expect("Failed to sign transaction");
         let tx = reth_rpc_types::Transaction {
-            transaction_type: Some(U8::from(2)),
+            transaction_type: Some(2),
             nonce: tx.nonce(),
             hash: tx_signed.hash(),
             to: tx.to(),
             from: eoa_address,
-            block_number: Some(U256::from(TRACING_BLOCK_NUMBER)),
+            block_number: Some(TRACING_BLOCK_NUMBER),
             chain_id: tx.chain_id(),
-            gas: U256::from(tx.gas_limit()),
+            gas: tx.gas_limit() as u128,
             input: tx.input().clone(),
             signature: Some(Signature {
                 r: tx_signed.signature().r,
@@ -96,9 +96,9 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
                 v: U256::from(tx_signed.signature().v(Some(chain_id))),
                 y_parity: Some(reth_rpc_types::Parity(tx_signed.signature().odd_y_parity)),
             }),
-            max_fee_per_gas: Some(U256::from(max_fee_per_gas)),
-            gas_price: Some(U256::from(max_fee_per_gas)),
-            max_priority_fee_per_gas: Some(U256::from(max_priority_fee_per_gas)),
+            max_fee_per_gas: Some(max_fee_per_gas),
+            gas_price: Some(max_fee_per_gas),
+            max_priority_fee_per_gas: Some(max_priority_fee_per_gas),
             value: tx.value(),
             ..Default::default()
         };

@@ -32,9 +32,10 @@ use starknet::core::utils::{get_contract_address, get_storage_var_address, get_u
 use walkdir::WalkDir;
 
 use crate::test_utils::constants::{
-    ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE,
-    KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
-    KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+    ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION,
+    KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_CAIRO1_HELPERS_CLASS_HASH,
+    KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO,
+    KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
 };
 
 lazy_static! {
@@ -186,7 +187,7 @@ impl KatanaGenesisBuilder<Uninitialized> {
                 let class_hash = compute_class_hash(artifact).ok()?;
                 Some((path.file_stem().unwrap().to_str().unwrap().to_string(), class_hash))
             })
-            .collect::<HashMap<_, _>>();
+            .collect();
         self.classes = classes.into_iter().map(|(_, class)| class).collect();
 
         self.update_state()
@@ -221,6 +222,7 @@ impl KatanaGenesisBuilder<Loaded> {
         ));
         // Cache the address for later use.
         self.cache.insert("kakarot_address".to_string(), kakarot_address.0);
+        self.cache.insert("cairo1_helpers".to_string(), cairo1_helpers_class_hash);
 
         // Construct the kakarot contract storage.
         let kakarot_storage = [
@@ -234,7 +236,7 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr(KAKAROT_BLOCK_GAS_LIMIT)?, block_gas_limit),
         ]
         .into_iter()
-        .collect::<HashMap<_, _>>();
+        .collect();
 
         let kakarot = GenesisContractJson {
             class: Some(kakarot_class_hash),
@@ -257,15 +259,17 @@ impl KatanaGenesisBuilder<Initialized> {
 
         let kakarot_address = self.cache_load("kakarot_address")?;
         let account_contract_class_hash = self.account_contract_class_hash()?;
+        let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
 
         // Set the eoa storage
         let eoa_storage = [
             (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
             (storage_addr(OWNABLE_OWNER)?, kakarot_address),
             (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
+            (storage_addr(ACCOUNT_CAIRO1_HELPERS_CLASS_HASH)?, cairo1_helpers_class_hash),
         ]
         .into_iter()
-        .collect::<HashMap<_, _>>();
+        .collect();
 
         let eoa = GenesisContractJson {
             class: Some(account_contract_class_hash),
@@ -341,9 +345,10 @@ impl KatanaGenesisBuilder<Initialized> {
 
     /// Returns the manifest of the genesis.
     pub fn manifest(&self) -> KatanaManifest {
-        let cache = self.cache().clone().into_iter().map(|(k, v)| (k, Hex(v))).collect::<HashMap<_, _>>();
-        let class_hashes = self.class_hashes().clone().into_iter().map(|(k, v)| (k, Hex(v))).collect::<HashMap<_, _>>();
-        KatanaManifest { declarations: class_hashes, deployments: cache }
+        KatanaManifest {
+            declarations: self.class_hashes().clone().into_iter().map(|(k, v)| (k, Hex(v))).collect(),
+            deployments: self.cache().clone().into_iter().map(|(k, v)| (k, Hex(v))).collect(),
+        }
     }
 
     /// Compute the Starknet address for the given Ethereum address.
