@@ -1,7 +1,6 @@
-use super::transaction::rpc_to_primitive_transaction;
 use crate::eth_provider::constant::STARKNET_MODULUS;
 use crate::{eth_provider::error::EthereumDataFormatError, into_via_try_wrapper};
-use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, Header, TransactionSigned, Withdrawals, U256};
+use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, U256};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
 #[derive(Debug)]
@@ -67,43 +66,12 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
     }
 }
 
-pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, EthereumDataFormatError> {
-    let body = {
-        let transactions: Result<Vec<TransactionSigned>, EthereumDataFormatError> = match block.transactions {
-            reth_rpc_types::BlockTransactions::Full(transactions) => transactions
-                .into_iter()
-                .map(|tx| {
-                    let signature = tx.signature.ok_or(EthereumDataFormatError::PrimitiveError)?;
-                    Ok(TransactionSigned::from_transaction_and_signature(
-                        rpc_to_primitive_transaction(tx)?,
-                        reth_primitives::Signature {
-                            r: signature.r,
-                            s: signature.s,
-                            odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-                        },
-                    ))
-                })
-                .collect(),
-            reth_rpc_types::BlockTransactions::Hashes(_) | reth_rpc_types::BlockTransactions::Uncle => {
-                return Err(EthereumDataFormatError::PrimitiveError);
-            }
-        };
-        transactions?
-    };
-    // ⚠️ Kakarot does not support omners or withdrawals and returns default values for those fields ⚠️
-    Ok(reth_primitives::Block {
-        header: Header::try_from(block.header).ok().ok_or(EthereumDataFormatError::PrimitiveError)?,
-        body,
-        ommers: Default::default(),
-        withdrawals: Some(Withdrawals::default()),
-    })
-}
-
 #[cfg(test)]
 mod tests {
+    use super::transaction::rpc_to_primitive_transaction;
     use std::str::FromStr;
 
-    use reth_primitives::{Address, Bloom, Bytes, B256, B64, U256};
+    use reth_primitives::{Address, Block, Bloom, Bytes, TransactionSigned, Withdrawals, B256, B64, U256};
     use reth_rpc_types::{other::OtherFields, Parity, Signature};
 
     use super::*;
@@ -183,7 +151,7 @@ mod tests {
     #[test]
     fn test_rpc_to_primitive_block() {
         let block = base_rpc_block();
-        let primitive_block = rpc_to_primitive_block(block).unwrap();
+        let primitive_block = Block::try_from(block).ok().ok_or(EthereumDataFormatError::PrimitiveError).unwrap();
         assert_eq!(primitive_block.header.parent_hash, B256::from_str(&format!("0x{:0>64}", "01")).unwrap());
         assert_eq!(primitive_block.header.ommers_hash, B256::from_str(&format!("0x{:0>64}", "02")).unwrap());
         assert_eq!(primitive_block.header.beneficiary, Address::from_str(&format!("0x{:0>40}", "03")).unwrap());
