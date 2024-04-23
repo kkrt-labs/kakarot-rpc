@@ -21,10 +21,10 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let receipt = Receipt::arbitrary(u)?;
 
-        let mut rpc_logs = Vec::new();
+        let mut logs = Vec::new();
 
         for log in receipt.logs {
-            rpc_logs.push(reth_rpc_types::Log {
+            logs.push(reth_rpc_types::Log {
                 transaction_index: Some(u64::arbitrary(u)?),
                 log_index: Some(u64::arbitrary(u)?),
                 removed: bool::arbitrary(u)?,
@@ -39,8 +39,8 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
         let receipt = reth_rpc_types::ReceiptWithBloom {
             receipt: reth_rpc_types::Receipt {
                 status: bool::arbitrary(u)?,
-                cumulative_gas_used: u128::arbitrary(u)?,
-                logs: rpc_logs,
+                cumulative_gas_used: u64::arbitrary(u)? as u128,
+                logs,
             },
             logs_bloom: Bloom::arbitrary(u)?,
         };

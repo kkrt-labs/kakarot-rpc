@@ -39,7 +39,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                 to: transaction.to(),
                 value: transaction.value(),
                 gas_price: Some(u128::arbitrary(u)?),
-                gas: u128::arbitrary(u)?,
+                gas: u64::arbitrary(u)? as u128,
                 max_fee_per_gas: Some(transaction.max_fee_per_gas()),
                 max_priority_fee_per_gas: Some(transaction.max_priority_fee_per_gas().unwrap_or_default()),
                 max_fee_per_blob_gas: transaction.max_fee_per_blob_gas(),
