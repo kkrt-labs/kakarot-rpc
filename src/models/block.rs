@@ -91,17 +91,13 @@ pub fn rpc_to_primitive_header(
         logs_bloom: header.logs_bloom,
         mix_hash: header.mix_hash.unwrap_or_default(),
         nonce: u64::from_be_bytes(header.nonce.unwrap_or_default().0),
-        number: header
-            .number
-            .ok_or(EthereumDataFormatError::PrimitiveError)?
-            .try_into()
-            .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+        number: header.number.ok_or(EthereumDataFormatError::PrimitiveError)?,
         ommers_hash: header.uncles_hash,
         parent_beacon_block_root: header.parent_beacon_block_root,
         parent_hash: header.parent_hash,
         receipts_root: header.receipts_root,
         state_root: header.state_root,
-        timestamp: header.timestamp.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+        timestamp: header.timestamp,
         transactions_root: header.transactions_root,
         // Withdrawals are not allowed so we push a None value
         withdrawals_root: Default::default(),

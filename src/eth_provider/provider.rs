@@ -166,11 +166,6 @@ where
             None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
             Some(header) => {
                 let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber)?;
-                let number: u64 = number
-                    .try_into()
-                    .inspect_err(|err| tracing::error!("internal error: {:?}", err))
-                    .map_err(|_| EthApiError::UnknownBlockNumber)?;
-
                 let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
                 U64::from(if is_pending_block { number - 1 } else { number })
             }
@@ -668,7 +663,7 @@ where
         let data = request.input.into_input().unwrap_or_default();
         let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
 
-        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or_else(|| CALL_REQUEST_GAS_LIMIT as u128))?;
+        let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or(CALL_REQUEST_GAS_LIMIT as u128))?;
 
         // We cannot unwrap_or_default() here because Kakarot.eth_call will
         // Reject transactions with gas_price < Kakarot.base_fee

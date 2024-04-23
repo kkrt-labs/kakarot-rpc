@@ -15,11 +15,7 @@ pub fn rpc_to_primitive_transaction(
     {
         TxType::Legacy => Ok(reth_primitives::Transaction::Legacy(TxLegacy {
             nonce: rpc_transaction.nonce,
-            gas_price: rpc_transaction
-                .gas_price
-                .ok_or(EthereumDataFormatError::PrimitiveError)?
-                .try_into()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+            gas_price: rpc_transaction.gas_price.ok_or(EthereumDataFormatError::PrimitiveError)?,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
             value: rpc_transaction.value,
@@ -29,11 +25,7 @@ pub fn rpc_to_primitive_transaction(
         TxType::Eip2930 => Ok(reth_primitives::Transaction::Eip2930(TxEip2930 {
             chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?,
             nonce: rpc_transaction.nonce,
-            gas_price: rpc_transaction
-                .gas_price
-                .ok_or(EthereumDataFormatError::PrimitiveError)?
-                .try_into()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+            gas_price: rpc_transaction.gas_price.ok_or(EthereumDataFormatError::PrimitiveError)?,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
             value: rpc_transaction.value,
@@ -55,16 +47,10 @@ pub fn rpc_to_primitive_transaction(
             chain_id: rpc_transaction.chain_id.ok_or(EthereumDataFormatError::PrimitiveError)?,
             nonce: rpc_transaction.nonce,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
-            max_fee_per_gas: rpc_transaction
-                .max_fee_per_gas
-                .ok_or(EthereumDataFormatError::PrimitiveError)?
-                .try_into()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+            max_fee_per_gas: rpc_transaction.max_fee_per_gas.ok_or(EthereumDataFormatError::PrimitiveError)?,
             max_priority_fee_per_gas: rpc_transaction
                 .max_priority_fee_per_gas
-                .ok_or(EthereumDataFormatError::PrimitiveError)?
-                .try_into()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?,
+                .ok_or(EthereumDataFormatError::PrimitiveError)?,
             to: rpc_transaction.to.map_or_else(|| TransactionKind::Create, TransactionKind::Call),
             value: rpc_transaction.value,
             access_list: AccessList(
@@ -184,7 +170,7 @@ mod tests {
             assert_eq!($tx.nonce(), $rpc_tx.nonce);
             assert_eq!($tx.max_fee_per_gas(), $rpc_tx.$gas_price_field.unwrap());
             assert_eq!($tx.max_priority_fee_per_gas(), $rpc_tx.max_priority_fee_per_gas);
-            assert_eq!($tx.gas_limit(), $rpc_tx.gas as u64);
+            assert_eq!($tx.gas_limit() as u128, $rpc_tx.gas);
             assert_eq!($tx.value(), $rpc_tx.value);
             assert_eq!($tx.input().clone(), $rpc_tx.input);
             assert_eq!($tx.to().unwrap(), $rpc_tx.to.unwrap());

@@ -89,10 +89,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                         .max_fee_per_gas
                         .map(|fee| fee.saturating_sub(tx.max_priority_fee_per_gas.unwrap_or_default())),
                     _ => return Err(EthereumDataFormatError::TransactionConversionError.into()),
-                }
-                .map(|fee| fee.try_into())
-                .transpose()
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)?;
+                };
 
                 let transaction_info = TransactionInfo {
                     hash: Some(tx.hash),

@@ -128,7 +128,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
                         logs: receipt
                             .inner
                             .logs()
-                            .into_iter()
+                            .iter()
                             .filter_map(|log| Log::new(log.address(), log.topics().to_vec(), log.data().data.clone()))
                             .collect(),
                     },

@@ -29,7 +29,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredHeader {
                 number: Some(header.number),
                 gas_limit: u128::from(header.gas_limit),
                 gas_used: u128::from(header.gas_used),
-                timestamp: u64::from(header.timestamp),
+                timestamp: header.timestamp,
                 total_difficulty: Some(U256::arbitrary(u)?),
                 extra_data: header.extra_data.clone(),
                 mix_hash: Some(header.mix_hash),
