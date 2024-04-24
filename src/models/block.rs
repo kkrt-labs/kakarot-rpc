@@ -143,7 +143,7 @@ mod tests {
                 base_rpc_transaction(),
             ]),
             size: None,
-            withdrawals: Some(Vec::default()),
+            withdrawals: None,
             other: OtherFields::default(),
         }
     }
