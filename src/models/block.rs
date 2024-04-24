@@ -82,7 +82,7 @@ mod tests {
             state_root: B256::from_str(&format!("0x{:0>64}", "04")).unwrap(),
             transactions_root: B256::from_str(&format!("0x{:0>64}", "05")).unwrap(),
             receipts_root: B256::from_str(&format!("0x{:0>64}", "06")).unwrap(),
-            withdrawals_root: Some(B256::from_str(&format!("0x{:0>64}", "07")).unwrap()),
+            withdrawals_root: None,
             logs_bloom: Bloom::ZERO,
             difficulty: U256::ZERO,
             base_fee_per_gas: Some(8),
@@ -202,7 +202,7 @@ mod tests {
                 )
             ]
         );
-        assert_eq!(primitive_block.withdrawals, Some(Withdrawals::default()));
+        assert!(primitive_block.withdrawals.is_none());
         assert_eq!(primitive_block.ommers, Vec::default());
     }
 }
