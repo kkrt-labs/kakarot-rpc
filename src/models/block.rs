@@ -102,6 +102,8 @@ mod tests {
     }
 
     fn base_rpc_transaction() -> reth_rpc_types::Transaction {
+        let access_list = reth_rpc_types::AccessList::default();
+
         reth_rpc_types::Transaction {
             hash: B256::default(),
             nonce: 1,
@@ -125,7 +127,7 @@ mod tests {
             }),
             chain_id: Some(1),
             blob_versioned_hashes: Some(vec![]),
-            access_list: None,
+            access_list: Some(access_list),
             transaction_type: Some(2),
             other: serde_json::from_str("{}").unwrap(),
         }
