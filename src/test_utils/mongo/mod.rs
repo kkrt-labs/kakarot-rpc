@@ -199,7 +199,7 @@ impl MongoFuzzer {
         for i in range {
             let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
             let mut unstructured = arbitrary::Unstructured::new(&bytes);
-            let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
+            let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
 
             header.header.number = Some(i as u64);
 
@@ -272,7 +272,7 @@ impl MongoFuzzer {
     fn generate_transaction_header(&self, transaction: &Transaction) -> StoredHeader {
         let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
         let mut unstructured = arbitrary::Unstructured::new(&bytes);
-        let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
+        let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
 
         header.header.hash = transaction.block_hash;
         header.header.number = transaction.block_number;
@@ -423,7 +423,7 @@ impl TransactionBuilder {
             });
         }
 
-        Ok(StoredTransaction::arbitrary(&mut arbitrary::Unstructured::new(&{
+        Ok(StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(&{
             (0..rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>()
         }))?)
     }
