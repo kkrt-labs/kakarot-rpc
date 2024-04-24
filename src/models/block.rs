@@ -71,7 +71,7 @@ mod tests {
     use crate::models::transaction::rpc_to_primitive_transaction;
     use std::str::FromStr;
 
-    use reth_primitives::{Address, Block, Bloom, Bytes, TransactionSigned, Withdrawals, B256, B64, U256};
+    use reth_primitives::{Address, Block, Bloom, Bytes, TransactionSigned, B256, B64, U256};
     use reth_rpc_types::{other::OtherFields, Parity, Signature};
 
     fn base_rpc_header() -> reth_rpc_types::Header {
