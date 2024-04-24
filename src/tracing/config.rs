@@ -4,10 +4,8 @@ use reth_revm::{inspector_handle_register, primitives::EnvWithHandlerCfg, Databa
 pub(super) struct KakarotEvmConfig;
 
 impl KakarotEvmConfig {
-    /// Returns new EVM with the given database and env. We would prefer to implement [reth_evm::ConfigureEvmEnv]
-    /// but need this commit to be merged in order to add `append_handler_register(inspector_handle_register)`
-    /// otherwise the inspector will not be registered.
-    /// https://github.com/paradigmxyz/reth/pull/7470
+    /// Returns new EVM with the given database and env. Similar to the implementation of [reth_evm::ConfigureEvmEnv]
+    /// but only keeping the necessary API.
     pub(super) fn evm_with_env_and_inspector<'a, DB: Database + 'a, I: reth_revm::Inspector<DB>>(
         &self,
         db: DB,

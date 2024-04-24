@@ -1,4 +1,4 @@
-use reth_primitives::B256;
+use reth_primitives::{B256, U256};
 use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
 use reth_rpc_types::{BlockId, BlockTransactions, Header};
 
@@ -104,11 +104,11 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
         let Header { number, timestamp, gas_limit, miner, base_fee_per_gas, difficulty, .. } =
             self.block.clone().expect("Block not set").header;
         let block_env = BlockEnv {
-            number: number.unwrap_or_default(),
-            timestamp,
-            gas_limit,
+            number: U256::from(number.unwrap_or_default()),
+            timestamp: U256::from(timestamp),
+            gas_limit: U256::from(gas_limit),
             coinbase: miner,
-            basefee: base_fee_per_gas.unwrap_or_default(),
+            basefee: U256::from(base_fee_per_gas.unwrap_or_default()),
             prevrandao: Some(B256::from_slice(&difficulty.to_be_bytes::<32>()[..])),
             ..Default::default()
         };

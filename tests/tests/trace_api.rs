@@ -7,7 +7,7 @@ use kakarot_rpc::test_utils::evm_contract::{
 use kakarot_rpc::test_utils::fixtures::{plain_opcodes, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use reth_primitives::{B256, U256, U8};
+use reth_primitives::{B256, U256};
 use reth_rpc_types::trace::geth::TraceResult;
 use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
 use rstest::*;
