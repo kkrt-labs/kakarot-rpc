@@ -45,9 +45,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         };
         let mut raw_block = Vec::new();
         if let Some(block) = block {
-            let block = Block::try_from(block.inner)
-                .map_err(|_| EthereumDataFormatError::PrimitiveError)
-                .map_err(EthApiError::from)?;
+            let block =
+                Block::try_from(block.inner).map_err(|_| EthApiError::from(EthereumDataFormatError::PrimitiveError))?;
             block.encode(&mut raw_block);
         }
         Ok(raw_block.into())
