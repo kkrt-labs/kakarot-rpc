@@ -1,10 +1,15 @@
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
-use crate::eth_rpc::api::debug_api::DebugApiServer;
-use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_to_primitive_transaction};
+use std::sync::Arc;
+
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Block, Bytes, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
-use reth_rpc_types::BlockId;
+use reth_rpc_types::trace::geth::{GethDebugTracingOptions, TraceResult};
+use reth_rpc_types::{BlockId, BlockNumberOrTag};
+
+use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
+use crate::eth_rpc::api::debug_api::DebugApiServer;
+use crate::tracing::builder::TracerBuilder;
+use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_to_primitive_transaction};
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]
@@ -139,5 +144,39 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         // Returns the vector containing the raw receipts
         Ok(raw_receipts)
+    }
+
+    /// Returns the Geth debug trace for the given block number.
+    async fn trace_block_by_number(
+        &self,
+        block_number: BlockNumberOrTag,
+        opts: Option<GethDebugTracingOptions>,
+    ) -> Result<Option<Vec<TraceResult>>> {
+        let provider = Arc::new(&self.eth_provider);
+        let maybe_tracer =
+            TracerBuilder::new(provider).await?.with_block_id(BlockId::Number(block_number)).await?.build()?;
+        if maybe_tracer.is_none() {
+            return Ok(None);
+        }
+        let tracer = maybe_tracer.unwrap();
+        let traces = tracer.debug_block(opts.unwrap_or_default())?;
+        Ok(traces)
+    }
+
+    /// Returns the Geth debug trace for the given block hash.
+    async fn trace_block_by_hash(
+        &self,
+        block_hash: B256,
+        opts: Option<GethDebugTracingOptions>,
+    ) -> Result<Option<Vec<TraceResult>>> {
+        let provider = Arc::new(&self.eth_provider);
+        let maybe_tracer =
+            TracerBuilder::new(provider).await?.with_block_id(BlockId::Hash(block_hash.into())).await?.build()?;
+        if maybe_tracer.is_none() {
+            return Ok(None);
+        }
+        let tracer = maybe_tracer.unwrap();
+        let traces = tracer.debug_block(opts.unwrap_or_default())?;
+        Ok(traces)
     }
 }
