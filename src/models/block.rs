@@ -68,13 +68,11 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
 
 #[cfg(test)]
 mod tests {
-    use super::transaction::rpc_to_primitive_transaction;
+    use crate::models::transaction::rpc_to_primitive_transaction;
     use std::str::FromStr;
 
     use reth_primitives::{Address, Block, Bloom, Bytes, TransactionSigned, Withdrawals, B256, B64, U256};
     use reth_rpc_types::{other::OtherFields, Parity, Signature};
-
-    use super::*;
 
     fn base_rpc_header() -> reth_rpc_types::Header {
         reth_rpc_types::Header {
@@ -151,7 +149,7 @@ mod tests {
     #[test]
     fn test_rpc_to_primitive_block() {
         let block = base_rpc_block();
-        let primitive_block = Block::try_from(block).ok().ok_or(EthereumDataFormatError::PrimitiveError).unwrap();
+        let primitive_block = Block::try_from(block).unwrap();
         assert_eq!(primitive_block.header.parent_hash, B256::from_str(&format!("0x{:0>64}", "01")).unwrap());
         assert_eq!(primitive_block.header.ommers_hash, B256::from_str(&format!("0x{:0>64}", "02")).unwrap());
         assert_eq!(primitive_block.header.beneficiary, Address::from_str(&format!("0x{:0>40}", "03")).unwrap());
