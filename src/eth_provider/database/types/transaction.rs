@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// A full transaction as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
-#[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
+#[cfg_attr(any(test, feature = "arbitrary", feature = "testing"), derive(arbitrary::Arbitrary))]
 pub struct StoredTransaction {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,

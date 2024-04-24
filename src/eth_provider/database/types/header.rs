@@ -8,7 +8,7 @@ use {
 
 /// A header as stored in the database
 #[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "arbitrary"), derive(arbitrary::Arbitrary))]
+#[cfg_attr(any(test, feature = "arbitrary", feature = "testing"), derive(arbitrary::Arbitrary))]
 pub struct StoredHeader {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub header: Header,
