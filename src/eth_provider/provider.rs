@@ -10,8 +10,7 @@ use mongodb::bson::doc;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{
-    Address, BlockId, BlockNumberOrTag, Bytes, Header as PrimitiveHeader, TransactionSigned,
-    TransactionSignedEcRecovered, B256, U256, U64,
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256, U256, U64,
 };
 use reth_rpc_types::{
     Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
@@ -826,8 +825,9 @@ where
 
         // This is how reth computes the block size.
         // `https://github.com/paradigmxyz/reth/blob/v0.2.0-beta.5/crates/rpc/rpc-types-compat/src/block.rs#L66`
-        let size =
-            PrimitiveHeader::try_from(header.clone()).ok().ok_or(EthereumDataFormatError::PrimitiveError)?.length();
+        let size = reth_primitives::Header::try_from(header.clone())
+            .map_err(|_| EthereumDataFormatError::PrimitiveError)?
+            .length();
         Ok(Some(
             Block {
                 header,
