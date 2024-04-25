@@ -1,6 +1,6 @@
 use reth_primitives::B256;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use reth_primitives::{Address, TransactionSigned, U256};
+use reth_primitives::{Address, TransactionSigned, TxType, U256};
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
 
@@ -28,6 +28,8 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let transaction = TransactionSigned::arbitrary(u)?;
 
+        let transaction_type = Into::<u8>::into(transaction.tx_type()) % 3;
+
         Ok(StoredTransaction {
             tx: Transaction {
                 hash: transaction.hash,
@@ -40,8 +42,16 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                 value: transaction.value(),
                 gas_price: Some(u128::arbitrary(u)?),
                 gas: u64::arbitrary(u)? as u128,
-                max_fee_per_gas: Some(transaction.max_fee_per_gas()),
-                max_priority_fee_per_gas: Some(transaction.max_priority_fee_per_gas().unwrap_or_default()),
+                max_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
+                    None
+                } else {
+                    Some(transaction.max_fee_per_gas())
+                },
+                max_priority_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
+                    None
+                } else {
+                    Some(transaction.max_priority_fee_per_gas().unwrap_or_default())
+                },
                 max_fee_per_blob_gas: transaction.max_fee_per_blob_gas(),
                 input: transaction.input().clone(),
                 signature: Some(reth_rpc_types::Signature {
@@ -63,7 +73,6 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
                             .collect(),
                     )
                 }),
-
                 transaction_type: Some(Into::<u8>::into(transaction.tx_type()) % 3),
                 other: Default::default(),
             },

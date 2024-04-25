@@ -6,6 +6,7 @@ use {
     ethers::abi::Token,
 };
 
+/// This fixture deploys a counter contract on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
@@ -15,6 +16,7 @@ pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     (katana, contract)
 }
 
+/// This fixture deploys an empty contract on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
@@ -24,6 +26,7 @@ pub async fn contract_empty(#[future] katana: Katana) -> (Katana, KakarotEvmCont
     (katana, contract)
 }
 
+/// This fixture deploys an ERC20 contract on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
@@ -43,6 +46,7 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     (katana, contract)
 }
 
+/// This fixture deploys the plain opcodes contract on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]

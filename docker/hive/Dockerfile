@@ -133,7 +133,7 @@ ENV ALLOW_NET=""
 ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
 ENV RUST_LOG=kakarot_rpc=info
-ENV MAX_FELTS_IN_CALLDATA=22500
+ENV MAX_FELTS_IN_CALLDATA=30000
 
 HEALTHCHECK --interval=10s --timeout=10s --start-period=15s --retries=5 \
     CMD response=$(curl --silent --request POST \

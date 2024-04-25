@@ -1,5 +1,4 @@
 use crate::eth_provider::starknet::kakarot_core::account_contract::BytecodeOutput;
-use crate::models::block::rpc_to_primitive_header;
 use crate::models::transaction::rpc_to_primitive_transaction;
 use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
@@ -843,7 +842,9 @@ where
 
         // This is how reth computes the block size.
         // `https://github.com/paradigmxyz/reth/blob/v0.2.0-beta.5/crates/rpc/rpc-types-compat/src/block.rs#L66`
-        let size = rpc_to_primitive_header(header.clone())?.length();
+        let size = reth_primitives::Header::try_from(header.clone())
+            .map_err(|_| EthereumDataFormatError::PrimitiveError)?
+            .length();
         Ok(Some(
             Block {
                 header,
