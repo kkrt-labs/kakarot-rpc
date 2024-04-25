@@ -84,7 +84,7 @@ use_self = "allow"
 
 [dependencies]
 # Starknet dependencies
-cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5", default-features = false, features = ["abig-rs"] }
+cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5", default-features = false, features = ["abigen-rs"] }
 cairo-lang-starknet = { version = "2.5.4", default-features = false }
 ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "e215eb2", default-features = false, features = ["v0"], optional = true }
 starknet = { version = "0.9.0", default-features = false }

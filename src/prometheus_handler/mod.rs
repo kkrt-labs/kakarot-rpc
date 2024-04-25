@@ -50,7 +50,7 @@ pub enum Error {
 
     /// Http request error.
     #[error(transparent)]
-    Http(#[from] hyper::http::Error),
+    Http(#[from] Box<dyn std::error::Error + Send + Sync>),
 
     /// i/o error.
     #[error(transparent)]
@@ -100,15 +100,20 @@ async fn init_prometheus_with_listener(listener: tokio::net::TcpListener, regist
         // Use an adapter to access something implementing `tokio::io` traits as if they implement
         let io = TokioIo::new(tcp);
 
-        // Manufacturing a connection with the service from request_metrics fn
-        let conn = server::conn::auto::Builder::new(TokioExecutor::new()).serve_connection(
+        // making a clone of registry, as it will be used in the service_fn closure
+        let registry = registry.clone();
+
+        // Manufacturing a connection
+        let conn = server::conn::auto::Builder::new(TokioExecutor::new());
+
+        // setting up the connection to use the service implemented by request_metrics fn
+        let conn = conn.serve_connection(
             io,
             service_fn(move |req: Request<hyper::body::Incoming>| request_metrics(req, registry.clone())),
         );
 
         // awaiting for the res
-        // TODO: converting the Box<dyn Error + Send + Sync> to Error. having troubles with that
-        let res = conn.await.map_err(|_| Error::Http(hyper::http::Error::from("Some error occured")));
+        let res = conn.await.map_err(|e| Error::Http(e.into()))?;
 
         // sending out the result
         res
