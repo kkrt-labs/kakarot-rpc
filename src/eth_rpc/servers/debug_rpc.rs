@@ -2,14 +2,12 @@ use std::sync::Arc;
 
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
+use reth_primitives::{Block, Bytes, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
 use reth_rpc_types::trace::geth::{GethDebugTracingOptions, TraceResult};
 use reth_rpc_types::{BlockId, BlockNumberOrTag};
 
 use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
 use crate::eth_rpc::api::debug_api::DebugApiServer;
-use crate::models::block::rpc_to_primitive_block;
-use crate::models::block::rpc_to_primitive_header;
 use crate::tracing::builder::TracerBuilder;
 use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_to_primitive_transaction};
 
@@ -34,7 +32,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .eth_provider
             .header(&block_id)
             .await?
-            .map(rpc_to_primitive_header)
+            .map(Header::try_from)
             .transpose()
             .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::HeaderConversionError))?
         {
@@ -52,7 +50,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         };
         let mut raw_block = Vec::new();
         if let Some(block) = block {
-            let block = rpc_to_primitive_block(block.inner).map_err(EthApiError::from)?;
+            let block =
+                Block::try_from(block.inner).map_err(|_| EthApiError::from(EthereumDataFormatError::PrimitiveError))?;
             block.encode(&mut raw_block);
         }
         Ok(raw_block.into())

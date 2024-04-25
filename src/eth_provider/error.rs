@@ -250,6 +250,9 @@ pub enum SignatureError {
     /// Thrown when signature is missing.
     #[error("missing signature")]
     MissingSignature,
+    /// Thrown when parity is invalid.
+    #[error("invalid parity")]
+    InvalidParity,
 }
 
 /// Error related to Ethereum data format.

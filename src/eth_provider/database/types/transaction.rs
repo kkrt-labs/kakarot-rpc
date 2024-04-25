@@ -1,8 +1,8 @@
-#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use arbitrary::Arbitrary;
 use reth_primitives::B256;
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+use {arbitrary::Arbitrary, reth_primitives::TxType};
 
 /// A full transaction as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -27,6 +27,10 @@ impl From<Transaction> for StoredTransaction {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> StoredTransaction {
     pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let transaction = Self::arbitrary(u)?.tx;
+
+        let transaction_type = Into::<u8>::into(transaction.transaction_type.unwrap_or_default()) % 3;
+
         Ok(Self {
             tx: Transaction {
                 block_hash: Some(B256::arbitrary(u)?),
@@ -34,15 +38,24 @@ impl<'a> StoredTransaction {
                 transaction_index: Some(u64::arbitrary(u)?),
                 gas_price: Some(u128::arbitrary(u)?),
                 gas: u64::arbitrary(u)? as u128,
-                max_fee_per_gas: Some(u128::arbitrary(u)?),
-                max_priority_fee_per_gas: Some(u128::arbitrary(u)?),
+                max_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
+                    None
+                } else {
+                    Some(u128::arbitrary(u)?)
+                },
+                max_priority_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
+                    None
+                } else {
+                    Some(u128::arbitrary(u)?)
+                },
                 signature: Some(reth_rpc_types::Signature {
                     y_parity: Some(reth_rpc_types::Parity(bool::arbitrary(u)?)),
                     ..reth_rpc_types::Signature::arbitrary(u)?
                 }),
-                transaction_type: Some(u8::arbitrary(u)? % 3),
+                transaction_type: Some(transaction_type),
                 other: Default::default(),
-                ..Self::arbitrary(u)?.into()
+                access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
+                ..transaction
             },
         })
     }
