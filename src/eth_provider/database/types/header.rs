@@ -24,6 +24,12 @@ impl<'a> StoredHeader {
                 mix_hash: Some(B256::arbitrary(u).unwrap()),
                 nonce: Some(B64::arbitrary(u).unwrap()),
                 withdrawals_root: Some(EMPTY_ROOT_HASH),
+                base_fee_per_gas: Some(u64::arbitrary(u).unwrap() as u128),
+                blob_gas_used: Some(u64::arbitrary(u).unwrap() as u128),
+                excess_blob_gas: Some(u64::arbitrary(u).unwrap() as u128),
+                gas_limit: u64::arbitrary(u).unwrap() as u128,
+                gas_used: u64::arbitrary(u).unwrap() as u128,
+                number: Some(u64::arbitrary(u).unwrap()),
                 ..Self::arbitrary(u)?.header
             },
         })
