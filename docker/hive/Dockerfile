@@ -11,6 +11,7 @@ FROM debian:bookworm as apibara-build
 RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
 
 # Apibara Starknet and Sink are built with Nix, so we need to extract the binaries from the Nix store
+# ⚠️ When modifying the tag of Apibara, make sure to change the Github CI workflow, and Indexer dockerfile as well
 # Depending on the platform, the path to the binaries will be different
 # These values need to be updated if the version of ApiBara Starknet or Sink change.
 # platform: linux/amd64:

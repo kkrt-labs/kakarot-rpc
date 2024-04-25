@@ -8,6 +8,7 @@ on:
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
   DOCKER_USERNAME: ${{ github.actor }}
+  INDEXER_IMAGE: ghcr.io/${{ github.repository }}/indexer
 
 jobs:
   prepare:
@@ -118,3 +119,29 @@ jobs:
             --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} \
             --tag ${{ env.REGISTRY_IMAGE }}:latest \
             --push
+
+  build-push-indexer-docker:
+    runs-on: ubuntu-latest-16-cores
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          tags: ${{ env.INDEXER_IMAGE }}:${{ github.ref_name }}, ${{
+            env.INDEXER_IMAGE }}:latest
+          context: .
+          file: ./docker/indexer/Dockerfile
+          platforms: linux/amd64
+          build-args: |
+            APIBARA_SINK_BIN_DIR="sci7y4a8r7yz05094pl88h3d7vv1s98f"
