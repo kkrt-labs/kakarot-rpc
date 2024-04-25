@@ -1,8 +1,9 @@
 use reth_primitives::{
     AccessList, AccessListItem, Signature, TransactionKind, TransactionSigned, TxEip1559, TxEip2930, TxLegacy, TxType,
+    U256,
 };
 
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
+use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError, TransactionError};
 
 pub fn rpc_to_primitive_transaction(
     rpc_transaction: reth_rpc_types::Transaction,
@@ -77,12 +78,21 @@ pub fn rpc_to_ec_recovered_transaction(
     let signature = transaction.signature.ok_or(SignatureError::MissingSignature)?;
     let transaction = rpc_to_primitive_transaction(transaction)?;
 
+    let parity = match transaction.tx_type() {
+        TxType::Legacy => {
+            let chain_id = transaction.chain_id().ok_or(TransactionError::InvalidChainId)?;
+            let recovery: U256 = U256::from(2) * U256::from(chain_id) + U256::from(35);
+            signature.v - recovery
+        }
+        TxType::Eip1559 | TxType::Eip2930 | TxType::Eip4844 => signature.v,
+    };
+
     let tx_signed = TransactionSigned::from_transaction_and_signature(
         transaction,
         Signature {
             r: signature.r,
             s: signature.s,
-            odd_y_parity: signature.y_parity.ok_or(SignatureError::RecoveryError)?.0,
+            odd_y_parity: parity.try_into().map_err(|_| SignatureError::InvalidParity)?,
         },
     );
 
@@ -115,8 +125,8 @@ mod tests {
                     signature: Some(reth_rpc_types::Signature {
                         r: U256::from(1),
                         s: U256::from(2),
-                        v: U256::from(37),
-                        y_parity: Some(reth_rpc_types::Parity(true)),
+                        v: U256::from(38),
+                        y_parity: None,
                     }),
                     chain_id: Some(1),
                     transaction_type: Some(0),
@@ -126,6 +136,15 @@ mod tests {
         }
 
         fn with_transaction_type(mut self, tx_type: TxType) -> Self {
+            match tx_type {
+                TxType::Eip2930 | TxType::Eip1559 => {
+                    if let Some(sig) = self.tx.signature.as_mut() {
+                        sig.v = U256::from(1);
+                        sig.y_parity = Some(reth_rpc_types::Parity(true));
+                    }
+                }
+                _ => {}
+            }
             self.tx.transaction_type = Some(tx_type as u8);
             self
         }
@@ -226,12 +245,11 @@ mod tests {
 
                 // Then
                 assert_common_fields!(tx, rpc_tx, $gas_price_field, $has_access_list);
+                let mut v = rpc_tx.signature.unwrap().v.to::<u64>();
+                v = if v > 1 { v - tx.chain_id().unwrap() * 2 - 35 } else { v };
                 assert_eq!(
                     tx.signature,
-                    rpc_tx
-                        .signature
-                        .map(|sig| Signature { r: sig.r, s: sig.s, odd_y_parity: sig.y_parity.unwrap().0 })
-                        .unwrap()
+                    rpc_tx.signature.map(|sig| Signature { r: sig.r, s: sig.s, odd_y_parity: v != 0 }).unwrap()
                 );
             }
         };
