@@ -1,7 +1,6 @@
-use super::transaction::rpc_to_primitive_transaction;
 use crate::eth_provider::constant::STARKNET_MODULUS;
 use crate::{eth_provider::error::EthereumDataFormatError, into_via_try_wrapper};
-use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, TransactionSigned, Withdrawals, U256};
+use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, U256};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
 #[derive(Debug)]
@@ -67,83 +66,13 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
     }
 }
 
-pub fn rpc_to_primitive_header(
-    header: reth_rpc_types::Header,
-) -> Result<reth_primitives::Header, EthereumDataFormatError> {
-    Ok(reth_primitives::Header {
-        base_fee_per_gas: header
-            .base_fee_per_gas
-            .map(|base_fee_per_gas| base_fee_per_gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
-            .transpose()?,
-        beneficiary: header.miner,
-        blob_gas_used: header
-            .blob_gas_used
-            .map(|blob_gas_used| blob_gas_used.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
-            .transpose()?,
-        difficulty: header.difficulty,
-        excess_blob_gas: header
-            .excess_blob_gas
-            .map(|excess_blob_gas| excess_blob_gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError))
-            .transpose()?,
-        extra_data: header.extra_data,
-        gas_limit: header.gas_limit.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
-        gas_used: header.gas_used.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
-        logs_bloom: header.logs_bloom,
-        mix_hash: header.mix_hash.unwrap_or_default(),
-        nonce: u64::from_be_bytes(header.nonce.unwrap_or_default().0),
-        number: header.number.ok_or(EthereumDataFormatError::PrimitiveError)?,
-        ommers_hash: header.uncles_hash,
-        parent_beacon_block_root: header.parent_beacon_block_root,
-        parent_hash: header.parent_hash,
-        receipts_root: header.receipts_root,
-        state_root: header.state_root,
-        timestamp: header.timestamp,
-        transactions_root: header.transactions_root,
-        // Withdrawals are not allowed so we push a None value
-        withdrawals_root: Default::default(),
-    })
-}
-
-pub fn rpc_to_primitive_block(block: reth_rpc_types::Block) -> Result<reth_primitives::Block, EthereumDataFormatError> {
-    let body = {
-        let transactions: Result<Vec<TransactionSigned>, EthereumDataFormatError> = match block.transactions {
-            reth_rpc_types::BlockTransactions::Full(transactions) => transactions
-                .into_iter()
-                .map(|tx| {
-                    let signature = tx.signature.ok_or(EthereumDataFormatError::PrimitiveError)?;
-                    Ok(TransactionSigned::from_transaction_and_signature(
-                        rpc_to_primitive_transaction(tx)?,
-                        reth_primitives::Signature {
-                            r: signature.r,
-                            s: signature.s,
-                            odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-                        },
-                    ))
-                })
-                .collect(),
-            reth_rpc_types::BlockTransactions::Hashes(_) | reth_rpc_types::BlockTransactions::Uncle => {
-                return Err(EthereumDataFormatError::PrimitiveError);
-            }
-        };
-        transactions?
-    };
-    // ⚠️ Kakarot does not support omners or withdrawals and returns default values for those fields ⚠️
-    Ok(reth_primitives::Block {
-        header: rpc_to_primitive_header(block.header)?,
-        body,
-        ommers: Default::default(),
-        withdrawals: Some(Withdrawals::default()),
-    })
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::models::transaction::rpc_to_primitive_transaction;
     use std::str::FromStr;
 
-    use reth_primitives::{Address, Bloom, Bytes, B256, B64, U256};
+    use reth_primitives::{Address, Block, Bloom, Bytes, TransactionSigned, B256, B64, U256};
     use reth_rpc_types::{other::OtherFields, Parity, Signature};
-
-    use super::*;
 
     fn base_rpc_header() -> reth_rpc_types::Header {
         reth_rpc_types::Header {
@@ -153,7 +82,7 @@ mod tests {
             state_root: B256::from_str(&format!("0x{:0>64}", "04")).unwrap(),
             transactions_root: B256::from_str(&format!("0x{:0>64}", "05")).unwrap(),
             receipts_root: B256::from_str(&format!("0x{:0>64}", "06")).unwrap(),
-            withdrawals_root: Some(B256::from_str(&format!("0x{:0>64}", "07")).unwrap()),
+            withdrawals_root: None,
             logs_bloom: Bloom::ZERO,
             difficulty: U256::ZERO,
             base_fee_per_gas: Some(8),
@@ -173,6 +102,8 @@ mod tests {
     }
 
     fn base_rpc_transaction() -> reth_rpc_types::Transaction {
+        let access_list = reth_rpc_types::AccessList::default();
+
         reth_rpc_types::Transaction {
             hash: B256::default(),
             nonce: 1,
@@ -196,7 +127,7 @@ mod tests {
             }),
             chain_id: Some(1),
             blob_versioned_hashes: Some(vec![]),
-            access_list: None,
+            access_list: Some(access_list),
             transaction_type: Some(2),
             other: serde_json::from_str("{}").unwrap(),
         }
@@ -212,7 +143,7 @@ mod tests {
                 base_rpc_transaction(),
             ]),
             size: None,
-            withdrawals: Some(Vec::default()),
+            withdrawals: None,
             other: OtherFields::default(),
         }
     }
@@ -220,7 +151,7 @@ mod tests {
     #[test]
     fn test_rpc_to_primitive_block() {
         let block = base_rpc_block();
-        let primitive_block = rpc_to_primitive_block(block).unwrap();
+        let primitive_block = Block::try_from(block).unwrap();
         assert_eq!(primitive_block.header.parent_hash, B256::from_str(&format!("0x{:0>64}", "01")).unwrap());
         assert_eq!(primitive_block.header.ommers_hash, B256::from_str(&format!("0x{:0>64}", "02")).unwrap());
         assert_eq!(primitive_block.header.beneficiary, Address::from_str(&format!("0x{:0>40}", "03")).unwrap());
@@ -271,7 +202,7 @@ mod tests {
                 )
             ]
         );
-        assert_eq!(primitive_block.withdrawals, Some(Withdrawals::default()));
+        assert!(primitive_block.withdrawals.is_none());
         assert_eq!(primitive_block.ommers, Vec::default());
     }
 }
