@@ -161,11 +161,11 @@ pin-project-lite = { version = "0.2", default-features = false }
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.3", default-features = false }
-katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.3", features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.4", default-features = false }
+katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.4", features = [
   "messaging",
 ] }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.3", default-features = false, features = [
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.1-alpha.4", default-features = false, features = [
   "serde",
 ] }
 arbitrary = { version = "1", features = ["derive"] }
