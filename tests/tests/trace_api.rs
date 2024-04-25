@@ -85,7 +85,7 @@ pub async fn tracing(katana: &Katana, plain_opcodes: &KakarotEvmContract) {
             signature: Some(reth_rpc_types::Signature {
                 r: tx_signed.signature().r,
                 s: tx_signed.signature().s,
-                v: U256::from(tx_signed.signature().v(Some(chain_id))),
+                v: U256::from(tx_signed.signature().odd_y_parity),
                 y_parity: Some(reth_rpc_types::Parity(tx_signed.signature().odd_y_parity)),
             }),
             max_fee_per_gas: Some(max_fee_per_gas),
