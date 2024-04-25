@@ -560,19 +560,19 @@ where
         // Update pending transactions collection
         let filter = into_filter("tx.hash", &transaction.hash, HASH_PADDING);
 
-        self.database
-            .update_one::<StoredPendingTransaction>(
-                if let Some(pending_transaction) =
-                    self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?
-                {
-                    StoredPendingTransaction::new(transaction, pending_transaction.retries + 1)
-                } else {
-                    transaction.into()
-                },
-                filter,
-                true,
-            )
-            .await?;
+        if let Some(pending_transaction) =
+            self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?
+        {
+            self.database
+                .update_one::<StoredPendingTransaction>(
+                    StoredPendingTransaction::new(transaction, pending_transaction.retries + 1),
+                    filter,
+                    true,
+                )
+                .await?;
+        } else {
+            self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
+        }
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
