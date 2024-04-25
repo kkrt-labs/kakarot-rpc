@@ -13,6 +13,7 @@ use reth_revm::{
 use reth_rpc_types::{serde_helpers::JsonStorageKey, BlockId, BlockNumberOrTag};
 use tokio::runtime::Handle;
 
+#[derive(Debug)]
 pub(crate) struct EthDatabaseSnapshot<P: EthereumProvider + Send + Sync> {
     cache: CacheDB<P>,
     block_id: BlockId,
@@ -27,6 +28,11 @@ impl<P: EthereumProvider + Send + Sync> EthDatabaseSnapshot<P> {
 impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
     type Error = EthApiError;
 
+    /// Returns the account information for the given address.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called from a non-async runtime.
     fn basic(&mut self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
         let cache = &self.cache;
         if let Some(account) = cache.accounts.get(&address) {
@@ -48,10 +54,16 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
         Ok(Some(account_info))
     }
 
+    /// Returns the code for the given code hash.
     fn code_by_hash(&mut self, code_hash: B256) -> Result<Bytecode, Self::Error> {
         Ok(self.cache.contracts.get(&code_hash).cloned().unwrap_or_default())
     }
 
+    /// Returns the storage value for the given address and index.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called from a non-async runtime.
     fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
         let cache = &self.cache;
         if let Some(account) = cache.accounts.get(&address) {
@@ -73,6 +85,11 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
         Ok(storage)
     }
 
+    /// Returns the block hash for the given block number.
+    ///
+    /// # Panics
+    ///
+    /// Panics if called from a non-async runtime.
     fn block_hash(&mut self, number: U256) -> Result<B256, Self::Error> {
         let cache = &self.cache;
         if let Some(hash) = cache.block_hashes.get(&number) {

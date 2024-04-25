@@ -1,14 +1,13 @@
 #![cfg(feature = "testing")]
-use alloy_rlp::{Decodable, Encodable};
+use alloy_rlp::Encodable;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::models::block::rpc_to_primitive_block;
 use kakarot_rpc::models::transaction::rpc_to_primitive_transaction;
 use kakarot_rpc::test_utils::fixtures::{katana, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH};
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use reth_primitives::{
-    BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered, U256,
+    Block, BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered,
 };
 use reth_rpc_types_compat::transaction::from_recovered_with_block_context;
 use rstest::*;
@@ -52,7 +51,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         *BLOCK_HASH,
         BLOCK_NUMBER,
         None,
-        U256::ZERO,
+        0,
     );
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -108,7 +107,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         *BLOCK_HASH,
         BLOCK_NUMBER,
         None,
-        U256::ZERO,
+        0,
     );
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -164,7 +163,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         *BLOCK_HASH,
         BLOCK_NUMBER,
         None,
-        U256::ZERO,
+        0,
     );
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -207,7 +206,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
     // Get the block number from the transaction and convert it to a u64.
-    let block_number = tx.block_number.unwrap().to::<u64>();
+    let block_number = tx.block_number.unwrap();
 
     // Fetch raw transactions by block hash.
     let reqwest_client = reqwest::Client::new();
@@ -317,7 +316,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
     // Get the block number from the transaction and convert it to a u64.
-    let block_number = tx.block_number.unwrap().to::<u64>();
+    let block_number = tx.block_number.unwrap();
 
     // Fetch raw receipts by block hash.
     let reqwest_client = reqwest::Client::new();
@@ -394,16 +393,17 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         // Construct a Receipt instance from the transaction receipt data.
         let r = ReceiptWithBloom {
             receipt: Receipt {
-                tx_type: tx_receipt.transaction_type.to::<u8>().try_into().unwrap(),
-                success: tx_receipt.status_code.unwrap_or_default().to::<u64>() == 1,
-                cumulative_gas_used: tx_receipt.cumulative_gas_used.to::<u64>(),
+                tx_type: Into::<u8>::into(tx_receipt.transaction_type()).try_into().unwrap(),
+                success: tx_receipt.inner.status(),
+                cumulative_gas_used: TryInto::<u64>::try_into(tx_receipt.inner.cumulative_gas_used()).unwrap(),
                 logs: tx_receipt
-                    .logs
-                    .into_iter()
-                    .map(|log| Log { address: log.address, topics: log.topics, data: log.data })
+                    .inner
+                    .logs()
+                    .iter()
+                    .filter_map(|log| Log::new(log.address(), log.topics().to_vec(), log.data().data.clone()))
                     .collect(),
             },
-            bloom: tx_receipt.logs_bloom,
+            bloom: *receipt.inner.logs_bloom(),
         }
         .envelope_encoded();
 
@@ -427,7 +427,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     let tx = &katana.first_transaction().unwrap();
 
     // Get the block number from the transaction and convert it to a u64.
-    let block_number = tx.block_number.unwrap().to::<u64>();
+    let block_number = tx.block_number.unwrap();
 
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
@@ -475,16 +475,12 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     let response: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
     let rpc_block: reth_rpc_types::Block =
         serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
-    let primitive_block = rpc_to_primitive_block(rpc_block).unwrap();
+    let primitive_block = Block::try_from(rpc_block).unwrap();
 
     // Encode primitive block and compare with the result of debug_getRawBlock
     let mut buf = Vec::new();
     primitive_block.encode(&mut buf);
     assert_eq!(rlp_bytes.clone().unwrap(), Bytes::from(buf));
-
-    // Decode encoded block and compare with the block from eth_getBlockByNumber
-    let decoded_block = reth_primitives::Block::decode(&mut rlp_bytes.unwrap().as_ref()).unwrap();
-    assert_eq!(decoded_block, primitive_block);
 
     // Stop the Kakarot RPC server.
     drop(server_handle);
@@ -504,7 +500,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     // Get the block hash from the transaction.
     let block_hash = tx.block_hash.unwrap();
     // Get the block number from the transaction and convert it to a u64.
-    let block_number = tx.block_number.unwrap().to::<u64>();
+    let block_number = tx.block_number.unwrap();
 
     // Create a reqwest client.
     let reqwest_client = reqwest::Client::new();
@@ -570,7 +566,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
 
     // Encode header into RLP bytes and assert equality with RLP bytes fetched by block number.
     let mut data = vec![];
-    rpc_to_primitive_block(block.inner).unwrap().header.encode(&mut data);
+    Block::try_from(block.inner).unwrap().header.encode(&mut data);
     assert_eq!(rlp_bytes_by_block_number, data);
 
     // Stop the Kakarot RPC server.

@@ -88,7 +88,7 @@ cainome = { git = "https://github.com/cartridge-gg/cainome.git", tag = "v0.2.5",
   "abigen-rs",
 ] }
 cairo-lang-starknet = { version = "2.5.4", default-features = false }
-ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "a177922", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "e215eb2", default-features = false, features = [
   "v0",
 ], optional = true }
 starknet = { version = "0.9.0", default-features = false }
@@ -96,20 +96,20 @@ starknet-crypto = { version = "0.6.1", default-features = false }
 starknet_api = { version = "0.7.0-dev.0", default-features = false }
 
 # Ethereum dependencies
-alloy-primitives = "0.6.4"
+alloy-primitives = "0.7.0"
 alloy-rlp = { version = "0.3.4", default-features = false }
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false, features = [
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false, features = [
   "arbitrary",
 ] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.5", default-features = false }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
 
 # Serde
-serde = { version = "1.0.197", default-features = false, features = ["derive"] }
+serde = { version = "1.0.198", default-features = false, features = ["derive"] }
 serde_json = { version = "1.0.115", default-features = false }
 serde_with = { version = "2.3.1", default-features = false }
 

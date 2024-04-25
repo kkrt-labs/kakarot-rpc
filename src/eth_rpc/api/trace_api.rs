@@ -7,7 +7,7 @@ use reth_rpc_types::BlockId;
 #[rpc(server, namespace = "trace")]
 #[async_trait]
 pub trait TraceApi {
-    /// Returns the traces for the given block.
+    /// Returns the parity traces for the given block.
     #[method(name = "block")]
     async fn trace_block(&self, block_id: BlockId) -> Result<Option<Vec<LocalizedTransactionTrace>>>;
 }

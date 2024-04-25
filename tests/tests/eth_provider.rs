@@ -77,8 +77,7 @@ async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
 
     // When: Retrieving block by specific block number
-    let block =
-        eth_provider.block_by_number(BlockNumberOrTag::Number(block_number.to::<u64>()), false).await.unwrap().unwrap();
+    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has the expected block number
     assert_eq!(block.header.number, Some(block_number));
@@ -87,7 +86,7 @@ async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     let block = eth_provider.block_by_number(BlockNumberOrTag::Earliest, false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has block number zero
-    assert_eq!(block.header.number, Some(U256::ZERO));
+    assert_eq!(block.header.number, Some(0));
 
     // When: Retrieving latest block
     let block = eth_provider.block_by_number(BlockNumberOrTag::Latest, false).await.unwrap().unwrap();
@@ -148,11 +147,8 @@ async fn test_block_transaction_count_by_number(#[future] katana: Katana, _setup
 
     // When: Retrieving transaction count for the block of the most recent transaction
     let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
-    let count = eth_provider
-        .block_transaction_count_by_number(BlockNumberOrTag::Number(block_number.to::<u64>()))
-        .await
-        .unwrap()
-        .unwrap();
+    let count =
+        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(block_number)).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved transaction count matches the expected value
     assert_eq!(count, U256::from(1));
@@ -336,7 +332,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // Retrieve the most recent block number.
-    let newest_block = katana.most_recent_transaction().unwrap().block_number.unwrap().to::<u64>();
+    let newest_block = katana.most_recent_transaction().unwrap().block_number.unwrap();
 
     // To ensure that the range includes all mocked blocks.
     let block_count = u64::MAX;
@@ -359,7 +355,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     assert_eq!(fee_history.gas_used_ratio.len(), nbr_blocks);
 
     // Verify that the oldest block in the fee history is equal to zero.
-    assert_eq!(fee_history.oldest_block, U256::ZERO);
+    assert_eq!(fee_history.oldest_block, 0);
 }
 
 #[rstest]
@@ -420,14 +416,14 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     // Then: Retrieve receipts by block number
     let receipts = eth_provider
         .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(
-            transaction.block_number.unwrap().to::<u64>(),
+            transaction.block_number.unwrap(),
         ))))
         .await
         .unwrap()
         .unwrap();
     assert_eq!(receipts.len(), 1);
     let receipt = receipts.first().unwrap();
-    assert_eq!(receipt.transaction_index, transaction.transaction_index.unwrap().to::<U64>());
+    assert_eq!(receipt.transaction_index, transaction.transaction_index);
     assert_eq!(receipt.block_hash, transaction.block_hash);
     assert_eq!(receipt.block_number, transaction.block_number);
 
@@ -439,7 +435,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
         .unwrap();
     assert_eq!(receipts.len(), 1);
     let receipt = receipts.first().unwrap();
-    assert_eq!(receipt.transaction_index, transaction.transaction_index.unwrap().to::<U64>());
+    assert_eq!(receipt.transaction_index, transaction.transaction_index);
     assert_eq!(receipt.block_hash, transaction.block_hash);
     assert_eq!(receipt.block_number, transaction.block_number);
 
@@ -460,8 +456,7 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let transaction = katana.most_recent_transaction().unwrap();
 
     // When: Convert block number identifier to StarkNet block identifier
-    let block_id =
-        reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(transaction.block_number.unwrap().to::<u64>()));
+    let block_id = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(transaction.block_number.unwrap()));
     let pending_starknet_block_id = eth_provider.to_starknet_block_id(block_id).await.unwrap();
 
     // When: Convert block hash identifier to StarkNet block identifier
@@ -477,10 +472,7 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let unknown_starknet_block_number = eth_provider.to_starknet_block_id(unknown_block_number).await;
 
     // Then: Ensure the converted StarkNet block identifiers match the expected values
-    assert_eq!(
-        pending_starknet_block_id,
-        starknet::core::types::BlockId::Number(transaction.block_number.unwrap().to::<u64>())
-    );
+    assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(transaction.block_number.unwrap()));
     assert_eq!(
         some_starknet_block_hash,
         starknet::core::types::BlockId::Hash(
@@ -625,7 +617,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap(), tx);
 
     // Modify the block number of the pending transaction
-    stored_transaction.tx.block_number = Some(U256::from(1111));
+    stored_transaction.tx.block_number = Some(1111);
 
     // Insert the transaction into the final transaction collection
     let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_PADDING);
@@ -636,5 +628,5 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
         .expect("Failed to insert documents");
 
     // Check if the final transaction is returned correctly by the `transaction_by_hash` method
-    assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(U256::from(1111)));
+    assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(1111));
 }

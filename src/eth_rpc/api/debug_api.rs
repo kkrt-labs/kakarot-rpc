@@ -1,7 +1,10 @@
 use jsonrpsee::core::RpcResult as Result;
 use jsonrpsee::proc_macros::rpc;
 use reth_primitives::{Bytes, B256};
-use reth_rpc_types::BlockId;
+use reth_rpc_types::{
+    trace::geth::{GethDebugTracingOptions, TraceResult},
+    BlockId, BlockNumberOrTag,
+};
 
 /// Debug API
 /// Taken from Reth's DebugApi trait:
@@ -30,4 +33,20 @@ pub trait DebugApi {
     /// Returns an array of EIP-2718 binary-encoded receipts.
     #[method(name = "getRawReceipts")]
     async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>>;
+
+    /// Returns the Geth debug trace for the given block number.
+    #[method(name = "traceBlockByNumber")]
+    async fn trace_block_by_number(
+        &self,
+        block_number: BlockNumberOrTag,
+        opts: Option<GethDebugTracingOptions>,
+    ) -> Result<Option<Vec<TraceResult>>>;
+
+    /// Returns the Geth debug trace for the given block hash.
+    #[method(name = "traceBlockByHash")]
+    async fn trace_block_by_hash(
+        &self,
+        block_hash: B256,
+        opts: Option<GethDebugTracingOptions>,
+    ) -> Result<Option<Vec<TraceResult>>>;
 }
