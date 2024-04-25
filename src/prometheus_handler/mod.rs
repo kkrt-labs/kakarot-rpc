@@ -105,17 +105,15 @@ async fn init_prometheus_with_listener(listener: tokio::net::TcpListener, regist
         // Manufacturing a connection
         let conn = server::conn::auto::Builder::new(TokioExecutor::new());
 
-        // setting up the connection to use the service implemented by request_metrics fn
-        let conn = conn.serve_connection(
+        // set up the connection to use the service implemented by request_metrics fn
+        // await for the res
+        // and send it off
+        conn.serve_connection(
             io,
             service_fn(move |req: Request<hyper::body::Incoming>| request_metrics(req, registry.clone())),
-        );
-
-        // awaiting for the res
-        let res = conn.await.map_err(|e| Error::Http(e.into()))?;
-
-        // sending out the result
-        res
+        )
+        .await
+        .map_err(Error::Http)?
     }
 }
 
