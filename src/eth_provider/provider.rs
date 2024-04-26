@@ -1,4 +1,5 @@
 use crate::eth_provider::starknet::kakarot_core::account_contract::BytecodeOutput;
+use crate::models::transaction::rpc_to_primitive_transaction;
 use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -22,7 +23,7 @@ use starknet::core::types::{FunctionCall, SyncStatusType};
 use starknet::core::utils::{get_selector_from_name, get_storage_var_address};
 use starknet_crypto::FieldElement;
 
-use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
+use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, MAX_RETRIES, U64_PADDING};
 use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
     transaction::StoredTransaction, transaction::StoredTransactionHash,
@@ -137,7 +138,10 @@ pub struct EthDataProvider<SP: starknet::providers::Provider> {
     chain_id: u64,
 }
 
-impl<SP: starknet::providers::Provider> EthDataProvider<SP> {
+impl<SP> EthDataProvider<SP>
+where
+    SP: starknet::providers::Provider,
+{
     /// Returns a reference to the database.
     pub fn database(&self) -> &Database {
         &self.database
@@ -198,7 +202,7 @@ where
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        Ok(self.block(block_number.to::<u64>().into(), full).await?)
+        Ok(self.block(block_number.into(), full).await?)
     }
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
@@ -554,7 +558,20 @@ where
 
         // Update pending transactions collection
         let filter = into_filter("tx.hash", &transaction.hash, HASH_PADDING);
-        self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
+
+        if let Some(pending_transaction) =
+            self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?
+        {
+            self.database
+                .update_one::<StoredPendingTransaction>(
+                    StoredPendingTransaction::new(transaction, pending_transaction.retries + 1),
+                    filter,
+                    true,
+                )
+                .await?;
+        } else {
+            self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
+        }
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
@@ -925,7 +942,7 @@ where
 
             let tx = execution
                 .nonce(current_nonce)
-                .max_fee(FieldElement::from(u64::MAX))
+                .max_fee(u64::MAX.into())
                 .prepared()
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?
                 .get_invoke_request(false)
@@ -938,5 +955,58 @@ where
         };
 
         Ok(())
+    }
+}
+
+impl<SP> EthDataProvider<SP>
+where
+    SP: starknet::providers::Provider + Send + Sync,
+{
+    pub async fn retry_transactions(&self) -> EthProviderResult<Vec<B256>> {
+        // Initialize an empty vector to store the hashes of retried transactions
+        let mut transactions_retried = Vec::new();
+
+        // Iterate over pending transactions fetched from the database
+        for tx in self.database.get::<StoredPendingTransaction>(None, None).await? {
+            // Check if the number of retries exceeds the maximum allowed retries
+            // or if the transaction already exists in the database of finalized transactions
+            if tx.retries + 1 > MAX_RETRIES
+                || self
+                    .database
+                    .get_one::<StoredTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_PADDING), None)
+                    .await?
+                    .is_some()
+            {
+                // Delete the pending transaction from the database
+                self.database
+                    .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_PADDING))
+                    .await?;
+
+                // Continue to the next iteration of the loop
+                continue;
+            }
+
+            // Extract the signature from the transaction
+            let transaction_signature = tx.tx.signature.unwrap();
+
+            // Create a signed transaction and send it
+            transactions_retried.push(
+                self.send_raw_transaction(
+                    TransactionSigned::from_transaction_and_signature(
+                        rpc_to_primitive_transaction(tx.tx.clone())?,
+                        reth_primitives::Signature {
+                            r: transaction_signature.r,
+                            s: transaction_signature.s,
+                            odd_y_parity: transaction_signature.y_parity.unwrap().0,
+                        },
+                    )
+                    .envelope_encoded(),
+                )
+                .await?,
+            );
+        }
+
+        // Return the hashes of retried transactions
+        Ok(transactions_retried)
     }
 }

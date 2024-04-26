@@ -17,6 +17,8 @@ use crate::test_utils::evm_contract::{
     EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
 };
 use crate::test_utils::tx_waiter::watch_tx;
+use reth_primitives::TransactionSignedEcRecovered;
+use reth_rpc_types_compat::transaction::from_recovered;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
 
@@ -71,6 +73,7 @@ impl<P: Provider + Send + Sync> Eoa<P> for KakarotEOA<P> {
     fn private_key(&self) -> B256 {
         self.private_key
     }
+
     fn eth_provider(&self) -> &EthDataProvider<P> {
         &self.eth_provider
     }
@@ -204,5 +207,21 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
         let _ = self.send_transaction(tx_signed).await;
         Ok(tx)
+    }
+
+    /// Mocks a transaction with the given nonce without executing it
+    pub fn mock_transaction_with_nonce(&self, nonce: u64) -> Result<reth_rpc_types::Transaction, eyre::Error> {
+        Ok(from_recovered(TransactionSignedEcRecovered::from_signed_transaction(
+            self.sign_transaction(Transaction::Eip1559(TxEip1559 {
+                chain_id: 1,
+                nonce,
+                gas_limit: 21000,
+                to: TransactionKind::Call(Address::random()),
+                value: U256::from(1000),
+                max_fee_per_gas: 875000000,
+                ..Default::default()
+            }))?,
+            self.evm_address()?,
+        )))
     }
 }

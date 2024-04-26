@@ -35,7 +35,7 @@ impl From<U64> for Felt252Wrapper {
 
 impl From<u64> for Felt252Wrapper {
     fn from(value: u64) -> Self {
-        Self(FieldElement::from(value))
+        Self(value.into())
     }
 }
 

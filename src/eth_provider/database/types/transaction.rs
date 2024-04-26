@@ -82,13 +82,22 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredPendingTransaction {
+    /// Transaction object
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
+    /// Number of retries
+    pub retries: u64,
+}
+
+impl StoredPendingTransaction {
+    pub fn new(tx: Transaction, retries: u64) -> Self {
+        Self { tx, retries }
+    }
 }
 
 impl From<Transaction> for StoredPendingTransaction {
     fn from(tx: Transaction) -> Self {
-        Self { tx }
+        Self { tx, retries: 0 }
     }
 }
 
