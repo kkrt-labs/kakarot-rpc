@@ -71,7 +71,6 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use reth_primitives::B256;
-    use starknet_crypto::FieldElement;
     use std::str::FromStr;
 
     #[test]
@@ -93,25 +92,16 @@ mod tests {
 
     #[test]
     fn test_split_u256() {
-        // Define a property to test the split_u256 function
-        proptest!(|(value in any::<B256>())| {
-            // Convert the B256 value to a hexadecimal string
-            let hex_string = format!("{:?}", value);
-            // Convert the hexadecimal string to a U256 value
-            let u256_value = U256::from_str(&hex_string).unwrap();
+        // Define a property-based test using Proptest
+        proptest!(|(value in any::<U256>())| {
+            // Call the split_u256 function to split the U256 value into two u128 values
+            let result = split_u256::<u128>(value);
 
-            // Call the split_u256 function
-            let result = split_u256::<FieldElement>(u256_value);
+            // Combine the two u128 values into a hexadecimal string
+            let combined_hex = format!("{:#x}{:0width$x}", result[1], result[0], width = 32);
 
-            // Format the combined hexadecimal string with different widths for each part
-            let combined_hex = format!("{:#0width1$x}{:0width2$x}",
-                u128::from_str(&result[1].to_string()).unwrap(),
-                u128::from_str(&result[0].to_string()).unwrap(),
-                width1 = 34,
-                width2 = 32);
-
-            // Assertion to check the equality with the original value converted to a string
-            assert_eq!(combined_hex, value.to_string());
+            // Assertion to check the equality with the original U256 value
+            assert_eq!(U256::from_str(&combined_hex).unwrap(), value);
         });
     }
 }
