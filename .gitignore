@@ -36,3 +36,5 @@ artifacts/
 build/
 .kakarot/
 
+# ignore proptest-regressions
+/proptest-regressions
