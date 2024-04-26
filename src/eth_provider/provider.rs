@@ -595,12 +595,10 @@ where
     }
 
     async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        match block_id {
+        match block_id.unwrap_or_default() {
             BlockId::Number(maybe_number) => {
                 let block_number = self.tag_into_block_number(maybe_number).await?;
-                let block_exists = self.block_exists(block_number.into()).await?;
-                if !block_exists {
+                if !self.block_exists(block_number.into()).await? {
                     return Ok(None);
                 }
 
@@ -609,14 +607,11 @@ where
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
             BlockId::Hash(hash) => {
-                let block_exists = self.block_exists(hash.block_hash.into()).await?;
-                if !block_exists {
+                if !self.block_exists(hash.block_hash.into()).await? {
                     return Ok(None);
                 }
-
                 let filter = into_filter("receipt.blockHash", &hash.block_hash, HASH_PADDING);
-                let tx: Vec<StoredTransactionReceipt> = self.database.get(filter, None).await?;
-                Ok(Some(tx.into_iter().map(Into::into).collect()))
+                Ok(Some(self.database.get_and_map_to::<_, StoredTransactionReceipt>(filter, None).await?))
             }
         }
     }
@@ -625,7 +620,7 @@ where
         &self,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
-        let block_id = match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
+        let block_id = match block_id.unwrap_or_default() {
             BlockId::Number(maybe_number) => self.tag_into_block_number(maybe_number).await?.to::<u64>().into(),
             BlockId::Hash(hash) => hash.block_hash.into(),
         };
@@ -645,11 +640,10 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
-        let chain_id = starknet_provider.chain_id().await?;
         // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
-        let chain_id = (FieldElement::from(u32::MAX) & chain_id).try_into().unwrap(); // safe unwrap
+        let chain_id = (FieldElement::from(u32::MAX) & starknet_provider.chain_id().await?).try_into().unwrap(); // safe unwrap
         Ok(Self { database, starknet_provider, chain_id })
     }
 
