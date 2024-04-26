@@ -30,7 +30,7 @@ impl<'a> StoredHeader {
                 gas_limit: u64::arbitrary(u).unwrap() as u128,
                 gas_used: u64::arbitrary(u).unwrap() as u128,
                 number: Some(u64::arbitrary(u).unwrap()),
-                ..Self::arbitrary(u)?.header
+                ..Header::arbitrary(u)?
             },
         })
     }

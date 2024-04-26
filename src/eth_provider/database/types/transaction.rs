@@ -53,6 +53,7 @@ impl<'a> StoredTransaction {
                     ..reth_rpc_types::Signature::arbitrary(u)?
                 }),
                 transaction_type: Some(transaction_type),
+                chain_id: Some(u32::arbitrary(u)? as u64),
                 other: Default::default(),
                 access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
                 ..transaction
