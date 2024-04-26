@@ -620,7 +620,7 @@ where
         &self,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
-        let block_id = match block_id.unwrap_or_default() {
+        let block_id = match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
             BlockId::Number(maybe_number) => self.tag_into_block_number(maybe_number).await?.to::<u64>().into(),
             BlockId::Hash(hash) => hash.block_hash.into(),
         };
