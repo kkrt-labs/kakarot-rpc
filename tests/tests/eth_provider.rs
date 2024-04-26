@@ -1,7 +1,7 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 
-use kakarot_rpc::eth_provider::constant::{HASH_PADDING, STARKNET_MODULUS};
+use kakarot_rpc::eth_provider::constant::{HASH_PADDING, MAX_RETRIES, STARKNET_MODULUS};
 use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::eth_provider::utils::into_filter;
@@ -521,6 +521,10 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     // Retrieve the transaction from the database
     let tx: Option<StoredPendingTransaction> =
         eth_provider.database().get_one(None, None).await.expect("Failed to get transaction");
+
+    // Assert that the number of retries is 0
+    assert_eq!(tx.clone().unwrap().retries, 0);
+
     let tx = tx.unwrap().tx;
 
     // Assert the transaction hash and block number
@@ -629,4 +633,81 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
 
     // Check if the final transaction is returned correctly by the `transaction_by_hash` method
     assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(1111));
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // Insert the first transaction into the pending transactions collection with 0 retry
+    let transaction1 = katana.eoa().mock_transaction_with_nonce(0).expect("Failed to get mock transaction");
+    eth_provider
+        .database()
+        .update_one::<StoredPendingTransaction>(
+            transaction1.clone().into(),
+            into_filter("tx.hash", &transaction1.hash, HASH_PADDING),
+            true,
+        )
+        .await
+        .expect("Failed to insert pending transaction in database");
+
+    // Insert the transaction into the pending transactions collection with MAX_RETRIES + 1 retry
+    // Shouldn't be retried as it has reached the maximum number of retries
+    let transaction2 = katana.eoa().mock_transaction_with_nonce(1).expect("Failed to get mock transaction");
+    eth_provider
+        .database()
+        .update_one::<StoredPendingTransaction>(
+            StoredPendingTransaction::new(transaction2.clone(), MAX_RETRIES + 1),
+            into_filter("tx.hash", &transaction2.hash, HASH_PADDING),
+            true,
+        )
+        .await
+        .expect("Failed to insert pending transaction in database");
+
+    // Insert the transaction into both the mined transactions and pending transactions collections
+    // Shouln't be retried as it has already been mined
+    let transaction3 = katana.eoa().mock_transaction_with_nonce(2).expect("Failed to get mock transaction");
+    eth_provider
+        .database()
+        .update_one::<StoredPendingTransaction>(
+            transaction3.clone().into(),
+            into_filter("tx.hash", &transaction3.clone().hash, HASH_PADDING),
+            true,
+        )
+        .await
+        .expect("Failed to insert pending transaction in database");
+    eth_provider
+        .database()
+        .update_one::<StoredTransaction>(
+            transaction3.clone().into(),
+            into_filter("tx.hash", &transaction3.hash, HASH_PADDING),
+            true,
+        )
+        .await
+        .expect("Failed to insert transaction in mined collection");
+
+    // Retrieve the retried transactions.
+    let retried_transactions = eth_provider.retry_transactions().await.expect("Failed to retry transactions");
+
+    // Assert that there is only one retried transaction.
+    assert_eq!(retried_transactions.len(), 1);
+
+    // Retrieve the pending transactions.
+    let pending_transactions = eth_provider
+        .database()
+        .get::<StoredPendingTransaction>(None, None)
+        .await
+        .expect("Failed get pending transactions");
+
+    // Ensure that the spurious transactions are dropped from the pending transactions collection
+    assert_eq!(pending_transactions.len(), 1);
+
+    // Ensure that the retry is incremented for the first transaction
+    assert_eq!(pending_transactions.first().unwrap().retries, 1);
+
+    // Ensure that the transaction1 is still in the pending transactions collection
+    assert_eq!(pending_transactions.first().unwrap().tx, transaction1);
 }

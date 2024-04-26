@@ -1636,10 +1636,34 @@ source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5#54df2a4114c
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome-cairo-serde",
- "cainome-parser",
- "cainome-rs",
- "cainome-rs-macro",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "camino",
+ "clap",
+ "clap_complete",
+ "convert_case 0.6.0",
+ "serde",
+ "serde_json",
+ "starknet 0.9.0",
+ "thiserror",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "cainome"
+version = "0.2.3"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6#07ba9c91baa2f6aa2bc850b6699ffc2266be9a13"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
+ "cainome-rs-macro 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
  "camino",
  "clap",
  "clap_complete",
@@ -1663,9 +1687,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "cainome-cairo-serde"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6#07ba9c91baa2f6aa2bc850b6699ffc2266be9a13"
+dependencies = [
+ "starknet 0.9.0",
+ "thiserror",
+]
+
+[[package]]
 name = "cainome-parser"
 version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5#54df2a4114c0c61359c2f1a70bc7e5fb57d9eaf2"
+dependencies = [
+ "convert_case 0.6.0",
+ "quote",
+ "serde_json",
+ "starknet 0.9.0",
+ "syn 2.0.58",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-parser"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6#07ba9c91baa2f6aa2bc850b6699ffc2266be9a13"
 dependencies = [
  "convert_case 0.6.0",
  "quote",
@@ -1681,8 +1727,24 @@ version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5#54df2a4114c0c61359c2f1a70bc7e5fb57d9eaf2"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde",
- "cainome-parser",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "starknet 0.9.0",
+ "syn 2.0.58",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-rs"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6#07ba9c91baa2f6aa2bc850b6699ffc2266be9a13"
+dependencies = [
+ "anyhow",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -1697,9 +1759,26 @@ version = "0.1.0"
 source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5#54df2a4114c0c61359c2f1a70bc7e5fb57d9eaf2"
 dependencies = [
  "anyhow",
- "cainome-cairo-serde",
- "cainome-parser",
- "cainome-rs",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "starknet 0.9.0",
+ "syn 2.0.58",
+ "thiserror",
+]
+
+[[package]]
+name = "cainome-rs-macro"
+version = "0.1.0"
+source = "git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6#07ba9c91baa2f6aa2bc850b6699ffc2266be9a13"
+dependencies = [
+ "anyhow",
+ "cainome-cairo-serde 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
+ "cainome-parser 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
+ "cainome-rs 0.1.0 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
  "proc-macro2",
  "quote",
  "serde_json",
@@ -3948,7 +4027,7 @@ source = "git+https://github.com/dojoengine/dojo?tag=v0.6.0-alpha.6#cfdd17029222
 dependencies = [
  "anyhow",
  "async-trait",
- "cainome",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.5)",
  "cairo-lang-filesystem 2.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "cairo-lang-project 2.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "cairo-lang-starknet 2.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6536,7 +6615,7 @@ dependencies = [
  "http 0.2.11",
  "hyper 0.14.28",
  "log",
- "rustls 0.21.10",
+ "rustls 0.21.11",
  "rustls-native-certs 0.6.3",
  "tokio",
  "tokio-rustls 0.24.1",
@@ -7466,7 +7545,7 @@ dependencies = [
  "async-trait",
  "auto_impl",
  "bytes",
- "cainome",
+ "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
  "cairo-lang-starknet 2.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "dojo-test-utils",
  "dotenvy",
@@ -8380,7 +8459,7 @@ dependencies = [
  "percent-encoding",
  "rand 0.8.5",
  "rustc_version_runtime",
- "rustls 0.21.10",
+ "rustls 0.21.11",
  "rustls-pemfile 1.0.4",
  "serde",
  "serde_bytes",
@@ -9867,7 +9946,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
- "rustls 0.21.10",
+ "rustls 0.21.11",
  "rustls-native-certs 0.6.3",
  "rustls-pemfile 1.0.4",
  "serde",
@@ -11565,9 +11644,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.21.10"
+version = "0.21.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9d5a6813c0759e4609cd494e8e725babae6a2ca7b62a5536a13daaec6fcb7ba"
+checksum = "7fecbfb7b1444f477b345853b1fce097a2c6fb637b2bfb87e6bc5db0f043fae4"
 dependencies = [
  "log",
  "ring 0.17.7",
@@ -13501,7 +13580,7 @@ version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c28327cf380ac148141087fbfb9de9d7bd4e84ab5d2c28fbc911d753de8a7081"
 dependencies = [
- "rustls 0.21.10",
+ "rustls 0.21.11",
  "tokio",
 ]
 
@@ -13536,7 +13615,7 @@ checksum = "212d5dcb2a1ce06d81107c3d0ffa3121fe974b73f068c8282cb1c32328113b6c"
 dependencies = [
  "futures-util",
  "log",
- "rustls 0.21.10",
+ "rustls 0.21.11",
  "tokio",
  "tokio-rustls 0.24.1",
  "tungstenite",
@@ -13981,7 +14060,7 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.8.5",
- "rustls 0.21.10",
+ "rustls 0.21.11",
  "sha1",
  "thiserror",
  "url",

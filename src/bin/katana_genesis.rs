@@ -14,7 +14,7 @@ lazy_static! {
     static ref GENESIS_FOLDER_PATH: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join(".katana");
     static ref KAKAROT_CONTRACTS_PATH: PathBuf =
         Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join("lib/kakarot/build");
-    static ref COINBASE_ADDRESS: FieldElement = FieldElement::from(0x12345u32);
+    static ref COINBASE_ADDRESS: FieldElement = 0x12345u32.into();
     static ref SALT: FieldElement = FieldElement::ZERO;
 }
 
