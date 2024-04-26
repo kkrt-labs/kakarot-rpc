@@ -7488,6 +7488,7 @@ dependencies = [
  "mongodb",
  "pin-project-lite",
  "prometheus",
+ "proptest",
  "rand 0.8.5",
  "rayon",
  "reqwest 0.12.3",

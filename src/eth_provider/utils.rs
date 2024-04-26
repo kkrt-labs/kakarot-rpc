@@ -69,7 +69,9 @@ pub(crate) fn entrypoint_not_found<T>(err: &Result<T, Error>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
     use reth_primitives::B256;
+    use starknet_crypto::FieldElement;
     use std::str::FromStr;
 
     #[test]
@@ -87,5 +89,29 @@ mod tests {
             into_filter::<B256>("test_key", &B256::default(), 64),
             doc! {"test_key": format!("0x{}", "0".repeat(64))}
         );
+    }
+
+    #[test]
+    fn test_split_u256() {
+        // Define a property to test the split_u256 function
+        proptest!(|(value in any::<B256>())| {
+            // Convert the B256 value to a hexadecimal string
+            let hex_string = format!("{:?}", value);
+            // Convert the hexadecimal string to a U256 value
+            let u256_value = U256::from_str(&hex_string).unwrap();
+
+            // Call the split_u256 function
+            let result = split_u256::<FieldElement>(u256_value);
+
+            // Format the combined hexadecimal string with different widths for each part
+            let combined_hex = format!("{:#0width1$x}{:0width2$x}",
+                u128::from_str(&result[1].to_string()).unwrap(),
+                u128::from_str(&result[0].to_string()).unwrap(),
+                width1 = 34,
+                width2 = 32);
+
+            // Assertion to check the equality with the original value converted to a string
+            assert_eq!(combined_hex, value.to_string());
+        });
     }
 }
