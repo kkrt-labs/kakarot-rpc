@@ -27,7 +27,7 @@ impl From<Transaction> for StoredTransaction {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> StoredTransaction {
     pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let transaction = Self::arbitrary(u)?.tx;
+        let transaction = Transaction::arbitrary(u)?;
 
         let transaction_type = Into::<u8>::into(transaction.transaction_type.unwrap_or_default()) % 3;
 
