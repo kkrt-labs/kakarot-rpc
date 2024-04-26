@@ -1,16 +1,13 @@
 mod database;
 
-use crate::{
-    eth_provider::{
+use crate::eth_provider::{
         error::{EthApiError, EthereumDataFormatError, TransactionError},
         provider::EthereumProvider,
-    },
-    models::transaction::rpc_to_ec_recovered_transaction,
-};
+    };
 use reth_primitives::{
     revm::env::tx_env_with_recovered,
     revm_primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, SpecId},
-    TxType, B256, U256,
+    TxType, B256, U256, TransactionSignedEcRecovered
 };
 use reth_revm::tracing::{TracingInspector, TracingInspectorConfig};
 use reth_revm::{primitives::HandlerCfg, DatabaseCommit};
@@ -72,7 +69,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
             while let Some(tx) = transactions.next() {
                 // Convert the transaction to an ec recovered transaction and update the evm env with it
-                let tx_ec_recovered = rpc_to_ec_recovered_transaction(tx.clone())?;
+                let tx_ec_recovered = TransactionSignedEcRecovered::try_from(tx.clone()).map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
                 let tx_env = tx_env_with_recovered(&tx_ec_recovered);
                 evm = evm.modify().modify_tx_env(|env| *env = tx_env).build();
 

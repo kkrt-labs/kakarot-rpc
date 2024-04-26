@@ -1,8 +1,8 @@
 use reth_primitives::{
-    AccessList, AccessListItem, Signature, TransactionKind, TransactionSigned, TxEip1559, TxEip2930, TxLegacy, TxType,
+    AccessList, AccessListItem, TransactionKind, TxEip1559, TxEip2930, TxLegacy, TxType,
 };
 
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
+use crate::eth_provider::error::EthereumDataFormatError;
 
 pub fn rpc_to_primitive_transaction(
     rpc_transaction: reth_rpc_types::Transaction,
@@ -93,7 +93,7 @@ pub fn rpc_to_ec_recovered_transaction(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reth_primitives::{Address, Bytes, U256};
+    use reth_primitives::{Address, Bytes, U256, TransactionSignedEcRecovered, Signature};
     use reth_rpc_types::AccessListItem as RpcAccessListItem;
     use std::str::FromStr;
 
@@ -221,8 +221,7 @@ mod tests {
                 let rpc_tx = $tx_initializer();
 
                 // When
-                let tx = rpc_to_ec_recovered_transaction(rpc_tx.clone())
-                    .expect("Failed to convert RPC transaction to primitive");
+                let tx = TransactionSignedEcRecovered::try_from(rpc_tx.clone()).expect("Failed to convert RPC transaction to ec recovered");
 
                 // Then
                 assert_common_fields!(tx, rpc_tx, $gas_price_field, $has_access_list);
