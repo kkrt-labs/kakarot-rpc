@@ -144,4 +144,4 @@ jobs:
           file: ./docker/indexer/Dockerfile
           platforms: linux/amd64
           build-args: |
-            APIBARA_SINK_BIN_DIR="sci7y4a8r7yz05094pl88h3d7vv1s98f"
+            APIBARA_SINK_BIN_DIR=sci7y4a8r7yz05094pl88h3d7vv1s98f
