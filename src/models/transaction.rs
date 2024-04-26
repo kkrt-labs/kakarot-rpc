@@ -71,24 +71,6 @@ pub fn rpc_to_primitive_transaction(
     }
 }
 
-pub fn rpc_to_ec_recovered_transaction(
-    transaction: reth_rpc_types::Transaction,
-) -> Result<reth_primitives::TransactionSignedEcRecovered, EthApiError> {
-    let signature = transaction.signature.ok_or(SignatureError::MissingSignature)?;
-    let transaction = rpc_to_primitive_transaction(transaction)?;
-
-    let tx_signed = TransactionSigned::from_transaction_and_signature(
-        transaction,
-        Signature {
-            r: signature.r,
-            s: signature.s,
-            odd_y_parity: signature.y_parity.ok_or(SignatureError::RecoveryError)?.0,
-        },
-    );
-
-    let tx_ec_recovered = tx_signed.try_into_ecrecovered().map_err(|_| SignatureError::RecoveryError)?;
-    Ok(tx_ec_recovered)
-}
 
 #[cfg(test)]
 mod tests {
