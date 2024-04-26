@@ -82,8 +82,8 @@ pub fn rpc_to_ec_recovered_transaction(
         TxType::Legacy => {
             // EIP-155: v = {0, 1} + CHAIN_ID * 2 + 35
             let chain_id = transaction.chain_id().ok_or(TransactionError::InvalidChainId)?;
-            let recovery: U256 = U256::from(2) * U256::from(chain_id) + U256::from(35);
-            signature.v - recovery
+            let recovery = chain_id.saturating_mul(2).saturating_add(35);
+            signature.v - U256::from(recovery)
         }
         TxType::Eip1559 | TxType::Eip2930 | TxType::Eip4844 => signature.v,
     };
