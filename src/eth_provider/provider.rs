@@ -595,7 +595,7 @@ where
     }
 
     async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>> {
-        match block_id.unwrap_or_default() {
+        match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
             BlockId::Number(maybe_number) => {
                 let block_number = self.tag_into_block_number(maybe_number).await?;
                 if !self.block_exists(block_number.into()).await? {
