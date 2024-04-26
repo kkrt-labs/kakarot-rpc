@@ -1,10 +1,7 @@
-use crate::eth_provider::starknet::kakarot_core::account_contract::BytecodeOutput;
-use crate::models::transaction::rpc_to_primitive_transaction;
 use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
-use cainome::cairo_serde::CairoSerde;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
@@ -19,8 +16,8 @@ use reth_rpc_types::{
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
-use starknet::core::types::{FunctionCall, SyncStatusType};
-use starknet::core::utils::{get_selector_from_name, get_storage_var_address};
+use starknet::core::types::SyncStatusType;
+use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
 use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, MAX_RETRIES, U64_PADDING};
@@ -42,6 +39,7 @@ use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
+use crate::models::transaction::rpc_to_primitive_transaction;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -368,36 +366,18 @@ where
     }
 
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
-        // TODO: temporary fix to handle empty bytecode until
-        // https://github.com/cartridge-gg/cainome/issues/24 is solved
-        let bytecode = self
-            .starknet_provider
-            .call(
-                FunctionCall {
-                    contract_address: starknet_address(address),
-                    entry_point_selector: get_selector_from_name("bytecode").unwrap(),
-                    calldata: Default::default(),
-                },
-                self.to_starknet_block_id(block_id).await?,
-            )
-            .await
-            .map_err(cainome::cairo_serde::Error::Provider);
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
+
+        let address = starknet_address(address);
+        let account_contract = AccountContractReader::new(address, &self.starknet_provider);
+        let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().await;
 
         if contract_not_found(&bytecode) || entrypoint_not_found(&bytecode) {
             return Ok(Bytes::default());
         }
 
-        let bytecode_raw = bytecode.map_err(KakarotError::from)?;
-
-        // If the bytecode is empty, return an empty Bytes
-        if bytecode_raw.len() == 1 && bytecode_raw[0] == FieldElement::ZERO {
-            return Ok(Bytes::default());
-        }
-
-        // Deserialize the bytecode
-        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(
-            BytecodeOutput::cairo_deserialize(&bytecode_raw, 0).map_err(KakarotError::from)?.bytecode.0,
-        )))
+        let bytecode = bytecode.map_err(KakarotError::from)?.bytecode.0;
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode)))
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
@@ -918,6 +898,7 @@ where
         use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::accounts::{Call, Execution};
         use starknet::core::types::BlockTag;
+        use starknet::core::utils::get_selector_from_name;
 
         let signer_starknet_address = starknet_address(signer);
         let account_contract = AccountContractReader::new(signer_starknet_address, &self.starknet_provider);
