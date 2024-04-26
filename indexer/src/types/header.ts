@@ -15,7 +15,10 @@ import {
 import { KAKAROT } from "../provider.ts";
 
 // A default block gas limit in case the call to get_block_gas_limit fails.
-const DEFAULT_BLOCK_GAS_LIMIT = BigInt(7_000_000);
+const BLOCK_GAS_LIMIT = Deno.env.get("BLOCK_GAS_LIMIT");
+if (BLOCK_GAS_LIMIT === undefined) {
+  throw new Error("ENV: BLOCK_GAS_LIMIT is not set");
+}
 
 /**
  * @param header - A Starknet block header.
@@ -108,7 +111,7 @@ export async function toEthHeader({
     console.warn(
       `⚠️ Failed to get block gas limit for block ${blockNumber} - Error: ${error.message}`,
     );
-    blockGasLimit = DEFAULT_BLOCK_GAS_LIMIT;
+    blockGasLimit = BigInt(BLOCK_GAS_LIMIT!);
   }
 
   return {
