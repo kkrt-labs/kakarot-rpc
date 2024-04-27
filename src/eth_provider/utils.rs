@@ -69,6 +69,7 @@ pub(crate) fn entrypoint_not_found<T>(err: &Result<T, Error>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
     use reth_primitives::B256;
     use std::str::FromStr;
 
@@ -87,5 +88,20 @@ mod tests {
             into_filter::<B256>("test_key", &B256::default(), 64),
             doc! {"test_key": format!("0x{}", "0".repeat(64))}
         );
+    }
+
+    #[test]
+    fn test_split_u256() {
+        // Define a property-based test using Proptest
+        proptest!(|(value in any::<U256>())| {
+            // Call the split_u256 function to split the U256 value into two u128 values
+            let result = split_u256::<u128>(value);
+
+            // Combine the two u128 values into a hexadecimal string
+            let combined_hex = format!("{:#x}{:0width$x}", result[1], result[0], width = 32);
+
+            // Assertion to check the equality with the original U256 value
+            assert_eq!(U256::from_str(&combined_hex).unwrap(), value);
+        });
     }
 }
