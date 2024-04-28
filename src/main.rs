@@ -72,20 +72,18 @@ async fn main() -> Result<()> {
         *nonce = deployer_nonce;
     }
 
-    let (kakarot_rpc_module, retry_service_handle) = match starknet_provider {
+    let kakarot_rpc_module = match starknet_provider {
         StarknetProvider::JsonRpcClient(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
             let eth_provider = EthDataProvider::new(db.clone(), starknet_provider).await?;
-            let rpc_module = KakarotRpcModuleBuilder::new(eth_provider.clone()).rpc_module()?;
-            let retry_service_handle = tokio::spawn(start_retry_service(eth_provider));
-            (rpc_module, retry_service_handle)
+            tokio::spawn(start_retry_service(eth_provider.clone()));
+            KakarotRpcModuleBuilder::new(eth_provider).rpc_module()?
         }
         StarknetProvider::SequencerGatewayProvider(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
             let eth_provider = EthDataProvider::new(db.clone(), starknet_provider).await?;
-            let rpc_module = KakarotRpcModuleBuilder::new(eth_provider.clone()).rpc_module()?;
-            let retry_service_handle = tokio::spawn(start_retry_service(eth_provider));
-            (rpc_module, retry_service_handle)
+            tokio::spawn(start_retry_service(eth_provider.clone()));
+            KakarotRpcModuleBuilder::new(eth_provider).rpc_module()?
         }
     };
 
@@ -94,11 +92,6 @@ async fn main() -> Result<()> {
     let url = format!("http://{}", socket_addr);
 
     println!("RPC Server running on {url}...");
-
-    // Await the retry service handle and handle any errors
-    if let Err(err) = retry_service_handle.await {
-        return Err(eyre::eyre!("Error while running retry service: {:?}", err));
-    }
 
     server_handle.stopped().await;
 

@@ -8,7 +8,7 @@ use mongodb::bson::doc;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{
-    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxType, B256, U256, U64,
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256, U256, U64,
 };
 use reth_rpc_types::{
     Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
@@ -39,7 +39,7 @@ use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::rpc_to_primitive_transaction;
+use crate::models::transaction::rpc_to_ec_recovered_transaction;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -960,37 +960,22 @@ where
                 continue;
             }
 
-            // Extract the signature from the transaction
-            let transaction_signature = tx.tx.signature.unwrap();
-
-            // Generate primitive transaction
-            let transaction = rpc_to_primitive_transaction(tx.tx.clone())?;
+            // Generate primitive transaction, handle error if any
+            let transaction = match rpc_to_ec_recovered_transaction(tx.tx.clone()) {
+                Ok(transaction) => transaction,
+                Err(_) => {
+                    // Delete the pending transaction from the database due conversion error
+                    // Malformed transaction
+                    self.database
+                        .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_PADDING))
+                        .await?;
+                    // Continue to the next iteration of the loop
+                    continue;
+                }
+            };
 
             // Create a signed transaction and send it
-            transactions_retried.push(
-                self.send_raw_transaction(
-                    TransactionSigned::from_transaction_and_signature(
-                        transaction.clone(),
-                        reth_primitives::Signature {
-                            r: transaction_signature.r,
-                            s: transaction_signature.s,
-                            odd_y_parity: match transaction.tx_type() {
-                                TxType::Legacy => {
-                                    // EIP-155: v = {0, 1} + CHAIN_ID * 2 + 35
-                                    let chain_id = transaction.chain_id().ok_or(TransactionError::InvalidChainId)?;
-                                    let recovery = chain_id.saturating_mul(2).saturating_add(35);
-                                    (transaction_signature.v - U256::from(recovery))
-                                        .try_into()
-                                        .map_err(|_| SignatureError::InvalidParity)?
-                                }
-                                _ => transaction_signature.y_parity.unwrap().0,
-                            },
-                        },
-                    )
-                    .envelope_encoded(),
-                )
-                .await?,
-            );
+            transactions_retried.push(self.send_raw_transaction(transaction.into_signed().envelope_encoded()).await?);
         }
 
         // Return the hashes of retried transactions
