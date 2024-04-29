@@ -3,7 +3,7 @@ mod config;
 mod database;
 
 use eyre::eyre;
-use reth_primitives::{revm::env::tx_env_with_recovered, TxType, TransactionSignedEcRecovered};
+use reth_primitives::{revm::env::tx_env_with_recovered, TxType};
 use reth_revm::primitives::{Env, EnvWithHandlerCfg};
 use reth_revm::tracing::{TracingInspector, TracingInspectorConfig};
 use reth_revm::DatabaseCommit;
@@ -19,9 +19,9 @@ use reth_rpc_types::{
 use self::config::KakarotEvmConfig;
 use self::database::EthDatabaseSnapshot;
 use crate::eth_provider::{
-        error::{EthApiError, EthereumDataFormatError, TransactionError},
-        provider::EthereumProvider,
-    };
+    error::{EthApiError, EthereumDataFormatError, TransactionError},
+    provider::EthereumProvider,
+};
 
 pub type TracerResult<T> = Result<T, EthApiError>;
 
@@ -157,7 +157,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
             while let Some(tx) = transactions.next() {
                 // Convert the transaction to an ec recovered transaction and update the env with it.
-                let tx_ec_recovered= tx.clone().try_into().map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
+                let tx_ec_recovered =
+                    tx.clone().try_into().map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
 
                 let tx_env = tx_env_with_recovered(&tx_ec_recovered);
                 let env = EnvWithHandlerCfg {
