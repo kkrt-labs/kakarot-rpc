@@ -157,7 +157,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
             while let Some(tx) = transactions.next() {
                 // Convert the transaction to an ec recovered transaction and update the env with it.
-                let tx_ec_recovered = TransactionSignedEcRecovered::try_from(tx.clone()).map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
+                let tx_ec_recovered= tx.clone().try_into().map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
 
                 let tx_env = tx_env_with_recovered(&tx_ec_recovered);
                 let env = EnvWithHandlerCfg {
