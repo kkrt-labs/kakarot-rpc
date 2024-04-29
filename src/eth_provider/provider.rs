@@ -39,7 +39,7 @@ use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::rpc_to_primitive_transaction;
+use crate::models::transaction::rpc_to_ec_recovered_transaction;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -129,7 +129,7 @@ pub trait EthereumProvider {
 /// Structure that implements the EthereumProvider trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
     database: Database,
     starknet_provider: SP,
@@ -960,24 +960,22 @@ where
                 continue;
             }
 
-            // Extract the signature from the transaction
-            let transaction_signature = tx.tx.signature.unwrap();
+            // Generate primitive transaction, handle error if any
+            let transaction = match rpc_to_ec_recovered_transaction(tx.tx.clone()) {
+                Ok(transaction) => transaction,
+                Err(_) => {
+                    // Delete the pending transaction from the database due conversion error
+                    // Malformed transaction
+                    self.database
+                        .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_PADDING))
+                        .await?;
+                    // Continue to the next iteration of the loop
+                    continue;
+                }
+            };
 
             // Create a signed transaction and send it
-            transactions_retried.push(
-                self.send_raw_transaction(
-                    TransactionSigned::from_transaction_and_signature(
-                        rpc_to_primitive_transaction(tx.tx.clone())?,
-                        reth_primitives::Signature {
-                            r: transaction_signature.r,
-                            s: transaction_signature.s,
-                            odd_y_parity: transaction_signature.y_parity.unwrap().0,
-                        },
-                    )
-                    .envelope_encoded(),
-                )
-                .await?,
-            );
+            transactions_retried.push(self.send_raw_transaction(transaction.into_signed().envelope_encoded()).await?);
         }
 
         // Return the hashes of retried transactions
