@@ -7,6 +7,23 @@ endif
 
 MANIFEST=.katana/manifest.json
 
+usage:
+	@echo "Usage:"
+	@echo "    setup:     Setup the project. Will also rename the precompiles compiled class. and move it to the correct location."
+	@echo "    deploy-kakarot:        Deploys kakarot using poetry."
+	@echo "    load-env:       Loads important environment variables."
+	@echo "    run-dev:      Run the development version of the Kakarot RPC server."
+	@echo "    install-katana:        Install Katana from the dojoengine."
+	@echo "    katana-genesis:        Generates a new genesis block for Katana, initializing the environment for testing."
+	@echo "    run-katana:      Runs Katana with Kakarot deployed on top."
+	@echo "    test:      Runs all tests."
+	@echo "    test-target:        Run a specific test target. Need to run make katana-genesis once first."
+	@echo "    benchmark:     Executes benchmarks to evaluate the performance of components."
+	@echo "    docker-build:        Builds kakarot for Docker."
+	@echo "    local-rpc-up:     Runs a local instance of the entire Kakarot stack."
+	@echo "    testnet-rpc-up:      Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Sepolia Testnet in production."
+	@echo "    staging-rpc-up:        Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Staging environment."
+
 # Setup the project. Will also rename the precompiles compiled class
 # and move it to the correct location.
 setup: .gitmodules
