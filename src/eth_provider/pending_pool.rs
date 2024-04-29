@@ -9,7 +9,7 @@ where
     loop {
         // Call the retry_transactions method
         if let Err(err) = eth_provider.retry_transactions().await {
-            println!("Error while retrying transactions: {:?}", err);
+            tracing::error!("Error while retrying transactions: {:?}", err);
         }
         // 30-second pause
         sleep(Duration::from_secs(30)).await;
