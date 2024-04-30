@@ -518,6 +518,7 @@ where
             let eth_fees = eth_fees_per_gas.saturating_mul(transaction_signed.gas_limit());
             let balance = self.balance(signer, None).await?;
             let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
+            let max_fee = (max_fee as u128 * 80 / 100) as u64;
             max_fee.saturating_sub(eth_fees)
         };
 
