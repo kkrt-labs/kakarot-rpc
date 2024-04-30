@@ -32,7 +32,7 @@ where
 
         // Check if 5 minutes have passed since the last print
         if last_print_time.elapsed() >= Duration::from_secs(300) {
-            println!("Elapsed time to retry transactions (milliseconds): {}", elapsed_time_ms);
+            tracing::info!("Elapsed time to retry transactions (milliseconds): {}", elapsed_time_ms);
             // Update last print time
             last_print_time = Instant::now();
         }
