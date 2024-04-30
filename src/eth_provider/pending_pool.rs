@@ -16,19 +16,19 @@ pub async fn start_retry_service<SP>(eth_provider: EthDataProvider<SP>)
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    // Measure start time
-    let start_time = Instant::now();
     // Initialize last print time
     let mut last_print_time = Instant::now();
 
     // Start an infinite loop.
     loop {
+        // Measure start time
+        let start_time_fn = Instant::now();
         // Call the retry_transactions method
         if let Err(err) = eth_provider.retry_transactions().await {
             tracing::error!("Error while retrying transactions: {:?}", err);
         }
         // Calculate elapsed time in milliseconds
-        let elapsed_time_ms = start_time.elapsed().as_millis();
+        let elapsed_time_ms = start_time_fn.elapsed().as_millis();
 
         // Check if 5 minutes have passed since the last print
         if last_print_time.elapsed() >= Duration::from_secs(300) {
