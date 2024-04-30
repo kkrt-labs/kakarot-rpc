@@ -65,6 +65,7 @@ RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
     && apt-get update && apt-get install -y \
     jq \
     wget \
+    docker.io \
     tar \
     unzip \
     zip
@@ -111,7 +112,7 @@ RUN cargo build \
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
-RUN apt-get update && apt-get install -y tini curl jq libssl-dev ca-certificates docker.io && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y tini curl jq libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Environment
 #############
