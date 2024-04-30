@@ -1,5 +1,6 @@
 use crate::eth_provider::provider::EthDataProvider;
 use lazy_static::lazy_static;
+use std::str::FromStr;
 use std::time::Instant;
 use tokio::time::{sleep, Duration};
 
