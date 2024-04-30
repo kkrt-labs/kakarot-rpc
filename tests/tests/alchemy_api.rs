@@ -7,9 +7,10 @@ use kakarot_rpc::test_utils::evm_contract::KakarotEvmContract;
 use kakarot_rpc::test_utils::fixtures::{erc20, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
+use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_primitives::{Address, U256};
 use rstest::*;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 #[rstest]
 #[awt]
@@ -45,15 +46,11 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"alchemy_getTokenBalances",
-                    "params":[eoa_address, [erc20_address]],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::default()
+                .method("alchemy_getTokenBalances")
+                .add_param(eoa_address)
+                .add_param(erc20_address)
+                .build(),
         )
         .send()
         .await
