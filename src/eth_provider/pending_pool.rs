@@ -17,6 +17,9 @@ where
 {
     // Measure start time
     let start_time = Instant::now();
+    // Initialize last print time
+    let mut last_print_time = Instant::now();
+
     // Start an infinite loop.
     loop {
         // Call the retry_transactions method
@@ -25,8 +28,15 @@ where
         }
         // Calculate elapsed time in milliseconds
         let elapsed_time_ms = start_time.elapsed().as_millis();
-        println!("Elapsed time to retry transactions (milliseconds): {}", elapsed_time_ms);
+
+        // Check if 5 minutes have passed since the last print
+        if last_print_time.elapsed() >= Duration::from_secs(300) {
+            println!("Elapsed time to retry transactions (milliseconds): {}", elapsed_time_ms);
+            // Update last print time
+            last_print_time = Instant::now();
+        }
+
         // pause
-        sleep(Duration::from_secs(RETRY_TX_INTERVAL)).await;
+        sleep(Duration::from_secs(*RETRY_TX_INTERVAL as u64)).await;
     }
 }
