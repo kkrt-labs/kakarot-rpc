@@ -1,11 +1,12 @@
-use jsonrpsee::server::ServerHandle;
-use std::net::SocketAddr;
-
 use super::katana::Katana;
 use crate::eth_rpc::config::RPCConfig;
 use crate::eth_rpc::rpc::KakarotRpcModuleBuilder;
 use crate::eth_rpc::run_server;
+use jsonrpsee::server::ServerHandle;
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::net::SocketAddr;
 use tokio::sync::Mutex;
 
 lazy_static! {
@@ -85,4 +86,44 @@ pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, Se
         RPCConfig::from_port(get_next_port().await),
     )
     .await?)
+}
+
+/// Represents a builder for creating JSON-RPC requests.
+/// Taken from https://github.com/paradigmxyz/reth/blob/main/crates/rpc/rpc-builder/tests/it/http.rs
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct RawRpcParamsBuilder {
+    method: String,
+    params: Vec<Value>,
+    id: i32,
+}
+
+impl RawRpcParamsBuilder {
+    /// Sets the method name for the JSON-RPC request.
+    pub fn new(method: impl Into<String>) -> Self {
+        Self { method: method.into(), params: Vec::new(), id: 1 }
+    }
+
+    /// Adds a parameter to the JSON-RPC request.
+    pub fn add_param<S: Serialize>(mut self, param: S) -> Self {
+        self.params.push(serde_json::to_value(param).expect("Failed to serialize parameter"));
+        self
+    }
+
+    /// Sets the ID for the JSON-RPC request.
+    pub fn set_id(mut self, id: i32) -> Self {
+        self.id = id;
+        self
+    }
+
+    /// Constructs the JSON-RPC request string based on the provided configurations.
+    pub fn build(self) -> String {
+        let Self { method, params, id } = self;
+
+        format!(
+            r#"{{"jsonrpc":"2.0","id":{},"method":"{}","params":[{}]}}"#,
+            id,
+            method,
+            params.into_iter().map(|p| p.to_string()).collect::<Vec<String>>().join(",")
+        )
+    }
 }
