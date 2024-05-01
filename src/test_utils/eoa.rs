@@ -42,9 +42,14 @@ pub trait Eoa<P: Provider + Send + Sync> {
         Ok(eth_provider.transaction_count(evm_address, None).await?)
     }
 
-    fn sign_transaction(&self, tx: Transaction) -> Result<TransactionSigned, eyre::Error> {
+    fn sign_payload(&self, payload: B256) -> Result<reth_primitives::Signature, eyre::Error> {
         let pk = self.private_key();
-        let signature = sign_message(pk, tx.signature_hash())?;
+        let signature = sign_message(pk, payload)?;
+        Ok(signature)
+    }
+
+    fn sign_transaction(&self, tx: Transaction) -> Result<TransactionSigned, eyre::Error> {
+        let signature = self.sign_payload(tx.signature_hash())?;
         Ok(TransactionSigned::from_transaction_and_signature(tx, signature))
     }
 
