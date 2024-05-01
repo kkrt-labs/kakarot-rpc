@@ -115,6 +115,15 @@ impl Database {
         Ok(())
     }
 
+    /// Delete a single document from a collection
+    pub async fn delete_one<T>(&self, filter: impl Into<Document>) -> DatabaseResult<()>
+    where
+        T: CollectionName,
+    {
+        self.collection::<T>().delete_one(filter.into(), None).await?;
+        Ok(())
+    }
+
     /// Count the number of documents in a collection matching the filter
     pub async fn count<T>(&self, filter: impl Into<Option<Document>>) -> DatabaseResult<u64>
     where

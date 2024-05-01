@@ -1,11 +1,12 @@
 use reth_primitives::B256;
-#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use reth_primitives::{Address, TransactionSigned, TxType, U256};
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+use {arbitrary::Arbitrary, reth_primitives::TxType};
 
 /// A full transaction as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[cfg_attr(any(test, feature = "arbitrary", feature = "testing"), derive(arbitrary::Arbitrary))]
 pub struct StoredTransaction {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
@@ -24,57 +25,38 @@ impl From<Transaction> for StoredTransaction {
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
-    fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let transaction = TransactionSigned::arbitrary(u)?;
+impl<'a> StoredTransaction {
+    pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let transaction = Transaction::arbitrary(u)?;
 
-        let transaction_type = Into::<u8>::into(transaction.tx_type()) % 3;
+        let transaction_type = Into::<u8>::into(transaction.transaction_type.unwrap_or_default()) % 3;
 
-        Ok(StoredTransaction {
+        Ok(Self {
             tx: Transaction {
-                hash: transaction.hash,
-                nonce: transaction.nonce(),
                 block_hash: Some(B256::arbitrary(u)?),
                 block_number: Some(u64::arbitrary(u)?),
                 transaction_index: Some(u64::arbitrary(u)?),
-                from: Address::arbitrary(u)?,
-                to: transaction.to(),
-                value: transaction.value(),
                 gas_price: Some(u128::arbitrary(u)?),
                 gas: u64::arbitrary(u)? as u128,
                 max_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
                     None
                 } else {
-                    Some(transaction.max_fee_per_gas())
+                    Some(u128::arbitrary(u)?)
                 },
                 max_priority_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
                     None
                 } else {
-                    Some(transaction.max_priority_fee_per_gas().unwrap_or_default())
+                    Some(u128::arbitrary(u)?)
                 },
-                max_fee_per_blob_gas: transaction.max_fee_per_blob_gas(),
-                input: transaction.input().clone(),
                 signature: Some(reth_rpc_types::Signature {
-                    r: transaction.signature.r,
-                    s: transaction.signature.s,
-                    v: U256::arbitrary(u)?,
                     y_parity: Some(reth_rpc_types::Parity(bool::arbitrary(u)?)),
+                    ..reth_rpc_types::Signature::arbitrary(u)?
                 }),
-                chain_id: transaction.chain_id(),
-                blob_versioned_hashes: transaction.blob_versioned_hashes(),
-                access_list: transaction.access_list().map(|list| {
-                    reth_rpc_types::AccessList(
-                        list.0
-                            .iter()
-                            .map(|item| reth_rpc_types::AccessListItem {
-                                address: item.address,
-                                storage_keys: item.storage_keys.clone(),
-                            })
-                            .collect(),
-                    )
-                }),
-                transaction_type: Some(Into::<u8>::into(transaction.tx_type()) % 3),
+                transaction_type: Some(transaction_type),
+                chain_id: Some(u32::arbitrary(u)? as u64),
                 other: Default::default(),
+                access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
+                ..transaction
             },
         })
     }
@@ -82,13 +64,22 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransaction {
 
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredPendingTransaction {
+    /// Transaction object
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
+    /// Number of retries
+    pub retries: u64,
+}
+
+impl StoredPendingTransaction {
+    pub fn new(tx: Transaction, retries: u64) -> Self {
+        Self { tx, retries }
+    }
 }
 
 impl From<Transaction> for StoredPendingTransaction {
     fn from(tx: Transaction) -> Self {
-        Self { tx }
+        Self { tx, retries: 0 }
     }
 }
 

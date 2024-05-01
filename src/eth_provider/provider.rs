@@ -1,9 +1,7 @@
-use crate::eth_provider::starknet::kakarot_core::account_contract::BytecodeOutput;
 use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
-use cainome::cairo_serde::CairoSerde;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
@@ -18,11 +16,11 @@ use reth_rpc_types::{
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
-use starknet::core::types::{FunctionCall, SyncStatusType};
-use starknet::core::utils::{get_selector_from_name, get_storage_var_address};
+use starknet::core::types::SyncStatusType;
+use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
-use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, U64_PADDING};
+use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, MAX_RETRIES, U64_PADDING};
 use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
     transaction::StoredTransaction, transaction::StoredTransactionHash,
@@ -41,6 +39,7 @@ use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
+use crate::models::transaction::rpc_to_ec_recovered_transaction;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -130,14 +129,17 @@ pub trait EthereumProvider {
 /// Structure that implements the EthereumProvider trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
     database: Database,
     starknet_provider: SP,
     chain_id: u64,
 }
 
-impl<SP: starknet::providers::Provider> EthDataProvider<SP> {
+impl<SP> EthDataProvider<SP>
+where
+    SP: starknet::providers::Provider,
+{
     /// Returns a reference to the database.
     pub fn database(&self) -> &Database {
         &self.database
@@ -198,7 +200,7 @@ where
         full: bool,
     ) -> EthProviderResult<Option<RichBlock>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        Ok(self.block(block_number.to::<u64>().into(), full).await?)
+        Ok(self.block(block_number.into(), full).await?)
     }
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
@@ -356,44 +358,25 @@ where
         // Get the protocol nonce as well, in edge cases where the protocol nonce is higher than the account nonce.
         // This can happen when an underlying Starknet transaction reverts => Account storage changes are reverted,
         // but the protocol nonce is still incremented.
-        let protocol_nonce =
-            self.starknet_provider.get_nonce(starknet_block_id, address).await.map_err(KakarotError::from)?;
+        let protocol_nonce = self.starknet_provider.get_nonce(starknet_block_id, address).await.unwrap_or_default();
         let nonce = nonce.max(protocol_nonce);
 
         Ok(into_via_wrapper!(nonce))
     }
 
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
-        // TODO: temporary fix to handle empty bytecode until
-        // https://github.com/cartridge-gg/cainome/issues/24 is solved
-        let bytecode = self
-            .starknet_provider
-            .call(
-                FunctionCall {
-                    contract_address: starknet_address(address),
-                    entry_point_selector: get_selector_from_name("bytecode").unwrap(),
-                    calldata: Default::default(),
-                },
-                self.to_starknet_block_id(block_id).await?,
-            )
-            .await
-            .map_err(cainome::cairo_serde::Error::Provider);
+        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
+
+        let address = starknet_address(address);
+        let account_contract = AccountContractReader::new(address, &self.starknet_provider);
+        let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().await;
 
         if contract_not_found(&bytecode) || entrypoint_not_found(&bytecode) {
             return Ok(Bytes::default());
         }
 
-        let bytecode_raw = bytecode.map_err(KakarotError::from)?;
-
-        // If the bytecode is empty, return an empty Bytes
-        if bytecode_raw.len() == 1 && bytecode_raw[0] == FieldElement::ZERO {
-            return Ok(Bytes::default());
-        }
-
-        // Deserialize the bytecode
-        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(
-            BytecodeOutput::cairo_deserialize(&bytecode_raw, 0).map_err(KakarotError::from)?.bytecode.0,
-        )))
+        let bytecode = bytecode.map_err(KakarotError::from)?.bytecode.0;
+        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode)))
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
@@ -535,6 +518,7 @@ where
             let eth_fees = eth_fees_per_gas.saturating_mul(transaction_signed.gas_limit());
             let balance = self.balance(signer, None).await?;
             let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
+            let max_fee = (max_fee as u128 * 80 / 100) as u64;
             max_fee.saturating_sub(eth_fees)
         };
 
@@ -554,7 +538,20 @@ where
 
         // Update pending transactions collection
         let filter = into_filter("tx.hash", &transaction.hash, HASH_PADDING);
-        self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
+
+        if let Some(pending_transaction) =
+            self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?
+        {
+            self.database
+                .update_one::<StoredPendingTransaction>(
+                    StoredPendingTransaction::new(transaction, pending_transaction.retries + 1),
+                    filter,
+                    true,
+                )
+                .await?;
+        } else {
+            self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
+        }
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
@@ -578,12 +575,10 @@ where
     }
 
     async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>> {
-        let block_id = block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest));
-        match block_id {
+        match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
             BlockId::Number(maybe_number) => {
                 let block_number = self.tag_into_block_number(maybe_number).await?;
-                let block_exists = self.block_exists(block_number.into()).await?;
-                if !block_exists {
+                if !self.block_exists(block_number.into()).await? {
                     return Ok(None);
                 }
 
@@ -592,14 +587,11 @@ where
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
             BlockId::Hash(hash) => {
-                let block_exists = self.block_exists(hash.block_hash.into()).await?;
-                if !block_exists {
+                if !self.block_exists(hash.block_hash.into()).await? {
                     return Ok(None);
                 }
-
                 let filter = into_filter("receipt.blockHash", &hash.block_hash, HASH_PADDING);
-                let tx: Vec<StoredTransactionReceipt> = self.database.get(filter, None).await?;
-                Ok(Some(tx.into_iter().map(Into::into).collect()))
+                Ok(Some(self.database.get_and_map_to::<_, StoredTransactionReceipt>(filter, None).await?))
             }
         }
     }
@@ -628,11 +620,10 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
-        let chain_id = starknet_provider.chain_id().await?;
         // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
-        let chain_id = (FieldElement::from(u32::MAX) & chain_id).try_into().unwrap(); // safe unwrap
+        let chain_id = (FieldElement::from(u32::MAX) & starknet_provider.chain_id().await?).try_into().unwrap(); // safe unwrap
         Ok(Self { database, starknet_provider, chain_id })
     }
 
@@ -901,6 +892,7 @@ where
         use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::accounts::{Call, Execution};
         use starknet::core::types::BlockTag;
+        use starknet::core::utils::get_selector_from_name;
 
         let signer_starknet_address = starknet_address(signer);
         let account_contract = AccountContractReader::new(signer_starknet_address, &self.starknet_provider);
@@ -925,7 +917,7 @@ where
 
             let tx = execution
                 .nonce(current_nonce)
-                .max_fee(FieldElement::from(u64::MAX))
+                .max_fee(u64::MAX.into())
                 .prepared()
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?
                 .get_invoke_request(false)
@@ -938,5 +930,56 @@ where
         };
 
         Ok(())
+    }
+}
+
+impl<SP> EthDataProvider<SP>
+where
+    SP: starknet::providers::Provider + Send + Sync,
+{
+    pub async fn retry_transactions(&self) -> EthProviderResult<Vec<B256>> {
+        // Initialize an empty vector to store the hashes of retried transactions
+        let mut transactions_retried = Vec::new();
+
+        // Iterate over pending transactions fetched from the database
+        for tx in self.database.get::<StoredPendingTransaction>(None, None).await? {
+            // Check if the number of retries exceeds the maximum allowed retries
+            // or if the transaction already exists in the database of finalized transactions
+            if tx.retries + 1 > MAX_RETRIES
+                || self
+                    .database
+                    .get_one::<StoredTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_PADDING), None)
+                    .await?
+                    .is_some()
+            {
+                // Delete the pending transaction from the database
+                self.database
+                    .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_PADDING))
+                    .await?;
+
+                // Continue to the next iteration of the loop
+                continue;
+            }
+
+            // Generate primitive transaction, handle error if any
+            let transaction = match rpc_to_ec_recovered_transaction(tx.tx.clone()) {
+                Ok(transaction) => transaction,
+                Err(_) => {
+                    // Delete the pending transaction from the database due conversion error
+                    // Malformed transaction
+                    self.database
+                        .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_PADDING))
+                        .await?;
+                    // Continue to the next iteration of the loop
+                    continue;
+                }
+            };
+
+            // Create a signed transaction and send it
+            transactions_retried.push(self.send_raw_transaction(transaction.into_signed().envelope_encoded()).await?);
+        }
+
+        // Return the hashes of retried transactions
+        Ok(transactions_retried)
     }
 }

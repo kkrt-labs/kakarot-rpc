@@ -10,6 +10,7 @@ pub const HASH_PADDING: usize = 64;
 pub const U64_PADDING: usize = 16;
 // Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
 pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x800000000000011]);
+pub const MAX_RETRIES: u64 = 10;
 
 #[cfg(feature = "hive")]
 use {

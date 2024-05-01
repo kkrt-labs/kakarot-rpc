@@ -180,7 +180,7 @@ impl KatanaGenesisBuilder<Loaded> {
         let account_contract_class_hash = self.account_contract_class_hash()?;
         let uninitialized_account_class_hash = self.uninitialized_account_class_hash()?;
         let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
-        let block_gas_limit = FieldElement::from(20_000_000u64);
+        let block_gas_limit = 20_000_000u64.into();
         // Construct the kakarot contract address. Based on the constructor args from
         // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/kakarot.cairo#L23
         let kakarot_address = ContractAddress::new(get_udc_deployed_address(
@@ -260,8 +260,7 @@ impl KatanaGenesisBuilder<Initialized> {
 
         // Set the allowance for the EOA to the Kakarot contract.
         let key = get_storage_var_address("ERC20_allowances", &[*starknet_address, kakarot_address])?;
-        let storage =
-            [(key, FieldElement::from(u128::MAX)), (key + 1u8.into(), FieldElement::from(u128::MAX))].into_iter();
+        let storage = [(key, u128::MAX.into()), (key + 1u8.into(), u128::MAX.into())].into_iter();
         self.fee_token_storage.extend(storage);
 
         // Write the address to the Kakarot evm to starknet mapping
@@ -285,9 +284,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let key = get_storage_var_address("ERC20_balances", &[*starknet_address])?;
         let amount_split = split_u256::<u128>(amount);
 
-        let storage =
-            [(key, FieldElement::from(amount_split[0])), (key + 1u8.into(), FieldElement::from(amount_split[1]))]
-                .into_iter();
+        let storage = [(key, amount_split[0].into()), (key + 1u8.into(), amount_split[1].into())].into_iter();
         self.fee_token_storage.extend(storage);
 
         eoa.balance = Some(amount);

@@ -1,6 +1,5 @@
 // Eth
-import { bigIntToHex, bytesToHex } from "../deps.ts";
-import { PrefixedHexString, stripHexPrefix } from "../deps.ts";
+import { bigIntToHex, bytesToHex, PrefixedHexString, stripHexPrefix } from "../deps.ts";
 
 export const NULL_BLOCK_HASH = padString("0x", 32);
 
@@ -8,10 +7,7 @@ export const NULL_BLOCK_HASH = padString("0x", 32);
  * @param hex - A decimal string.
  */
 export function toHexString(decimal: string | undefined): PrefixedHexString {
-  if (decimal === undefined) {
-    return "0x";
-  }
-  return bigIntToHex(BigInt(decimal));
+  return decimal ? bigIntToHex(BigInt(decimal)) : "0x";
 }
 
 /**
