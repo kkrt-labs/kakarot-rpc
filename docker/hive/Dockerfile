@@ -65,13 +65,21 @@ RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
     && apt-get update && apt-get install -y \
     jq \
     wget \
+    docker.io \
     tar \
     unzip \
     zip
 
 COPY . .
 
-RUN make setup
+# Similar to `make setup` but we remove the `make build-sol` step
+# which uses docker to build the experimental solidity contracts.
+# Using docker in docker is not supported in the current setup.
+RUN chmod +x ./scripts/extract_abi.sh \ 
+    && git submodule update --init --recursive \
+    && cd lib/kakarot && make setup && make build \
+    && mv build/ssj/contracts_Cairo1Helpers.contract_class.json build/cairo1_helpers.json && rm -fr build/ssj && cd ../.. \
+    && ./scripts/extract_abi.sh
 
 COPY . .
 
