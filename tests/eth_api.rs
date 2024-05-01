@@ -2,7 +2,6 @@
 use kakarot_rpc::test_utils::fixtures::{katana, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use reth_primitives::U256;
 use rstest::*;
 use serde_json::{json, Value};
 
@@ -42,7 +41,7 @@ async fn test_block_number(#[future] katana: Katana, _setup: ()) {
 
     // Deserialize response body and extract block number
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let block_number: Option<U256> =
+    let block_number: Option<u64> =
         serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
 
     // Assert that the fetched block number matches the expected block number.
