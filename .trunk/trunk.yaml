@@ -21,7 +21,7 @@ lint:
     - clippy@1.65.0
     - git-diff-check
     - hadolint@2.12.0
-    - markdownlint@0.39.0
+    - markdownlint@0.40.0
     - osv-scanner@1.7.2
     - oxipng@9.1.1
     - prettier@3.2.5
