@@ -23,6 +23,27 @@ pub enum Network {
     JsonRpcProvider(Url),
 }
 
+impl From<String> for Network {
+    fn from(s: String) -> Self {
+        match s.to_lowercase().as_str() {
+            "katana" => Network::Katana,
+            "madara" => Network::Madara,
+            "sharingan" => Network::Sharingan,
+            "mainnet" => Network::MainnetGateway,
+            "goerli1" => Network::Goerli1Gateway,
+            "goerli2" => Network::Goerli2Gateway,
+            "testnet" => Network::Goerli1Gateway,
+            network_url => {
+                if let Ok(url) = Url::parse(network_url) {
+                    Network::JsonRpcProvider(url)
+                } else {
+                    Network::Katana
+                }
+            }
+        }
+    }
+}
+
 impl Network {
     pub fn gateway_url(&self) -> Result<Url, eyre::Error> {
         match self {
@@ -74,23 +95,12 @@ impl KakarotRpcConfig {
     /// `STARKNET_NETWORK` environment variable should be set the URL of a JsonRpc
     /// starknet provider, e.g. https://starknet-goerli.g.alchemy.com/v2/some_key.
     pub fn from_env() -> Result<Self, eyre::Error> {
-        let network = var("STARKNET_NETWORK")?;
-        let network = match network.to_lowercase().as_str() {
-            "katana" => Network::Katana,
-            "madara" => Network::Madara,
-            "sharingan" => Network::Sharingan,
-            "mainnet" => Network::MainnetGateway,
-            "goerli1" => Network::Goerli1Gateway,
-            "goerli2" => Network::Goerli2Gateway,
-            "testnet" => Network::Goerli1Gateway,
-            network_url => Network::JsonRpcProvider(Url::parse(network_url)?),
-        };
-
-        let kakarot_address = env_var_to_field_element("KAKAROT_ADDRESS")?;
-        let uninitialized_account_class_hash = env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH")?;
-        let account_contract_class_hash = env_var_to_field_element("ACCOUNT_CONTRACT_CLASS_HASH")?;
-
-        Ok(Self::new(network, kakarot_address, uninitialized_account_class_hash, account_contract_class_hash))
+        Ok(Self {
+            network: var("STARKNET_NETWORK")?.into(),
+            kakarot_address: env_var_to_field_element("KAKAROT_ADDRESS")?,
+            uninitialized_account_class_hash: env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH")?,
+            account_contract_class_hash: env_var_to_field_element("ACCOUNT_CONTRACT_CLASS_HASH")?,
+        })
     }
 }
 
@@ -104,8 +114,6 @@ impl<T: JsonRpcTransport> JsonRpcClientBuilder<T> {
         Self(JsonRpcClient::new(transport))
     }
 
-    // This clippy lint is false positive, trying to make this function `const` but it doesn't work.
-    #[allow(clippy::missing_const_for_fn)]
     /// Build the `JsonRpcClient`.
     pub fn build(self) -> JsonRpcClient<T> {
         self.0
@@ -156,8 +164,6 @@ impl SequencerGatewayProviderBuilder {
         }
     }
 
-    // This clippy lint is false positive, trying to make this function `const` but it doesn't work.
-    #[allow(clippy::missing_const_for_fn)]
     /// Build the `SequencerGatewayProvider`.
     pub fn build(self) -> SequencerGatewayProvider {
         self.0
