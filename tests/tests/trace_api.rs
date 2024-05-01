@@ -18,7 +18,7 @@ use starknet::core::types::MaybePendingBlockWithTxHashes;
 use starknet::providers::Provider;
 
 const TRACING_BLOCK_NUMBER: u64 = 0x3;
-const TRANSACTIONS_COUNT: usize = 1;
+const TRANSACTIONS_COUNT: usize = 5;
 
 /// Helper to create a header.
 fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> reth_rpc_types::Header {
@@ -146,7 +146,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
 
     assert!(traces.is_some());
     // We expect 3 traces per transaction: CALL, CREATE, and CALL.
-    assert!(traces.unwrap().len() == TRANSACTIONS_COUNT * 3);
+    assert!(traces.unwrap().len() == 3 * TRANSACTIONS_COUNT);
     drop(server_handle);
 }
 
@@ -188,7 +188,7 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
         serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
 
     assert!(traces.is_some());
-    // We expect 3 traces per transaction: CALL, CREATE, and CALL.
+    // We expect 1 trace per transaction given the formatting of the debug_traceBlockByNumber response.
     assert!(traces.unwrap().len() == TRANSACTIONS_COUNT);
     drop(server_handle);
 }
@@ -257,17 +257,7 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"trace_block",
-                    "params":[format!("0x{:016x}", TRACING_BLOCK_NUMBER)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
+        .body(RawRpcParamsBuilder::new("trace_block").add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -277,7 +267,7 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
         serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
 
     assert!(traces.is_some());
-    // We expect 3 traces per transaction: CALL and CALL.
+    // We expect 2 traces per transaction: CALL and CALL.
     assert!(traces.unwrap().len() == 2 * TRANSACTIONS_COUNT);
     drop(server_handle);
 }
