@@ -9,23 +9,21 @@ MANIFEST=.katana/manifest.json
 
 usage:
 	@echo "Usage:"
-	@echo "    setup:     Setup the project. Will also rename the precompiles compiled class. and move it to the correct location."
-	@echo "    deploy-kakarot:        Deploys kakarot using poetry."
-	@echo "    load-env:       Loads important environment variables."
-	@echo "    run-dev:      Run the development version of the Kakarot RPC server."
-	@echo "    install-katana:        Install Katana from the dojoengine."
-	@echo "    katana-genesis:        Generates a new genesis block for Katana, initializing the environment for testing."
-	@echo "    run-katana:      Runs Katana with Kakarot deployed on top."
-	@echo "    test:      Runs all tests."
-	@echo "    test-target:        Run a specific test target. Need to run make katana-genesis once first."
-	@echo "    benchmark:     Executes benchmarks to evaluate the performance of components."
-	@echo "    docker-build:        Builds kakarot for Docker."
-	@echo "    local-rpc-up:     Runs a local instance of the entire Kakarot stack."
-	@echo "    testnet-rpc-up:      Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Sepolia Testnet in production."
-	@echo "    staging-rpc-up:        Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Staging environment."
+	@echo "    setup:           Setup the project by setting the Kakarot submodule, compiling solidity contracts and extracting Starknet contracts abis."
+	@echo "    deploy-kakarot:  Deploys kakarot. Uses the STARKNET_NETWORK environment variable to determine the network."
+	@echo "    load-env:        Loads environment variables necessary for RPC."
+	@echo "    run-dev:         Run the development version of the Kakarot RPC server."
+	@echo "    install-katana:  Install Katana from the dojoengine."
+	@echo "    katana-genesis:  Generates a new genesis block for Katana."
+	@echo "    run-katana:      Runs Katana with Kakarot deployed in the genesis."
+	@echo "    test:            Runs all tests."
+	@echo "    test-target:     Run a specific test target. Requires katana-genesis to have ran once before."
+	@echo "    benchmark:       Executes TPS benchmarks."
+	@echo "    docker-build:    Builds the Kakarot RPC docker image."
+	@echo "    local-rpc-up:    Runs a local instance of the entire Kakarot stack: RPC, Indexer, Starknet client, Kakarot contracts deployed. This is equivalent to running a local anvil."
+	@echo "    testnet-rpc-up:  Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Sepolia Testnet in production."
+	@echo "    staging-rpc-up:  Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Staging environment."
 
-# Setup the project. Will also rename the precompiles compiled class
-# and move it to the correct location.
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
@@ -45,7 +43,6 @@ run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
 
 
-### Kakarot tests and local development:
 install-katana:
 	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.0-alpha.6 katana
 
@@ -53,15 +50,12 @@ katana-genesis: install-katana
 	rm -fr .katana/ && mkdir .katana
 	cargo run --bin katana_genesis --features testing
 
-# Runs Katana with Kakarot deployed on top.
 run-katana: katana-genesis
 	katana --disable-fee --chain-id=kkrt --genesis .katana/genesis.json
 
-# Total test suite.
 test: katana-genesis load-env
 	cargo test --all --features testing
 
-# Run a specific test target. Need to run make katana-genesis once first.
 # Example: `make test-target TARGET=test_raw_transaction`
 test-target: load-env
 	cargo test --tests --features "testing,hive" $(TARGET) -- --nocapture
@@ -70,30 +64,20 @@ benchmark:
 	cd benchmarks && bun i && bun run benchmark
 
 
-### Running the Kakarot stack locally:
-
 docker-build: setup
 	docker build -t kakarot-rpc . -f docker/rpc/Dockerfile
 
-# Runs a local instance of the entire Kakarot stack: RPC, Indexer, Starknet client, Kakarot contracts deployed.
-# This is equivalent to running a local anvil.
 local-rpc-up:
 	docker compose up -d --force-recreate
 
-# Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Sepolia Testnet in production
-# This is equivalent to locally running a Geth instance that syncs with Sepolia.
 testnet-rpc-up:
 	docker compose -f docker-compose.prod.yaml up -d --force-recreate
 
-# Runs a local instance of the Kakarot RPC layer, pointing to the Kakarot Staging environment.
-# The staging environment is in all things equivalent to the production environment, but with a different chain ID.
-# It is meant to be used for testing and development before pushing things to the public production-ready Testnet.
 staging-rpc-up:
 	docker compose -f docker-compose.staging.yaml up -d --force-recreate
 
 # To stop the dockerized local instances, run: docker compose -f <NAME OF THE FILE> down
 # To delete volumes, add the `--volumes` flag to the command above.
 # Example: docker compose -f docker-compose.prod.yaml down --remove-orphans --volumes
-
 
 .PHONY: test
