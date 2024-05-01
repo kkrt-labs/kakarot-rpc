@@ -92,16 +92,15 @@ pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, Se
 /// Taken from https://github.com/paradigmxyz/reth/blob/main/crates/rpc/rpc-builder/tests/it/http.rs
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawRpcParamsBuilder {
-    method: Option<String>,
+    method: String,
     params: Vec<Value>,
     id: i32,
 }
 
 impl RawRpcParamsBuilder {
     /// Sets the method name for the JSON-RPC request.
-    pub fn method(mut self, method: impl Into<String>) -> Self {
-        self.method = Some(method.into());
-        self
+    pub fn new(method: impl Into<String>) -> Self {
+        Self { method: method.into(), params: Vec::new(), id: 1 }
     }
 
     /// Adds a parameter to the JSON-RPC request.
@@ -123,14 +122,8 @@ impl RawRpcParamsBuilder {
         format!(
             r#"{{"jsonrpc":"2.0","id":{},"method":"{}","params":[{}]}}"#,
             id,
-            method.unwrap_or_else(|| panic!("JSON-RPC method not set")),
+            method,
             params.into_iter().map(|p| p.to_string()).collect::<Vec<String>>().join(",")
         )
-    }
-}
-
-impl Default for RawRpcParamsBuilder {
-    fn default() -> Self {
-        Self { method: None, params: Vec::new(), id: 1 }
     }
 }

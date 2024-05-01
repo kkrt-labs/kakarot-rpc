@@ -135,12 +135,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::default()
-                .method("trace_block")
-                .add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER))
-                .build(),
-        )
+        .body(RawRpcParamsBuilder::new("trace_block").add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -173,8 +168,7 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            RawRpcParamsBuilder::default()
-                .method("debug_traceBlockByNumber")
+            RawRpcParamsBuilder::new("debug_traceBlockByNumber")
                 .add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER))
                 .add_param(json!({
                     "tracer": "callTracer",

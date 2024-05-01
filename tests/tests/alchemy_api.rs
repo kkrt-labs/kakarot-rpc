@@ -46,8 +46,7 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            RawRpcParamsBuilder::default()
-                .method("alchemy_getTokenBalances")
+            RawRpcParamsBuilder::new("alchemy_getTokenBalances")
                 .add_param(eoa_address)
                 .add_param([erc20_address])
                 .build(),
