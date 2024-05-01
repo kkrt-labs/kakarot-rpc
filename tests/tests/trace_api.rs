@@ -49,7 +49,12 @@ fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> r
 }
 
 /// Helper to set up the debug/tracing environment on Katana.
-pub async fn tracing<T: Tokenize + Clone>(katana: &Katana, contract: &KakarotEvmContract, entry_point: &str, args: T) {
+pub async fn tracing<T: Tokenize>(
+    katana: &Katana,
+    contract: &KakarotEvmContract,
+    entry_point: &str,
+    get_args: Box<dyn Fn(u64) -> T>,
+) {
     let eoa = katana.eoa();
     let eoa_address = eoa.evm_address().expect("Failed to get eoa address");
     let nonce: u64 = eoa.nonce().await.expect("Failed to get nonce").to();
@@ -63,7 +68,7 @@ pub async fn tracing<T: Tokenize + Clone>(katana: &Katana, contract: &KakarotEvm
         let tx = contract
             .prepare_call_transaction(
                 entry_point,
-                args.clone(),
+                get_args(nonce + i as u64),
                 &TransactionInfo::FeeMarketInfo(TxFeeMarketInfo {
                     common: TxCommonInfo { nonce: nonce + i as u64, value: 0, chain_id },
                     max_fee_per_gas,
@@ -125,7 +130,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     // Setup the Kakarot RPC server.
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
-    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", ()).await;
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| ())).await;
 
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
@@ -157,7 +162,7 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
     // Setup the Kakarot RPC server.
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
-    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", ()).await;
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| ())).await;
 
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
@@ -206,37 +211,31 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
     let eoa_address = eoa.evm_address().expect("Failed to get eoa address");
 
     let chain_id = katana.eth_provider().chain_id().await.expect("Failed to get chain id").unwrap_or_default().to();
-    let nonce: u64 = eoa.nonce().await.expect("Failed to get eoa nonce").to();
     let invoker_address = Address::from_slice(&invoker.evm_address.to_bytes_be()[12..]);
     let commit = B256::default();
 
-    // Taken from https://github.com/paradigmxyz/alphanet/blob/87be409101bab9c8977b0e74edfb25334511a74c/crates/instructions/src/eip3074.rs#L129
-    // Composes the message expected by the AUTH instruction in this format:
-    // `keccak256(MAGIC || chainId || nonce || invokerAddress || commit)`
-    fn compose_msg(chain_id: u64, nonce: u64, invoker_address: Address, commit: B256) -> B256 {
-        let mut msg = [0u8; 129];
-        msg[0] = 0x4;
-        msg[1..33].copy_from_slice(B256::left_padding_from(&chain_id.to_be_bytes()).as_slice());
-        msg[33..65].copy_from_slice(B256::left_padding_from(&nonce.to_be_bytes()).as_slice());
-        msg[65..97].copy_from_slice(B256::left_padding_from(invoker_address.as_slice()).as_slice());
-        msg[97..].copy_from_slice(commit.as_slice());
-        reth_primitives::keccak256(msg.as_slice())
-    }
-    // We use nonce + 1 because authority == sender.
-    let msg = compose_msg(chain_id, nonce + 1, invoker_address, commit);
-    let signature = eoa.sign_payload(msg).expect("Failed to sign message");
-    let calldata = counter
-        .prepare_call_transaction("inc", (), &TransactionInfo::LegacyInfo(TxLegacyInfo::default()))
-        .expect("Failed to prepare call transaction")
-        .input()
-        .clone();
+    let get_args = Box::new(move |nonce| {
+        // Taken from https://github.com/paradigmxyz/alphanet/blob/87be409101bab9c8977b0e74edfb25334511a74c/crates/instructions/src/eip3074.rs#L129
+        // Composes the message expected by the AUTH instruction in this format:
+        // `keccak256(MAGIC || chainId || nonce || invokerAddress || commit)`
+        fn compose_msg(chain_id: u64, nonce: u64, invoker_address: Address, commit: B256) -> B256 {
+            let mut msg = [0u8; 129];
+            msg[0] = 0x4;
+            msg[1..33].copy_from_slice(B256::left_padding_from(&chain_id.to_be_bytes()).as_slice());
+            msg[33..65].copy_from_slice(B256::left_padding_from(&nonce.to_be_bytes()).as_slice());
+            msg[65..97].copy_from_slice(B256::left_padding_from(invoker_address.as_slice()).as_slice());
+            msg[97..].copy_from_slice(commit.as_slice());
+            reth_primitives::keccak256(msg.as_slice())
+        }
+        // We use nonce + 1 because authority == sender.
+        let msg = compose_msg(chain_id, nonce + 1, invoker_address, commit);
+        let signature = eoa.sign_payload(msg).expect("Failed to sign message");
+        let calldata = counter
+            .prepare_call_transaction("inc", (), &TransactionInfo::LegacyInfo(TxLegacyInfo::default()))
+            .expect("Failed to prepare call transaction")
+            .input()
+            .clone();
 
-    // Set up the transactions for tracing. We call the sponsorCall entry point which should
-    // auth the invoker as the sender and then call the inc entry point on the counter contract.
-    tracing(
-        &katana,
-        &invoker,
-        "sponsorCall",
         (
             Token::Address(ethers::abi::Address::from_slice(eoa_address.as_slice())),
             Token::FixedBytes(commit.as_slice().to_vec()),
@@ -245,9 +244,12 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
             Token::FixedBytes(signature.s.to_be_bytes::<32>().to_vec()),
             Token::Address(ethers::abi::Address::from_slice(&counter.evm_address.to_bytes_be()[12..])),
             Token::Bytes(calldata.to_vec()),
-        ),
-    )
-    .await;
+        )
+    });
+
+    // Set up the transactions for tracing. We call the sponsorCall entry point which should
+    // auth the invoker as the sender and then call the inc entry point on the counter contract.
+    tracing(&katana, &invoker, "sponsorCall", get_args).await;
 
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
