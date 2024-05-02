@@ -101,7 +101,7 @@ pub trait EvmContract {
     fn prepare_call_transaction<T: Tokenize>(
         &self,
         selector: &str,
-        constructor_args: T,
+        args: T,
         tx_info: &TransactionInfo,
     ) -> Result<Transaction, eyre::Error>;
 }
