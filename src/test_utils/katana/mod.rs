@@ -5,7 +5,6 @@ use std::path::Path;
 use std::sync::Arc;
 
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
-use katana_primitives::block::GasPrices;
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;

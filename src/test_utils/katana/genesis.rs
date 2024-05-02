@@ -6,7 +6,6 @@ use std::path::PathBuf;
 use crate::eth_provider::utils::split_u256;
 use alloy_signer_wallet::LocalWallet;
 use eyre::{eyre, OptionExt, Result};
-use katana_primitives::block::GasPrices;
 use katana_primitives::contract::{StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
@@ -300,7 +299,7 @@ impl KatanaGenesisBuilder<Initialized> {
             number: 0,
             timestamp: 0,
             sequencer_address: self.compute_starknet_address(self.coinbase)?,
-            gas_prices: GasPrices::default(),
+            gas_prices: Default::default(),
             classes: self.classes,
             fee_token: FeeTokenConfigJson {
                 name: "Ether".to_string(),
