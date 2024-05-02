@@ -17,8 +17,10 @@ use serde_json::{json, Value};
 use starknet::core::types::MaybePendingBlockWithTxHashes;
 use starknet::providers::Provider;
 
+/// The block number on which tracing will be performed.
 const TRACING_BLOCK_NUMBER: u64 = 0x3;
-const TRANSACTIONS_COUNT: usize = 5;
+/// The amount of transactions to be traced.
+const TRACING_TRANSACTIONS_COUNT: usize = 5;
 
 /// Helper to create a header.
 fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> reth_rpc_types::Header {
@@ -61,10 +63,10 @@ pub async fn tracing<T: Tokenize>(
     let chain_id = eoa.eth_provider().chain_id().await.expect("Failed to get chain id").unwrap_or_default().to();
 
     // Push 10 RPC transactions into the database.
-    let mut txs = Vec::with_capacity(TRANSACTIONS_COUNT);
+    let mut txs = Vec::with_capacity(TRACING_TRANSACTIONS_COUNT);
     let max_fee_per_gas = 10;
     let max_priority_fee_per_gas = 1;
-    for i in 0..TRANSACTIONS_COUNT {
+    for i in 0..TRACING_TRANSACTIONS_COUNT {
         let tx = contract
             .prepare_call_transaction(
                 entry_point,
@@ -151,7 +153,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
 
     assert!(traces.is_some());
     // We expect 3 traces per transaction: CALL, CREATE, and CALL.
-    assert!(traces.unwrap().len() == 3 * TRANSACTIONS_COUNT);
+    assert!(traces.unwrap().len() == 3 * TRACING_TRANSACTIONS_COUNT);
     drop(server_handle);
 }
 
@@ -194,7 +196,7 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
 
     assert!(traces.is_some());
     // We expect 1 trace per transaction given the formatting of the debug_traceBlockByNumber response.
-    assert!(traces.unwrap().len() == TRANSACTIONS_COUNT);
+    assert!(traces.unwrap().len() == TRACING_TRANSACTIONS_COUNT);
     drop(server_handle);
 }
 
@@ -220,6 +222,7 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
         // `keccak256(MAGIC || chainId || nonce || invokerAddress || commit)`
         fn compose_msg(chain_id: u64, nonce: u64, invoker_address: Address, commit: B256) -> B256 {
             let mut msg = [0u8; 129];
+            // MAGIC constant is used for [EIP-3074](https://eips.ethereum.org/EIPS/eip-3074) signatures to prevent signature collisions with other signing formats.
             msg[0] = 0x4;
             msg[1..33].copy_from_slice(B256::left_padding_from(&chain_id.to_be_bytes()).as_slice());
             msg[33..65].copy_from_slice(B256::left_padding_from(&nonce.to_be_bytes()).as_slice());
@@ -270,6 +273,6 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
 
     assert!(traces.is_some());
     // We expect 2 traces per transaction: CALL and CALL.
-    assert!(traces.unwrap().len() == 2 * TRANSACTIONS_COUNT);
+    assert!(traces.unwrap().len() == 2 * TRACING_TRANSACTIONS_COUNT);
     drop(server_handle);
 }
