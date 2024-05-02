@@ -6,12 +6,13 @@ use kakarot_rpc::test_utils::fixtures::{katana, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH};
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
+use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_primitives::{
     Block, BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered,
 };
 use reth_rpc_types_compat::transaction::from_recovered_with_block_context;
 use rstest::*;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 #[rstest]
 #[awt]
@@ -26,15 +27,9 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawTransaction",
-                    "params":[format!("0x{:064x}", *EIP1599_TX_HASH)],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("debug_getRawTransaction")
+                .add_param(format!("0x{:064x}", *EIP1599_TX_HASH))
+                .build(),
         )
         .send()
         .await
@@ -57,15 +52,9 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"eth_getTransactionByHash",
-                    "params":[format!("0x{:064x}", *EIP1599_TX_HASH)],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("eth_getTransactionByHash")
+                .add_param(format!("0x{:064x}", *EIP1599_TX_HASH))
+                .build(),
         )
         .send()
         .await
@@ -82,15 +71,9 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawTransaction",
-                    "params":[format!("0x{:064x}", *EIP2930_TX_HASH)],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("debug_getRawTransaction")
+                .add_param(format!("0x{:064x}", *EIP2930_TX_HASH))
+                .build(),
         )
         .send()
         .await
@@ -113,15 +96,9 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"eth_getTransactionByHash",
-                    "params":[format!("0x{:064x}", *EIP2930_TX_HASH)],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("eth_getTransactionByHash")
+                .add_param(format!("0x{:064x}", *EIP2930_TX_HASH))
+                .build(),
         )
         .send()
         .await
@@ -138,15 +115,9 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawTransaction",
-                    "params":[format!("0x{:064x}", *LEGACY_TX_HASH)],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("debug_getRawTransaction")
+                .add_param(format!("0x{:064x}", *LEGACY_TX_HASH))
+                .build(),
         )
         .send()
         .await
@@ -169,15 +140,9 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"eth_getTransactionByHash",
-                    "params":[format!("0x{:064x}", *LEGACY_TX_HASH)],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("eth_getTransactionByHash")
+                .add_param(format!("0x{:064x}", *LEGACY_TX_HASH))
+                .build(),
         )
         .send()
         .await
@@ -213,17 +178,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let res_by_block_hash = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawTransactions",
-                    "params":[format!("0x{:064x}", block_hash)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
+        .body(RawRpcParamsBuilder::new("debug_getRawTransactions").add_param(format!("0x{:064x}", block_hash)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -241,15 +196,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawTransactions",
-                    "params":[format!("0x{:016x}", block_number)],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("debug_getRawTransactions").add_param(format!("0x{:016x}", block_number)).build(),
         )
         .send()
         .await
@@ -323,17 +270,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let res_by_block_hash = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawReceipts",
-                    "params":[format!("0x{:064x}", block_hash)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
+        .body(RawRpcParamsBuilder::new("debug_getRawReceipts").add_param(format!("0x{:064x}", block_hash)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -350,17 +287,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let res_by_block_number = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawReceipts",
-                    "params":[format!("0x{:016x}", block_number)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
+        .body(RawRpcParamsBuilder::new("debug_getRawReceipts").add_param(format!("0x{:016x}", block_number)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -433,17 +360,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawBlock",
-                    "params":[format!("0x{:016x}", block_number)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
+        .body(RawRpcParamsBuilder::new("debug_getRawBlock").add_param(format!("0x{:016x}", block_number)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -458,15 +375,10 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"eth_getBlockByNumber",
-                    "params":[format!("0x{:x}", block_number), true],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("eth_getBlockByNumber")
+                .add_param(format!("0x{:x}", block_number))
+                .add_param(true)
+                .build(),
         )
         .send()
         .await
@@ -509,17 +421,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let res_by_block_hash = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawHeader",
-                    "params":[format!("0x{:064x}", block_hash)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
+        .body(RawRpcParamsBuilder::new("debug_getRawHeader").add_param(format!("0x{:064x}", block_hash)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -535,17 +437,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let res_by_block_number = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_getRawHeader",
-                    "params":[format!("0x{:016x}", block_number)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
+        .body(RawRpcParamsBuilder::new("debug_getRawHeader").add_param(format!("0x{:016x}", block_number)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");

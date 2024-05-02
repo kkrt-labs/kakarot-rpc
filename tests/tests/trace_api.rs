@@ -7,6 +7,7 @@ use kakarot_rpc::test_utils::evm_contract::{
 use kakarot_rpc::test_utils::fixtures::{plain_opcodes, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
+use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_primitives::{B256, U256};
 use reth_rpc_types::trace::geth::TraceResult;
 use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
@@ -134,17 +135,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"trace_block",
-                    "params":[format!("0x{:016x}", TRACING_BLOCK_NUMBER)],
-                    "id":1,
-                }
-            )
-            .to_string(),
-        )
+        .body(RawRpcParamsBuilder::new("trace_block").add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -177,15 +168,16 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"debug_traceBlockByNumber",
-                    "params":[format!("0x{:016x}", TRACING_BLOCK_NUMBER), {"tracer": "callTracer", "tracerConfig": {"onlyTopCall": false}, "timeout": "300s"}],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("debug_traceBlockByNumber")
+                .add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER))
+                .add_param(json!({
+                    "tracer": "callTracer",
+                    "tracerConfig": {
+                        "onlyTopCall": false
+                    },
+                    "timeout": "300s"
+                }))
+                .build(),
         )
         .send()
         .await
