@@ -33,15 +33,11 @@ use {
 };
 
 fn load_genesis() -> Genesis {
-    let mut genesis = Genesis::try_from(
+    Genesis::try_from(
         GenesisJson::load(Path::new(env!("CARGO_MANIFEST_DIR")).join(".katana/genesis.json"))
             .expect("Failed to load genesis.json, run `make katana-genesis`"),
     )
-    .expect("Failed to convert GenesisJson to Genesis");
-
-    genesis.gas_prices = GasPrices { eth: 1, strk: 0 };
-
-    genesis
+    .expect("Failed to convert GenesisJson to Genesis")
 }
 
 /// Returns a `StarknetConfig` instance customized for Kakarot.
