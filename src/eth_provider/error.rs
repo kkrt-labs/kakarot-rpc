@@ -27,8 +27,7 @@ pub enum EthRpcErrorCode {
 impl From<EthApiError> for EthRpcErrorCode {
     fn from(error: EthApiError) -> Self {
         match error {
-            EthApiError::UnknownBlock => EthRpcErrorCode::ResourceNotFound,
-            EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
+            EthApiError::UnknownBlock | EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
             EthApiError::InvalidBlockRange
             | EthApiError::Signature(_)
             | EthApiError::EthereumDataFormat(_)
@@ -232,8 +231,7 @@ impl From<TransactionError> for EthRpcErrorCode {
         match error {
             TransactionError::InvalidChainId => EthRpcErrorCode::InvalidInput,
             TransactionError::GasOverflow => EthRpcErrorCode::TransactionRejected,
-            TransactionError::ExpectedFullTransactions => EthRpcErrorCode::InternalError,
-            TransactionError::Tracing(_) => EthRpcErrorCode::InternalError,
+            TransactionError::ExpectedFullTransactions | TransactionError::Tracing(_) => EthRpcErrorCode::InternalError,
         }
     }
 }
