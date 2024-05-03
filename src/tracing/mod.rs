@@ -49,6 +49,13 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
              db: &mut EthDatabaseSnapshot<P>,
              tx: &reth_rpc_types::Transaction|
              -> TracerResult<(Vec<LocalizedTransactionTrace>, reth_revm::primitives::State)> {
+                let block_base_fee = env
+                    .env
+                    .block
+                    .basefee
+                    .try_into()
+                    .map_err(|err: FromUintError<u128>| TransactionError::Tracing(err.into()))?;
+
                 // Set up the inspector and transact the transaction
                 let mut inspector = TracingInspector::new(tracing_config);
                 let mut evm = cfg.evm_with_env_and_inspector(db, env, &mut inspector);
@@ -57,13 +64,6 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 drop(evm);
 
                 let parity_builder = inspector.into_parity_builder();
-
-                let block_base_fee = env
-                    .env
-                    .block
-                    .basefee
-                    .try_into()
-                    .map_err(|err: FromUintError<u128>| TransactionError::Tracing(err.into()))?;
 
                 let transaction_info = TransactionInfo {
                     hash: Some(tx.hash),
