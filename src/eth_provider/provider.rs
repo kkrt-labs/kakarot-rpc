@@ -20,7 +20,10 @@ use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
-use super::constant::{CALL_REQUEST_GAS_LIMIT, HASH_PADDING, MAX_RETRIES, U64_PADDING};
+use super::constant::{
+    ADDRESS_PADDING, BLOCK_NUMBER_PADDING, CALL_REQUEST_GAS_LIMIT, HASH_PADDING, LOGS_TOPICS_PADDING, MAX_RETRIES,
+    U64_PADDING,
+};
 use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
     transaction::StoredTransaction, transaction::StoredTransactionHash,
@@ -223,7 +226,7 @@ where
             return Ok(None);
         }
 
-        let filter = into_filter("tx.blockNumber", &block_number, U64_PADDING);
+        let filter = into_filter("tx.blockNumber", &block_number, BLOCK_NUMBER_PADDING);
         let count = self.database.count::<StoredTransaction>(filter).await?;
         Ok(Some(U256::from(count)))
     }
@@ -280,7 +283,7 @@ where
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let mut filter = into_filter("tx.blockNumber", &block_number, U64_PADDING);
+        let mut filter = into_filter("tx.blockNumber", &block_number, BLOCK_NUMBER_PADDING);
         let index: usize = index.into();
 
         filter.insert("tx.transactionIndex", format_hex(index, U64_PADDING));
@@ -407,11 +410,11 @@ where
         // 1. Slice the topics array to the same length as the filter topics
         // 2. Match on values for which the sliced topics equal the filter topics
         let mut database_filter = doc! {
-            "log.blockNumber": {"$gte": format_hex(from, 64), "$lte": format_hex(to, 64)},
+            "log.blockNumber": {"$gte": format_hex(from, BLOCK_NUMBER_PADDING), "$lte": format_hex(to, BLOCK_NUMBER_PADDING)},
             "$expr": {
                 "$eq": [
                   { "$slice": ["$log.topics", topics.len() as i32] },
-                  topics.into_iter().map(|t| format_hex(t, 64)).collect::<Vec<_>>()
+                  topics.into_iter().map(|t| format_hex(t, LOGS_TOPICS_PADDING)).collect::<Vec<_>>()
                 ]
               }
         };
@@ -422,8 +425,10 @@ where
             ValueOrArray::Array(addresses) => addresses,
         });
         addresses.map(|adds| {
-            database_filter
-                .insert("log.address", doc! {"$in": adds.into_iter().map(|a| format_hex(a, 40)).collect::<Vec<_>>()})
+            database_filter.insert(
+                "log.address",
+                doc! {"$in": adds.into_iter().map(|a| format_hex(a, ADDRESS_PADDING)).collect::<Vec<_>>()},
+            )
         });
 
         Ok(FilterChanges::Logs(self.database.get_and_map_to::<_, StoredLog>(database_filter, None).await?))
@@ -461,7 +466,7 @@ where
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
         // This means we need to introduce a new type for the StoredHeader.
-        let header_filter = doc! {"$and": [ { "header.number": { "$gte": format_hex(start_block, U64_PADDING) } }, { "header.number": { "$lte": format_hex(end_block, U64_PADDING) } } ] };
+        let header_filter = doc! {"$and": [ { "header.number": { "$gte": format_hex(start_block, BLOCK_NUMBER_PADDING) } }, { "header.number": { "$lte": format_hex(end_block, BLOCK_NUMBER_PADDING) } } ] };
         let blocks: Vec<StoredHeader> = self.database.get(header_filter, None).await?;
 
         if blocks.is_empty() {
@@ -582,7 +587,7 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockNumber", &block_number, U64_PADDING);
+                let filter = into_filter("receipt.blockNumber", &block_number, BLOCK_NUMBER_PADDING);
                 let tx: Vec<StoredTransactionReceipt> = self.database.get(filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -762,7 +767,7 @@ where
     async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
         let filter = match id {
             BlockHashOrNumber::Hash(hash) => into_filter("header.hash", &hash, HASH_PADDING),
-            BlockHashOrNumber::Number(number) => into_filter("header.number", &number, U64_PADDING),
+            BlockHashOrNumber::Number(number) => into_filter("header.number", &number, BLOCK_NUMBER_PADDING),
         };
         self.database
             .get_one(filter, None)
@@ -781,7 +786,7 @@ where
     ) -> EthProviderResult<BlockTransactions> {
         let transactions_filter = match block_id {
             BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", &hash, HASH_PADDING),
-            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", &number, U64_PADDING),
+            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", &number, BLOCK_NUMBER_PADDING),
         };
 
         let block_transactions = if full {

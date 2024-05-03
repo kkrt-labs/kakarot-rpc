@@ -7,7 +7,10 @@ lazy_static! {
 
 pub const CALL_REQUEST_GAS_LIMIT: u64 = 5_000_000;
 pub const HASH_PADDING: usize = 64;
+pub const LOGS_TOPICS_PADDING: usize = HASH_PADDING;
+pub const ADDRESS_PADDING: usize = 40;
 pub const U64_PADDING: usize = 16;
+pub const BLOCK_NUMBER_PADDING: usize = U64_PADDING;
 // Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
 pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x800000000000011]);
 pub const MAX_RETRIES: u64 = 10;
