@@ -7597,6 +7597,8 @@ dependencies = [
  "starknet 0.9.0",
  "starknet-crypto 0.6.1",
  "starknet_api",
+ "strum 0.26.1",
+ "strum_macros 0.26.1",
  "testcontainers",
  "thiserror",
  "tokio",
