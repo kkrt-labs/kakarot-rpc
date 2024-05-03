@@ -232,7 +232,7 @@ impl MongoFuzzer {
     /// Adds a transaction to the collections of transactions, receipts, logs, and headers.
     fn add_transaction_to_collections(&mut self, transaction: StoredTransaction) {
         let receipt = self.generate_transaction_receipt(&transaction.tx);
-        let mut logs = Into::<Vec<StoredLog>>::into(receipt.clone()).into_iter().map(StoredData::StoredLog).collect();
+        let mut logs = Vec::<StoredLog>::from(receipt.clone()).into_iter().map(StoredData::StoredLog).collect();
 
         let header = self.generate_transaction_header(&transaction.tx);
 

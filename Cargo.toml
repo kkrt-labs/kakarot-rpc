@@ -157,8 +157,8 @@ ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "e215eb2
 ], optional = true }
 rand = { version = "0.8.5", default-features = false, optional = true }
 rayon = { version = "1.10.0", default-features = false, optional = true }
-strum = { version = "0.26", default-features = false, optional = true }
-strum_macros = { version = "0.26", default-features = false, optional = true }
+strum = { version = "0.26.2", default-features = false, optional = true }
+strum_macros = { version = "0.26.2", default-features = false, optional = true }
 testcontainers = { version = "0.15.0", default-features = false, optional = true }
 tokio-util = { version = "0.7.10", features = [
   "codec",

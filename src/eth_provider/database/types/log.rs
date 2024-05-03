@@ -18,12 +18,12 @@ impl From<StoredLog> for Log {
 
 impl From<Log> for StoredLog {
     fn from(log: Log) -> Self {
-        StoredLog { log }
+        Self { log }
     }
 }
 
 impl From<StoredTransactionReceipt> for Vec<StoredLog> {
     fn from(value: StoredTransactionReceipt) -> Self {
-        value.receipt.inner.logs().iter().cloned().map(Into::<StoredLog>::into).collect()
+        value.receipt.inner.logs().iter().cloned().map(Into::into).collect()
     }
 }
