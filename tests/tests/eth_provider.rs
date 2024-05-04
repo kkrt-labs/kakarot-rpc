@@ -1,7 +1,7 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 
-use kakarot_rpc::eth_provider::constant::{HASH_PADDING, MAX_RETRIES, STARKNET_MODULUS};
+use kakarot_rpc::eth_provider::constant::{HASH_HEX_STRING_LEN, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
 use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::eth_provider::utils::into_filter;
@@ -642,7 +642,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     stored_transaction.tx.block_number = Some(1111);
 
     // Insert the transaction into the final transaction collection
-    let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_PADDING);
+    let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_HEX_STRING_LEN);
     eth_provider
         .database()
         .update_one::<StoredTransaction>(stored_transaction.tx.into(), filter, true)
@@ -666,20 +666,20 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
         .database()
         .update_one::<StoredPendingTransaction>(
             transaction1.clone().into(),
-            into_filter("tx.hash", &transaction1.hash, HASH_PADDING),
+            into_filter("tx.hash", &transaction1.hash, HASH_HEX_STRING_LEN),
             true,
         )
         .await
         .expect("Failed to insert pending transaction in database");
 
-    // Insert the transaction into the pending transactions collection with MAX_RETRIES + 1 retry
+    // Insert the transaction into the pending transactions collection with TRANSACTION_MAX_RETRIES + 1 retry
     // Shouldn't be retried as it has reached the maximum number of retries
     let transaction2 = katana.eoa().mock_transaction_with_nonce(1).expect("Failed to get mock transaction");
     eth_provider
         .database()
         .update_one::<StoredPendingTransaction>(
-            StoredPendingTransaction::new(transaction2.clone(), MAX_RETRIES + 1),
-            into_filter("tx.hash", &transaction2.hash, HASH_PADDING),
+            StoredPendingTransaction::new(transaction2.clone(), TRANSACTION_MAX_RETRIES + 1),
+            into_filter("tx.hash", &transaction2.hash, HASH_HEX_STRING_LEN),
             true,
         )
         .await
@@ -692,7 +692,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
         .database()
         .update_one::<StoredPendingTransaction>(
             transaction3.clone().into(),
-            into_filter("tx.hash", &transaction3.clone().hash, HASH_PADDING),
+            into_filter("tx.hash", &transaction3.clone().hash, HASH_HEX_STRING_LEN),
             true,
         )
         .await
@@ -701,7 +701,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
         .database()
         .update_one::<StoredTransaction>(
             transaction3.clone().into(),
-            into_filter("tx.hash", &transaction3.hash, HASH_PADDING),
+            into_filter("tx.hash", &transaction3.hash, HASH_HEX_STRING_LEN),
             true,
         )
         .await

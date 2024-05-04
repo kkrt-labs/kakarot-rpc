@@ -17,7 +17,7 @@ use starknet::providers::JsonRpcClient;
 use crate::eth_provider::database::types::{header::StoredHeader, transaction::StoredTransaction};
 use crate::eth_provider::utils::{format_hex, into_filter};
 use crate::eth_provider::{
-    constant::{HASH_PADDING, U64_PADDING},
+    constant::{HASH_HEX_STRING_LEN, U64_HEX_STRING_LEN},
     provider::EthDataProvider,
 };
 use crate::test_utils::eoa::KakarotEOA;
@@ -163,7 +163,7 @@ impl<'a> Katana {
         // Add the transactions to the database.
         let tx_collection = database.collection::<StoredTransaction>();
         for tx in txs {
-            let filter = into_filter("tx.hash", &tx.hash, HASH_PADDING);
+            let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
             database
                 .update_one::<StoredTransaction>(tx.into(), filter, true)
                 .await
@@ -173,7 +173,7 @@ impl<'a> Katana {
         // We use the unpadded block number to filter the transactions in the database and
         // the padded block number to update the block number in the database.
         let unpadded_block_number = format_hex(block_number, 0);
-        let padded_block_number = format_hex(block_number, U64_PADDING);
+        let padded_block_number = format_hex(block_number, U64_HEX_STRING_LEN);
 
         // The transactions get added in the database with the unpadded block number (due to U256 serialization using `human_readable`).
         // We need to update the block number to the padded version.
@@ -189,7 +189,7 @@ impl<'a> Katana {
         // Same issue as the transactions, we need to update the block number to the padded version once added
         // to the database.
         let header_collection = database.collection::<StoredHeader>();
-        let filter = into_filter("header.number", &block_number, U64_PADDING);
+        let filter = into_filter("header.number", &block_number, U64_HEX_STRING_LEN);
         database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
         header_collection
             .update_one(
