@@ -16,7 +16,7 @@ use reth_primitives::transaction::Signature;
 use reth_primitives::{sign_message, Transaction, TransactionKind, TxEip1559};
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::{RpcBlockHash, TransactionRequest};
+use reth_rpc_types::{Filter, FilterChanges, RpcBlockHash, TransactionRequest};
 use rstest::*;
 use starknet::core::types::BlockTag;
 use starknet_crypto::FieldElement;
@@ -262,6 +262,24 @@ async fn test_get_code(#[future] counter: (Katana, KakarotEvmContract), _setup: 
     let expected =
         counter_bytecode.deployed_bytecode.unwrap().bytecode.unwrap().object.into_bytes().unwrap().as_ref().to_vec();
     assert_eq!(bytecode, Bytes::from(expected));
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let provider = katana.eth_provider();
+
+    // When
+    let logs = provider.get_logs(Filter::default()).await.expect("Failed to get logs");
+
+    // Then
+    let logs = match logs {
+        FilterChanges::Logs(logs) => logs,
+        _ => panic!("Expected logs"),
+    };
+    assert!(!logs.is_empty());
 }
 
 #[rstest]
