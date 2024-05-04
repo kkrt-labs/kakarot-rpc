@@ -38,9 +38,7 @@ use super::starknet::kakarot_core::{
     starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{
-    contract_not_found, entrypoint_not_found, id_to_filter, into_filter, split_u256, try_from_u8_iterator,
-};
+use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, try_from_u8_iterator};
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
@@ -772,7 +770,10 @@ where
 
     /// Get a header from the database based on the filter.
     async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
-        let filter = id_to_filter(id);
+        let filter = match id {
+            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", &hash, HASH_HEX_STRING_LEN),
+            BlockHashOrNumber::Number(number) => into_filter("header.number", &number, BLOCK_NUMBER_HEX_STRING_LEN),
+        };
         self.database
             .get_one(filter, None)
             .await
@@ -788,8 +789,10 @@ where
         block_id: BlockHashOrNumber,
         full: bool,
     ) -> EthProviderResult<BlockTransactions> {
-        let transactions_filter = id_to_filter(block_id);
-
+        let transactions_filter = match block_id {
+            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", &hash, HASH_HEX_STRING_LEN),
+            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", &number, BLOCK_NUMBER_HEX_STRING_LEN),
+        };
         let block_transactions = if full {
             BlockTransactions::Full(
                 self.database.get_and_map_to::<_, StoredTransaction>(transactions_filter, None).await?,
