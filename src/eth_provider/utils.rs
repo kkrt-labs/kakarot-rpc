@@ -3,10 +3,13 @@ use std::fmt::LowerHex;
 use cainome::cairo_serde::Error;
 use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
+use reth_rpc_types::BlockHashOrNumber;
 use starknet::{
     core::types::{ContractErrorData, StarknetError},
     providers::ProviderError,
 };
+
+use super::constant::{BLOCK_NUMBER_HEX_STRING_LEN, HASH_HEX_STRING_LEN};
 
 /// Converts an iterator of `TryInto<u8>` into a `FromIterator<u8>`.
 #[inline]
@@ -31,6 +34,13 @@ where
     T: LowerHex,
 {
     doc! {key: format_hex(value, width)}
+}
+
+pub fn id_to_filter(id: BlockHashOrNumber) -> Document {
+    match id {
+        BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", &hash, HASH_HEX_STRING_LEN),
+        BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", &number, BLOCK_NUMBER_HEX_STRING_LEN),
+    }
 }
 
 /// Splits a U256 value into two generic values implementing the From<u128> trait

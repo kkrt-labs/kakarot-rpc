@@ -1,4 +1,4 @@
-use crate::eth_provider::constant::U64_PADDING;
+use crate::eth_provider::constant::U64_HEX_STRING_LEN;
 use crate::eth_provider::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
 };
@@ -324,9 +324,9 @@ impl MongoFuzzer {
                     .expect("Failed to insert documents");
 
                 let number = serialized_data.get_document(doc).unwrap().get_str(block_number).unwrap();
-                let padded_number = format!("0x{:0>width$}", &number[2..], width = U64_PADDING);
+                let padded_number = format!("0x{:0>width$}", &number[2..], width = U64_HEX_STRING_LEN);
 
-                // Update the document by padding the block number to U64_PADDING value.
+                // Update the document by padding the block number to U64_HEX_STRING_LEN value.
                 collection
                     .update_one(
                         doc! {&block_key: &number},

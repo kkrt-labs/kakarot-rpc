@@ -5,15 +5,22 @@ lazy_static! {
     pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
 }
 
-pub const CALL_REQUEST_GAS_LIMIT: u64 = 5_000_000;
-pub const HASH_PADDING: usize = 64;
-pub const LOGS_TOPICS_PADDING: usize = HASH_PADDING;
-pub const ADDRESS_PADDING: usize = 40;
-pub const U64_PADDING: usize = 16;
-pub const BLOCK_NUMBER_PADDING: usize = U64_PADDING;
-// Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
+/// Gas limit for estimate gas and call
+pub const CALL_REQUEST_GAS_LIMIT: u128 = 5_000_000;
+/// Number of characters for representing a U256 in a hex string form. Used for padding hashes
+pub const HASH_HEX_STRING_LEN: usize = 64;
+/// Number of characters for representing logs topics in a hex string form. Used for padding logs topics
+pub const LOGS_TOPICS_HEX_STRING_LEN: usize = HASH_HEX_STRING_LEN;
+/// Number of characters for representing a u64 in a hex string form. Used for padding numbers
+pub const U64_HEX_STRING_LEN: usize = 16;
+/// Number of characters for representing a block number in a hex string form. Used for padding block numbers
+pub const BLOCK_NUMBER_HEX_STRING_LEN: usize = U64_HEX_STRING_LEN;
+/// Number of characters for representing an address in a hex string form. Used for padding addresses
+pub const ADDRESS_HEX_STRING_LEN: usize = 40;
+/// Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
 pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x800000000000011]);
-pub const MAX_RETRIES: u64 = 10;
+/// Maximum number of times a transaction can be retried
+pub const TRANSACTION_MAX_RETRIES: u64 = 10;
 
 #[cfg(feature = "hive")]
 use {
