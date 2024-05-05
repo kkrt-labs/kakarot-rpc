@@ -759,8 +759,10 @@ where
         if estimate_gas_output.success == FieldElement::ZERO {
             return Err(KakarotError::from(EvmError::from(return_data.0)).into());
         }
-        let required_gas = estimate_gas_output.required_gas.try_into().map_err(|_| TransactionError::GasOverflow)?;
-        Ok(required_gas)
+        let required_gas =
+            u128::try_from(estimate_gas_output.required_gas).map_err(|_| TransactionError::GasOverflow)?;
+        let increased_gas = required_gas * 120 / 100;
+        Ok(increased_gas)
     }
 
     /// Check if a block exists in the database.
