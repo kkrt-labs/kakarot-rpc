@@ -52,15 +52,15 @@ pub struct KatanaManifest {
     pub deployments: HashMap<String, Hex>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Uninitialized;
 #[derive(Debug, Clone)]
 pub struct Loaded;
 #[derive(Debug, Clone)]
 pub struct Initialized;
 
-#[derive(Debug, Clone)]
-pub struct KatanaGenesisBuilder<T> {
+#[derive(Debug, Clone, Default)]
+pub struct KatanaGenesisBuilder<T = Uninitialized> {
     coinbase: FieldElement,
     classes: Vec<GenesisClassJson>,
     class_hashes: HashMap<String, FieldElement>,
@@ -137,21 +137,6 @@ impl<T> KatanaGenesisBuilder<T> {
 
     pub fn cairo1_helpers_class_hash(&self) -> Result<FieldElement> {
         self.class_hashes.get("cairo1_helpers").cloned().ok_or_eyre("Missing cairo1 helpers class hash")
-    }
-}
-
-impl Default for KatanaGenesisBuilder<Uninitialized> {
-    fn default() -> Self {
-        KatanaGenesisBuilder {
-            coinbase: FieldElement::ZERO,
-            classes: vec![],
-            class_hashes: HashMap::new(),
-            contracts: HashMap::new(),
-            accounts: HashMap::new(),
-            fee_token_storage: HashMap::new(),
-            cache: HashMap::new(),
-            status: PhantomData::<Uninitialized>,
-        }
     }
 }
 
