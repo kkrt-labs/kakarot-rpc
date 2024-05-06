@@ -1,7 +1,7 @@
 FROM quay.io/apibara/sink-mongo:0.7.0 as indexer
 
-FROM debian:bookworm as apibara-build
-RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
+FROM debian:latest as apibara-build
+RUN apt-get update && apt-get install --no-install-recommends -y patchelf && rm -rf /var/lib/apt/lists/*
 
 ARG BUILDPLATFORM
 ARG APIBARA_SINK_BIN_DIR
@@ -22,16 +22,9 @@ RUN case $BUILDPLATFORM in \
     esac
 
 
-FROM debian:latest as base
-
-WORKDIR /code
-
-COPY ./indexer .
-
-
 FROM debian:latest
 
-COPY --from=base /code /usr/src/app/code
+COPY ./indexer /usr/src/app/code
 COPY --from=apibara-build /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
 
 CMD ["sink-mongo", "run", "/usr/src/app/code/src/main.ts"]
