@@ -449,6 +449,11 @@ where
         let request = TransactionRequest { gas: Some(u64::MAX as u128), ..request };
 
         let gas_used = self.estimate_gas_helper(request, block_id).await?;
+
+        // Increase the gas used by 20% to make sure the transaction will not fail due to gas.
+        // This is a temporary solution until we have a proper gas estimation.
+        // Does not apply to Hive feature otherwise end2end tests will fail.
+        let gas_used = if !cfg!(feature = "hive") { gas_used * 120 / 100 } else { gas_used };
         Ok(U256::from(gas_used))
     }
 
@@ -759,10 +764,8 @@ where
         if estimate_gas_output.success == FieldElement::ZERO {
             return Err(KakarotError::from(EvmError::from(return_data.0)).into());
         }
-        let required_gas =
-            u128::try_from(estimate_gas_output.required_gas).map_err(|_| TransactionError::GasOverflow)?;
-        let increased_gas = required_gas * 120 / 100;
-        Ok(increased_gas)
+        let required_gas = estimate_gas_output.required_gas.try_into().map_err(|_| TransactionError::GasOverflow)?;
+        Ok(required_gas)
     }
 
     /// Check if a block exists in the database.
