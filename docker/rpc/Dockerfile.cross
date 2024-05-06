@@ -7,7 +7,7 @@ ARG TARGETARCH
 # Install any necessary dependencies
 RUN apt-get update && \
     apt-get -y upgrade && \ 
-    apt-get install -y libssl-dev ca-certificates tini curl && \ 
+    apt-get install --no-install-recommends -y libssl-dev ca-certificates tini curl && \ 
     rm -rf /var/lib/apt/lists/*
 
 # Copy the built binary. This assumes that the binary
@@ -29,7 +29,7 @@ HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
 
 RUN apt-get update && \
     apt-get -y upgrade && \ 
-    apt-get install -y libssl-dev ca-certificates tini curl && \ 
+    apt-get install --no-install-recommends -y libssl-dev ca-certificates tini curl && \ 
     rm -rf /var/lib/apt/lists/*
 
 # Copy the indexer code into the RPC
