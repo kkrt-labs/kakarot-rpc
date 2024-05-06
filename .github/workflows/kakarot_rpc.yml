@@ -145,7 +145,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ env.INDEXER_IMAGE }}:${{ github.ref_name }}, ${{ env.INDEXER_IMAGE }}:latest
+          tags: ${{ env.INDEXER_IMAGE }}:latest
           context: .
           file: ./docker/indexer/Dockerfile
           platforms: ${{ matrix.platform }}
