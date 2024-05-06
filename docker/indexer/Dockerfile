@@ -26,5 +26,6 @@ FROM debian:latest
 
 COPY ./indexer /usr/src/app/code
 COPY --from=apibara-build /usr/local/bin/sink-mongo /usr/local/bin/sink-mongo
+RUN chmod +x /usr/local/bin/sink-mongo
 
 CMD ["sink-mongo", "run", "/usr/src/app/code/src/main.ts"]
