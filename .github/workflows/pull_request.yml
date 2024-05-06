@@ -15,7 +15,3 @@ jobs:
   tests:
     name: Rust tests
     uses: ./.github/workflows/test.yml
-
-  build:
-    name: Build
-    uses: ./.github/workflows/kakarot_rpc.yml
