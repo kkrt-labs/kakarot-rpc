@@ -8,12 +8,6 @@ use starknet::{
     providers::ProviderError,
 };
 
-/// Converts an iterator of `TryInto<u8>` into a `FromIterator<u8>`.
-#[inline]
-pub(crate) fn try_from_u8_iterator<I: TryInto<u8>, T: FromIterator<u8>>(it: impl IntoIterator<Item = I>) -> T {
-    it.into_iter().filter_map(|x| TryInto::<u8>::try_into(x).ok()).collect()
-}
-
 pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
     // Add 2 to the width to account for the 0x prefix.
     let s = format!("{:#0width$x}", value, width = width + 2);
