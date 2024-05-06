@@ -1,9 +1,8 @@
 ---
-name: RPC
+name: release
 
 on:
-  release:
-    types: [published]
+  workflow_call:
 
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
@@ -122,6 +121,14 @@ jobs:
 
   build-push-indexer-docker:
     runs-on: ubuntu-latest-16-cores
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            apibara_sink_bin_dir: sci7y4a8r7yz05094pl88h3d7vv1s98f
+          - platform: linux/arm64
+            apibara_sink_bin_dir: 5p0wgpyfsk19v8rrprnykiv5inzx8zag
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -138,10 +145,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: ${{ env.INDEXER_IMAGE }}:${{ github.ref_name }}, ${{
-            env.INDEXER_IMAGE }}:latest
+          tags: ${{ env.INDEXER_IMAGE }}:${{ github.ref_name }}, ${{ env.INDEXER_IMAGE }}:latest
           context: .
           file: ./docker/indexer/Dockerfile
-          platforms: linux/amd64
+          platforms: ${{ matrix.platform }}
           build-args: |
-            APIBARA_SINK_BIN_DIR=sci7y4a8r7yz05094pl88h3d7vv1s98f
+            APIBARA_SINK_BIN_DIR=${{ matrix.apibara_sink_bin_dir }}
