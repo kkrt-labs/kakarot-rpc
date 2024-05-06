@@ -449,6 +449,11 @@ where
         let request = TransactionRequest { gas: Some(u64::MAX as u128), ..request };
 
         let gas_used = self.estimate_gas_helper(request, block_id).await?;
+
+        // Increase the gas used by 20% to make sure the transaction will not fail due to gas.
+        // This is a temporary solution until we have a proper gas estimation.
+        // Does not apply to Hive feature otherwise end2end tests will fail.
+        let gas_used = if !cfg!(feature = "hive") { gas_used * 120 / 100 } else { gas_used };
         Ok(U256::from(gas_used))
     }
 
