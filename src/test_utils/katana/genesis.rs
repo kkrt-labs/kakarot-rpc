@@ -56,11 +56,11 @@ pub struct KatanaManifest {
 pub struct Uninitialized;
 #[derive(Debug, Clone)]
 pub struct Loaded;
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Initialized;
 
 #[derive(Debug, Clone, Default)]
-pub struct KatanaGenesisBuilder<T> {
+pub struct KatanaGenesisBuilder<T = Uninitialized> {
     coinbase: FieldElement,
     classes: Vec<GenesisClassJson>,
     class_hashes: HashMap<String, FieldElement>,
