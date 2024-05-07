@@ -38,7 +38,7 @@ use super::starknet::kakarot_core::{
     starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, try_from_u8_iterator};
+use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256};
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
@@ -384,7 +384,8 @@ where
         }
 
         let bytecode = bytecode.map_err(KakarotError::from)?.bytecode.0;
-        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<u8>>(bytecode)))
+
+        Ok(Bytes::from(bytecode.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
@@ -441,7 +442,7 @@ where
 
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
         let output = self.call_helper(request, block_id).await?;
-        Ok(Bytes::from(try_from_u8_iterator::<_, Vec<_>>(output.0)))
+        Ok(Bytes::from(output.0.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
     }
 
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
