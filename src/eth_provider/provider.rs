@@ -388,13 +388,14 @@ where
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
         let current_block = self.block_number().await?.try_into().map_err(|_| EthApiError::UnknownBlockNumber)?;
+        let from = filter.get_from_block().unwrap_or_default();
+        let to = filter.get_to_block().unwrap_or(current_block);
 
-        let (from, to) =
-            match (filter.get_from_block().unwrap_or_default(), filter.get_to_block().unwrap_or(current_block)) {
-                (from, to) if from > current_block || to < from => return Ok(FilterChanges::Empty),
-                (from, to) if to > current_block => (from, current_block),
-                other => other,
-            };
+        let (from, to) = match (from, to) {
+            (from, to) if from > current_block || to < from => return Ok(FilterChanges::Empty),
+            (from, to) if to > current_block => (from, current_block),
+            other => other,
+        };
 
         // Convert the topics to a vector of B256
         let topics = filter
