@@ -308,9 +308,8 @@ where
 
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
-        let address = starknet_address(address);
         let balance = eth_contract
-            .balanceOf(&address)
+            .balanceOf(&starknet_address(address))
             .block_id(starknet_block_id)
             .call()
             .await
@@ -333,7 +332,7 @@ where
         let address = starknet_address(address);
         let contract = AccountContractReader::new(address, &self.starknet_provider);
 
-        let keys = split_u256::<FieldElement>(index.0);
+        let keys = split_u256(index.0);
         let storage_address = get_storage_var_address("Account_storage", &keys).expect("Storage var name is not ASCII");
 
         let storage = contract
@@ -389,15 +388,13 @@ where
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
         let current_block = self.block_number().await?.try_into().map_err(|_| EthApiError::UnknownBlockNumber)?;
-        let from = filter.get_from_block().unwrap_or_default();
-        let to = filter.get_to_block().unwrap_or(current_block);
 
-        let (from, to) = match (from, to) {
-            (from, _) if from > current_block => return Ok(FilterChanges::Empty),
-            (from, to) if to > current_block => (from, current_block),
-            (from, to) if to < from => return Ok(FilterChanges::Empty),
-            _ => (from, to),
-        };
+        let (from, to) =
+            match (filter.get_from_block().unwrap_or_default(), filter.get_to_block().unwrap_or(current_block)) {
+                (from, to) if from > current_block || to < from => return Ok(FilterChanges::Empty),
+                (from, to) if to > current_block => (from, current_block),
+                other => other,
+            };
 
         // Convert the topics to a vector of B256
         let topics = filter
