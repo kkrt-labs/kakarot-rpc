@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use ethers::abi::Tokenize;
 use ethers::signers::{LocalWallet, Signer};
 use ethers_solc::artifacts::CompactContractBytecode;
-use reth_primitives::{sign_message, Address, Transaction, TransactionKind, TransactionSigned, TxEip1559, B256, U256};
+use reth_primitives::{sign_message, Address, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
 use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::core::utils::get_selector_from_name;
 use starknet::providers::Provider;
@@ -203,7 +203,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().try_into()?,
             nonce: self.nonce().await?.try_into()?,
             gas_limit: TX_GAS_LIMIT,
-            to: TransactionKind::Call(to),
+            to: TxKind::Call(to),
             value: U256::from(value),
             ..Default::default()
         });
@@ -221,7 +221,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
                 chain_id: 1,
                 nonce,
                 gas_limit: 21000,
-                to: TransactionKind::Call(Address::random()),
+                to: TxKind::Call(Address::random()),
                 value: U256::from(1000),
                 max_fee_per_gas: 875000000,
                 ..Default::default()

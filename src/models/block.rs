@@ -98,6 +98,7 @@ mod tests {
             number: Some(17),
             timestamp: 18,
             total_difficulty: None,
+            requests_root: None,
         }
     }
 

@@ -11,9 +11,9 @@ use kakarot_rpc::test_utils::evm_contract::EvmContract;
 use kakarot_rpc::test_utils::fixtures::{contract_empty, counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
-use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
+use reth_primitives::serde_helper::{JsonStorageKey, U64};
 use reth_primitives::transaction::Signature;
-use reth_primitives::{sign_message, Transaction, TransactionKind, TxEip1559};
+use reth_primitives::{sign_message, Transaction, TxKind, TxEip1559};
 use reth_primitives::{Address, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::{Filter, FilterChanges, RpcBlockHash, TransactionRequest};
@@ -359,10 +359,8 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let nbr_blocks = katana.count_block();
 
     // Call the fee_history method of the Ethereum provider.
-    let fee_history = eth_provider
-        .fee_history(U64HexOrNumber::from(block_count), BlockNumberOrTag::Number(newest_block), None)
-        .await
-        .unwrap();
+    let fee_history =
+        eth_provider.fee_history(U64::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
 
     // Verify that the length of the base_fee_per_gas list in the fee history is equal
     // to the total number of blocks plus one.
@@ -518,7 +516,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         chain_id: 1,
         nonce: 0,
         gas_limit: 21000,
-        to: TransactionKind::Call(Address::random()),
+        to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
         max_fee_per_gas: 875000000,
@@ -562,7 +560,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
         chain_id: 1,
         nonce: 0,
         gas_limit: 21000,
-        to: TransactionKind::Call(Address::random()),
+        to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
         max_fee_per_gas: 875000000,
@@ -611,7 +609,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
         chain_id: 1,
         nonce: 0,
         gas_limit: 21000,
-        to: TransactionKind::Call(Address::random()),
+        to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
         max_fee_per_gas: 875000000,
