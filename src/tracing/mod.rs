@@ -65,13 +65,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
                 let parity_builder = inspector.into_parity_builder();
 
-                let transaction_info = TransactionInfo {
-                    hash: Some(tx.hash),
-                    index: tx.transaction_index,
-                    block_hash: tx.block_hash,
-                    block_number: tx.block_number,
-                    base_fee: Some(block_base_fee),
-                };
+                let mut transaction_info = TransactionInfo::from(tx);
+                transaction_info.base_fee = Some(block_base_fee);
 
                 Ok((parity_builder.into_localized_transaction_traces(transaction_info), res.state))
             };
