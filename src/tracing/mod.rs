@@ -6,7 +6,6 @@ use eyre::eyre;
 use reth_primitives::revm::env::tx_env_with_recovered;
 use reth_primitives::ruint::FromUintError;
 use reth_revm::primitives::{Env, EnvWithHandlerCfg};
-use reth_revm::tracing::{TracingInspector, TracingInspectorConfig};
 use reth_revm::DatabaseCommit;
 use reth_rpc_types::trace::geth::TraceResult;
 use reth_rpc_types::{
@@ -16,6 +15,7 @@ use reth_rpc_types::{
     },
     TransactionInfo,
 };
+use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
 
 use self::config::KakarotEvmConfig;
 use self::database::EthDatabaseSnapshot;

@@ -47,6 +47,7 @@ fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> r
         excess_blob_gas: Default::default(),
         parent_beacon_block_root: Default::default(),
         blob_gas_used: Default::default(),
+        requests_root: Default::default(),
     }
 }
 

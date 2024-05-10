@@ -1,8 +1,8 @@
 #![allow(clippy::blocks_in_conditions)]
 
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
+use reth_rpc_types::serde_helpers::JsonStorageKey;
 use reth_rpc_types::{
     AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock,
     SyncStatus, Transaction, TransactionReceipt, TransactionRequest, Work,
@@ -184,7 +184,7 @@ where
     #[tracing::instrument(skip_all, ret, err, fields(block_count = ?block_count, newest_block = %newest_block, reward_percentiles = ?reward_percentiles))]
     async fn fee_history(
         &self,
-        block_count: U64HexOrNumber,
+        block_count: U64,
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {

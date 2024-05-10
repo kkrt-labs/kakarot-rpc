@@ -93,18 +93,21 @@ starknet-crypto = { version = "0.6.1", default-features = false }
 starknet_api = { version = "0.7.0-dev.0", default-features = false }
 
 # Ethereum dependencies
-alloy-primitives = "0.7.0"
+alloy-primitives = "0.7.2"
 alloy-rlp = { version = "0.3.4", default-features = false }
-alphanet-instructions = { git = "https://github.com/paradigmxyz/alphanet.git", rev = "87be409", default-features = false }
+alphanet-instructions = { git = "https://github.com/paradigmxyz/alphanet.git", rev = "a7f66d6", default-features = false }
 ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false, features = [
-  "arbitrary",
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false, features = [
+  "alloy-compat"
 ] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.6", default-features = false }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false, features = [
+  "arbitrary"
+]  }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false }
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false }
+revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "7168ac5" }
 
 # Serde
 serde = { version = "1.0.198", default-features = false, features = ["derive"] }
@@ -152,7 +155,7 @@ http-body-util = { version = "0.1.1", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
 
 # Testing crates
-ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "e215eb2", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "80f179f", default-features = false, features = [
   "v0",
 ], optional = true }
 rand = { version = "0.8.5", default-features = false, optional = true }

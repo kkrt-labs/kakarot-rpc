@@ -6,10 +6,10 @@ use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
-use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::{
-    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256, U256, U64,
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
+use reth_rpc_types::serde_helpers::JsonStorageKey;
 use reth_rpc_types::{
     Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
     TransactionReceipt, TransactionRequest, ValueOrArray,
@@ -112,7 +112,7 @@ pub trait EthereumProvider {
     /// Returns the fee history given a block count and a newest block number.
     async fn fee_history(
         &self,
-        block_count: U64HexOrNumber,
+        block_count: U64,
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> EthProviderResult<FeeHistory>;
@@ -458,11 +458,11 @@ where
 
     async fn fee_history(
         &self,
-        block_count: U64HexOrNumber,
+        block_count: U64,
         newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
     ) -> EthProviderResult<FeeHistory> {
-        if block_count.to() == 0 {
+        if block_count == U64::ZERO {
             return Ok(FeeHistory::default());
         }
 
@@ -655,8 +655,10 @@ where
         // unwrap option
         let to: kakarot_core::core::Option = {
             match request.to {
-                Some(to) => kakarot_core::core::Option { is_some: FieldElement::ONE, value: into_via_wrapper!(to) },
-                None => kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO },
+                Some(TxKind::Call(to)) => {
+                    kakarot_core::core::Option { is_some: FieldElement::ONE, value: into_via_wrapper!(to) }
+                }
+                _ => kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO },
             }
         };
 
