@@ -68,7 +68,6 @@ impl From<EthBlockNumberOrTag> for StarknetBlockId {
 
 #[cfg(test)]
 mod tests {
-    use crate::models::transaction::rpc_to_primitive_transaction;
     use std::str::FromStr;
 
     use reth_primitives::{Address, Block, Bloom, Bytes, TransactionSigned, B256, B64, U256};
@@ -178,7 +177,7 @@ mod tests {
             primitive_block.body,
             vec![
                 TransactionSigned::from_transaction_and_signature(
-                    rpc_to_primitive_transaction(base_rpc_transaction()).unwrap(),
+                    base_rpc_transaction().try_into().unwrap(),
                     reth_primitives::Signature {
                         r: base_rpc_transaction().signature.unwrap().r,
                         s: base_rpc_transaction().signature.unwrap().s,
@@ -186,7 +185,7 @@ mod tests {
                     },
                 ),
                 TransactionSigned::from_transaction_and_signature(
-                    rpc_to_primitive_transaction(base_rpc_transaction()).unwrap(),
+                    base_rpc_transaction().try_into().unwrap(),
                     reth_primitives::Signature {
                         r: base_rpc_transaction().signature.unwrap().r,
                         s: base_rpc_transaction().signature.unwrap().s,
@@ -194,7 +193,7 @@ mod tests {
                     },
                 ),
                 TransactionSigned::from_transaction_and_signature(
-                    rpc_to_primitive_transaction(base_rpc_transaction()).unwrap(),
+                    base_rpc_transaction().try_into().unwrap(),
                     reth_primitives::Signature {
                         r: base_rpc_transaction().signature.unwrap().r,
                         s: base_rpc_transaction().signature.unwrap().s,

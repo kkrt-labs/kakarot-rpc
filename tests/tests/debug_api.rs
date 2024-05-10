@@ -1,7 +1,6 @@
 #![cfg(feature = "testing")]
 use alloy_rlp::Encodable;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::models::transaction::rpc_to_primitive_transaction;
 use kakarot_rpc::test_utils::fixtures::{katana, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH};
@@ -230,7 +229,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
 
         // Convert the transaction to a primitives transactions and encode it.
         let rlp_bytes = TransactionSigned::from_transaction_and_signature(
-            rpc_to_primitive_transaction(tx).unwrap(),
+            tx.try_into().unwrap(),
             reth_primitives::Signature {
                 r: signature.r,
                 s: signature.s,

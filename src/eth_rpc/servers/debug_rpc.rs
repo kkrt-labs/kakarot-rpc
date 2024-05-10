@@ -7,9 +7,9 @@ use reth_rpc_types::trace::geth::{GethDebugTracingOptions, TraceResult};
 use reth_rpc_types::{BlockId, BlockNumberOrTag};
 
 use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
+use crate::eth_provider::provider::EthereumProvider;
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::tracing::builder::TracerBuilder;
-use crate::{eth_provider::provider::EthereumProvider, models::transaction::rpc_to_primitive_transaction};
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]
@@ -65,7 +65,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         if let Some(tx) = transaction {
             let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx = rpc_to_primitive_transaction(tx).map_err(EthApiError::from)?;
+            let tx =
+                tx.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::PrimitiveError))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
@@ -88,7 +89,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         for t in transactions {
             let signature = t.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx = rpc_to_primitive_transaction(t).map_err(EthApiError::from)?;
+            let tx =
+                t.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::PrimitiveError))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
