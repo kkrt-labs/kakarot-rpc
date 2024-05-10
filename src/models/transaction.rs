@@ -17,7 +17,7 @@ pub fn rpc_to_primitive_transaction(
             nonce: rpc_transaction.nonce,
             gas_price: rpc_transaction.gas_price.ok_or(EthereumDataFormatError::PrimitiveError)?,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
-            to: rpc_transaction.to.map_or_else(|| TxKind::Create, TxKind::Call),
+            to: rpc_transaction.to.map_or(TxKind::Create, TxKind::Call),
             value: rpc_transaction.value,
             input: rpc_transaction.input,
             chain_id: rpc_transaction.chain_id,
@@ -27,7 +27,7 @@ pub fn rpc_to_primitive_transaction(
             nonce: rpc_transaction.nonce,
             gas_price: rpc_transaction.gas_price.ok_or(EthereumDataFormatError::PrimitiveError)?,
             gas_limit: rpc_transaction.gas.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?,
-            to: rpc_transaction.to.map_or_else(|| TxKind::Create, TxKind::Call),
+            to: rpc_transaction.to.map_or(TxKind::Create, TxKind::Call),
             value: rpc_transaction.value,
             access_list: AccessList(
                 rpc_transaction
@@ -51,7 +51,7 @@ pub fn rpc_to_primitive_transaction(
             max_priority_fee_per_gas: rpc_transaction
                 .max_priority_fee_per_gas
                 .ok_or(EthereumDataFormatError::PrimitiveError)?,
-            to: rpc_transaction.to.map_or_else(|| TxKind::Create, TxKind::Call),
+            to: rpc_transaction.to.map_or(TxKind::Create, TxKind::Call),
             value: rpc_transaction.value,
             access_list: AccessList(
                 rpc_transaction

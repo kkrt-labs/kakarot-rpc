@@ -655,15 +655,10 @@ where
         // unwrap option
         let to: kakarot_core::core::Option = {
             match request.to {
-                Some(to) => match to {
-                    TxKind::Create => {
-                        kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO }
-                    }
-                    TxKind::Call(to) => {
-                        kakarot_core::core::Option { is_some: FieldElement::ONE, value: into_via_wrapper!(to) }
-                    }
-                },
-                None => kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO },
+                Some(TxKind::Call(to)) => {
+                    kakarot_core::core::Option { is_some: FieldElement::ONE, value: into_via_wrapper!(to) }
+                }
+                _ => kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO },
             }
         };
 
