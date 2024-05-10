@@ -101,6 +101,7 @@ pub async fn tracing<T: Tokenize>(
             gas_price: Some(max_fee_per_gas),
             max_priority_fee_per_gas: Some(max_priority_fee_per_gas),
             value: tx.value(),
+            access_list: Some(Default::default()),
             ..Default::default()
         };
         txs.push(tx);

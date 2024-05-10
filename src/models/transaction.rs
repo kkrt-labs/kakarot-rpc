@@ -36,7 +36,7 @@ pub fn rpc_to_ec_recovered_transaction(
 mod tests {
     use super::*;
     use reth_primitives::{Address, Bytes, U256};
-    use reth_rpc_types::AccessListItem as RpcAccessListItem;
+    use reth_rpc_types::{AccessList, AccessListItem};
     use std::str::FromStr;
 
     struct RpcTxBuilder {
@@ -82,7 +82,7 @@ mod tests {
         }
 
         fn with_access_list(mut self) -> Self {
-            self.tx.access_list = Some(reth_rpc_types::AccessList(vec![RpcAccessListItem {
+            self.tx.access_list = Some(reth_rpc_types::AccessList(vec![AccessListItem {
                 address: Address::from_str("0x0000000000000000000000000000000000000003").unwrap(),
                 storage_keys: vec![U256::from(123).into(), U256::from(456).into()],
             }]));
