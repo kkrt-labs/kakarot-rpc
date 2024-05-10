@@ -28,26 +28,9 @@ fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> r
         number: Some(block_number),
         hash: Some(hash),
         parent_hash,
-        nonce: Default::default(),
-        logs_bloom: Default::default(),
-        transactions_root: Default::default(),
-        state_root: Default::default(),
-        receipts_root: Default::default(),
-        difficulty: Default::default(),
-        total_difficulty: Default::default(),
-        extra_data: Default::default(),
         gas_limit: u64::MAX as u128,
-        gas_used: Default::default(),
-        timestamp: Default::default(),
-        uncles_hash: Default::default(),
-        miner: Default::default(),
-        mix_hash: Default::default(),
         base_fee_per_gas: Some(base_fee),
-        withdrawals_root: Default::default(),
-        excess_blob_gas: Default::default(),
-        parent_beacon_block_root: Default::default(),
-        blob_gas_used: Default::default(),
-        requests_root: Default::default(),
+        ..Default::default()
     }
 }
 
