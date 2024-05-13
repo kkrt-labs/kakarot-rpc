@@ -1,16 +1,17 @@
 # trunk-ignore-all(terrascan/AC_DOCKER_0047)
 
 # CairoVM Chain
-FROM ghcr.io/dojoengine/dojo:v0.6.0-alpha.2 as katana
+FROM ghcr.io/dojoengine/dojo:v0.6.0-alpha.6 as katana
 
 # Indexer service
 ### Apibara DNA indexer and indexer
 FROM quay.io/apibara/starknet:1.4.1 as apibara
 FROM quay.io/apibara/sink-mongo:0.7.0 as indexer
 FROM debian:bookworm as apibara-build
-RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --no-install-recommends -y patchelf && rm -rf /var/lib/apt/lists/*
 
 # Apibara Starknet and Sink are built with Nix, so we need to extract the binaries from the Nix store
+# ⚠️ When modifying the tag of Apibara, make sure to change the Github CI workflow, and Indexer dockerfile as well
 # Depending on the platform, the path to the binaries will be different
 # These values need to be updated if the version of ApiBara Starknet or Sink change.
 # platform: linux/amd64:
@@ -62,16 +63,24 @@ RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
     && chmod +x foundry.sh \
     && ./foundry.sh \
     && foundryup \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install --no-install-recommends -y \
     jq \
     wget \
+    docker.io \
     tar \
     unzip \
     zip
 
 COPY . .
 
-RUN make setup
+# Similar to `make setup` but we remove the `make build-sol` step
+# which uses docker to build the experimental solidity contracts.
+# Using docker in docker is not supported in the current setup.
+RUN chmod +x ./scripts/extract_abi.sh \ 
+    && git submodule update --init --recursive \
+    && cd lib/kakarot && make setup && make build \
+    && mv build/ssj/contracts_Cairo1Helpers.contract_class.json build/cairo1_helpers.json && rm -fr build/ssj && cd ../.. \
+    && ./scripts/extract_abi.sh
 
 COPY . .
 
@@ -111,7 +120,7 @@ RUN cargo build \
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
-RUN apt-get update && apt-get install -y tini curl jq libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --no-install-recommends -y tini curl jq libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Environment
 #############
@@ -134,7 +143,8 @@ ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
 ENV RUST_LOG=kakarot_rpc=info
 ENV MAX_FELTS_IN_CALLDATA=30000
-ENV DEFAULT_BLOCK_GAS_LIMIT=7000000 
+ENV RETRY_TX_INTERVAL=10
+ENV DEFAULT_BLOCK_GAS_LIMIT=7000000
 
 HEALTHCHECK --interval=10s --timeout=10s --start-period=15s --retries=5 \
     CMD response=$(curl --silent --request POST \

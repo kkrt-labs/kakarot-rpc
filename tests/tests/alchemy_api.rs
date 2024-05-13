@@ -1,15 +1,16 @@
 #![cfg(feature = "testing")]
 use ethers::abi::Token;
-use ethers::core::types::{Address as EthersAddress, U256 as EthersU256};
-use kakarot_rpc::models::{balance::TokenBalances, felt::Felt252Wrapper};
+use kakarot_rpc::models::balance::TokenBalances;
+use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
 use kakarot_rpc::test_utils::evm_contract::KakarotEvmContract;
 use kakarot_rpc::test_utils::fixtures::{erc20, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
+use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_primitives::{Address, U256};
 use rstest::*;
-use serde_json::{json, Value};
+use serde_json::Value;
 
 #[rstest]
 #[awt]
@@ -21,19 +22,19 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
     let eoa = katana.eoa();
     let eoa_address = eoa.evm_address().expect("Failed to get Eoa EVM address");
     let erc20_address: Address =
-        Into::<Felt252Wrapper>::into(erc20.evm_address).try_into().expect("Failed to convert EVM address");
+        Felt252Wrapper::from(erc20.evm_address).try_into().expect("Failed to convert EVM address");
 
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     // When
-    let to = EthersAddress::from_slice(eoa.evm_address().unwrap().as_slice());
+    let to = ethers::abi::Address::from_slice(eoa.evm_address().unwrap().as_slice());
     let amount = U256::from(10_000);
 
     eoa.call_evm_contract(
         &erc20,
         "mint",
-        (Token::Address(to), Token::Uint(EthersU256::from_big_endian(&amount.to_be_bytes::<32>()[..]))),
+        (Token::Address(to), Token::Uint(ethers::abi::Uint::from_big_endian(&amount.to_be_bytes::<32>()[..]))),
         0,
     )
     .await
@@ -45,15 +46,10 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            json!(
-                {
-                    "jsonrpc":"2.0",
-                    "method":"alchemy_getTokenBalances",
-                    "params":[eoa_address, [erc20_address]],
-                    "id":1,
-                }
-            )
-            .to_string(),
+            RawRpcParamsBuilder::new("alchemy_getTokenBalances")
+                .add_param(eoa_address)
+                .add_param([erc20_address])
+                .build(),
         )
         .send()
         .await

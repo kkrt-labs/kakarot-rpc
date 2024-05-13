@@ -4,9 +4,9 @@ use crate::eth_provider::provider::EthereumProvider;
 use crate::eth_rpc::api::trace_api::TraceApiServer;
 use crate::tracing::builder::TracerBuilder;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_revm::tracing::TracingInspectorConfig;
 use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
 use reth_rpc_types::BlockId;
+use revm_inspectors::tracing::TracingInspectorConfig;
 
 /// The RPC module for implementing the Trace api
 #[derive(Debug)]

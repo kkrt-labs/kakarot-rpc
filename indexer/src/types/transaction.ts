@@ -82,7 +82,7 @@ export function toEthTx({
   const result: JsonRpcTx & { yParity?: string } = {
     blockHash: isPendingBlock ? null : blockHash,
     blockNumber,
-    from: transaction.getSenderAddress().toString(),
+    from: transaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
     gas: txJSON.gasLimit!,
     gasPrice: txJSON.gasPrice ?? txJSON.maxFeePerGas!,
     maxFeePerGas: txJSON.maxFeePerGas,

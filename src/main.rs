@@ -5,6 +5,7 @@ use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::config::{JsonRpcClientBuilder, KakarotRpcConfig, Network, SequencerGatewayProviderBuilder};
 use kakarot_rpc::eth_provider::database::Database;
+use kakarot_rpc::eth_provider::pending_pool::start_retry_service;
 use kakarot_rpc::eth_provider::provider::EthDataProvider;
 use kakarot_rpc::eth_rpc::config::RPCConfig;
 use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
@@ -74,15 +75,17 @@ async fn main() -> Result<()> {
     let kakarot_rpc_module = match starknet_provider {
         StarknetProvider::JsonRpcClient(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
-            let eth_provider = EthDataProvider::new(db, starknet_provider).await?;
-            KakarotRpcModuleBuilder::new(eth_provider).rpc_module()
+            let eth_provider = EthDataProvider::new(db.clone(), starknet_provider).await?;
+            tokio::spawn(start_retry_service(eth_provider.clone()));
+            KakarotRpcModuleBuilder::new(eth_provider).rpc_module()?
         }
         StarknetProvider::SequencerGatewayProvider(starknet_provider) => {
             let starknet_provider = Arc::new(starknet_provider);
-            let eth_provider = EthDataProvider::new(db, starknet_provider).await?;
-            KakarotRpcModuleBuilder::new(eth_provider).rpc_module()
+            let eth_provider = EthDataProvider::new(db.clone(), starknet_provider).await?;
+            tokio::spawn(start_retry_service(eth_provider.clone()));
+            KakarotRpcModuleBuilder::new(eth_provider).rpc_module()?
         }
-    }?;
+    };
 
     let (socket_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
 

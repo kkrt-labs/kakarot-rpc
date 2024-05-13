@@ -83,8 +83,7 @@ impl HiveGenesisConfig {
                 let code = info.code.unwrap_or_default();
                 let storage = info.storage.unwrap_or_default();
                 let storage: Vec<(U256, U256)> = storage.into_iter().collect();
-                let is_eoa = code.is_empty() & storage.is_empty();
-                let kakarot_account = KakarotAccount::new(&address, &code, U256::ZERO, &storage, is_eoa)?;
+                let kakarot_account = KakarotAccount::new(&address, &code, U256::ZERO, &storage)?;
 
                 let mut kakarot_account_storage: Vec<(FieldElement, FieldElement)> =
                     kakarot_account.storage().iter().map(|(k, v)| ((*k.0.key()).into(), (*v).into())).collect();

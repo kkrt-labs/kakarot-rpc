@@ -3,9 +3,9 @@ mod config;
 mod database;
 
 use eyre::eyre;
-use reth_primitives::{revm::env::tx_env_with_recovered, TxType};
+use reth_primitives::revm::env::tx_env_with_recovered;
+use reth_primitives::ruint::FromUintError;
 use reth_revm::primitives::{Env, EnvWithHandlerCfg};
-use reth_revm::tracing::{TracingInspector, TracingInspectorConfig};
 use reth_revm::DatabaseCommit;
 use reth_rpc_types::trace::geth::TraceResult;
 use reth_rpc_types::{
@@ -15,6 +15,7 @@ use reth_rpc_types::{
     },
     TransactionInfo,
 };
+use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
 
 use self::config::KakarotEvmConfig;
 use self::database::EthDatabaseSnapshot;
@@ -45,6 +46,13 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
              db: &mut EthDatabaseSnapshot<P>,
              tx: &reth_rpc_types::Transaction|
              -> TracerResult<(Vec<LocalizedTransactionTrace>, reth_revm::primitives::State)> {
+                let block_base_fee = env
+                    .env
+                    .block
+                    .basefee
+                    .try_into()
+                    .map_err(|err: FromUintError<u128>| TransactionError::Tracing(err.into()))?;
+
                 // Set up the inspector and transact the transaction
                 let mut inspector = TracingInspector::new(tracing_config);
                 let mut evm = cfg.evm_with_env_and_inspector(db, env, &mut inspector);
@@ -54,22 +62,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
                 let parity_builder = inspector.into_parity_builder();
 
-                // Extract the base fee from the transaction based on the transaction type
-                let base_fee = match tx.transaction_type.and_then(|typ| typ.try_into().ok()) {
-                    Some(TxType::Legacy) | Some(TxType::Eip2930) => tx.gas_price,
-                    Some(TxType::Eip1559) => tx
-                        .max_fee_per_gas
-                        .map(|fee| fee.saturating_sub(tx.max_priority_fee_per_gas.unwrap_or_default())),
-                    _ => return Err(EthereumDataFormatError::TransactionConversionError.into()),
-                };
-
-                let transaction_info = TransactionInfo {
-                    hash: Some(tx.hash),
-                    index: tx.transaction_index,
-                    block_hash: tx.block_hash,
-                    block_number: tx.block_number,
-                    base_fee,
-                };
+                let mut transaction_info = TransactionInfo::from(tx);
+                transaction_info.base_fee = Some(block_base_fee);
 
                 Ok((parity_builder.into_localized_transaction_traces(transaction_info), res.state))
             };

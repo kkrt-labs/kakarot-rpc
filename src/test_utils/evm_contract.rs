@@ -4,7 +4,7 @@ use std::path::Path;
 use ethers::abi::Tokenize;
 use ethers_solc::artifacts::CompactContractBytecode;
 use foundry_config::{find_project_root_path, load_config};
-use reth_primitives::{Transaction, TransactionKind, TxEip1559, TxLegacy, U256};
+use reth_primitives::{Transaction, TxEip1559, TxKind, TxLegacy, U256};
 use starknet_crypto::FieldElement;
 
 use crate::models::felt::Felt252Wrapper;
@@ -101,7 +101,7 @@ pub trait EvmContract {
     fn prepare_call_transaction<T: Tokenize>(
         &self,
         selector: &str,
-        constructor_args: T,
+        args: T,
         tx_info: &TransactionInfo,
     ) -> Result<Transaction, eyre::Error>;
 }
@@ -142,7 +142,7 @@ impl EvmContract for KakarotEvmContract {
                 chain_id: tx_info.chain_id(),
                 nonce: tx_info.nonce(),
                 gas_limit: TX_GAS_LIMIT,
-                to: TransactionKind::Call(evm_address.try_into()?),
+                to: TxKind::Call(evm_address.try_into()?),
                 value: U256::from(tx_info.value()),
                 input: data.into(),
                 max_fee_per_gas: fee_market.max_fee_per_gas,
@@ -153,7 +153,7 @@ impl EvmContract for KakarotEvmContract {
                 chain_id: Some(tx_info.chain_id()),
                 nonce: tx_info.nonce(),
                 gas_limit: TX_GAS_LIMIT,
-                to: TransactionKind::Call(evm_address.try_into()?),
+                to: TxKind::Call(evm_address.try_into()?),
                 value: U256::from(tx_info.value()),
                 input: data.into(),
                 gas_price: legacy.gas_price,

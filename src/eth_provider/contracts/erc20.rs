@@ -3,7 +3,7 @@ use ethers::core::types::Address as EthersAddress;
 use ethers::prelude::abigen;
 use reth_primitives::Address;
 
-use reth_primitives::{BlockId, U256};
+use reth_primitives::{BlockId, TxKind, U256};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::TransactionRequest;
 
@@ -40,7 +40,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
 
         let request = TransactionRequest {
             from: Some(Address::default()),
-            to: Some(self.address),
+            to: Some(TxKind::Call(self.address)),
             gas_price: Some(0),
             gas: Some(1_000_000),
             value: Some(U256::ZERO),

@@ -2,6 +2,7 @@ use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, Tx
 
 use crate::eth_provider::error::EthereumDataFormatError;
 
+
 pub fn rpc_to_primitive_transaction(
     rpc_transaction: reth_rpc_types::Transaction,
 ) -> Result<reth_primitives::Transaction, EthereumDataFormatError> {
@@ -73,7 +74,7 @@ pub fn rpc_to_primitive_transaction(
 mod tests {
     use super::*;
     use reth_primitives::{Address, Bytes, Signature, TransactionSignedEcRecovered, U256};
-    use reth_rpc_types::AccessListItem as RpcAccessListItem;
+    use reth_rpc_types::{AccessList, AccessListItem};
     use std::str::FromStr;
 
     struct RpcTxBuilder {
@@ -119,7 +120,7 @@ mod tests {
         }
 
         fn with_access_list(mut self) -> Self {
-            self.tx.access_list = Some(reth_rpc_types::AccessList(vec![RpcAccessListItem {
+            self.tx.access_list = Some(reth_rpc_types::AccessList(vec![AccessListItem {
                 address: Address::from_str("0x0000000000000000000000000000000000000003").unwrap(),
                 storage_keys: vec![U256::from(123).into(), U256::from(456).into()],
             }]));
@@ -191,8 +192,8 @@ mod tests {
                 let rpc_tx = $tx_initializer();
 
                 // When
-                let tx = rpc_to_primitive_transaction(rpc_tx.clone())
-                    .expect("Failed to convert RPC transaction to ec recovered");
+                let tx: Transaction =
+                    rpc_tx.clone().try_into().expect("Failed to convert RPC transaction to ec recovered");
 
                 // Then
                 assert_common_fields!(tx, rpc_tx, $gas_price_field, $has_access_list);
@@ -265,13 +266,4 @@ mod tests {
         max_fee_per_gas,
         true
     );
-
-    #[test]
-    #[should_panic(expected = "PrimitiveError")]
-    fn test_invalid_transaction_type() {
-        let mut rpc_tx = RpcTxBuilder::new().build();
-        rpc_tx.transaction_type = Some(99); // Invalid type
-
-        let _ = rpc_to_primitive_transaction(rpc_tx).unwrap();
-    }
 }

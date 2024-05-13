@@ -1,28 +1,24 @@
-use crate::eth_provider::constant::U64_PADDING;
+use crate::eth_provider::constant::U64_HEX_STRING_LEN;
 use crate::eth_provider::database::types::{
-    header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
 };
-use crate::eth_provider::database::Database;
+use crate::eth_provider::database::{CollectionName, Database};
+use arbitrary::Arbitrary;
 use lazy_static::lazy_static;
 use mongodb::{
-    bson::{doc, Document},
+    bson::{self, doc, Document},
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
 use reth_primitives::{Address, TxType, B256, U256};
+use reth_rpc_types::Transaction;
 use serde::{Serialize, Serializer};
+use std::collections::HashMap;
 use std::ops::Range;
 use std::str::FromStr;
+use strum::{EnumIter, IntoEnumIterator};
 use testcontainers::clients::{self, Cli};
-#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use {
-    crate::eth_provider::database::CollectionName,
-    arbitrary::Arbitrary,
-    mongodb::bson,
-    reth_rpc_types::Transaction,
-    std::collections::HashMap,
-    testcontainers::{GenericImage, RunnableImage},
-};
+use testcontainers::{GenericImage, RunnableImage};
 
 lazy_static! {
     pub static ref DOCKER_CLI: Cli = clients::Cli::default();
@@ -57,7 +53,7 @@ pub fn generate_port_number() -> u16 {
 }
 
 /// Enumeration of collections in the database.
-#[derive(Eq, Hash, PartialEq, Clone, Debug)]
+#[derive(Eq, Hash, PartialEq, Clone, Debug, EnumIter)]
 pub enum CollectionDB {
     /// Collection of block headers.
     Headers,
@@ -65,6 +61,8 @@ pub enum CollectionDB {
     Transactions,
     /// Collection of transaction receipts.
     Receipts,
+    /// Collection of logs.
+    Logs,
 }
 
 /// Type alias for the different types of stored data associated with each CollectionDB.
@@ -76,6 +74,8 @@ pub enum StoredData {
     StoredTransaction(StoredTransaction),
     /// Represents a stored transaction receipt associated with a CollectionDB.
     StoredTransactionReceipt(StoredTransactionReceipt),
+    /// Represents a stored log associated with a CollectionDB.
+    StoredLog(StoredLog),
 }
 
 impl StoredData {
@@ -113,6 +113,7 @@ impl Serialize for StoredData {
             StoredData::StoredHeader(header) => header.serialize(serializer),
             StoredData::StoredTransaction(transaction) => transaction.serialize(serializer),
             StoredData::StoredTransactionReceipt(receipt) => receipt.serialize(serializer),
+            StoredData::StoredLog(log) => log.serialize(serializer),
         }
     }
 }
@@ -175,9 +176,9 @@ impl MongoFuzzer {
 
     /// Finalizes the data generation and returns the MongoDB database.
     pub async fn finalize(&self) -> Database {
-        self.update_collection(CollectionDB::Headers).await;
-        self.update_collection(CollectionDB::Transactions).await;
-        self.update_collection(CollectionDB::Receipts).await;
+        for collection in CollectionDB::iter() {
+            self.update_collection(collection).await;
+        }
 
         self.mongodb.clone()
     }
@@ -228,13 +229,16 @@ impl MongoFuzzer {
         Ok(())
     }
 
-    /// Adds a transaction to the collections of transactions, receipts, and headers.
+    /// Adds a transaction to the collections of transactions, receipts, logs, and headers.
     fn add_transaction_to_collections(&mut self, transaction: StoredTransaction) {
         let receipt = self.generate_transaction_receipt(&transaction.tx);
+        let mut logs = Vec::<StoredLog>::from(receipt.clone()).into_iter().map(StoredData::StoredLog).collect();
+
         let header = self.generate_transaction_header(&transaction.tx);
 
         self.documents.entry(CollectionDB::Transactions).or_default().push(StoredData::StoredTransaction(transaction));
         self.documents.entry(CollectionDB::Receipts).or_default().push(StoredData::StoredTransactionReceipt(receipt));
+        self.documents.entry(CollectionDB::Logs).or_default().append(&mut logs);
         self.documents.entry(CollectionDB::Headers).or_default().push(StoredData::StoredHeader(header));
     }
 
@@ -294,6 +298,10 @@ impl MongoFuzzer {
                 let updates = self.documents.get(&CollectionDB::Receipts);
                 ("receipt", "transactionHash", StoredTransactionReceipt::collection_name(), updates, "blockNumber")
             }
+            CollectionDB::Logs => {
+                let updates = self.documents.get(&CollectionDB::Logs);
+                ("log", "transactionHash", StoredLog::collection_name(), updates, "blockNumber")
+            }
         };
 
         let collection: Collection<Document> = self.mongodb.inner().collection(collection_name);
@@ -316,9 +324,9 @@ impl MongoFuzzer {
                     .expect("Failed to insert documents");
 
                 let number = serialized_data.get_document(doc).unwrap().get_str(block_number).unwrap();
-                let padded_number = format!("0x{:0>width$}", &number[2..], width = U64_PADDING);
+                let padded_number = format!("0x{:0>width$}", &number[2..], width = U64_HEX_STRING_LEN);
 
-                // Update the document by padding the block number to U64_PADDING value.
+                // Update the document by padding the block number to U64_HEX_STRING_LEN value.
                 collection
                     .update_one(
                         doc! {&block_key: &number},
