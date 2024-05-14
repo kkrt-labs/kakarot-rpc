@@ -1,9 +1,7 @@
-use reth_primitives::{AccessList, AccessListItem, TxEip1559, TxEip2930, TxKind, TxLegacy, TxType};
-
-use crate::eth_provider::error::EthereumDataFormatError;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::eth_provider::error::EthereumDataFormatError;
     use reth_primitives::{Address, Bytes, Signature, TransactionSignedEcRecovered, U256};
     use reth_rpc_types::{AccessList, AccessListItem};
     use std::str::FromStr;
