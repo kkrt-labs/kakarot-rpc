@@ -17,7 +17,7 @@ use reth_primitives::{
 };
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::serde_helpers::JsonStorageKey;
-use reth_rpc_types::{Filter, FilterChanges, RpcBlockHash, TransactionRequest};
+use reth_rpc_types::{Filter, FilterChanges, RpcBlockHash, Topic, TransactionRequest};
 use rstest::*;
 use starknet::core::types::BlockTag;
 use starknet_crypto::FieldElement;
@@ -268,7 +268,7 @@ async fn test_get_code(#[future] counter: (Katana, KakarotEvmContract), _setup: 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_get_logs(#[future] katana: Katana, _setup: ()) {
+async fn test_get_logs_block_range(#[future] katana: Katana, _setup: ()) {
     // Given
     let provider = katana.eth_provider();
 
@@ -281,6 +281,87 @@ async fn test_get_logs(#[future] katana: Katana, _setup: ()) {
         _ => panic!("Expected logs"),
     };
     assert!(!logs.is_empty());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_topics(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let provider = katana.eth_provider();
+    let logs = katana.logs_with_min_topics(3);
+    let topic_one = logs[0].topics()[0];
+    let topic_two = logs[1].topics()[1];
+    let topic_three = logs[0].topics()[2];
+    let topic_four = logs[1].topics()[2];
+
+    let filter_and_assert = |filter: Filter, expected_count: usize| {
+        let provider = provider.clone();
+        async move {
+            let logs = provider.get_logs(filter).await.expect("Failed to get logs");
+            let logs = match logs {
+                FilterChanges::Logs(logs) => logs,
+                _ => panic!("Expected logs"),
+            };
+            assert_eq!(logs.len(), expected_count);
+        }
+    };
+
+    // Filter on the first topic
+    let filter = Filter {
+        topics: [topic_one.into(), Topic::default(), Topic::default(), Topic::default()],
+        ..Default::default()
+    };
+    filter_and_assert(filter, 1).await;
+
+    // Filter on the second topic
+    let filter = Filter {
+        topics: [Topic::default(), topic_two.into(), Topic::default(), Topic::default()],
+        ..Default::default()
+    };
+    filter_and_assert(filter, 1).await;
+
+    // Filter on the combination of topics three and four (should return 2 logs)
+    let filter = Filter {
+        topics: [Topic::default(), Topic::default(), vec![topic_three, topic_four].into(), Topic::default()],
+        ..Default::default()
+    };
+    filter_and_assert(filter, 2).await;
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_address(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let provider = katana.eth_provider();
+    let logs = katana.logs_with_min_topics(3);
+    let address_one = logs[0].address();
+    let address_two = logs[1].address();
+
+    let filter_and_assert = |filter: Filter, expected_count: usize| {
+        let provider = provider.clone();
+        async move {
+            let logs = provider.get_logs(filter).await.expect("Failed to get logs");
+            let logs = match logs {
+                FilterChanges::Logs(logs) => logs,
+                _ => panic!("Expected logs"),
+            };
+            assert_eq!(logs.len(), expected_count);
+        }
+    };
+
+    // Filter on the first address
+    let filter = Filter { address: address_one.into(), ..Default::default() };
+    filter_and_assert(filter, 1).await;
+
+    // Filter on the second address
+    let filter = Filter { address: address_two.into(), ..Default::default() };
+    filter_and_assert(filter, 1).await;
+
+    // Filter on the combination of both addresses
+    let filter = Filter { address: vec![address_one, address_two].into(), ..Default::default() };
+    filter_and_assert(filter, 2).await;
 }
 
 #[rstest]

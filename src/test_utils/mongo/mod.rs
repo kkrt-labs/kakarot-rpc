@@ -102,6 +102,14 @@ impl StoredData {
             _ => None,
         }
     }
+
+    /// Extracts the stored log if it exists, otherwise returns None.
+    pub fn extract_stored_log(&self) -> Option<&StoredLog> {
+        match self {
+            StoredData::StoredLog(log) => Some(log),
+            _ => None,
+        }
+    }
 }
 
 impl Serialize for StoredData {
@@ -213,6 +221,28 @@ impl MongoFuzzer {
     pub fn add_hardcoded_transaction(&mut self, tx_type: Option<TxType>) -> Result<(), Box<dyn std::error::Error>> {
         let builder = TransactionBuilder::default().with_tx_type(tx_type.unwrap_or_default());
         self.add_custom_transaction(builder)
+    }
+
+    /// Adds a hardcoded log to the collection of logs.
+    pub fn add_hardcoded_logs(&mut self, n_logs: usize) -> Result<(), Box<dyn std::error::Error>> {
+        for _ in 0..n_logs {
+            let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+            let mut unstructured = arbitrary::Unstructured::new(&bytes);
+            let mut log = StoredLog::arbitrary(&mut unstructured)?.log;
+
+            let topics = log.inner.data.topics_mut_unchecked();
+            topics.extend([
+                B256::arbitrary(&mut unstructured)?,
+                B256::arbitrary(&mut unstructured)?,
+                B256::arbitrary(&mut unstructured)?,
+                B256::arbitrary(&mut unstructured)?,
+            ]);
+            topics.truncate(4);
+            let stored_log = StoredLog { log };
+
+            self.documents.entry(CollectionDB::Logs).or_default().push(StoredData::StoredLog(stored_log));
+        }
+        Ok(())
     }
 
     /// Adds a hardcoded transaction to the collection of transactions.

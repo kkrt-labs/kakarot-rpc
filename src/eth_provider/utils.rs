@@ -1,8 +1,10 @@
 use std::fmt::LowerHex;
 
+use super::constant::LOGS_TOPICS_HEX_STRING_LEN;
 use cainome::cairo_serde::Error;
 use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
+use reth_rpc_types::{Topic, ValueOrArray};
 use starknet::{
     core::types::{ContractErrorData, StarknetError},
     providers::ProviderError,
@@ -107,6 +109,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use reth_primitives::B256;
+    use reth_rpc_types::FilterSet;
     use std::str::FromStr;
 
     #[test]
@@ -139,5 +142,43 @@ mod tests {
             // Assertion to check the equality with the original U256 value
             assert_eq!(U256::from_str(&combined_hex).unwrap(), value);
         });
+    }
+
+    #[test]
+    fn test_log_filter_empty() {
+        // Given
+        let topics = [Topic::default(), Topic::default(), Topic::default(), Topic::default()];
+
+        // When
+        let filter = to_logs_filter(topics);
+
+        // Then
+        assert_eq!(filter, doc! { "log.topics": {"$exists": true} });
+    }
+
+    #[test]
+    fn test_log_filter() {
+        // Given
+        let topics: [FilterSet<B256>; 4] = [
+            vec![B256::left_padding_from(&[1]), B256::left_padding_from(&[2])].into(),
+            B256::left_padding_from(&[3]).into(),
+            B256::left_padding_from(&[4]).into(),
+            vec![B256::left_padding_from(&[5]), B256::left_padding_from(&[6])].into(),
+        ];
+
+        // When
+        let filter = to_logs_filter(topics);
+
+        // Then
+        assert_eq!(
+            filter,
+            doc! { "$and": [
+                    { "log.topics.0": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000000000000000000000000000002"]} },
+                    { "log.topics.1": "0x0000000000000000000000000000000000000000000000000000000000000003" },
+                    { "log.topics.2": "0x0000000000000000000000000000000000000000000000000000000000000004" },
+                    { "log.topics.3": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000005", "0x0000000000000000000000000000000000000000000000000000000000000006"]} },
+                ]
+            }
+        );
     }
 }
