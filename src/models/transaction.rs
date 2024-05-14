@@ -2,7 +2,7 @@
 mod tests {
     use super::*;
     use crate::eth_provider::error::EthereumDataFormatError;
-    use reth_primitives::{Address, Bytes, Signature, TransactionSignedEcRecovered, U256};
+    use reth_primitives::{Address, Bytes, Signature, Transaction, TransactionSignedEcRecovered, TxType, U256};
     use reth_rpc_types::{AccessList, AccessListItem};
     use std::str::FromStr;
 
