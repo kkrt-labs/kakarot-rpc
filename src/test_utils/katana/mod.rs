@@ -125,7 +125,7 @@ impl<'a> Katana {
             .add_hardcoded_transaction(Some(TxType::Legacy))
             .expect("Failed to add Legacy transaction in the database");
         // Add a hardcoded logs to the MongoDB database.
-        mongo_fuzzer.add_hardcoded_logs(2).expect("Failed to logs in the database");
+        mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
 
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;

@@ -223,8 +223,8 @@ impl MongoFuzzer {
         self.add_custom_transaction(builder)
     }
 
-    /// Adds a hardcoded log to the collection of logs.
-    pub fn add_hardcoded_logs(&mut self, n_logs: usize) -> Result<(), Box<dyn std::error::Error>> {
+    /// Adds random logs to the collection of logs.
+    pub fn add_random_logs(&mut self, n_logs: usize) -> Result<(), Box<dyn std::error::Error>> {
         for _ in 0..n_logs {
             let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
             let mut unstructured = arbitrary::Unstructured::new(&bytes);
