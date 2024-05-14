@@ -39,9 +39,8 @@ pub(crate) fn to_logs_filter(topics: [Topic; 4]) -> Document {
             let topics = t.iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>();
             let key = format!("log.topics.{}", index);
             // If the topic array has only one element, use an equality filter
-            if t.len() == 1 {
-                let value = format_hex(t[0], LOGS_TOPICS_HEX_STRING_LEN);
-                filter.push(doc! {key: value});
+            if topics.len() == 1 {
+                filter.push(doc! {key: topics[0].clone()});
             } else {
                 // If the topic array has more than one element, use an $in filter
                 filter.push(doc! {key: {"$in": topics}});
