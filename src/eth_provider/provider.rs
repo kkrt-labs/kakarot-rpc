@@ -7,7 +7,7 @@ use itertools::Itertools;
 use mongodb::bson::doc;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
 use reth_primitives::{
-    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
+    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64, TransactionSignedEcRecovered
 };
 use reth_rpc_types::serde_helpers::JsonStorageKey;
 use reth_rpc_types::{
@@ -42,7 +42,6 @@ use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::rpc_to_ec_recovered_transaction;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -977,7 +976,7 @@ where
             }
 
             // Generate primitive transaction, handle error if any
-            let transaction = match rpc_to_ec_recovered_transaction(tx.tx.clone()) {
+            let transaction = match TransactionSignedEcRecovered::try_from(tx.tx.clone()) {
                 Ok(transaction) => transaction,
                 Err(_) => {
                     // Delete the pending transaction from the database due conversion error
