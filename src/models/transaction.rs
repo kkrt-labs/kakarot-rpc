@@ -1,4 +1,4 @@
-use reth_primitives::{AccessList, AccessListItem, TransactionKind, TxEip1559, TxEip2930, TxLegacy, TxType};
+use reth_primitives::{AccessList, AccessListItem, TxKind, TxEip1559, TxEip2930, TxLegacy, TxType};
 
 use crate::eth_provider::error::EthereumDataFormatError;
 
