@@ -19,12 +19,9 @@ use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
 
 use self::config::KakarotEvmConfig;
 use self::database::EthDatabaseSnapshot;
-use crate::{
-    eth_provider::{
-        error::{EthApiError, TransactionError},
-        provider::EthereumProvider,
-    },
-    models::transaction::rpc_to_ec_recovered_transaction,
+use crate::eth_provider::{
+    error::{EthApiError, EthereumDataFormatError, TransactionError},
+    provider::EthereumProvider,
 };
 
 pub type TracerResult<T> = Result<T, EthApiError>;
@@ -153,8 +150,10 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             let mut db = self.db;
 
             while let Some(tx) = transactions.next() {
-                // Convert the transaction to an ec recovered transaction and update the env with it
-                let tx_ec_recovered = rpc_to_ec_recovered_transaction(tx.clone())?;
+                // Convert the transaction to an ec recovered transaction and update the env with it.
+                let tx_ec_recovered =
+                    tx.clone().try_into().map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
+
                 let tx_env = tx_env_with_recovered(&tx_ec_recovered);
                 let env = EnvWithHandlerCfg {
                     env: Env::boxed(self.env.env.cfg.clone(), self.env.env.block.clone(), tx_env),

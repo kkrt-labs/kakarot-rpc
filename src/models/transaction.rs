@@ -1,41 +1,7 @@
-use reth_primitives::{Signature, Transaction, TransactionSigned, TxType, U256};
-
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError, TransactionError};
-
-pub fn rpc_to_ec_recovered_transaction(
-    transaction: reth_rpc_types::Transaction,
-) -> Result<reth_primitives::TransactionSignedEcRecovered, EthApiError> {
-    let signature = transaction.signature.ok_or(SignatureError::MissingSignature)?;
-    let transaction: Transaction =
-        transaction.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::PrimitiveError))?;
-
-    let parity = match transaction.tx_type() {
-        TxType::Legacy => {
-            // EIP-155: v = {0, 1} + CHAIN_ID * 2 + 35
-            let chain_id = transaction.chain_id().ok_or(TransactionError::InvalidChainId)?;
-            let recovery = chain_id.saturating_mul(2).saturating_add(35);
-            signature.v - U256::from(recovery)
-        }
-        TxType::Eip1559 | TxType::Eip2930 | TxType::Eip4844 => signature.v,
-    };
-
-    let tx_signed = TransactionSigned::from_transaction_and_signature(
-        transaction,
-        Signature {
-            r: signature.r,
-            s: signature.s,
-            odd_y_parity: parity.try_into().map_err(|_| SignatureError::InvalidParity)?,
-        },
-    );
-
-    let tx_ec_recovered = tx_signed.try_into_ecrecovered().map_err(|_| SignatureError::RecoveryError)?;
-    Ok(tx_ec_recovered)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use reth_primitives::{Address, Bytes, U256};
+    use crate::eth_provider::error::EthereumDataFormatError;
+    use reth_primitives::{Address, Bytes, Signature, Transaction, TransactionSignedEcRecovered, TxType, U256};
     use reth_rpc_types::{AccessList, AccessListItem};
     use std::str::FromStr;
 
@@ -172,8 +138,9 @@ mod tests {
                 let rpc_tx = $tx_initializer();
 
                 // When
-                let tx = rpc_to_ec_recovered_transaction(rpc_tx.clone())
-                    .expect("Failed to convert RPC transaction to primitive");
+                let tx = TransactionSignedEcRecovered::try_from(rpc_tx.clone())
+                    .map_err(|_| EthereumDataFormatError::TransactionConversionError)
+                    .unwrap();
 
                 // Then
                 assert_common_fields!(tx, rpc_tx, $gas_price_field, $has_access_list);
