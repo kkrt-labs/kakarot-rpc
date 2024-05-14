@@ -8,6 +8,48 @@ use starknet::{
     providers::ProviderError,
 };
 
+/// Converts an array of topics into a MongoDB filter.
+pub(crate) fn to_logs_filter(topics: [Topic; 4]) -> Document {
+    // Converts the topics to [Option<Vec<Topic>>;4]
+    let topics = topics
+        .into_iter()
+        .map(|t| {
+            t.to_value_or_array().map(|t| match t {
+                ValueOrArray::Value(topic) => vec![topic],
+                ValueOrArray::Array(topics) => topics,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    // Count the amount of topics that are not None
+    // If all topics are None, return a filter that checks if the log.topics field exists
+    let topics_len = topics.iter().fold(0usize, |acc, t| acc + t.as_ref().map_or(0, |_| 1));
+    if topics_len == 0 {
+        return doc! { "log.topics": {"$exists": true} };
+    }
+
+    let mut filter = vec![];
+
+    // Iterate over the topics and add the filter to the filter vector
+    for (index, maybe_topic) in topics.iter().enumerate() {
+        // If the topic is None, skip it.
+        if let Some(t) = maybe_topic {
+            let topics = t.iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>();
+            let key = format!("log.topics.{}", index);
+            // If the topic array has only one element, use an equality filter
+            if t.len() == 1 {
+                let value = format_hex(t[0], LOGS_TOPICS_HEX_STRING_LEN);
+                filter.push(doc! {key: value});
+            } else {
+                // If the topic array has more than one element, use an $in filter
+                filter.push(doc! {key: {"$in": topics}});
+            }
+        }
+    }
+
+    doc! {"$and": filter}
+}
+
 pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
     // Add 2 to the width to account for the 0x prefix.
     let s = format!("{:#0width$x}", value, width = width + 2);
