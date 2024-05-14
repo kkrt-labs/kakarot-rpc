@@ -23,10 +23,8 @@ pub(crate) fn to_logs_filter(topics: [Topic; 4]) -> Document {
         })
         .collect::<Vec<_>>();
 
-    // Count the amount of topics that are not None
     // If all topics are None, return a filter that checks if the log.topics field exists
-    let topics_len = topics.iter().fold(0usize, |acc, t| acc + t.as_ref().map_or(0, |_| 1));
-    if topics_len == 0 {
+    if topics.iter().all(Option::is_none) {
         return doc! { "log.topics": {"$exists": true} };
     }
 
@@ -169,15 +167,28 @@ mod tests {
         let filter = to_logs_filter(topics);
 
         // Then
+        let and_filter = filter.get("$and").unwrap().as_array().unwrap();
+        let first_topic_filter = and_filter[0].as_document().unwrap().clone();
+        assert!(
+            first_topic_filter
+                == doc! { "log.topics.0": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000000000000000000000000000002"]} }
+                || first_topic_filter
+                    == doc! { "log.topics.0": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000000000000000000000000000001"]} }
+        );
         assert_eq!(
-            filter,
-            doc! { "$and": [
-                    { "log.topics.0": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000000000000000000000000000002"]} },
-                    { "log.topics.1": "0x0000000000000000000000000000000000000000000000000000000000000003" },
-                    { "log.topics.2": "0x0000000000000000000000000000000000000000000000000000000000000004" },
-                    { "log.topics.3": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000005", "0x0000000000000000000000000000000000000000000000000000000000000006"]} },
-                ]
-            }
+            and_filter[1].as_document().unwrap().clone(),
+            doc! { "log.topics.1": "0x0000000000000000000000000000000000000000000000000000000000000003" }
+        );
+        assert_eq!(
+            and_filter[2].as_document().unwrap().clone(),
+            doc! { "log.topics.2": "0x0000000000000000000000000000000000000000000000000000000000000004" }
+        );
+        let fourth_topic_filter = and_filter[3].as_document().unwrap().clone();
+        assert!(
+            fourth_topic_filter
+                == doc! { "log.topics.3": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000005", "0x0000000000000000000000000000000000000000000000000000000000000006"]} }
+                || fourth_topic_filter
+                    == doc! { "log.topics.3": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000006", "0x0000000000000000000000000000000000000000000000000000000000000005"]} }
         );
     }
 }

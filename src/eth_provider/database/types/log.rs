@@ -33,14 +33,13 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredLog {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         Ok(Self {
             log: Log {
-                inner: alloy_primitives::Log::arbitrary(u)?,
                 block_hash: Some(reth_primitives::B256::arbitrary(u)?),
                 block_number: Some(u64::arbitrary(u)?),
                 block_timestamp: Some(u64::arbitrary(u)?),
                 transaction_hash: Some(reth_primitives::B256::arbitrary(u)?),
                 transaction_index: Some(u64::arbitrary(u)?),
                 log_index: Some(u64::arbitrary(u)?),
-                removed: bool::arbitrary(u)?,
+                ..Log::arbitrary(u)?
             },
         })
     }
