@@ -1,12 +1,53 @@
 use std::fmt::LowerHex;
 
+use super::constant::LOGS_TOPICS_HEX_STRING_LEN;
 use cainome::cairo_serde::Error;
 use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
+use reth_rpc_types::{Topic, ValueOrArray};
 use starknet::{
     core::types::{ContractErrorData, StarknetError},
     providers::ProviderError,
 };
+
+/// Converts an array of topics into a MongoDB filter.
+pub(crate) fn to_logs_filter(topics: [Topic; 4]) -> Document {
+    // Converts the topics to [Option<Vec<Topic>>;4]
+    let topics = topics
+        .into_iter()
+        .map(|t| {
+            t.to_value_or_array().map(|t| match t {
+                ValueOrArray::Value(topic) => vec![topic],
+                ValueOrArray::Array(topics) => topics,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    // If all topics are None, return a filter that checks if the log.topics field exists
+    if topics.iter().all(Option::is_none) {
+        return doc! { "log.topics": {"$exists": true} };
+    }
+
+    let mut filter = vec![];
+
+    // Iterate over the topics and add the filter to the filter vector
+    for (index, maybe_topic) in topics.iter().enumerate() {
+        // If the topic is None, skip it.
+        if let Some(t) = maybe_topic {
+            let topics = t.iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>();
+            let key = format!("log.topics.{}", index);
+            // If the topic array has only one element, use an equality filter
+            if topics.len() == 1 {
+                filter.push(doc! {key: topics[0].clone()});
+            } else {
+                // If the topic array has more than one element, use an $in filter
+                filter.push(doc! {key: {"$in": topics}});
+            }
+        }
+    }
+
+    doc! {"$and": filter}
+}
 
 pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
     // Add 2 to the width to account for the 0x prefix.
@@ -65,6 +106,7 @@ mod tests {
     use super::*;
     use proptest::prelude::*;
     use reth_primitives::B256;
+    use reth_rpc_types::FilterSet;
     use std::str::FromStr;
 
     #[test]
@@ -97,5 +139,56 @@ mod tests {
             // Assertion to check the equality with the original U256 value
             assert_eq!(U256::from_str(&combined_hex).unwrap(), value);
         });
+    }
+
+    #[test]
+    fn test_log_filter_empty() {
+        // Given
+        let topics = [Topic::default(), Topic::default(), Topic::default(), Topic::default()];
+
+        // When
+        let filter = to_logs_filter(topics);
+
+        // Then
+        assert_eq!(filter, doc! { "log.topics": {"$exists": true} });
+    }
+
+    #[test]
+    fn test_log_filter() {
+        // Given
+        let topics: [FilterSet<B256>; 4] = [
+            vec![B256::left_padding_from(&[1]), B256::left_padding_from(&[2])].into(),
+            B256::left_padding_from(&[3]).into(),
+            B256::left_padding_from(&[4]).into(),
+            vec![B256::left_padding_from(&[5]), B256::left_padding_from(&[6])].into(),
+        ];
+
+        // When
+        let filter = to_logs_filter(topics);
+
+        // Then
+        let and_filter = filter.get("$and").unwrap().as_array().unwrap();
+        let first_topic_filter = and_filter[0].as_document().unwrap().clone();
+        assert!(
+            first_topic_filter
+                == doc! { "log.topics.0": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000000000000000000000000000002"]} }
+                || first_topic_filter
+                    == doc! { "log.topics.0": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000000000000000000000000000001"]} }
+        );
+        assert_eq!(
+            and_filter[1].as_document().unwrap().clone(),
+            doc! { "log.topics.1": "0x0000000000000000000000000000000000000000000000000000000000000003" }
+        );
+        assert_eq!(
+            and_filter[2].as_document().unwrap().clone(),
+            doc! { "log.topics.2": "0x0000000000000000000000000000000000000000000000000000000000000004" }
+        );
+        let fourth_topic_filter = and_filter[3].as_document().unwrap().clone();
+        assert!(
+            fourth_topic_filter
+                == doc! { "log.topics.3": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000005", "0x0000000000000000000000000000000000000000000000000000000000000006"]} }
+                || fourth_topic_filter
+                    == doc! { "log.topics.3": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000006", "0x0000000000000000000000000000000000000000000000000000000000000005"]} }
+        );
     }
 }

@@ -22,7 +22,7 @@ use starknet_crypto::FieldElement;
 
 use super::constant::{
     ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN,
-    LOGS_TOPICS_HEX_STRING_LEN, TRANSACTION_MAX_RETRIES, U64_HEX_STRING_LEN,
+    TRANSACTION_MAX_RETRIES, U64_HEX_STRING_LEN,
 };
 use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
@@ -38,7 +38,7 @@ use super::starknet::kakarot_core::{
     starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256};
+use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, to_logs_filter};
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
@@ -397,30 +397,23 @@ where
             other => other,
         };
 
-        // Convert the topics to a vector of B256
-        let topics = filter
-            .topics
-            .into_iter()
-            .filter_map(|t| t.to_value_or_array())
-            .flat_map(|t| match t {
-                ValueOrArray::Value(topic) => vec![topic],
-                ValueOrArray::Array(topics) => topics,
-            })
-            .collect::<Vec<_>>();
-
         // Create the database filter. We filter by block number using $gte and $lte,
         // and by topics using $expr and $eq. The topics query will:
         // 1. Slice the topics array to the same length as the filter topics
         // 2. Match on values for which the sliced topics equal the filter topics
         let mut database_filter = doc! {
             "log.blockNumber": {"$gte": format_hex(from, BLOCK_NUMBER_HEX_STRING_LEN), "$lte": format_hex(to, BLOCK_NUMBER_HEX_STRING_LEN)},
-            "$expr": {
-                "$eq": [
-                  { "$slice": ["$log.topics", topics.len() as i32] },
-                  topics.into_iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>()
-                ]
-              }
         };
+
+        // TODO: this will work for now but isn't very efficient. Would need to:
+        // 1. Create the bloom filter from the topics
+        // 2. Query the database for logs within block range with the bloom filter
+        // 3. Filter this reduced set of logs by the topics
+        // 4. Limit the number of logs returned
+
+        // Convert the topics to a MongoDB filter and add it to the database filter
+        let logs_filter = to_logs_filter(filter.topics);
+        database_filter.extend(logs_filter);
 
         // Add the address filter if any
         let addresses = filter.address.to_value_or_array().map(|a| match a {

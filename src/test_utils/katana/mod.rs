@@ -11,6 +11,7 @@ use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use mongodb::bson::doc;
 use mongodb::options::{UpdateModifications, UpdateOptions};
+use reth_rpc_types::Log;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
@@ -123,6 +124,9 @@ impl<'a> Katana {
         mongo_fuzzer
             .add_hardcoded_transaction(Some(TxType::Legacy))
             .expect("Failed to add Legacy transaction in the database");
+        // Add a hardcoded logs to the MongoDB database.
+        mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
+
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
         // Clone the mock data stored in the MongoFuzzer instance.
@@ -231,6 +235,16 @@ impl<'a> Katana {
                     .map(|stored_header| stored_header.header.clone())
                     .filter(|header| header.hash == Some(hash))
             })
+        })
+    }
+
+    pub fn logs_with_min_topics(&self, min_topics: usize) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| stored_log.log.topics().len() >= min_topics)
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
         })
     }
 
