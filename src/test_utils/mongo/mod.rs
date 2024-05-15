@@ -231,13 +231,13 @@ impl MongoFuzzer {
             let mut log = StoredLog::arbitrary(&mut unstructured)?.log;
 
             let topics = log.inner.data.topics_mut_unchecked();
+            topics.clear();
             topics.extend([
                 B256::arbitrary(&mut unstructured)?,
                 B256::arbitrary(&mut unstructured)?,
                 B256::arbitrary(&mut unstructured)?,
                 B256::arbitrary(&mut unstructured)?,
             ]);
-            topics.truncate(4);
             let stored_log = StoredLog { log };
 
             self.documents.entry(CollectionDB::Logs).or_default().push(StoredData::StoredLog(stored_log));
