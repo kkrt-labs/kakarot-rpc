@@ -155,7 +155,80 @@ pub fn to_starknet_transaction(
 mod tests {
     use super::*;
     use alloy_rlp::Decodable;
-    use reth_primitives::hex;
+    use reth_primitives::{hex, transaction::TxEip2930, Bytes, Signature, TxKind, U256};
+
+    #[test]
+    fn test_to_starknet_transaction() {
+        // Define a sample signed transaction.
+        let transaction = TransactionSigned::from_transaction_and_signature(Transaction::Eip2930(TxEip2930 { chain_id: 1802203764, nonce: 33, gas_price:  0, gas_limit: 302606, to: TxKind::Create, value: U256::ZERO, access_list: Default::default(), input: Bytes::from_str("0x608060405260405161040a38038061040a83398101604081905261002291610268565b61002c8282610033565b5050610352565b61003c82610092565b6040516001600160a01b038316907fbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b90600090a280511561008657610081828261010e565b505050565b61008e610185565b5050565b806001600160a01b03163b6000036100cd57604051634c9c8ce360e01b81526001600160a01b03821660048201526024015b60405180910390fd5b7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc80546001600160a01b0319166001600160a01b0392909216919091179055565b6060600080846001600160a01b03168460405161012b9190610336565b600060405180830381855af49150503d8060008114610166576040519150601f19603f3d011682016040523d82523d6000602084013e61016b565b606091505b50909250905061017c8583836101a6565b95945050505050565b34156101a45760405163b398979f60e01b815260040160405180910390fd5b565b6060826101bb576101b682610205565b6101fe565b81511580156101d257506001600160a01b0384163b155b156101fb57604051639996b31560e01b81526001600160a01b03851660048201526024016100c4565b50805b9392505050565b8051156102155780518082602001fd5b604051630a12f52160e11b815260040160405180910390fd5b634e487b7160e01b600052604160045260246000fd5b60005b8381101561025f578181015183820152602001610247565b50506000910152565b6000806040838503121561027b57600080fd5b82516001600160a01b038116811461029257600080fd5b60208401519092506001600160401b03808211156102af57600080fd5b818501915085601f8301126102c357600080fd5b8151818111156102d5576102d561022e565b604051601f8201601f19908116603f011681019083821181831017156102fd576102fd61022e565b8160405282815288602084870101111561031657600080fd5b610327836020830160208801610244565b80955050505050509250929050565b60008251610348818460208701610244565b9190910192915050565b60aa806103606000396000f3fe6080604052600a600c565b005b60186014601a565b6051565b565b6000604c7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc546001600160a01b031690565b905090565b3660008037600080366000845af43d6000803e808015606f573d6000f35b3d6000fdfea2646970667358221220d0232cfa81216c3e4973e570f043b57ccb69ae4a81b8bc064338713721c87a9f64736f6c6343000814003300000000000000000000000009635f643e140090a9a8dcd712ed6285858cebef000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000647a1ac61e00000000000000000000000084ea74d481ee0a5332c457a4d796187f6ba67feb00000000000000000000000000000000000000000000000000038d7ea4c68000000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000").unwrap() }), Signature { r: U256::from_str("0x6290c177b6ee7b16d87909474a792d9ac022385505161e91191c57d666b61496").unwrap(), s: U256::from_str("0x7ba95168843acb8b888de596c28033c6c66a9cb6c7621cfc996bc5851115634d").unwrap(), odd_y_parity: true });
+
+        // Invoke the function to convert the transaction to Starknet format.
+        match to_starknet_transaction(
+            &transaction,
+            1802203764,
+            Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap(),
+            0,
+        )
+        .unwrap()
+        {
+            // Handle the Starknet transaction format.
+            BroadcastedInvokeTransaction::V1(tx) => {
+                // Transaction signature assertion.
+                assert_eq!(
+                    tx.signature,
+                    vec![
+                        FieldElement::from(255389455834799815707633470637690197142_u128),
+                        FieldElement::from(131015958324370192097986834655742602650_u128),
+                        FieldElement::from(263740705169547910390939684488449712973_u128),
+                        FieldElement::from(164374192806466935713473791294001132486_u128),
+                        FieldElement::ONE
+                    ]
+                );
+
+                // Transaction nonce assertion.
+                assert_eq!(tx.nonce, FieldElement::from(33_u128));
+
+                // Assertion for transaction properties.
+                assert!(!tx.is_query);
+                assert_eq!(tx.max_fee, FieldElement::ZERO);
+
+                // Assert the length of calldata.
+                assert_eq!(tx.calldata.len(), transaction.transaction.length() + 6);
+
+                // Assert the first 6 elements of calldata.
+                assert_eq!(
+                    tx.calldata[0..6],
+                    vec![
+                        FieldElement::ONE,
+                        *KAKAROT_ADDRESS,
+                        *ETH_SEND_TRANSACTION,
+                        FieldElement::ZERO,
+                        FieldElement::from(transaction.transaction.length()),
+                        FieldElement::from(transaction.transaction.length()),
+                    ]
+                );
+
+                // Assert the sender address.
+                assert_eq!(
+                    tx.sender_address,
+                    get_contract_address(
+                        FieldElement::from(Felt252Wrapper::from(
+                            Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap()
+                        )),
+                        *UNINITIALIZED_ACCOUNT_CLASS_HASH,
+                        &[
+                            *KAKAROT_ADDRESS,
+                            FieldElement::from(Felt252Wrapper::from(
+                                Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap()
+                            )),
+                        ],
+                        FieldElement::ZERO,
+                    )
+                )
+            }
+            _ => panic!("Invalid Starknet broadcasted transaction"),
+        }
+    }
 
     #[test]
     #[should_panic(expected = "calldata exceeded limit of 22500: 30032")]
