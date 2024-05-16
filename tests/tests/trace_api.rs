@@ -10,8 +10,9 @@ use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_primitives::{Address, B256, U256};
-use reth_rpc_types::trace::geth::TraceResult;
+use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
 use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
+use reth_rpc_types::BlockNumberOrTag;
 use rstest::*;
 use serde_json::{json, Value};
 use starknet::core::types::MaybePendingBlockWithTxHashes;
@@ -142,22 +143,10 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     drop(server_handle);
 }
 
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
-    // Setup the Kakarot RPC server.
-    let katana = plain_opcodes.0;
-    let plain_opcodes = plain_opcodes.1;
-    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| ())).await;
-
-    let (server_addr, server_handle) =
-        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
-
-    // Send the trace_block RPC request.
+async fn trace_block_by_number(port: u16) -> Vec<TraceResult> {
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
+        .post(format!("http://localhost:{}", port))
         .header("Content-Type", "application/json")
         .body(
             RawRpcParamsBuilder::new("debug_traceBlockByNumber")
@@ -176,12 +165,27 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
         .expect("Failed to call Debug RPC");
     let response = res.text().await.expect("Failed to get response body");
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let traces: Option<Vec<TraceResult>> =
-        serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
 
-    assert!(traces.is_some());
+    serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result")
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Setup the Kakarot RPC server.
+    let katana = plain_opcodes.0;
+    let plain_opcodes = plain_opcodes.1;
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| ())).await;
+
+    let (server_addr, server_handle) =
+        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+    // Send the trace_block RPC request.
+    let traces = trace_block_by_number(server_addr.port()).await;
+
     // We expect 1 trace per transaction given the formatting of the debug_traceBlockByNumber response.
-    assert!(traces.unwrap().len() == TRACING_TRANSACTIONS_COUNT);
+    assert!(traces.len() == TRACING_TRANSACTIONS_COUNT);
     drop(server_handle);
 }
 
@@ -259,5 +263,66 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
     assert!(traces.is_some());
     // We expect 2 traces per transaction: CALL and CALL.
     assert!(traces.unwrap().len() == 2 * TRACING_TRANSACTIONS_COUNT);
+    drop(server_handle);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Setup the Kakarot RPC server.
+    let katana = plain_opcodes.0;
+    let plain_opcodes = plain_opcodes.1;
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| ())).await;
+
+    let (server_addr, server_handle) =
+        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+    // Get the block in order to trace a transaction.
+    let block = katana
+        .eth_provider()
+        .block_by_number(BlockNumberOrTag::Number(TRACING_BLOCK_NUMBER), false)
+        .await
+        .expect("Failed to get block")
+        .unwrap();
+    let index = TRACING_TRANSACTIONS_COUNT - 2;
+    let tx_hash = block.transactions.as_hashes().unwrap().get(index).unwrap();
+
+    // Send the trace_block RPC request.
+    let reqwest_client = reqwest::Client::new();
+    let res = reqwest_client
+        .post(format!("http://localhost:{}", server_addr.port()))
+        .header("Content-Type", "application/json")
+        .body(
+            RawRpcParamsBuilder::new("debug_traceTransaction")
+                .add_param(format!("0x{:016x}", tx_hash))
+                .add_param(json!({
+                    "tracer": "callTracer",
+                    "tracerConfig": {
+                        "onlyTopCall": false
+                    },
+                    "timeout": "300s"
+                }))
+                .build(),
+        )
+        .send()
+        .await
+        .expect("Failed to call Debug RPC");
+    let response = res.text().await.expect("Failed to get response body");
+    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
+    let trace: GethTrace = serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
+
+    // Get the traces for the block
+    let traces = trace_block_by_number(server_addr.port()).await;
+    let expected_trace =
+        if let reth_rpc_types::trace::geth::TraceResult::Success { result, .. } = traces.get(index).cloned().unwrap() {
+            result
+        } else {
+            panic!("Failed to get expected trace")
+        };
+
+    // Compare traces
+    assert_eq!(expected_trace, trace);
+
     drop(server_handle);
 }
