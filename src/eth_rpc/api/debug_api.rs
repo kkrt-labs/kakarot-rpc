@@ -2,7 +2,7 @@ use jsonrpsee::core::RpcResult as Result;
 use jsonrpsee::proc_macros::rpc;
 use reth_primitives::{Bytes, B256};
 use reth_rpc_types::{
-    trace::geth::{GethDebugTracingOptions, TraceResult},
+    trace::geth::{GethDebugTracingOptions, GethTrace, TraceResult},
     BlockId, BlockNumberOrTag,
 };
 
@@ -40,7 +40,7 @@ pub trait DebugApi {
         &self,
         block_number: BlockNumberOrTag,
         opts: Option<GethDebugTracingOptions>,
-    ) -> Result<Option<Vec<TraceResult>>>;
+    ) -> Result<Vec<TraceResult>>;
 
     /// Returns the Geth debug trace for the given block hash.
     #[method(name = "traceBlockByHash")]
@@ -48,5 +48,13 @@ pub trait DebugApi {
         &self,
         block_hash: B256,
         opts: Option<GethDebugTracingOptions>,
-    ) -> Result<Option<Vec<TraceResult>>>;
+    ) -> Result<Vec<TraceResult>>;
+
+    /// Returns the Geth debug trace for the given transaction hash.
+    #[method(name = "traceTransaction")]
+    async fn trace_transaction(
+        &self,
+        transaction_hash: B256,
+        opts: Option<GethDebugTracingOptions>,
+    ) -> Result<GethTrace>;
 }
