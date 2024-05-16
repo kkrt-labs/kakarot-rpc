@@ -44,7 +44,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
         })
     }
 
-    /// Sets the block to trace
+    /// Sets the block to trace given the transaction hash
     pub async fn with_transaction_hash(self, transaction_hash: B256) -> TracerResult<TracerBuilder<P, Pinned>> {
         let transaction =
             self.eth_provider.transaction_by_hash(transaction_hash).await?.ok_or(EthApiError::TransactionNotFound)?;

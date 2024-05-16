@@ -95,10 +95,10 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                     .first()
                     .cloned()
                     .ok_or(TransactionError::Tracing(eyre!("No trace found").into()))?;
-                if let TraceResult::Success { result, .. } = trace {
-                    return Ok(result);
-                };
-                return Err(TransactionError::Tracing(eyre!("No trace found").into()).into());
+                match trace {
+                    TraceResult::Success { result, .. } => return Ok(result),
+                    TraceResult::Error { error, .. } => return Err(TransactionError::Tracing(error.into()).into()),
+                }
             }
 
             let env = env_with_tx(self.env.clone(), tx.clone())?;
