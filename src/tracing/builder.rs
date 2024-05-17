@@ -54,8 +54,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
             return Err(EthApiError::UnknownBlock);
         }
 
-        self.with_block_id(BlockId::Number(reth_rpc_types::BlockNumberOrTag::Number(transaction.block_number.unwrap())))
-            .await
+        self.with_block_id(BlockId::Number(transaction.block_number.unwrap().into())).await
     }
 
     /// Fetches a block from the Ethereum provider given a block id

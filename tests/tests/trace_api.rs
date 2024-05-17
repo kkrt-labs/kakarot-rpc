@@ -12,7 +12,6 @@ use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_primitives::{Address, B256, U256};
 use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
 use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
-use reth_rpc_types::BlockNumberOrTag;
 use rstest::*;
 use serde_json::{json, Value};
 use starknet::core::types::MaybePendingBlockWithTxHashes;
@@ -281,7 +280,7 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
     // Get the block in order to trace a transaction.
     let block = katana
         .eth_provider()
-        .block_by_number(BlockNumberOrTag::Number(TRACING_BLOCK_NUMBER), false)
+        .block_by_number(TRACING_BLOCK_NUMBER.into(), false)
         .await
         .expect("Failed to get block")
         .unwrap();
