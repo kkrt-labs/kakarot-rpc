@@ -25,11 +25,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> TraceApiServer for TraceRpc<P>
     /// Returns the parity traces for the given block.
     async fn trace_block(&self, block_id: BlockId) -> Result<Option<Vec<LocalizedTransactionTrace>>> {
         let provider = Arc::new(&self.eth_provider);
-        let maybe_tracer = TracerBuilder::new(provider).await?.with_block_id(block_id).await?.build()?;
-        if maybe_tracer.is_none() {
-            return Ok(None);
-        }
-        let tracer = maybe_tracer.unwrap();
+        let tracer = TracerBuilder::new(provider).await?.with_block_id(block_id).await?.build()?;
+
         let traces = tracer.trace_block(TracingInspectorConfig::default_parity())?;
         Ok(traces)
     }

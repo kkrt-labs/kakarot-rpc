@@ -66,7 +66,7 @@ where
         Ok(self.eth_provider.block_by_hash(hash, full).await?)
     }
 
-    #[tracing::instrument(skip_all, ret, err, fields(number = %number, full = full))]
+    #[tracing::instrument(skip_all, err, fields(number = %number, full = full))]
     async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
         Ok(self.eth_provider.block_by_number(number, full).await?)
     }
@@ -93,13 +93,13 @@ where
         Ok(U256::ZERO)
     }
 
-    #[tracing::instrument(skip_all, ret, err, fields(hash = %_hash, index = ?_index))]
+    #[tracing::instrument(skip_all, err, fields(hash = %_hash, index = ?_index))]
     async fn uncle_by_block_hash_and_index(&self, _hash: B256, _index: Index) -> Result<Option<RichBlock>> {
         tracing::warn!("Kakarot chain does not produce uncles");
         Ok(None)
     }
 
-    #[tracing::instrument(skip_all, ret, err, fields(hash = %_number, index = ?_index))]
+    #[tracing::instrument(skip_all, err, fields(hash = %_number, index = ?_index))]
     async fn uncle_by_block_number_and_index(
         &self,
         _number: BlockNumberOrTag,
@@ -148,17 +148,17 @@ where
         Ok(self.eth_provider.transaction_count(address, block_id).await?)
     }
 
-    #[tracing::instrument(skip_all, ret, err, fields(address = %address, block_id = ?block_id))]
+    #[tracing::instrument(skip_all, err, fields(address = %address, block_id = ?block_id))]
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes> {
         Ok(self.eth_provider.get_code(address, block_id).await?)
     }
 
-    #[tracing::instrument(skip_all, ret, err, fields(filter = ?filter))]
+    #[tracing::instrument(skip_all, err, fields(filter = ?filter))]
     async fn get_logs(&self, filter: Filter) -> Result<FilterChanges> {
         Ok(self.eth_provider.get_logs(filter).await?)
     }
 
-    #[tracing::instrument(skip_all, ret, err, fields(request = ?request, block_id = ?block_id))]
+    #[tracing::instrument(skip_all, err, fields(block_id = ?block_id))]
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<Bytes> {
         Ok(self.eth_provider.call(request, block_id).await?)
     }
@@ -171,7 +171,7 @@ where
         Err(EthApiError::Unsupported("eth_createAccessList").into())
     }
 
-    #[tracing::instrument(skip_all, ret, fields(request = ?request, block_id = ?block_id))]
+    #[tracing::instrument(skip_all, ret, fields(block_id = ?block_id))]
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<U256> {
         Ok(self.eth_provider.estimate_gas(request, block_id).await?)
     }
@@ -227,7 +227,7 @@ where
         Err(EthApiError::Unsupported("eth_sendTransaction").into())
     }
 
-    #[tracing::instrument(skip_all, ret, err, fields(bytes = %bytes))]
+    #[tracing::instrument(skip_all, ret, err)]
     async fn send_raw_transaction(&self, bytes: Bytes) -> Result<B256> {
         Ok(self.eth_provider.send_raw_transaction(bytes).await?)
     }
