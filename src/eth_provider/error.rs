@@ -27,7 +27,9 @@ pub enum EthRpcErrorCode {
 impl From<EthApiError> for EthRpcErrorCode {
     fn from(error: EthApiError) -> Self {
         match error {
-            EthApiError::UnknownBlock | EthApiError::UnknownBlockNumber => EthRpcErrorCode::ResourceNotFound,
+            EthApiError::UnknownBlock | EthApiError::UnknownBlockNumber | EthApiError::TransactionNotFound => {
+                EthRpcErrorCode::ResourceNotFound
+            }
             EthApiError::InvalidBlockRange
             | EthApiError::Signature(_)
             | EthApiError::EthereumDataFormat(_)
@@ -48,6 +50,9 @@ pub enum EthApiError {
     /// When an unknown block number is encountered
     #[error("unknown block number")]
     UnknownBlockNumber,
+    /// When a transaction is not found
+    #[error("transaction not found")]
+    TransactionNotFound,
     /// When an invalid block range is provided
     #[error("invalid block range")]
     InvalidBlockRange,
