@@ -92,7 +92,7 @@ TL;DR:
 - Run Kakarot RPC in dev mode:
   - Run dev RPC: `make run-dev` (you'll need a StarknetOS instance running in another process and Kakarot contracts deployed)
 - Run with Docker Compose:
-  - `make katana-rpc-up`
+  - `make local-rpc-up`
   - To kill these processes, `make docker-down`
 - Build the docker image for the RPC:
   - `make docker-build`
