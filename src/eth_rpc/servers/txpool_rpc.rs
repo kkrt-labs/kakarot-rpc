@@ -5,7 +5,7 @@ use reth_primitives::Address;
 use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom};
 use tracing::trace;
 
-/// The RPC module for implementing the Trace api
+/// The RPC module for implementing the Txpool api
 #[derive(Debug)]
 pub struct TxpoolRpc<P: EthereumProvider> {
     eth_provider: P,
@@ -39,7 +39,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> TxPoolApiServer for TxpoolRpc<
     }
 
     /// Returns the details of all transactions currently pending for inclusion in the next
-    /// block(s).
+    /// block(s), grouped by nonce.
     ///
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_content) for more details
     /// Handler for `txpool_content`
