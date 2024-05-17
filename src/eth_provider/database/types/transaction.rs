@@ -77,6 +77,13 @@ impl StoredPendingTransaction {
     }
 }
 
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+impl<'a> StoredPendingTransaction {
+    pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        Ok(Self { tx: StoredTransaction::arbitrary_with_optional_fields(u)?.into(), retries: u64::arbitrary(u)? })
+    }
+}
+
 impl From<Transaction> for StoredPendingTransaction {
     fn from(tx: Transaction) -> Self {
         Self { tx, retries: 0 }

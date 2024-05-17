@@ -15,7 +15,10 @@ use reth_rpc_types::Log;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::eth_provider::database::types::{header::StoredHeader, transaction::StoredTransaction};
+use crate::eth_provider::database::types::{
+    header::StoredHeader,
+    transaction::{StoredPendingTransaction, StoredTransaction},
+};
 use crate::eth_provider::utils::{format_hex, into_filter};
 use crate::eth_provider::{
     constant::{HASH_HEX_STRING_LEN, U64_HEX_STRING_LEN},
@@ -155,6 +158,21 @@ impl<'a> Katana {
     #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
+    }
+
+    /// Adds pending transactions to the database.
+    pub async fn add_pending_transactions_to_database(&self, txs: Vec<Transaction>) {
+        let provider = self.eth_provider();
+        let database = provider.database();
+
+        // Add the transactions to the database.
+        for tx in txs {
+            let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
+            database
+                .update_one::<StoredPendingTransaction>(tx.into(), filter, true)
+                .await
+                .expect("Failed to update pending transaction in database");
+        }
     }
 
     /// Adds transactions to the database along with a corresponding header.

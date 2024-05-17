@@ -126,6 +126,8 @@ pub trait EthereumProvider {
         &self,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>>;
+    /// Returns the content of the pending pool.
+    async fn txpool_content(&self) -> EthProviderResult<Vec<StoredPendingTransaction>>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -618,6 +620,10 @@ where
             BlockTransactions::Full(transactions) => Ok(Some(transactions)),
             _ => Err(TransactionError::ExpectedFullTransactions.into()),
         }
+    }
+
+    async fn txpool_content(&self) -> EthProviderResult<Vec<StoredPendingTransaction>> {
+        Ok(self.database.get_and_map_to::<_, StoredPendingTransaction>(None, None).await?)
     }
 }
 
