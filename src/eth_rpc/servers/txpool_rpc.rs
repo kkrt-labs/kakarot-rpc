@@ -15,15 +15,6 @@ impl<P: EthereumProvider> TxpoolRpc<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
-
-    async fn content(&self) -> Result<TxpoolContent> {
-        Ok(self.eth_provider.txpool_content().await.map(|txs| {
-            txs.into_iter().fold(TxpoolContent::default(), |mut content, pending| {
-                content.pending.entry(pending.tx.from).or_default().insert(pending.tx.nonce.to_string(), pending.tx);
-                content
-            })
-        })?)
-    }
 }
 
 #[async_trait]
@@ -35,7 +26,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> TxPoolApiServer for TxpoolRpc<
     /// Handler for `txpool_contentFrom`
     async fn txpool_content_from(&self, from: Address) -> Result<TxpoolContentFrom> {
         trace!(target: "rpc::eth", ?from, "Serving txpool_contentFrom");
-        Ok(self.content().await?.remove_from(&from))
+        Ok(self.eth_provider.txpool_content().await?.remove_from(&from))
     }
 
     /// Returns the details of all transactions currently pending for inclusion in the next
@@ -45,6 +36,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> TxPoolApiServer for TxpoolRpc<
     /// Handler for `txpool_content`
     async fn txpool_content(&self) -> Result<TxpoolContent> {
         trace!(target: "rpc::eth", "Serving txpool_content");
-        Ok(self.content().await?)
+        Ok(self.eth_provider.txpool_content().await?)
     }
 }
