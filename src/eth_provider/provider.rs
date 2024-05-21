@@ -10,6 +10,7 @@ use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
 use reth_rpc_types::serde_helpers::JsonStorageKey;
+use reth_rpc_types::txpool::TxpoolContent;
 use reth_rpc_types::{
     Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
     TransactionReceipt, TransactionRequest, ValueOrArray,
@@ -126,6 +127,8 @@ pub trait EthereumProvider {
         &self,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>>;
+    /// Returns the content of the pending pool.
+    async fn txpool_content(&self) -> EthProviderResult<TxpoolContent>;
 }
 
 /// Structure that implements the EthereumProvider trait.
@@ -618,6 +621,16 @@ where
             BlockTransactions::Full(transactions) => Ok(Some(transactions)),
             _ => Err(TransactionError::ExpectedFullTransactions.into()),
         }
+    }
+
+    async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {
+        let transactions: Vec<StoredPendingTransaction> =
+            self.database.get_and_map_to::<_, StoredPendingTransaction>(None, None).await?;
+
+        Ok(transactions.into_iter().fold(TxpoolContent::default(), |mut content, pending| {
+            content.pending.entry(pending.tx.from).or_default().insert(pending.tx.nonce.to_string(), pending.tx);
+            content
+        }))
     }
 }
 
