@@ -18,7 +18,7 @@ use reth_primitives::{
 };
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::serde_helpers::JsonStorageKey;
-use reth_rpc_types::{Filter, FilterChanges, RpcBlockHash, Topic, TransactionRequest};
+use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest};
 use rstest::*;
 use starknet::core::types::BlockTag;
 use starknet_crypto::FieldElement;
@@ -284,12 +284,16 @@ async fn test_get_logs_block_range(#[future] katana: Katana, _setup: ()) {
     assert!(!logs.is_empty());
 }
 
-async fn filter_logs_and_assert(filter: Filter, expected_count: usize, provider: Arc<dyn EthereumProvider>) {
+async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider>) -> Vec<Log> {
     let logs = provider.get_logs(filter).await.expect("Failed to get logs");
-    let logs = match logs {
+    match logs {
         FilterChanges::Logs(logs) => logs,
         _ => panic!("Expected logs"),
-    };
+    }
+}
+
+async fn filter_logs_and_assert(filter: Filter, expected_count: usize, provider: Arc<dyn EthereumProvider>) {
+    let logs = filter_logs(filter, provider).await;
     assert_eq!(logs.len(), expected_count);
 }
 
@@ -348,6 +352,22 @@ async fn test_get_logs_address(#[future] katana: Katana, _setup: ()) {
     // Filter on the combination of both addresses
     let filter = Filter { address: vec![address_one, address_two].into(), ..Default::default() };
     filter_logs_and_assert(filter, 2, provider.clone()).await;
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_block_hash(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let provider = katana.eth_provider();
+    let logs = katana.logs_with_min_topics(0);
+    let block_hash = logs[0].block_hash.unwrap();
+
+    // Filter on block hash
+    let filter = Filter { block_option: FilterBlockOption::AtBlockHash(block_hash), ..Default::default() };
+    let filtered_logs = filter_logs(filter, provider.clone()).await;
+
+    assert!(filtered_logs.iter().all(|log| log.block_hash.unwrap() == block_hash));
 }
 
 #[rstest]
