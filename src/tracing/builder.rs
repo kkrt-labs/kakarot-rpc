@@ -22,6 +22,11 @@ pub struct TracerBuilder<P: EthereumProvider + Send + Sync, Status = Floating> {
     _phantom: std::marker::PhantomData<Status>,
 }
 
+/// Block gas limit for tracing. Set to an arbitrarily high value to never run out.
+/// Block gas limit is only partially enforced in Cairo EVM layer: <https://github.com/kkrt-labs/kakarot/blob/98b26fda32c36f09880ed0c7f44dba7f4d669b61/src/kakarot/accounts/library.cairo#L245>
+/// Remove when block gas limit is enforced consistently (i.e. when we check that a transaction's gas limit is lower than the block gas limit as well as the current block's cumulative gas)
+const TRACING_BLOCK_GAS_LIMIT: u64 = 1_000_000_000;
+
 impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
     pub async fn new(eth_provider: P) -> TracerResult<Self> {
         let mut cfg = CfgEnv::default();
@@ -103,12 +108,11 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
     fn init_env_with_block_env(&self) -> Env {
         let mut env = self.env.clone();
 
-        let Header { number, timestamp, gas_limit, miner, base_fee_per_gas, difficulty, .. } =
-            self.block.header.clone();
+        let Header { number, timestamp, miner, base_fee_per_gas, difficulty, .. } = self.block.header.clone();
         let block_env = BlockEnv {
             number: U256::from(number.unwrap_or_default()),
             timestamp: U256::from(timestamp),
-            gas_limit: U256::from(gas_limit),
+            gas_limit: U256::from(TRACING_BLOCK_GAS_LIMIT),
             coinbase: miner,
             basefee: U256::from(base_fee_per_gas.unwrap_or_default()),
             prevrandao: Some(B256::from_slice(&difficulty.to_be_bytes::<32>()[..])),
