@@ -22,9 +22,11 @@ pub struct TracerBuilder<P: EthereumProvider + Send + Sync, Status = Floating> {
     _phantom: std::marker::PhantomData<Status>,
 }
 
-/// Block gas limit for tracing. This is a very high value
-/// used because block gas limit isn't enforced in the
-/// Kakarot execution engine.
+/// Block gas limit for tracing. We set it to a huge value
+/// since block gas limit isn't enforced in the execution
+/// layer and we want to avoid running out of gas while tracing.
+/// This should be removed once we have a proper block gas limit
+/// in Kakarot.
 const TRACING_BLOCK_GAS_LIMIT: u64 = 1_000_000_000;
 
 impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
