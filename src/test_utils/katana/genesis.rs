@@ -3,11 +3,9 @@ use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
 
-use ethers::signers::LocalWallet;
-use ethers::signers::Signer;
-use ethers::types::U256;
+use crate::eth_provider::utils::split_u256;
+use alloy_signer_wallet::LocalWallet;
 use eyre::{eyre, OptionExt, Result};
-use katana_primitives::block::GasPrices;
 use katana_primitives::contract::{StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
@@ -20,7 +18,7 @@ use katana_primitives::{
 };
 use lazy_static::lazy_static;
 use rayon::prelude::*;
-use reth_primitives::B256;
+use reth_primitives::{B256, U256};
 use serde::Serialize;
 use serde_json::Value;
 use serde_with::serde_as;
@@ -101,7 +99,7 @@ impl<T> KatanaGenesisBuilder<T> {
 
     pub fn with_dev_allocation(mut self, amount: u16) -> Self {
         let dev_allocations = DevAllocationsGenerator::new(amount)
-            .with_balance(DEFAULT_PREFUNDED_ACCOUNT_BALANCE)
+            .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
             .with_seed(parse_seed("0"))
             .generate()
             .into_iter()
@@ -119,7 +117,6 @@ impl<T> KatanaGenesisBuilder<T> {
                 )
             });
         self.accounts.extend(dev_allocations);
-
         self
     }
 
@@ -150,27 +147,21 @@ impl KatanaGenesisBuilder<Uninitialized> {
             .map(|entry| {
                 let path = entry.unwrap().path().to_path_buf();
                 let artifact = fs::read_to_string(&path).expect("Failed to read artifact");
-                (
-                    path,
-                    GenesisClassJson {
-                        class: PathOrFullArtifact::Artifact(
-                            serde_json::from_str(&artifact).expect("Failed to parse artifact"),
-                        ),
-                        class_hash: None,
-                    },
-                )
+                let artifact = serde_json::from_str(&artifact).expect("Failed to parse artifact");
+                let class_hash = compute_class_hash(&artifact)
+                    .inspect_err(|e| eprint!("Failed to compute class hash: {:?}", e))
+                    .ok();
+                (path, GenesisClassJson { class: PathOrFullArtifact::Artifact(artifact), class_hash })
             })
             .collect::<Vec<_>>();
 
         self.class_hashes = classes
-            .par_iter()
-            .filter_map(|(path, class)| {
-                let artifact = match &class.class {
-                    PathOrFullArtifact::Artifact(artifact) => artifact,
-                    PathOrFullArtifact::Path(_) => unreachable!("Expected artifact"),
-                };
-                let class_hash = compute_class_hash(artifact).ok()?;
-                Some((path.file_stem().unwrap().to_str().unwrap().to_string(), class_hash))
+            .iter()
+            .map(|(path, class)| {
+                (
+                    path.file_stem().unwrap().to_str().unwrap().to_string(),
+                    class.class_hash.expect("all class hashes should be computed"),
+                )
             })
             .collect();
         self.classes = classes.into_iter().map(|(_, class)| class).collect();
@@ -290,12 +281,9 @@ impl KatanaGenesisBuilder<Initialized> {
         let eoa = self.contracts.get_mut(&starknet_address).ok_or_eyre("Missing EOA contract")?;
 
         let key = get_storage_var_address("ERC20_balances", &[*starknet_address])?;
-        let low = amount & U256::from(u128::MAX);
-        let low: u128 = low.try_into().unwrap(); // safe to unwrap
-        let high = amount >> U256::from(128);
-        let high: u128 = high.try_into().unwrap(); // safe to unwrap
+        let amount_split = split_u256::<u128>(amount);
 
-        let storage = [(key, low.into()), (key + 1u8.into(), high.into())].into_iter();
+        let storage = [(key, amount_split[0].into()), (key + 1u8.into(), amount_split[1].into())].into_iter();
         self.fee_token_storage.extend(storage);
 
         eoa.balance = Some(amount);
@@ -311,7 +299,7 @@ impl KatanaGenesisBuilder<Initialized> {
             number: 0,
             timestamp: 0,
             sequencer_address: self.compute_starknet_address(self.coinbase)?,
-            gas_prices: GasPrices::default(),
+            gas_prices: Default::default(),
             classes: self.classes,
             fee_token: FeeTokenConfigJson {
                 name: "Ether".to_string(),
@@ -349,9 +337,7 @@ impl KatanaGenesisBuilder<Initialized> {
     }
 
     fn evm_address(&self, pk: B256) -> Result<FieldElement> {
-        let wallet = LocalWallet::from_bytes(pk.as_slice())?;
-        let evm_address = wallet.address();
-        Ok(FieldElement::from_byte_slice_be(evm_address.as_bytes())?)
+        Ok(FieldElement::from_byte_slice_be(&LocalWallet::from_bytes(&pk)?.address().into_array())?)
     }
 
     pub fn cache_load(&self, key: &str) -> Result<FieldElement> {

@@ -44,7 +44,7 @@ run-dev: load-env
 
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.6.0-alpha.6 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.7.0-alpha.0 katana
 
 katana-genesis: install-katana
 	rm -fr .katana/ && mkdir .katana

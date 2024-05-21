@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use ef_testing::evm_sequencer::account::KakarotAccount;
-use ethers::types::U256 as EthersU256;
 use katana_primitives::{
     contract::ContractAddress,
     genesis::json::{GenesisContractJson, GenesisJson},
@@ -108,7 +107,7 @@ impl HiveGenesisConfig {
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
                         class: Some(account_contract_class_hash.0.into()),
-                        balance: Some(EthersU256::from_big_endian(&info.balance.to_be_bytes::<32>())),
+                        balance: Some(info.balance),
                         nonce: None,
                         storage: Some(kakarot_account_storage.into_iter().collect()),
                     },
@@ -178,7 +177,7 @@ mod tests {
             let contract = GENESIS.contracts.get(&ContractAddress::new(starknet_address)).unwrap();
 
             // Check the balance
-            assert_eq!(contract.balance, Some(EthersU256::from_big_endian(&account.balance.to_be_bytes::<32>())));
+            assert_eq!(contract.balance, Some(account.balance));
             // Check the storage
             for (key, value) in account.storage.unwrap_or_default() {
                 let key = get_storage_var_address(ACCOUNT_STORAGE, &split_u256::<FieldElement>(key)).unwrap();

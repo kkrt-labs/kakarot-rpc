@@ -173,14 +173,12 @@ tokio-stream = { version = "0.1.15", default-features = false, optional = true }
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.6", default-features = false }
-katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.6", features = [
-  "messaging",
-] }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.6.0-alpha.6", default-features = false, features = [
-  "serde",
-] }
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", default-features = false }
+katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", features = ["messaging"] }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", default-features = false, features = ["serde"] }
 arbitrary = { version = "1", features = ["derive"] }
+
+alloy-signer-wallet = { version = "0.1.0", default-features = false }
 
 [patch."https://github.com/starkware-libs/blockifier"]
 blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979" }
@@ -191,6 +189,17 @@ cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381"
 # we patch starknet_api because the version v0.7.0-rc.0 was removed from crates.io
 # we need v0.7.0-rc.0 to be compatible with dojo.
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api.git", tag = "v0.7.0-rc.0" }
+
+alloy-primitives = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-json-abi = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
+alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
+alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
+alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500"}
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
+alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
+alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
+alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
 
 [dev-dependencies]
 rstest = { version = "0.19.0", default-features = false }

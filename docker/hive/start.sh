@@ -20,9 +20,9 @@ until
 	curl --silent --request POST \
 		--header "Content-Type: application/json" \
 		--data '{
-           "jsonrpc": "2.0", 
-           "method": "starknet_blockNumber", 
-           "params": [], 
+           "jsonrpc": "2.0",
+           "method": "starknet_blockNumber",
+           "params": [],
            "id": 1
        }' \
 		"${STARKNET_NETWORK}" # Use the provided network address
