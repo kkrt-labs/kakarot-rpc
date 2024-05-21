@@ -393,7 +393,9 @@ where
         let current_block = self.block_number().await?.try_into().map_err(|_| EthApiError::UnknownBlockNumber)?;
         let block_hash = filter.get_block_hash();
 
+        // Create the database filter.
         let mut database_filter = if block_hash.is_some() {
+            // We filter by block hash on matching the exact block hash.
             doc! {
                 "log.blockHash": format_hex(block_hash.unwrap(), HASH_HEX_STRING_LEN)
             }
@@ -406,7 +408,7 @@ where
                 (from, to) if to > current_block => (from, current_block),
                 other => other,
             };
-            // Create the database filter. We filter by block number using $gte and $lte.
+            // We filter by block number using $gte and $lte.
             doc! {
                 "log.blockNumber": {"$gte": format_hex(from, BLOCK_NUMBER_HEX_STRING_LEN), "$lte": format_hex(to, BLOCK_NUMBER_HEX_STRING_LEN)},
             }
