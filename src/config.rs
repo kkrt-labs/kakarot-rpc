@@ -26,18 +26,18 @@ pub enum Network {
 impl From<String> for Network {
     fn from(s: String) -> Self {
         match s.to_lowercase().as_str() {
-            "katana" => Network::Katana,
-            "madara" => Network::Madara,
-            "sharingan" => Network::Sharingan,
-            "mainnet" => Network::MainnetGateway,
-            "goerli1" => Network::Goerli1Gateway,
-            "goerli2" => Network::Goerli2Gateway,
-            "testnet" => Network::Goerli1Gateway,
+            "katana" => Self::Katana,
+            "madara" => Self::Madara,
+            "sharingan" => Self::Sharingan,
+            "mainnet" => Self::MainnetGateway,
+            "goerli1" => Self::Goerli1Gateway,
+            "goerli2" => Self::Goerli2Gateway,
+            "testnet" => Self::Goerli1Gateway,
             network_url => {
                 if let Ok(url) = Url::parse(network_url) {
-                    Network::JsonRpcProvider(url)
+                    Self::JsonRpcProvider(url)
                 } else {
-                    Network::Katana
+                    Self::Katana
                 }
             }
         }

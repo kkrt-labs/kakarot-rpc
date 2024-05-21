@@ -28,14 +28,14 @@ impl From<EthApiError> for EthRpcErrorCode {
     fn from(error: EthApiError) -> Self {
         match error {
             EthApiError::UnknownBlock | EthApiError::UnknownBlockNumber | EthApiError::TransactionNotFound => {
-                EthRpcErrorCode::ResourceNotFound
+                Self::ResourceNotFound
             }
             EthApiError::InvalidBlockRange
             | EthApiError::Signature(_)
             | EthApiError::EthereumDataFormat(_)
-            | EthApiError::CalldataExceededLimit(_, _) => EthRpcErrorCode::InvalidParams,
+            | EthApiError::CalldataExceededLimit(_, _) => Self::InvalidParams,
             EthApiError::Transaction(err) => err.into(),
-            EthApiError::Unsupported(_) => EthRpcErrorCode::InternalError,
+            EthApiError::Unsupported(_) => Self::InternalError,
             EthApiError::Kakarot(err) => err.into(),
         }
     }
@@ -119,15 +119,15 @@ pub enum KakarotError {
 
 impl From<KakarotError> for EthApiError {
     fn from(value: KakarotError) -> Self {
-        EthApiError::Kakarot(value)
+        Self::Kakarot(value)
     }
 }
 
 impl From<KakarotError> for EthRpcErrorCode {
     fn from(value: KakarotError) -> Self {
         match value {
-            KakarotError::ExecutionError(_) => EthRpcErrorCode::ExecutionError,
-            _ => EthRpcErrorCode::InternalError,
+            KakarotError::ExecutionError(_) => Self::ExecutionError,
+            _ => Self::InternalError,
         }
     }
 }
@@ -173,7 +173,7 @@ pub enum EvmError {
 
 impl From<EvmError> for KakarotError {
     fn from(value: EvmError) -> Self {
-        KakarotError::ExecutionError(value)
+        Self::ExecutionError(value)
     }
 }
 
@@ -182,33 +182,33 @@ impl From<Vec<FieldElement>> for EvmError {
         let bytes = value.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<_>>();
         let maybe_revert_reason = String::from_utf8(bytes.clone());
         if maybe_revert_reason.is_err() {
-            return EvmError::Other(format!("{}", Bytes::from(bytes)));
+            return Self::Other(format!("{}", Bytes::from(bytes)));
         }
 
         let revert_reason = maybe_revert_reason.unwrap(); // safe unwrap
         let trimmed = revert_reason.trim_start_matches("Kakarot: ").trim_start_matches("Precompile: ");
         match trimmed {
-            "eth validation failed" => EvmError::ValidationError,
-            "StateModificationError" => EvmError::StateModificationError,
-            "UnknownOpcode" => EvmError::UnknownOpcode,
-            "invalidJumpDestError" => EvmError::InvalidJumpDest,
-            "caller contract is not a Kakarot account" => EvmError::NotKakarotEoaCaller,
-            "entrypoint should only be called in view mode" => EvmError::ViewFunctionError,
-            "StackOverflow" => EvmError::StackOverflow,
-            "StackUnderflow" => EvmError::StackUnderflow,
-            "OutOfBoundsRead" => EvmError::OutOfBoundsRead,
+            "eth validation failed" => Self::ValidationError,
+            "StateModificationError" => Self::StateModificationError,
+            "UnknownOpcode" => Self::UnknownOpcode,
+            "invalidJumpDestError" => Self::InvalidJumpDest,
+            "caller contract is not a Kakarot account" => Self::NotKakarotEoaCaller,
+            "entrypoint should only be called in view mode" => Self::ViewFunctionError,
+            "StackOverflow" => Self::StackOverflow,
+            "StackUnderflow" => Self::StackUnderflow,
+            "OutOfBoundsRead" => Self::OutOfBoundsRead,
             s if s.contains("UnknownPrecompile") => {
-                EvmError::UnknownPrecompile(s.trim_start_matches("UnknownPrecompile ").to_string())
+                Self::UnknownPrecompile(s.trim_start_matches("UnknownPrecompile ").to_string())
             }
             s if s.contains("NotImplementedPrecompile") => {
-                EvmError::NotImplementedPrecompile(s.trim_start_matches("NotImplementedPrecompile ").to_string())
+                Self::NotImplementedPrecompile(s.trim_start_matches("NotImplementedPrecompile ").to_string())
             }
-            "wrong input_length" => EvmError::PrecompileInputError,
-            "flag error" => EvmError::PrecompileFlagError,
-            "transfer amount exceeds balance" => EvmError::BalanceError,
-            "AddressCollision" => EvmError::AddressCollision,
-            s if s.contains("outOfGas") => EvmError::OutOfGas,
-            _ => EvmError::Other(format!("{}", Bytes::from(bytes))),
+            "wrong input_length" => Self::PrecompileInputError,
+            "flag error" => Self::PrecompileFlagError,
+            "transfer amount exceeds balance" => Self::BalanceError,
+            "AddressCollision" => Self::AddressCollision,
+            s if s.contains("outOfGas") => Self::OutOfGas,
+            _ => Self::Other(format!("{}", Bytes::from(bytes))),
         }
     }
 }
@@ -234,9 +234,9 @@ pub enum TransactionError {
 impl From<TransactionError> for EthRpcErrorCode {
     fn from(error: TransactionError) -> Self {
         match error {
-            TransactionError::InvalidChainId => EthRpcErrorCode::InvalidInput,
-            TransactionError::GasOverflow => EthRpcErrorCode::TransactionRejected,
-            TransactionError::ExpectedFullTransactions | TransactionError::Tracing(_) => EthRpcErrorCode::InternalError,
+            TransactionError::InvalidChainId => Self::InvalidInput,
+            TransactionError::GasOverflow => Self::TransactionRejected,
+            TransactionError::ExpectedFullTransactions | TransactionError::Tracing(_) => Self::InternalError,
         }
     }
 }

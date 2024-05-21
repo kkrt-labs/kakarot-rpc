@@ -82,7 +82,7 @@ impl StoredData {
     /// Extracts the stored header if it exists, otherwise returns None.
     pub fn extract_stored_header(&self) -> Option<&StoredHeader> {
         match self {
-            StoredData::StoredHeader(header) => Some(header),
+            Self::StoredHeader(header) => Some(header),
             _ => None,
         }
     }
@@ -90,7 +90,7 @@ impl StoredData {
     /// Extracts the stored transaction if it exists, otherwise returns None.
     pub fn extract_stored_transaction(&self) -> Option<&StoredTransaction> {
         match self {
-            StoredData::StoredTransaction(transaction) => Some(transaction),
+            Self::StoredTransaction(transaction) => Some(transaction),
             _ => None,
         }
     }
@@ -98,7 +98,7 @@ impl StoredData {
     /// Extracts the stored transaction receipt if it exists, otherwise returns None.
     pub fn extract_stored_transaction_receipt(&self) -> Option<&StoredTransactionReceipt> {
         match self {
-            StoredData::StoredTransactionReceipt(receipt) => Some(receipt),
+            Self::StoredTransactionReceipt(receipt) => Some(receipt),
             _ => None,
         }
     }
@@ -106,7 +106,7 @@ impl StoredData {
     /// Extracts the stored log if it exists, otherwise returns None.
     pub fn extract_stored_log(&self) -> Option<&StoredLog> {
         match self {
-            StoredData::StoredLog(log) => Some(log),
+            Self::StoredLog(log) => Some(log),
             _ => None,
         }
     }
@@ -118,10 +118,10 @@ impl Serialize for StoredData {
         S: Serializer,
     {
         match self {
-            StoredData::StoredHeader(header) => header.serialize(serializer),
-            StoredData::StoredTransaction(transaction) => transaction.serialize(serializer),
-            StoredData::StoredTransactionReceipt(receipt) => receipt.serialize(serializer),
-            StoredData::StoredLog(log) => log.serialize(serializer),
+            Self::StoredHeader(header) => header.serialize(serializer),
+            Self::StoredTransaction(transaction) => transaction.serialize(serializer),
+            Self::StoredTransactionReceipt(receipt) => receipt.serialize(serializer),
+            Self::StoredLog(log) => log.serialize(serializer),
         }
     }
 }

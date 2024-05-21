@@ -116,8 +116,8 @@ pub struct Metrics<S> {
 
 impl<S> Metrics<S> {
     /// Create a new metrics middleware.
-    pub fn new(service: S, metrics: RpcMetrics, transport_label: &'static str) -> Metrics<S> {
-        Metrics { service, metrics, transport_label }
+    pub fn new(service: S, metrics: RpcMetrics, transport_label: &'static str) -> Self {
+        Self { service, metrics, transport_label }
     }
 }
 
