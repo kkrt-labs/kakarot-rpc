@@ -391,21 +391,27 @@ where
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
         let current_block = self.block_number().await?.try_into().map_err(|_| EthApiError::UnknownBlockNumber)?;
-        let from = filter.get_from_block().unwrap_or_default();
-        let to = filter.get_to_block().unwrap_or(current_block);
+        let block_hash = filter.get_block_hash();
 
-        let (from, to) = match (from, to) {
-            (from, to) if from > current_block || to < from => return Ok(FilterChanges::Empty),
-            (from, to) if to > current_block => (from, current_block),
-            other => other,
-        };
+        // Create the database filter.
+        let mut database_filter = if block_hash.is_some() {
+            // We filter by block hash on matching the exact block hash.
+            doc! {
+                "log.blockHash": format_hex(block_hash.unwrap(), HASH_HEX_STRING_LEN)
+            }
+        } else {
+            let from = filter.get_from_block().unwrap_or_default();
+            let to = filter.get_to_block().unwrap_or(current_block);
 
-        // Create the database filter. We filter by block number using $gte and $lte,
-        // and by topics using $expr and $eq. The topics query will:
-        // 1. Slice the topics array to the same length as the filter topics
-        // 2. Match on values for which the sliced topics equal the filter topics
-        let mut database_filter = doc! {
-            "log.blockNumber": {"$gte": format_hex(from, BLOCK_NUMBER_HEX_STRING_LEN), "$lte": format_hex(to, BLOCK_NUMBER_HEX_STRING_LEN)},
+            let (from, to) = match (from, to) {
+                (from, to) if from > current_block || to < from => return Ok(FilterChanges::Empty),
+                (from, to) if to > current_block => (from, current_block),
+                other => other,
+            };
+            // We filter by block number using $gte and $lte.
+            doc! {
+                "log.blockNumber": {"$gte": format_hex(from, BLOCK_NUMBER_HEX_STRING_LEN), "$lte": format_hex(to, BLOCK_NUMBER_HEX_STRING_LEN)},
+            }
         };
 
         // TODO: this will work for now but isn't very efficient. Would need to:
