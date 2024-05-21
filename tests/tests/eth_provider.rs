@@ -1,7 +1,8 @@
 #![cfg(feature = "testing")]
 use std::str::FromStr;
+use std::sync::Arc;
 
-use kakarot_rpc::eth_provider::constant::{HASH_PADDING, MAX_RETRIES, STARKNET_MODULUS};
+use kakarot_rpc::eth_provider::constant::{HASH_HEX_STRING_LEN, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
 use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::eth_provider::utils::into_filter;
@@ -11,12 +12,13 @@ use kakarot_rpc::test_utils::evm_contract::EvmContract;
 use kakarot_rpc::test_utils::fixtures::{contract_empty, counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
-use reth_primitives::serde_helper::{JsonStorageKey, U64HexOrNumber};
 use reth_primitives::transaction::Signature;
-use reth_primitives::{sign_message, Transaction, TransactionKind, TxEip1559};
-use reth_primitives::{Address, BlockNumberOrTag, Bytes, TransactionSigned, B256, U256, U64};
+use reth_primitives::{
+    sign_message, Address, BlockNumberOrTag, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256, U64,
+};
 use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::{RpcBlockHash, TransactionRequest};
+use reth_rpc_types::serde_helpers::JsonStorageKey;
+use reth_rpc_types::{Filter, FilterChanges, RpcBlockHash, Topic, TransactionRequest};
 use rstest::*;
 use starknet::core::types::BlockTag;
 use starknet_crypto::FieldElement;
@@ -267,6 +269,90 @@ async fn test_get_code(#[future] counter: (Katana, KakarotEvmContract), _setup: 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_block_range(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let provider = katana.eth_provider();
+
+    // When
+    let logs = provider.get_logs(Filter::default()).await.expect("Failed to get logs");
+
+    // Then
+    let logs = match logs {
+        FilterChanges::Logs(logs) => logs,
+        _ => panic!("Expected logs"),
+    };
+    assert!(!logs.is_empty());
+}
+
+async fn filter_logs_and_assert(filter: Filter, expected_count: usize, provider: Arc<dyn EthereumProvider>) {
+    let logs = provider.get_logs(filter).await.expect("Failed to get logs");
+    let logs = match logs {
+        FilterChanges::Logs(logs) => logs,
+        _ => panic!("Expected logs"),
+    };
+    assert_eq!(logs.len(), expected_count);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_topics(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let provider = katana.eth_provider();
+    let logs = katana.logs_with_min_topics(3);
+    let topic_one = logs[0].topics()[0];
+    let topic_two = logs[1].topics()[1];
+    let topic_three = logs[0].topics()[2];
+    let topic_four = logs[1].topics()[2];
+
+    // Filter on the first topic
+    let filter = Filter {
+        topics: [topic_one.into(), Topic::default(), Topic::default(), Topic::default()],
+        ..Default::default()
+    };
+    filter_logs_and_assert(filter, 1, provider.clone()).await;
+
+    // Filter on the second topic
+    let filter = Filter {
+        topics: [Topic::default(), topic_two.into(), Topic::default(), Topic::default()],
+        ..Default::default()
+    };
+    filter_logs_and_assert(filter, 1, provider.clone()).await;
+
+    // Filter on the combination of topics three and four (should return 2 logs)
+    let filter = Filter {
+        topics: [Topic::default(), Topic::default(), vec![topic_three, topic_four].into(), Topic::default()],
+        ..Default::default()
+    };
+    filter_logs_and_assert(filter, 2, provider.clone()).await;
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_address(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let provider = katana.eth_provider();
+    let logs = katana.logs_with_min_topics(3);
+    let address_one = logs[0].address();
+    let address_two = logs[1].address();
+
+    // Filter on the first address
+    let filter = Filter { address: address_one.into(), ..Default::default() };
+    filter_logs_and_assert(filter, 1, provider.clone()).await;
+
+    // Filter on the second address
+    let filter = Filter { address: address_two.into(), ..Default::default() };
+    filter_logs_and_assert(filter, 1, provider.clone()).await;
+
+    // Filter on the combination of both addresses
+    let filter = Filter { address: vec![address_one, address_two].into(), ..Default::default() };
+    filter_logs_and_assert(filter, 2, provider.clone()).await;
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_get_code_empty(#[future] contract_empty: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana: Katana = contract_empty.0;
@@ -311,7 +397,7 @@ async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _set
 
     let request = TransactionRequest {
         from: Some(eoa.evm_address().unwrap()),
-        to: Some(counter_address.try_into().unwrap()),
+        to: Some(TxKind::Call(counter_address.try_into().unwrap())),
         input: TransactionInput { input: None, data: Some(Bytes::from_str("0x371303c0").unwrap()) }, // selector of "function inc()"
         chain_id: Some(chain_id.to::<u64>()),
         ..Default::default()
@@ -341,10 +427,8 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let nbr_blocks = katana.count_block();
 
     // Call the fee_history method of the Ethereum provider.
-    let fee_history = eth_provider
-        .fee_history(U64HexOrNumber::from(block_count), BlockNumberOrTag::Number(newest_block), None)
-        .await
-        .unwrap();
+    let fee_history =
+        eth_provider.fee_history(U64::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
 
     // Verify that the length of the base_fee_per_gas list in the fee history is equal
     // to the total number of blocks plus one.
@@ -500,7 +584,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         chain_id: 1,
         nonce: 0,
         gas_limit: 21000,
-        to: TransactionKind::Call(Address::random()),
+        to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
         max_fee_per_gas: 875000000,
@@ -544,7 +628,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
         chain_id: 1,
         nonce: 0,
         gas_limit: 21000,
-        to: TransactionKind::Call(Address::random()),
+        to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
         max_fee_per_gas: 875000000,
@@ -593,7 +677,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
         chain_id: 1,
         nonce: 0,
         gas_limit: 21000,
-        to: TransactionKind::Call(Address::random()),
+        to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
         max_fee_per_gas: 875000000,
@@ -624,7 +708,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     stored_transaction.tx.block_number = Some(1111);
 
     // Insert the transaction into the final transaction collection
-    let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_PADDING);
+    let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_HEX_STRING_LEN);
     eth_provider
         .database()
         .update_one::<StoredTransaction>(stored_transaction.tx.into(), filter, true)
@@ -648,20 +732,20 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
         .database()
         .update_one::<StoredPendingTransaction>(
             transaction1.clone().into(),
-            into_filter("tx.hash", &transaction1.hash, HASH_PADDING),
+            into_filter("tx.hash", &transaction1.hash, HASH_HEX_STRING_LEN),
             true,
         )
         .await
         .expect("Failed to insert pending transaction in database");
 
-    // Insert the transaction into the pending transactions collection with MAX_RETRIES + 1 retry
+    // Insert the transaction into the pending transactions collection with TRANSACTION_MAX_RETRIES + 1 retry
     // Shouldn't be retried as it has reached the maximum number of retries
     let transaction2 = katana.eoa().mock_transaction_with_nonce(1).expect("Failed to get mock transaction");
     eth_provider
         .database()
         .update_one::<StoredPendingTransaction>(
-            StoredPendingTransaction::new(transaction2.clone(), MAX_RETRIES + 1),
-            into_filter("tx.hash", &transaction2.hash, HASH_PADDING),
+            StoredPendingTransaction::new(transaction2.clone(), TRANSACTION_MAX_RETRIES + 1),
+            into_filter("tx.hash", &transaction2.hash, HASH_HEX_STRING_LEN),
             true,
         )
         .await
@@ -674,7 +758,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
         .database()
         .update_one::<StoredPendingTransaction>(
             transaction3.clone().into(),
-            into_filter("tx.hash", &transaction3.clone().hash, HASH_PADDING),
+            into_filter("tx.hash", &transaction3.clone().hash, HASH_HEX_STRING_LEN),
             true,
         )
         .await
@@ -683,7 +767,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
         .database()
         .update_one::<StoredTransaction>(
             transaction3.clone().into(),
-            into_filter("tx.hash", &transaction3.hash, HASH_PADDING),
+            into_filter("tx.hash", &transaction3.hash, HASH_HEX_STRING_LEN),
             true,
         )
         .await

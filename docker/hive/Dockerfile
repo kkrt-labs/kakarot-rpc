@@ -8,9 +8,10 @@ FROM ghcr.io/dojoengine/dojo:v0.7.0-alpha.0 as katana
 FROM quay.io/apibara/starknet:1.4.1 as apibara
 FROM quay.io/apibara/sink-mongo:0.7.0 as indexer
 FROM debian:bookworm as apibara-build
-RUN apt-get update && apt-get install -y patchelf && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --no-install-recommends -y patchelf && rm -rf /var/lib/apt/lists/*
 
 # Apibara Starknet and Sink are built with Nix, so we need to extract the binaries from the Nix store
+# ⚠️ When modifying the tag of Apibara, make sure to change the Github CI workflow, and Indexer dockerfile as well
 # Depending on the platform, the path to the binaries will be different
 # These values need to be updated if the version of ApiBara Starknet or Sink change.
 # platform: linux/amd64:
@@ -62,7 +63,7 @@ RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
     && chmod +x foundry.sh \
     && ./foundry.sh \
     && foundryup \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install --no-install-recommends -y \
     jq \
     wget \
     docker.io \
@@ -119,7 +120,7 @@ RUN cargo build \
 
 FROM debian:bookworm-slim as base
 # Install any necessary dependencies
-RUN apt-get update && apt-get install -y tini curl jq libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install --no-install-recommends -y tini curl jq libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Environment
 #############

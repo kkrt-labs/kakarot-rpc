@@ -11,12 +11,14 @@ use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::eth_rpc::api::eth_api::EthApiServer;
 use crate::eth_rpc::api::net_api::NetApiServer;
 use crate::eth_rpc::api::trace_api::TraceApiServer;
+use crate::eth_rpc::api::txpool_api::TxPoolApiServer;
 use crate::eth_rpc::api::web3_api::Web3ApiServer;
 use crate::eth_rpc::servers::alchemy_rpc::AlchemyRpc;
 use crate::eth_rpc::servers::debug_rpc::DebugRpc;
 use crate::eth_rpc::servers::eth_rpc::KakarotEthRpc;
 use crate::eth_rpc::servers::net_rpc::NetRpc;
 use crate::eth_rpc::servers::trace_rpc::TraceRpc;
+use crate::eth_rpc::servers::txpool_rpc::TxpoolRpc;
 use crate::eth_rpc::servers::web3_rpc::Web3Rpc;
 
 /// Represents RPC modules that are supported by reth
@@ -28,6 +30,7 @@ pub enum KakarotRpcModule {
     Net,
     Debug,
     Trace,
+    Txpool,
 }
 
 #[derive(Debug)]
@@ -50,7 +53,8 @@ where
         let web3_rpc_module = Web3Rpc::default().into_rpc();
         let net_rpc_module = NetRpc::new(eth_provider.clone()).into_rpc();
         let debug_rpc_module = DebugRpc::new(eth_provider.clone()).into_rpc();
-        let trace_rpc_module = TraceRpc::new(eth_provider).into_rpc();
+        let trace_rpc_module = TraceRpc::new(eth_provider.clone()).into_rpc();
+        let txpool_rpc_module = TxpoolRpc::new(eth_provider).into_rpc();
 
         let mut modules = HashMap::new();
 
@@ -60,6 +64,7 @@ where
         modules.insert(KakarotRpcModule::Net, net_rpc_module.into());
         modules.insert(KakarotRpcModule::Debug, debug_rpc_module.into());
         modules.insert(KakarotRpcModule::Trace, trace_rpc_module.into());
+        modules.insert(KakarotRpcModule::Txpool, txpool_rpc_module.into());
 
         Self { modules, _phantom: PhantomData }
     }

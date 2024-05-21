@@ -10,13 +10,17 @@ use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
 use mongodb::bson::doc;
 use mongodb::options::{UpdateModifications, UpdateOptions};
+use reth_rpc_types::Log;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::eth_provider::database::types::{header::StoredHeader, transaction::StoredTransaction};
+use crate::eth_provider::database::types::{
+    header::StoredHeader,
+    transaction::{StoredPendingTransaction, StoredTransaction},
+};
 use crate::eth_provider::utils::{format_hex, into_filter};
 use crate::eth_provider::{
-    constant::{HASH_PADDING, U64_PADDING},
+    constant::{HASH_HEX_STRING_LEN, U64_HEX_STRING_LEN},
     provider::EthDataProvider,
 };
 use crate::test_utils::eoa::KakarotEOA;
@@ -123,6 +127,9 @@ impl<'a> Katana {
         mongo_fuzzer
             .add_hardcoded_transaction(Some(TxType::Legacy))
             .expect("Failed to add Legacy transaction in the database");
+        // Add a hardcoded logs to the MongoDB database.
+        mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
+
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
         // Clone the mock data stored in the MongoFuzzer instance.
@@ -153,6 +160,21 @@ impl<'a> Katana {
         &self.sequencer
     }
 
+    /// Adds pending transactions to the database.
+    pub async fn add_pending_transactions_to_database(&self, txs: Vec<Transaction>) {
+        let provider = self.eth_provider();
+        let database = provider.database();
+
+        // Add the transactions to the database.
+        for tx in txs {
+            let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
+            database
+                .update_one::<StoredPendingTransaction>(tx.into(), filter, true)
+                .await
+                .expect("Failed to update pending transaction in database");
+        }
+    }
+
     /// Adds transactions to the database along with a corresponding header.
     pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, header: Header) {
         let provider = self.eth_provider();
@@ -163,7 +185,7 @@ impl<'a> Katana {
         // Add the transactions to the database.
         let tx_collection = database.collection::<StoredTransaction>();
         for tx in txs {
-            let filter = into_filter("tx.hash", &tx.hash, HASH_PADDING);
+            let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
             database
                 .update_one::<StoredTransaction>(tx.into(), filter, true)
                 .await
@@ -173,7 +195,7 @@ impl<'a> Katana {
         // We use the unpadded block number to filter the transactions in the database and
         // the padded block number to update the block number in the database.
         let unpadded_block_number = format_hex(block_number, 0);
-        let padded_block_number = format_hex(block_number, U64_PADDING);
+        let padded_block_number = format_hex(block_number, U64_HEX_STRING_LEN);
 
         // The transactions get added in the database with the unpadded block number (due to U256 serialization using `human_readable`).
         // We need to update the block number to the padded version.
@@ -189,7 +211,7 @@ impl<'a> Katana {
         // Same issue as the transactions, we need to update the block number to the padded version once added
         // to the database.
         let header_collection = database.collection::<StoredHeader>();
-        let filter = into_filter("header.number", &block_number, U64_PADDING);
+        let filter = into_filter("header.number", &block_number, U64_HEX_STRING_LEN);
         database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
         header_collection
             .update_one(
@@ -231,6 +253,16 @@ impl<'a> Katana {
                     .map(|stored_header| stored_header.header.clone())
                     .filter(|header| header.hash == Some(hash))
             })
+        })
+    }
+
+    pub fn logs_with_min_topics(&self, min_topics: usize) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| stored_log.log.topics().len() >= min_topics)
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
         })
     }
 

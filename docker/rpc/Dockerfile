@@ -13,7 +13,7 @@ COPY . .
 # Install system dependencies
 RUN apt-get update && \
     apt-get -y upgrade && \ 
-    apt-get install -y libclang-dev
+    apt-get install --no-install-recommends -y libclang-dev
 RUN cargo build --release --bin kakarot-rpc
 
 FROM debian:bookworm-slim AS runtime
@@ -38,7 +38,7 @@ HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
 
 RUN apt-get update && \
     apt-get -y upgrade && \ 
-    apt-get install -y libssl-dev ca-certificates tini curl && \ 
+    apt-get install --no-install-recommends -y libssl-dev ca-certificates tini curl && \ 
     rm -rf /var/lib/apt/lists/*
 
 # Copy the indexer code into the RPC

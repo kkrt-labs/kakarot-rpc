@@ -92,7 +92,7 @@ TL;DR:
 - Run Kakarot RPC in dev mode:
   - Run dev RPC: `make run-dev` (you'll need a StarknetOS instance running in another process and Kakarot contracts deployed)
 - Run with Docker Compose:
-  - `make katana-rpc-up`
+  - `make local-rpc-up`
   - To kill these processes, `make docker-down`
 - Build the docker image for the RPC:
   - `make docker-build`
@@ -101,22 +101,28 @@ TL;DR:
 
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Docker](https://docs.docker.com/engine/install)
+- [Python](https://www.python.org/)
 - Make
 
 ## Installation
 
 ### Setup the project
 
-To set up the repository (pulling git submodule and building Cairo dependencies),run:
+To set up the repository (pulling git submodule and building Cairo dependencies), run:
 
 ```console
 make setup
 ```
 
-Caveats: the `setup` make command uses linux (MacOs compatible)
-commands to allow running the `./scripts/extract_abi.sh`.
-This script is used to use strongly typed Rust bindings for Cairo programs.
-If you encounter problems when building the project, try running `./scripts/extract_abi.sh`
+Caveats:
+
+1. the `setup` make command uses linux (MacOs compatible) commands to allow
+   running the `./scripts/extract_abi.sh`. This script is used to use strongly
+   typed Rust bindings for Cairo programs. If you encounter problems when building
+   the project, try running `./scripts/extract_abi.sh`.
+2. the [kakarot](https://github.com/kkrt-labs/kakarot) submodule uses Python to build
+   and deploy Kakarot contracts. If you don't have the right version available, we
+   recommend to use [pyenv](https://github.com/pyenv/pyenv) to install it.
 
 ### Build from source
 
@@ -308,10 +314,11 @@ the passing tests:
 If you which to run our hive test suite locally, the following steps should be taken:
 
 - Set up the repo: `make setup`.
-- Build a local docker image of the RPC:
+- Build a local docker image of the RPC. Check the hive [Dockerfile](docker/hive/Dockerfile)
+  for the values for `xxx` and `yyy`:
 
   ```shell
-  docker build --build-arg APIBARA_STARKNET_BIN_DIR=f7va4mjqww1kkpp4il6y295dgcwq147v --build-arg APIBARA_SINK_BIN_DIR=5p0wgpyfsk19v8rrprnykiv5inzx8zag  -t hive . -f docker/hive/Dockerfile
+  docker build --build-arg APIBARA_STARKNET_BIN_DIR=xxx --build-arg APIBARA_SINK_BIN_DIR=yyy  -t hive . -f docker/hive/Dockerfile
   ```
 
 - Checkout the Kakarot fork of hive: `git clone https://github.com/kkrt-labs/hive`
@@ -462,3 +469,5 @@ Thanks goes to these wonderful people
 This project follows the
 [all-contributors](https://github.com/all-contributors/all-contributors)
 specification. Contributions of any kind welcome!
+
+

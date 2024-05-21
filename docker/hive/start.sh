@@ -13,7 +13,7 @@ mv /genesis/hive-genesis.json /hive-genesis.json && rm -fr /genesis
 # 2. Start Katana
 echo "Launching Katana..."
 chain_id=$(printf '%x' $(jq -r '.config.chainId' hive-genesis.json))
-RUST_LOG=warn katana --block-time 2000 --disable-fee --chain-id=0x$chain_id --genesis genesis.json &
+RUST_LOG=warn katana --block-time 6000 --disable-fee --chain-id=0x$chain_id --genesis genesis.json &
 ###### 2.5. Await Katana to be healthy
 # Loop until the curl command succeeds
 until
@@ -54,7 +54,7 @@ sink-mongo run /usr/src/app/code/indexer/src/main.ts &
 
 ### 3.5. Await the Indexer to be healthy
 echo "Waiting for the indexer to start..."
-sleep 3
+sleep 8
 
 # 4. Start the Kakarot RPC service
 echo "Launching Kakarot RPC..."
