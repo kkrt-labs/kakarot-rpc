@@ -72,7 +72,7 @@ services:
       # To add robustness: parse the `deployments/starknet-sepolia` folder in `kkrt-labs/kakarot` repo
       - KAKAROT_ADDRESS=0x464f7e37179d2f93ea208795bdb2d0912e8257f6fb5f67ae2559251523aee19
       - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x1d8b8047e26b484d3f6262d1967217d980d0f2dfc69afa5661492bd5bfe2954
-      - ACCOUNT_CONTRACT_CLASS_HASH=0x56d311021950bf65ee500426e007b9e3ced0db97f9c1e0d29a9e03d79a9bf6c
+      - ACCOUNT_CONTRACT_CLASS_HASH=0x3c1081f98ecdd1d320368d2a136191a3fbf02a3e419463d77c3c5aa6dbc99a0
       - MAX_FELTS_IN_CALLDATA=30000
       - RETRY_TX_INTERVAL=10
     restart: on-failure
