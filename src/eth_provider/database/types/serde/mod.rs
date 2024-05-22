@@ -11,10 +11,10 @@ use serde_json::Value;
 ///
 /// The database stores {"hash": "0x1234"}. This gets serialized to
 /// "{\"hash\":\"0x1234\"}". It's not possible to deserialize \"0x1234\"
-/// into a U64 or B256 type from reth_primitives (since \"0x1234\" is the
+/// into a U64 or B256 type from `reth_primitives` (since \"0x1234\" is the
 /// serialized representation of the string "0x1234"). This function provides
 /// a custom deserialization that first deserializes the data into a
-/// HashMap<String, Value>, which can them be used to deserialize into the
+/// `HashMap`<String, Value>, which can them be used to deserialize into the
 /// desired types.
 pub fn deserialize_intermediate<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where

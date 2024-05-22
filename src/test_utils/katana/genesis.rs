@@ -291,7 +291,7 @@ impl KatanaGenesisBuilder<Initialized> {
         Ok(self)
     }
 
-    /// Consume the [KatanaGenesisBuilder] and returns the corresponding [GenesisJson].
+    /// Consume the [`KatanaGenesisBuilder`] and returns the corresponding [`GenesisJson`].
     pub fn build(self) -> Result<GenesisJson> {
         Ok(GenesisJson {
             parent_hash: FieldElement::ZERO,

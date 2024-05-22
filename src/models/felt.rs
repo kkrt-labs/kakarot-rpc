@@ -103,7 +103,7 @@ macro_rules! into_via_wrapper {
 }
 
 /// This macro provides a convenient way to convert a value from a source
-/// type $val that implements TryInto<Felt252Wrapper> into a target type that
+/// type $val that implements `TryInto`<Felt252Wrapper> into a target type that
 /// implements From<Felt252Wrapper>.
 #[macro_export]
 macro_rules! into_via_try_wrapper {

@@ -90,7 +90,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     }
 
     /// Deploys an EVM contract given a contract name and constructor arguments
-    /// Returns a KakarotEvmContract instance
+    /// Returns a `KakarotEvmContract` instance
     pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
         contract_name: Option<&str>,
@@ -162,7 +162,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         Ok(KakarotEvmContract::new(bytecode, event.data[1], event.data[0]))
     }
 
-    /// Calls a KakarotEvmContract function and returns the Starknet transaction hash
+    /// Calls a `KakarotEvmContract` function and returns the Starknet transaction hash
     /// The transaction is signed and sent by the EOA
     /// The transaction is waited for until it is confirmed
     pub async fn call_evm_contract<T: Tokenize>(

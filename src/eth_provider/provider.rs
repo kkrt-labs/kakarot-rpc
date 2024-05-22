@@ -132,7 +132,7 @@ pub trait EthereumProvider {
     async fn txpool_content(&self) -> EthProviderResult<TxpoolContent>;
 }
 
-/// Structure that implements the EthereumProvider trait.
+/// Structure that implements the `EthereumProvider` trait.
 /// Uses an access to a database to certain data, while
 /// the rest is fetched from the Starknet Provider.
 #[derive(Debug, Clone)]

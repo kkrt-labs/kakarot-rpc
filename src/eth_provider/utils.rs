@@ -10,7 +10,7 @@ use starknet::{
     providers::ProviderError,
 };
 
-/// Converts an array of topics into a MongoDB filter.
+/// Converts an array of topics into a `MongoDB` filter.
 pub(crate) fn to_logs_filter(topics: [Topic; 4]) -> Document {
     // Converts the topics to [Option<Vec<Topic>>;4]
     let topics = topics
@@ -60,7 +60,7 @@ pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
     s
 }
 
-/// Converts a key and value into a MongoDB filter.
+/// Converts a key and value into a `MongoDB` filter.
 pub fn into_filter<T>(key: &str, value: &T, width: usize) -> Document
 where
     T: LowerHex,

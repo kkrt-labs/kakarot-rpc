@@ -89,7 +89,7 @@ pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, Se
 }
 
 /// Represents a builder for creating JSON-RPC requests.
-/// Taken from https://github.com/paradigmxyz/reth/blob/main/crates/rpc/rpc-builder/tests/it/http.rs
+/// Taken from <https://github.com/paradigmxyz/reth/blob/main/crates/rpc/rpc-builder/tests/it/http.rs>
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct RawRpcParamsBuilder {
     method: String,

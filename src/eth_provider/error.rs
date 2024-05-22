@@ -4,7 +4,7 @@ use starknet_crypto::FieldElement;
 use thiserror::Error;
 
 /// List of JSON-RPC error codes from ETH rpc spec.
-/// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md
+/// <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md>
 #[derive(Debug, Copy, PartialEq, Eq, Clone)]
 pub enum EthRpcErrorCode {
     /// Custom geth error code, <https://github.com/vapory-legacy/wiki/blob/master/JSON-RPC-Error-Codes-Improvement-Proposal.md>
