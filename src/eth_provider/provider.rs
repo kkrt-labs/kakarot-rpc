@@ -43,6 +43,7 @@ use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
+use crate::tracing::builder::TRACING_BLOCK_GAS_LIMIT;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -536,6 +537,14 @@ where
             let max_fee = (max_fee as u128 * 80 / 100) as u64;
             max_fee.saturating_sub(eth_fees)
         };
+
+        // If the transaction gas limit is higher than the tracing
+        // block gas limit, prevent the transaction from being sent
+        // (it will revert anyway on the Starknet side). This assures
+        // that all transactions are traceable.
+        if transaction_signed.gas_limit() > TRACING_BLOCK_GAS_LIMIT {
+            return Err(TransactionError::GasOverflow.into());
+        }
 
         // Deploy EVM transaction signer if Hive feature is enabled
         #[cfg(feature = "hive")]
