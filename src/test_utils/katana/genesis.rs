@@ -97,7 +97,6 @@ impl<T> KatanaGenesisBuilder<T> {
         }
     }
 
-    #[must_use]
     pub fn with_dev_allocation(mut self, amount: u16) -> Self {
         let dev_allocations = DevAllocationsGenerator::new(amount)
             .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
@@ -140,7 +139,6 @@ impl<T> KatanaGenesisBuilder<T> {
 
 impl KatanaGenesisBuilder<Uninitialized> {
     /// Load the classes from the given path. Computes the class hashes and stores them in the builder.
-    #[must_use]
     pub fn load_classes(mut self, path: PathBuf) -> KatanaGenesisBuilder<Loaded> {
         let entries = WalkDir::new(path).into_iter().filter(|e| e.is_ok() && e.as_ref().unwrap().file_type().is_file());
         let classes = entries

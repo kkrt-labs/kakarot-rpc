@@ -31,10 +31,6 @@ future_not_send = "allow"
 fallible_impl_from = "allow"
 uninlined_format_args = "warn"
 doc_markdown = "warn"
-# pedantic = "warn"
-# missing_errors_doc = "allow"
-# similar_names = "allow"
-# missing_panics_doc = "allow"
 
 [dependencies]
 # Starknet dependencies

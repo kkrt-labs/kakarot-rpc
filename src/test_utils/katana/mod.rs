@@ -147,18 +147,16 @@ impl<'a> Katana {
         Self { sequencer, eoa, mock_data, port, container: Some(container) }
     }
 
-    #[must_use]
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {
         self.eoa.eth_provider.clone()
     }
 
-    #[must_use]
     pub fn eoa(&self) -> KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
         self.eoa.clone()
     }
 
     #[allow(dead_code)]
-    #[must_use]
+
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
     }
@@ -227,7 +225,7 @@ impl<'a> Katana {
     }
 
     /// Retrieves the first stored transaction
-    #[must_use]
+
     pub fn first_transaction(&self) -> Option<Transaction> {
         self.mock_data
             .get(&CollectionDB::Transactions)
@@ -237,7 +235,7 @@ impl<'a> Katana {
     }
 
     /// Retrieves the most recent stored transaction based on block number
-    #[must_use]
+
     pub fn most_recent_transaction(&self) -> Option<Transaction> {
         self.mock_data
             .get(&CollectionDB::Transactions)
@@ -251,7 +249,7 @@ impl<'a> Katana {
     }
 
     /// Retrieves the stored header by hash
-    #[must_use]
+
     pub fn header_by_hash(&self, hash: B256) -> Option<Header> {
         self.mock_data.get(&CollectionDB::Headers).and_then(|headers| {
             headers.iter().find_map(|data| {
@@ -273,7 +271,7 @@ impl<'a> Katana {
     }
 
     /// Retrieves the number of blocks in the database
-    #[must_use]
+
     pub fn count_block(&self) -> usize {
         self.mock_data.get(&CollectionDB::Headers).map_or(0, std::vec::Vec::len)
     }

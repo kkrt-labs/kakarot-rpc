@@ -46,7 +46,6 @@ lazy_static! {
 pub const BLOCK_NUMBER: u64 = 0x1234;
 pub const RANDOM_BYTES_SIZE: usize = 100_024;
 
-#[must_use]
 pub fn generate_port_number() -> u16 {
     let address = "0.0.0.0:0";
     let socket = std::net::UdpSocket::bind(address).expect("Cannot bind to socket");
@@ -169,7 +168,7 @@ impl MongoFuzzer {
     }
 
     /// Obtains an immutable reference to the documents `HashMap`.
-    #[must_use]
+
     pub const fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
         &self.documents
     }
@@ -181,7 +180,7 @@ impl MongoFuzzer {
     }
 
     /// Get port number
-    #[must_use]
+
     pub const fn port(&self) -> u16 {
         self.port
     }
@@ -383,7 +382,7 @@ pub struct TransactionBuilder {
 
 impl TransactionBuilder {
     /// Specifies the type of transaction to build.
-    #[must_use]
+
     pub const fn with_tx_type(mut self, tx_type: TxType) -> Self {
         self.tx_type = Some(tx_type);
         self
