@@ -127,7 +127,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("trace_block").add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER)).build())
+        .body(RawRpcParamsBuilder::new("trace_block").add_param(format!("0x{TRACING_BLOCK_NUMBER:016x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -145,11 +145,11 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
 async fn trace_block_by_number(port: u16) -> Vec<TraceResult> {
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
-        .post(format!("http://localhost:{}", port))
+        .post(format!("http://localhost:{port}"))
         .header("Content-Type", "application/json")
         .body(
             RawRpcParamsBuilder::new("debug_traceBlockByNumber")
-                .add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER))
+                .add_param(format!("0x{TRACING_BLOCK_NUMBER:016x}"))
                 .add_param(json!({
                     "tracer": "callTracer",
                     "tracerConfig": {
@@ -250,7 +250,7 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("trace_block").add_param(format!("0x{:016x}", TRACING_BLOCK_NUMBER)).build())
+        .body(RawRpcParamsBuilder::new("trace_block").add_param(format!("0x{TRACING_BLOCK_NUMBER:016x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -294,7 +294,7 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
         .header("Content-Type", "application/json")
         .body(
             RawRpcParamsBuilder::new("debug_traceTransaction")
-                .add_param(format!("0x{:016x}", tx_hash))
+                .add_param(format!("0x{tx_hash:016x}"))
                 .add_param(json!({
                     "tracer": "callTracer",
                     "tracerConfig": {

@@ -177,7 +177,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let res_by_block_hash = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("debug_getRawTransactions").add_param(format!("0x{:064x}", block_hash)).build())
+        .body(RawRpcParamsBuilder::new("debug_getRawTransactions").add_param(format!("0x{block_hash:064x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -195,7 +195,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
         .body(
-            RawRpcParamsBuilder::new("debug_getRawTransactions").add_param(format!("0x{:016x}", block_number)).build(),
+            RawRpcParamsBuilder::new("debug_getRawTransactions").add_param(format!("0x{block_number:016x}")).build(),
         )
         .send()
         .await
@@ -269,7 +269,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let res_by_block_hash = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("debug_getRawReceipts").add_param(format!("0x{:064x}", block_hash)).build())
+        .body(RawRpcParamsBuilder::new("debug_getRawReceipts").add_param(format!("0x{block_hash:064x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -286,7 +286,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let res_by_block_number = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("debug_getRawReceipts").add_param(format!("0x{:016x}", block_number)).build())
+        .body(RawRpcParamsBuilder::new("debug_getRawReceipts").add_param(format!("0x{block_number:016x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -359,7 +359,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("debug_getRawBlock").add_param(format!("0x{:016x}", block_number)).build())
+        .body(RawRpcParamsBuilder::new("debug_getRawBlock").add_param(format!("0x{block_number:016x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -375,7 +375,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
         .header("Content-Type", "application/json")
         .body(
             RawRpcParamsBuilder::new("eth_getBlockByNumber")
-                .add_param(format!("0x{:x}", block_number))
+                .add_param(format!("0x{block_number:x}"))
                 .add_param(true)
                 .build(),
         )
@@ -420,7 +420,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let res_by_block_hash = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("debug_getRawHeader").add_param(format!("0x{:064x}", block_hash)).build())
+        .body(RawRpcParamsBuilder::new("debug_getRawHeader").add_param(format!("0x{block_hash:064x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -436,7 +436,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let res_by_block_number = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("debug_getRawHeader").add_param(format!("0x{:016x}", block_number)).build())
+        .body(RawRpcParamsBuilder::new("debug_getRawHeader").add_param(format!("0x{block_number:016x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
