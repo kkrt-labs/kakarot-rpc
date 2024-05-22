@@ -552,7 +552,7 @@ where
             // DuplicateTx error in Starknet, which rejects incoming transactions
             // with the same hash. Incrementing the max fee causes the Starknet
             // hash to change, allowing the transaction to pass.
-            let retries = pending_transaction.as_ref().map(|tx| tx.retries).unwrap_or_default();
+            let retries = pending_transaction.as_ref().map(|tx| tx.retries + 1).unwrap_or_default();
             max_fee.saturating_sub(eth_fees).saturating_add(retries)
         };
 
