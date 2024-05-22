@@ -269,8 +269,7 @@ dependencies = [
 [[package]]
 name = "alloy-json-abi"
 version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24ed0f2a6c3a1c947b4508522a53a190dba8f94dcd4e3e1a5af945a498e78f2f"
+source = "git+https://github.com/alloy-rs/core?rev=ff339696fa9b490698cb3edec3d4647fae0bd332#ff339696fa9b490698cb3edec3d4647fae0bd332"
 dependencies = [
  "alloy-primitives 0.6.4",
  "alloy-sol-type-parser 0.6.4",
@@ -338,8 +337,7 @@ dependencies = [
 [[package]]
 name = "alloy-primitives"
 version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "600d34d8de81e23b6d909c094e23b3d357e01ca36b78a8c5424c501eedbe86f0"
+source = "git+https://github.com/alloy-rs/core?rev=ff339696fa9b490698cb3edec3d4647fae0bd332#ff339696fa9b490698cb3edec3d4647fae0bd332"
 dependencies = [
  "alloy-rlp",
  "bytes",
@@ -646,8 +644,7 @@ dependencies = [
 [[package]]
 name = "alloy-sol-type-parser"
 version = "0.6.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0045cc89524e1451ccf33e8581355b6027ac7c6e494bb02959d4213ad0d8e91d"
+source = "git+https://github.com/alloy-rs/core?rev=ff339696fa9b490698cb3edec3d4647fae0bd332#ff339696fa9b490698cb3edec3d4647fae0bd332"
 dependencies = [
  "winnow 0.6.5",
 ]
@@ -8000,7 +7997,7 @@ dependencies = [
 
 [[package]]
 name = "kakarot-rpc"
-version = "0.1.0"
+version = "0.6.12"
 dependencies = [
  "alloy-primitives 0.7.2",
  "alloy-rlp",
