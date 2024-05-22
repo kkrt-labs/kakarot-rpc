@@ -530,7 +530,7 @@ where
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
 
-        // Update pending transactions collection
+        // Fetch pending transaction for hash
         let filter = into_filter("tx.hash", &transaction_signed.hash, HASH_HEX_STRING_LEN);
         let pending_transaction = self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?;
 
@@ -548,6 +548,10 @@ where
             let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
             let max_fee = (max_fee as u128 * 80 / 100) as u64;
 
+            // We add the retry count to the max fee in order to bypass the
+            // DuplicateTx error in Starknet, which rejects incoming transactions
+            // with the same hash. Incrementing the max fee causes the Starknet
+            // hash to change, allowing the transaction to pass.
             let retries = pending_transaction.as_ref().map(|tx| tx.retries).unwrap_or_default();
             max_fee.saturating_sub(eth_fees).saturating_add(retries)
         };
