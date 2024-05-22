@@ -91,7 +91,7 @@ impl From<Transaction> for StoredPendingTransaction {
 }
 
 impl From<StoredPendingTransaction> for Transaction {
-    fn from(tx: StoredPendingTransaction) -> Transaction {
+    fn from(tx: StoredPendingTransaction) -> Self {
         tx.tx
     }
 }
