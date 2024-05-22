@@ -225,7 +225,6 @@ impl<'a> Katana {
     }
 
     /// Retrieves the first stored transaction
-
     pub fn first_transaction(&self) -> Option<Transaction> {
         self.mock_data
             .get(&CollectionDB::Transactions)
@@ -235,7 +234,6 @@ impl<'a> Katana {
     }
 
     /// Retrieves the most recent stored transaction based on block number
-
     pub fn most_recent_transaction(&self) -> Option<Transaction> {
         self.mock_data
             .get(&CollectionDB::Transactions)
@@ -249,7 +247,6 @@ impl<'a> Katana {
     }
 
     /// Retrieves the stored header by hash
-
     pub fn header_by_hash(&self, hash: B256) -> Option<Header> {
         self.mock_data.get(&CollectionDB::Headers).and_then(|headers| {
             headers.iter().find_map(|data| {
@@ -271,7 +268,6 @@ impl<'a> Katana {
     }
 
     /// Retrieves the number of blocks in the database
-
     pub fn count_block(&self) -> usize {
         self.mock_data.get(&CollectionDB::Headers).map_or(0, std::vec::Vec::len)
     }
