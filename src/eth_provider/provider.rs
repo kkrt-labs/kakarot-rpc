@@ -446,14 +446,14 @@ where
 
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
         // Set a high gas limit to make sure the transaction will not fail due to gas.
-        let request = TransactionRequest { gas: Some(u64::MAX as u128), ..request };
+        let request = TransactionRequest { gas: Some(u128::from(u64::MAX)), ..request };
 
         let gas_used = self.estimate_gas_helper(request, block_id).await?;
 
         // Increase the gas used by 20% to make sure the transaction will not fail due to gas.
         // This is a temporary solution until we have a proper gas estimation.
         // Does not apply to Hive feature otherwise end2end tests will fail.
-        let gas_used = if !cfg!(feature = "hive") { gas_used * 120 / 100 } else { gas_used };
+        let gas_used = if cfg!(feature = "hive") { gas_used } else { gas_used * 120 / 100 };
         Ok(U256::from(gas_used))
     }
 
@@ -545,7 +545,7 @@ where
             let eth_fees = eth_fees_per_gas.saturating_mul(transaction_signed.gas_limit());
             let balance = self.balance(signer, None).await?;
             let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
-            let max_fee = (max_fee as u128 * 80 / 100) as u64;
+            let max_fee = (u128::from(max_fee) * 80 / 100) as u64;
 
             // We add the retry count to the max fee in order to bypass the
             // DuplicateTx error in Starknet, which rejects incoming transactions
@@ -997,17 +997,14 @@ where
             }
 
             // Generate primitive transaction, handle error if any
-            let transaction = match TransactionSignedEcRecovered::try_from(tx.tx.clone()) {
-                Ok(transaction) => transaction,
-                Err(_) => {
-                    // Delete the pending transaction from the database due conversion error
-                    // Malformed transaction
-                    self.database
-                        .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
-                        .await?;
-                    // Continue to the next iteration of the loop
-                    continue;
-                }
+            let Ok(transaction) = TransactionSignedEcRecovered::try_from(tx.tx.clone()) else {
+                // Delete the pending transaction from the database due conversion error
+                // Malformed transaction
+                self.database
+                    .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
+                    .await?;
+                // Continue to the next iteration of the loop
+                continue;
             };
 
             // Create a signed transaction and send it

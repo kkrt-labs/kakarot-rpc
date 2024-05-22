@@ -1,3 +1,4 @@
+#![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use ethers::abi::{Token, Tokenize};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
@@ -28,7 +29,7 @@ fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> r
         number: Some(block_number),
         hash: Some(hash),
         parent_hash,
-        gas_limit: u64::MAX as u128,
+        gas_limit: u128::from(u64::MAX),
         base_fee_per_gas: Some(base_fee),
         ..Default::default()
     }
@@ -72,7 +73,7 @@ pub async fn tracing<T: Tokenize>(
             from: eoa_address,
             block_number: Some(TRACING_BLOCK_NUMBER),
             chain_id: tx.chain_id(),
-            gas: tx.gas_limit() as u128,
+            gas: u128::from(tx.gas_limit()),
             input: tx.input().clone(),
             signature: Some(reth_rpc_types::Signature {
                 r: tx_signed.signature().r,
@@ -230,7 +231,7 @@ async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContr
         (
             Token::Address(ethers::abi::Address::from_slice(eoa_address.as_slice())),
             Token::FixedBytes(commit.as_slice().to_vec()),
-            Token::Uint(ethers::abi::Uint::from(signature.odd_y_parity as u8 + 27)),
+            Token::Uint(ethers::abi::Uint::from(u8::from(signature.odd_y_parity) + 27)),
             Token::FixedBytes(signature.r.to_be_bytes::<32>().to_vec()),
             Token::FixedBytes(signature.s.to_be_bytes::<32>().to_vec()),
             Token::Address(ethers::abi::Address::from_slice(&counter.evm_address.to_bytes_be()[12..])),
@@ -313,12 +314,11 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
 
     // Get the traces for the block
     let traces = trace_block_by_number(server_addr.port()).await;
-    let expected_trace =
-        if let reth_rpc_types::trace::geth::TraceResult::Success { result, .. } = traces.get(index).cloned().unwrap() {
-            result
-        } else {
-            panic!("Failed to get expected trace")
-        };
+    let reth_rpc_types::trace::geth::TraceResult::Success { result: expected_trace, .. } =
+        traces.get(index).cloned().unwrap()
+    else {
+        panic!("Failed to get expected trace")
+    };
 
     // Compare traces
     assert_eq!(expected_trace, trace);

@@ -121,7 +121,7 @@ impl HiveGenesisConfig {
 
         let kakarot_contract = genesis.contracts.entry(kakarot_address);
         kakarot_contract.and_modify(|contract| {
-            contract.storage.get_or_insert_with(HashMap::new).extend(additional_kakarot_storage)
+            contract.storage.get_or_insert_with(HashMap::new).extend(additional_kakarot_storage);
         });
 
         genesis.fee_token.storage.get_or_insert_with(HashMap::new).extend(fee_token_storage);

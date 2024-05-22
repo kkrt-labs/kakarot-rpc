@@ -381,7 +381,7 @@ pub struct TransactionBuilder {
 
 impl TransactionBuilder {
     /// Specifies the type of transaction to build.
-
+    #[must_use]
     pub const fn with_tx_type(mut self, tx_type: TxType) -> Self {
         self.tx_type = Some(tx_type);
         self

@@ -146,9 +146,8 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             .await
             .expect("Failed to get transaction receipt after retries");
 
-        let receipt = match maybe_receipt {
-            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => receipt,
-            _ => return Err(eyre::eyre!("Failed to deploy contract")),
+        let MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) = maybe_receipt else {
+            return Err(eyre::eyre!("Failed to deploy contract"));
         };
 
         let selector = get_selector_from_name("evm_contract_deployed").unwrap(); // safe unwrap

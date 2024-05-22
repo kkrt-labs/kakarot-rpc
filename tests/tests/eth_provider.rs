@@ -1,3 +1,4 @@
+#![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use std::str::FromStr;
 use std::sync::Arc;
@@ -277,10 +278,7 @@ async fn test_get_logs_block_range(#[future] katana: Katana, _setup: ()) {
     let logs = provider.get_logs(Filter::default()).await.expect("Failed to get logs");
 
     // Then
-    let logs = match logs {
-        FilterChanges::Logs(logs) => logs,
-        _ => panic!("Expected logs"),
-    };
+    let FilterChanges::Logs(logs) = logs else { panic!("Expected logs") };
     assert!(!logs.is_empty());
 }
 

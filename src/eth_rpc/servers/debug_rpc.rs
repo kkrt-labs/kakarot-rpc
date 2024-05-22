@@ -157,8 +157,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         let provider = Arc::new(&self.eth_provider);
         let tracer = TracerBuilder::new(provider).await?.with_block_id(BlockId::Number(block_number)).await?.build()?;
 
-        let traces = tracer.debug_block(opts.unwrap_or_default())?;
-        Ok(traces)
+        Ok(tracer.debug_block(opts.unwrap_or_default())?)
     }
 
     /// Returns the Geth debug trace for the given block hash.
@@ -171,8 +170,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         let tracer =
             TracerBuilder::new(provider).await?.with_block_id(BlockId::Hash(block_hash.into())).await?.build()?;
 
-        let traces = tracer.debug_block(opts.unwrap_or_default())?;
-        Ok(traces)
+        Ok(tracer.debug_block(opts.unwrap_or_default())?)
     }
 
     /// Returns the Geth debug trace for the given transaction hash.

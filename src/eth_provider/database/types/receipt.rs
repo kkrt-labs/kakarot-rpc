@@ -33,13 +33,13 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
                 block_number: Some(u64::arbitrary(u)?),
                 block_timestamp: Some(u64::arbitrary(u)?),
                 transaction_hash: Some(B256::arbitrary(u)?),
-            })
+            });
         }
 
         let receipt = reth_rpc_types::ReceiptWithBloom {
             receipt: reth_rpc_types::Receipt {
                 status: bool::arbitrary(u)?,
-                cumulative_gas_used: u64::arbitrary(u)? as u128,
+                cumulative_gas_used: u128::from(u64::arbitrary(u)?),
                 logs,
             },
             logs_bloom: Bloom::arbitrary(u)?,

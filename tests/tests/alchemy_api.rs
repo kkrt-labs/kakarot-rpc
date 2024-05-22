@@ -1,3 +1,4 @@
+#![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use ethers::abi::Token;
 use kakarot_rpc::models::balance::TokenBalances;

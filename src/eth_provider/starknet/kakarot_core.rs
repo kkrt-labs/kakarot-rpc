@@ -25,13 +25,13 @@ use crate::{
 // Contract ABIs
 
 pub mod account_contract {
-    use super::*;
+    use super::abigen_legacy;
     abigen_legacy!(AccountContract, "./.kakarot/artifacts/account_contract.json");
 }
 
 #[allow(clippy::too_many_arguments)]
 pub mod core {
-    use super::*;
+    use super::{abigen_legacy, FieldElement};
     abigen_legacy!(KakarotCore, "./.kakarot/artifacts/kakarot.json");
 
     #[derive(Debug)]
@@ -109,7 +109,7 @@ pub fn to_starknet_transaction(
         if let Transaction::Legacy(_) = transaction.transaction {
             signature.push(transaction_signature.v(Some(chain_id)).into());
         } else {
-            signature.push((transaction_signature.odd_y_parity as u64).into());
+            signature.push(u64::from(transaction_signature.odd_y_parity).into());
         }
 
         signature
@@ -225,9 +225,9 @@ mod tests {
                         ],
                         FieldElement::ZERO,
                     )
-                )
+                );
             }
-            _ => panic!("Invalid Starknet broadcasted transaction"),
+            BroadcastedInvokeTransaction::V3(_) => panic!("Invalid Starknet broadcasted transaction"),
         }
     }
 

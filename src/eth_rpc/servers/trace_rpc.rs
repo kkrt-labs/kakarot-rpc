@@ -27,7 +27,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> TraceApiServer for TraceRpc<P>
         let provider = Arc::new(&self.eth_provider);
         let tracer = TracerBuilder::new(provider).await?.with_block_id(block_id).await?.build()?;
 
-        let traces = tracer.trace_block(TracingInspectorConfig::default_parity())?;
-        Ok(traces)
+        Ok(tracer.trace_block(TracingInspectorConfig::default_parity())?)
     }
 }

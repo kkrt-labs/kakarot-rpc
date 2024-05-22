@@ -75,7 +75,7 @@ fn parse_seed(seed: &str) -> [u8; 32] {
     let seed = seed.as_bytes();
 
     if seed.len() >= 32 {
-        unsafe { *(seed[..32].as_ptr() as *const [u8; 32]) }
+        unsafe { *seed[..32].as_ptr().cast::<[u8; 32]>() }
     } else {
         let mut actual_seed = [0u8; 32];
         seed.iter().enumerate().for_each(|(i, b)| actual_seed[i] = *b);
@@ -97,6 +97,7 @@ impl<T> KatanaGenesisBuilder<T> {
         }
     }
 
+    #[must_use]
     pub fn with_dev_allocation(mut self, amount: u16) -> Self {
         let dev_allocations = DevAllocationsGenerator::new(amount)
             .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
@@ -334,12 +335,13 @@ impl KatanaGenesisBuilder<Initialized> {
         )))
     }
 
+    #[allow(clippy::unused_self)]
     fn evm_address(&self, pk: B256) -> Result<FieldElement> {
         Ok(FieldElement::from_byte_slice_be(&LocalWallet::from_bytes(&pk)?.address().into_array())?)
     }
 
     pub fn cache_load(&self, key: &str) -> Result<FieldElement> {
-        self.cache.get(key).cloned().ok_or(eyre!("Cache miss for {key} address"))
+        self.cache.get(key).copied().ok_or(eyre!("Cache miss for {key} address"))
     }
 
     pub const fn cache(&self) -> &HashMap<String, FieldElement> {

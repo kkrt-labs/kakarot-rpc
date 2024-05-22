@@ -1,3 +1,4 @@
+#![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use alloy_rlp::Encodable;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;

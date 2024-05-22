@@ -104,14 +104,14 @@ impl RawRpcParamsBuilder {
     }
 
     /// Adds a parameter to the JSON-RPC request.
-
+    #[must_use]
     pub fn add_param<S: Serialize>(mut self, param: S) -> Self {
         self.params.push(serde_json::to_value(param).expect("Failed to serialize parameter"));
         self
     }
 
     /// Sets the ID for the JSON-RPC request.
-
+    #[must_use]
     pub const fn set_id(mut self, id: i32) -> Self {
         self.id = id;
         self

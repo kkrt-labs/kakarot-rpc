@@ -25,13 +25,26 @@ rust.unused_must_use = "deny"
 rust.rust_2018_idioms = "deny"
 
 [lints.clippy]
+# all lints that are on by default (correctness, suspicious, style, complexity, perf)
 all = "warn"
+
+# new lints that are still under development
 nursery = "warn"
+# avoid lints that are too pedantic
 future_not_send = "allow"
 fallible_impl_from = "allow"
-uninlined_format_args = "warn"
-doc_markdown = "warn"
-unreadable_literal = "warn"
+
+# lints which are rather strict or have occasional false positives
+pedantic = "warn"
+# avoid lints that are too pedantic
+must_use_candidate = "allow"
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+default_trait_access = "allow"
+module_name_repetitions = "allow"
+no_effect_underscore_binding = "allow"
 
 [dependencies]
 # Starknet dependencies

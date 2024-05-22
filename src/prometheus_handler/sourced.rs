@@ -96,10 +96,10 @@ impl<T: SourcedType, S: MetricSource> Collector for SourcedMetric<T, S> {
             debug_assert_eq!(self.desc.variable_labels.len(), label_values.len());
             match self.desc.variable_labels.len().cmp(&label_values.len()) {
                 Ordering::Greater => {
-                    log::warn!("Missing label values for sourced metric {}", self.desc.fq_name)
+                    log::warn!("Missing label values for sourced metric {}", self.desc.fq_name);
                 }
                 Ordering::Less => {
-                    log::warn!("Too many label values for sourced metric {}", self.desc.fq_name)
+                    log::warn!("Too many label values for sourced metric {}", self.desc.fq_name);
                 }
                 Ordering::Equal => {}
             }
@@ -112,7 +112,7 @@ impl<T: SourcedType, S: MetricSource> Collector for SourcedMetric<T, S> {
                     .map(|(l_name, l_value)| {
                         let mut l = proto::LabelPair::default();
                         l.set_name(l_name.to_string());
-                        l.set_value(l_value.to_string());
+                        l.set_value((*l_value).to_string());
                         l
                     })
                     .chain(self.desc.const_label_pairs.iter().cloned())

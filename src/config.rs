@@ -30,9 +30,8 @@ impl From<String> for Network {
             "madara" => Self::Madara,
             "sharingan" => Self::Sharingan,
             "mainnet" => Self::MainnetGateway,
-            "goerli1" => Self::Goerli1Gateway,
+            "goerli1" | "testnet" => Self::Goerli1Gateway,
             "goerli2" => Self::Goerli2Gateway,
-            "testnet" => Self::Goerli1Gateway,
             network_url => Url::parse(network_url).map_or(Self::Katana, Self::JsonRpcProvider),
         }
     }
