@@ -519,8 +519,20 @@ where
         let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
             .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?;
 
+        // If the transaction gas limit is higher than the tracing
+        // block gas limit, prevent the transaction from being sent
+        // (it will revert anyway on the Starknet side). This assures
+        // that all transactions are traceable.
+        if transaction_signed.gas_limit() > TRACING_BLOCK_GAS_LIMIT {
+            return Err(TransactionError::GasOverflow.into());
+        }
+
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
+
+        // Fetch pending transaction for hash
+        let filter = into_filter("tx.hash", &transaction_signed.hash, HASH_HEX_STRING_LEN);
+        let pending_transaction = self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?;
 
         // Determine the maximum fee
         let max_fee = if cfg!(feature = "hive") {
@@ -535,16 +547,14 @@ where
             let balance = self.balance(signer, None).await?;
             let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
             let max_fee = (max_fee as u128 * 80 / 100) as u64;
-            max_fee.saturating_sub(eth_fees)
-        };
 
-        // If the transaction gas limit is higher than the tracing
-        // block gas limit, prevent the transaction from being sent
-        // (it will revert anyway on the Starknet side). This assures
-        // that all transactions are traceable.
-        if transaction_signed.gas_limit() > TRACING_BLOCK_GAS_LIMIT {
-            return Err(TransactionError::GasOverflow.into());
-        }
+            // We add the retry count to the max fee in order to bypass the
+            // DuplicateTx error in Starknet, which rejects incoming transactions
+            // with the same hash. Incrementing the max fee causes the Starknet
+            // hash to change, allowing the transaction to pass.
+            let retries = pending_transaction.as_ref().map(|tx| tx.retries + 1).unwrap_or_default();
+            max_fee.saturating_sub(eth_fees).saturating_add(retries)
+        };
 
         // Deploy EVM transaction signer if Hive feature is enabled
         #[cfg(feature = "hive")]
@@ -560,12 +570,7 @@ where
         let transaction =
             from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
 
-        // Update pending transactions collection
-        let filter = into_filter("tx.hash", &transaction.hash, HASH_HEX_STRING_LEN);
-
-        if let Some(pending_transaction) =
-            self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?
-        {
+        if let Some(pending_transaction) = pending_transaction {
             self.database
                 .update_one::<StoredPendingTransaction>(
                     StoredPendingTransaction::new(transaction, pending_transaction.retries + 1),
@@ -980,16 +985,17 @@ where
         for tx in self.database.get::<StoredPendingTransaction>(None, None).await? {
             // Check if the number of retries exceeds the maximum allowed retries
             // or if the transaction already exists in the database of finalized transactions
+            let hash = tx.tx.hash;
             if tx.retries + 1 > TRANSACTION_MAX_RETRIES
                 || self
                     .database
-                    .get_one::<StoredTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_HEX_STRING_LEN), None)
+                    .get_one::<StoredTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN), None)
                     .await?
                     .is_some()
             {
                 // Delete the pending transaction from the database
                 self.database
-                    .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &tx.tx.hash, HASH_HEX_STRING_LEN))
+                    .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
                     .await?;
 
                 // Continue to the next iteration of the loop
@@ -1003,11 +1009,7 @@ where
                     // Delete the pending transaction from the database due conversion error
                     // Malformed transaction
                     self.database
-                        .delete_one::<StoredPendingTransaction>(into_filter(
-                            "tx.hash",
-                            &tx.tx.hash,
-                            HASH_HEX_STRING_LEN,
-                        ))
+                        .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
                         .await?;
                     // Continue to the next iteration of the loop
                     continue;
