@@ -1,4 +1,4 @@
-use rstest::*;
+use rstest::fixture;
 use tracing_subscriber::{filter, FmtSubscriber};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {

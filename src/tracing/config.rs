@@ -9,7 +9,7 @@ use reth_revm::{
 pub(super) struct EvmBuilder;
 
 impl EvmBuilder {
-    /// Returns new EVM with the given database, env and inspector. Similar to the implementation of [reth_evm::ConfigureEvmEnv]
+    /// Returns new EVM with the given database, env and inspector. Similar to the implementation of [`reth_evm::ConfigureEvmEnv`]
     /// but only keeping the necessary API.
     pub(super) fn evm_with_env_and_inspector<'a, DB: Database + 'a, I: reth_revm::Inspector<DB>>(
         db: DB,
@@ -27,7 +27,7 @@ impl EvmBuilder {
         evm
     }
 
-    /// Returns new EVM with the given database and env. Similar to the implementation of [reth_evm::ConfigureEvmEnv]
+    /// Returns new EVM with the given database and env. Similar to the implementation of [`reth_evm::ConfigureEvmEnv`]
     /// but only keeping the necessary API.
     pub(super) fn evm_with_env<'a, DB: Database + 'a>(db: DB, env: EnvWithHandlerCfg) -> Evm<'a, (), DB> {
         let mut evm =

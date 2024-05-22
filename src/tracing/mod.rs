@@ -66,7 +66,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             };
 
         let txs = self.transactions.clone();
-        let traces = self.trace_transactions(transact_to_parity_trace, txs)?;
+        let traces = self.trace_transactions(transact_to_parity_trace, &txs)?;
 
         Ok(Some(traces))
     }
@@ -76,7 +76,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     pub fn debug_block(self, opts: GethDebugTracingOptions) -> TracerResult<Vec<TraceResult>> {
         let transact_to_geth_trace = transact_and_get_traces_geth(opts);
         let txs = self.transactions.clone();
-        let traces = self.trace_transactions(transact_to_geth_trace, txs)?;
+        let traces = self.trace_transactions(transact_to_geth_trace, &txs)?;
 
         Ok(traces)
     }
@@ -91,7 +91,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 let transact_and_get_traces = transact_and_get_traces_geth::<P>(opts);
                 // We only want to trace the transaction with the given hash.
                 let trace = self
-                    .trace_transactions(transact_and_get_traces, vec![tx])?
+                    .trace_transactions(transact_and_get_traces, &[tx])?
                     .first()
                     .cloned()
                     .ok_or(TransactionError::Tracing(eyre!("No trace found").into()))?;
@@ -101,7 +101,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 };
             }
 
-            let env = env_with_tx(self.env.clone(), tx.clone())?;
+            let env = env_with_tx(&self.env.clone(), tx.clone())?;
             let evm = EvmBuilder::evm_with_env(&mut self.db, env);
             transact_commit_in_place(evm)?;
         }
@@ -115,7 +115,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     fn trace_transactions<T, F>(
         self,
         transact_and_get_traces: F,
-        transactions: Vec<reth_rpc_types::Transaction>,
+        transactions: &[reth_rpc_types::Transaction],
     ) -> TracerResult<Vec<T>>
     where
         F: Fn(
@@ -129,7 +129,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         let mut db = self.db;
 
         while let Some(tx) = transactions.next() {
-            let env = env_with_tx(self.env.clone(), tx.clone())?;
+            let env = env_with_tx(&self.env.clone(), tx.clone())?;
 
             let (res, state_changes) = transact_and_get_traces(env, &mut db, tx)?;
             traces.extend(res);
@@ -196,7 +196,7 @@ fn transact_and_get_traces_geth<P: EthereumProvider + Send + Sync + Clone>(
 }
 
 /// Returns the environment with the transaction env updated to the given transaction.
-fn env_with_tx(env: EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> TracerResult<EnvWithHandlerCfg> {
+fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> TracerResult<EnvWithHandlerCfg> {
     // Convert the transaction to an ec recovered transaction and update the env with it.
     let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
 
@@ -207,10 +207,10 @@ fn env_with_tx(env: EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> Trace
     })
 }
 
-/// Runs the evm.transact_commit() in a blocking context using tokio::task::block_in_place.
+/// Runs the `evm.transact_commit()` in a blocking context using `tokio::task::block_in_place`.
 /// This is needed in order to enter a blocking context which is then converted to a async
 /// context in the implementation of [Database] using `Handle::current().block_on(async { ... })`
-/// ⚠️ evm.transact() should NOT be used as is and we should always make use of the `transact_in_place` function
+/// ⚠️ `evm.transact()` should NOT be used as is and we should always make use of the `transact_in_place` function
 fn transact_in_place<I, DB: Database>(mut evm: reth_revm::Evm<'_, I, DB>) -> TracerResult<ResultAndState>
 where
     <DB as Database>::Error: std::error::Error + Sync + Send + 'static,
@@ -218,10 +218,10 @@ where
     tokio::task::block_in_place(|| evm.transact().map_err(|err| TransactionError::Tracing(err.into()).into()))
 }
 
-/// Runs the evm.transact_commit() in a blocking context using tokio::task::block_in_place.
+/// Runs the `evm.transact_commit()` in a blocking context using `tokio::task::block_in_place`.
 /// This is needed in order to enter a blocking context which is then converted to a async
 /// context in the implementation of [Database] using `Handle::current().block_on(async { ... })`
-/// ⚠️ evm.transact_commit() should NOT be used as is and we should always make use of the `transaction_commit_in_place` function
+/// ⚠️ `evm.transact_commit()` should NOT be used as is and we should always make use of the `transaction_commit_in_place` function
 fn transact_commit_in_place<I, DB: Database + DatabaseCommit>(
     mut evm: reth_revm::Evm<'_, I, DB>,
 ) -> TracerResult<ExecutionResult>

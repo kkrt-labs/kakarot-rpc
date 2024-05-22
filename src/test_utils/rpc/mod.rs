@@ -39,7 +39,7 @@ async fn get_next_port() -> u16 {
 ///
 /// # Arguments
 ///
-/// * `starknet_test_sequencer` - An Arc-wrapped TestSequencer. This is used to deploy the Kakarot
+/// * `starknet_test_sequencer` - An Arc-wrapped `TestSequencer`. This is used to deploy the Kakarot
 ///   contracts and to set up the Kakarot RPC server.
 ///
 /// # Returns
@@ -47,7 +47,7 @@ async fn get_next_port() -> u16 {
 /// This function returns a Result containing a tuple with the server's address and a handle to
 /// stop the server upon successful execution.
 ///
-/// The function may return an Err variant of eyre::Report if there are issues with deploying the
+/// The function may return an Err variant of `eyre::Report` if there are issues with deploying the
 /// Kakarot contracts, creating the clients, or running the RPC server.
 ///
 /// # Example
@@ -74,7 +74,7 @@ async fn get_next_port() -> u16 {
 /// }
 /// ```
 ///
-/// allow(dead_code) is used because this function is used in tests,
+/// `allow(dead_code)` is used because this function is used in tests,
 /// and each test is compiled separately, so the compiler thinks this function is unused
 #[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
@@ -104,18 +104,21 @@ impl RawRpcParamsBuilder {
     }
 
     /// Adds a parameter to the JSON-RPC request.
+    #[must_use]
     pub fn add_param<S: Serialize>(mut self, param: S) -> Self {
         self.params.push(serde_json::to_value(param).expect("Failed to serialize parameter"));
         self
     }
 
     /// Sets the ID for the JSON-RPC request.
+    #[must_use]
     pub const fn set_id(mut self, id: i32) -> Self {
         self.id = id;
         self
     }
 
     /// Constructs the JSON-RPC request string based on the provided configurations.
+    #[must_use]
     pub fn build(self) -> String {
         let Self { method, params, id } = self;
 

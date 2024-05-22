@@ -33,13 +33,7 @@ impl From<String> for Network {
             "goerli1" => Self::Goerli1Gateway,
             "goerli2" => Self::Goerli2Gateway,
             "testnet" => Self::Goerli1Gateway,
-            network_url => {
-                if let Ok(url) = Url::parse(network_url) {
-                    Self::JsonRpcProvider(url)
-                } else {
-                    Self::Katana
-                }
-            }
+            network_url => Url::parse(network_url).map_or(Self::Katana, Self::JsonRpcProvider),
         }
     }
 }

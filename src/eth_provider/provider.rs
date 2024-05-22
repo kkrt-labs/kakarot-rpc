@@ -426,16 +426,15 @@ where
         database_filter.extend(logs_filter);
 
         // Add the address filter if any
-        let addresses = filter.address.to_value_or_array().map(|a| match a {
+        if let Some(addresses) = filter.address.to_value_or_array().map(|a| match a {
             ValueOrArray::Value(address) => vec![address],
             ValueOrArray::Array(addresses) => addresses,
-        });
-        addresses.map(|adds| {
+        }) {
             database_filter.insert(
                 "log.address",
-                doc! {"$in": adds.into_iter().map(|a| format_hex(a, ADDRESS_HEX_STRING_LEN)).collect::<Vec<_>>()},
-            )
-        });
+                doc! {"$in": addresses.into_iter().map(|a| format_hex(a, ADDRESS_HEX_STRING_LEN)).collect::<Vec<_>>()},
+            );
+        }
 
         Ok(FilterChanges::Logs(self.database.get_and_map_to::<_, StoredLog>(database_filter, None).await?))
     }
@@ -585,16 +584,11 @@ where
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
             return Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]));
-        } else {
-            let hash = transaction_signed.hash();
-            tracing::info!(
-                "Fired a transaction: Starknet Hash: {:?} --- Ethereum Hash: {:?}",
-                res.transaction_hash,
-                hash
-            );
-
-            Ok(hash)
         }
+        let hash = transaction_signed.hash();
+        tracing::info!("Fired a transaction: Starknet Hash: {:?} --- Ethereum Hash: {:?}", res.transaction_hash, hash);
+
+        Ok(hash)
     }
 
     async fn gas_price(&self) -> EthProviderResult<U256> {

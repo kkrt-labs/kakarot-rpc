@@ -97,6 +97,7 @@ impl<T> KatanaGenesisBuilder<T> {
         }
     }
 
+    #[must_use]
     pub fn with_dev_allocation(mut self, amount: u16) -> Self {
         let dev_allocations = DevAllocationsGenerator::new(amount)
             .with_balance(U256::from(DEFAULT_PREFUNDED_ACCOUNT_BALANCE))
@@ -121,15 +122,15 @@ impl<T> KatanaGenesisBuilder<T> {
     }
 
     fn kakarot_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("kakarot").cloned().ok_or_eyre("Missing Kakarot class hash")
+        self.class_hashes.get("kakarot").copied().ok_or_eyre("Missing Kakarot class hash")
     }
 
     pub fn account_contract_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("account_contract").cloned().ok_or_eyre("Missing account contract class hash")
+        self.class_hashes.get("account_contract").copied().ok_or_eyre("Missing account contract class hash")
     }
 
     pub fn uninitialized_account_class_hash(&self) -> Result<FieldElement> {
-        self.class_hashes.get("uninitialized_account").cloned().ok_or_eyre("Missing uninitialized account class hash")
+        self.class_hashes.get("uninitialized_account").copied().ok_or_eyre("Missing uninitialized account class hash")
     }
 
     pub fn cairo1_helpers_class_hash(&self) -> Result<FieldElement> {
@@ -148,9 +149,8 @@ impl KatanaGenesisBuilder<Uninitialized> {
                 let path = entry.unwrap().path().to_path_buf();
                 let artifact = fs::read_to_string(&path).expect("Failed to read artifact");
                 let artifact = serde_json::from_str(&artifact).expect("Failed to parse artifact");
-                let class_hash = compute_class_hash(&artifact)
-                    .inspect_err(|e| eprint!("Failed to compute class hash: {:?}", e))
-                    .ok();
+                let class_hash =
+                    compute_class_hash(&artifact).inspect_err(|e| eprint!("Failed to compute class hash: {e:?}")).ok();
                 (path, GenesisClassJson { class: PathOrFullArtifact::Artifact(artifact), class_hash })
             })
             .collect::<Vec<_>>();
@@ -354,13 +354,11 @@ impl KatanaGenesisBuilder<Initialized> {
 }
 
 fn compute_class_hash(class: &Value) -> Result<FieldElement> {
-    match serde_json::from_value::<SierraClass>(class.clone()) {
-        Ok(sierra) => Ok(sierra.class_hash()?),
-        Err(_) => {
-            let casm: LegacyContractClass =
-                serde_json::from_value(class.clone()).expect("Failed to parse class code v0");
-            Ok(casm.class_hash()?)
-        }
+    if let Ok(sierra) = serde_json::from_value::<SierraClass>(class.clone()) {
+        Ok(sierra.class_hash()?)
+    } else {
+        let casm: LegacyContractClass = serde_json::from_value(class.clone()).expect("Failed to parse class code v0");
+        Ok(casm.class_hash()?)
     }
 }
 

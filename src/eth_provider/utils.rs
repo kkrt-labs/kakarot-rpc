@@ -35,7 +35,7 @@ pub(crate) fn to_logs_filter(topics: [Topic; 4]) -> Document {
         // If the topic is None, skip it.
         if let Some(t) = maybe_topic {
             let topics = t.iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>();
-            let key = format!("log.topics.{}", index);
+            let key = format!("log.topics.{index}");
             // If the topic array has only one element, use an equality filter
             if topics.len() == 1 {
                 filter.push(doc! {key: topics[0].clone()});

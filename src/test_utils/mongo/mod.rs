@@ -11,6 +11,7 @@ use mongodb::{
     Client, Collection,
 };
 use reth_primitives::{Address, TxType, B256, U256};
+use reth_rpc_types::AccessList;
 use reth_rpc_types::Transaction;
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
@@ -43,8 +44,9 @@ lazy_static! {
 }
 
 pub const BLOCK_NUMBER: u64 = 0x1234;
-pub const RANDOM_BYTES_SIZE: usize = 100024;
+pub const RANDOM_BYTES_SIZE: usize = 100_024;
 
+#[must_use]
 pub fn generate_port_number() -> u16 {
     let address = "0.0.0.0:0";
     let socket = std::net::UdpSocket::bind(address).expect("Cannot bind to socket");
@@ -65,7 +67,7 @@ pub enum CollectionDB {
     Logs,
 }
 
-/// Type alias for the different types of stored data associated with each CollectionDB.
+/// Type alias for the different types of stored data associated with each `CollectionDB`.
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum StoredData {
     /// Represents a stored header associated with a CollectionDB.
@@ -126,7 +128,7 @@ impl Serialize for StoredData {
     }
 }
 
-/// Struct representing a data generator for MongoDB.
+/// Struct representing a data generator for `MongoDB`.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[derive(Debug)]
 pub struct MongoFuzzer {
@@ -163,26 +165,28 @@ impl MongoFuzzer {
             )
             .into();
 
-        Self { documents: Default::default(), mongodb, rnd_bytes_size, port }
+        Self { documents: HashMap::default(), mongodb, rnd_bytes_size, port }
     }
 
-    /// Obtains an immutable reference to the documents HashMap.
+    /// Obtains an immutable reference to the documents `HashMap`.
+    #[must_use]
     pub const fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
         &self.documents
     }
 
-    /// Get MongoDB image
+    /// Get `MongoDB` image
     pub fn mongo_image(&self) -> RunnableImage<GenericImage> {
         let image = GenericImage::new("mongo".to_string(), "6.0.13".to_string());
         RunnableImage::from(image).with_mapped_port((self.port, 27017))
     }
 
     /// Get port number
+    #[must_use]
     pub const fn port(&self) -> u16 {
         self.port
     }
 
-    /// Finalizes the data generation and returns the MongoDB database.
+    /// Finalizes the data generation and returns the `MongoDB` database.
     pub async fn finalize(&self) -> Database {
         for collection in CollectionDB::iter() {
             self.update_collection(collection).await;
@@ -379,6 +383,7 @@ pub struct TransactionBuilder {
 
 impl TransactionBuilder {
     /// Specifies the type of transaction to build.
+    #[must_use]
     pub const fn with_tx_type(mut self, tx_type: TxType) -> Self {
         self.tx_type = Some(tx_type);
         self
@@ -407,7 +412,7 @@ impl TransactionBuilder {
                             y_parity: Some(reth_rpc_types::Parity(true)),
                         }),
                         chain_id: Some(1),
-                        access_list: Some(Default::default()),
+                        access_list: Some(AccessList::default()),
                         transaction_type: Some(TxType::Eip1559.into()),
                         ..Default::default()
                     },
@@ -427,10 +432,10 @@ impl TransactionBuilder {
                             s: *TEST_SIG_S,
                             // EIP-155 legacy transaction: v = {0,1} + CHAIN_ID * 2 + 35
                             v: CHAIN_ID.saturating_mul(U256::from(2)).saturating_add(U256::from(35)),
-                            y_parity: Default::default(),
+                            y_parity: Option::default(),
                         }),
                         chain_id: Some(1),
-                        blob_versioned_hashes: Default::default(),
+                        blob_versioned_hashes: Option::default(),
                         transaction_type: Some(TxType::Legacy.into()),
                         ..Default::default()
                     },
@@ -452,12 +457,12 @@ impl TransactionBuilder {
                             y_parity: Some(reth_rpc_types::Parity(true)),
                         }),
                         chain_id: Some(1),
-                        access_list: Some(Default::default()),
+                        access_list: Some(AccessList::default()),
                         transaction_type: Some(TxType::Eip2930.into()),
                         ..Default::default()
                     },
                 },
-                _ => unimplemented!(),
+                TxType::Eip4844 => unimplemented!(),
             });
         }
 

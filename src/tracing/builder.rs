@@ -1,6 +1,6 @@
 use reth_primitives::{B256, U256};
 use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
-use reth_rpc_types::{BlockId, BlockTransactions, Header};
+use reth_rpc_types::{Block, BlockId, BlockTransactions, Header};
 
 use crate::eth_provider::{
     error::{EthApiError, TransactionError},
@@ -18,7 +18,7 @@ pub struct Pinned;
 pub struct TracerBuilder<P: EthereumProvider + Send + Sync, Status = Floating> {
     eth_provider: P,
     env: Env,
-    block: reth_rpc_types::Block,
+    block: Block,
     _phantom: std::marker::PhantomData<Status>,
 }
 
@@ -34,7 +34,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 
         let env = Env { cfg, ..Default::default() };
 
-        Ok(Self { eth_provider, env, block: Default::default(), _phantom: std::marker::PhantomData })
+        Ok(Self { eth_provider, env, block: Block::default(), _phantom: std::marker::PhantomData })
     }
 
     /// Sets the block to trace
@@ -95,10 +95,10 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
         // DB should use the state of the parent block
         let db = EthDatabaseSnapshot::new(self.eth_provider, BlockId::Hash(self.block.header.parent_hash.into()));
 
-        Ok(Tracer { env, transactions, db })
+        Ok(Tracer { transactions, env, db })
     }
 
-    /// Init an EnvWithHandlerCfg.
+    /// Init an `EnvWithHandlerCfg`.
     fn init_env_with_handler_config(&self) -> EnvWithHandlerCfg {
         let env = Box::new(self.init_env_with_block_env());
         EnvWithHandlerCfg::new(env, HandlerCfg::new(SpecId::CANCUN))

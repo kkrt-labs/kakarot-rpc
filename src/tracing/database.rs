@@ -14,6 +14,7 @@ use reth_rpc_types::{serde_helpers::JsonStorageKey, BlockId, BlockNumberOrTag};
 use tokio::runtime::Handle;
 
 #[derive(Debug)]
+#[allow(clippy::redundant_pub_crate)]
 pub(crate) struct EthDatabaseSnapshot<P: EthereumProvider + Send + Sync> {
     cache: CacheDB<P>,
     block_id: BlockId,
@@ -116,13 +117,13 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
 
 impl<P: EthereumProvider + Send + Sync> DatabaseCommit for EthDatabaseSnapshot<P> {
     fn commit(&mut self, changes: HashMap<Address, Account>) {
-        changes.into_iter().for_each(|(address, account)| {
+        for (address, account) in changes {
             let db_account = DbAccount {
                 info: account.info.clone(),
                 storage: account.storage.into_iter().map(|(k, v)| (k, v.present_value)).collect(),
                 account_state: AccountState::None,
             };
             self.cache.accounts.insert(address, db_account);
-        });
+        }
     }
 }

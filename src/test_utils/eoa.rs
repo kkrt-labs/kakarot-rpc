@@ -223,7 +223,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
                 gas_limit: 21000,
                 to: TxKind::Call(Address::random()),
                 value: U256::from(1000),
-                max_fee_per_gas: 875000000,
+                max_fee_per_gas: 875_000_000,
                 ..Default::default()
             }))?,
             self.evm_address()?,
