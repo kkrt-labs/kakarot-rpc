@@ -1,3 +1,6 @@
+//! The primitives crate provides primitives types across the entire project.
+
+/// Adds two numbers together.
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }

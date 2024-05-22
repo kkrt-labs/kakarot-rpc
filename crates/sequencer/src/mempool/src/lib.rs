@@ -1,3 +1,6 @@
+//! The mempool crate provides the core logic for managing transactions in the mempool.
+
+/// Adds two numbers together.
 pub fn add(left: usize, right: usize) -> usize {
     left + right
 }

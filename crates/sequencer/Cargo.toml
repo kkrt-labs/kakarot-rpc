@@ -1,5 +1,5 @@
 [workspace]
-members = [ "src/execution","src/mempool", "src/primitives"]
+members = ["src/*"]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
@@ -80,4 +80,5 @@ rust-version = "1.76"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[workspace.dependencies]
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false }
