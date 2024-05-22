@@ -128,6 +128,8 @@ pub trait EthereumProvider {
         &self,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>>;
+    /// Returns a vec of pending pool transactions.
+    async fn txpool_transactions(&self) -> EthProviderResult<Vec<StoredPendingTransaction>>;
     /// Returns the content of the pending pool.
     async fn txpool_content(&self) -> EthProviderResult<TxpoolContent>;
 }
@@ -638,11 +640,12 @@ where
         }
     }
 
-    async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {
-        let transactions: Vec<StoredPendingTransaction> =
-            self.database.get_and_map_to::<_, StoredPendingTransaction>(None, None).await?;
+    async fn txpool_transactions(&self) -> EthProviderResult<Vec<StoredPendingTransaction>> {
+        Ok(self.database.get_and_map_to::<_, StoredPendingTransaction>(None, None).await?)
+    }
 
-        Ok(transactions.into_iter().fold(TxpoolContent::default(), |mut content, pending| {
+    async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {
+        Ok(self.txpool_transactions().await?.into_iter().fold(TxpoolContent::default(), |mut content, pending| {
             content.pending.entry(pending.tx.from).or_default().insert(pending.tx.nonce.to_string(), pending.tx);
             content
         }))
