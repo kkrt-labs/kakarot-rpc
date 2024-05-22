@@ -1,11 +1,18 @@
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
 use reth_primitives::Address;
-use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom};
+use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolStatus};
 
 /// Txpool API
 #[rpc(server, namespace = "txpool")]
 #[async_trait]
 pub trait TxPoolApi {
+    /// Returns the number of transactions currently pending for inclusion in the next block(s), as
+    /// well as the ones that are being scheduled for future execution only.
+    ///
+    /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_status) for more details
+    #[method(name = "status")]
+    async fn txpool_status(&self) -> RpcResult<TxpoolStatus>;
+
     /// Retrieves the transactions contained within the txpool, returning pending
     /// transactions of this address, grouped by nonce.
     ///
