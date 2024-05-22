@@ -100,11 +100,11 @@ ethers = { version = "2.0.9", default-features = false }
 ethers-solc = { version = "2.0.9", default-features = false }
 jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false, features = [
-  "alloy-compat"
+  "alloy-compat",
 ] }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false, features = [
-  "arbitrary"
-]  }
+  "arbitrary",
+] }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false }
 reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false }
 revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "7168ac5" }
@@ -174,8 +174,12 @@ tokio-stream = { version = "0.1.15", default-features = false, optional = true }
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", default-features = false }
-katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", features = ["messaging"] }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", default-features = false, features = ["serde"] }
+katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", features = [
+  "messaging",
+] }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", default-features = false, features = [
+  "serde",
+] }
 arbitrary = { version = "1", features = ["derive"] }
 
 alloy-signer-wallet = { version = "0.1.0", default-features = false }
@@ -190,12 +194,10 @@ cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381"
 # we need v0.7.0-rc.0 to be compatible with dojo.
 starknet_api = { git = "https://github.com/starkware-libs/starknet-api.git", tag = "v0.7.0-rc.0" }
 
-alloy-primitives = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
-alloy-json-abi = { git = "https://github.com/alloy-rs/core", rev = "ff339696fa9b490698cb3edec3d4647fae0bd332" }
 alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
 alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
 alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500"}
+alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
 alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
 alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "d68a6b787b2904061f0ae7fcc02ece8513e3c500" }
