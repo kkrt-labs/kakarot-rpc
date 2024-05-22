@@ -292,11 +292,6 @@ async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider>) -> Vec
     }
 }
 
-async fn filter_logs_and_assert(filter: Filter, expected_count: usize, provider: Arc<dyn EthereumProvider>) {
-    let logs = filter_logs(filter, provider).await;
-    assert_eq!(logs.len(), expected_count);
-}
-
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
@@ -314,21 +309,21 @@ async fn test_get_logs_topics(#[future] katana: Katana, _setup: ()) {
         topics: [topic_one.into(), Topic::default(), Topic::default(), Topic::default()],
         ..Default::default()
     };
-    filter_logs_and_assert(filter, 1, provider.clone()).await;
+    assert_eq!(filter_logs(filter, provider.clone()).await.len(), 1);
 
     // Filter on the second topic
     let filter = Filter {
         topics: [Topic::default(), topic_two.into(), Topic::default(), Topic::default()],
         ..Default::default()
     };
-    filter_logs_and_assert(filter, 1, provider.clone()).await;
+    assert_eq!(filter_logs(filter, provider.clone()).await.len(), 1);
 
     // Filter on the combination of topics three and four (should return 2 logs)
     let filter = Filter {
         topics: [Topic::default(), Topic::default(), vec![topic_three, topic_four].into(), Topic::default()],
         ..Default::default()
     };
-    filter_logs_and_assert(filter, 2, provider.clone()).await;
+    assert_eq!(filter_logs(filter, provider.clone()).await.len(), 2);
 }
 
 #[rstest]
@@ -343,15 +338,15 @@ async fn test_get_logs_address(#[future] katana: Katana, _setup: ()) {
 
     // Filter on the first address
     let filter = Filter { address: address_one.into(), ..Default::default() };
-    filter_logs_and_assert(filter, 1, provider.clone()).await;
+    assert_eq!(filter_logs(filter, provider.clone()).await.len(), 1);
 
     // Filter on the second address
     let filter = Filter { address: address_two.into(), ..Default::default() };
-    filter_logs_and_assert(filter, 1, provider.clone()).await;
+    assert_eq!(filter_logs(filter, provider.clone()).await.len(), 1);
 
     // Filter on the combination of both addresses
     let filter = Filter { address: vec![address_one, address_two].into(), ..Default::default() };
-    filter_logs_and_assert(filter, 2, provider.clone()).await;
+    assert_eq!(filter_logs(filter, provider.clone()).await.len(), 2);
 }
 
 #[rstest]
