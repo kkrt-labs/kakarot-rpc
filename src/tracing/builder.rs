@@ -34,7 +34,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 
         let env = Env { cfg, ..Default::default() };
 
-        Ok(Self { eth_provider, env, block: Block::default(), _phantom: std::marker::PhantomData })
+        Ok(Self { eth_provider, env, block: Default::default(), _phantom: std::marker::PhantomData })
     }
 
     /// Sets the block to trace

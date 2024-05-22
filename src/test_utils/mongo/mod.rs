@@ -11,7 +11,6 @@ use mongodb::{
     Client, Collection,
 };
 use reth_primitives::{Address, TxType, B256, U256};
-use reth_rpc_types::AccessList;
 use reth_rpc_types::Transaction;
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;
@@ -164,7 +163,7 @@ impl MongoFuzzer {
             )
             .into();
 
-        Self { documents: HashMap::default(), mongodb, rnd_bytes_size, port }
+        Self { documents: Default::default(), mongodb, rnd_bytes_size, port }
     }
 
     /// Obtains an immutable reference to the documents `HashMap`.
@@ -411,7 +410,7 @@ impl TransactionBuilder {
                             y_parity: Some(reth_rpc_types::Parity(true)),
                         }),
                         chain_id: Some(1),
-                        access_list: Some(AccessList::default()),
+                        access_list: Some(Default::default()),
                         transaction_type: Some(TxType::Eip1559.into()),
                         ..Default::default()
                     },
@@ -431,10 +430,10 @@ impl TransactionBuilder {
                             s: *TEST_SIG_S,
                             // EIP-155 legacy transaction: v = {0,1} + CHAIN_ID * 2 + 35
                             v: CHAIN_ID.saturating_mul(U256::from(2)).saturating_add(U256::from(35)),
-                            y_parity: Option::default(),
+                            y_parity: Default::default(),
                         }),
                         chain_id: Some(1),
-                        blob_versioned_hashes: Option::default(),
+                        blob_versioned_hashes: Default::default(),
                         transaction_type: Some(TxType::Legacy.into()),
                         ..Default::default()
                     },
@@ -456,7 +455,7 @@ impl TransactionBuilder {
                             y_parity: Some(reth_rpc_types::Parity(true)),
                         }),
                         chain_id: Some(1),
-                        access_list: Some(AccessList::default()),
+                        access_list: Some(Default::default()),
                         transaction_type: Some(TxType::Eip2930.into()),
                         ..Default::default()
                     },
