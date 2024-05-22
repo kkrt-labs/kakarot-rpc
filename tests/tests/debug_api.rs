@@ -194,9 +194,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let res_by_block_number = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::new("debug_getRawTransactions").add_param(format!("0x{block_number:016x}")).build(),
-        )
+        .body(RawRpcParamsBuilder::new("debug_getRawTransactions").add_param(format!("0x{block_number:016x}")).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
