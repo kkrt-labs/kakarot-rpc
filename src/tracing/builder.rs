@@ -25,7 +25,7 @@ pub struct TracerBuilder<P: EthereumProvider + Send + Sync, Status = Floating> {
 /// Block gas limit for tracing. Set to an arbitrarily high value to never run out.
 /// Block gas limit is only partially enforced in Cairo EVM layer: <https://github.com/kkrt-labs/kakarot/blob/98b26fda32c36f09880ed0c7f44dba7f4d669b61/src/kakarot/accounts/library.cairo#L245>
 /// Remove when block gas limit is enforced consistently (i.e. when we check that a transaction's gas limit is lower than the block gas limit as well as the current block's cumulative gas)
-const TRACING_BLOCK_GAS_LIMIT: u64 = u64::MAX;
+const TRACING_BLOCK_GAS_LIMIT: u64 = 1_000_000_000;
 
 impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
     pub async fn new(eth_provider: P) -> TracerResult<Self> {
