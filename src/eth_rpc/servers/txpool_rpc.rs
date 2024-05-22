@@ -2,7 +2,7 @@ use crate::eth_provider::provider::EthereumProvider;
 use crate::eth_rpc::api::txpool_api::TxPoolApiServer;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::Address;
-use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom};
+use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolStatus};
 use tracing::trace;
 
 /// The RPC module for implementing the Txpool api
@@ -19,6 +19,17 @@ impl<P: EthereumProvider> TxpoolRpc<P> {
 
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> TxPoolApiServer for TxpoolRpc<P> {
+    /// Returns the number of transactions currently pending for inclusion in the next block(s), as
+    /// well as the ones that are being scheduled for future execution only.
+    /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_status)
+    ///
+    /// Handler for `txpool_status`
+    async fn txpool_status(&self) -> Result<TxpoolStatus> {
+        trace!(target: "rpc::eth", "Serving txpool_status");
+        let all = self.eth_provider.txpool_content().await?;
+        Ok(TxpoolStatus { pending: all.pending.len() as u64, queued: all.queued.len() as u64 })
+    }
+
     /// Retrieves the transactions contained within the txpool, returning pending
     /// transactions of this address, grouped by nonce.
     ///
