@@ -110,7 +110,7 @@ impl RawRpcParamsBuilder {
     }
 
     /// Sets the ID for the JSON-RPC request.
-    pub fn set_id(mut self, id: i32) -> Self {
+    pub const fn set_id(mut self, id: i32) -> Self {
         self.id = id;
         self
     }

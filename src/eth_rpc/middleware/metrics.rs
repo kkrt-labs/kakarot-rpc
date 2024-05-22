@@ -106,7 +106,7 @@ pub struct MetricsLayer {
 
 impl MetricsLayer {
     /// Create a new [`MetricsLayer`].
-    pub fn new(metrics: RpcMetrics, transport_label: &'static str) -> Self {
+    pub const fn new(metrics: RpcMetrics, transport_label: &'static str) -> Self {
         Self { inner: metrics, transport_label }
     }
 }
@@ -129,7 +129,7 @@ pub struct Metrics<S> {
 
 impl<S> Metrics<S> {
     /// Create a new metrics middleware.
-    pub fn new(service: S, metrics: RpcMetrics, transport_label: &'static str) -> Self {
+    pub const fn new(service: S, metrics: RpcMetrics, transport_label: &'static str) -> Self {
         Self { service, metrics, transport_label }
     }
 }

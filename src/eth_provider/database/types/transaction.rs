@@ -72,7 +72,7 @@ pub struct StoredPendingTransaction {
 }
 
 impl StoredPendingTransaction {
-    pub fn new(tx: Transaction, retries: u64) -> Self {
+    pub const fn new(tx: Transaction, retries: u64) -> Self {
         Self { tx, retries }
     }
 }

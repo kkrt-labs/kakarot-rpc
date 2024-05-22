@@ -55,7 +55,7 @@ mod tests {
             self
         }
 
-        fn with_fee_market(mut self) -> Self {
+        const fn with_fee_market(mut self) -> Self {
             self.tx.max_fee_per_gas = Some(30);
             self.tx.max_priority_fee_per_gas = Some(10);
             self

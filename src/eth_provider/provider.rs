@@ -146,7 +146,7 @@ where
     SP: starknet::providers::Provider,
 {
     /// Returns a reference to the database.
-    pub fn database(&self) -> &Database {
+    pub const fn database(&self) -> &Database {
         &self.database
     }
 }
@@ -653,7 +653,7 @@ where
     }
 
     #[cfg(feature = "testing")]
-    pub fn starknet_provider(&self) -> &SP {
+    pub const fn starknet_provider(&self) -> &SP {
         &self.starknet_provider
     }
 

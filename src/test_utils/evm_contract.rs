@@ -20,7 +20,7 @@ pub enum TransactionInfo {
 
 macro_rules! impl_common_info {
     ($field: ident, $type: ty) => {
-        pub fn $field(&self) -> $type {
+        pub const fn $field(&self) -> $type {
             match self {
                 TransactionInfo::FeeMarketInfo(info) => info.common.$field,
                 TransactionInfo::LegacyInfo(info) => info.common.$field,
