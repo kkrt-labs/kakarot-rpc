@@ -2350,6 +2350,7 @@ dependencies = [
 name = "mempool"
 version = "0.1.0"
 dependencies = [
+ "reth-primitives",
  "reth-transaction-pool",
 ]
 

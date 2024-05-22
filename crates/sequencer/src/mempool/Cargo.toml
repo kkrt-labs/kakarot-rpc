@@ -10,3 +10,4 @@ workspace = true
 
 [dependencies]
 reth-transaction-pool = { workspace = true }
+reth-primitives = { workspace = true }
