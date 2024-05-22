@@ -52,7 +52,7 @@ async fn test_chain_id(#[future] katana: Katana, _setup: ()) {
     // Then
     // ASCII code for "test" is 0x74657374
     // Since kaka_test > u32::MAX, we should return the last 4 bytes of the chain_id.
-    assert_eq!(chain_id, U64::from(0x74657374u64));
+    assert_eq!(chain_id, U64::from(0x7465_7374_u64));
 }
 
 #[rstest]
@@ -541,7 +541,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
 
     // Then: Attempt to retrieve receipts for a non-existing block
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::from(U256::from(0xc0fefe))))))
+        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::from(U256::from(0x00c0_fefe))))))
         .await
         .unwrap();
     assert!(receipts.is_none());
@@ -603,7 +603,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
-        max_fee_per_gas: 875000000,
+        max_fee_per_gas: 875_000_000,
         max_priority_fee_per_gas: 0,
         access_list: Default::default(),
     });
@@ -647,7 +647,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
         to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
-        max_fee_per_gas: 875000000,
+        max_fee_per_gas: 875_000_000,
         max_priority_fee_per_gas: 0,
         access_list: Default::default(),
     });
@@ -696,7 +696,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
         to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
-        max_fee_per_gas: 875000000,
+        max_fee_per_gas: 875_000_000,
         max_priority_fee_per_gas: 0,
         access_list: Default::default(),
     });
