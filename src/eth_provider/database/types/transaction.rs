@@ -90,6 +90,12 @@ impl From<Transaction> for StoredPendingTransaction {
     }
 }
 
+impl From<StoredPendingTransaction> for Transaction {
+    fn from(tx: StoredPendingTransaction) -> Transaction {
+        tx.tx
+    }
+}
+
 /// A transaction hash as stored in the database
 /// This wrapper is used to deserialize a transaction
 /// from the database, on which a projection was

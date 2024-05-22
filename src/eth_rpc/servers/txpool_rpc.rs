@@ -33,16 +33,13 @@ impl<P: EthereumProvider + Send + Sync + 'static> TxPoolApiServer for TxpoolRpc<
         let transactions = self.eth_provider.txpool_transactions().await?;
 
         for transaction in transactions {
-            let tx = transaction.tx;
-
-            let entry = inspect.pending.entry(tx.from).or_default();
-            entry.insert(
-                tx.nonce.to_string(),
+            inspect.pending.entry(transaction.from).or_default().insert(
+                transaction.nonce.to_string(),
                 TxpoolInspectSummary {
-                    to: tx.to,
-                    value: tx.value,
-                    gas: tx.gas,
-                    gas_price: tx.gas_price.unwrap_or_default(),
+                    to: transaction.to,
+                    value: transaction.value,
+                    gas: transaction.gas,
+                    gas_price: transaction.gas_price.unwrap_or_default(),
                 },
             );
         }
