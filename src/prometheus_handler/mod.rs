@@ -60,7 +60,6 @@ pub enum Error {
     PortInUse(SocketAddr),
 }
 
-#[allow(clippy::unused_async)]
 async fn request_metrics(
     req: Request<hyper::body::Incoming>,
     registry: Registry,
