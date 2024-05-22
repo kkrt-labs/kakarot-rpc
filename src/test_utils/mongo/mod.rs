@@ -80,7 +80,7 @@ pub enum StoredData {
 
 impl StoredData {
     /// Extracts the stored header if it exists, otherwise returns None.
-    pub fn extract_stored_header(&self) -> Option<&StoredHeader> {
+    pub const fn extract_stored_header(&self) -> Option<&StoredHeader> {
         match self {
             Self::StoredHeader(header) => Some(header),
             _ => None,
@@ -88,7 +88,7 @@ impl StoredData {
     }
 
     /// Extracts the stored transaction if it exists, otherwise returns None.
-    pub fn extract_stored_transaction(&self) -> Option<&StoredTransaction> {
+    pub const fn extract_stored_transaction(&self) -> Option<&StoredTransaction> {
         match self {
             Self::StoredTransaction(transaction) => Some(transaction),
             _ => None,
@@ -96,7 +96,7 @@ impl StoredData {
     }
 
     /// Extracts the stored transaction receipt if it exists, otherwise returns None.
-    pub fn extract_stored_transaction_receipt(&self) -> Option<&StoredTransactionReceipt> {
+    pub const fn extract_stored_transaction_receipt(&self) -> Option<&StoredTransactionReceipt> {
         match self {
             Self::StoredTransactionReceipt(receipt) => Some(receipt),
             _ => None,
@@ -104,7 +104,7 @@ impl StoredData {
     }
 
     /// Extracts the stored log if it exists, otherwise returns None.
-    pub fn extract_stored_log(&self) -> Option<&StoredLog> {
+    pub const fn extract_stored_log(&self) -> Option<&StoredLog> {
         match self {
             Self::StoredLog(log) => Some(log),
             _ => None,
@@ -167,7 +167,7 @@ impl MongoFuzzer {
     }
 
     /// Obtains an immutable reference to the documents HashMap.
-    pub fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
+    pub const fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
         &self.documents
     }
 
@@ -178,7 +178,7 @@ impl MongoFuzzer {
     }
 
     /// Get port number
-    pub fn port(&self) -> u16 {
+    pub const fn port(&self) -> u16 {
         self.port
     }
 
@@ -379,7 +379,7 @@ pub struct TransactionBuilder {
 
 impl TransactionBuilder {
     /// Specifies the type of transaction to build.
-    pub fn with_tx_type(mut self, tx_type: TxType) -> Self {
+    pub const fn with_tx_type(mut self, tx_type: TxType) -> Self {
         self.tx_type = Some(tx_type);
         self
     }

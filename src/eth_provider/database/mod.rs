@@ -28,7 +28,7 @@ impl Database {
     }
 
     /// Get a reference to the inner MongoDatabase
-    pub fn inner(&self) -> &MongoDatabase {
+    pub const fn inner(&self) -> &MongoDatabase {
         &self.0
     }
 

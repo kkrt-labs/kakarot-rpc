@@ -344,11 +344,11 @@ impl KatanaGenesisBuilder<Initialized> {
         self.cache.get(key).cloned().ok_or(eyre!("Cache miss for {key} address"))
     }
 
-    pub fn cache(&self) -> &HashMap<String, FieldElement> {
+    pub const fn cache(&self) -> &HashMap<String, FieldElement> {
         &self.cache
     }
 
-    pub fn class_hashes(&self) -> &HashMap<String, FieldElement> {
+    pub const fn class_hashes(&self) -> &HashMap<String, FieldElement> {
         &self.class_hashes
     }
 }
