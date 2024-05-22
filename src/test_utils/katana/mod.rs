@@ -156,7 +156,6 @@ impl<'a> Katana {
     }
 
     #[allow(dead_code)]
-
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
     }
