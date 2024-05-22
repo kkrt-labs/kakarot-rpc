@@ -269,7 +269,8 @@ dependencies = [
 [[package]]
 name = "alloy-json-abi"
 version = "0.6.4"
-source = "git+https://github.com/alloy-rs/core?rev=ff339696fa9b490698cb3edec3d4647fae0bd332#ff339696fa9b490698cb3edec3d4647fae0bd332"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24ed0f2a6c3a1c947b4508522a53a190dba8f94dcd4e3e1a5af945a498e78f2f"
 dependencies = [
  "alloy-primitives 0.6.4",
  "alloy-sol-type-parser 0.6.4",
@@ -337,7 +338,8 @@ dependencies = [
 [[package]]
 name = "alloy-primitives"
 version = "0.6.4"
-source = "git+https://github.com/alloy-rs/core?rev=ff339696fa9b490698cb3edec3d4647fae0bd332#ff339696fa9b490698cb3edec3d4647fae0bd332"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "600d34d8de81e23b6d909c094e23b3d357e01ca36b78a8c5424c501eedbe86f0"
 dependencies = [
  "alloy-rlp",
  "bytes",
@@ -644,7 +646,8 @@ dependencies = [
 [[package]]
 name = "alloy-sol-type-parser"
 version = "0.6.4"
-source = "git+https://github.com/alloy-rs/core?rev=ff339696fa9b490698cb3edec3d4647fae0bd332#ff339696fa9b490698cb3edec3d4647fae0bd332"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0045cc89524e1451ccf33e8581355b6027ac7c6e494bb02959d4213ad0d8e91d"
 dependencies = [
  "winnow 0.6.5",
 ]
