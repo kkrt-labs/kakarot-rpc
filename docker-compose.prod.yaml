@@ -7,7 +7,7 @@ services:
     ports:
       - 6060:6060
     volumes:
-      - juno_files:/var/lib/juno
+      - juno_files_prod:/var/lib/juno
     command: >
       --pending-poll-interval "1s"
       --http
@@ -20,7 +20,7 @@ services:
       --cn-gateway-url https://gateway.kakarot.sw-dev.io/gateway/
       --cn-l1-chain-id 0xaa36a7
       --cn-l2-chain-id kkrt
-      --cn-core-contract-address 0x9DAd05893305352cDd142F79e36bc39393F23770
+      --cn-core-contract-address 0x74Ca1aC5BD4c3c97006d2B7b9375Dd3B6C17ACcD
       --cn-unverifiable-range 0,1000000
     networks:
       - internal_prod
@@ -60,7 +60,7 @@ services:
       - POSTGRES_DB=starknet_explorer_dev
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - starknet-explorer:/var/lib/postgresql/data/
+      - starknet-explorer_prod:/var/lib/postgresql/data/
 
   kakarot-rpc:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
@@ -76,15 +76,15 @@ services:
       # These values are unique to Sepolia Testnet
       # They'll need to be manually changed in case the testnet is reset
       # To add robustness: parse the `deployments/kakarot-sepolia` folder in `kkrt-labs/kakarot` repo
-      - KAKAROT_ADDRESS=0x70c14f7fe5968975cff5cc4614c9d9a8cbb9051da19a28990772e3b55c23328
+      - KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
       - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e
       - ACCOUNT_CONTRACT_CLASS_HASH=0x490cccb64e3917ecf0a80a59d0c3e449766f745c1d6db54e0050f89eb59aba1
       - MAX_FELTS_IN_CALLDATA=30000
-      - RETRY_TX_INTERVAL=10
+      - RETRY_TX_INTERVAL=2
     restart: on-failure
     volumes:
       # Mount the indexer code
-      - indexer_code:/usr/src/indexer
+      - indexer_code_prod:/usr/src/indexer
     depends_on:
       starknet:
         condition: service_started
@@ -92,14 +92,19 @@ services:
       - internal_prod
 
   apibara-dna:
-    extends:
-      file: docker-compose.yaml
-      service: apibara-dna
+    image: quay.io/apibara/starknet:1.4.1
     command:
       - start
       - --rpc=http://starknet:6060
       - --wait-for-rpc
       - --data=/data
+    ports:
+      - 7171:7171
+    volumes:
+      - apibara_prod:/data
+    networks:
+      - internal_prod
+    restart: on-failure
 
   ### MongoDB with Mongo Express
   mongo:
@@ -133,11 +138,11 @@ services:
       - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
-      - KAKAROT_ADDRESS=0x70c14f7fe5968975cff5cc4614c9d9a8cbb9051da19a28990772e3b55c23328
+      - KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
       - DEFAULT_BLOCK_GAS_LIMIT=7000000
     restart: on-failure
     volumes:
-      - indexer_code:/indexer
+      - indexer_code_prod:/indexer
     networks:
       - internal_prod
     depends_on:
