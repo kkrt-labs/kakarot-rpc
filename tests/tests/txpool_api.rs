@@ -88,7 +88,7 @@ async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_txpool_content_from(#[future] katana: Katana) {
+async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
     // Start the Kakarot RPC server and retrieve the server address and handle
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
