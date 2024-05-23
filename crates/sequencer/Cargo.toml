@@ -82,3 +82,4 @@ rust-version = "1.76"
 
 [workspace.dependencies]
 reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.7", default-features = false }
