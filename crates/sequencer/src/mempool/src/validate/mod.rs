@@ -5,7 +5,8 @@ use reth_transaction_pool::BlobStore;
 use std::sync::Arc;
 
 /// A wrapper around the Reth [reth_transaction_pool::validate::EthTransactionValidatorBuilder].
-/// The produced Validator will reject EIP4844 transactions.
+/// The produced Validator will reject EIP4844 transactions not supported by Kakarot at the moment.
+
 #[derive(Debug)]
 pub struct EthTransactionValidatorBuilder(reth_transaction_pool::validate::EthTransactionValidatorBuilder);
 

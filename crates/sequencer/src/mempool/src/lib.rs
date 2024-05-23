@@ -15,9 +15,13 @@ use reth_transaction_pool::{
     CoinbaseTipOrdering, EthPooledTransaction, EthTransactionValidator, Pool, TransactionValidationTaskExecutor,
 };
 
+/// A type alias for the Kakarot Transaction Validator.
+/// Uses the Reth implementation [TransactionValidationTaskExecutor].
+pub type Validator<Client> = TransactionValidationTaskExecutor<EthTransactionValidator<Client, EthPooledTransaction>>;
+
+/// A type alias for the Kakarot Transaction Ordering.
+/// Uses the Reth implementation [CoinbaseTipOrdering].
+pub type TransactionOrdering = CoinbaseTipOrdering<EthPooledTransaction>;
+
 /// A type alias for the Kakarot Sequencer Mempool.
-pub type KakarotMempool<Client, S> = Pool<
-    TransactionValidationTaskExecutor<EthTransactionValidator<Client, EthPooledTransaction>>,
-    CoinbaseTipOrdering<EthPooledTransaction>,
-    S,
->;
+pub type Mempool<Client, S> = Pool<Validator<Client>, TransactionOrdering, S>;
