@@ -69,6 +69,11 @@ lazy_static! {
         &std::env::var("MAX_FELTS_IN_CALLDATA")
             .unwrap_or_else(|_| panic!("Missing environment variable MAX_FELTS_IN_CALLDATA"))
     ).expect("failing to parse MAX_FELTS_IN_CALLDATA");
+
+    pub static ref WHITE_LISTED_EIP_155_ADDRESS: Address = Address::from_str(
+        &std::env::var("WHITE_LISTED_EIP_155_ADDRESS")
+            .unwrap_or_else(|_| panic!("Missing environment variable WHITE_LISTED_EIP_155_ADDRESS"))
+    ).expect("failing to parse WHITE_LISTED_EIP_155_ADDRESS");
 }
 
 // Kakarot utils
@@ -87,7 +92,7 @@ pub fn starknet_address(address: Address) -> FieldElement {
 /// Convert a Ethereum transaction into a Starknet transaction
 pub fn to_starknet_transaction(
     transaction: &TransactionSigned,
-    chain_id: u64,
+    chain_id: Option<u64>,
     signer: Address,
     max_fee: u64,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
@@ -105,9 +110,10 @@ pub fn to_starknet_transaction(
 
         // Push the last element of the signature
         // In case of a Legacy Transaction, it is v := {0, 1} + chain_id * 2 + 35
+        // or {0, 1} + 27 for pre EIP-155 transactions.
         // Else, it is odd_y_parity
         if let Transaction::Legacy(_) = transaction.transaction {
-            signature.push(transaction_signature.v(Some(chain_id)).into());
+            signature.push(transaction_signature.v(chain_id).into());
         } else {
             signature.push(u64::from(transaction_signature.odd_y_parity).into());
         }
@@ -166,7 +172,7 @@ mod tests {
         // Invoke the function to convert the transaction to Starknet format.
         match to_starknet_transaction(
             &transaction,
-            1_802_203_764,
+            Some(1_802_203_764),
             Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap(),
             0,
         )
@@ -244,6 +250,6 @@ mod tests {
         transaction.transaction.set_input(vec![0; 30000].into());
 
         // Attempt to convert the transaction into a Starknet transaction
-        to_starknet_transaction(&transaction, 1, transaction.recover_signer().unwrap(), 100_000_000).unwrap();
+        to_starknet_transaction(&transaction, Some(1), transaction.recover_signer().unwrap(), 100_000_000).unwrap();
     }
 }
