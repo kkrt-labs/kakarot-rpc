@@ -13,7 +13,7 @@ use reth_rpc_types::serde_helpers::JsonStorageKey;
 use reth_rpc_types::txpool::TxpoolContent;
 use reth_rpc_types::{
     Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
-    TransactionReceipt, TransactionRequest, ValueOrArray,
+    Transaction, TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
@@ -128,6 +128,8 @@ pub trait EthereumProvider {
         &self,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>>;
+    /// Returns a vec of pending pool transactions.
+    async fn txpool_transactions(&self) -> EthProviderResult<Vec<Transaction>>;
     /// Returns the content of the pending pool.
     async fn txpool_content(&self) -> EthProviderResult<TxpoolContent>;
 }
@@ -643,12 +645,13 @@ where
         }
     }
 
-    async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {
-        let transactions: Vec<StoredPendingTransaction> =
-            self.database.get_and_map_to::<_, StoredPendingTransaction>(None, None).await?;
+    async fn txpool_transactions(&self) -> EthProviderResult<Vec<Transaction>> {
+        Ok(self.database.get_and_map_to::<Transaction, StoredPendingTransaction>(None, None).await?)
+    }
 
-        Ok(transactions.into_iter().fold(TxpoolContent::default(), |mut content, pending| {
-            content.pending.entry(pending.tx.from).or_default().insert(pending.tx.nonce.to_string(), pending.tx);
+    async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {
+        Ok(self.txpool_transactions().await?.into_iter().fold(TxpoolContent::default(), |mut content, pending| {
+            content.pending.entry(pending.from).or_default().insert(pending.nonce.to_string(), pending);
             content
         }))
     }
