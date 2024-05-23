@@ -101,7 +101,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 };
             }
 
-            let env = env_with_tx(&self.env.clone(), tx.clone())?;
+            let env = env_with_tx(&self.env, tx.clone())?;
             let evm = EvmBuilder::evm_with_env(&mut self.db, env);
             transact_commit_in_place(evm)?;
         }
@@ -129,7 +129,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         let mut db = self.db;
 
         while let Some(tx) = transactions.next() {
-            let env = env_with_tx(&self.env.clone(), tx.clone())?;
+            let env = env_with_tx(&self.env, tx.clone())?;
 
             let (res, state_changes) = transact_and_get_traces(env, &mut db, tx)?;
             traces.extend(res);
