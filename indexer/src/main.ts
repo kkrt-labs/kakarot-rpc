@@ -1,5 +1,6 @@
 // Utils
 import { NULL_BLOCK_HASH, padString, toHexString } from "./utils/hex.ts";
+import { isKakarotTransaction, ethValidationFailed } from "./utils/filter.ts";
 
 // Types
 import { toEthTx, toTypedEthTx } from "./types/transaction.ts";
@@ -8,12 +9,7 @@ import { fromJsonRpcReceipt, toEthReceipt } from "./types/receipt.ts";
 import { JsonRpcLog, toEthLog } from "./types/log.ts";
 import { StoreItem } from "./types/storeItem.ts";
 // Starknet
-import {
-  BlockHeader,
-  EventWithTransaction,
-  hash,
-  Transaction,
-} from "./deps.ts";
+import { BlockHeader, EventWithTransaction, hash } from "./deps.ts";
 // Eth
 import { Bloom, encodeReceipt, hexToBytes, RLP, Trie } from "./deps.ts";
 
@@ -28,11 +24,6 @@ if (!Number.isSafeInteger(STARTING_BLOCK) || STARTING_BLOCK < 0) {
 const SINK_TYPE = Deno.env.get("SINK_TYPE") ?? "console";
 if (SINK_TYPE !== "console" && SINK_TYPE !== "mongo") {
   throw new Error("Invalid SINK_TYPE");
-}
-
-const KAKAROT_ADDRESS = Deno.env.get("KAKAROT_ADDRESS");
-if (KAKAROT_ADDRESS === undefined) {
-  throw new Error("ENV: KAKAROT_ADDRESS is not set");
 }
 
 const sinkOptions =
@@ -63,36 +54,6 @@ export const config = {
   },
   sinkType: SINK_TYPE,
   sinkOptions: sinkOptions,
-};
-
-const isKakarotTransaction = (transaction: Transaction) => {
-  // Filter out transactions that are not related to Kakarot.
-  // callArrayLen <- calldata[0]
-  // to <- calldata[1]
-  // selector <- calldata[2];
-  // dataOffset <- calldata[3]
-  // dataLength <- calldata[4]
-  // calldataLen <- calldata[5]
-  const calldata = transaction.invokeV1?.calldata;
-  if (calldata === undefined) {
-    console.error("No calldata in transaction");
-    console.error(JSON.stringify(transaction, null, 2));
-    return false;
-  }
-  const to = calldata[1];
-  if (to === undefined) {
-    console.error("No `to` field in calldata of transaction");
-    console.error(JSON.stringify(transaction, null, 2));
-    return false;
-  }
-  // TODO(Greged93): replace this with a more robust check.
-  // ⚠️ The existence of `to` field in invoke calldata in RPC is not enforced by protocol.
-  // Forks or modifications of the kkrt-labs/kakarot-rpc codebase could break this check.
-  if (BigInt(to) !== BigInt(KAKAROT_ADDRESS)) {
-    console.log("✅ Skipping transaction that is not related to Kakarot");
-    return false;
-  }
-  return true;
 };
 
 export default async function transform({
@@ -126,6 +87,12 @@ export default async function transform({
       if (!isKakarotTx) {
         return null;
       }
+
+      // Skip if the transaction_executed event contains "eth validation failed".
+      if (ethValidationFailed(event)) {
+        return null;
+      }
+
       const typedEthTx = toTypedEthTx({ transaction });
       // Can be null if:
       // 1. The transaction is missing calldata.
