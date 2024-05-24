@@ -75,6 +75,7 @@ services:
       - ACCOUNT_CONTRACT_CLASS_HASH=0x3c1081f98ecdd1d320368d2a136191a3fbf02a3e419463d77c3c5aa6dbc99a0
       - MAX_FELTS_IN_CALLDATA=30000
       - RETRY_TX_INTERVAL=10
+      - WHITE_LISTED_EIP_155_ADDRESS=
     restart: on-failure
     volumes:
       # Mount the indexer code

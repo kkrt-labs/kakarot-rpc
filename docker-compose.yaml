@@ -78,6 +78,7 @@ services:
       - MONGO_DATABASE_NAME=kakarot-local
       - MAX_FELTS_IN_CALLDATA=30000
       - RETRY_TX_INTERVAL=1
+      - WHITE_LISTED_EIP_155_ADDRESS=
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app
