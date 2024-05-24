@@ -31,7 +31,7 @@ use super::database::types::{
 };
 use super::database::{CollectionName, Database};
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
-use super::starknet::kakarot_core::WHITE_LISTED_EIP_155_ADDRESS;
+use super::starknet::kakarot_core::WHITE_LISTED_EIP_155_TRANSACTION_HASHES;
 use super::starknet::kakarot_core::{
     self,
     account_contract::AccountContractReader,
@@ -539,8 +539,8 @@ where
             return Err(TransactionError::InvalidChainId.into());
         }
 
-        // If the transaction is a pre EIP-155 transaction, check signer is whitelisted
-        if maybe_chain_id.is_none() && signer != *WHITE_LISTED_EIP_155_ADDRESS {
+        // If the transaction is a pre EIP-155 transaction, check hash is whitelisted
+        if maybe_chain_id.is_none() && !WHITE_LISTED_EIP_155_TRANSACTION_HASHES.contains(&transaction_signed.hash) {
             return Err(TransactionError::InvalidTransactionType.into());
         }
 

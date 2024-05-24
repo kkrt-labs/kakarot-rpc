@@ -190,7 +190,7 @@ async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup
 
     // Then
     let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
-    assert_eq!(B256::left_padding_from(&[0x1]), count);
+    assert_eq!(count, B256::left_padding_from(&[0x1]));
 }
 
 #[rstest]
@@ -623,7 +623,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         eth_provider.database().get_one(None, None).await.expect("Failed to get transaction");
 
     // Assert that the number of retries is 0
-    assert_eq!(tx.clone().unwrap().retries, 0);
+    assert_eq!(0, tx.clone().unwrap().retries);
 
     let tx = tx.unwrap().tx;
 
@@ -645,8 +645,6 @@ async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEv
     let eth_provider = katana.eth_provider();
     let nonce: u64 = katana.eoa().nonce().await.unwrap().try_into().expect("Failed to convert nonce");
 
-    let eoa = katana.eoa();
-
     // Create a sample transaction
     let transaction = counter
         .prepare_call_transaction(
@@ -663,9 +661,11 @@ async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEv
     let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
-    // Set the WHITE_LISTED_EIP_155_ADDRESS env var to the eoa address
-    let eoa_evm_address = eoa.evm_address().expect("failed to get eoa evm address");
-    std::env::set_var("WHITE_LISTED_EIP_155_ADDRESS", eoa_evm_address.to_string());
+    // Set the WHITE_LISTED_EIP_155_TRANSACTION_HASHES env var to the hash
+    // and add a blank space and an unknown hash to test the env var
+    let hash = transaction_signed.hash();
+    let random_hash = B256::random();
+    std::env::set_var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES", format!("{hash}, {random_hash}"));
 
     // Send the transaction
     let tx_hash = eth_provider
@@ -682,7 +682,7 @@ async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEv
 
     // Then
     let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
-    assert_eq!(B256::left_padding_from(&[0x1]), count);
+    assert_eq!(count, B256::left_padding_from(&[0x1]));
 }
 
 #[rstest]

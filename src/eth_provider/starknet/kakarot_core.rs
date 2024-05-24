@@ -7,7 +7,7 @@ use alloy_rlp::Encodable;
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
 use lazy_static::lazy_static;
-use reth_primitives::{Address, Transaction, TransactionSigned};
+use reth_primitives::{Address, Transaction, TransactionSigned, B256};
 use starknet::{
     core::{
         types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1},
@@ -70,10 +70,14 @@ lazy_static! {
             .unwrap_or_else(|_| panic!("Missing environment variable MAX_FELTS_IN_CALLDATA"))
     ).expect("failing to parse MAX_FELTS_IN_CALLDATA");
 
-    pub static ref WHITE_LISTED_EIP_155_ADDRESS: Address = Address::from_str(
-        &std::env::var("WHITE_LISTED_EIP_155_ADDRESS")
-            .unwrap_or_else(|_| panic!("Missing environment variable WHITE_LISTED_EIP_155_ADDRESS"))
-    ).expect("failing to parse WHITE_LISTED_EIP_155_ADDRESS");
+    // List of white listed EIP-155 transactions hashes
+    pub static ref WHITE_LISTED_EIP_155_TRANSACTION_HASHES: Vec<B256> = std::env::var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES")
+        .unwrap_or_else(|_| panic!("Missing environment variable WHITE_LISTED_EIP_155_TRANSACTION_HASHES"))
+        .replace(' ', "")
+        .split(',')
+        .map(|hash| B256::from_str(hash).unwrap())
+        .collect();
+
 }
 
 // Kakarot utils

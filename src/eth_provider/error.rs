@@ -237,8 +237,7 @@ pub enum TransactionError {
 impl From<TransactionError> for EthRpcErrorCode {
     fn from(error: TransactionError) -> Self {
         match error {
-            TransactionError::InvalidChainId => Self::InvalidInput,
-            TransactionError::InvalidTransactionType => Self::InvalidInput,
+            TransactionError::InvalidChainId | TransactionError::InvalidTransactionType => Self::InvalidInput,
             TransactionError::GasOverflow => Self::TransactionRejected,
             TransactionError::ExpectedFullTransactions | TransactionError::Tracing(_) => Self::InternalError,
         }
