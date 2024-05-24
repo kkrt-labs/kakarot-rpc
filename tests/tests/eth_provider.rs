@@ -8,10 +8,11 @@ use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTrans
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::eth_provider::utils::into_filter;
 use kakarot_rpc::models::felt::Felt252Wrapper;
-use kakarot_rpc::test_utils::eoa::Eoa as _;
-use kakarot_rpc::test_utils::evm_contract::EvmContract;
+use kakarot_rpc::test_utils::eoa::Eoa;
+use kakarot_rpc::test_utils::evm_contract::{EvmContract, TransactionInfo, TxCommonInfo, TxLegacyInfo};
 use kakarot_rpc::test_utils::fixtures::{contract_empty, counter, katana, setup};
 use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
+use kakarot_rpc::test_utils::tx_waiter::watch_tx;
 use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
 use reth_primitives::transaction::Signature;
 use reth_primitives::{
@@ -189,7 +190,7 @@ async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup
 
     // Then
     let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
-    assert_eq!(B256::left_padding_from(&[0x1]), count);
+    assert_eq!(count, B256::left_padding_from(&[0x1]));
 }
 
 #[rstest]
@@ -592,10 +593,11 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
 async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
+    let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
 
     // Create a sample transaction
     let transaction = Transaction::Eip1559(TxEip1559 {
-        chain_id: 1,
+        chain_id,
         nonce: 0,
         gas_limit: 21000,
         to: TxKind::Call(Address::random()),
@@ -621,13 +623,66 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         eth_provider.database().get_one(None, None).await.expect("Failed to get transaction");
 
     // Assert that the number of retries is 0
-    assert_eq!(tx.clone().unwrap().retries, 0);
+    assert_eq!(0, tx.clone().unwrap().retries);
 
     let tx = tx.unwrap().tx;
 
     // Assert the transaction hash and block number
     assert_eq!(tx.hash, transaction_signed.hash());
     assert!(tx.block_number.is_none());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
+    // Given
+    let katana = counter.0;
+    let counter = counter.1;
+    let counter_address: Felt252Wrapper = counter.evm_address.into();
+    let counter_address = counter_address.try_into().expect("Failed to convert EVM address");
+
+    let eth_provider = katana.eth_provider();
+    let nonce: u64 = katana.eoa().nonce().await.unwrap().try_into().expect("Failed to convert nonce");
+
+    // Create a sample transaction
+    let transaction = counter
+        .prepare_call_transaction(
+            "inc",
+            (),
+            &TransactionInfo::LegacyInfo(TxLegacyInfo {
+                common: TxCommonInfo { nonce, ..Default::default() },
+                gas_price: 1,
+            }),
+        )
+        .unwrap();
+
+    // Sign the transaction
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
+    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Set the WHITE_LISTED_EIP_155_TRANSACTION_HASHES env var to the hash
+    // and add a blank space and an unknown hash to test the env var
+    let hash = transaction_signed.hash();
+    let random_hash = B256::random();
+    std::env::set_var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES", format!("{hash}, {random_hash}"));
+
+    // Send the transaction
+    let tx_hash = eth_provider
+        .send_raw_transaction(transaction_signed.envelope_encoded())
+        .await
+        .expect("failed to send transaction");
+
+    let bytes = tx_hash.0;
+    let starknet_tx_hash = FieldElement::from_bytes_be(&bytes).unwrap();
+
+    watch_tx(eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
+        .await
+        .expect("Tx polling failed");
+
+    // Then
+    let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
+    assert_eq!(count, B256::left_padding_from(&[0x1]));
 }
 
 #[rstest]
@@ -640,14 +695,11 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
     // Create a sample transaction
     let transaction = Transaction::Eip1559(TxEip1559 {
         chain_id: 1,
-        nonce: 0,
         gas_limit: 21000,
         to: TxKind::Call(Address::random()),
         value: U256::from(1000),
-        input: Bytes::default(),
         max_fee_per_gas: 875_000_000,
-        max_priority_fee_per_gas: 0,
-        access_list: Default::default(),
+        ..Default::default()
     });
 
     // Sign the transaction
@@ -675,6 +727,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     // Given
     // Retrieve an instance of the Ethereum provider from the test environment
     let eth_provider = katana.eth_provider();
+    let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default().to();
 
     // Retrieve the first transaction from the test environment
     let first_transaction = katana.first_transaction().unwrap();
@@ -688,15 +741,12 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     // Generate a pending transaction to be stored in the pending transactions collection
     // Create a sample transaction
     let transaction = Transaction::Eip1559(TxEip1559 {
-        chain_id: 1,
-        nonce: 0,
+        chain_id,
         gas_limit: 21000,
         to: TxKind::Call(Address::random()),
         value: U256::from(1000),
-        input: Bytes::default(),
         max_fee_per_gas: 875_000_000,
-        max_priority_fee_per_gas: 0,
-        access_list: Default::default(),
+        ..Default::default()
     });
 
     // Sign the transaction
@@ -741,7 +791,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // Insert the first transaction into the pending transactions collection with 0 retry
-    let transaction1 = katana.eoa().mock_transaction_with_nonce(0).expect("Failed to get mock transaction");
+    let transaction1 = katana.eoa().mock_transaction_with_nonce(0).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
         .update_one::<StoredPendingTransaction>(
@@ -754,7 +804,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
 
     // Insert the transaction into the pending transactions collection with TRANSACTION_MAX_RETRIES + 1 retry
     // Shouldn't be retried as it has reached the maximum number of retries
-    let transaction2 = katana.eoa().mock_transaction_with_nonce(1).expect("Failed to get mock transaction");
+    let transaction2 = katana.eoa().mock_transaction_with_nonce(1).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
         .update_one::<StoredPendingTransaction>(
@@ -767,7 +817,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
 
     // Insert the transaction into both the mined transactions and pending transactions collections
     // Shouln't be retried as it has already been mined
-    let transaction3 = katana.eoa().mock_transaction_with_nonce(2).expect("Failed to get mock transaction");
+    let transaction3 = katana.eoa().mock_transaction_with_nonce(2).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
         .update_one::<StoredPendingTransaction>(

@@ -29,14 +29,14 @@ macro_rules! impl_common_info {
     };
 }
 impl TransactionInfo {
-    impl_common_info!(chain_id, u64);
+    impl_common_info!(chain_id, Option<u64>);
     impl_common_info!(nonce, u64);
     impl_common_info!(value, u128);
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct TxCommonInfo {
-    pub chain_id: u64,
+    pub chain_id: Option<u64>,
     pub nonce: u64,
     pub value: u128,
 }
@@ -89,7 +89,7 @@ pub trait EvmContract {
         };
 
         Ok(Transaction::Eip1559(TxEip1559 {
-            chain_id: tx_info.chain_id,
+            chain_id: tx_info.chain_id.expect("chain id required"),
             nonce: tx_info.nonce,
             gas_limit: TX_GAS_LIMIT,
             input: deploy_data.into(),
@@ -139,7 +139,7 @@ impl EvmContract for KakarotEvmContract {
 
         let tx = match tx_info {
             TransactionInfo::FeeMarketInfo(fee_market) => Transaction::Eip1559(TxEip1559 {
-                chain_id: tx_info.chain_id(),
+                chain_id: tx_info.chain_id().expect("chain id required"),
                 nonce: tx_info.nonce(),
                 gas_limit: TX_GAS_LIMIT,
                 to: TxKind::Call(evm_address.try_into()?),
@@ -150,7 +150,7 @@ impl EvmContract for KakarotEvmContract {
                 ..Default::default()
             }),
             TransactionInfo::LegacyInfo(legacy) => Transaction::Legacy(TxLegacy {
-                chain_id: Some(tx_info.chain_id()),
+                chain_id: tx_info.chain_id(),
                 nonce: tx_info.nonce(),
                 gas_limit: TX_GAS_LIMIT,
                 to: TxKind::Call(evm_address.try_into()?),
