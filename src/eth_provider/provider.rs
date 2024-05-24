@@ -584,6 +584,7 @@ where
         let transaction =
             from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
 
+        // Update or insert the pending transaction in the database
         if let Some(pending_transaction) = pending_transaction {
             self.database
                 .update_one::<StoredPendingTransaction>(
