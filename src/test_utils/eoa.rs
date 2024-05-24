@@ -90,7 +90,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     }
 
     /// Deploys an EVM contract given a contract name and constructor arguments
-    /// Returns a KakarotEvmContract instance
+    /// Returns a `KakarotEvmContract` instance
     pub async fn deploy_evm_contract<T: Tokenize>(
         &self,
         contract_name: Option<&str>,
@@ -146,9 +146,8 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             .await
             .expect("Failed to get transaction receipt after retries");
 
-        let receipt = match maybe_receipt {
-            MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) => receipt,
-            _ => return Err(eyre::eyre!("Failed to deploy contract")),
+        let MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) = maybe_receipt else {
+            return Err(eyre::eyre!("Failed to deploy contract"));
         };
 
         let selector = get_selector_from_name("evm_contract_deployed").unwrap(); // safe unwrap
@@ -162,7 +161,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         Ok(KakarotEvmContract::new(bytecode, event.data[1], event.data[0]))
     }
 
-    /// Calls a KakarotEvmContract function and returns the Starknet transaction hash
+    /// Calls a `KakarotEvmContract` function and returns the Starknet transaction hash
     /// The transaction is signed and sent by the EOA
     /// The transaction is waited for until it is confirmed
     pub async fn call_evm_contract<T: Tokenize>(
@@ -223,7 +222,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
                 gas_limit: 21000,
                 to: TxKind::Call(Address::random()),
                 value: U256::from(1000),
-                max_fee_per_gas: 875000000,
+                max_fee_per_gas: 875_000_000,
                 ..Default::default()
             }))?,
             self.evm_address()?,

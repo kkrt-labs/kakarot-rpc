@@ -30,16 +30,9 @@ impl From<String> for Network {
             "madara" => Self::Madara,
             "sharingan" => Self::Sharingan,
             "mainnet" => Self::MainnetGateway,
-            "goerli1" => Self::Goerli1Gateway,
+            "goerli1" | "testnet" => Self::Goerli1Gateway,
             "goerli2" => Self::Goerli2Gateway,
-            "testnet" => Self::Goerli1Gateway,
-            network_url => {
-                if let Ok(url) = Url::parse(network_url) {
-                    Self::JsonRpcProvider(url)
-                } else {
-                    Self::Katana
-                }
-            }
+            network_url => Url::parse(network_url).map_or(Self::Katana, Self::JsonRpcProvider),
         }
     }
 }
@@ -92,8 +85,8 @@ impl KakarotRpcConfig {
 
     /// Create a new `StarknetConfig` from environment variables.
     /// When using non-standard providers (i.e. not "katana", "madara", "mainnet"), the
-    /// `STARKNET_NETWORK` environment variable should be set the URL of a JsonRpc
-    /// starknet provider, e.g. https://starknet-goerli.g.alchemy.com/v2/some_key.
+    /// `STARKNET_NETWORK` environment variable should be set the URL of a `JsonRpc`
+    /// starknet provider, e.g. <https://starknet-goerli.g.alchemy.com/v2/some_key>.
     pub fn from_env() -> Result<Self, eyre::Error> {
         Ok(Self {
             network: var("STARKNET_NETWORK")?.into(),

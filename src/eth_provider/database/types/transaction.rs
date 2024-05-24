@@ -37,7 +37,7 @@ impl<'a> StoredTransaction {
                 block_number: Some(u64::arbitrary(u)?),
                 transaction_index: Some(u64::arbitrary(u)?),
                 gas_price: Some(u128::arbitrary(u)?),
-                gas: u64::arbitrary(u)? as u128,
+                gas: u128::from(u64::arbitrary(u)?),
                 max_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
                     None
                 } else {
@@ -53,7 +53,7 @@ impl<'a> StoredTransaction {
                     ..reth_rpc_types::Signature::arbitrary(u)?
                 }),
                 transaction_type: Some(transaction_type),
-                chain_id: Some(u32::arbitrary(u)? as u64),
+                chain_id: Some(u64::from(u32::arbitrary(u)?)),
                 other: Default::default(),
                 access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
                 ..transaction

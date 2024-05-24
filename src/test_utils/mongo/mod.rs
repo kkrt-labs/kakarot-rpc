@@ -43,7 +43,7 @@ lazy_static! {
 }
 
 pub const BLOCK_NUMBER: u64 = 0x1234;
-pub const RANDOM_BYTES_SIZE: usize = 100024;
+pub const RANDOM_BYTES_SIZE: usize = 100_024;
 
 pub fn generate_port_number() -> u16 {
     let address = "0.0.0.0:0";
@@ -65,7 +65,7 @@ pub enum CollectionDB {
     Logs,
 }
 
-/// Type alias for the different types of stored data associated with each CollectionDB.
+/// Type alias for the different types of stored data associated with each `CollectionDB`.
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum StoredData {
     /// Represents a stored header associated with a CollectionDB.
@@ -126,7 +126,7 @@ impl Serialize for StoredData {
     }
 }
 
-/// Struct representing a data generator for MongoDB.
+/// Struct representing a data generator for `MongoDB`.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[derive(Debug)]
 pub struct MongoFuzzer {
@@ -166,23 +166,25 @@ impl MongoFuzzer {
         Self { documents: Default::default(), mongodb, rnd_bytes_size, port }
     }
 
-    /// Obtains an immutable reference to the documents HashMap.
+    /// Obtains an immutable reference to the documents `HashMap`.
+
     pub const fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
         &self.documents
     }
 
-    /// Get MongoDB image
+    /// Get `MongoDB` image
     pub fn mongo_image(&self) -> RunnableImage<GenericImage> {
         let image = GenericImage::new("mongo".to_string(), "6.0.13".to_string());
         RunnableImage::from(image).with_mapped_port((self.port, 27017))
     }
 
     /// Get port number
+
     pub const fn port(&self) -> u16 {
         self.port
     }
 
-    /// Finalizes the data generation and returns the MongoDB database.
+    /// Finalizes the data generation and returns the `MongoDB` database.
     pub async fn finalize(&self) -> Database {
         for collection in CollectionDB::iter() {
             self.update_collection(collection).await;
@@ -379,6 +381,7 @@ pub struct TransactionBuilder {
 
 impl TransactionBuilder {
     /// Specifies the type of transaction to build.
+    #[must_use]
     pub const fn with_tx_type(mut self, tx_type: TxType) -> Self {
         self.tx_type = Some(tx_type);
         self
@@ -457,7 +460,7 @@ impl TransactionBuilder {
                         ..Default::default()
                     },
                 },
-                _ => unimplemented!(),
+                TxType::Eip4844 => unimplemented!(),
             });
         }
 

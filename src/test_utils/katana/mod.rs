@@ -268,6 +268,6 @@ impl<'a> Katana {
 
     /// Retrieves the number of blocks in the database
     pub fn count_block(&self) -> usize {
-        self.mock_data.get(&CollectionDB::Headers).map_or(0, |headers| headers.len())
+        self.mock_data.get(&CollectionDB::Headers).map_or(0, std::vec::Vec::len)
     }
 }

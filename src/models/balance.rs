@@ -39,7 +39,7 @@ impl<F: Future<Output = BalanceOfResult> + Unpin> Future for FutureTokenBalance<
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
         let balance = self.balance.poll_unpin(cx);
-        let token_address = self.token_address.to_owned();
+        let token_address = self.token_address;
 
         match balance {
             Poll::Ready(output) => match output {

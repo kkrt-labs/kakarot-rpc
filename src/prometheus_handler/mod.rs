@@ -60,6 +60,7 @@ pub enum Error {
     PortInUse(SocketAddr),
 }
 
+#[allow(clippy::unused_async)]
 async fn request_metrics(
     req: Request<hyper::body::Incoming>,
     registry: Registry,
@@ -113,7 +114,7 @@ async fn init_prometheus_with_listener(listener: tokio::net::TcpListener, regist
             service_fn(move |req: Request<hyper::body::Incoming>| request_metrics(req, registry.clone())),
         )
         .await
-        .map_err(Error::Http)?
+        .map_err(Error::Http)?;
     }
 }
 
@@ -140,19 +141,19 @@ mod tests {
             .expect("Registers the test metric");
 
         tokio::task::spawn(async {
-            init_prometheus_with_listener(listener, registry).await.expect("failed to init prometheus")
+            init_prometheus_with_listener(listener, registry).await.expect("failed to init prometheus");
         });
 
         let client: Client<HttpConnector, Full<Bytes>> = Client::builder(TokioExecutor::new()).build_http();
 
         let res = client
-            .get(Uri::try_from(&format!("http://{}/metrics", local_addr)).expect("failed to parse URI"))
+            .get(Uri::try_from(&format!("http://{local_addr}/metrics")).expect("failed to parse URI"))
             .await
             .expect("failed to request metrics");
 
         let buf = res.into_body().collect().await.unwrap().to_bytes();
 
         let body = String::from_utf8(buf.to_vec()).expect("failed to convert body to String");
-        assert!(body.contains(&format!("{} 0", METRIC_NAME)));
+        assert!(body.contains(&format!("{METRIC_NAME} 0")));
     }
 }

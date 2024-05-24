@@ -18,7 +18,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 
-/// Wrapper around a MongoDB database
+/// Wrapper around a `MongoDB` database
 #[derive(Clone, Debug)]
 pub struct Database(MongoDatabase);
 
@@ -27,12 +27,12 @@ impl Database {
         Self(database)
     }
 
-    /// Get a reference to the inner MongoDatabase
+    /// Get a reference to the inner `MongoDatabase`
     pub const fn inner(&self) -> &MongoDatabase {
         &self.0
     }
 
-    /// Get a mutable reference to the inner MongoDatabase
+    /// Get a mutable reference to the inner `MongoDatabase`
     pub fn inner_mut(&mut self) -> &mut MongoDatabase {
         &mut self.0
     }

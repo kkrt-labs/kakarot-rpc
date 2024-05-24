@@ -4,7 +4,7 @@ use starknet_crypto::FieldElement;
 use thiserror::Error;
 
 /// List of JSON-RPC error codes from ETH rpc spec.
-/// https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md
+/// <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md>
 #[derive(Debug, Copy, PartialEq, Eq, Clone)]
 pub enum EthRpcErrorCode {
     /// Custom geth error code, <https://github.com/vapory-legacy/wiki/blob/master/JSON-RPC-Error-Codes-Improvement-Proposal.md>
@@ -80,9 +80,9 @@ impl std::fmt::Debug for EthApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Kakarot(KakarotError::ProviderError(err)) => {
-                write!(f, "starknet provider error: {:?}", err)
+                write!(f, "starknet provider error: {err:?}")
             }
-            _ => write!(f, "{}", self),
+            _ => write!(f, "{self}"),
         }
     }
 }
@@ -90,7 +90,7 @@ impl std::fmt::Debug for EthApiError {
 /// Constructs a JSON-RPC error object, consisting of `code` and `message`.
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
-        let msg = format!("{:?}", value);
+        let msg = format!("{value:?}");
         ErrorObject::owned(EthRpcErrorCode::from(value) as i32, msg, None::<()>)
     }
 }

@@ -21,7 +21,7 @@ impl RPCConfig {
         // Remove port from socket address and replace it with provided port
         let parts: Vec<&str> = config.socket_addr.split(':').collect();
         if let Some(addr) = parts.first() {
-            config.socket_addr = format!("{}:{}", addr, port);
+            config.socket_addr = format!("{addr}:{port}");
         }
         Ok(config)
     }
@@ -38,7 +38,7 @@ impl RPCConfig {
         // Remove port from socket address and replace it with provided port
         let parts: Vec<&str> = config.socket_addr.split(':').collect();
         if let Some(addr) = parts.first() {
-            config.socket_addr = format!("{}:{}", addr, port);
+            config.socket_addr = format!("{addr}:{port}");
         }
         config
     }

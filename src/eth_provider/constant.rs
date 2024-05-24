@@ -18,7 +18,7 @@ pub const BLOCK_NUMBER_HEX_STRING_LEN: usize = U64_HEX_STRING_LEN;
 /// Number of characters for representing an address in a hex string form. Used for padding addresses
 pub const ADDRESS_HEX_STRING_LEN: usize = 40;
 /// Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
-pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x800000000000011]);
+pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x0800_0000_0000_0011]);
 /// Maximum number of times a transaction can be retried
 pub const TRANSACTION_MAX_RETRIES: u64 = 10;
 

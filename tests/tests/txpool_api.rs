@@ -1,3 +1,4 @@
+#![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
 use kakarot_rpc::test_utils::fixtures::{katana, setup};
