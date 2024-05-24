@@ -57,7 +57,7 @@ pub async fn tracing<T: Tokenize>(
                 entry_point,
                 get_args(nonce + i as u64),
                 &TransactionInfo::FeeMarketInfo(TxFeeMarketInfo {
-                    common: TxCommonInfo { nonce: nonce + i as u64, value: 0, chain_id },
+                    common: TxCommonInfo { nonce: nonce + i as u64, value: 0, chain_id: Some(chain_id) },
                     max_fee_per_gas,
                     max_priority_fee_per_gas,
                 }),

@@ -124,7 +124,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             <KakarotEvmContract as EvmContract>::prepare_create_transaction(
                 &bytecode,
                 constructor_args,
-                &TxCommonInfo { nonce, chain_id: chain_id.try_into()?, ..Default::default() },
+                &TxCommonInfo { nonce, chain_id: Some(chain_id.try_into()?), ..Default::default() },
             )?
         };
         let tx_signed = self.sign_transaction(tx)?;
@@ -178,7 +178,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             function,
             args,
             &TransactionInfo::FeeMarketInfo(TxFeeMarketInfo {
-                common: TxCommonInfo { chain_id, nonce, value },
+                common: TxCommonInfo { chain_id: Some(chain_id), nonce, value },
                 ..Default::default()
             }),
         )?;
@@ -214,10 +214,11 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     }
 
     /// Mocks a transaction with the given nonce without executing it
-    pub fn mock_transaction_with_nonce(&self, nonce: u64) -> Result<reth_rpc_types::Transaction, eyre::Error> {
+    pub async fn mock_transaction_with_nonce(&self, nonce: u64) -> Result<reth_rpc_types::Transaction, eyre::Error> {
+        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default().to();
         Ok(from_recovered(TransactionSignedEcRecovered::from_signed_transaction(
             self.sign_transaction(Transaction::Eip1559(TxEip1559 {
-                chain_id: 1,
+                chain_id,
                 nonce,
                 gas_limit: 21000,
                 to: TxKind::Call(Address::random()),
