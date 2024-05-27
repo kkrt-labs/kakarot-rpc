@@ -119,6 +119,7 @@ http-body-util = { version = "0.1.1", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
 
 # Testing crates
+arbitrary = { version = "1", features = ["derive"] }
 ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "80f179f", default-features = false, features = [
   "v0",
 ], optional = true }
@@ -144,7 +145,6 @@ katana-core = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.
 katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", default-features = false, features = [
   "serde",
 ] }
-arbitrary = { version = "1", features = ["derive"] }
 
 alloy-signer-wallet = { version = "0.1.0", default-features = false }
 

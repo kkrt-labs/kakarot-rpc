@@ -219,6 +219,9 @@ pub enum TransactionError {
     /// Thrown when the chain id is invalid.
     #[error("invalid chain id")]
     InvalidChainId,
+    /// Thrown when the transaction type is invalid.
+    #[error("invalid transaction type")]
+    InvalidTransactionType,
     /// Thrown when the gas used overflows u128.
     #[error("gas overflow")]
     GasOverflow,
@@ -234,7 +237,7 @@ pub enum TransactionError {
 impl From<TransactionError> for EthRpcErrorCode {
     fn from(error: TransactionError) -> Self {
         match error {
-            TransactionError::InvalidChainId => Self::InvalidInput,
+            TransactionError::InvalidChainId | TransactionError::InvalidTransactionType => Self::InvalidInput,
             TransactionError::GasOverflow => Self::TransactionRejected,
             TransactionError::ExpectedFullTransactions | TransactionError::Tracing(_) => Self::InternalError,
         }

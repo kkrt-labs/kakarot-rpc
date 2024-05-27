@@ -8000,7 +8000,7 @@ dependencies = [
 
 [[package]]
 name = "kakarot-rpc"
-version = "0.6.12"
+version = "0.6.14"
 dependencies = [
  "alloy-primitives 0.7.2",
  "alloy-rlp",

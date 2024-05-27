@@ -31,6 +31,7 @@ use super::database::types::{
 };
 use super::database::{CollectionName, Database};
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
+use super::starknet::kakarot_core::WHITE_LISTED_EIP_155_TRANSACTION_HASHES;
 use super::starknet::kakarot_core::{
     self,
     account_contract::AccountContractReader,
@@ -424,7 +425,7 @@ where
         // 4. Limit the number of logs returned
 
         // Convert the topics to a MongoDB filter and add it to the database filter
-        let logs_filter = to_logs_filter(filter.topics);
+        let logs_filter = to_logs_filter(&filter.topics);
         database_filter.extend(logs_filter);
 
         // Add the address filter if any
@@ -512,10 +513,6 @@ where
     }
 
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
-        // Get the chain ID
-        let chain_id =
-            self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
-
         // Decode the transaction data
         let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
             .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?;
@@ -530,6 +527,22 @@ where
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
+
+        // Get the chain id
+        let maybe_chain_id = transaction_signed.chain_id();
+
+        // Assert the chain is correct
+        // If the chain id is not the same as the RPC chain id, return an error
+        let rpc_chain_id: u64 =
+            self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
+        if !maybe_chain_id.map_or(true, |chain_id| chain_id == rpc_chain_id) {
+            return Err(TransactionError::InvalidChainId.into());
+        }
+
+        // If the transaction is a pre EIP-155 transaction, check hash is whitelisted
+        if maybe_chain_id.is_none() && !WHITE_LISTED_EIP_155_TRANSACTION_HASHES.contains(&transaction_signed.hash) {
+            return Err(TransactionError::InvalidTransactionType.into());
+        }
 
         // Fetch pending transaction for hash
         let filter = into_filter("tx.hash", &transaction_signed.hash, HASH_HEX_STRING_LEN);
@@ -562,7 +575,7 @@ where
         self.deploy_evm_transaction_signer(signer).await?;
 
         // Convert the transaction to a Starknet transaction
-        let transaction = to_starknet_transaction(&transaction_signed, chain_id, signer, max_fee)?;
+        let transaction = to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee)?;
 
         // Add the transaction to the Starknet provider
         let res = self.starknet_provider.add_invoke_transaction(transaction).await.map_err(KakarotError::from)?;
@@ -571,6 +584,7 @@ where
         let transaction =
             from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
 
+        // Update or insert the pending transaction in the database
         if let Some(pending_transaction) = pending_transaction {
             self.database
                 .update_one::<StoredPendingTransaction>(
