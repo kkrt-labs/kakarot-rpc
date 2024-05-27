@@ -293,24 +293,18 @@ impl KatanaGenesisBuilder<Initialized> {
     /// Consume the [`KatanaGenesisBuilder`] and returns the corresponding [`GenesisJson`].
     pub fn build(self) -> Result<GenesisJson> {
         Ok(GenesisJson {
-            parent_hash: FieldElement::ZERO,
-            state_root: FieldElement::ZERO,
-            number: 0,
-            timestamp: 0,
             sequencer_address: self.compute_starknet_address(self.coinbase)?,
-            gas_prices: Default::default(),
             classes: self.classes,
             fee_token: FeeTokenConfigJson {
                 name: "Ether".to_string(),
                 symbol: "ETH".to_string(),
                 decimals: 18,
                 storage: Some(self.fee_token_storage),
-                address: None,
-                class: None,
+                ..Default::default()
             },
-            universal_deployer: None,
             accounts: self.accounts,
             contracts: self.contracts,
+            ..Default::default()
         })
     }
 
