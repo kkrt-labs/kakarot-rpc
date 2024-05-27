@@ -71,8 +71,8 @@ services:
       # They'll need to be manually changed in case the testnet is reset
       # To add robustness: parse the `deployments/starknet-sepolia` folder in `kkrt-labs/kakarot` repo
       - KAKAROT_ADDRESS=0x464f7e37179d2f93ea208795bdb2d0912e8257f6fb5f67ae2559251523aee19
-      - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x1d8b8047e26b484d3f6262d1967217d980d0f2dfc69afa5661492bd5bfe2954
-      - ACCOUNT_CONTRACT_CLASS_HASH=0x3c1081f98ecdd1d320368d2a136191a3fbf02a3e419463d77c3c5aa6dbc99a0
+      - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e
+      - ACCOUNT_CONTRACT_CLASS_HASH=0x1276d0b017701646f8646b69de6c3b3584edce71879678a679f28c07a9971cf
       - MAX_FELTS_IN_CALLDATA=30000
       - RETRY_TX_INTERVAL=10
     restart: on-failure
