@@ -425,7 +425,7 @@ where
         // 4. Limit the number of logs returned
 
         // Convert the topics to a MongoDB filter and add it to the database filter
-        let logs_filter = to_logs_filter(filter.topics);
+        let logs_filter = to_logs_filter(&filter.topics);
         database_filter.extend(logs_filter);
 
         // Add the address filter if any
