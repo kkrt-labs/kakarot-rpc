@@ -11,33 +11,26 @@ use starknet::{
 };
 
 /// Converts an array of topics into a `MongoDB` filter.
-pub(crate) fn to_logs_filter(topics: [Topic; 4]) -> Document {
-    // Converts the topics to [Option<Vec<Topic>>;4]
-    let topics = topics
-        .into_iter()
-        .map(|t| {
-            t.to_value_or_array().map(|t| match t {
-                ValueOrArray::Value(topic) => vec![topic],
-                ValueOrArray::Array(topics) => topics,
-            })
-        })
-        .collect::<Vec<_>>();
-
+pub(crate) fn to_logs_filter(topics: &[Topic; 4]) -> Document {
     // If all topics are None, return a filter that checks if the log.topics field exists
-    if topics.iter().all(Option::is_none) {
+    if topics.iter().all(Topic::is_empty) {
         return doc! { "log.topics": {"$exists": true} };
     }
 
     let mut filter = vec![];
 
     // Iterate over the topics and add the filter to the filter vector
-    for (index, maybe_topic) in topics.iter().enumerate() {
+    for (index, topic_set) in topics.iter().enumerate() {
         // If the topic is None, skip it.
-        if let Some(t) = maybe_topic {
-            let topics = t.iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>();
+        if let Some(t) = topic_set.to_value_or_array() {
             let key = format!("log.topics.{index}");
-            // If the topic array has only one element, use an equality filter
+            let topics = match t {
+                ValueOrArray::Value(t) => vec![t],
+                ValueOrArray::Array(t) => t,
+            };
+            let topics = topics.iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>();
             if topics.len() == 1 {
+                // If the topic array has only one element, use an equality filter
                 filter.push(doc! {key: topics[0].clone()});
             } else {
                 // If the topic array has more than one element, use an $in filter
@@ -157,7 +150,7 @@ mod tests {
         let topics = [Topic::default(), Topic::default(), Topic::default(), Topic::default()];
 
         // When
-        let filter = to_logs_filter(topics);
+        let filter = to_logs_filter(&topics);
 
         // Then
         assert_eq!(filter, doc! { "log.topics": {"$exists": true} });
@@ -174,7 +167,7 @@ mod tests {
         ];
 
         // When
-        let filter = to_logs_filter(topics);
+        let filter = to_logs_filter(&topics);
 
         // Then
         let and_filter = filter.get("$and").unwrap().as_array().unwrap();
