@@ -574,18 +574,17 @@ where
         #[cfg(feature = "hive")]
         self.deploy_evm_transaction_signer(signer).await?;
 
-        // Convert the transaction to a Starknet transaction
-        let transaction = to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee)?;
-
-        // Add the transaction to the Starknet provider
-        let res = self.starknet_provider.add_invoke_transaction(transaction).await.map_err(KakarotError::from)?;
-
         // Serialize transaction document
         let transaction =
             from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
 
         // Update or insert the pending transaction in the database
         if let Some(pending_transaction) = pending_transaction {
+            tracing::info!(
+                "Transaction with hash {:?} already exists in the pending pool, updating the retries count to {}.",
+                transaction.hash.to_string(),
+                pending_transaction.retries + 1
+            );
             self.database
                 .update_one::<StoredPendingTransaction>(
                     StoredPendingTransaction::new(transaction, pending_transaction.retries + 1),
@@ -594,8 +593,16 @@ where
                 )
                 .await?;
         } else {
+            tracing::info!("New transaction with hash {:?} added to the pending pool.", transaction.hash.to_string());
             self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
         }
+
+        // Convert the transaction to a Starknet transaction
+        let starnet_transaction = to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee)?;
+
+        // Add the transaction to the Starknet provider
+        let res =
+            self.starknet_provider.add_invoke_transaction(starnet_transaction).await.map_err(KakarotError::from)?;
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
@@ -1004,6 +1011,8 @@ where
                     .await?
                     .is_some()
             {
+                tracing::info!("Pruning pending transaction: {hash:?} after reaching max retries or already finalized");
+
                 // Delete the pending transaction from the database
                 self.database
                     .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
@@ -1014,15 +1023,21 @@ where
             }
 
             // Generate primitive transaction, handle error if any
-            let Ok(transaction) = TransactionSignedEcRecovered::try_from(tx.tx.clone()) else {
-                // Delete the pending transaction from the database due conversion error
-                // Malformed transaction
-                self.database
-                    .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
-                    .await?;
-                // Continue to the next iteration of the loop
-                continue;
+            let transaction = match TransactionSignedEcRecovered::try_from(tx.tx.clone()) {
+                Ok(transaction) => transaction,
+                Err(error) => {
+                    tracing::info!("Pruning pending transaction: {hash:?} due to conversion error: {error:?}");
+                    // Delete the pending transaction from the database due conversion error
+                    // Malformed transaction
+                    self.database
+                        .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
+                        .await?;
+                    // Continue to the next iteration of the loop
+                    continue;
+                }
             };
+
+            tracing::info!("Retrying transaction: {hash:?}");
 
             // Create a signed transaction and send it
             transactions_retried.push(self.send_raw_transaction(transaction.into_signed().envelope_encoded()).await?);
