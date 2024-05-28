@@ -581,7 +581,7 @@ where
         // Update or insert the pending transaction in the database
         if let Some(pending_transaction) = pending_transaction {
             tracing::info!(
-                "Transaction with hash {:?} already exists in the pending pool, updating the retries count to {}.",
+                "Transaction with hash {} already exists in the pending pool, updating the retries count to {}.",
                 transaction.hash.to_string(),
                 pending_transaction.retries + 1
             );
@@ -593,7 +593,7 @@ where
                 )
                 .await?;
         } else {
-            tracing::info!("New transaction with hash {:?} added to the pending pool.", transaction.hash.to_string());
+            tracing::info!("New transaction with hash {} added to the pending pool.", transaction.hash.to_string());
             self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
         }
 
@@ -609,7 +609,7 @@ where
             return Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]));
         }
         let hash = transaction_signed.hash();
-        tracing::info!("Fired a transaction: Starknet Hash: {:?} --- Ethereum Hash: {:?}", res.transaction_hash, hash);
+        tracing::info!("Fired a transaction: Starknet Hash: {} --- Ethereum Hash: {}", res.transaction_hash, hash);
 
         Ok(hash)
     }
@@ -1011,7 +1011,7 @@ where
                     .await?
                     .is_some()
             {
-                tracing::info!("Pruning pending transaction: {hash:?} after reaching max retries or already finalized");
+                tracing::info!("Pruning pending transaction: {hash} after reaching max retries or already finalized");
 
                 // Delete the pending transaction from the database
                 self.database
@@ -1026,7 +1026,7 @@ where
             let transaction = match TransactionSignedEcRecovered::try_from(tx.tx.clone()) {
                 Ok(transaction) => transaction,
                 Err(error) => {
-                    tracing::info!("Pruning pending transaction: {hash:?} due to conversion error: {error:?}");
+                    tracing::info!("Pruning pending transaction: {hash} due to conversion error: {error}");
                     // Delete the pending transaction from the database due conversion error
                     // Malformed transaction
                     self.database
@@ -1037,7 +1037,7 @@ where
                 }
             };
 
-            tracing::info!("Retrying transaction: {hash:?}");
+            tracing::info!("Retrying transaction: {hash}");
 
             // Create a signed transaction and send it
             transactions_retried.push(self.send_raw_transaction(transaction.into_signed().envelope_encoded()).await?);
