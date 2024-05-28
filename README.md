@@ -102,13 +102,15 @@ TL;DR:
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Docker](https://docs.docker.com/engine/install)
 - [Python](https://www.python.org/)
+- [Deno](https://docs.deno.com/runtime/manual/)
 - Make
 
 ## Installation
 
 ### Setup the project
 
-To set up the repository (pulling git submodule and building Cairo dependencies), run:
+To set up the repository (pulling git submodule and building Cairo dependencies),
+run:
 
 ```console
 make setup
@@ -233,6 +235,22 @@ You can take a look at `rpc-call-examples` directory. Please note the following:
   [provided python script](https://github.com/sayajin-labs/kakarot/blob/main/scripts/utils/kakarot.py#L273).
 
 ## Testing
+
+### Rust tests
+
+In order to execute the Rust tests, follow the below instructions:
+
+- Run `make setup` in order to setup the project.
+- Run `make test` which will create a Genesis test file for Kakarot
+  and launch tests.
+- If you which to only run a specific test, be sure to first at least
+  run `make katana-genesis` once, then run `make test-target TARGET=test_you_want_to_run`.
+
+### Apibara indexer tests
+
+In order to run the Typescript unit tests, you will need to have [Deno](https://docs.deno.com/runtime/manual/)
+installed. Then you can run `KAKAROT_ADDRESS=ADDRESS_YOU_WANT_TO_USE_FOR_KAKAROT
+deno test --allow-env`.
 
 ### Hive
 
@@ -469,5 +487,3 @@ Thanks goes to these wonderful people
 This project follows the
 [all-contributors](https://github.com/all-contributors/all-contributors)
 specification. Contributions of any kind welcome!
-
-
