@@ -113,10 +113,9 @@ Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
 });
 
 Deno.test("isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS", () => {
-  const serializedTx: `0x${string}`[] = [];
   const starknetTxCalldata: `0x${string}`[] = [
+    "0x1",
     "0x2",
-    ...serializedTx,
   ];
   const transaction: Transaction = {
     invokeV1: {
@@ -136,16 +135,9 @@ Deno.test("isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS", () 
 });
 
 Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
-  const serializedTx: `0x${string}`[] = [];
   const starknetTxCalldata: `0x${string}`[] = [
     "0x1",
-    "0x1",
-    "0x0",
-    "0x0",
-    "0x0",
-    "0x0",
-    "0x0",
-    ...serializedTx,
+    "0x1"
   ];
   const transaction: Transaction = {
     invokeV1: {
