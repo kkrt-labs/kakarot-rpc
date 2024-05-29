@@ -326,7 +326,6 @@ async fn test_get_logs_topics(#[future] katana: Katana, _setup: ()) {
 }
 
 #[rstest]
-#[ignore = "fails randomly on CI: issue #1097"]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_logs_address(#[future] katana: Katana, _setup: ()) {
@@ -335,6 +334,10 @@ async fn test_get_logs_address(#[future] katana: Katana, _setup: ()) {
     let logs = katana.logs_with_min_topics(3);
     let address_one = logs[0].address();
     let address_two = logs[1].address();
+
+    println!("Logs: {:?}", logs);
+    println!("Address one: {:?}", address_one);
+    println!("Address two: {:?}", address_two);
 
     // Filter on the first address
     let filter = Filter { address: address_one.into(), ..Default::default() };
