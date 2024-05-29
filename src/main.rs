@@ -13,7 +13,7 @@ use kakarot_rpc::eth_rpc::run_server;
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::{JsonRpcClient, SequencerGatewayProvider};
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{filter, util::SubscriberInitExt};
 
 enum StarknetProvider {
     JsonRpcClient(JsonRpcClient<HttpTransport>),
@@ -24,7 +24,8 @@ enum StarknetProvider {
 async fn main() -> Result<()> {
     dotenv().ok();
     // Environment variables are safe to use after this
-    let filter = tracing_subscriber::EnvFilter::try_from_default_env()?;
+    let filter = format!("kakarot_rpc={}", std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()));
+    let filter = filter::EnvFilter::new(filter);
     tracing_subscriber::FmtSubscriber::builder().with_env_filter(filter).finish().try_init()?;
 
     let starknet_config = KakarotRpcConfig::from_env()?;
