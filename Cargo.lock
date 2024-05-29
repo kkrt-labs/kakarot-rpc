@@ -8005,6 +8005,7 @@ dependencies = [
  "alloy-primitives 0.7.2",
  "alloy-rlp",
  "alloy-signer-wallet",
+ "alloy-sol-types",
  "alphanet-instructions",
  "anyhow",
  "arbitrary",
