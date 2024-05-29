@@ -1,9 +1,11 @@
 import {
   assert,
   assertFalse,
+  assertExists,
+  assertEquals
 } from "https://deno.land/std@0.213.0/assert/mod.ts";
-import { ethValidationFailed } from "./filter.ts";
-import { Event } from "../deps.ts";
+import { ethValidationFailed, isKakarotTransaction } from "./filter.ts";
+import { Event, Transaction } from "../deps.ts";
 
 const event = (data: `0x${string}`[]) => {
   return {
@@ -70,4 +72,95 @@ Deno.test("ethValidationFailed: incorrect data length", () => {
   const x = event(["0x10"]);
   const failed = ethValidationFailed(x);
   assertFalse(failed);
+});
+
+Deno.test("isKakarotTransaction: no calldata", () => {
+  const transaction: Transaction = {
+    invokeV1: {
+      senderAddress: "0x01",
+      calldata: []
+    },
+    meta: {
+      hash: "0x01",
+      maxFee: "0x01",
+      nonce: "0x01",
+      signature: ["0x1", "0x2", "0x3", "0x4", "0x32"],
+      version: "1",
+    },
+  };
+  const failed = isKakarotTransaction(transaction);
+  assertFalse(failed);
+});
+
+Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
+  const starknetTxCalldata: `0x${string}`[] = [
+    "0x1"
+  ];
+  const transaction: Transaction = {
+    invokeV1: {
+      senderAddress: "0x01",
+      calldata: starknetTxCalldata
+    },
+    meta: {
+      hash: "0x01",
+      maxFee: "0x01",
+      nonce: "0x01",
+      signature: ["0x1", "0x2", "0x3", "0x4", "0x32"],
+      version: "1",
+    },
+  };
+  const failed = isKakarotTransaction(transaction);
+  assertFalse(failed);
+});
+
+Deno.test("isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS", () => {
+  const serializedTx: `0x${string}`[] = [];
+  const starknetTxCalldata: `0x${string}`[] = [
+    "0x2",
+    ...serializedTx,
+  ];
+  const transaction: Transaction = {
+    invokeV1: {
+      senderAddress: "0x01",
+      calldata: starknetTxCalldata
+    },
+    meta: {
+      hash: "0x02",
+      maxFee: "0x02",
+      nonce: "0x02",
+      signature: ["0x2"],
+      version: "1",
+    },
+  };
+  const failed = isKakarotTransaction(transaction);
+  assertEquals(failed, false);
+});
+
+Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
+  const serializedTx: `0x${string}`[] = [];
+  const starknetTxCalldata: `0x${string}`[] = [
+    "0x1",
+    "0x1",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    ...serializedTx,
+  ];
+  const transaction: Transaction = {
+    invokeV1: {
+      senderAddress: "0x01",
+      calldata: starknetTxCalldata
+    },
+    meta: {
+      hash: "0x01",
+      maxFee: "0x01",
+      nonce: "0x01",
+      signature: ["0x1", "0x2", "0x3", "0x4", "0x1"],
+      version: "1",
+    },
+  };
+  const success = isKakarotTransaction(transaction);
+  assertEquals(success, true);
 });
