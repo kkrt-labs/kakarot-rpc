@@ -1,7 +1,6 @@
 import {
   assert,
   assertFalse,
-  assertExists,
   assertEquals
 } from "https://deno.land/std@0.213.0/assert/mod.ts";
 import { ethValidationFailed, isKakarotTransaction } from "./filter.ts";
