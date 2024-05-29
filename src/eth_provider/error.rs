@@ -1,3 +1,4 @@
+use alloy_sol_types::SolType;
 use jsonrpsee::types::ErrorObject;
 use reth_primitives::Bytes;
 use starknet_crypto::FieldElement;
@@ -182,7 +183,7 @@ impl From<Vec<FieldElement>> for EvmError {
         let bytes = value.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<_>>();
         let maybe_revert_reason = String::from_utf8(bytes.clone());
         if maybe_revert_reason.is_err() {
-            return Self::Other(format!("{}", Bytes::from(bytes)));
+            return Self::Other(decode_err(&bytes));
         }
 
         let revert_reason = maybe_revert_reason.unwrap(); // safe unwrap
@@ -208,9 +209,16 @@ impl From<Vec<FieldElement>> for EvmError {
             "transfer amount exceeds balance" => Self::BalanceError,
             "AddressCollision" => Self::AddressCollision,
             s if s.contains("outOfGas") => Self::OutOfGas,
-            _ => Self::Other(format!("{}", Bytes::from(bytes))),
+            _ => Self::Other(decode_err(&bytes)),
         }
     }
+}
+
+fn decode_err(bytes: &[u8]) -> String {
+    // Skip the first 4 bytes which is the function selector
+    let msg = &bytes[4..];
+    let maybe_decoded_msg = alloy_sol_types::sol_data::String::abi_decode(msg, true);
+    maybe_decoded_msg.map_or_else(|_| format!("{}", bytes.iter().collect::<Bytes>()), |s| s)
 }
 
 /// Error related to a transaction.
@@ -284,13 +292,42 @@ mod tests {
 
     #[test]
     fn test_assure_source_error_visible_in_kakarot_error() {
+        // Given
         let err = KakarotError::ProviderError(starknet::providers::ProviderError::StarknetError(
             starknet::core::types::StarknetError::UnexpectedError("test".to_string()),
         ));
 
+        // When
         let eth_err: EthApiError = err.into();
         let json_err: ErrorObject<'static> = eth_err.into();
 
+        // Then
         assert_eq!(json_err.message(), "starknet provider error: StarknetError(UnexpectedError(\"test\"))");
+    }
+
+    #[test]
+    fn test_decode_evm_error() {
+        // Given
+        let bytes: Vec<_> = vec![
+            0x08u8, 0xc3, 0x79, 0xa0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x17, 0x46, 0x61, 0x75,
+            0x63, 0x65, 0x74, 0x3a, 0x20, 0x43, 0x6c, 0x61, 0x69, 0x6d, 0x20, 0x74, 0x6f, 0x6f, 0x20, 0x73, 0x6f, 0x6f,
+            0x6e, 0x2e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ]
+        .into_iter()
+        .map(FieldElement::from)
+        .collect();
+
+        // When
+        let evm_err: EvmError = bytes.into();
+
+        // Then
+        if let EvmError::Other(err) = evm_err {
+            assert_eq!(err, "Faucet: Claim too soon.");
+        } else {
+            panic!("Expected EvmError::Other, got {evm_err:?}");
+        }
     }
 }
