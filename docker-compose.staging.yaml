@@ -15,7 +15,13 @@ services:
       --http-port 6060
       --db-path /var/lib/juno
       --eth-node ${ETH_NODE_WS}
-      --network sepolia
+      --cn-name KKRT_BETA
+      --cn-feeder-url https://gateway-beta.kakarot.sw-dev.io/feeder_gateway/
+      --cn-gateway-url https://gateway-beta.kakarot.sw-dev.io/gateway/
+      --cn-l1-chain-id 11155111
+      --cn-l2-chain-id kkrt
+      --cn-core-contract-address 0xc7c9ea7fD0921Cb6EDd9a3184F88cF1b821aA82B
+      --cn-unverifiable-range 0,0
     networks:
       - internal_staging
   starknet-explorer:
