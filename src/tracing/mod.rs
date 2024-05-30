@@ -230,3 +230,65 @@ where
 {
     tokio::task::block_in_place(|| evm.transact_commit().map_err(|err| TransactionError::Tracing(err.into()).into()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::eth_provider::database::Database;
+    use crate::eth_provider::provider::EthDataProvider;
+    use builder::TracerBuilder;
+    use hex::FromHex;
+    use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
+    use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+    use std::sync::Arc;
+    use url::Url;
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[ignore = "This test is used for debugging purposes only"]
+    async fn test_debug_tracing() {
+        // Set the env vars
+        std::env::set_var("KAKAROT_ADDRESS", "CHECK THE KAKAROT ADDRESS FOR THE BLOCK YOU ARE DEBUGGING");
+        std::env::set_var(
+            "UNINITIALIZED_ACCOUNT_CLASS_HASH",
+            "CHECK THE KAKAROT UNINITIALIZED ACCOUNT CLASS HASH FOR THE BLOCK YOU ARE DEBUGGING",
+        );
+
+        // Given
+        let url = Url::parse("https://juno-kakarot-dev.karnot.xyz/").unwrap();
+        let starknet_provider = JsonRpcClient::new(HttpTransport::new(url));
+
+        // Start a local mongodb instance with the state of the network:
+        // - Installing `mongod`.
+        // - Run `brew services start mongodb-community` on MacOS.
+        // - Connect to the remote mongodb instance using MongoCompass and export the headers collection
+        //   and the transactions collection. Instructions for exporting/importing can be found at
+        //   `https://www.mongodb.com/docs/compass/current/import-export/`.
+        // - Connect to the local mongodb instance using MongoCompass.
+        // - Import the headers and transactions collections.
+        // - ‼️ You might need to manually fix some transactions that don't have an `accessList` field. ‼️
+        // - ‼️ Be sure to import the collections in the database called `local`. ‼️
+        let db_client = mongodb::Client::with_uri_str("mongodb://localhost:27017/").await.unwrap();
+        let db = Database::new(
+            db_client.database_with_options(
+                "local",
+                DatabaseOptions::builder()
+                    .read_concern(ReadConcern::MAJORITY)
+                    .write_concern(WriteConcern::MAJORITY)
+                    .build(),
+            ),
+        );
+
+        let eth_provider = Arc::new(EthDataProvider::new(db, starknet_provider).await.unwrap());
+        let tracer = TracerBuilder::new(eth_provider)
+            .await
+            .unwrap()
+            .with_transaction_hash(B256::from_hex("INSERT THE TRANSACTION HASH YOU WISH TO DEBUG").unwrap())
+            .await
+            .unwrap()
+            .build()
+            .unwrap();
+
+        // When
+        let _ = tracer.trace_block(TracingInspectorConfig::default_parity()).unwrap();
+    }
+}
