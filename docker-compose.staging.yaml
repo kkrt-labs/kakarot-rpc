@@ -15,7 +15,13 @@ services:
       --http-port 6060
       --db-path /var/lib/juno
       --eth-node ${ETH_NODE_WS}
-      --network sepolia
+      --cn-name KKRT_BETA
+      --cn-feeder-url https://gateway-beta.kakarot.sw-dev.io/feeder_gateway/
+      --cn-gateway-url https://gateway-beta.kakarot.sw-dev.io/gateway/
+      --cn-l1-chain-id 11155111
+      --cn-l2-chain-id kkrt
+      --cn-core-contract-address 0xc7c9ea7fD0921Cb6EDd9a3184F88cF1b821aA82B
+      --cn-unverifiable-range 0,0
     networks:
       - internal_staging
   starknet-explorer:
@@ -70,7 +76,7 @@ services:
       # These values are unique to Sepolia Testnet
       # They'll need to be manually changed in case the testnet is reset
       # To add robustness: parse the `deployments/starknet-sepolia` folder in `kkrt-labs/kakarot` repo
-      - KAKAROT_ADDRESS=0x464f7e37179d2f93ea208795bdb2d0912e8257f6fb5f67ae2559251523aee19
+      - KAKAROT_ADDRESS=0x2824d6ed6759ac4c4a54a39b78d04c0e48be8937237026bf8c3bf46a8bea722
       - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e
       - ACCOUNT_CONTRACT_CLASS_HASH=0x1276d0b017701646f8646b69de6c3b3584edce71879678a679f28c07a9971cf
       - MAX_FELTS_IN_CALLDATA=30000
@@ -128,7 +134,7 @@ services:
       - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
-      - KAKAROT_ADDRESS=0x464f7e37179d2f93ea208795bdb2d0912e8257f6fb5f67ae2559251523aee19
+      - KAKAROT_ADDRESS=0x2824d6ed6759ac4c4a54a39b78d04c0e48be8937237026bf8c3bf46a8bea722
       - DEFAULT_BLOCK_GAS_LIMIT=7000000
     restart: on-failure
     volumes:
