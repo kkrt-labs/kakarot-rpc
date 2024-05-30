@@ -341,14 +341,13 @@ where
         let keys = split_u256(index.0);
         let storage_address = get_storage_var_address("Account_storage", &keys).expect("Storage var name is not ASCII");
 
-        let storage = contract
-            .storage(&storage_address)
-            .block_id(starknet_block_id)
-            .call()
-            .await
-            .map_err(KakarotError::from)?
-            .value;
+        let maybe_storage = contract.storage(&storage_address).block_id(starknet_block_id).call().await;
 
+        if contract_not_found(&maybe_storage) || entrypoint_not_found(&maybe_storage) {
+            return Ok(U256::ZERO.into());
+        }
+
+        let storage = maybe_storage.map_err(KakarotError::from)?.value;
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
         let storage: U256 = low + (high << 128);

@@ -17,7 +17,7 @@ lint:
   disabled:
     - checkov
   enabled:
-    - actionlint@1.7.0
+    - actionlint@1.7.1
     - clippy@1.65.0
     - git-diff-check
     - hadolint@2.12.0
@@ -31,7 +31,7 @@ lint:
     - taplo@0.8.1
     - terrascan@1.19.1
     - trivy@0.51.4
-    - trufflehog@3.76.3
+    - trufflehog@3.77.0
     - yamllint@1.35.1
   ignore:
     - linters: [ALL]

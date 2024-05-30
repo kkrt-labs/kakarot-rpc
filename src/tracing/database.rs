@@ -68,9 +68,7 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
     fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
         let cache = &self.cache;
         if let Some(account) = cache.accounts.get(&address) {
-            if let Some(storage) = account.storage.get(&index) {
-                return Ok(*storage);
-            }
+            return Ok(account.storage.get(&index).copied().unwrap_or_default());
         }
 
         let storage = Handle::current().block_on(async {
