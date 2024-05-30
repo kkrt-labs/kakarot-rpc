@@ -258,7 +258,7 @@ mod tests {
         let starknet_provider = JsonRpcClient::new(HttpTransport::new(url));
 
         // Start a local mongodb instance with the state of the network:
-        // - Installing `mongod`.
+        // - Install `mongod`.
         // - Run `brew services start mongodb-community` on MacOS.
         // - Connect to the remote mongodb instance using MongoCompass and export the headers collection
         //   and the transactions collection. Instructions for exporting/importing can be found at
