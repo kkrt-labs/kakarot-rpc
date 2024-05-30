@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
 use kakarot_rpc::test_utils::fixtures::{katana, setup};
 use kakarot_rpc::test_utils::katana::Katana;
@@ -9,11 +10,9 @@ use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
 use rstest::*;
 use serde_json::Value;
+use std::net::SocketAddr;
 
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
+async fn initial_setup(katana: Katana) -> (SocketAddr, ServerHandle, Katana) {
     // Start the Kakarot RPC server and retrieve the server address and handle
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
@@ -29,6 +28,14 @@ async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
             .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
     }
     katana.add_pending_transactions_to_database(pending_transactions).await;
+    (server_addr, server_handle, katana)
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
+    let (server_addr, server_handle, katana) = initial_setup(katana).await;
 
     // Create a reqwest client
     let reqwest_client = reqwest::Client::new();
@@ -89,21 +96,7 @@ async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
-    // Start the Kakarot RPC server and retrieve the server address and handle
-    let (server_addr, server_handle) =
-        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
-
-    // Generate a vector of random bytes
-    let bytes: Vec<u8> = (0..RANDOM_BYTES_SIZE).map(|_| rand::random()).collect();
-    let mut unstructured = arbitrary::Unstructured::new(&bytes);
-
-    // Generate 10 pending transactions and add them to the database
-    let mut pending_transactions = Vec::new();
-    for _ in 0..10 {
-        pending_transactions
-            .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
-    }
-    katana.add_pending_transactions_to_database(pending_transactions).await;
+    let (server_addr, server_handle, katana) = initial_setup(katana).await;
 
     // Retrieve the first pending transaction from the database
     let first_pending_tx = katana
@@ -153,21 +146,7 @@ async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_txpool_status(#[future] katana: Katana, _setup: ()) {
-    // Start the Kakarot RPC server and retrieve the server address and handle
-    let (server_addr, server_handle) =
-        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
-
-    // Generate a vector of random bytes
-    let bytes: Vec<u8> = (0..RANDOM_BYTES_SIZE).map(|_| rand::random()).collect();
-    let mut unstructured = arbitrary::Unstructured::new(&bytes);
-
-    // Generate 10 pending transactions and add them to the database
-    let mut pending_transactions = Vec::new();
-    for _ in 0..10 {
-        pending_transactions
-            .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
-    }
-    katana.add_pending_transactions_to_database(pending_transactions).await;
+    let (server_addr, server_handle, _) = initial_setup(katana).await;
 
     // Create a reqwest client
     let reqwest_client = reqwest::Client::new();
@@ -188,6 +167,7 @@ async fn test_txpool_status(#[future] katana: Katana, _setup: ()) {
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
 
     // Deserialize the 'result' field of the JSON into a TxpoolStatus struct
+    println!("\n\n\nRAW: {raw}\n\n\n");
     let tx_pool_status: TxpoolStatus =
         serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
 
@@ -205,21 +185,7 @@ async fn test_txpool_status(#[future] katana: Katana, _setup: ()) {
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_txpool_inspect(#[future] katana: Katana, _setup: ()) {
-    // Start the Kakarot RPC server and retrieve the server address and handle
-    let (server_addr, server_handle) =
-        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
-
-    // Generate a vector of random bytes
-    let bytes: Vec<u8> = (0..RANDOM_BYTES_SIZE).map(|_| rand::random()).collect();
-    let mut unstructured = arbitrary::Unstructured::new(&bytes);
-
-    // Generate 10 pending transactions and add them to the database
-    let mut pending_transactions = Vec::new();
-    for _ in 0..10 {
-        pending_transactions
-            .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
-    }
-    katana.add_pending_transactions_to_database(pending_transactions).await;
+    let (server_addr, server_handle, katana) = initial_setup(katana).await;
 
     // Create a reqwest client
     let reqwest_client = reqwest::Client::new();
