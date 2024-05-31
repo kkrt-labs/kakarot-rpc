@@ -29,22 +29,41 @@
 - [Request a Feature](https://github.com/sayajin-labs/kakarot-rpc/issues/new?assignees=&labels=enhancement&template=02_FEATURE_REQUEST.md&title=feat%3A+≠≠≠≠≠≠≠)
 - [About](#about)
 - [Architecture](#architecture)
+  - [High level](#high-level)
+  - [Low level](#low-level)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-    - [Build from source](#build-from-source)
-    - [Environment variables](#environment-variables)
-  - [Configuration](#configuration)
 - [Installation](#installation)
+  - [Setup the project](#setup-the-project)
+  - [Build from source](#build-from-source)
+  - [Environment variables](#environment-variables)
+  - [Dev mode with Katana](#dev-mode-with-katana)
+  - [Building a Docker Image](#building-a-docker-image)
+  - [Sending transactions to RPC using forge script](#sending-transactions-to-rpc-using-forge-script)
+  - [Configuration](#configuration)
+- [Running a Node in Various Environments](#running-a-node-in-various-environments)
+  - [Local Environment](#local-environment)
+  - [Staging Environment](#staging-environment)
+  - [Production Environment](#production-environment)
+  - [Potential Pitfalls, Caveats, and Requirements](#potential-pitfalls-caveats-and-requirements)
+    - [Requirements](#requirements)
+    - [Potential Pitfalls](#potential-pitfalls)
+    - [Caveats](#caveats)
   - [API](#api)
-- [Roadmap](#roadmap)
-- [Support](#support)
+- [Testing](#testing)
+  - [Rust tests](#rust-tests)
+  - [Apibara indexer tests](#apibara-indexer-tests)
+  - [Hive](#hive)
 - [Project assistance](#project-assistance)
 - [Contributing](#contributing)
+- [Glossary](#glossary)
 - [Authors \& contributors](#authors--contributors)
 - [Security](#security)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
+- [Benchmarks](#benchmarks)
+- [Contributors ✨](#contributors-)
+
 
 </details>
 
@@ -224,6 +243,7 @@ This section outlines how to run a complete node in different environments: loca
 By correctly configuring these components, you can ensure that the node functions as a robust part of the system.
 
 In the following sections we have tried to provide the most important parameters useful for understanding and configuring the node. However for the sake of brevity, certain parameters deemed less important are omitted and can all be found in the corresponding Docker compose files:
+
 - Local: `docker-compose.yaml`
 - Staging: `docker-compose.staging.yaml`
 - Production: `docker-compose.prod.yaml`
@@ -239,12 +259,14 @@ make local-rpc-up
 This command will use the `docker-compose.yaml` file to set up the whole infrastructure locally utilizing the following elements:
 
 - **Katana (local sequencer)**:
+
   - Fees disabled (ETH and STRK gas price set to 0).
   - Maximum steps for account validation logic set to 16,777,216.
   - Maximum steps for account execution logic set to 16,777,216.
   - Chain ID set to KKRT (0x4b4b5254 in ASCII).
 
 - **Kakarot EVM Programs**:
+
   - Prefunded Katana account with:
     - Account address: `0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca`.
     - Private key: `0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a`.
@@ -254,6 +276,7 @@ This command will use the `docker-compose.yaml` file to set up the whole infrast
   - Network: `STARKNET_NETWORK=katana`.
 
 - **Kakarot RPC Node** on port 3030:
+
   - MongoDB connection string: `MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017`.
   - Database name: `MONGO_DATABASE_NAME=kakarot-local`.
   - Max calldata felts: 30,000.
@@ -261,6 +284,7 @@ This command will use the `docker-compose.yaml` file to set up the whole infrast
   - Currently, Kakarot does not support pre-EIP-155 transactions, except for a whitelist of specific transaction hashes that can be found in the corresponding Docker compose file.
 
 - **Apibara Indexer Service** on port 7171:
+
   - Uses the Starknet node URL for RPC.
   - Configured with MongoDB and Kakarot addresses.
 
@@ -277,6 +301,7 @@ make staging-rpc-up
 This command will use the `docker-compose.staging.yaml` file to set up the whole infrastructure in the staging configuration utilizing the following elements:
 
 - **Starknet Full-Node (Juno)** on port 6060:
+
   - Pending block is synced to the head of the chain every second.
   - Ethereum node websocket endpoint to be specified by env variable `ETH_NODE_WS` (for example `ETH_NODE_WS=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`).
   - Network configuration:
@@ -289,6 +314,7 @@ This command will use the `docker-compose.staging.yaml` file to set up the whole
     - Network range of blocks to skip hash verifications: `0` to `0`.
 
 - **Starknet Explorer** on port 4000:
+
   - RPC API hosts.
   - Database connection details for Postgres.
   - Secret key base for security.
@@ -297,6 +323,7 @@ This command will use the `docker-compose.staging.yaml` file to set up the whole
 - **Starknet Explorer Database (Postgres)** on port 5432.
 
 - **Kakarot RPC Node** on port 3030:
+
   - Starknet network URL: `http://starknet:6060`.
   - MongoDB connection string: `mongodb://mongo:mongo@mongo:27017`.
   - Database name: `kakarot-local`.
@@ -307,6 +334,7 @@ This command will use the `docker-compose.staging.yaml` file to set up the whole
   - Whitelisted pre-EIP-155 transaction hashes (see the corresponding Docker compose file).
 
 - **Apibara DNA Indexer Service** on port 7171:
+
   - Uses the Starknet node URL for RPC.
   - Configured with MongoDB and Kakarot addresses.
 
@@ -323,6 +351,7 @@ make testnet-rpc-up
 This command will use the `docker-compose.prod.yaml` file to set up the whole infrastructure in the production configuration utilizing the following elements:
 
 - **Starknet Full-Node (Juno)** on port 6060:
+
   - Synchronizes pending blocks to the head of the chain every second.
   - Ethereum node websocket endpoint specified by `ETH_NODE_WS` (for example `ETH_NODE_WS=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`).
   - Network configuration:
@@ -335,6 +364,7 @@ This command will use the `docker-compose.prod.yaml` file to set up the whole in
     - Network range of blocks to skip hash verifications: `0` to `1000000`.
 
 - **Starknet Explorer** on port 4000:
+
   - RPC API hosts.
   - Database connection details for Postgres.
   - Secret key base for security.
@@ -343,6 +373,7 @@ This command will use the `docker-compose.prod.yaml` file to set up the whole in
 - **Starknet Explorer Database (Postgres)** on port 5432.
 
 - **Kakarot RPC Node** on port 3030:
+
   - Starknet network URL: `http://starknet:6060`.
   - MongoDB connection string: `mongodb://mongo:mongo@mongo:27017`.
   - Database name: `kakarot-local`.
@@ -354,6 +385,7 @@ This command will use the `docker-compose.prod.yaml` file to set up the whole in
   - Whitelisted pre-EIP-155 transaction hashes (see local environment).
 
 - **Apibara DNA Indexer Service** on port 7171:
+
   - Uses the Starknet node URL for RPC.
   - Configured with MongoDB and Kakarot addresses.
 
