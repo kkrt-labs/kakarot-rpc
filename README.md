@@ -99,11 +99,11 @@ TL;DR:
 
 ### Prerequisites
 
-- [Rust](https://www.rust-lang.org/tools/install)
-- [Docker](https://docs.docker.com/engine/install)
-- [Python](https://www.python.org/)
-- [Deno](https://docs.deno.com/runtime/manual/)
-- Make
+- [Rust](https://www.rust-lang.org/tools/install): The codebase is written in Rust to ensure high performance, maintainability, and a developer-friendly experience.
+- [Docker](https://docs.docker.com/engine/install): Required for containerizing and running the various services and components in a consistent environment.
+- [Python](https://www.python.org/): Used primarily for interacting with and building our Kakarot programs.
+- [Deno](https://docs.deno.com/runtime/manual/): A JavaScript runtime used for our indexing service, based on the [Apibara](https://www.apibara.com/docs) third-party service.
+- Make: Utilized to interact with the `Makefile` for running commands such as building the project or executing tests.
 
 ## Installation
 
@@ -154,12 +154,18 @@ The binaries will be located in `target/release/`.
 
 ### Dev mode with [Katana](https://github.com/dojoengine/dojo/tree/main/crates/katana)
 
-To run a local StarknetOS client (Katana) and
-deploy Kakarot zkEVM on it, i.e. the set of Cairo smart contracts implementing the EVM:
+To run a local StarknetOS client, you can use Katana. Katana, developed by the Dojo team, is a sequencer designed to aid in local development. It allows you to perform all Starknet-related activities in a local environment, making it an efficient platform for development and testing. To run Katana and deploy the Kakarot zkEVM (a set of Cairo smart contracts implementing the EVM):
 
 ```console
 make run-katana
 ```
+
+This command will install Katana and generate a genesis file at `.katana/genesis.json`. Katana's genesis configuration feature is a way to define the initial state and settings of the Kakarot blockchain network locally, providing a customizable starting point for the chain. Among other things, it allows you to:
+
+- Specify the token used for network fees.
+- Allocate initial token balances to accounts.
+- Pre-declare classes at the start of the chain.
+- Pre-deploy smart contracts at the start of the chain.
 
 To deploy Kakarot Core EVM (set of Cairo Programs):
 
@@ -181,23 +187,6 @@ Some notes on this local devnet:
 - the deployments and declarations for the devnet will be written to the
   `deployments/katana` folder inside your project root after a successful run of
   the `make deploy-kakarot` command.
-
-### Running with [Docker Compose](https://docs.docker.com/compose/)
-
-To orchestrate running a Katana/Madara devnet instance, deploy Kakarot contracts
-and initialize the RPC, you may use the following commands:
-
-For Katana
-
-```console
-make katana-rpc-up
-```
-
-For Madara
-
-```console
-make madara-rpc-up
-```
 
 ### Building a [Docker Image](https://docs.docker.com/reference/cli/docker/image/build/)
 
@@ -221,6 +210,176 @@ forge script scripts/PlainOpcodes.s.sol --broadcast --legacy --slow
 
 Kakarot RPC is configurable through environment variables.
 Check out `.env.example` file to see the environment variables.
+
+## Running a Node in Various Environments
+
+This section outlines how to run a complete node in different environments: local, staging, and production. Running a node involves several critical components to ensure the system operates effectively:
+
+- **Starknet Engine**: Interacts with the Starknet ecosystem and processes transactions.
+- **Kakarot Programs**: Implement the EVM logic using Cairo.
+- **RPC Node**: Manages the Ethereum RPC logic, facilitating smooth interaction with the Kakarot chain.
+- **Apibara Service**: Monitors the Kakarot chain and indexes its data.
+- **MongoDB**: Serves as the database for storing transactions after indexing and acts as the core component for fetching information.
+
+By correctly configuring these components, you can ensure that the node functions as a robust part of the system.
+
+In the following sections we have tried to provide the most important parameters useful for understanding and configuring the node. However for the sake of brevity, certain parameters deemed less important are omitted and can all be found in the corresponding Docker compose files:
+- Local: `docker-compose.yaml`
+- Staging: `docker-compose.staging.yaml`
+- Production: `docker-compose.prod.yaml`
+
+### Local Environment
+
+To start the entire infrastructure locally, use the following command:
+
+```console
+make local-rpc-up
+```
+
+This command will use the `docker-compose.yaml` file to set up the whole infrastructure locally utilizing the following elements:
+
+- **Katana (local sequencer)**:
+  - Fees disabled (ETH and STRK gas price set to 0).
+  - Maximum steps for account validation logic set to 16,777,216.
+  - Maximum steps for account execution logic set to 16,777,216.
+  - Chain ID set to KKRT (0x4b4b5254 in ASCII).
+
+- **Kakarot EVM Programs**:
+  - Prefunded Katana account with:
+    - Account address: `0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca`.
+    - Private key: `0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a`.
+  - Anvil (local Ethereum node):
+    - Private key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`.
+  - Katana RPC URL: `http://starknet:5050`.
+  - Network: `STARKNET_NETWORK=katana`.
+
+- **Kakarot RPC Node** on port 3030:
+  - MongoDB connection string: `MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017`.
+  - Database name: `MONGO_DATABASE_NAME=kakarot-local`.
+  - Max calldata felts: 30,000.
+  - Pending transactions stored in MongoDB, with a retry service running every second.
+  - Currently, Kakarot does not support pre-EIP-155 transactions, except for a whitelist of specific transaction hashes that can be found in the corresponding Docker compose file.
+
+- **Apibara Indexer Service** on port 7171:
+  - Uses the Starknet node URL for RPC.
+  - Configured with MongoDB and Kakarot addresses.
+
+- **MongoDB** with Mongo Express on port 27017 for data management.
+
+### Staging Environment
+
+To start the entire infrastructure in the staging environment, use the following command:
+
+```console
+make staging-rpc-up
+```
+
+This command will use the `docker-compose.staging.yaml` file to set up the whole infrastructure in the staging configuration utilizing the following elements:
+
+- **Starknet Full-Node (Juno)** on port 6060:
+  - Pending block is synced to the head of the chain every second.
+  - Ethereum node websocket endpoint to be specified by env variable `ETH_NODE_WS` (for example `ETH_NODE_WS=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`).
+  - Network configuration:
+    - Network name: `KKRT_BETA`.
+    - Network feeder URL: `https://gateway-beta.kakarot.sw-dev.io/feeder_gateway/`.
+    - Network gateway URL: `https://gateway-beta.kakarot.sw-dev.io/gateway/`.
+    - L1 chain ID: `11155111` (Ethereum Sepolia).
+    - L2 chain ID: `kkrt`.
+    - Core contract address: `0xc7c9ea7fD0921Cb6EDd9a3184F88cF1b821aA82B`.
+    - Network range of blocks to skip hash verifications: `0` to `0`.
+
+- **Starknet Explorer** on port 4000:
+  - RPC API hosts.
+  - Database connection details for Postgres.
+  - Secret key base for security.
+  - Listener enabled for synchronizing with the Starknet node.
+
+- **Starknet Explorer Database (Postgres)** on port 5432.
+
+- **Kakarot RPC Node** on port 3030:
+  - Starknet network URL: `http://starknet:6060`.
+  - MongoDB connection string: `mongodb://mongo:mongo@mongo:27017`.
+  - Database name: `kakarot-local`.
+  - Kakarot address: `0x2824d6ed6759ac4c4a54a39b78d04c0e48be8937237026bf8c3bf46a8bea722`.
+  - Uninitialized account class hash: `0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e`.
+  - Max calldata felts: 30,000.
+  - Pending transactions stored in MongoDB, with a retry service running every 10 second.
+  - Whitelisted pre-EIP-155 transaction hashes (see the corresponding Docker compose file).
+
+- **Apibara DNA Indexer Service** on port 7171:
+  - Uses the Starknet node URL for RPC.
+  - Configured with MongoDB and Kakarot addresses.
+
+- **MongoDB** with Mongo Express on port 27017 for data management.
+
+### Production Environment
+
+To start the entire infrastructure in the production environment, use the following command:
+
+```console
+make testnet-rpc-up
+```
+
+This command will use the `docker-compose.prod.yaml` file to set up the whole infrastructure in the production configuration utilizing the following elements:
+
+- **Starknet Full-Node (Juno)** on port 6060:
+  - Synchronizes pending blocks to the head of the chain every second.
+  - Ethereum node websocket endpoint specified by `ETH_NODE_WS` (for example `ETH_NODE_WS=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`).
+  - Network configuration:
+    - Network name: `kakarot-sepolia`.
+    - Network feeder URL: `https://gateway.kakarot.sw-dev.io/feeder_gateway/`.
+    - Network gateway URL: `https://gateway.kakarot.sw-dev.io/gateway/`.
+    - L1 chain ID: `11155111` (Ethereum Sepolia).
+    - L2 chain ID: `kkrt`.
+    - Core contract address: `0x74Ca1aC5BD4c3c97006d2B7b9375Dd3B6C17ACcD`.
+    - Network range of blocks to skip hash verifications: `0` to `1000000`.
+
+- **Starknet Explorer** on port 4000:
+  - RPC API hosts.
+  - Database connection details for Postgres.
+  - Secret key base for security.
+  - Listener enabled for synchronizing with the Starknet node.
+
+- **Starknet Explorer Database (Postgres)** on port 5432.
+
+- **Kakarot RPC Node** on port 3030:
+  - Starknet network URL: `http://starknet:6060`.
+  - MongoDB connection string: `mongodb://mongo:mongo@mongo:27017`.
+  - Database name: `kakarot-local`.
+  - Kakarot address: `0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda`.
+  - Uninitialized account class hash: `0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e`.
+  - Account contract class hash: `0x1276d0b017701646f8646b69de6c3b3584edce71879678a679f28c07a9971cf`.
+  - Max calldata felts: 30,000.
+  - Pending transactions stored in MongoDB, with a retry service running every 10 seconds.
+  - Whitelisted pre-EIP-155 transaction hashes (see local environment).
+
+- **Apibara DNA Indexer Service** on port 7171:
+  - Uses the Starknet node URL for RPC.
+  - Configured with MongoDB and Kakarot addresses.
+
+- **MongoDB** with Mongo Express on port 27017 for data management.
+
+### Potential Pitfalls, Caveats, and Requirements
+
+When setting up the Kakarot node in any environment, it's important to be aware of the following:
+
+#### Requirements
+
+- **Hardware**: Ensure your system meets the necessary hardware requirements for running Docker containers efficiently. A modern multi-core CPU, at least 16GB of RAM, and ample storage space are recommended.
+- **Software**: Install the latest versions of Docker and Docker Compose to ensure compatibility with the provided configuration.
+- **Network**: Stable internet connection for downloading images and communicating with remote services if needed. We have noticed difficulties on networks with low bandwidth.
+
+#### Potential Pitfalls
+
+- **Resource Limits**: Docker containers might consume significant system resources. Monitor system performance and consider adjusting container resource limits if necessary.
+- **Network Configuration**: Ensure no port conflicts on your local machine, especially with ports 3030, 5050, 6060, 7171, 27017... used by the services.
+- **Volume Persistence**: Docker volumes are used for data persistence. Ensure they are properly managed and backed up to prevent data loss.
+
+#### Caveats
+
+- **Pre-EIP-155 Transactions**: Kakarot does not natively support pre-EIP-155 transactions, except for those whitelisted. Be cautious about transaction compatibility.
+- **Environment Configuration**: Double-check environment variables and their values, particularly those related to security, such as private keys and database credentials.
+- **Service Dependencies**: The order of service initialization is crucial. Dependencies between services must be respected to avoid runtime errors.
 
 ### API
 
