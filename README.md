@@ -154,7 +154,7 @@ The binaries will be located in `target/release/`.
 
 ### Dev mode with [Katana](https://github.com/dojoengine/dojo/tree/main/crates/katana)
 
-To run a local StarknetOS client, you can use Katana. Katana, developed by the Dojo team, is a sequencer designed to aid in local development. It allows you to perform all Starknet-related activities in a local environment, making it an efficient platform for development and testing. To run Katana and deploy the Kakarot zkEVM (a set of Cairo smart contracts implementing the EVM):
+To run a local Starknet sequencer, you can use Katana. Katana, developed by the Dojo team, is a sequencer designed to aid in local development. It allows you to perform all Starknet-related activities in a local environment, making it an efficient platform for development and testing. To run Katana and deploy the Kakarot zkEVM (a set of Cairo smart contracts implementing the EVM):
 
 ```console
 make run-katana
