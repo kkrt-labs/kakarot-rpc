@@ -1,6 +1,6 @@
 use alloy_sol_types::SolType;
 use jsonrpsee::types::ErrorObject;
-use reth_primitives::Bytes;
+use reth_primitives::{Bytes, B256};
 use starknet_crypto::FieldElement;
 use thiserror::Error;
 
@@ -28,11 +28,10 @@ pub enum EthRpcErrorCode {
 impl From<EthApiError> for EthRpcErrorCode {
     fn from(error: EthApiError) -> Self {
         match error {
-            EthApiError::UnknownBlock | EthApiError::UnknownBlockNumber | EthApiError::TransactionNotFound => {
+            EthApiError::UnknownBlock(_) | EthApiError::UnknownBlockNumber(_) | EthApiError::TransactionNotFound(_) => {
                 Self::ResourceNotFound
             }
-            EthApiError::InvalidBlockRange
-            | EthApiError::Signature(_)
+            EthApiError::Signature(_)
             | EthApiError::EthereumDataFormat(_)
             | EthApiError::CalldataExceededLimit(_, _) => Self::InvalidParams,
             EthApiError::Transaction(err) => err.into(),
@@ -46,17 +45,14 @@ impl From<EthApiError> for EthRpcErrorCode {
 #[derive(Error)]
 pub enum EthApiError {
     /// When a block is not found
-    #[error("unknown block")]
-    UnknownBlock,
+    #[error("unknown block {0}")]
+    UnknownBlock(String),
     /// When an unknown block number is encountered
-    #[error("unknown block number")]
-    UnknownBlockNumber,
+    #[error("unknown block number {0}")]
+    UnknownBlockNumber(String),
     /// When a transaction is not found
-    #[error("transaction not found")]
-    TransactionNotFound,
-    /// When an invalid block range is provided
-    #[error("invalid block range")]
-    InvalidBlockRange,
+    #[error("transaction not found {0}")]
+    TransactionNotFound(B256),
     /// Error related to transaction
     #[error("transaction error: {0}")]
     Transaction(#[from] TransactionError),

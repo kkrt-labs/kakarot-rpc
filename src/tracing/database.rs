@@ -101,7 +101,7 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
                 .db
                 .block_by_number(BlockNumberOrTag::Number(block_number), false)
                 .await?
-                .ok_or(EthApiError::UnknownBlock)?
+                .ok_or(EthApiError::UnknownBlock("fetch failure".to_string()))?
                 .header
                 .hash
                 .unwrap_or_default();

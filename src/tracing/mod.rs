@@ -106,7 +106,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             transact_commit_in_place(evm)?;
         }
 
-        Err(EthApiError::TransactionNotFound)
+        Err(EthApiError::TransactionNotFound(transaction_hash))
     }
 
     /// Traces the provided transactions using the given closure.
