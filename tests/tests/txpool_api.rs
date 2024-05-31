@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
 use kakarot_rpc::test_utils::fixtures::{katana, setup};
 use kakarot_rpc::test_utils::katana::Katana;
@@ -8,12 +9,12 @@ use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
 use rstest::*;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use serde_json::Value;
+use std::net::SocketAddr;
 
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
+async fn initial_setup(katana: Katana) -> (SocketAddr, ServerHandle, Katana) {
     // Start the Kakarot RPC server and retrieve the server address and handle
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
@@ -29,28 +30,44 @@ async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
             .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
     }
     katana.add_pending_transactions_to_database(pending_transactions).await;
+    (server_addr, server_handle, katana)
+}
 
+async fn request<D: DeserializeOwned, S: Serialize>(method: &str, port: u16, params: Vec<S>) -> D {
     // Create a reqwest client
     let reqwest_client = reqwest::Client::new();
 
-    // Send a POST request to the Kakarot RPC server to retrieve the transaction pool content
+    // Build the JSON-RPC request body
+    let mut body_builder = RawRpcParamsBuilder::new(method);
+    for p in params {
+        body_builder = body_builder.add_param(p);
+    }
+    let body = body_builder.build();
+
+    // Send a POST request to the Kakarot RPC server
     let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
+        .post(format!("http://localhost:{port}"))
         .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("txpool_content").build())
+        .body(body)
         .send()
         .await
         .expect("Failed to call TxPool RPC");
 
     // Extract the response body as text
     let response = res.text().await.expect("Failed to get response body");
-
     // Deserialize the response body into JSON
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
+    // Deserialize the 'result' field of the JSON into a T struct
+    serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result")
+}
 
-    // Deserialize the 'result' field of the JSON into a TxpoolContent struct
-    let tx_pool_content: TxpoolContent =
-        serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
+    let (server_addr, server_handle, katana) = initial_setup(katana).await;
+
+    let tx_pool_content: TxpoolContent = request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
 
     // Assert that we recovered the 10 pending transactions
     assert_eq!(tx_pool_content.pending.len(), 10);
@@ -89,21 +106,7 @@ async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
-    // Start the Kakarot RPC server and retrieve the server address and handle
-    let (server_addr, server_handle) =
-        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
-
-    // Generate a vector of random bytes
-    let bytes: Vec<u8> = (0..RANDOM_BYTES_SIZE).map(|_| rand::random()).collect();
-    let mut unstructured = arbitrary::Unstructured::new(&bytes);
-
-    // Generate 10 pending transactions and add them to the database
-    let mut pending_transactions = Vec::new();
-    for _ in 0..10 {
-        pending_transactions
-            .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
-    }
-    katana.add_pending_transactions_to_database(pending_transactions).await;
+    let (server_addr, server_handle, katana) = initial_setup(katana).await;
 
     // Retrieve the first pending transaction from the database
     let first_pending_tx = katana
@@ -114,27 +117,8 @@ async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
         .expect("Failed to get the first pending transaction")
         .unwrap();
 
-    // Create a reqwest client
-    let reqwest_client = reqwest::Client::new();
-
-    // Send a POST request to the Kakarot RPC server to retrieve the transaction pool content for a specific address
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("txpool_contentFrom").add_param(first_pending_tx.tx.from.to_string()).build())
-        .send()
-        .await
-        .expect("Failed to call TxPool RPC");
-
-    // Extract the response body as text
-    let response = res.text().await.expect("Failed to get response body");
-
-    // Deserialize the response body into JSON
-    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-
-    // Deserialize the 'result' field of the JSON into a TxpoolContentFrom struct
     let tx_pool_content: TxpoolContentFrom =
-        serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
+        request("txpool_contentFrom", server_addr.port(), vec![first_pending_tx.tx.from.to_string()]).await;
 
     // Assert that we recovered a single pending transaction
     assert_eq!(tx_pool_content.pending.len(), 1);
@@ -153,43 +137,9 @@ async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_txpool_status(#[future] katana: Katana, _setup: ()) {
-    // Start the Kakarot RPC server and retrieve the server address and handle
-    let (server_addr, server_handle) =
-        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+    let (server_addr, server_handle, katana) = initial_setup(katana).await;
 
-    // Generate a vector of random bytes
-    let bytes: Vec<u8> = (0..RANDOM_BYTES_SIZE).map(|_| rand::random()).collect();
-    let mut unstructured = arbitrary::Unstructured::new(&bytes);
-
-    // Generate 10 pending transactions and add them to the database
-    let mut pending_transactions = Vec::new();
-    for _ in 0..10 {
-        pending_transactions
-            .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
-    }
-    katana.add_pending_transactions_to_database(pending_transactions).await;
-
-    // Create a reqwest client
-    let reqwest_client = reqwest::Client::new();
-
-    // Send a POST request to the Kakarot RPC server to retrieve the transaction pool status
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("txpool_status").build())
-        .send()
-        .await
-        .expect("Failed to call TxPool RPC");
-
-    // Extract the response body as text
-    let response = res.text().await.expect("Failed to get response body");
-
-    // Deserialize the response body into JSON
-    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-
-    // Deserialize the 'result' field of the JSON into a TxpoolStatus struct
-    let tx_pool_status: TxpoolStatus =
-        serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
+    let tx_pool_status: TxpoolStatus = request("txpool_status", server_addr.port(), Vec::<String>::new()).await;
 
     // Assert that we recovered the 10 pending transactions
     assert_eq!(tx_pool_status.pending, 10);
@@ -199,49 +149,16 @@ async fn test_txpool_status(#[future] katana: Katana, _setup: ()) {
 
     // Drop the server handle to shut down the server after the test
     drop(server_handle);
+    drop(katana);
 }
 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_txpool_inspect(#[future] katana: Katana, _setup: ()) {
-    // Start the Kakarot RPC server and retrieve the server address and handle
-    let (server_addr, server_handle) =
-        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+    let (server_addr, server_handle, katana) = initial_setup(katana).await;
 
-    // Generate a vector of random bytes
-    let bytes: Vec<u8> = (0..RANDOM_BYTES_SIZE).map(|_| rand::random()).collect();
-    let mut unstructured = arbitrary::Unstructured::new(&bytes);
-
-    // Generate 10 pending transactions and add them to the database
-    let mut pending_transactions = Vec::new();
-    for _ in 0..10 {
-        pending_transactions
-            .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
-    }
-    katana.add_pending_transactions_to_database(pending_transactions).await;
-
-    // Create a reqwest client
-    let reqwest_client = reqwest::Client::new();
-
-    // Send a POST request to the Kakarot RPC server to do a pool inspection
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("txpool_inspect").build())
-        .send()
-        .await
-        .expect("Failed to call TxPool RPC");
-
-    // Extract the response body as text
-    let response = res.text().await.expect("Failed to get response body");
-
-    // Deserialize the response body into JSON
-    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-
-    // Deserialize the 'result' field of the JSON into a TxpoolInspect struct
-    let tx_pool_inspect: TxpoolInspect =
-        serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
+    let tx_pool_inspect: TxpoolInspect = request("txpool_inspect", server_addr.port(), Vec::<String>::new()).await;
 
     // Assert that we recovered the 10 pending transactions
     assert_eq!(tx_pool_inspect.pending.len(), 10);
