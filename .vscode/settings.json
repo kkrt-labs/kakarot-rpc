@@ -8,7 +8,7 @@
   "deno.enable": true,
   "deno.suggest.imports.autoDiscover": true,
   "[typescript]": {
-    "editor.defaultFormatter": "trunk.io"
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "deno.lint": true,
   "deno.unstable": true,

@@ -55,18 +55,14 @@ export function toEthTx({
 }): (JsonRpcTx & { yParity?: string }) | null {
   const index = receipt.transactionIndex;
 
-  if (index === undefined) {
+  if (!index) {
     console.error(
       "Known bug (apibara): ⚠️ Transaction index is undefined - Transaction index will be set to 0.",
     );
   }
 
   const txJSON = transaction.toJSON();
-  if (
-    txJSON.r === undefined ||
-    txJSON.s === undefined ||
-    txJSON.v === undefined
-  ) {
+  if (!txJSON.r || !txJSON.s || !txJSON.v) {
     console.error(
       `Transaction is not signed: {r: ${txJSON.r}, s: ${txJSON.s}, v: ${txJSON.v}}`,
     );
