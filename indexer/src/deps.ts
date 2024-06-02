@@ -16,7 +16,7 @@ export type {
   Config,
   NetworkOptions,
   SinkOptions,
-} from "https://esm.sh/@apibara/indexer";
+} from "https://esm.sh/@apibara/indexer@0.2.2";
 
 // Ethereum
 export {
