@@ -40,7 +40,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         self,
         tracing_config: TracingInspectorConfig,
     ) -> TracerResult<Option<Vec<LocalizedTransactionTrace>>> {
-        let transact_to_parity_trace =
+        let txs = self.transactions.clone();
+        let traces = self.trace_transactions(
             |env: EnvWithHandlerCfg,
              db: &mut EthDatabaseSnapshot<P>,
              tx: &reth_rpc_types::Transaction|
@@ -63,10 +64,9 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 transaction_info.base_fee = Some(block_base_fee);
 
                 Ok((parity_builder.into_localized_transaction_traces(transaction_info), res.state))
-            };
-
-        let txs = self.transactions.clone();
-        let traces = self.trace_transactions(transact_to_parity_trace, &txs)?;
+            },
+            &txs,
+        )?;
 
         Ok(Some(traces))
     }
@@ -74,9 +74,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Returns the debug trace in the Geth.
     /// Currently only supports the call tracer or the default tracer.
     pub fn debug_block(self, opts: GethDebugTracingOptions) -> TracerResult<Vec<TraceResult>> {
-        let transact_to_geth_trace = transact_and_get_traces_geth(opts);
         let txs = self.transactions.clone();
-        let traces = self.trace_transactions(transact_to_geth_trace, &txs)?;
+        let traces = self.trace_transactions(transact_and_get_traces_geth(opts), &txs)?;
 
         Ok(traces)
     }
@@ -88,10 +87,9 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     ) -> TracerResult<GethTrace> {
         for tx in self.transactions.clone() {
             if tx.hash == transaction_hash {
-                let transact_and_get_traces = transact_and_get_traces_geth::<P>(opts);
                 // We only want to trace the transaction with the given hash.
                 let trace = self
-                    .trace_transactions(transact_and_get_traces, &[tx])?
+                    .trace_transactions(transact_and_get_traces_geth::<P>(opts), &[tx])?
                     .first()
                     .cloned()
                     .ok_or(TransactionError::Tracing(eyre!("No trace found").into()))?;
