@@ -1,6 +1,6 @@
 use reth_primitives::{B256, U256};
 use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
-use reth_rpc_types::{Block, BlockId, BlockTransactions, Header};
+use reth_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header};
 
 use crate::eth_provider::{
     error::{EthApiError, TransactionError},
@@ -59,7 +59,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 
         // we can't trace a pending transaction
         if transaction.block_number.is_none() {
-            return Err(EthApiError::UnknownBlock(transaction_hash.to_string()));
+            return Err(EthApiError::UnknownBlock(transaction_hash.into()));
         }
 
         self.with_block_id(BlockId::Number(transaction.block_number.unwrap().into())).await
@@ -76,13 +76,15 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
             BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
         }
         .ok_or(match block_id {
-            BlockId::Hash(hash) => EthApiError::UnknownBlock(hash.block_hash.to_string()),
-            BlockId::Number(number) => EthApiError::UnknownBlock(number.to_string()),
+            BlockId::Hash(hash) => EthApiError::UnknownBlock(hash.block_hash.into()),
+            BlockId::Number(number) => {
+                EthApiError::UnknownBlock(BlockHashOrNumber::Number(number.as_number().unwrap()))
+            }
         })?;
 
         // we can't trace a pending block
         if block.header.hash.unwrap_or_default().is_zero() {
-            return Err(EthApiError::UnknownBlock("0".to_string()));
+            return Err(EthApiError::UnknownBlock(BlockHashOrNumber::Number(0)));
         }
 
         Ok(block.inner)

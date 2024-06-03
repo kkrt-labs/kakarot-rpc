@@ -1,6 +1,7 @@
 use alloy_sol_types::SolType;
 use jsonrpsee::types::ErrorObject;
 use reth_primitives::{Bytes, B256};
+use reth_rpc_types::BlockHashOrNumber;
 use starknet_crypto::FieldElement;
 use thiserror::Error;
 
@@ -46,10 +47,10 @@ impl From<EthApiError> for EthRpcErrorCode {
 pub enum EthApiError {
     /// When a block is not found
     #[error("unknown block {0}")]
-    UnknownBlock(String),
+    UnknownBlock(BlockHashOrNumber),
     /// When an unknown block number is encountered
-    #[error("unknown block number {0}")]
-    UnknownBlockNumber(String),
+    #[error("unknown block number {0:?}")]
+    UnknownBlockNumber(Option<u64>),
     /// When a transaction is not found
     #[error("transaction not found {0}")]
     TransactionNotFound(B256),
