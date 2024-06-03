@@ -11,9 +11,7 @@ type Collection =
   | "logs"
   | "receipts"
   | "headers"
-  | "transactions_failure"
-  | "logs_failure"
-  | "receipts_failure";
+  | "transactions_failure";
 
 export type StoreItem<C = Collection> = {
   collection: C;
@@ -25,9 +23,5 @@ export type StoreItem<C = Collection> = {
         ? { receipt: JsonRpcReceipt }
         : C extends "transactions_failure"
           ? { tx: JsonRpcTx }
-          : C extends "logs_failure"
-            ? { log: JsonRpcLog }
-            : C extends "receipts_failure"
-              ? { receipt: JsonRpcReceipt }
-              : { header: JsonRpcBlock };
+          : { header: JsonRpcBlock };
 };

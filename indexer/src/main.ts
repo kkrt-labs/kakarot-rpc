@@ -19,6 +19,7 @@ import {
 } from "./deps.ts";
 // Eth
 import { Bloom, encodeReceipt, hexToBytes, RLP, Trie } from "./deps.ts";
+import { transaction } from "https://esm.sh/starknet@5.24.3";
 
 const AUTH_TOKEN = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
 const TRANSACTION_EXECUTED = hash.getSelectorFromName("transaction_executed");
@@ -46,8 +47,6 @@ const sinkOptions =
           "receipts",
           "logs",
           "transactions_failure",
-          "receipts_failure",
-          "logs_failure",
         ],
       }
     : {};
@@ -60,6 +59,12 @@ export const config: Config<NetworkOptions, SinkOptions> = {
   finality: "DATA_STATUS_PENDING",
   filter: {
     header: { weak: false },
+    events: [
+      {
+        keys: [TRANSACTION_EXECUTED],
+      },
+    ],
+    transactions: [{ includeReverted: true }],
   },
   sinkType: SINK_TYPE,
   sinkOptions: sinkOptions,
@@ -97,11 +102,16 @@ export default async function transform({
         return null;
       }
 
-      // If the event is a transaction_executed event
-      const isTxExecuted = event.keys[0] == TRANSACTION_EXECUTED;
+      // Skip if the transaction is reverted and the revert reason is not run out of resources.
+      if (
+        receipt.executionStatus === "EXECUTION_STATUS_REVERTED" &&
+        !receipt.revertReason?.includes("RunResources has no remaining steps")
+      ) {
+        return null;
+      }
 
       // Skip if the transaction_executed event contains "eth validation failed".
-      if (isTxExecuted && ethValidationFailed(event)) {
+      if (ethValidationFailed(event)) {
         return null;
       }
 
@@ -158,51 +168,35 @@ export default async function transform({
         isPendingBlock,
       });
 
-      // This section is dedicated to executed transactions that will be part of the block.
-      if (isTxExecuted) {
-        // Trie code is based off:
-        // - https://github.com/ethereumjs/ethereumjs-monorepo/blob/master/packages/block/src/block.ts#L85
-        // - https://github.com/ethereumjs/ethereumjs-monorepo/blob/master/packages/vm/src/buildBlock.ts#L153
-        // Add the transaction to the transaction trie.
-        await transactionTrie.put(
-          RLP.encode(Number(ethTx.transactionIndex)),
-          typedEthTx.serialize(),
-        );
-        // Add the receipt to the receipt trie.
-        const encodedReceipt = encodeReceipt(
-          fromJsonRpcReceipt(ethReceipt),
-          typedEthTx.type,
-        );
-        await receiptTrie.put(
-          RLP.encode(Number(ethTx.transactionIndex)),
-          encodedReceipt,
-        );
+      // Trie code is based off:
+      // - https://github.com/ethereumjs/ethereumjs-monorepo/blob/master/packages/block/src/block.ts#L85
+      // - https://github.com/ethereumjs/ethereumjs-monorepo/blob/master/packages/vm/src/buildBlock.ts#L153
+      // Add the transaction to the transaction trie.
+      await transactionTrie.put(
+        RLP.encode(Number(ethTx.transactionIndex)),
+        typedEthTx.serialize(),
+      );
+      // Add the receipt to the receipt trie.
+      const encodedReceipt = encodeReceipt(
+        fromJsonRpcReceipt(ethReceipt),
+        typedEthTx.type,
+      );
+      await receiptTrie.put(
+        RLP.encode(Number(ethTx.transactionIndex)),
+        encodedReceipt,
+      );
 
-        // Add the logs bloom of the receipt to the block logs bloom.
-        const receiptBloom = new Bloom(hexToBytes(ethReceipt.logsBloom));
-        blockLogsBloom.or(receiptBloom);
-        cumulativeGasUsed += BigInt(ethReceipt.gasUsed);
-      }
+      // Add the logs bloom of the receipt to the block logs bloom.
+      const receiptBloom = new Bloom(hexToBytes(ethReceipt.logsBloom));
+      blockLogsBloom.or(receiptBloom);
+      cumulativeGasUsed += BigInt(ethReceipt.gasUsed);
 
-      // Add all the eth data to the store.
-      if (isTxExecuted) {
-        // Executed transactions are stored in the main collections.
-        store.push({ collection: "transactions", data: { tx: ethTx } });
-        store.push({ collection: "receipts", data: { receipt: ethReceipt } });
-        ethLogs.forEach((ethLog) => {
-          store.push({ collection: "logs", data: { log: ethLog } });
-        });
-      } else {
-        // Failed transactions are stored in the failure collections.
-        store.push({ collection: "transactions_failure", data: { tx: ethTx } });
-        store.push({
-          collection: "receipts_failure",
-          data: { receipt: ethReceipt },
-        });
-        ethLogs.forEach((ethLog) => {
-          store.push({ collection: "logs_failure", data: { log: ethLog } });
-        });
-      }
+      // Executed transactions are stored in the main collections.
+      store.push({ collection: "transactions", data: { tx: ethTx } });
+      store.push({ collection: "receipts", data: { receipt: ethReceipt } });
+      ethLogs.forEach((ethLog) => {
+        store.push({ collection: "logs", data: { log: ethLog } });
+      });
     }),
   );
 

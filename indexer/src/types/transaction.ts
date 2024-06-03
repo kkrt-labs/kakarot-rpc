@@ -52,7 +52,9 @@ export function toEthTx({
   blockNumber: PrefixedHexString;
   blockHash: PrefixedHexString;
   isPendingBlock: boolean;
-}): (JsonRpcTx & { yParity?: string }) | null {
+}):
+  | (JsonRpcTx & { yParity?: string; other: { isRunOutOfResources: boolean } })
+  | null {
   const index = receipt.transactionIndex;
 
   if (!index) {
@@ -77,7 +79,10 @@ export function toEthTx({
       ? bigIntToHex((BigInt(txJSON.v) - 35n) / 2n)
       : txJSON.chainId;
 
-  const result: JsonRpcTx & { yParity?: string } = {
+  const result: JsonRpcTx & {
+    yParity?: string;
+    other: { isRunOutOfResources: boolean };
+  } = {
     blockHash: isPendingBlock ? null : blockHash,
     blockNumber,
     from: transaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
@@ -99,6 +104,11 @@ export function toEthTx({
     s: txJSON.s,
     maxFeePerBlobGas: txJSON.maxFeePerBlobGas,
     blobVersionedHashes: txJSON.blobVersionedHashes,
+    other: {
+      isRunOutOfResources:
+        receipt.executionStatus === "EXECUTION_STATUS_REVERTED" &&
+        receipt.revertReason!.includes("RunResources has no remaining steps"),
+    },
   };
   // Adding yParity for EIP-1559 and EIP-2930 transactions
   // To fit the Ethereum format, we need to add the yParity field.
