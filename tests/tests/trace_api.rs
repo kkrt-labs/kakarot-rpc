@@ -284,5 +284,17 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
     // Compare traces
     assert_eq!(expected_trace, trace);
 
+    // Get the last trace from the trace vector, which is expected to be out of resources.
+    let run_out_of_resource_trace = traces.last().unwrap();
+
+    // Asser that the trace matches the expected default GethTrace for a transaction that runs out of resources.
+    match run_out_of_resource_trace {
+        TraceResult::Success { result, tx_hash } => assert_eq!(
+            *result,
+            GethTrace::Default(reth_rpc_types::trace::geth::DefaultFrame { failed: true, ..Default::default() })
+        ),
+        _ => panic!("Expected a success trace result"),
+    };
+
     drop(server_handle);
 }
