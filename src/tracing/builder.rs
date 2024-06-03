@@ -84,7 +84,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 
         // we can't trace a pending block
         if block.header.hash.unwrap_or_default().is_zero() {
-            return Err(EthApiError::UnknownBlock(BlockHashOrNumber::Number(0)));
+            return Err(EthApiError::UnknownBlock(BlockHashOrNumber::Hash(B256::ZERO)));
         }
 
         Ok(block.inner)
