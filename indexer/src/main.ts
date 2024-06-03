@@ -185,7 +185,7 @@ export default async function transform({
       blockLogsBloom.or(receiptBloom);
       cumulativeGasUsed += BigInt(ethReceipt.gasUsed);
 
-      // Executed transactions are stored in the main collections.
+      // Add all the eth data to the store.
       store.push({ collection: "transactions", data: { tx: ethTx } });
       store.push({ collection: "receipts", data: { receipt: ethReceipt } });
       ethLogs.forEach((ethLog) => {
