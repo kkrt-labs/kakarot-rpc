@@ -216,9 +216,9 @@ impl From<Vec<FieldElement>> for EvmError {
 
 fn decode_err(bytes: &[u8]) -> String {
     // Skip the first 4 bytes which is the function selector
-    let msg = &bytes[4..];
-    let maybe_decoded_msg = alloy_sol_types::sol_data::String::abi_decode(msg, true);
-    maybe_decoded_msg.map_or_else(|_| format!("{}", bytes.iter().collect::<Bytes>()), |s| s)
+    let msg = &bytes.get(4..);
+    let maybe_decoded_msg = msg.and_then(|msg| alloy_sol_types::sol_data::String::abi_decode(msg, true).ok());
+    maybe_decoded_msg.map_or_else(|| format!("{}", bytes.iter().collect::<Bytes>()), |s| s)
 }
 
 /// Error related to a transaction.
