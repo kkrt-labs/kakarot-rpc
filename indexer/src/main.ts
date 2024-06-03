@@ -19,7 +19,6 @@ import {
 } from "./deps.ts";
 // Eth
 import { Bloom, encodeReceipt, hexToBytes, RLP, Trie } from "./deps.ts";
-import { transaction } from "https://esm.sh/starknet@5.24.3";
 
 const AUTH_TOKEN = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
 const TRANSACTION_EXECUTED = hash.getSelectorFromName("transaction_executed");
@@ -41,13 +40,7 @@ const sinkOptions =
           Deno.env.get("MONGO_CONNECTION_STRING") ??
           "mongodb://mongo:mongo@mongo:27017",
         database: Deno.env.get("MONGO_DATABASE_NAME") ?? "kakarot-test-db",
-        collectionNames: [
-          "headers",
-          "transactions",
-          "receipts",
-          "logs",
-          "transactions_failure",
-        ],
+        collectionNames: ["headers", "transactions", "receipts", "logs"],
       }
     : {};
 
@@ -59,6 +52,7 @@ export const config: Config<NetworkOptions, SinkOptions> = {
   finality: "DATA_STATUS_PENDING",
   filter: {
     header: { weak: false },
+    // Filters are unions
     events: [
       {
         keys: [TRANSACTION_EXECUTED],
