@@ -1,5 +1,10 @@
 // Starknet
-export { hash, RpcProvider, uint256, Contract} from "https://esm.sh/starknet@5.24.3";
+export {
+  hash,
+  RpcProvider,
+  uint256,
+  Contract,
+} from "https://esm.sh/starknet@5.24.3";
 export type {
   BlockHeader,
   Event,
@@ -7,6 +12,11 @@ export type {
   Transaction,
   TransactionReceipt,
 } from "https://esm.sh/@apibara/indexer@0.2.2/starknet";
+export type {
+  Config,
+  NetworkOptions,
+  SinkOptions,
+} from "https://esm.sh/@apibara/indexer@0.2.2";
 
 // Ethereum
 export {

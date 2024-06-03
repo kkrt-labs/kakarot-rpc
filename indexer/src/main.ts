@@ -9,7 +9,14 @@ import { fromJsonRpcReceipt, toEthReceipt } from "./types/receipt.ts";
 import { JsonRpcLog, toEthLog } from "./types/log.ts";
 import { StoreItem } from "./types/storeItem.ts";
 // Starknet
-import { BlockHeader, EventWithTransaction, hash } from "./deps.ts";
+import {
+  BlockHeader,
+  EventWithTransaction,
+  hash,
+  Config,
+  NetworkOptions,
+  SinkOptions,
+} from "./deps.ts";
 // Eth
 import { Bloom, encodeReceipt, hexToBytes, RLP, Trie } from "./deps.ts";
 
@@ -37,7 +44,7 @@ const sinkOptions =
       }
     : {};
 
-export const config = {
+export const config: Config<NetworkOptions, SinkOptions> = {
   streamUrl: STREAM_URL,
   authToken: AUTH_TOKEN,
   startingBlock: STARTING_BLOCK,
