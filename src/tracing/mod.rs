@@ -224,12 +224,6 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         let mut db = self.db;
 
         while let Some(tx) = transactions.next() {
-            // Check if the transaction has `isRunOutOfResources` set to true in the `other` field.
-            if tx.other.get("isRunOutOfResources") == Some(&serde_json::Value::Bool(true)) {
-                // Skip this transaction if `isRunOutOfResources` is true.
-                continue;
-            }
-
             let env = env_with_tx(&self.env, tx.clone())?;
 
             let (res, state_changes) = match &self.tracing_options {
