@@ -837,25 +837,43 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
         .await
         .expect("Failed to insert transaction in mined collection");
 
-    // Retrieve the retried transactions.
-    let retried_transactions = eth_provider.retry_transactions().await.expect("Failed to retry transactions");
+    let mut pending_tx_hashes: Vec<B256> = Vec::new();
 
-    // Assert that there is only one retried transaction.
-    assert_eq!(retried_transactions.len(), 1);
+    for i in 0..TRANSACTION_MAX_RETRIES + 2 {
+        // Retrieve the retried transactions.
+        let retried_transactions = eth_provider.retry_transactions().await.expect("Failed to retry transactions");
 
-    // Retrieve the pending transactions.
-    let pending_transactions = eth_provider
-        .database()
-        .get::<StoredPendingTransaction>(None, None)
-        .await
-        .expect("Failed get pending transactions");
+        // Assert that there is only one retried transaction before reaching retry limit.
+        assert_eq!(retried_transactions.len(), usize::from(i < TRANSACTION_MAX_RETRIES));
 
-    // Ensure that the spurious transactions are dropped from the pending transactions collection
-    assert_eq!(pending_transactions.len(), 1);
+        // Retrieve the pending transactions.
+        let pending_transactions = eth_provider
+            .database()
+            .get::<StoredPendingTransaction>(None, None)
+            .await
+            .expect("Failed get pending transactions");
 
-    // Ensure that the retry is incremented for the first transaction
-    assert_eq!(pending_transactions.first().unwrap().retries, 1);
+        if i < TRANSACTION_MAX_RETRIES {
+            // Ensure that the spurious transactions are dropped from the pending transactions collection
+            assert_eq!(pending_transactions.len(), 1);
 
-    // Ensure that the transaction1 is still in the pending transactions collection
-    assert_eq!(pending_transactions.first().unwrap().tx, transaction1);
+            // Ensure that the retry is incremented for the first transaction
+            assert_eq!(pending_transactions.first().unwrap().retries, i + 1);
+
+            // Ensure that the transaction1 is still in the pending transactions collection
+            assert_eq!(pending_transactions.first().unwrap().tx, transaction1);
+
+            // Get the pending transaction hash
+            let pending_tx_hash = retried_transactions.first().unwrap();
+
+            // Ensure that the pending transaction hash is not already in the list
+            // Transaction hashes should be unique
+            assert!(!pending_tx_hashes.contains(pending_tx_hash));
+
+            // Add the pending transaction hash to the list
+            pending_tx_hashes.push(*pending_tx_hash);
+        } else {
+            assert_eq!(pending_transactions.len(), 0);
+        }
+    }
 }

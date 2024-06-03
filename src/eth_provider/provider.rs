@@ -552,6 +552,9 @@ where
         let filter = into_filter("tx.hash", &transaction_signed.hash, HASH_HEX_STRING_LEN);
         let pending_transaction = self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?;
 
+        // Number of retries for the transaction (0 if it's a new transaction)
+        let retries = pending_transaction.as_ref().map(|tx| tx.retries).unwrap_or_default();
+
         // Determine the maximum fee
         let max_fee = if cfg!(feature = "hive") {
             u64::MAX
@@ -566,12 +569,7 @@ where
             let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
             let max_fee = (u128::from(max_fee) * 80 / 100) as u64;
 
-            // We add the retry count to the max fee in order to bypass the
-            // DuplicateTx error in Starknet, which rejects incoming transactions
-            // with the same hash. Incrementing the max fee causes the Starknet
-            // hash to change, allowing the transaction to pass.
-            let retries = pending_transaction.as_ref().map(|tx| tx.retries + 1).unwrap_or_default();
-            max_fee.saturating_sub(eth_fees).saturating_add(retries)
+            max_fee.saturating_sub(eth_fees)
         };
 
         // Deploy EVM transaction signer if Hive feature is enabled
@@ -602,7 +600,9 @@ where
         }
 
         // Convert the transaction to a Starknet transaction
-        let starnet_transaction = to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee)?;
+        // We add retries number to the signature in order to prevent duplicated hashes
+        let starnet_transaction =
+            to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee, retries + 1)?;
 
         // Add the transaction to the Starknet provider
         let res =

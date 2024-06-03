@@ -99,6 +99,7 @@ pub fn to_starknet_transaction(
     chain_id: Option<u64>,
     signer: Address,
     max_fee: u64,
+    retries: u64,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
     let sender_address = starknet_address(signer);
 
@@ -108,7 +109,7 @@ pub fn to_starknet_transaction(
     let signature: Vec<FieldElement> = {
         let transaction_signature = transaction.signature();
 
-        let mut signature = Vec::with_capacity(5);
+        let mut signature = Vec::with_capacity(6);
         signature.extend_from_slice(&split_u256(transaction_signature.r));
         signature.extend_from_slice(&split_u256(transaction_signature.s));
 
@@ -121,6 +122,9 @@ pub fn to_starknet_transaction(
         } else {
             signature.push(u64::from(transaction_signature.odd_y_parity).into());
         }
+
+        // Add the retries to the signature
+        signature.push(retries.into());
 
         signature
     };
@@ -179,6 +183,7 @@ mod tests {
             Some(1_802_203_764),
             Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap(),
             0,
+            0,
         )
         .unwrap()
         {
@@ -190,7 +195,8 @@ mod tests {
                     FieldElement::from(131_015_958_324_370_192_097_986_834_655_742_602_650_u128),
                     FieldElement::from(263_740_705_169_547_910_390_939_684_488_449_712_973_u128),
                     FieldElement::from(164_374_192_806_466_935_713_473_791_294_001_132_486_u128),
-                    FieldElement::ONE
+                    FieldElement::ONE,
+                    FieldElement::ZERO
                 ]
             );
 
@@ -252,6 +258,6 @@ mod tests {
         transaction.transaction.set_input(vec![0; 30000].into());
 
         // Attempt to convert the transaction into a Starknet transaction
-        to_starknet_transaction(&transaction, Some(1), transaction.recover_signer().unwrap(), 100_000_000).unwrap();
+        to_starknet_transaction(&transaction, Some(1), transaction.recover_signer().unwrap(), 100_000_000, 0).unwrap();
     }
 }
