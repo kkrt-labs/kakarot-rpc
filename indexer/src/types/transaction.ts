@@ -53,7 +53,7 @@ export function toEthTx({
   blockHash: PrefixedHexString;
   isPendingBlock: boolean;
 }):
-  | (JsonRpcTx & { yParity?: string; other: { isRunOutOfResources: boolean } })
+  | (JsonRpcTx & { yParity?: string; other?: { isRunOutOfResources: boolean } })
   | null {
   const index = receipt.transactionIndex;
 
@@ -81,7 +81,7 @@ export function toEthTx({
 
   const result: JsonRpcTx & {
     yParity?: string;
-    other: { isRunOutOfResources: boolean };
+    other?: { isRunOutOfResources: boolean };
   } = {
     blockHash: isPendingBlock ? null : blockHash,
     blockNumber,
@@ -104,11 +104,6 @@ export function toEthTx({
     s: txJSON.s,
     maxFeePerBlobGas: txJSON.maxFeePerBlobGas,
     blobVersionedHashes: txJSON.blobVersionedHashes,
-    other: {
-      isRunOutOfResources:
-        receipt.executionStatus === "EXECUTION_STATUS_REVERTED" &&
-        receipt.revertReason!.includes("RunResources has no remaining steps"),
-    },
   };
   // Adding yParity for EIP-1559 and EIP-2930 transactions
   // To fit the Ethereum format, we need to add the yParity field.
@@ -118,6 +113,16 @@ export function toEthTx({
   ) {
     result.yParity = txJSON.v;
   }
+
+  if (
+    receipt.executionStatus === "EXECUTION_STATUS_REVERTED" &&
+    receipt.revertReason!.includes("RunResources has no remaining steps")
+  ) {
+    result.other = {
+      isRunOutOfResources: true,
+    };
+  }
+
   return result;
 }
 

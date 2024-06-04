@@ -12,9 +12,5 @@
   },
   "deno.lint": true,
   "deno.unstable": true,
-  "rust-analyzer.linkedProjects": [
-    "crates/sequencer/Cargo.toml",
-    "./Cargo.toml"
-  ],
-  "rust-analyzer.checkOnSave": false
+  "rust-analyzer.linkedProjects": ["crates/sequencer/Cargo.toml", "./Cargo.toml"]
 }
