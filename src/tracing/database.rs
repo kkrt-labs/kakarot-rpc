@@ -10,7 +10,7 @@ use reth_revm::{
     primitives::{Account, AccountInfo, Bytecode},
     Database, DatabaseCommit,
 };
-use reth_rpc_types::{serde_helpers::JsonStorageKey, BlockId, BlockNumberOrTag};
+use reth_rpc_types::{serde_helpers::JsonStorageKey, BlockHashOrNumber, BlockId, BlockNumberOrTag};
 use tokio::runtime::Handle;
 
 #[derive(Debug)]
@@ -101,7 +101,7 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
                 .db
                 .block_by_number(BlockNumberOrTag::Number(block_number), false)
                 .await?
-                .ok_or(EthApiError::UnknownBlock)?
+                .ok_or(EthApiError::UnknownBlock(BlockHashOrNumber::Number(block_number)))?
                 .header
                 .hash
                 .unwrap_or_default();

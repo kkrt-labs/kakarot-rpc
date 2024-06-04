@@ -2,7 +2,7 @@ use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use cainome::cairo_serde::CairoArrayLegacy;
-use eyre::Result;
+use eyre::{eyre, Result};
 use itertools::Itertools;
 use mongodb::bson::doc;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
@@ -175,7 +175,7 @@ where
             // In case the database is empty, use the starknet provider
             None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
             Some(header) => {
-                let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber)?;
+                let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;
                 let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
                 U64::from(if is_pending_block { number - 1 } else { number })
             }
@@ -393,7 +393,6 @@ where
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
-        let current_block = self.block_number().await?.try_into().map_err(|_| EthApiError::UnknownBlockNumber)?;
         let block_hash = filter.get_block_hash();
 
         // Create the database filter.
@@ -403,6 +402,10 @@ where
                 "log.blockHash": format_hex(block_hash.unwrap(), HASH_HEX_STRING_LEN)
             }
         } else {
+            let current_block = self.block_number().await?;
+            let current_block =
+                current_block.try_into().map_err(|_| EthApiError::UnknownBlockNumber(Some(current_block.to())))?;
+
             let from = filter.get_from_block().unwrap_or_default();
             let to = filter.get_to_block().unwrap_or(current_block);
 
@@ -482,7 +485,9 @@ where
         let blocks: Vec<StoredHeader> = self.database.get(header_filter, None).await?;
 
         if blocks.is_empty() {
-            return Err(EthApiError::UnknownBlock);
+            return Err(
+                KakarotError::from(mongodb::error::Error::custom(eyre!("No blocks found in the database"))).into()
+            );
         }
 
         let gas_used_ratio = blocks
@@ -825,10 +830,8 @@ where
         self.database
             .get_one(filter, None)
             .await
-            .inspect_err(|err| {
-                tracing::error!("internal error: {:?}", err);
-            })
-            .map_err(|_| EthApiError::UnknownBlock)
+            .inspect_err(|err| tracing::error!("internal error: {:?}", err))
+            .map_err(|_| EthApiError::UnknownBlock(id))
     }
 
     /// Return the transactions given a block id.
@@ -906,9 +909,10 @@ where
                 // 3. The block number is not found, then we return an error
                 match number_or_tag {
                     BlockNumberOrTag::Number(number) => {
-                        let header = self.header(number.into()).await?.ok_or(EthApiError::UnknownBlockNumber)?;
+                        let header =
+                            self.header(number.into()).await?.ok_or(EthApiError::UnknownBlockNumber(Some(number)))?;
                         // If the block hash is zero, then the block corresponds to a Starknet pending block
-                        if header.header.hash.ok_or(EthApiError::UnknownBlock)?.is_zero() {
+                        if header.header.hash.ok_or(EthApiError::UnknownBlock(number.into()))?.is_zero() {
                             Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
                         } else {
                             Ok(starknet::core::types::BlockId::Number(number))
