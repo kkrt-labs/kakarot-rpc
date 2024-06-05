@@ -27,6 +27,145 @@ use crate::eth_provider::{
 
 pub type TracerResult<T> = Result<T, EthApiError>;
 
+/// Representing different tracing options for transactions.
+enum TracingOptions {
+    /// Geth debug tracing options.
+    Geth(GethDebugTracingOptions),
+    /// Parity tracing options.
+    Parity(TracingInspectorConfig),
+}
+
+/// Representing the result of tracing transactions.
+enum TracingResult {
+    /// Geth trace results.
+    Geth(Vec<TraceResult>),
+    /// Parity trace results.
+    Parity(Vec<LocalizedTransactionTrace>),
+}
+
+impl TracingResult {
+    /// Returns a closure that transacts and gets the geth traces for the given transaction.
+    /// Captures the `opts` in order to use it in the closure.
+    fn trace_geth<P: EthereumProvider + Send + Sync + Clone>(
+        opts: GethDebugTracingOptions,
+    ) -> impl Fn(
+        EnvWithHandlerCfg,
+        &mut EthDatabaseSnapshot<P>,
+        &reth_rpc_types::Transaction,
+    ) -> TracerResult<(Vec<TraceResult>, reth_revm::primitives::State)> {
+        move |env: EnvWithHandlerCfg,
+              db: &mut EthDatabaseSnapshot<P>,
+              tx: &reth_rpc_types::Transaction|
+              -> TracerResult<(Vec<TraceResult>, reth_revm::primitives::State)> {
+            match Self::trace_transaction(env, db, tx, TracingOptions::Geth(opts.clone()))? {
+                (Self::Geth(traces), state) => Ok((traces, state)),
+                _ => Err(EthApiError::Transaction(TransactionError::Tracing(
+                    eyre!("Unexpected trace result type for Geth").into(),
+                ))),
+            }
+        }
+    }
+
+    /// Returns a closure that transacts and retrieves the Parity traces for the given transaction.
+    /// Captures the `tracing_config` to use it within the closure.
+    fn trace_parity<P: EthereumProvider + Send + Sync + Clone>(
+        tracing_config: TracingInspectorConfig,
+    ) -> impl Fn(
+        EnvWithHandlerCfg,
+        &mut EthDatabaseSnapshot<P>,
+        &reth_rpc_types::Transaction,
+    ) -> TracerResult<(Vec<LocalizedTransactionTrace>, reth_revm::primitives::State)> {
+        move |env: EnvWithHandlerCfg,
+              db: &mut EthDatabaseSnapshot<P>,
+              tx: &reth_rpc_types::Transaction|
+              -> TracerResult<(Vec<LocalizedTransactionTrace>, reth_revm::primitives::State)> {
+            match Self::trace_transaction(env, db, tx, TracingOptions::Parity(tracing_config))? {
+                (Self::Parity(traces), state) => Ok((traces, state)),
+                _ => Err(EthApiError::Transaction(TransactionError::Tracing(
+                    eyre!("Unexpected trace result type for Parity").into(),
+                ))),
+            }
+        }
+    }
+
+    /// Traces the transaction based on the specified tracing options and returns the resulting traces and state.
+    fn trace_transaction<P: EthereumProvider + Send + Sync + Clone>(
+        env: EnvWithHandlerCfg,
+        db: &mut EthDatabaseSnapshot<P>,
+        tx: &reth_rpc_types::Transaction,
+        tracing_options: TracingOptions,
+    ) -> TracerResult<(Self, reth_revm::primitives::State)> {
+        match tracing_options {
+            TracingOptions::Geth(opts) => {
+                let GethDebugTracingOptions { tracer_config, config, tracer, .. } = opts;
+
+                if let Some(tracer) = tracer {
+                    return match tracer {
+                        GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer) => {
+                            let call_config = tracer_config
+                                .clone()
+                                .into_call_config()
+                                .map_err(|err| EthApiError::Transaction(TransactionError::Tracing(err.into())))?;
+                            let mut inspector =
+                                TracingInspector::new(TracingInspectorConfig::from_geth_call_config(&call_config));
+                            let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
+
+                            let res = transact_in_place(evm)?;
+                            let call_frame = inspector.into_geth_builder().geth_call_traces(
+                                tracer_config
+                                    .into_call_config()
+                                    .map_err(|err| TransactionError::Tracing(err.into()))?,
+                                res.result.gas_used(),
+                            );
+                            Ok((
+                                Self::Geth(vec![TraceResult::Success {
+                                    result: call_frame.into(),
+                                    tx_hash: Some(tx.hash),
+                                }]),
+                                res.state,
+                            ))
+                        }
+                        _ => Err(EthApiError::Transaction(TransactionError::Tracing(
+                            eyre!("only call tracer is currently supported").into(),
+                        ))),
+                    };
+                }
+
+                // default tracer
+                let mut inspector = TracingInspector::new(TracingInspectorConfig::from_geth_config(&config));
+                let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
+
+                let res = transact_in_place(evm)?;
+                let gas_used = res.result.gas_used();
+                let return_value = res.result.into_output().unwrap_or_default();
+                let frame = inspector.into_geth_builder().geth_traces(gas_used, return_value, config);
+                Ok((Self::Geth(vec![TraceResult::Success { result: frame.into(), tx_hash: Some(tx.hash) }]), res.state))
+            }
+            TracingOptions::Parity(tracing_config) => {
+                let block_base_fee = env
+                    .env
+                    .block
+                    .basefee
+                    .try_into()
+                    .map_err(|err: FromUintError<u128>| TransactionError::Tracing(err.into()))?;
+
+                // Set up the inspector and transact the transaction
+                let mut inspector = TracingInspector::new(tracing_config);
+                let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
+                let res = transact_in_place(evm)?;
+
+                let mut transaction_info = TransactionInfo::from(tx);
+                transaction_info.base_fee = Some(block_base_fee);
+
+                Ok((
+                    Self::Parity(inspector.into_parity_builder().into_localized_transaction_traces(transaction_info)),
+                    res.state,
+                ))
+            }
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Tracer<P: EthereumProvider + Send + Sync> {
     transactions: Vec<reth_rpc_types::Transaction>,
@@ -41,43 +180,14 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         tracing_config: TracingInspectorConfig,
     ) -> TracerResult<Option<Vec<LocalizedTransactionTrace>>> {
         let txs = self.transactions.clone();
-        let traces = self.trace_transactions(
-            |env: EnvWithHandlerCfg,
-             db: &mut EthDatabaseSnapshot<P>,
-             tx: &reth_rpc_types::Transaction|
-             -> TracerResult<(Vec<LocalizedTransactionTrace>, reth_revm::primitives::State)> {
-                let block_base_fee = env
-                    .env
-                    .block
-                    .basefee
-                    .try_into()
-                    .map_err(|err: FromUintError<u128>| TransactionError::Tracing(err.into()))?;
-
-                // Set up the inspector and transact the transaction
-                let mut inspector = TracingInspector::new(tracing_config);
-                let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
-                let res = transact_in_place(evm)?;
-
-                let parity_builder = inspector.into_parity_builder();
-
-                let mut transaction_info = TransactionInfo::from(tx);
-                transaction_info.base_fee = Some(block_base_fee);
-
-                Ok((parity_builder.into_localized_transaction_traces(transaction_info), res.state))
-            },
-            &txs,
-        )?;
-
-        Ok(Some(traces))
+        Ok(Some(self.trace_transactions(TracingResult::trace_parity(tracing_config), &txs)?))
     }
 
     /// Returns the debug trace in the Geth.
     /// Currently only supports the call tracer or the default tracer.
     pub fn debug_block(self, opts: GethDebugTracingOptions) -> TracerResult<Vec<TraceResult>> {
         let txs = self.transactions.clone();
-        let traces = self.trace_transactions(transact_and_get_traces_geth(opts), &txs)?;
-
-        Ok(traces)
+        self.trace_transactions(TracingResult::trace_geth(opts), &txs)
     }
 
     pub fn debug_transaction(
@@ -89,7 +199,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             if tx.hash == transaction_hash {
                 // We only want to trace the transaction with the given hash.
                 let trace = self
-                    .trace_transactions(transact_and_get_traces_geth::<P>(opts), &[tx])?
+                    .trace_transactions(TracingResult::trace_geth::<P>(opts), &[tx])?
                     .first()
                     .cloned()
                     .ok_or(TransactionError::Tracing(eyre!("No trace found").into()))?;
@@ -100,8 +210,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             }
 
             let env = env_with_tx(&self.env, tx.clone())?;
-            let evm = EvmBuilder::evm_with_env(&mut self.db, env);
-            transact_commit_in_place(evm)?;
+            transact_commit_in_place(EvmBuilder::evm_with_env(&mut self.db, env))?;
         }
 
         Err(EthApiError::TransactionNotFound(transaction_hash))
@@ -139,57 +248,6 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         }
 
         TracerResult::Ok(traces)
-    }
-}
-
-/// Returns a closure that transacts and gets the geth traces for the given transaction. Captures the
-/// `opts` in order to use it in the closure.
-fn transact_and_get_traces_geth<P: EthereumProvider + Send + Sync + Clone>(
-    opts: GethDebugTracingOptions,
-) -> impl Fn(
-    EnvWithHandlerCfg,
-    &mut EthDatabaseSnapshot<P>,
-    &reth_rpc_types::Transaction,
-) -> TracerResult<(Vec<TraceResult>, reth_revm::primitives::State)> {
-    move |env: EnvWithHandlerCfg,
-          db: &mut EthDatabaseSnapshot<P>,
-          tx: &reth_rpc_types::Transaction|
-          -> TracerResult<(Vec<TraceResult>, reth_revm::primitives::State)> {
-        let GethDebugTracingOptions { tracer_config, config, tracer, .. } = opts.clone();
-
-        if let Some(tracer) = tracer {
-            return match tracer {
-                GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer) => {
-                    let call_config = tracer_config
-                        .clone()
-                        .into_call_config()
-                        .map_err(|err| EthApiError::Transaction(TransactionError::Tracing(err.into())))?;
-                    let mut inspector =
-                        TracingInspector::new(TracingInspectorConfig::from_geth_call_config(&call_config));
-                    let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
-
-                    let res = transact_in_place(evm)?;
-                    let call_frame = inspector.into_geth_builder().geth_call_traces(
-                        tracer_config.into_call_config().map_err(|err| TransactionError::Tracing(err.into()))?,
-                        res.result.gas_used(),
-                    );
-                    Ok((vec![TraceResult::Success { result: call_frame.into(), tx_hash: Some(tx.hash) }], res.state))
-                }
-                _ => Err(EthApiError::Transaction(TransactionError::Tracing(
-                    eyre!("only call tracer is currently supported").into(),
-                ))),
-            };
-        }
-
-        // default tracer
-        let mut inspector = TracingInspector::new(TracingInspectorConfig::from_geth_config(&config));
-        let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
-
-        let res = transact_in_place(evm)?;
-        let gas_used = res.result.gas_used();
-        let return_value = res.result.into_output().unwrap_or_default();
-        let frame = inspector.into_geth_builder().geth_traces(gas_used, return_value, config);
-        Ok((vec![TraceResult::Success { result: frame.into(), tx_hash: Some(tx.hash) }], res.state))
     }
 }
 

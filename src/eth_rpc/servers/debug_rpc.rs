@@ -174,9 +174,11 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         block_hash: B256,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<Vec<TraceResult>> {
-        let provider = Arc::new(&self.eth_provider);
-        let tracer =
-            TracerBuilder::new(provider).await?.with_block_id(BlockId::Hash(block_hash.into())).await?.build()?;
+        let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
+            .await?
+            .with_block_id(BlockId::Hash(block_hash.into()))
+            .await?
+            .build()?;
 
         Ok(tracer.debug_block(opts.unwrap_or_default())?)
     }
@@ -188,10 +190,12 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         transaction_hash: B256,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<GethTrace> {
-        let provider = Arc::new(&self.eth_provider);
-        let tracer = TracerBuilder::new(provider).await?.with_transaction_hash(transaction_hash).await?.build()?;
+        let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
+            .await?
+            .with_transaction_hash(transaction_hash)
+            .await?
+            .build()?;
 
-        let trace = tracer.debug_transaction(transaction_hash, opts.unwrap_or_default())?;
-        Ok(trace)
+        Ok(tracer.debug_transaction(transaction_hash, opts.unwrap_or_default())?)
     }
 }
