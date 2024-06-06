@@ -142,14 +142,23 @@ pub fn to_starknet_transaction(
     }
 
     let mut calldata = Vec::with_capacity(capacity);
+
+    // assert that the selector < FieldElement::MAX - retries
+    assert!(*ETH_SEND_TRANSACTION < FieldElement::MAX - retries.into());
+    let selector = *ETH_SEND_TRANSACTION + retries.into();
+
+    // Retries are used to alter the transaction hash in order to avoid the
+    // DuplicateTx error from the Starknet gateway, encountered whenever
+    // a transaction with the same hash is sent multiple times.
+    // We add the retries to the selector in the calldata, since the selector
+    // is not used in by the EOA contract during the transaction execution.
     calldata.append(&mut vec![
-        FieldElement::ONE, // call array length
-        *KAKAROT_ADDRESS,  // contract address
-        // This is possible because the selector is hardcoded in the EOA contract
-        *ETH_SEND_TRANSACTION + retries.into(), // selector + retries
-        FieldElement::ZERO,                     // data offset
-        signed_data.len().into(),               // data length
-        signed_data.len().into(),               // calldata length
+        FieldElement::ONE,        // call array length
+        *KAKAROT_ADDRESS,         // contract address
+        selector,                 // selector + retries
+        FieldElement::ZERO,       // data offset
+        signed_data.len().into(), // data length
+        signed_data.len().into(), // calldata length
     ]);
     calldata.append(&mut signed_data.into_iter().map(Into::into).collect());
 

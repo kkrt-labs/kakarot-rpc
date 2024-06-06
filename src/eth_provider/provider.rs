@@ -555,13 +555,6 @@ where
         // Number of retries for the transaction (0 if it's a new transaction)
         let retries = pending_transaction.as_ref().map(|tx| tx.retries).unwrap_or_default();
 
-        // Determine the maximum fee
-        let max_fee = if cfg!(feature = "hive") { u64::MAX } else { u64::MIN };
-
-        // Deploy EVM transaction signer if Hive feature is enabled
-        #[cfg(feature = "hive")]
-        self.deploy_evm_transaction_signer(signer).await?;
-
         // Serialize transaction document
         let transaction =
             from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
@@ -585,10 +578,18 @@ where
             self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
         }
 
+        // The max fee is always set to 0. This means that no fee is perceived by the
+        // Starknet sequencer, which is the intended behavior has fee perception is
+        // handled by the Kakarot execution layer through EVM gas accounting.
+        let max_fee = 0;
+
         // Convert the transaction to a Starknet transaction
-        // We add retries number to the signature in order to prevent duplicated hashes
         let starknet_transaction =
             to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee, retries + 1)?;
+
+        // Deploy EVM transaction signer if Hive feature is enabled
+        #[cfg(feature = "hive")]
+        self.deploy_evm_transaction_signer(signer).await?;
 
         // Add the transaction to the Starknet provider
         let res =
