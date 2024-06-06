@@ -37,7 +37,7 @@ jobs:
         if: env.current_commit != env.latest_commit
         run: |
           cd lib/kakarot
-          git fetch
+          git fetch origin
           git checkout ${{ env.latest_release }}
           cd -
           git checkout -b update-kakarot-submodule-${{ env.latest_release }}
