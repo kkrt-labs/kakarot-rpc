@@ -174,13 +174,15 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
     /// Trace the block in the parity format.
     pub fn trace_block(self) -> TracerResult<Option<Vec<LocalizedTransactionTrace>>> {
-        Ok(Some(self.trace_transactions(TracingResult::into_parity)?))
+        let txs = self.transactions.clone();
+        Ok(Some(self.trace_transactions(TracingResult::into_parity, &txs)?))
     }
 
     /// Returns the debug trace in the Geth.
     /// Currently only supports the call tracer or the default tracer.
     pub fn debug_block(self) -> TracerResult<Vec<TraceResult>> {
-        self.trace_transactions(TracingResult::into_geth)
+        let txs = self.transactions.clone();
+        self.trace_transactions(TracingResult::into_geth, &txs)
     }
 
     pub fn debug_transaction(mut self, transaction_hash: B256) -> TracerResult<GethTrace> {
@@ -188,7 +190,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             if tx.hash == transaction_hash {
                 // We only want to trace the transaction with the given hash.
                 let trace = self
-                    .trace_transactions(TracingResult::into_geth)?
+                    .trace_transactions(TracingResult::into_geth, &[tx])?
                     .first()
                     .cloned()
                     .ok_or(TransactionError::Tracing(eyre!("No trace found").into()))?;
@@ -208,10 +210,13 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Traces the provided transactions using the given closure.
     /// The function `transact_and_get_traces` closure uses the `env` and `db` to create an evm
     /// which is then used to transact and trace the transaction.
-    fn trace_transactions<T>(self, convert_result: fn(TracingResult) -> Option<Vec<T>>) -> TracerResult<Vec<T>> {
+    fn trace_transactions<T>(
+        self,
+        convert_result: fn(TracingResult) -> Option<Vec<T>>,
+        transactions: &[reth_rpc_types::Transaction],
+    ) -> TracerResult<Vec<T>> {
         let mut traces = Vec::with_capacity(self.transactions.len());
-        let txs = self.transactions.clone();
-        let mut transactions = txs.iter().peekable();
+        let mut transactions = transactions.iter().peekable();
         let mut db = self.db;
 
         while let Some(tx) = transactions.next() {
