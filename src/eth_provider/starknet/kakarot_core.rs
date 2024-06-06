@@ -99,6 +99,7 @@ pub fn to_starknet_transaction(
     chain_id: Option<u64>,
     signer: Address,
     max_fee: u64,
+    retries: u8,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
     let sender_address = starknet_address(signer);
 
@@ -141,10 +142,20 @@ pub fn to_starknet_transaction(
     }
 
     let mut calldata = Vec::with_capacity(capacity);
+
+    // assert that the selector < FieldElement::MAX - retries
+    assert!(*ETH_SEND_TRANSACTION < FieldElement::MAX - retries.into());
+    let selector = *ETH_SEND_TRANSACTION + retries.into();
+
+    // Retries are used to alter the transaction hash in order to avoid the
+    // DuplicateTx error from the Starknet gateway, encountered whenever
+    // a transaction with the same hash is sent multiple times.
+    // We add the retries to the selector in the calldata, since the selector
+    // is not used in by the EOA contract during the transaction execution.
     calldata.append(&mut vec![
         FieldElement::ONE,        // call array length
         *KAKAROT_ADDRESS,         // contract address
-        *ETH_SEND_TRANSACTION,    // selector
+        selector,                 // selector + retries
         FieldElement::ZERO,       // data offset
         signed_data.len().into(), // data length
         signed_data.len().into(), // calldata length
@@ -179,6 +190,7 @@ mod tests {
             Some(1_802_203_764),
             Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap(),
             0,
+            0,
         )
         .unwrap()
         {
@@ -190,7 +202,7 @@ mod tests {
                     FieldElement::from(131_015_958_324_370_192_097_986_834_655_742_602_650_u128),
                     FieldElement::from(263_740_705_169_547_910_390_939_684_488_449_712_973_u128),
                     FieldElement::from(164_374_192_806_466_935_713_473_791_294_001_132_486_u128),
-                    FieldElement::ONE
+                    FieldElement::ONE,
                 ]
             );
 
@@ -252,6 +264,6 @@ mod tests {
         transaction.transaction.set_input(vec![0; 30000].into());
 
         // Attempt to convert the transaction into a Starknet transaction
-        to_starknet_transaction(&transaction, Some(1), transaction.recover_signer().unwrap(), 100_000_000).unwrap();
+        to_starknet_transaction(&transaction, Some(1), transaction.recover_signer().unwrap(), 100_000_000, 0).unwrap();
     }
 }

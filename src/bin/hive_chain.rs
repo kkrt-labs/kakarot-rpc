@@ -62,7 +62,7 @@ async fn main() -> eyre::Result<()> {
         for transaction in body.transactions {
             let signer = transaction.recover_signer().ok_or_eyre("failed to recover signer")?;
             let chain_id = transaction.chain_id().ok_or_eyre("failed to recover chain id")?;
-            let starknet_tx = to_starknet_transaction(&transaction, Some(chain_id), signer, u64::MAX)?;
+            let starknet_tx = to_starknet_transaction(&transaction, Some(chain_id), signer, u64::MAX, 0)?;
 
             let nonce = match &starknet_tx {
                 BroadcastedInvokeTransaction::V1(starknet_tx) => starknet_tx.nonce,

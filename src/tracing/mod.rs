@@ -288,7 +288,7 @@ mod tests {
     use url::Url;
 
     #[tokio::test(flavor = "multi_thread")]
-    #[ignore = "This test is used for debugging purposes only"]
+    #[ignore = "this test is used for debugging purposes only"]
     async fn test_debug_tracing() {
         // Set the env vars
         std::env::set_var("KAKAROT_ADDRESS", "CHECK THE KAKAROT ADDRESS FOR THE BLOCK YOU ARE DEBUGGING");
