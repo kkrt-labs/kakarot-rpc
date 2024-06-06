@@ -32,13 +32,13 @@ impl Default for TracingOptions {
 
 impl From<GethDebugTracingOptions> for TracingOptions {
     fn from(options: GethDebugTracingOptions) -> Self {
-        TracingOptions::Geth(options)
+        Self::Geth(options)
     }
 }
 
 impl From<TracingInspectorConfig> for TracingOptions {
     fn from(config: TracingInspectorConfig) -> Self {
-        TracingOptions::Parity(config)
+        Self::Parity(config)
     }
 }
 
