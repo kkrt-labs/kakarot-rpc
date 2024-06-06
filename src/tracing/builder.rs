@@ -1,11 +1,12 @@
-use reth_primitives::{B256, U256};
-use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
-use reth_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header};
-
 use crate::eth_provider::{
     error::{EthApiError, TransactionError},
     provider::EthereumProvider,
 };
+use reth_primitives::{B256, U256};
+use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
+use reth_rpc_types::trace::geth::GethDebugTracingOptions;
+use reth_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header};
+use revm_inspectors::tracing::TracingInspectorConfig;
 
 use super::{database::EthDatabaseSnapshot, Tracer, TracerResult};
 
@@ -14,11 +15,39 @@ pub struct Floating;
 #[derive(Debug)]
 pub struct Pinned;
 
+/// Representing different tracing options for transactions.
+#[derive(Clone, Debug)]
+pub enum TracingOptions {
+    /// Geth debug tracing options.
+    Geth(GethDebugTracingOptions),
+    /// Parity tracing options.
+    Parity(TracingInspectorConfig),
+}
+
+impl Default for TracingOptions {
+    fn default() -> Self {
+        GethDebugTracingOptions::default().into()
+    }
+}
+
+impl From<GethDebugTracingOptions> for TracingOptions {
+    fn from(options: GethDebugTracingOptions) -> Self {
+        Self::Geth(options)
+    }
+}
+
+impl From<TracingInspectorConfig> for TracingOptions {
+    fn from(config: TracingInspectorConfig) -> Self {
+        Self::Parity(config)
+    }
+}
+
 #[derive(Debug)]
 pub struct TracerBuilder<P: EthereumProvider + Send + Sync, Status = Floating> {
     eth_provider: P,
     env: Env,
     block: Block,
+    tracing_options: TracingOptions,
     _phantom: std::marker::PhantomData<Status>,
 }
 
@@ -34,7 +63,13 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 
         let env = Env { cfg, ..Default::default() };
 
-        Ok(Self { eth_provider, env, block: Default::default(), _phantom: std::marker::PhantomData })
+        Ok(Self {
+            eth_provider,
+            env,
+            block: Default::default(),
+            tracing_options: Default::default(),
+            _phantom: std::marker::PhantomData,
+        })
     }
 
     /// Sets the block to trace
@@ -45,6 +80,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
             eth_provider: self.eth_provider.clone(),
             env: self.env.clone(),
             block,
+            tracing_options: self.tracing_options.clone(),
             _phantom: std::marker::PhantomData,
         })
     }
@@ -92,6 +128,13 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 }
 
 impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
+    /// Sets the tracing options
+    #[must_use]
+    pub fn with_tracing_options(mut self, tracing_options: TracingOptions) -> Self {
+        self.tracing_options = tracing_options;
+        self
+    }
+
     /// Builds the tracer.
     pub fn build(self) -> TracerResult<Tracer<P>> {
         let transactions = match &self.block.transactions {
@@ -101,9 +144,11 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
 
         let env = self.init_env_with_handler_config();
         // DB should use the state of the parent block
-        let db = EthDatabaseSnapshot::new(self.eth_provider, BlockId::Hash(self.block.header.parent_hash.into()));
+        let db = EthDatabaseSnapshot::new(self.eth_provider, self.block.header.parent_hash.into());
 
-        Ok(Tracer { transactions, env, db })
+        let tracing_options = self.tracing_options;
+
+        Ok(Tracer { transactions, env, db, tracing_options })
     }
 
     /// Init an `EnvWithHandlerCfg`.
