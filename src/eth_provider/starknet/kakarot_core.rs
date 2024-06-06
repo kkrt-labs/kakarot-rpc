@@ -109,7 +109,7 @@ pub fn to_starknet_transaction(
     let signature: Vec<FieldElement> = {
         let transaction_signature = transaction.signature();
 
-        let mut signature = Vec::with_capacity(6);
+        let mut signature = Vec::with_capacity(5);
         signature.extend_from_slice(&split_u256(transaction_signature.r));
         signature.extend_from_slice(&split_u256(transaction_signature.s));
 
@@ -122,9 +122,6 @@ pub fn to_starknet_transaction(
         } else {
             signature.push(u64::from(transaction_signature.odd_y_parity).into());
         }
-
-        // Add the retries to the signature
-        signature.push(retries.into());
 
         signature
     };
@@ -197,7 +194,6 @@ mod tests {
                     FieldElement::from(263_740_705_169_547_910_390_939_684_488_449_712_973_u128),
                     FieldElement::from(164_374_192_806_466_935_713_473_791_294_001_132_486_u128),
                     FieldElement::ONE,
-                    FieldElement::ZERO
                 ]
             );
 
