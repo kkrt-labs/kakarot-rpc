@@ -38,9 +38,9 @@ jobs:
           cd lib/kakarot
           git fetch
           git checkout ${{ env.latest_release }}
-          cd - # Return to the root directory
+          cd -
           git checkout -b update-kakarot-submodule-${{ env.latest_release }}
-          git add lib/kakarot # Add the submodule update
+          git add lib/kakarot
           git commit -m "Update kakarot submodule to latest release ${{ env.latest_release }}"
           git push origin update-kakarot-submodule-${{ env.latest_release }}
 
