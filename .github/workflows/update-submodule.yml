@@ -1,0 +1,52 @@
+name: Update Submodule
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Runs daily at midnight
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive # Checkout submodules
+
+      - name: Get Latest Release Tag
+        id: get_latest_release
+        run: |
+          latest_release=$(curl -s https://api.github.com/repos/kkrt-labs/kakarot/releases/latest | jq -r .tag_name)
+          echo "latest_release=${latest_release}" >> $GITHUB_ENV
+
+      - name: Check Current Submodule Commit
+        id: check_submodule_commit
+        run: |
+          cd lib/kakarot
+          current_commit=$(git rev-parse HEAD)
+          latest_commit=$(git ls-remote https://github.com/kkrt-labs/kakarot.git ${{ env.latest_release }} | awk '{print $1}')
+          echo "current_commit=${current_commit}" >> $GITHUB_ENV
+          echo "latest_commit=${latest_commit}" >> $GITHUB_ENV
+
+      - name: Update Submodule
+        if: env.current_commit != env.latest_commit
+        run: |
+          cd lib/kakarot # Navigate to the submodule directory
+          git fetch
+          git checkout ${{ env.latest_release }}
+          cd - # Return to the root directory
+          git add lib/kakarot # Add the submodule update
+          git commit -m "Update kakarot submodule to latest release ${{ env.latest_release }}"
+          git push origin HEAD:refs/heads/update-kakarot-submodule-${{ env.latest_release }}
+
+      - name: Create Pull Request
+        if: env.current_commit != env.latest_commit
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/kkrt-labs/kakarot-rpc/pulls \
+            -d '{"title":"Update kakarot submodule to ${{ env.latest_release }}","head":"update-kakarot-submodule-${{ env.latest_release }}","base":"main","body":"This PR updates the kakarot submodule to the latest release ${{ env.latest_release }}."}'
