@@ -613,7 +613,11 @@ where
             return Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]));
         }
         let hash = transaction_signed.hash();
-        tracing::info!("Fired a transaction: Starknet Hash: {} --- Ethereum Hash: {}", res.transaction_hash, hash);
+        tracing::info!(
+            "Fired a transaction: Starknet Hash: {} --- Ethereum Hash: {}",
+            B256::from_slice(&res.transaction_hash.to_bytes_be()[..]),
+            hash
+        );
 
         Ok(hash)
     }
