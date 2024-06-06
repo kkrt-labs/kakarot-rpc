@@ -31,6 +31,7 @@ jobs:
           latest_commit=$(git ls-remote https://github.com/kkrt-labs/kakarot.git ${{ env.latest_release }} | awk '{print $1}')
           echo "current_commit=${current_commit}" >> $GITHUB_ENV
           echo "latest_commit=${latest_commit}" >> $GITHUB_ENV
+          cd -
 
       - name: Update Submodule
         if: env.current_commit != env.latest_commit
