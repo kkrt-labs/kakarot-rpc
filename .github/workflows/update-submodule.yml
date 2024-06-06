@@ -9,8 +9,7 @@ on: [pull_request]
 
 jobs:
   update-submodule:
-    permissions:
-        contents: write
+    permissions: write-all
     runs-on: ubuntu-latest
 
     steps:
