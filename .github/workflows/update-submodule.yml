@@ -7,9 +7,10 @@ name: Update Submodule
 
 on: [pull_request]
 
+permissions: write-all
+
 jobs:
   update-submodule:
-    permissions: write-all
     runs-on: ubuntu-latest
 
     steps:
@@ -46,7 +47,7 @@ jobs:
           git checkout -b update-kakarot-submodule-${{ env.latest_release }}
           git add lib/kakarot
           git commit -m "Update kakarot submodule to latest release ${{ env.latest_release }}"
-          git push origin update-kakarot-submodule-${{ env.latest_release }} --force
+          git push origin update-kakarot-submodule-${{ env.latest_release }}
 
       - name: Create Pull Request
         if: env.current_commit != env.latest_commit
