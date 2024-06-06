@@ -68,11 +68,11 @@ pub struct StoredPendingTransaction {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
     /// Number of retries
-    pub retries: u64,
+    pub retries: u8,
 }
 
 impl StoredPendingTransaction {
-    pub const fn new(tx: Transaction, retries: u64) -> Self {
+    pub const fn new(tx: Transaction, retries: u8) -> Self {
         Self { tx, retries }
     }
 }
@@ -80,7 +80,7 @@ impl StoredPendingTransaction {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> StoredPendingTransaction {
     pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        Ok(Self { tx: StoredTransaction::arbitrary_with_optional_fields(u)?.into(), retries: u64::arbitrary(u)? })
+        Ok(Self { tx: StoredTransaction::arbitrary_with_optional_fields(u)?.into(), retries: u8::arbitrary(u)? })
     }
 }
 

@@ -556,21 +556,7 @@ where
         let retries = pending_transaction.as_ref().map(|tx| tx.retries).unwrap_or_default();
 
         // Determine the maximum fee
-        let max_fee = if cfg!(feature = "hive") {
-            u64::MAX
-        } else {
-            // TODO(Kakarot Fee Mechanism): When we no longer need to use the Starknet fees, remove this line.
-            // We need to get the balance (in Kakarot/Starknet native Token) of the signer to compute the Starknet maximum `max_fee`.
-            // We used to set max_fee = u64::MAX, but it'll fail if the signer doesn't have enough balance to pay the fees.
-            let eth_fees_per_gas =
-                transaction_signed.effective_gas_price(Some(transaction_signed.max_fee_per_gas() as u64)) as u64;
-            let eth_fees = eth_fees_per_gas.saturating_mul(transaction_signed.gas_limit());
-            let balance = self.balance(signer, None).await?;
-            let max_fee: u64 = balance.try_into().unwrap_or(u64::MAX);
-            let max_fee = (u128::from(max_fee) * 80 / 100) as u64;
-
-            max_fee.saturating_sub(eth_fees)
-        };
+        let max_fee = if cfg!(feature = "hive") { u64::MAX } else { u64::MIN };
 
         // Deploy EVM transaction signer if Hive feature is enabled
         #[cfg(feature = "hive")]
@@ -601,12 +587,12 @@ where
 
         // Convert the transaction to a Starknet transaction
         // We add retries number to the signature in order to prevent duplicated hashes
-        let starnet_transaction =
+        let starknet_transaction =
             to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee, retries + 1)?;
 
         // Add the transaction to the Starknet provider
         let res =
-            self.starknet_provider.add_invoke_transaction(starnet_transaction).await.map_err(KakarotError::from)?;
+            self.starknet_provider.add_invoke_transaction(starknet_transaction).await.map_err(KakarotError::from)?;
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {

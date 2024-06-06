@@ -99,7 +99,7 @@ pub fn to_starknet_transaction(
     chain_id: Option<u64>,
     signer: Address,
     max_fee: u64,
-    retries: u64,
+    retries: u8,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
     let sender_address = starknet_address(signer);
 
@@ -146,12 +146,13 @@ pub fn to_starknet_transaction(
 
     let mut calldata = Vec::with_capacity(capacity);
     calldata.append(&mut vec![
-        FieldElement::ONE,        // call array length
-        *KAKAROT_ADDRESS,         // contract address
-        *ETH_SEND_TRANSACTION,    // selector
-        FieldElement::ZERO,       // data offset
-        signed_data.len().into(), // data length
-        signed_data.len().into(), // calldata length
+        FieldElement::ONE, // call array length
+        *KAKAROT_ADDRESS,  // contract address
+        // This is possible because the selector is hardcoded in the EOA contract
+        *ETH_SEND_TRANSACTION + retries.into(), // selector + retries
+        FieldElement::ZERO,                     // data offset
+        signed_data.len().into(),               // data length
+        signed_data.len().into(),               // calldata length
     ]);
     calldata.append(&mut signed_data.into_iter().map(Into::into).collect());
 
