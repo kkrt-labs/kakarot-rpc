@@ -1,9 +1,11 @@
 name: Update Submodule
 
-on:
-  schedule:
-    - cron: "0 0 * * *" # Runs daily at midnight
-  workflow_dispatch: # Allows manual triggering
+# on:
+#   schedule:
+#     - cron: "0 0 * * *" # Runs daily at midnight
+#   workflow_dispatch: # Allows manual triggering
+
+on: [pull_request]
 
 jobs:
   update-submodule:
