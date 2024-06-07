@@ -56,7 +56,7 @@ jobs:
           WEB3_HTTP_PROVIDER_URI: https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz
         run: |
           cd scripts
-          sh staging.sh
+          KAKAROT_STAGING_PRIVATE_KEY=${{ env.KAKAROT_STAGING_PRIVATE_KEY }} sh staging.sh
       - name: Check diff in deployments
         run: |
           cd lib/kakarot
