@@ -1,5 +1,4 @@
 #!/bin/sh
-export KAKAROT_STAGING_PRIVATE_KEY="${KAKAROT_STAGING_PRIVATE_KEY}"
 cd ../lib/kakarot || exit
 poetry run python ./kakarot_scripts/deploy_kakarot.py
 
