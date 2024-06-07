@@ -2,10 +2,6 @@
 cd ../lib/kakarot || exit
 poetry run python ./kakarot_scripts/deploy_kakarot.py
 
-# TODO:
-# - if all ok -> include this in a callable CI job
-# - if all ok -> should make a PR on Kakarot to include the redeployed/redeclared contracts in the CI
-
 KAKAROT_ADDRESS=$(jq -r '.kakarot.address' ./deployments/kakarot-staging/deployments.json)
 UNINITIALIZED_ACCOUNT_CLASS_HASH=$(jq -r '.uninitialized_account' ./deployments/kakarot-staging/declarations.json)
 ACCOUNT_CONTRACT_CLASS_HASH=$(jq -r '.account_contract' ./deployments/kakarot-staging/declarations.json)

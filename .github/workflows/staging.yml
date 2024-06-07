@@ -73,8 +73,8 @@ jobs:
           git commit -m "Update staging deployments from run ${{ env.GITHUB_RUN_ID }}"
           git push --set-upstream origin update-staging-deployment-${{ env.GITHUB_RUN_ID }}
       - name: Create Pull Request
-       if: ${{ env.has_diff }} == 1
-       run: |
+        if: ${{ env.has_diff }} == 1
+        run: |
          curl -X POST \
            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
            -H "X-GitHub-Api-Version: 2022-11-28" \
