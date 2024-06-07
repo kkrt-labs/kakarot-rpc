@@ -37,6 +37,8 @@ jobs:
           cd -
 
       - name: Update Submodule
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         if: env.current_commit != env.latest_commit
         run: |
           git config --global user.email "actions@github.com"
@@ -47,6 +49,7 @@ jobs:
           cd -
           git checkout -b update-kakarot-submodule-${{ env.latest_release }}
           git add lib/kakarot
+          git remote set-url --push origin https://tcoratger:${{ env.GITHUB_TOKEN }}@github.com/kkrt-labs/kakarot-rpc
           git commit -m "Update kakarot submodule to latest release ${{ env.latest_release }}"
           git push --set-upstream origin update-kakarot-submodule-${{ env.latest_release }}
 
