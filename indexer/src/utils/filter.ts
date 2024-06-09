@@ -1,5 +1,5 @@
 // Starknet
-import { Transaction, Event } from "../deps.ts";
+import { Event, Transaction } from "../deps.ts";
 
 const KAKAROT_ADDRESS = Deno.env.get("KAKAROT_ADDRESS");
 if (KAKAROT_ADDRESS === undefined) {
@@ -44,7 +44,9 @@ export const ethValidationFailed = (event: Event) => {
 
   if (response_len + 1 >= data.length) {
     console.error(
-      `Invalid event data length. Got ${data.length}, expected < ${response_len + 1}`,
+      `Invalid event data length. Got ${data.length}, expected < ${
+        response_len + 1
+      }`,
     );
     return false;
   }

@@ -1,7 +1,7 @@
 import {
   assert,
+  assertEquals,
   assertFalse,
-  assertEquals
 } from "https://deno.land/std@0.213.0/assert/mod.ts";
 import { ethValidationFailed, isKakarotTransaction } from "./filter.ts";
 import { Event, Transaction } from "../deps.ts";
@@ -77,7 +77,7 @@ Deno.test("isKakarotTransaction: no calldata", () => {
   const transaction: Transaction = {
     invokeV1: {
       senderAddress: "0x01",
-      calldata: []
+      calldata: [],
     },
     meta: {
       hash: "0x01",
@@ -93,12 +93,12 @@ Deno.test("isKakarotTransaction: no calldata", () => {
 
 Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
   const starknetTxCalldata: `0x${string}`[] = [
-    "0x1"
+    "0x1",
   ];
   const transaction: Transaction = {
     invokeV1: {
       senderAddress: "0x01",
-      calldata: starknetTxCalldata
+      calldata: starknetTxCalldata,
     },
     meta: {
       hash: "0x01",
@@ -120,7 +120,7 @@ Deno.test("isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS", () 
   const transaction: Transaction = {
     invokeV1: {
       senderAddress: "0x01",
-      calldata: starknetTxCalldata
+      calldata: starknetTxCalldata,
     },
     meta: {
       hash: "0x02",
@@ -137,12 +137,12 @@ Deno.test("isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS", () 
 Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
   const starknetTxCalldata: `0x${string}`[] = [
     "0x1",
-    "0x1"
+    "0x1",
   ];
   const transaction: Transaction = {
     invokeV1: {
       senderAddress: "0x01",
-      calldata: starknetTxCalldata
+      calldata: starknetTxCalldata,
     },
     meta: {
       hash: "0x01",
