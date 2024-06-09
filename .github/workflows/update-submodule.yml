@@ -36,8 +36,17 @@ jobs:
           echo "latest_commit=${latest_commit}" >> $GITHUB_ENV
           cd -
 
+      - name: Check if Branch Exists
+        id: check_branch_exists
+        run: |
+          if git ls-remote --exit-code --heads origin update-kakarot-submodule-${{ env.latest_release }}; then
+            echo "branch_exists=true" >> $GITHUB_ENV
+          else
+            echo "branch_exists=false" >> $GITHUB_ENV
+          fi
+
       - name: Update Submodule
-        if: env.current_commit != env.latest_commit
+        if: env.current_commit != env.latest_commit && env.branch_exists == 'false'
         run: |
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
@@ -50,8 +59,17 @@ jobs:
           git commit -m "Update kakarot submodule to latest release ${{ env.latest_release }}"
           git push --set-upstream origin update-kakarot-submodule-${{ env.latest_release }}
 
+      - name: Check if Pull Request Exists
+        id: check_pr_exists
+        run: |
+          pr_exists=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                        -H "Accept: application/vnd.github+json" \
+                        "https://api.github.com/repos/kkrt-labs/kakarot-rpc/pulls?state=open" \
+                        | jq '[.[] | select(.head.ref == "update-kakarot-submodule-${{ env.latest_release }}")] | length > 0')
+          echo "pr_exists=${pr_exists}" >> $GITHUB_ENV
+
       - name: Create Pull Request
-        if: env.current_commit != env.latest_commit
+        if: env.current_commit != env.latest_commit && env.pr_exists == 'false'
         run: |
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
