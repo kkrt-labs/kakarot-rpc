@@ -1,8 +1,15 @@
 use lazy_static::lazy_static;
 use reth_primitives::U256;
+use std::str::FromStr;
 
 lazy_static! {
     pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
+
+    /// Maximum number of times a transaction can be retried
+    pub static ref TRANSACTION_MAX_RETRIES: u8 = u8::from_str(
+        &std::env::var("TRANSACTION_MAX_RETRIES")
+            .unwrap_or_else(|_| panic!("Missing environment variable TRANSACTION_MAX_RETRIES"))
+    ).expect("failing to parse TRANSACTION_MAX_RETRIES");
 }
 
 /// Gas limit for estimate gas and call
@@ -19,11 +26,6 @@ pub const BLOCK_NUMBER_HEX_STRING_LEN: usize = U64_HEX_STRING_LEN;
 pub const ADDRESS_HEX_STRING_LEN: usize = 40;
 /// Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
 pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x0800_0000_0000_0011]);
-/// Maximum number of times a transaction can be retried
-pub const TRANSACTION_MAX_RETRIES: u8 = u8::from_str(
-    &std::env::var("TRANSACTION_MAX_RETRIES")
-        .unwrap_or_else(|_| panic!("Missing environment variable TRANSACTION_MAX_RETRIES"))
-).expect("failing to parse TRANSACTION_MAX_RETRIES");
 
 #[cfg(feature = "hive")]
 use {
