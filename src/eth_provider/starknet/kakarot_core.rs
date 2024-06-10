@@ -132,8 +132,11 @@ pub fn to_starknet_transaction(
     let mut signed_data = Vec::with_capacity(transaction.transaction.length());
     transaction.transaction.encode_without_signature(&mut signed_data);
 
+    // Signed data length after RLP encoding (used for calldata length check)
+    let signed_data_len = signed_data.len();
+
     // Pack the calldata in 31-byte chunks
-    let mut signed_data: Vec<FieldElement> = std::iter::once(FieldElement::from(signed_data.len()))
+    let mut signed_data: Vec<FieldElement> = std::iter::once(FieldElement::from(signed_data_len))
         .chain(
             signed_data
                 .as_slice()
@@ -147,8 +150,8 @@ pub fn to_starknet_transaction(
 
     // Check if call data is too large
     #[cfg(not(feature = "hive"))]
-    if capacity > *MAX_FELTS_IN_CALLDATA {
-        return Err(EthApiError::CalldataExceededLimit(*MAX_FELTS_IN_CALLDATA as u64, capacity as u64));
+    if signed_data_len + 6 > *MAX_FELTS_IN_CALLDATA {
+        return Err(EthApiError::CalldataExceededLimit(*MAX_FELTS_IN_CALLDATA as u64, (signed_data_len + 6) as u64));
     }
 
     let mut calldata = Vec::with_capacity(capacity);
@@ -224,6 +227,7 @@ mod tests {
             assert_eq!(tx.max_fee, FieldElement::ZERO);
 
             // Assert the length of calldata.
+            // We must adapt the check as we pack the calldata in 31-byte chunks.
             assert_eq!(tx.calldata.len(), (transaction.transaction.length() + 30) / 31 + 1 + 6);
 
             // Assert the first 6 elements of calldata.
