@@ -62,11 +62,11 @@ jobs:
         run: |
           cd lib/kakarot
           # TODO remove
-          echo "hello" >> deployments/kakarot-staging/hello.txt
+          echo "hello" >> deployments/kakarot-staging/deployments.json
           set +e
           git diff --no-patch --exit-code -- deployments/kakarot-staging/
-          set -e
           has_diff=$?
+          set -e
           echo "has_diff=$has_diff" >> $GITHUB_ENV
       - name: Open PR in Kakarot
         if: ${{ env.has_diff == 1 }}
