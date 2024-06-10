@@ -44,6 +44,10 @@ jobs:
       - name: Set up submodules
         run: |
           cd lib/kakarot
+          # TODO: remove
+          git fetch
+          # TODO: remove
+          git checkout f5763fe75f1c2221ab89fff9c8dd021b4164092b
           make setup && make build-sol && make build
       - name: Run staging script
         env:
