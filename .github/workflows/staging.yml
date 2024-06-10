@@ -1,15 +1,13 @@
 ---
 name: staging
 
-# TODO change to workflow_dispatch
 # TODO POINT TO A RELEASE
-# on: workflow_dispatch
-on: [pull_request]
+on: workflow_dispatch
 
 jobs:
   stage:
     runs-on: ubuntu-latest
-    timeout-minutes: 100
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,27 +40,25 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-      # - name: Set up submodules
-      #   run: |
-      #     cd lib/kakarot
-      #     make setup && make build-sol && make build
-      # - name: Run staging script
-      #   env:
-      #     PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
-      #     KAKAROT_STAGING_ACCOUNT_ADDRESS: "0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
-      #     KAKAROT_STAGING_PRIVATE_KEY: ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
-      #     EVM_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-      #     STARKNET_NETWORK: kakarot-staging
-      #     KAKAROT_STAGING_RPC_URL: https://juno-kakarot-testnet-stage.karnot.xyz
-      #     WEB3_HTTP_PROVIDER_URI: https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz
-      #   run: |
-      #     cd scripts
-      #     sh staging.sh
+      - name: Set up submodules
+        run: |
+          cd lib/kakarot
+          make setup && make build-sol && make build
+      - name: Run staging script
+        env:
+          PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
+          KAKAROT_STAGING_ACCOUNT_ADDRESS: "0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
+          KAKAROT_STAGING_PRIVATE_KEY: ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
+          EVM_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+          STARKNET_NETWORK: kakarot-staging
+          KAKAROT_STAGING_RPC_URL: https://juno-kakarot-testnet-stage.karnot.xyz
+          WEB3_HTTP_PROVIDER_URI: https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz
+        run: |
+          cd scripts
+          sh staging.sh
       - name: Check diff in deployments
         run: |
           cd lib/kakarot
-          # TODO remove
-          echo "hello" >> deployments/kakarot-staging/deployments.json
           set +e
           git diff --no-patch --exit-code -- deployments/kakarot-staging/
           has_diff=$?
@@ -71,6 +67,7 @@ jobs:
       - name: Open PR in Kakarot
         if: ${{ env.has_diff == 1 }}
         run: |
+          set +e
           cd lib/kakarot
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
@@ -81,6 +78,7 @@ jobs:
       - name: Create Pull Request
         if: ${{ env.has_diff == 1 }}
         run: |
+          set +e
           curl -X POST \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
