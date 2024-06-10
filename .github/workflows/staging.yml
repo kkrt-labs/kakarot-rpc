@@ -61,6 +61,8 @@ jobs:
       - name: Check diff in deployments
         run: |
           cd lib/kakarot
+          # TODO remove
+          echo "hello" >> deployments/kakarot-staging/hello.txt
           set +e
           git diff --no-patch --exit-code -- deployments/kakarot-staging/
           set -e
