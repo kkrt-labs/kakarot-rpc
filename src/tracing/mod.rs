@@ -29,7 +29,7 @@ use crate::tracing::builder::TracingOptions;
 pub type TracerResult<T> = Result<T, EthApiError>;
 
 /// Represents the result of tracing a transaction.
-type TracingStateResult = TracerResult<(TracingResult, reth_revm::primitives::State)>;
+type TracingStateResult = TracerResult<(TracingResult, reth_revm::primitives::EvmState)>;
 
 /// Representing the result of tracing transactions.
 #[derive(Clone, Debug)]
