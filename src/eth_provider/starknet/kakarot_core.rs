@@ -132,6 +132,16 @@ pub fn to_starknet_transaction(
     let mut signed_data = Vec::with_capacity(transaction.transaction.length());
     transaction.transaction.encode_without_signature(&mut signed_data);
 
+    // Pack the calldata in 31-byte chunks
+    let mut signed_data: Vec<FieldElement> = std::iter::once(FieldElement::from(signed_data.len()))
+        .chain(
+            signed_data
+                .as_slice()
+                .chunks(31)
+                .filter_map(|chunk_bytes| FieldElement::from_byte_slice_be(chunk_bytes).ok()),
+        )
+        .collect();
+
     // Prepare the calldata for the Starknet invoke transaction
     let capacity = 6 + signed_data.len();
 
@@ -160,7 +170,7 @@ pub fn to_starknet_transaction(
         signed_data.len().into(), // data length
         signed_data.len().into(), // calldata length
     ]);
-    calldata.append(&mut signed_data.into_iter().map(Into::into).collect());
+    calldata.append(&mut signed_data);
 
     Ok(BroadcastedInvokeTransaction::V1(BroadcastedInvokeTransactionV1 {
         max_fee: max_fee.into(),
@@ -214,7 +224,7 @@ mod tests {
             assert_eq!(tx.max_fee, FieldElement::ZERO);
 
             // Assert the length of calldata.
-            assert_eq!(tx.calldata.len(), transaction.transaction.length() + 6);
+            assert_eq!(tx.calldata.len(), (transaction.transaction.length() + 30) / 31 + 1 + 6);
 
             // Assert the first 6 elements of calldata.
             assert_eq!(
@@ -224,8 +234,8 @@ mod tests {
                     *KAKAROT_ADDRESS,
                     *ETH_SEND_TRANSACTION,
                     FieldElement::ZERO,
-                    FieldElement::from(transaction.transaction.length()),
-                    FieldElement::from(transaction.transaction.length()),
+                    FieldElement::from((transaction.transaction.length() + 30) / 31 + 1),
+                    FieldElement::from((transaction.transaction.length() + 30) / 31 + 1),
                 ]
             );
 
