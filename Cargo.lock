@@ -726,17 +726,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alphanet-instructions"
-version = "0.0.0"
-source = "git+https://github.com/paradigmxyz/alphanet.git?rev=a7f66d6#a7f66d66cc59033fe8b5364cbc3a98825384d549"
-dependencies = [
- "revm",
- "revm-interpreter 4.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "revm-precompile",
- "revm-primitives 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8006,7 +7995,6 @@ dependencies = [
  "alloy-rlp",
  "alloy-signer-wallet",
  "alloy-sol-types",
- "alphanet-instructions",
  "anyhow",
  "arbitrary",
  "async-trait",

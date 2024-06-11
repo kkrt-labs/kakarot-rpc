@@ -70,21 +70,6 @@ pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (
     (katana, contract)
 }
 
-/// This fixture deploys an eip 3074 invoker contract on Katana.
-#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-#[fixture]
-#[awt]
-pub async fn eip_3074_invoker(
-    #[future] counter: (Katana, KakarotEvmContract),
-) -> (Katana, KakarotEvmContract, KakarotEvmContract) {
-    let eoa = counter.0.eoa();
-    let contract = eoa
-        .deploy_evm_contract(Some("GasSponsorInvoker"), ())
-        .await
-        .expect("Failed to deploy GasSponsorInvoker contract");
-    (counter.0, counter.1, contract)
-}
-
 /// This fixture creates a new test environment on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
