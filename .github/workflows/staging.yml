@@ -63,7 +63,7 @@ jobs:
           has_diff=$?
           set -e
           echo "has_diff=$has_diff" >> $GITHUB_ENV
-      - name: Open PR in Kakarot
+      - name: Create and push branch for deployment updates
         if: ${{ env.has_diff == 1 }}
         run: |
           set +e
@@ -74,7 +74,7 @@ jobs:
           git add deployments/kakarot-staging/
           git commit -m "Update staging deployments from run ${{ github.run_id }}"
           git push --set-upstream origin update-staging-deployment-${{ github.run_id }}
-      - name: Create Pull Request
+      - name: Open PR on Kakarot
         if: ${{ env.has_diff == 1 }}
         run: |
           set +e
