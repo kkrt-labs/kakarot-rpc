@@ -1,16 +1,16 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use ethers::abi::{Token, Tokenize};
+use ethers::abi::Tokenize;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::test_utils::eoa::Eoa;
 use kakarot_rpc::test_utils::evm_contract::{
-    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo, TxLegacyInfo,
+    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
 };
-use kakarot_rpc::test_utils::fixtures::{eip_3074_invoker, plain_opcodes, setup};
+use kakarot_rpc::test_utils::fixtures::{plain_opcodes, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
-use reth_primitives::{Address, B256, U256};
+use reth_primitives::{B256, U256};
 use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
 use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
 use rstest::*;
