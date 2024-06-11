@@ -25,6 +25,7 @@ import {
   TxValuesArray,
   TypedTransaction,
   TypedTxData,
+  hexToBytes,
 } from "../deps.ts";
 
 /**
@@ -142,9 +143,8 @@ export function toTypedEthTx({
   // dataOffset <- calldata[3]
   // dataLength <- calldata[4]
   // calldataLen <- calldata[5]
-  const bytes = concatBytes(
-    ...calldata.slice(6).map((x) => bigIntToBytes(BigInt(x))),
-  );
+  // signedDataLen <- calldata[6]
+  const bytes = concatBytes(...calldata.slice(7).map((x) => hexToBytes(x)));
 
   const signature = transaction.meta.signature;
   if (signature.length !== 5) {

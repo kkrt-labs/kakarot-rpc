@@ -14,6 +14,7 @@ export const isKakarotTransaction = (transaction: Transaction) => {
   // dataOffset <- calldata[3]
   // dataLength <- calldata[4]
   // calldataLen <- calldata[5]
+  // signedDataLen <- calldata[6]
   const calldata = transaction.invokeV1?.calldata;
   if (!calldata) {
     console.error("No calldata in transaction");
@@ -44,7 +45,9 @@ export const ethValidationFailed = (event: Event) => {
 
   if (response_len + 1 >= data.length) {
     console.error(
-      `Invalid event data length. Got ${data.length}, expected < ${response_len + 1}`,
+      `Invalid event data length. Got ${data.length}, expected < ${
+        response_len + 1
+      }`,
     );
     return false;
   }

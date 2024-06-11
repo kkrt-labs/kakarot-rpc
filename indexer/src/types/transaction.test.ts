@@ -5,6 +5,7 @@ import {
   LegacyTransaction,
   RLP,
   Transaction,
+  bytesToHex,
 } from "../deps.ts";
 import { toTypedEthTx } from "./transaction.ts";
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/assert_equals.ts";
@@ -13,18 +14,29 @@ import { Common } from "https://esm.sh/v135/@ethereumjs/common@4.1.0/denonext/co
 Deno.test("toTypedEthTx Legacy Transaction", () => {
   // Given
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-  const tx = new LegacyTransaction({
-    nonce: 1n,
-    gasPrice: 2n,
-    gasLimit: 3n,
-    to: "0x0000000000000000000000000000000000000001",
-    value: 4n,
-    data: new Uint8Array([0x12, 0x34]),
-  }, { common });
+  const tx = new LegacyTransaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+    },
+    { common },
+  );
   const raw = RLP.encode(tx.getMessageToSign());
 
+  const bytesLength = raw.byteLength;
+
   const serializedTx: `0x${string}`[] = [];
-  raw.forEach((x) => serializedTx.push(`0x${x.toString(16)}`));
+  for (let i = 0; i < raw.length; i += 31) {
+    // byte chunk of 31 bytes
+    const chunk = raw.slice(i, i + 31);
+    // Convert to hex and push it to the serializedTx array
+    serializedTx.push(bytesToHex(chunk) as `0x${string}`);
+  }
+
   const starknetTxCalldata: `0x${string}`[] = [
     "0x1",
     "0x0",
@@ -32,6 +44,7 @@ Deno.test("toTypedEthTx Legacy Transaction", () => {
     "0x0",
     "0x0",
     "0x0",
+    `0x${bytesLength.toString(16)}`,
     ...serializedTx,
   ];
 
@@ -65,25 +78,38 @@ Deno.test("toTypedEthTx Legacy Transaction", () => {
 Deno.test("toTypedEthTx EIP1559 Transaction", () => {
   // Given
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-  const tx = new FeeMarketEIP1559Transaction({
-    nonce: 1n,
-    maxFeePerGas: 4n,
-    maxPriorityFeePerGas: 3n,
-    gasLimit: 4n,
-    to: "0x0000000000000000000000000000000000000001",
-    value: 5n,
-    data: new Uint8Array([0x12, 0x34]),
-    accessList: [{
-      address: "0x0000000000000000000000000000000000000002",
-      storageKeys: [
-        "0x0000000000000000000000000000000000000000000000000000000000000001",
+  const tx = new FeeMarketEIP1559Transaction(
+    {
+      nonce: 1n,
+      maxFeePerGas: 4n,
+      maxPriorityFeePerGas: 3n,
+      gasLimit: 4n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 5n,
+      data: new Uint8Array([0x12, 0x34]),
+      accessList: [
+        {
+          address: "0x0000000000000000000000000000000000000002",
+          storageKeys: [
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
+          ],
+        },
       ],
-    }],
-  }, { common });
+    },
+    { common },
+  );
 
   const raw = tx.getMessageToSign();
+  const bytesLength = raw.byteLength;
+
   const serializedTx: `0x${string}`[] = [];
-  raw.forEach((x) => serializedTx.push(`0x${x.toString(16)}`));
+  for (let i = 0; i < raw.length; i += 31) {
+    // byte chunk of 31 bytes
+    const chunk = raw.slice(i, i + 31);
+    // Convert to hex and push it to the serializedTx array
+    serializedTx.push(bytesToHex(chunk) as `0x${string}`);
+  }
+
   const starknetTxCalldata: `0x${string}`[] = [
     "0x1",
     "0x0",
@@ -91,6 +117,7 @@ Deno.test("toTypedEthTx EIP1559 Transaction", () => {
     "0x0",
     "0x0",
     "0x0",
+    `0x${bytesLength.toString(16)}`,
     ...serializedTx,
   ];
 
@@ -127,24 +154,37 @@ Deno.test("toTypedEthTx EIP1559 Transaction", () => {
 Deno.test("toTypedEthTx EIP2930 Transaction", () => {
   // Given
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-  const tx = new AccessListEIP2930Transaction({
-    nonce: 1n,
-    gasPrice: 2n,
-    gasLimit: 3n,
-    to: "0x0000000000000000000000000000000000000001",
-    value: 4n,
-    data: new Uint8Array([0x12, 0x34]),
-    accessList: [{
-      address: "0x0000000000000000000000000000000000000002",
-      storageKeys: [
-        "0x0000000000000000000000000000000000000000000000000000000000000001",
+  const tx = new AccessListEIP2930Transaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+      accessList: [
+        {
+          address: "0x0000000000000000000000000000000000000002",
+          storageKeys: [
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
+          ],
+        },
       ],
-    }],
-  }, { common });
+    },
+    { common },
+  );
 
   const raw = tx.getMessageToSign();
+  const bytesLength = raw.byteLength;
+
   const serializedTx: `0x${string}`[] = [];
-  raw.forEach((x) => serializedTx.push(`0x${x.toString(16)}`));
+  for (let i = 0; i < raw.length; i += 31) {
+    // byte chunk of 31 bytes
+    const chunk = raw.slice(i, i + 31);
+    // Convert to hex and push it to the serializedTx array
+    serializedTx.push(bytesToHex(chunk) as `0x${string}`);
+  }
+
   const starknetTxCalldata: `0x${string}`[] = [
     "0x1",
     "0x0",
@@ -152,6 +192,7 @@ Deno.test("toTypedEthTx EIP2930 Transaction", () => {
     "0x0",
     "0x0",
     "0x0",
+    `0x${bytesLength.toString(16)}`,
     ...serializedTx,
   ];
 
