@@ -1,7 +1,6 @@
 ---
 name: staging
 
-# TODO POINT TO A RELEASE
 on: workflow_dispatch
 
 jobs:
