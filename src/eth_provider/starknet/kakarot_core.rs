@@ -243,8 +243,6 @@ mod tests {
                 ]
             );
 
-            println!("Calldata: {:?}", tx.calldata);
-
             // Assert the sender address.
             assert_eq!(
                 tx.sender_address,
