@@ -7,9 +7,9 @@
   "rust-analyzer.cargo.features": "all",
   "deno.enable": true,
   "deno.suggest.imports.autoDiscover": true,
-  // "[typescript]": {
-  //   "editor.defaultFormatter": "trunk.io"
-  // },
+  "[typescript]": {
+    "editor.defaultFormatter": "trunk.io"
+  },
   "deno.lint": true,
   "deno.unstable": true,
   "rust-analyzer.linkedProjects": ["crates/sequencer/Cargo.toml", "./Cargo.toml"]
