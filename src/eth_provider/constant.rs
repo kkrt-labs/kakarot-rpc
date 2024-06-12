@@ -37,7 +37,7 @@ use {
     },
     starknet_crypto::FieldElement,
     std::sync::Arc,
-    std::{env::var, str::FromStr, sync::OnceLock},
+    std::{env::var, sync::OnceLock},
     tokio::sync::Mutex,
 };
 
