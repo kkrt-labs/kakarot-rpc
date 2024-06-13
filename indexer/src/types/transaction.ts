@@ -1,5 +1,6 @@
 // Utils
 import { padBigint, padBytes } from "../utils/hex.ts";
+import { isRevertedWithOutOfResources } from "../utils/filter.ts";
 
 // Starknet
 import { Transaction, TransactionReceipt, uint256 } from "../deps.ts";
@@ -30,8 +31,7 @@ import {
 } from "../deps.ts";
 
 /**
- * @param transaction - Typed transaction to be converted.
- * @param header - The block header of the block containing the transaction.
+ * @param transaction - A Kakarot transaction.
  * @param receipt The transaction receipt of the transaction.
  * @param blockNumber - The block number of the transaction in hex.
  * @param blockHash - The block hash of the transaction in hex.
@@ -47,14 +47,48 @@ export function toEthTx({
   blockHash,
   isPendingBlock,
 }: {
-  transaction: TypedTransaction;
+  transaction: Transaction;
   receipt: TransactionReceipt;
   blockNumber: PrefixedHexString;
   blockHash: PrefixedHexString;
   isPendingBlock: boolean;
-}):
-  | (JsonRpcTx & { yParity?: string; other?: { isRunOutOfResources: boolean } })
-  | null {
+}): (JsonRpcTx & { yParity?: string; isRunOutOfResources?: boolean }) | null {
+  const typedEthTx = toTypedEthTx({ transaction });
+  if (!typedEthTx) {
+    return null;
+  }
+  return typedTransactionToEthTx({
+    typedTransaction: typedEthTx,
+    receipt,
+    blockNumber,
+    blockHash,
+    isPendingBlock,
+  });
+}
+
+/**
+ * @param typeTransaction - Typed transaction to be converted.
+ * @param receipt The transaction receipt of the transaction.
+ * @param blockNumber - The block number of the transaction in hex.
+ * @param blockHash - The block hash of the transaction in hex.
+ * @param isPendingBlock - Whether the block is pending.
+ * @returns - The transaction in the Ethereum format, or null if the transaction is invalid.
+ *
+ * Acknowledgement: Code taken from <https://github.com/ethereumjs/ethereumjs-monorepo>
+ */
+export function typedTransactionToEthTx({
+  typedTransaction,
+  receipt,
+  blockNumber,
+  blockHash,
+  isPendingBlock,
+}: {
+  typedTransaction: TypedTransaction;
+  receipt: TransactionReceipt;
+  blockNumber: PrefixedHexString;
+  blockHash: PrefixedHexString;
+  isPendingBlock: boolean;
+}): (JsonRpcTx & { yParity?: string; isRunOutOfResources?: boolean }) | null {
   const index = receipt.transactionIndex;
 
   if (!index) {
@@ -63,7 +97,7 @@ export function toEthTx({
     );
   }
 
-  const txJSON = transaction.toJSON();
+  const txJSON = typedTransaction.toJSON();
   if (!txJSON.r || !txJSON.s || !txJSON.v) {
     console.error(
       `Transaction is not signed: {r: ${txJSON.r}, s: ${txJSON.s}, v: ${txJSON.v}}`,
@@ -74,29 +108,29 @@ export function toEthTx({
   // If the transaction is a legacy, we can calculate it from the v value.
   // v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
   const chainId =
-    isLegacyTx(transaction) &&
-    transaction.supports(Capability.EIP155ReplayProtection)
+    isLegacyTx(typedTransaction) &&
+    typedTransaction.supports(Capability.EIP155ReplayProtection)
       ? bigIntToHex((BigInt(txJSON.v) - 35n) / 2n)
       : txJSON.chainId;
 
   const result: JsonRpcTx & {
     yParity?: string;
-    other?: { isRunOutOfResources: boolean };
+    isRunOutOfResources?: boolean;
   } = {
     blockHash: isPendingBlock ? null : blockHash,
     blockNumber,
-    from: transaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
+    from: typedTransaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
     gas: txJSON.gasLimit!,
     gasPrice: txJSON.gasPrice ?? txJSON.maxFeePerGas!,
     maxFeePerGas: txJSON.maxFeePerGas,
     maxPriorityFeePerGas: txJSON.maxPriorityFeePerGas,
-    type: intToHex(transaction.type),
+    type: intToHex(typedTransaction.type),
     accessList: txJSON.accessList,
     chainId,
-    hash: padBytes(transaction.hash(), 32),
+    hash: padBytes(typedTransaction.hash(), 32),
     input: txJSON.data!,
     nonce: txJSON.nonce!,
-    to: transaction.to?.toString() ?? null,
+    to: typedTransaction.to?.toString() ?? null,
     transactionIndex: isPendingBlock ? null : padBigint(BigInt(index ?? 0), 8),
     value: txJSON.value!,
     v: txJSON.v,
@@ -108,19 +142,14 @@ export function toEthTx({
   // Adding yParity for EIP-1559 and EIP-2930 transactions
   // To fit the Ethereum format, we need to add the yParity field.
   if (
-    isFeeMarketEIP1559TxData(transaction) ||
-    isAccessListEIP2930Tx(transaction)
+    isFeeMarketEIP1559TxData(typedTransaction) ||
+    isAccessListEIP2930Tx(typedTransaction)
   ) {
     result.yParity = txJSON.v;
   }
 
-  if (
-    receipt.executionStatus === "EXECUTION_STATUS_REVERTED" &&
-    receipt.revertReason!.includes("RunResources has no remaining steps")
-  ) {
-    result.other = {
-      isRunOutOfResources: true,
-    };
+  if (isRevertedWithOutOfResources(receipt)) {
+    result.isRunOutOfResources = true;
   }
 
   return result;
