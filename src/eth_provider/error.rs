@@ -77,9 +77,10 @@ pub enum EthApiError {
 impl std::fmt::Debug for EthApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Kakarot(KakarotError::ProviderError(err)) => {
+            Self::Kakarot(KakarotError::Provider(err)) => {
                 write!(f, "starknet provider error: {err:?}")
             }
+            Self::Kakarot(KakarotError::Execution(err)) => write!(f, "execution reverted: {err:?}"),
             _ => write!(f, "{self}"),
         }
     }
@@ -100,19 +101,26 @@ impl From<EthApiError> for ErrorObject<'static> {
 pub enum KakarotError {
     /// Error related to the starknet provider.
     #[error(transparent)]
-    ProviderError(#[from] starknet::providers::ProviderError),
+    Provider(#[from] starknet::providers::ProviderError),
     /// Error related to the database.
     #[error(transparent)]
-    DatabaseError(#[from] mongodb::error::Error),
+    Database(#[from] mongodb::error::Error),
     /// Error related to the database deserialization.
     #[error(transparent)]
-    DatabaseDeserializationError(#[from] mongodb::bson::de::Error),
-    /// Error related to the evm execution.
+    DatabaseDeserialization(#[from] mongodb::bson::de::Error),
+    /// Error related to execution.
     #[error(transparent)]
-    ExecutionError(EvmError),
-    /// Error related to a starknet call.
-    #[error(transparent)]
-    CallError(#[from] cainome::cairo_serde::Error),
+    Execution(#[from] ExecutionError),
+}
+
+impl From<cainome::cairo_serde::Error> for KakarotError {
+    fn from(error: cainome::cairo_serde::Error) -> Self {
+        let error = error.to_string();
+        if error.contains("RunResources has no remaining steps.") {
+            return ExecutionError::from(CairoError::VmOutOfResources).into();
+        }
+        ExecutionError::Other(error).into()
+    }
 }
 
 impl From<KakarotError> for EthApiError {
@@ -124,10 +132,30 @@ impl From<KakarotError> for EthApiError {
 impl From<KakarotError> for EthRpcErrorCode {
     fn from(value: KakarotError) -> Self {
         match value {
-            KakarotError::ExecutionError(_) => Self::ExecutionError,
+            KakarotError::Execution(_) => Self::ExecutionError,
             _ => Self::InternalError,
         }
     }
+}
+
+/// Error related to execution errors, by the EVM or Cairo vm.
+#[derive(Debug, Error)]
+pub enum ExecutionError {
+    /// Error related to the EVM execution failures.
+    #[error(transparent)]
+    Evm(#[from] EvmError),
+    /// Error related to the Cairo vm execution failures.
+    #[error(transparent)]
+    CairoVm(#[from] CairoError),
+    #[error("{0}")]
+    Other(String),
+}
+
+/// Error related to the Cairo vm execution failures.
+#[derive(Debug, Error)]
+pub enum CairoError {
+    #[error("cairo vm out of resources")]
+    VmOutOfResources,
 }
 
 /// Error related to EVM execution.
@@ -171,7 +199,7 @@ pub enum EvmError {
 
 impl From<EvmError> for KakarotError {
     fn from(value: EvmError) -> Self {
-        Self::ExecutionError(value)
+        Self::Execution(ExecutionError::Evm(value))
     }
 }
 
@@ -285,12 +313,14 @@ pub enum EthereumDataFormatError {
 
 #[cfg(test)]
 mod tests {
+    use starknet::core::types::ContractErrorData;
+
     use super::*;
 
     #[test]
     fn test_assure_source_error_visible_in_kakarot_error() {
         // Given
-        let err = KakarotError::ProviderError(starknet::providers::ProviderError::StarknetError(
+        let err = KakarotError::Provider(starknet::providers::ProviderError::StarknetError(
             starknet::core::types::StarknetError::UnexpectedError("test".to_string()),
         ));
 
@@ -326,5 +356,66 @@ mod tests {
         } else {
             panic!("Expected EvmError::Other, got {evm_err:?}");
         }
+    }
+
+    #[test]
+    fn test_display_execution_error() {
+        // Given
+        let err = EthApiError::Kakarot(KakarotError::Execution(ExecutionError::Evm(EvmError::BalanceError)));
+
+        // When
+        let display = format!("{err:?}");
+
+        // Then
+        assert_eq!(display, "execution reverted: Evm(BalanceError)");
+    }
+
+    #[test]
+    fn test_from_run_resources_error() {
+        let err = cainome::cairo_serde::Error::Provider(starknet::providers::ProviderError::StarknetError(
+            starknet::core::types::StarknetError::ContractError(ContractErrorData {
+                revert_error:
+                    "Error in the called contract (0x007fbaddebb5e88696fac9fc5aaf8bdff4bbca1eaf06a0cb5ae94df8ea93f882):
+                     Error at pc=0:31:
+                     Got an exception while executing a hint.
+                     Cairo traceback (most recent call last):
+                     Unknown location (pc=0:4836)
+                     Unknown location (pc=0:4775)
+                     Unknown location (pc=0:3860)
+                     Unknown location (pc=0:663)
+                     Error in the called contract (0x040e005e7acea50434c537ba62e72e8a8e960d679c87609029d4639e2bdb9cb2):
+                     Error at pc=0:24:
+                     Could not reach the end of the program. RunResources has no remaining steps.
+                     Cairo traceback (most recent call last):
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23327)
+                     Unknown location (pc=0:23325)
+                     Unknown location (pc=0:22158)"
+                        .to_string(),
+            }),
+        ));
+
+        // When
+        let eth_err: KakarotError = err.into();
+        let display = format!("{eth_err:?}");
+
+        // Then
+        assert_eq!(display, "Execution(CairoVm(VmOutOfResources))");
     }
 }
