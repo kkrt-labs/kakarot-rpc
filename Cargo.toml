@@ -71,6 +71,8 @@ reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.
 ] }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }
 reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }
 revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "2b6fff1" }
 
 # Serde

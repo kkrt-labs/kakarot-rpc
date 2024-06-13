@@ -7894,6 +7894,8 @@ dependencies = [
  "rand 0.8.5",
  "rayon",
  "reqwest 0.12.3",
+ "reth-evm-ethereum",
+ "reth-node-api",
  "reth-primitives",
  "reth-revm",
  "reth-rpc-types",

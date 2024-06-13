@@ -1,8 +1,9 @@
 pub mod builder;
-mod config;
 mod database;
 
 use eyre::eyre;
+use reth_evm_ethereum::EthEvmConfig;
+use reth_node_api::ConfigureEvm;
 use reth_primitives::revm::env::tx_env_with_recovered;
 use reth_primitives::ruint::FromUintError;
 use reth_primitives::B256;
@@ -18,7 +19,6 @@ use reth_rpc_types::{
 };
 use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
 
-use self::config::EvmBuilder;
 use self::database::EthDatabaseSnapshot;
 use crate::eth_provider::{
     error::{EthApiError, EthereumDataFormatError, TransactionError},
@@ -95,7 +95,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                         TracingInspector::new(TracingInspectorConfig::from_geth_call_config(&call_config));
 
                     // Build EVM with environment and inspector
-                    let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
+                    let eth_evm_config = EthEvmConfig::default();
+                    let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
 
                     // Execute transaction
                     let res = transact_in_place(evm)?;
@@ -126,7 +127,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
         // Use default tracer
         let mut inspector = TracingInspector::new(TracingInspectorConfig::from_geth_config(&config));
-        let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
+        let eth_evm_config = EthEvmConfig::default();
+        let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
         let res = transact_in_place(evm)?;
         let gas_used = res.result.gas_used();
         let return_value = res.result.into_output().unwrap_or_default();
@@ -156,7 +158,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         let mut inspector = TracingInspector::new(tracing_config);
 
         // Build EVM with environment and inspector
-        let evm = EvmBuilder::evm_with_env_and_inspector(db, env, &mut inspector);
+        let eth_evm_config = EthEvmConfig::default();
+        let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
 
         // Execute transaction
         let res = transact_in_place(evm)?;
@@ -201,7 +204,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             }
 
             let env = env_with_tx(&self.env, tx.clone())?;
-            transact_commit_in_place(EvmBuilder::evm_with_env(&mut self.db, env))?;
+            let eth_evm_config = EthEvmConfig::default();
+            transact_commit_in_place(eth_evm_config.evm_with_env(&mut self.db, env))?;
         }
 
         Err(EthApiError::TransactionNotFound(transaction_hash))
