@@ -119,7 +119,7 @@ RUN cargo build \
     cargo build \
     --bin hive_chain --release --features testing --target-dir /usr/src/rpc/target
 
-FROM debian:bookworm-slim as base
+FROM ubuntu:24.10 as base
 # Install any necessary dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y tini curl jq libssl-dev ca-certificates && rm -rf /var/lib/apt/lists/*
 
