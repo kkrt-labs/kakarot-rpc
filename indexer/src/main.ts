@@ -90,7 +90,7 @@ export default async function transform({
   let cumulativeGasUsed = 0n;
   // The cumulative gas used is an array containing the transaction index and the
   // cumulative gas used up to that transaction. This is used to later
-  // get the cumulative gas used for a out of resources transaction.
+  // get the cumulative gas used for an out of resources transaction.
   const cumulativeGasUses: Array<{ index: number; cumulativeGasUsed: bigint }> =
     [];
 
