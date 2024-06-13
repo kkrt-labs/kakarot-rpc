@@ -1,5 +1,5 @@
 // Starknet
-import { Transaction, Event, TransactionReceipt } from "../deps.ts";
+import { Event, Transaction, TransactionReceipt } from "../deps.ts";
 
 const KAKAROT_ADDRESS = Deno.env.get("KAKAROT_ADDRESS");
 if (KAKAROT_ADDRESS === undefined) {

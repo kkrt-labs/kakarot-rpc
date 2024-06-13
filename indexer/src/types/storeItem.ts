@@ -10,11 +10,8 @@ type Collection = "transactions" | "logs" | "receipts" | "headers";
 
 export type StoreItem<C = Collection> = {
   collection: C;
-  data: C extends "transactions"
-    ? { tx: JsonRpcTx }
-    : C extends "logs"
-      ? { log: JsonRpcLog }
-      : C extends "receipts"
-        ? { receipt: JsonRpcReceipt }
-        : { header: JsonRpcBlock };
+  data: C extends "transactions" ? { tx: JsonRpcTx }
+    : C extends "logs" ? { log: JsonRpcLog }
+    : C extends "receipts" ? { receipt: JsonRpcReceipt }
+    : { header: JsonRpcBlock };
 };

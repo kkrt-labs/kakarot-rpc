@@ -107,11 +107,10 @@ export function typedTransactionToEthTx({
   }
   // If the transaction is a legacy, we can calculate it from the v value.
   // v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
-  const chainId =
-    isLegacyTx(typedTransaction) &&
-    typedTransaction.supports(Capability.EIP155ReplayProtection)
-      ? bigIntToHex((BigInt(txJSON.v) - 35n) / 2n)
-      : txJSON.chainId;
+  const chainId = isLegacyTx(typedTransaction) &&
+      typedTransaction.supports(Capability.EIP155ReplayProtection)
+    ? bigIntToHex((BigInt(txJSON.v) - 35n) / 2n)
+    : txJSON.chainId;
 
   const result: JsonRpcTx & {
     yParity?: string;

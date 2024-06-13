@@ -1,7 +1,7 @@
 import {
   assert,
-  assertFalse,
   assertEquals,
+  assertFalse,
 } from "https://deno.land/std@0.213.0/assert/mod.ts";
 import {
   ethValidationFailed,
@@ -182,7 +182,8 @@ Deno.test("isRevertedWithOutOfResources: false on status succeeded", () => {
     contractAddress: "0x01",
     l2ToL1Messages: [],
     events: [],
-    revertReason: "RunResources has no remaining steps",
+    revertReason:
+      "Could not reach the end of the program. RunResources has no remaining steps",
   };
   const success = isRevertedWithOutOfResources(receipt);
   assertEquals(success, false);

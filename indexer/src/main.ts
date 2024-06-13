@@ -1,8 +1,8 @@
 // Utils
 import { NULL_BLOCK_HASH, padString, toHexString } from "./utils/hex.ts";
 import {
-  isKakarotTransaction,
   ethValidationFailed,
+  isKakarotTransaction,
   isRevertedWithOutOfResources,
 } from "./utils/filter.ts";
 
@@ -14,8 +14,8 @@ import {
 } from "./types/transaction.ts";
 import { toEthHeader } from "./types/header.ts";
 import {
-  toRevertedOutOfResourcesReceipt,
   toEthReceipt,
+  toRevertedOutOfResourcesReceipt,
 } from "./types/receipt.ts";
 import { JsonRpcLog, toEthLog } from "./types/log.ts";
 import { createTrieData, TrieData } from "./types/tries.ts";
@@ -23,13 +23,13 @@ import { StoreItem } from "./types/storeItem.ts";
 // Starknet
 import {
   BlockHeader,
+  Config,
   EventWithTransaction,
   hash,
-  TransactionWithReceipt,
-  Config,
+  hexToBytes,
   NetworkOptions,
   SinkOptions,
-  hexToBytes,
+  TransactionWithReceipt,
 } from "./deps.ts";
 // Eth
 import { Bloom, Trie } from "./deps.ts";
@@ -47,16 +47,14 @@ if (SINK_TYPE !== "console" && SINK_TYPE !== "mongo") {
   throw new Error("Invalid SINK_TYPE");
 }
 
-const sinkOptions =
-  SINK_TYPE === "mongo"
-    ? {
-        connectionString:
-          Deno.env.get("MONGO_CONNECTION_STRING") ??
-          "mongodb://mongo:mongo@mongo:27017",
-        database: Deno.env.get("MONGO_DATABASE_NAME") ?? "kakarot-test-db",
-        collectionNames: ["headers", "transactions", "receipts", "logs"],
-      }
-    : {};
+const sinkOptions = SINK_TYPE === "mongo"
+  ? {
+    connectionString: Deno.env.get("MONGO_CONNECTION_STRING") ??
+      "mongodb://mongo:mongo@mongo:27017",
+    database: Deno.env.get("MONGO_DATABASE_NAME") ?? "kakarot-test-db",
+    collectionNames: ["headers", "transactions", "receipts", "logs"],
+  }
+  : {};
 
 export const config: Config<NetworkOptions, SinkOptions> = {
   streamUrl: STREAM_URL,
