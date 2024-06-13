@@ -998,7 +998,7 @@ where
             // Check if the number of retries exceeds the maximum allowed retries
             // or if the transaction already exists in the database of finalized transactions
             let hash = tx.tx.hash;
-            if tx.retries + 1 > TRANSACTION_MAX_RETRIES
+            if tx.retries + 1 > *TRANSACTION_MAX_RETRIES
                 || self
                     .database
                     .get_one::<StoredTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN), None)
