@@ -88,7 +88,7 @@ export default async function transform({
   // Accumulate the gas used in the block in order to calculate the cumulative gas used.
   // We increment it by the gas used in each transaction in the flatMap iteration.
   let cumulativeGasUsed = 0n;
-  // The cumulative gas uses is an array containing the transaction index and the
+  // The cumulative gas used is an array containing the transaction index and the
   // cumulative gas used up to that transaction. This is used to later
   // get the cumulative gas used for a out of resources transaction.
   const cumulativeGasUses: Array<{ index: number; cumulativeGasUsed: bigint }> =
