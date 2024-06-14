@@ -6,11 +6,7 @@ import { JsonRpcReceipt } from "./receipt.ts";
 import { JsonRpcTx } from "../deps.ts";
 import { JsonRpcBlock } from "./header.ts";
 
-type Collection =
-  | "transactions"
-  | "logs"
-  | "receipts"
-  | "headers";
+type Collection = "transactions" | "logs" | "receipts" | "headers";
 
 export type StoreItem<C = Collection> = {
   collection: C;

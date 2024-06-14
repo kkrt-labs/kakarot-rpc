@@ -54,16 +54,15 @@ export function toEthReceipt({
   // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/accounts/eoa/library.cairo
   const status = bigIntToHex(BigInt(event.data[event.data.length - 2]));
   // If there is no destination, calculate the deployed contract address.
-  const contractAddress =
-    transaction.to === null
-      ? padBytes(
-          generateAddress(
-            hexToBytes(transaction.from),
-            hexToBytes(transaction.nonce),
-          ),
-          20,
-        )
-      : null;
+  const contractAddress = transaction.to === null
+    ? padBytes(
+      generateAddress(
+        hexToBytes(transaction.from),
+        hexToBytes(transaction.nonce),
+      ),
+      20,
+    )
+    : null;
 
   return {
     transactionHash: transaction.hash,
@@ -83,6 +82,49 @@ export function toEthReceipt({
     logs,
     logsBloom: logsBloom(logs.map(fromJsonRpcLog)),
     status,
+    type: transaction.type,
+  };
+}
+
+/**
+ * @param transaction - A Ethereum transaction.
+ * @param blockNumber - The block number of the transaction in hex.
+ * @param blockHash - The block hash of the transaction in hex.
+ * @param cumulativeGasUsed - The cumulative gas used up to this transaction.
+ * @param isPendingBlock - Whether the block is pending.
+ * @returns - The Ethereum receipt corresponding to a reverted out of resources transaction.
+ */
+export function toRevertedOutOfResourcesReceipt({
+  transaction,
+  blockNumber,
+  blockHash,
+  cumulativeGasUsed,
+  isPendingBlock,
+}: {
+  transaction: JsonRpcTx;
+  blockNumber: PrefixedHexString;
+  blockHash: PrefixedHexString;
+  cumulativeGasUsed: bigint;
+  isPendingBlock?: boolean;
+}): JsonRpcReceipt {
+  return {
+    transactionHash: transaction.hash,
+    transactionIndex: bigIntToHex(BigInt(transaction.transactionIndex ?? 0)),
+    blockHash: isPendingBlock ? NULL_BLOCK_HASH : blockHash,
+    blockNumber,
+    from: transaction.from,
+    to: transaction.to,
+    cumulativeGasUsed: bigIntToHex(cumulativeGasUsed),
+    gasUsed: bigIntToHex(0n),
+    // Incorrect, should be as in EIP1559
+    // min(transaction.max_priority_fee_per_gas, transaction.max_fee_per_gas - block.base_fee_per_gas)
+    // effective_gas_price = priority_fee_per_gas + block.base_fee_per_gas
+    // Issue is that for now we don't have access to the block base fee per gas.
+    effectiveGasPrice: transaction.gasPrice,
+    contractAddress: null,
+    logs: [],
+    logsBloom: logsBloom([]),
+    status: bigIntToHex(0n),
     type: transaction.type,
   };
 }

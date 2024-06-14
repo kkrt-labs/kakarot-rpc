@@ -1,5 +1,10 @@
 // Eth
-import { bigIntToHex, bytesToHex, PrefixedHexString, stripHexPrefix } from "../deps.ts";
+import {
+  bigIntToHex,
+  bytesToHex,
+  PrefixedHexString,
+  stripHexPrefix,
+} from "../deps.ts";
 
 export const NULL_BLOCK_HASH = padString("0x", 32);
 

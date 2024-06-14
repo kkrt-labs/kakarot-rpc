@@ -18,6 +18,7 @@ use reth_rpc_types::{
     TransactionInfo,
 };
 use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
+use std::collections::HashMap;
 
 use self::database::EthDatabaseSnapshot;
 use crate::eth_provider::{
@@ -56,6 +57,24 @@ impl TracingResult {
             Some(traces)
         } else {
             None
+        }
+    }
+
+    /// Creates a default failure `TracingResult` based on the `TracingOptions`.
+    fn default_failure(tracing_options: &TracingOptions, tx: &reth_rpc_types::Transaction) -> Self {
+        match tracing_options {
+            TracingOptions::Geth(_) => Self::Geth(vec![TraceResult::Success {
+                result: GethTrace::Default(reth_rpc_types::trace::geth::DefaultFrame {
+                    failed: true,
+                    ..Default::default()
+                }),
+                tx_hash: Some(tx.hash),
+            }]),
+            TracingOptions::Parity(_) => Self::Parity(
+                TracingInspector::default()
+                    .into_parity_builder()
+                    .into_localized_transaction_traces(TransactionInfo::from(tx)),
+            ),
         }
     }
 }
@@ -226,10 +245,17 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         while let Some(tx) = transactions.next() {
             let env = env_with_tx(&self.env, tx.clone())?;
 
-            let (res, state_changes) = match &self.tracing_options {
-                TracingOptions::Geth(opts) => Self::trace_geth(env, &mut db, tx, opts.clone())?,
-                TracingOptions::Parity(tracing_config) => Self::trace_parity(env, &mut db, tx, *tracing_config)?,
-            };
+            let (res, state_changes) =
+                if tx.other.get("isRunOutOfResources").and_then(serde_json::Value::as_bool).unwrap_or(false) {
+                    (TracingResult::default_failure(&self.tracing_options, tx), HashMap::default())
+                } else {
+                    match &self.tracing_options {
+                        TracingOptions::Geth(opts) => Self::trace_geth(env, &mut db, tx, opts.clone())?,
+                        TracingOptions::Parity(tracing_config) => {
+                            Self::trace_parity(env, &mut db, tx, *tracing_config)?
+                        }
+                    }
+                };
 
             traces.extend(convert_result(res).unwrap_or_default());
 

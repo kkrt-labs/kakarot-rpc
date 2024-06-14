@@ -10,9 +10,12 @@ use kakarot_rpc::test_utils::fixtures::{plain_opcodes, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
-use reth_primitives::{B256, U256};
+use reth_primitives::{Address, Bytes, B256, U256};
+use reth_rpc_types::other::OtherFields;
 use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
-use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
+use reth_rpc_types::trace::parity::{
+    Action, CallAction, CallOutput, CallType, LocalizedTransactionTrace, TraceOutput, TransactionTrace,
+};
 use rstest::*;
 use serde_json::{json, Value};
 use starknet::core::types::MaybePendingBlockWithTxHashes;
@@ -65,7 +68,7 @@ pub async fn tracing<T: Tokenize>(
             .expect("Failed to prepare call transaction");
         // Sign the transaction and convert it to a RPC transaction.
         let tx_signed = eoa.sign_transaction(tx.clone()).expect("Failed to sign transaction");
-        let tx = reth_rpc_types::Transaction {
+        let mut tx = reth_rpc_types::Transaction {
             transaction_type: Some(2),
             nonce: tx.nonce(),
             hash: tx_signed.hash(),
@@ -88,6 +91,14 @@ pub async fn tracing<T: Tokenize>(
             access_list: Some(Default::default()),
             ..Default::default()
         };
+
+        // Add an out of resources field to the last transaction.
+        if i == TRACING_TRANSACTIONS_COUNT - 1 {
+            let mut out_of_resources = std::collections::BTreeMap::new();
+            out_of_resources.insert(String::from("isRunOutOfResources"), serde_json::Value::Bool(true));
+            tx.other = OtherFields::new(out_of_resources);
+        }
+
         txs.push(tx);
     }
 
@@ -137,9 +148,37 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     let traces: Option<Vec<LocalizedTransactionTrace>> =
         serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
 
+    // Assert that traces is not None, meaning the response contains some traces.
     assert!(traces.is_some());
     // We expect 3 traces per transaction: CALL, CREATE, and CALL.
-    assert!(traces.unwrap().len() == 3 * TRACING_TRANSACTIONS_COUNT);
+    // Except for the last one which is out of resources.
+    assert!(traces.clone().unwrap().len() == 3 * (TRACING_TRANSACTIONS_COUNT - 1) + 1);
+
+    // Get the last trace from the trace vector, which is expected to be out of resources.
+    let trace_vec = traces.unwrap();
+    let out_of_resources_trace = trace_vec.last().unwrap();
+
+    // Assert that the block number of the out-of-resources trace is equal to the expected TRACING_BLOCK_NUMBER.
+    assert_eq!(out_of_resources_trace.clone().block_number, Some(TRACING_BLOCK_NUMBER));
+    // Assert that the trace matches the expected default TransactionTrace.
+    assert_eq!(
+        out_of_resources_trace.trace,
+        TransactionTrace {
+            action: Action::Call(CallAction {
+                from: Address::ZERO,
+                call_type: CallType::Call,
+                gas: Default::default(),
+                input: Bytes::default(),
+                to: Address::ZERO,
+                value: U256::ZERO
+            }),
+            error: None,
+            result: Some(TraceOutput::Call(CallOutput { gas_used: Default::default(), output: Bytes::default() })),
+            subtraces: 0,
+            trace_address: vec![],
+        }
+    );
+
     drop(server_handle);
 }
 
@@ -245,6 +284,18 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
 
     // Compare traces
     assert_eq!(expected_trace, trace);
+
+    // Get the last trace from the trace vector, which is expected to be out of resources.
+    let run_out_of_resource_trace = traces.last().unwrap();
+
+    // Asser that the trace matches the expected default GethTrace for a transaction that runs out of resources.
+    match run_out_of_resource_trace {
+        TraceResult::Success { result, .. } => assert_eq!(
+            *result,
+            GethTrace::Default(reth_rpc_types::trace::geth::DefaultFrame { failed: true, ..Default::default() })
+        ),
+        TraceResult::Error { .. } => panic!("Expected a success trace result"),
+    };
 
     drop(server_handle);
 }
