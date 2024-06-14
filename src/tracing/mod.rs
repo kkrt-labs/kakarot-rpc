@@ -6,16 +6,18 @@ use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::ConfigureEvm;
 use reth_primitives::revm::env::tx_env_with_recovered;
 use reth_primitives::ruint::FromUintError;
-use reth_primitives::B256;
+use reth_primitives::{TxKind, B256, U256};
+use reth_revm::primitives::{BlockEnv, TransactTo, TxEnv};
 use reth_revm::primitives::{Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState};
 use reth_revm::{Database, DatabaseCommit};
+use reth_rpc::eth::revm_utils::{CallFees, EvmOverrides};
 use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
 use reth_rpc_types::{
     trace::{
-        geth::{GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions},
+        geth::{GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions, GethDebugTracingOptions},
         parity::LocalizedTransactionTrace,
     },
-    TransactionInfo,
+    TransactionInfo, TransactionRequest,
 };
 use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
 use std::collections::HashMap;
@@ -63,7 +65,7 @@ impl TracingResult {
     /// Creates a default failure `TracingResult` based on the `TracingOptions`.
     fn default_failure(tracing_options: &TracingOptions, tx: &reth_rpc_types::Transaction) -> Self {
         match tracing_options {
-            TracingOptions::Geth(_) => Self::Geth(vec![TraceResult::Success {
+            TracingOptions::Geth(_) | TracingOptions::GethCall(_) => Self::Geth(vec![TraceResult::Success {
                 result: GethTrace::Default(reth_rpc_types::trace::geth::DefaultFrame {
                     failed: true,
                     ..Default::default()
@@ -230,6 +232,71 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         Err(EthApiError::TransactionNotFound(transaction_hash))
     }
 
+    pub fn debug_transaction_request(mut self, request: TransactionRequest) -> TracerResult<GethTrace> {
+        let opts = match self.tracing_options {
+            TracingOptions::GethCall(opts) => opts,
+            _ => {
+                return Err(EthApiError::Transaction(TransactionError::Tracing(
+                    eyre!("only `GethDebugTracingCallOptions` tracing options are supported for call tracing").into(),
+                )))
+            }
+        };
+
+        let GethDebugTracingCallOptions { tracing_options, state_overrides, block_overrides } = opts;
+
+        let overrides = EvmOverrides::new(state_overrides, block_overrides.map(Box::new));
+        let GethDebugTracingOptions { config, tracer, tracer_config, .. } = tracing_options;
+
+        // Check if tracer is provided
+        if let Some(tracer) = tracer {
+            match tracer {
+                // Only support CallTracer for now
+                GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer) => {
+                    let mut db = self.db;
+                    let env = env_with_tx_request(&self.env, request.clone())?;
+
+                    let call_config =
+                        tracer_config.into_call_config().map_err(|err| TransactionError::Tracing(err.into()))?;
+
+                    let mut inspector =
+                        TracingInspector::new(TracingInspectorConfig::from_geth_call_config(&call_config));
+
+                    // Build EVM with environment and inspector
+                    let eth_evm_config = EthEvmConfig::default();
+                    let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
+
+                    // Execute transaction
+                    let res = transact_in_place(evm)?;
+
+                    let frame = inspector.into_geth_builder().geth_call_traces(call_config, res.result.gas_used());
+
+                    return Ok(GethTrace::Default(Default::default()));
+
+                    // let frame = self
+                    //     .inner
+                    //     .eth_api
+                    //     .spawn_with_call_at(call, at, overrides, move |db, env| {
+                    //         let (res, _) = this.eth_api().inspect(db, env, &mut inspector)?;
+                    //         let frame =
+                    //             inspector.into_geth_builder().geth_call_traces(call_config, res.result.gas_used());
+                    //         Ok(frame.into())
+                    //     })
+                    //     .await?;
+                    // return Ok(frame);
+                }
+
+                // Return error for unsupported tracers
+                _ => {
+                    return Err(EthApiError::Transaction(TransactionError::Tracing(
+                        eyre!("only call tracer is currently supported").into(),
+                    )))
+                }
+            }
+        }
+
+        return Ok(GethTrace::Default(Default::default()));
+    }
+
     /// Traces the provided transactions using the given closure.
     /// The function `transact_and_get_traces` closure uses the `env` and `db` to create an evm
     /// which is then used to transact and trace the transaction.
@@ -279,6 +346,83 @@ fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> Trac
         env: Env::boxed(env.env.cfg.clone(), env.env.block.clone(), tx_env),
         handler_cfg: env.handler_cfg,
     })
+}
+
+/// Returns the environment with the transaction env updated to the given transaction.
+fn env_with_tx_request(
+    env: &EnvWithHandlerCfg,
+    tx: reth_rpc_types::TransactionRequest,
+) -> TracerResult<EnvWithHandlerCfg> {
+    let tx_env = create_txn_env(&env.block, tx)?;
+
+    Ok(EnvWithHandlerCfg {
+        env: Env::boxed(env.env.cfg.clone(), env.env.block.clone(), tx_env),
+        handler_cfg: env.handler_cfg,
+    })
+}
+
+/// Configures a new [`TxEnv`]  for the [`TransactionRequest`]
+///
+/// All [`TxEnv`] fields are derived from the given [`TransactionRequest`], if fields are `None`,
+/// they fall back to the [`BlockEnv`]'s settings.
+pub(crate) fn create_txn_env(block_env: &BlockEnv, request: TransactionRequest) -> TracerResult<TxEnv> {
+    // Ensure that if versioned hashes are set, they're not empty
+    if request.blob_versioned_hashes.as_ref().map_or(false, |hashes| hashes.is_empty()) {
+        return Err(EthereumDataFormatError::TransactionConversionError.into());
+    }
+
+    let TransactionRequest {
+        from,
+        to,
+        gas_price,
+        max_fee_per_gas,
+        max_priority_fee_per_gas,
+        gas,
+        value,
+        input,
+        nonce,
+        access_list,
+        chain_id,
+        blob_versioned_hashes,
+        max_fee_per_blob_gas,
+        ..
+    } = request;
+
+    let CallFees { max_priority_fee_per_gas, gas_price, max_fee_per_blob_gas } = CallFees::ensure_fees(
+        gas_price.map(U256::from),
+        max_fee_per_gas.map(U256::from),
+        max_priority_fee_per_gas.map(U256::from),
+        block_env.basefee,
+        blob_versioned_hashes.as_deref(),
+        max_fee_per_blob_gas.map(U256::from),
+        block_env.get_blob_gasprice().map(U256::from),
+    )?;
+
+    let gas_limit = gas.unwrap_or_else(|| block_env.gas_limit.min(U256::from(u64::MAX)).to());
+    let transact_to = match to {
+        Some(TxKind::Call(to)) => TransactTo::call(to),
+        _ => TransactTo::create(),
+    };
+    let env = TxEnv {
+        gas_limit: gas_limit.try_into().map_err(|_| EthereumDataFormatError::TransactionConversionError)?,
+        nonce,
+        caller: from.unwrap_or_default(),
+        gas_price,
+        gas_priority_fee: max_priority_fee_per_gas,
+        transact_to,
+        value: value.unwrap_or_default(),
+        data: input
+            .try_into_unique_input()
+            .map_err(|_| EthereumDataFormatError::TransactionConversionError)?
+            .unwrap_or_default(),
+        chain_id,
+        access_list: access_list.map(reth_rpc_types::AccessList::into_flattened).unwrap_or_default(),
+        // EIP-4844 fields
+        blob_hashes: blob_versioned_hashes.unwrap_or_default(),
+        max_fee_per_blob_gas,
+    };
+
+    Ok(env)
 }
 
 /// Runs the `evm.transact_commit()` in a blocking context using `tokio::task::block_in_place`.

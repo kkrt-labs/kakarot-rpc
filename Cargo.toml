@@ -70,6 +70,7 @@ reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.
   "arbitrary",
 ] }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }
+reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }
 reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }
 reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }
 reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v0.2.0-beta.8", default-features = false }

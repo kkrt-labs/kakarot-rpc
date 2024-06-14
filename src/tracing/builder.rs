@@ -4,7 +4,7 @@ use crate::eth_provider::{
 };
 use reth_primitives::{B256, U256};
 use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
-use reth_rpc_types::trace::geth::GethDebugTracingOptions;
+use reth_rpc_types::trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions};
 use reth_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header};
 use revm_inspectors::tracing::TracingInspectorConfig;
 
@@ -22,6 +22,8 @@ pub enum TracingOptions {
     Geth(GethDebugTracingOptions),
     /// Parity tracing options.
     Parity(TracingInspectorConfig),
+    /// Geth debug call tracing options.
+    GethCall(GethDebugTracingCallOptions),
 }
 
 impl Default for TracingOptions {
@@ -39,6 +41,12 @@ impl From<GethDebugTracingOptions> for TracingOptions {
 impl From<TracingInspectorConfig> for TracingOptions {
     fn from(config: TracingInspectorConfig) -> Self {
         Self::Parity(config)
+    }
+}
+
+impl From<GethDebugTracingCallOptions> for TracingOptions {
+    fn from(options: GethDebugTracingCallOptions) -> Self {
+        Self::GethCall(options)
     }
 }
 

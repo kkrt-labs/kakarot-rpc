@@ -7898,6 +7898,7 @@ dependencies = [
  "reth-node-api",
  "reth-primitives",
  "reth-revm",
+ "reth-rpc",
  "reth-rpc-types",
  "reth-rpc-types-compat",
  "revm-inspectors",

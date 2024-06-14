@@ -4,8 +4,8 @@ use std::sync::Arc;
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Block, Bytes, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
-use reth_rpc_types::trace::geth::{GethDebugTracingOptions, GethTrace, TraceResult};
-use reth_rpc_types::{BlockId, BlockNumberOrTag};
+use reth_rpc_types::trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult};
+use reth_rpc_types::{BlockId, BlockNumberOrTag, TransactionRequest};
 
 use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
 use crate::eth_provider::provider::EthereumProvider;
@@ -204,5 +204,23 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .build()?;
 
         Ok(tracer.debug_transaction(transaction_hash)?)
+    }
+
+    /// Runs an `eth_call` within the context of a given block execution and returns the Geth debug trace.
+    #[tracing::instrument(skip(self), err, fields(request = ?request, block_number = ?block_number, opts=?opts))]
+    async fn trace_call(
+        &self,
+        request: TransactionRequest,
+        block_number: Option<BlockId>,
+        opts: Option<GethDebugTracingCallOptions>,
+    ) -> Result<GethTrace> {
+        let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
+            .await?
+            .with_block_id(block_number.unwrap_or_default())
+            .await?
+            .with_tracing_options(opts.unwrap_or_default().into())
+            .build()?;
+
+        Ok(tracer.debug_transaction_request(request)?)
     }
 }
