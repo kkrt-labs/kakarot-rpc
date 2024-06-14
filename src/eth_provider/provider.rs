@@ -560,7 +560,7 @@ where
             from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
 
         // Update or insert the pending transaction in the database
-        if let Some(pending_transaction) = pending_transaction {
+        if pending_transaction.is_some() {
             tracing::info!("Updating transaction {}, retries: {}.", transaction.hash.to_string(), retries);
             self.database
                 .update_one::<StoredPendingTransaction>(
