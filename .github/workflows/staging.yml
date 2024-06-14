@@ -1,8 +1,7 @@
 ---
 name: staging
 
-# on: workflow_dispatch
-on: [pull_request]
+on: workflow_dispatch
 
 jobs:
   stage:
@@ -42,26 +41,25 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-      # - name: Set up submodules
-      #   run: |
-      #     cd lib/kakarot
-      #     make setup && make build-sol && make build
-      # - name: Run staging script
-      #   env:
-      #     PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
-      #     KAKAROT_STAGING_ACCOUNT_ADDRESS: "0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
-      #     KAKAROT_STAGING_PRIVATE_KEY: ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
-      #     EVM_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-      #     STARKNET_NETWORK: kakarot-staging
-      #     KAKAROT_STAGING_RPC_URL: https://juno-kakarot-testnet-stage.karnot.xyz
-      #     WEB3_HTTP_PROVIDER_URI: https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz
-      #   run: |
-      #     cd scripts
-      #     sh staging.sh
+      - name: Set up submodules
+        run: |
+          cd lib/kakarot
+          make setup && make build-sol && make build
+      - name: Run staging script
+        env:
+          PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
+          KAKAROT_STAGING_ACCOUNT_ADDRESS: "0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
+          KAKAROT_STAGING_PRIVATE_KEY: ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
+          EVM_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+          STARKNET_NETWORK: kakarot-staging
+          KAKAROT_STAGING_RPC_URL: https://juno-kakarot-testnet-stage.karnot.xyz
+          WEB3_HTTP_PROVIDER_URI: https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz
+        run: |
+          cd scripts
+          sh staging.sh
       - name: Check diff in deployments
         run: |
           cd lib/kakarot
-          echo "hello" >> deployments/kakarot-staging/deployments.json
           set +e
           git diff --no-patch --exit-code -- deployments/kakarot-staging/
           has_diff=$?
