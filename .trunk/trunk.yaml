@@ -24,14 +24,14 @@ lint:
     - markdownlint@0.41.0
     - osv-scanner@1.7.4
     - oxipng@9.1.1
-    - prettier@3.3.1
+    - prettier@3.3.2
     - rustfmt@1.65.0
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - taplo@0.8.1
     - terrascan@1.19.1
-    - trivy@0.52.0
-    - trufflehog@3.78.0
+    - trivy@0.52.1
+    - trufflehog@3.78.1
     - yamllint@1.35.1
   ignore:
     - linters: [ALL]
