@@ -88,11 +88,10 @@ export default async function transform({
   // Accumulate the gas used in the block in order to calculate the cumulative gas used.
   // We increment it by the gas used in each transaction in the flatMap iteration.
   let cumulativeGasUsed = 0n;
-  // The cumulative gas used is an array containing the transaction index and the
-  // cumulative gas used up to that transaction. This is used to later
-  // get the cumulative gas used for an out of resources transaction.
-  const cumulativeGasUses: Array<{ index: number; cumulativeGasUsed: bigint }> =
-    [];
+  // An array containing the cumulative gas used up to that transaction, indexed by
+  // transaction index. This is used to later get the cumulative gas used for an out of
+  // resources transaction.
+  const cumulativeGasUsages: Array<bigint> = [];
 
   const blockNumber = padString(toHexString(header.blockNumber), 8);
   const isPendingBlock = padString(header.blockHash, 32) === NULL_BLOCK_HASH;
@@ -175,10 +174,9 @@ export default async function transform({
       });
 
       cumulativeGasUsed += BigInt(ethReceipt.gasUsed);
-      cumulativeGasUses.push({
-        index: Number(ethTx.transactionIndex),
-        cumulativeGasUsed,
-      });
+      // ethTx.transactionIndex can be null (if the block is pending) but
+      // Number(null) is 0 so this won't panic.
+      cumulativeGasUsages[Number(ethTx.transactionIndex)] = cumulativeGasUsed;
 
       // Add all the eth data to the store.
       store.push({ collection: "transactions", data: { tx: ethTx } });
@@ -220,9 +218,7 @@ export default async function transform({
   );
 
   // Sort the cumulative gas uses by descending transaction index.
-  cumulativeGasUses.sort(({ index: aIndex }, { index: bIndex }) => {
-    return bIndex - aIndex;
-  });
+  cumulativeGasUsages.reverse();
 
   (transactions ?? []).forEach(({ transaction, receipt }) => {
     if (isRevertedWithOutOfResources(receipt)) {
@@ -246,13 +242,16 @@ export default async function transform({
 
       // Get the cumulative gas used for the reverted transaction.
       // Example:
-      // const cumulativeGasUses = [{index: 10, gas: 300n}, {index: 6, gas: 200n}, {index: 3, gas: 100n}, {index: 1, gas: 0n}];
+      // const cumulativeGasUsages = [300n, undefined, undefined, 200n, undefined, 100n, undefined, undefined, 10n, undefined];
       // const ethTx = { transactionIndex: 5 };
       // const revertedTransactionCumulativeGasUsed = 100n;
+      const len = cumulativeGasUsages.length;
       const revertedTransactionCumulativeGasUsed =
-        cumulativeGasUses.find(({ index }) => {
-          return Number(ethTx.transactionIndex) >= index;
-        })?.cumulativeGasUsed ?? 0n;
+        cumulativeGasUsages.find((gas, i) => {
+          return (
+            Number(ethTx.transactionIndex) >= len - 1 - i && gas !== undefined
+          );
+        }) ?? 0n;
 
       const ethReceipt = toRevertedOutOfResourcesReceipt({
         transaction: ethTx,
