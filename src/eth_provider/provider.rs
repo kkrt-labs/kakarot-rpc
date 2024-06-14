@@ -553,7 +553,7 @@ where
         let pending_transaction = self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?;
 
         // Number of retries for the transaction (0 if it's a new transaction)
-        let retries = pending_transaction.as_ref().map(|tx| tx.retries).unwrap_or_default();
+        let retries = pending_transaction.as_ref().map(|tx| tx.retries + 1).unwrap_or_default();
 
         // Serialize transaction document
         let transaction =
@@ -585,7 +585,7 @@ where
 
         // Convert the transaction to a Starknet transaction
         let starknet_transaction =
-            to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee, retries + 1)?;
+            to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee, retries)?;
 
         // Deploy EVM transaction signer if Hive feature is enabled
         #[cfg(feature = "hive")]

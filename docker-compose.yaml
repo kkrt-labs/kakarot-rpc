@@ -64,10 +64,7 @@ services:
         condition: service_completed_successfully
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
-    # Always pull the latest image, until we use release tags
-    # TODO: use release tags
-    pull_policy: always
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.18
     ports:
       - 3030:3030
     environment:
@@ -99,6 +96,7 @@ services:
       - --rpc=http://starknet:5050
       - --wait-for-rpc
       - --data=/data
+      - --head-refresh-interval-ms=500
     ports:
       - 7171:7171
     volumes:
