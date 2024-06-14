@@ -561,14 +561,10 @@ where
 
         // Update or insert the pending transaction in the database
         if let Some(pending_transaction) = pending_transaction {
-            tracing::info!(
-                "Updating transaction {}, retries: {}.",
-                transaction.hash.to_string(),
-                pending_transaction.retries + 1
-            );
+            tracing::info!("Updating transaction {}, retries: {}.", transaction.hash.to_string(), retries);
             self.database
                 .update_one::<StoredPendingTransaction>(
-                    StoredPendingTransaction::new(transaction, pending_transaction.retries + 1),
+                    StoredPendingTransaction::new(transaction, retries),
                     filter,
                     true,
                 )
