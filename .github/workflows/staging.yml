@@ -7,11 +7,13 @@ on: [pull_request]
 jobs:
   stage:
     runs-on: ubuntu-latest
+    permissions: write-all
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          token: ${{ secrets.GH_TOKEN }}
       - name: install foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
