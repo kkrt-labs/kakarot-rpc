@@ -63,7 +63,7 @@ services:
       - starknet_explorer_staging:/var/lib/postgresql/data/
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.19-alpha1
     pull_policy: always
     ports:
       - 3030:3030
@@ -102,6 +102,7 @@ services:
       - --rpc=http://starknet:6060
       - --wait-for-rpc
       - --data=/data
+      - --head-refresh-interval-ms=1000
 
   ### MongoDB with Mongo Express
   mongo:

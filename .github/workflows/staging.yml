@@ -44,7 +44,7 @@ jobs:
       - name: Set up submodules
         run: |
           cd lib/kakarot
-          make setup && make build-sol && make build
+          make setup && make build-sol && make build && make build-cairo1
       - name: Run staging script
         env:
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
