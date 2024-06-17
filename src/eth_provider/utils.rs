@@ -23,7 +23,7 @@ pub(crate) fn to_logs_filter(topics: &[Topic; 4]) -> Document {
     for (index, topic_set) in topics.iter().enumerate() {
         let key = format!("log.topics.{index}");
         let topics: Vec<_> =
-            topic_set.clone().into_iter().map(|t| format_hex(&t, LOGS_TOPICS_HEX_STRING_LEN)).collect();
+            topic_set.clone().into_iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect();
 
         if topics.len() == 1 {
             // If the topic array has only one element, use an equality filter
