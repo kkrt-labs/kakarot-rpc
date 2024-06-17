@@ -1,7 +1,9 @@
 // Starknet
 import { Event, Transaction, TransactionReceipt } from "../deps.ts";
 
-const KAKAROT_ADDRESS = Deno.env.get("KAKAROT_ADDRESS");
+// Constants
+import { KAKAROT_ADDRESS } from "../constants.ts";
+
 if (KAKAROT_ADDRESS === undefined) {
   throw new Error("ENV: KAKAROT_ADDRESS is not set");
 }
@@ -28,7 +30,7 @@ export const isKakarotTransaction = (transaction: Transaction) => {
     return false;
   }
 
-  if (BigInt(to) !== BigInt(KAKAROT_ADDRESS)) {
+  if (BigInt(to) !== BigInt(Number(KAKAROT_ADDRESS))) {
     console.log("✅ Skipping transaction that is not related to Kakarot");
     return false;
   }

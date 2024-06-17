@@ -1,10 +1,20 @@
 // Utils
-import { NULL_BLOCK_HASH, padString, toHexString } from "./utils/hex.ts";
+import { padString, toHexString } from "./utils/hex.ts";
 import {
   ethValidationFailed,
   isKakarotTransaction,
   isRevertedWithOutOfResources,
 } from "./utils/filter.ts";
+
+// Constants
+import { 
+  AUTH_TOKEN, 
+  STREAM_URL, 
+  STARTING_BLOCK, 
+  SINK_TYPE, 
+  NULL_BLOCK_HASH, 
+  TRANSACTION_EXECUTED 
+} from "./constants.ts";
 
 // Types
 import {
@@ -25,7 +35,6 @@ import {
   BlockHeader,
   Config,
   EventWithTransaction,
-  hash,
   hexToBytes,
   NetworkOptions,
   SinkOptions,
@@ -34,15 +43,10 @@ import {
 // Eth
 import { Bloom, Trie } from "./deps.ts";
 
-const AUTH_TOKEN = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
-const TRANSACTION_EXECUTED = hash.getSelectorFromName("transaction_executed");
-
-const STREAM_URL = Deno.env.get("STREAM_URL") ?? "http://localhost:7171";
-const STARTING_BLOCK = Number(Deno.env.get("STARTING_BLOCK")) ?? 0;
 if (!Number.isSafeInteger(STARTING_BLOCK) || STARTING_BLOCK < 0) {
   throw new Error("Invalid STARTING_BLOCK");
 }
-const SINK_TYPE = Deno.env.get("SINK_TYPE") ?? "console";
+
 if (SINK_TYPE !== "console" && SINK_TYPE !== "mongo") {
   throw new Error("Invalid SINK_TYPE");
 }

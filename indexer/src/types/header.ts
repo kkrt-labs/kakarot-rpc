@@ -1,6 +1,9 @@
 // Utils
 import { padString } from "../utils/hex.ts";
 
+// Constants
+import { DEFAULT_BLOCK_GAS_LIMIT } from "../constants.ts";
+
 // Starknet
 import { BlockHeader } from "../deps.ts";
 
@@ -15,7 +18,7 @@ import {
 import { KAKAROT } from "../provider.ts";
 
 // A default block gas limit in case the call to get_block_gas_limit fails.
-const DEFAULT_BLOCK_GAS_LIMIT = Deno.env.get("DEFAULT_BLOCK_GAS_LIMIT");
+
 if (DEFAULT_BLOCK_GAS_LIMIT === undefined) {
   throw new Error("ENV: DEFAULT_BLOCK_GAS_LIMIT is not set");
 }

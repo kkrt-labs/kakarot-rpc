@@ -1,5 +1,8 @@
 // Utils
-import { NULL_BLOCK_HASH, padBytes } from "../utils/hex.ts";
+import { padBytes } from "../utils/hex.ts";
+
+// Constants
+import { NULL_BLOCK_HASH } from "../constants.ts";
 
 // Types
 import { fromJsonRpcLog, JsonRpcLog } from "./log.ts";
