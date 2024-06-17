@@ -4,7 +4,7 @@ use super::constant::LOGS_TOPICS_HEX_STRING_LEN;
 use cainome::cairo_serde::Error;
 use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
-use reth_rpc_types::{Topic, ValueOrArray};
+use reth_rpc_types::Topic;
 use starknet::{
     core::types::{ContractErrorData, StarknetError},
     providers::ProviderError,
@@ -21,21 +21,16 @@ pub(crate) fn to_logs_filter(topics: &[Topic; 4]) -> Document {
 
     // Iterate over the topics and add the filter to the filter vector
     for (index, topic_set) in topics.iter().enumerate() {
-        // If the topic is None, skip it.
-        if let Some(t) = topic_set.to_value_or_array() {
-            let key = format!("log.topics.{index}");
-            let topics = match t {
-                ValueOrArray::Value(t) => vec![t],
-                ValueOrArray::Array(t) => t,
-            };
-            let topics = topics.iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>();
-            if topics.len() == 1 {
-                // If the topic array has only one element, use an equality filter
-                filter.push(doc! {key: topics[0].clone()});
-            } else {
-                // If the topic array has more than one element, use an $in filter
-                filter.push(doc! {key: {"$in": topics}});
-            }
+        let key = format!("log.topics.{index}");
+        let topics: Vec<_> =
+            topic_set.clone().into_iter().map(|t| format_hex(&t, LOGS_TOPICS_HEX_STRING_LEN)).collect();
+
+        if topics.len() == 1 {
+            // If the topic array has only one element, use an equality filter
+            filter.push(doc! {key: topics[0].clone()});
+        } else if !topics.is_empty() {
+            // If the topic array has more than one element, use an $in filter
+            filter.push(doc! {key: {"$in": topics}});
         }
     }
 
