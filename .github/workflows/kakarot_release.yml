@@ -152,7 +152,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ${{ env.INDEXER_IMAGE }}:${{ github.ref_name }}, ${{ env.INDEXER_IMAGE }}:latest
+          # tags: ${{ env.INDEXER_IMAGE }}:${{ github.ref_name }}, ${{ env.INDEXER_IMAGE }}:latest
           file: ./docker/indexer/Dockerfile
           outputs: type=image,name=${{ env.INDEXER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           build-args: |
