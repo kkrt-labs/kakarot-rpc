@@ -283,12 +283,91 @@ async fn test_get_logs_block_range(#[future] katana: Katana, _setup: ()) {
     assert!(!logs.is_empty());
 }
 
+/// Utility function to filter logs using the Ethereum provider.
+/// Takes a filter and a provider, and returns the corresponding logs.
 async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider>) -> Vec<Log> {
+    // Call the provider to get logs using the filter.
     let logs = provider.get_logs(filter).await.expect("Failed to get logs");
+    // If the result contains logs, return them, otherwise panic with an error.
     match logs {
         FilterChanges::Logs(logs) => logs,
         _ => panic!("Expected logs"),
     }
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_block_filter(#[future] katana: Katana, _setup: ()) {
+    // Get the Ethereum provider from Katana.
+    let provider = katana.eth_provider();
+
+    // Get the first transaction from Katana.
+    let first_transaction = katana.first_transaction().unwrap();
+    let block_number = first_transaction.block_number.unwrap();
+    let block_hash = first_transaction.block_hash.unwrap();
+
+    // Get logs by block number from Katana.
+    let logs_katana_block_number = katana.logs_by_block_number(block_number);
+    // Get logs for a range of blocks from Katana.
+    let logs_katana_block_range = katana.logs_by_block_range(0..u64::MAX / 2);
+    // Get logs by block hash from Katana.
+    let logs_katana_block_hash = katana.logs_by_block_hash(block_hash);
+    // Get all logs from Katana.
+    let all_logs_katana = katana.all_logs();
+
+    // Verify logs filtered by block number.
+    assert_eq!(filter_logs(Filter::default().select(block_number), provider.clone()).await, logs_katana_block_number);
+    // Verify logs filtered by block hash.
+    assert_eq!(filter_logs(Filter::default().select(block_hash), provider.clone()).await, logs_katana_block_hash);
+    // Verify all logs.
+    assert_eq!(filter_logs(Filter::default().select(0..), provider.clone()).await, all_logs_katana);
+    // Verify logs filtered by a range of blocks.
+    assert_eq!(filter_logs(Filter::default().select(0..u64::MAX / 2), provider.clone()).await, logs_katana_block_range);
+    // Verify that filtering by an empty range returns an empty result.
+    assert!(filter_logs(Filter::default().select(0..0), provider.clone()).await.is_empty());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_address_filter(#[future] katana: Katana, _setup: ()) {
+    // Get the Ethereum provider from Katana.
+    let provider = katana.eth_provider();
+
+    // Get all logs from Katana.
+    let all_logs_katana = katana.all_logs();
+
+    // Get the first log address, or default address if logs are empty.
+    let first_address = if all_logs_katana.is_empty() { Address::default() } else { all_logs_katana[0].address() };
+    // Verify logs filtered by the first address.
+    assert_eq!(
+        filter_logs(Filter::new().address(vec![first_address]), provider.clone()).await,
+        katana.logs_by_address(&[first_address])
+    );
+
+    // Create a vector to store a few addresses.
+    let mut some_addresses = Vec::new();
+    // Add two addresses from the retrieved logs.
+    for log in &all_logs_katana {
+        if some_addresses.len() < 2 {
+            some_addresses.push(log.address());
+        }
+    }
+    // Verify logs filtered by these few addresses.
+    assert_eq!(
+        filter_logs(Filter::new().address(some_addresses.clone()), provider.clone()).await,
+        katana.logs_by_address(&some_addresses)
+    );
+
+    // Create a vector to store all addresses.
+    let mut all_addresses = Vec::new();
+    // Add all addresses from the retrieved logs.
+    for log in &all_logs_katana {
+        all_addresses.push(log.address());
+    }
+    // Verify that all logs are retrieved when filtered by all addresses.
+    assert_eq!(filter_logs(Filter::new().address(all_addresses), provider.clone()).await, all_logs_katana);
 }
 
 #[rstest]

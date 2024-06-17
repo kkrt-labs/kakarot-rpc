@@ -310,6 +310,7 @@ impl MongoFuzzer {
         let mut modified_logs = (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone();
         for log in &mut modified_logs.receipt.logs {
             log.block_number = Some(transaction.block_number.unwrap_or_default());
+            log.block_hash = transaction.block_hash;
         }
 
         receipt.receipt.transaction_hash = transaction.hash;
