@@ -122,15 +122,14 @@ jobs:
 
   build-push-indexer-docker:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       matrix:
-        fail-fast: false
         include:
           - platform: linux/amd64
             apibara_download_url: https://github.com/apibara/dna/releases/download/sink-mongo%2Fv0.7.0/sink-mongo-x86_64-linux.gz
           - platform: linux/arm64
             apibara_download_url: https://github.com/apibara/dna/releases/download/sink-mongo%2Fv0.7.0/sink-mongo-aarch64-linux.gz
-    timeout-minutes: 30
     steps:
       - name: Prepare
         run: |
