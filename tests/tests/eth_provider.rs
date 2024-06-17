@@ -20,7 +20,6 @@ use reth_primitives::{
 };
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::serde_helpers::JsonStorageKey;
-use reth_rpc_types::Header;
 use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest};
 use rstest::*;
 use starknet::core::types::BlockTag;
