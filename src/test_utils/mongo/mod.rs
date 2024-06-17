@@ -240,6 +240,10 @@ impl MongoFuzzer {
                 B256::arbitrary(&mut unstructured)?,
                 B256::arbitrary(&mut unstructured)?,
             ]);
+
+            // Ensure the block number in log <= max block number in the transactions collection.
+            log.block_number = Some(log.block_number.unwrap_or_default().min(self.max_block_number()));
+
             let stored_log = StoredLog { log };
 
             self.documents.entry(CollectionDB::Logs).or_default().push(StoredData::StoredLog(stored_log));
@@ -254,6 +258,17 @@ impl MongoFuzzer {
             .unwrap()
             .iter()
             .map(|log| log.extract_stored_log().unwrap().log.block_number.unwrap_or_default())
+            .max()
+            .unwrap_or_default()
+    }
+
+    /// Gets the highest block number in the transactions collection.
+    pub fn max_block_number(&self) -> u64 {
+        self.documents
+            .get(&CollectionDB::Headers)
+            .unwrap()
+            .iter()
+            .map(|header| header.extract_stored_header().unwrap().header.number.unwrap_or_default())
             .max()
             .unwrap_or_default()
     }
@@ -291,6 +306,12 @@ impl MongoFuzzer {
         let mut unstructured = arbitrary::Unstructured::new(&bytes);
         let mut receipt = StoredTransactionReceipt::arbitrary(&mut unstructured).unwrap();
 
+        // Ensure the block number in receipt is equal to the block number in transaction.
+        let mut modified_logs = (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone();
+        for log in &mut modified_logs.receipt.logs {
+            log.block_number = Some(transaction.block_number.unwrap_or_default());
+        }
+
         receipt.receipt.transaction_hash = transaction.hash;
         receipt.receipt.transaction_index = Some(transaction.transaction_index.unwrap_or_default());
         receipt.receipt.from = transaction.from;
@@ -298,18 +319,10 @@ impl MongoFuzzer {
         receipt.receipt.block_number = transaction.block_number;
         receipt.receipt.block_hash = transaction.block_hash;
         receipt.receipt.inner = match transaction.transaction_type.unwrap_or_default().try_into() {
-            Ok(TxType::Legacy) => reth_rpc_types::ReceiptEnvelope::Legacy(
-                (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone(),
-            ),
-            Ok(TxType::Eip2930) => reth_rpc_types::ReceiptEnvelope::Eip2930(
-                (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone(),
-            ),
-            Ok(TxType::Eip1559) => reth_rpc_types::ReceiptEnvelope::Eip1559(
-                (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone(),
-            ),
-            Ok(TxType::Eip4844) => reth_rpc_types::ReceiptEnvelope::Eip4844(
-                (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone(),
-            ),
+            Ok(TxType::Legacy) => reth_rpc_types::ReceiptEnvelope::Legacy(modified_logs),
+            Ok(TxType::Eip2930) => reth_rpc_types::ReceiptEnvelope::Eip2930(modified_logs),
+            Ok(TxType::Eip1559) => reth_rpc_types::ReceiptEnvelope::Eip1559(modified_logs),
+            Ok(TxType::Eip4844) => reth_rpc_types::ReceiptEnvelope::Eip4844(modified_logs),
             Err(_) => unreachable!(),
         };
         receipt
