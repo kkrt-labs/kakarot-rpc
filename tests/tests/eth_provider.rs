@@ -304,21 +304,6 @@ async fn test_get_logs_topics(#[future] katana: Katana, _setup: ()) {
     let topic_three = logs[0].topics()[2];
     let topic_four = logs[1].topics()[2];
 
-    // Calculate the max block number of the logs
-    let max_block_number_logs = logs[0].block_number.unwrap().max(logs[1].block_number.unwrap());
-
-    // Add a block with a higher block number than the max block number of the logs in order for both the logs to be included in the filter range
-    katana
-        .add_transactions_with_header_to_database(
-            vec![],
-            Header {
-                number: Some(max_block_number_logs + 1),
-                hash: Some(B256::from(U256::from(0x1234))),
-                ..Default::default()
-            },
-        )
-        .await;
-
     // Filter on the first topic
     let filter = Filter {
         topics: [topic_one.into(), Topic::default(), Topic::default(), Topic::default()],
@@ -351,21 +336,6 @@ async fn test_get_logs_address(#[future] katana: Katana, _setup: ()) {
     let address_one = logs[0].address();
     let address_two = logs[1].address();
 
-    // Calculate the max block number of the logs
-    let max_block_number_logs = logs[0].block_number.unwrap().max(logs[1].block_number.unwrap());
-
-    // Add a block with a higher block number than the max block number of the logs in order for both the logs to be included in the filter range
-    katana
-        .add_transactions_with_header_to_database(
-            vec![],
-            Header {
-                number: Some(max_block_number_logs + 1),
-                hash: Some(B256::from(U256::from(0x1234))),
-                ..Default::default()
-            },
-        )
-        .await;
-
     // Filter on the first address
     let filter = Filter { address: address_one.into(), ..Default::default() };
     assert_eq!(filter_logs(filter, provider.clone()).await.len(), 1);
@@ -387,18 +357,6 @@ async fn test_get_logs_block_hash(#[future] katana: Katana, _setup: ()) {
     let provider = katana.eth_provider();
     let logs = katana.logs_with_min_topics(0);
     let block_hash = logs[0].block_hash.unwrap();
-
-    // Add a block with a higher block number than the block number of the log in order for the log to be included in the filter range
-    katana
-        .add_transactions_with_header_to_database(
-            vec![],
-            Header {
-                number: Some(logs[0].block_number.unwrap() + 1),
-                hash: Some(B256::from(U256::from(0x1234))),
-                ..Default::default()
-            },
-        )
-        .await;
 
     // Filter on block hash
     let filter = Filter { block_option: FilterBlockOption::AtBlockHash(block_hash), ..Default::default() };

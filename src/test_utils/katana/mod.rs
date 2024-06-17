@@ -130,6 +130,14 @@ impl<'a> Katana {
         // Add a hardcoded logs to the MongoDB database.
         mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
 
+        // Get the maximum block number in the logs.
+        let max_block_number_logs = mongo_fuzzer.max_block_number_in_logs() as usize;
+        // Add a block with a number greater than the maximum block number in the logs.
+        // To be able to get logs properly.
+        mongo_fuzzer
+            .add_hardcoded_block_header_range(max_block_number_logs + 1..max_block_number_logs + 2)
+            .expect("Failed to add block range in the database");
+
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
         // Clone the mock data stored in the MongoFuzzer instance.

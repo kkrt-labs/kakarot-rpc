@@ -247,6 +247,17 @@ impl MongoFuzzer {
         Ok(())
     }
 
+    /// Gets the highest block number in the logs collection.
+    pub fn max_block_number_in_logs(&self) -> u64 {
+        self.documents
+            .get(&CollectionDB::Logs)
+            .unwrap()
+            .iter()
+            .map(|log| log.extract_stored_log().unwrap().log.block_number.unwrap_or_default())
+            .max()
+            .unwrap_or_default()
+    }
+
     /// Adds a hardcoded transaction to the collection of transactions.
     pub fn add_random_transaction(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let builder = TransactionBuilder::default();
