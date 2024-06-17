@@ -1,9 +1,9 @@
 ---
 name: release
 
-on: [pull_request]
-  # release:
-  #   types: [published]
+on:
+  release:
+    types: [published]
 
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
@@ -11,114 +11,114 @@ env:
   INDEXER_IMAGE: ghcr.io/${{ github.repository }}/indexer
 
 jobs:
-  # prepare:
-  #   runs-on: ubuntu-latest-16-cores
-  #   timeout-minutes: 30
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     # Install Foundry
-  #     - name: install foundry
-  #       uses: foundry-rs/foundry-toolchain@v1
-  #       with:
-  #         version: nightly
-  #     # Install Python
-  #     - name: Set up Python 3.10
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: 3.10.14
-  #     - name: Load cached Poetry installation
-  #       id: cached-poetry
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: ~/.local
-  #         key: poetry-${{ runner.os }}
-  #     - name: Install Poetry
-  #       if: steps.cached-poetry.outputs.cache-hit != 'true'
-  #       uses: snok/install-poetry@v1
-  #       with:
-  #         virtualenvs-create: true
-  #         virtualenvs-in-project: true
-  #         installer-parallel: true
-  #     - name: Load cached venv
-  #       id: cached-poetry-dependencies
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: .venv
-  #         key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-  #     - name: Setup the Kakarot submodule
-  #       run: make setup
-  #     - name: Upload artifacts
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: artifacts
-  #         path: ./.kakarot
+  prepare:
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      # Install Foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      # Install Python
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.10.14
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+      - name: Install Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Setup the Kakarot submodule
+        run: make setup
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: ./.kakarot
 
-  # # Inspired by Reth CI.
-  # # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
-  # build:
-  #   runs-on: ubuntu-latest-16-cores
-  #   needs: prepare
-  #   strategy:
-  #     matrix:
-  #       include:
-  #         - platform: amd64
-  #           target: x86_64-unknown-linux-gnu
-  #         - platform: arm64
-  #           target: aarch64-unknown-linux-gnu
-  #   timeout-minutes: 60
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Download artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: artifacts
-  #         path: ./.kakarot
-  #     - uses: dtolnay/rust-toolchain@stable
-  #     - uses: Swatinem/rust-cache@v2
-  #       with:
-  #         cache-on-failure: true
-  #     - uses: taiki-e/install-action@cross
-  #     - name: Build
-  #       run: |
-  #         RUSTFLAGS="-C link-arg=-lgcc -Clink-arg=-static-libgcc" \
-  #           cross build --bin kakarot-rpc --release --target ${{ matrix.target }}
-  #         mkdir -p ./bin/${{ matrix.platform }}
-  #         mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.platform }}/kakarot-rpc
-  #     - name: Upload artifacts
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: build-${{ matrix.platform }}
-  #         path: ./bin/${{ matrix.platform }}/kakarot-rpc
+  # Inspired by Reth CI.
+  # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
+  build:
+    runs-on: ubuntu-latest-16-cores
+    needs: prepare
+    strategy:
+      matrix:
+        include:
+          - platform: amd64
+            target: x86_64-unknown-linux-gnu
+          - platform: arm64
+            target: aarch64-unknown-linux-gnu
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts
+          path: ./.kakarot
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+      - uses: taiki-e/install-action@cross
+      - name: Build
+        run: |
+          RUSTFLAGS="-C link-arg=-lgcc -Clink-arg=-static-libgcc" \
+            cross build --bin kakarot-rpc --release --target ${{ matrix.target }}
+          mkdir -p ./bin/${{ matrix.platform }}
+          mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.platform }}/kakarot-rpc
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.platform }}
+          path: ./bin/${{ matrix.platform }}/kakarot-rpc
 
-  # build-push-docker:
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   timeout-minutes: 30
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/download-artifact@v4
-  #       with:
-  #         name: build-amd64
-  #         path: ./bin/amd64/kakarot-rpc
-  #     - uses: actions/download-artifact@v4
-  #       with:
-  #         name: build-arm64
-  #         path: ./bin/arm64/kakarot-rpc
-  #     - name: Log in to Docker
-  #       run: |
-  #         echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io --username ${DOCKER_USERNAME} --password-stdin
-  #     - name: Set up Docker builder
-  #       run: |
-  #         docker run --privileged --rm tonistiigi/binfmt --install amd64,arm64
-  #         docker buildx create --use --name cross-builder
-  #     - name: Build and push image, tag as "latest"
-  #       run: |
-  #         docker buildx build \
-  #           --file ./docker/rpc/Dockerfile.cross . \
-  #           --platform linux/amd64,linux/arm64 \
-  #           --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} \
-  #           --tag ${{ env.REGISTRY_IMAGE }}:latest \
-  #           --push
+  build-push-docker:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-amd64
+          path: ./bin/amd64/kakarot-rpc
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-arm64
+          path: ./bin/arm64/kakarot-rpc
+      - name: Log in to Docker
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io --username ${DOCKER_USERNAME} --password-stdin
+      - name: Set up Docker builder
+        run: |
+          docker run --privileged --rm tonistiigi/binfmt --install amd64,arm64
+          docker buildx create --use --name cross-builder
+      - name: Build and push image, tag as "latest"
+        run: |
+          docker buildx build \
+            --file ./docker/rpc/Dockerfile.cross . \
+            --platform linux/amd64,linux/arm64 \
+            --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} \
+            --tag ${{ env.REGISTRY_IMAGE }}:latest \
+            --push
 
   build-push-indexer-docker:
     runs-on: ubuntu-latest
@@ -157,7 +157,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          # tags: ${{ env.INDEXER_IMAGE }}:${{ github.ref_name }}, ${{ env.INDEXER_IMAGE }}:latest
+          tags: ${{ env.INDEXER_IMAGE }}:${{ github.ref_name }}, ${{ env.INDEXER_IMAGE }}:latest
           file: ./docker/indexer/Dockerfile
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.INDEXER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
