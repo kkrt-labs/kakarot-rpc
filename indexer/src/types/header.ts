@@ -17,12 +17,6 @@ import {
 } from "../deps.ts";
 import { KAKAROT } from "../provider.ts";
 
-// A default block gas limit in case the call to get_block_gas_limit fails.
-
-if (DEFAULT_BLOCK_GAS_LIMIT === undefined) {
-  throw new Error("ENV: DEFAULT_BLOCK_GAS_LIMIT is not set");
-}
-
 /**
  * @param header - A Starknet block header.
  * @param blockNumber - The block number of the transaction in hex.

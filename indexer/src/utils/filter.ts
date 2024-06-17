@@ -4,10 +4,6 @@ import { Event, Transaction, TransactionReceipt } from "../deps.ts";
 // Constants
 import { KAKAROT_ADDRESS } from "../constants.ts";
 
-if (KAKAROT_ADDRESS === undefined) {
-  throw new Error("ENV: KAKAROT_ADDRESS is not set");
-}
-
 export const isKakarotTransaction = (transaction: Transaction) => {
   // Filter out transactions that are not related to Kakarot.
   // callArrayLen <- calldata[0]
@@ -30,7 +26,7 @@ export const isKakarotTransaction = (transaction: Transaction) => {
     return false;
   }
 
-  if (BigInt(to) !== BigInt(Number(KAKAROT_ADDRESS))) {
+  if (BigInt(to) !== BigInt(KAKAROT_ADDRESS)) {
     console.log("✅ Skipping transaction that is not related to Kakarot");
     return false;
   }

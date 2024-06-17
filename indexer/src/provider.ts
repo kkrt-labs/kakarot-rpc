@@ -1,15 +1,6 @@
 import { Contract, RpcProvider } from "./deps.ts";
 import { KAKAROT_ADDRESS, RPC_URL } from "./constants.ts";
 
-
-if (RPC_URL === undefined) {
-  throw new Error("ENV: STARKNET_NETWORK is not set");
-}
-
-if (KAKAROT_ADDRESS === undefined) {
-  throw new Error("ENV: KAKAROT_ADDRESS is not set");
-}
-
 export const PROVIDER = new RpcProvider({
   nodeUrl: RPC_URL,
 });
