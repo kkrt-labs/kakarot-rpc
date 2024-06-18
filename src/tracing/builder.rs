@@ -58,8 +58,7 @@ pub const TRACING_BLOCK_GAS_LIMIT: u64 = 1_000_000_000;
 
 impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
     pub async fn new(eth_provider: P) -> TracerResult<Self> {
-        let mut cfg = CfgEnv::default();
-        cfg.chain_id = eth_provider.chain_id().await?.unwrap_or_default().to();
+        let cfg = CfgEnv::default().with_chain_id(eth_provider.chain_id().await?.unwrap_or_default().to());
 
         let env = Env { cfg, ..Default::default() };
 
