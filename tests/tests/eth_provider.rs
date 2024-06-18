@@ -3,7 +3,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use kakarot_rpc::eth_provider::constant::{HASH_HEX_STRING_LEN, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
+use kakarot_rpc::eth_provider::constant::{HASH_HEX_STRING_LEN, LIMIT_LOGS, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
 use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::eth_provider::utils::into_filter;
@@ -289,6 +289,30 @@ async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider>) -> Vec
         FilterChanges::Logs(logs) => logs,
         _ => panic!("Expected logs"),
     }
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_limit(#[future] katana: Katana, _setup: ()) {
+    // Get the Ethereum provider from Katana.
+    let provider = katana.eth_provider();
+
+    // Add mock logs to the Katana instance's database.
+    // The number of logs added is LIMIT_LOGS + 20, ensuring there are more logs than the limit.
+    katana.add_mock_logs(((*LIMIT_LOGS).unwrap() + 20) as usize).await;
+
+    // Create a filter for querying logs.
+    // The filter specifies topics and a block option.
+    let filter = Filter {
+        topics: [B256::with_last_byte(0x69).into(), Topic::default(), Topic::default(), Topic::default()],
+        block_option: FilterBlockOption::AtBlockHash(B256::with_last_byte(0x69)),
+        ..Default::default()
+    };
+
+    // Assert that the number of logs returned by filter_logs is equal to the limit.
+    // This ensures that the log retrieval respects the LIMIT_LOGS constraint.
+    assert_eq!(filter_logs(filter, provider.clone()).await.len(), (*LIMIT_LOGS).unwrap() as usize);
 }
 
 #[rstest]
