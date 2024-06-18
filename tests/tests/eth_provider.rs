@@ -298,21 +298,16 @@ async fn test_get_logs_limit(#[future] katana: Katana, _setup: ()) {
     // Get the Ethereum provider from Katana.
     let provider = katana.eth_provider();
 
+    // Set the limit of logs to be retrieved.
+    std::env::set_var("LIMIT_LOGS", "500");
+
     // Add mock logs to the Katana instance's database.
     // The number of logs added is LIMIT_LOGS + 20, ensuring there are more logs than the limit.
     katana.add_mock_logs(((*LIMIT_LOGS).unwrap() + 20) as usize).await;
 
-    // Create a filter for querying logs.
-    // The filter specifies topics and a block option.
-    let filter = Filter {
-        topics: [B256::with_last_byte(0x69).into(), Topic::default(), Topic::default(), Topic::default()],
-        block_option: FilterBlockOption::AtBlockHash(B256::with_last_byte(0x69)),
-        ..Default::default()
-    };
-
     // Assert that the number of logs returned by filter_logs is equal to the limit.
     // This ensures that the log retrieval respects the LIMIT_LOGS constraint.
-    assert_eq!(filter_logs(filter, provider.clone()).await.len(), (*LIMIT_LOGS).unwrap() as usize);
+    assert_eq!(filter_logs(Filter::default(), provider.clone()).await.len(), (*LIMIT_LOGS).unwrap() as usize);
 }
 
 #[rstest]
