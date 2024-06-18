@@ -326,7 +326,6 @@ async fn test_get_logs_topics(#[future] katana: Katana, _setup: ()) {
 }
 
 #[rstest]
-#[ignore = "fails randomly on CI: issue #1097"]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_get_logs_address(#[future] katana: Katana, _setup: ()) {

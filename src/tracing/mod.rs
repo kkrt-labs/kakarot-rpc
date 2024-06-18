@@ -184,8 +184,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         let res = transact_in_place(evm)?;
 
         // Create transaction info
-        let mut transaction_info = TransactionInfo::from(tx);
-        transaction_info.base_fee = Some(block_base_fee);
+        let transaction_info = TransactionInfo::from(tx).with_base_fee(block_base_fee);
 
         // Return Parity trace result
         Ok((
