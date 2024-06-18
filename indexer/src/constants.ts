@@ -15,11 +15,11 @@ export const AUTH_TOKEN = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
 export const STREAM_URL = Deno.env.get("STREAM_URL") ?? "http://localhost:7171";
 
 // Get the starting block or returns 0 if the value is null or undefined
-export const STARTING_BLOCK = (() => {
+export const STARTING_BLOCK = setTimeout(() => {
     const addr = Number(Deno.env.get("STARTING_BLOCK")) ?? 0;
     if (!Number.isSafeInteger(addr) || addr < 0) throw new Error("Invalid STARTING_BLOCK");
     return addr;
-})();
+}, 50);
 
 // Creates string that starts with "0x" and is padded to a total lenght of 64 chars
 export const NULL_BLOCK_HASH = padString("0x", 32);
@@ -35,15 +35,15 @@ export const KAKAROT_ADDRESS: string = (() => {
 })();
 
 // Get the URL of the Starknet Network
-export const RPC_URL = (() => {
+export const RPC_URL = setTimeout(() => {
     const addr = Deno.env.get("STARKNET_NETWORK");
     if (!addr) throw new Error("ENV: STARKNET_NETWORK is not set");
     return addr;
-})();
+}, 50);
 
 // A default block gas limit in case the call to get_block_gas_limit fails.
-export const DEFAULT_BLOCK_GAS_LIMIT = (() => {
+export const DEFAULT_BLOCK_GAS_LIMIT = setTimeout(() => {
     const addr = Deno.env.get("DEFAULT_BLOCK_GAS_LIMIT");
     if (!addr) throw new Error("ENV: DEFAULT_BLOCK_GAS_LIMIT is not set");
     return addr;
-})();
+}, 50);
