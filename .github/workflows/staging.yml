@@ -54,7 +54,7 @@ jobs:
           PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
           KAKAROT_STAGING_ACCOUNT_ADDRESS: "0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
           KAKAROT_STAGING_PRIVATE_KEY: ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
-          EVM_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+          EVM_PRIVATE_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
           STARKNET_NETWORK: kakarot-staging
           KAKAROT_STAGING_RPC_URL: https://juno-kakarot-testnet-stage.karnot.xyz
           WEB3_HTTP_PROVIDER_URI: https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz
