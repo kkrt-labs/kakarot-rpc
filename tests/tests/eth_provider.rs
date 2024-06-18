@@ -347,13 +347,7 @@ async fn test_get_logs_address_filter(#[future] katana: Katana, _setup: ()) {
     );
 
     // Create a vector to store a few addresses.
-    let mut some_addresses = Vec::new();
-    // Add two addresses from the retrieved logs.
-    for log in &all_logs_katana {
-        if some_addresses.len() < 2 {
-            some_addresses.push(log.address());
-        }
-    }
+    let some_addresses: Vec<_> = all_logs_katana.iter().take(2).map(Log::address).collect();
     // Verify logs filtered by these few addresses.
     assert_eq!(
         filter_logs(Filter::new().address(some_addresses.clone()), provider.clone()).await,
@@ -361,11 +355,7 @@ async fn test_get_logs_address_filter(#[future] katana: Katana, _setup: ()) {
     );
 
     // Create a vector to store all addresses.
-    let mut all_addresses = Vec::new();
-    // Add all addresses from the retrieved logs.
-    for log in &all_logs_katana {
-        all_addresses.push(log.address());
-    }
+    let all_addresses: Vec<_> = all_logs_katana.iter().map(Log::address).collect();
     // Verify that all logs are retrieved when filtered by all addresses.
     assert_eq!(filter_logs(Filter::new().address(all_addresses), provider.clone()).await, all_logs_katana);
 }
