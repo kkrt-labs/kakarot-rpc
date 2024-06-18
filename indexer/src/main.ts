@@ -13,7 +13,7 @@ import {
   STARTING_BLOCK, 
   SINK_TYPE, 
   NULL_BLOCK_HASH, 
-  TRANSACTION_EXECUTED 
+  TRANSACTION_EXECUTED,
 } from "./constants.ts";
 
 // Types
@@ -42,14 +42,6 @@ import {
 } from "./deps.ts";
 // Eth
 import { Bloom, Trie } from "./deps.ts";
-
-if (!Number.isSafeInteger(STARTING_BLOCK) || STARTING_BLOCK < 0) {
-  throw new Error("Invalid STARTING_BLOCK");
-}
-
-if (SINK_TYPE !== "console" && SINK_TYPE !== "mongo") {
-  throw new Error("Invalid SINK_TYPE");
-}
 
 const sinkOptions = SINK_TYPE === "mongo"
   ? {
