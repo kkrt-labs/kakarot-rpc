@@ -1,5 +1,5 @@
 // Starknet
-import { Event, Transaction } from "../deps.ts";
+import { Event, Transaction, TransactionReceipt } from "../deps.ts";
 
 const KAKAROT_ADDRESS = Deno.env.get("KAKAROT_ADDRESS");
 if (KAKAROT_ADDRESS === undefined) {
@@ -14,6 +14,7 @@ export const isKakarotTransaction = (transaction: Transaction) => {
   // dataOffset <- calldata[3]
   // dataLength <- calldata[4]
   // calldataLen <- calldata[5]
+  // signedDataLen <- calldata[6]
   const calldata = transaction.invokeV1?.calldata;
   if (!calldata) {
     console.error("No calldata in transaction");
@@ -60,4 +61,11 @@ export const ethValidationFailed = (event: Event) => {
   const msg = String.fromCharCode(...response.map((x) => parseInt(x, 16)));
 
   return msg.includes("eth validation failed");
+};
+
+export const isRevertedWithOutOfResources = (receipt: TransactionReceipt) => {
+  return (
+    receipt.executionStatus.includes("REVERTED") &&
+    receipt.revertReason?.includes("RunResources has no remaining steps")
+  );
 };

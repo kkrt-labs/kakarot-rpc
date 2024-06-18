@@ -1,18 +1,21 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use ethers::abi::{Token, Tokenize};
+use ethers::abi::Tokenize;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::test_utils::eoa::Eoa;
 use kakarot_rpc::test_utils::evm_contract::{
-    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo, TxLegacyInfo,
+    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
 };
-use kakarot_rpc::test_utils::fixtures::{eip_3074_invoker, plain_opcodes, setup};
+use kakarot_rpc::test_utils::fixtures::{plain_opcodes, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
-use reth_primitives::{Address, B256, U256};
+use reth_primitives::{Address, Bytes, B256, U256};
+use reth_rpc_types::other::OtherFields;
 use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
-use reth_rpc_types::trace::parity::LocalizedTransactionTrace;
+use reth_rpc_types::trace::parity::{
+    Action, CallAction, CallOutput, CallType, LocalizedTransactionTrace, TraceOutput, TransactionTrace,
+};
 use rstest::*;
 use serde_json::{json, Value};
 use starknet::core::types::MaybePendingBlockWithTxHashes;
@@ -65,7 +68,7 @@ pub async fn tracing<T: Tokenize>(
             .expect("Failed to prepare call transaction");
         // Sign the transaction and convert it to a RPC transaction.
         let tx_signed = eoa.sign_transaction(tx.clone()).expect("Failed to sign transaction");
-        let tx = reth_rpc_types::Transaction {
+        let mut tx = reth_rpc_types::Transaction {
             transaction_type: Some(2),
             nonce: tx.nonce(),
             hash: tx_signed.hash(),
@@ -88,6 +91,14 @@ pub async fn tracing<T: Tokenize>(
             access_list: Some(Default::default()),
             ..Default::default()
         };
+
+        // Add an out of resources field to the last transaction.
+        if i == TRACING_TRANSACTIONS_COUNT - 1 {
+            let mut out_of_resources = std::collections::BTreeMap::new();
+            out_of_resources.insert(String::from("isRunOutOfResources"), serde_json::Value::Bool(true));
+            tx.other = OtherFields::new(out_of_resources);
+        }
+
         txs.push(tx);
     }
 
@@ -137,9 +148,37 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     let traces: Option<Vec<LocalizedTransactionTrace>> =
         serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
 
+    // Assert that traces is not None, meaning the response contains some traces.
     assert!(traces.is_some());
     // We expect 3 traces per transaction: CALL, CREATE, and CALL.
-    assert!(traces.unwrap().len() == 3 * TRACING_TRANSACTIONS_COUNT);
+    // Except for the last one which is out of resources.
+    assert!(traces.clone().unwrap().len() == 3 * (TRACING_TRANSACTIONS_COUNT - 1) + 1);
+
+    // Get the last trace from the trace vector, which is expected to be out of resources.
+    let trace_vec = traces.unwrap();
+    let out_of_resources_trace = trace_vec.last().unwrap();
+
+    // Assert that the block number of the out-of-resources trace is equal to the expected TRACING_BLOCK_NUMBER.
+    assert_eq!(out_of_resources_trace.clone().block_number, Some(TRACING_BLOCK_NUMBER));
+    // Assert that the trace matches the expected default TransactionTrace.
+    assert_eq!(
+        out_of_resources_trace.trace,
+        TransactionTrace {
+            action: Action::Call(CallAction {
+                from: Address::ZERO,
+                call_type: CallType::Call,
+                gas: Default::default(),
+                input: Bytes::default(),
+                to: Address::ZERO,
+                value: U256::ZERO
+            }),
+            error: None,
+            result: Some(TraceOutput::Call(CallOutput { gas_used: Default::default(), output: Bytes::default() })),
+            subtraces: 0,
+            trace_address: vec![],
+        }
+    );
+
     drop(server_handle);
 }
 
@@ -186,83 +225,6 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
 
     // We expect 1 trace per transaction given the formatting of the debug_traceBlockByNumber response.
     assert!(traces.len() == TRACING_TRANSACTIONS_COUNT);
-    drop(server_handle);
-}
-
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_trace_eip3074(#[future] eip_3074_invoker: (Katana, KakarotEvmContract, KakarotEvmContract), _setup: ()) {
-    // Setup the Kakarot RPC server.
-    let katana = eip_3074_invoker.0;
-    let counter = eip_3074_invoker.1;
-    let invoker = eip_3074_invoker.2;
-
-    let eoa = katana.eoa();
-    let eoa_address = eoa.evm_address().expect("Failed to get eoa address");
-
-    let chain_id = katana.eth_provider().chain_id().await.expect("Failed to get chain id").unwrap_or_default().to();
-    let invoker_address = Address::from_slice(&invoker.evm_address.to_bytes_be()[12..]);
-    let commit = B256::default();
-
-    let get_args = Box::new(move |nonce| {
-        // Taken from https://github.com/paradigmxyz/alphanet/blob/87be409101bab9c8977b0e74edfb25334511a74c/crates/instructions/src/eip3074.rs#L129
-        // Composes the message expected by the AUTH instruction in this format:
-        // `keccak256(MAGIC || chainId || nonce || invokerAddress || commit)`
-        fn compose_msg(chain_id: u64, nonce: u64, invoker_address: Address, commit: B256) -> B256 {
-            let mut msg = [0u8; 129];
-            // MAGIC constant is used for [EIP-3074](https://eips.ethereum.org/EIPS/eip-3074) signatures to prevent signature collisions with other signing formats.
-            msg[0] = 0x4;
-            msg[1..33].copy_from_slice(B256::left_padding_from(&chain_id.to_be_bytes()).as_slice());
-            msg[33..65].copy_from_slice(B256::left_padding_from(&nonce.to_be_bytes()).as_slice());
-            msg[65..97].copy_from_slice(B256::left_padding_from(invoker_address.as_slice()).as_slice());
-            msg[97..].copy_from_slice(commit.as_slice());
-            reth_primitives::keccak256(msg.as_slice())
-        }
-        // We use nonce + 1 because authority == sender.
-        let msg = compose_msg(chain_id, nonce + 1, invoker_address, commit);
-        let signature = eoa.sign_payload(msg).expect("Failed to sign message");
-        let calldata = counter
-            .prepare_call_transaction("inc", (), &TransactionInfo::LegacyInfo(TxLegacyInfo::default()))
-            .expect("Failed to prepare call transaction")
-            .input()
-            .clone();
-
-        (
-            Token::Address(ethers::abi::Address::from_slice(eoa_address.as_slice())),
-            Token::FixedBytes(commit.as_slice().to_vec()),
-            Token::Uint(ethers::abi::Uint::from(u8::from(signature.odd_y_parity) + 27)),
-            Token::FixedBytes(signature.r.to_be_bytes::<32>().to_vec()),
-            Token::FixedBytes(signature.s.to_be_bytes::<32>().to_vec()),
-            Token::Address(ethers::abi::Address::from_slice(&counter.evm_address.to_bytes_be()[12..])),
-            Token::Bytes(calldata.to_vec()),
-        )
-    });
-
-    // Set up the transactions for tracing. We call the sponsorCall entry point which should
-    // auth the invoker as the sender and then call the inc entry point on the counter contract.
-    tracing(&katana, &invoker, "sponsorCall", get_args).await;
-
-    let (server_addr, server_handle) =
-        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
-
-    // Send the trace_block RPC request.
-    let reqwest_client = reqwest::Client::new();
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("trace_block").add_param(format!("0x{TRACING_BLOCK_NUMBER:016x}")).build())
-        .send()
-        .await
-        .expect("Failed to call Debug RPC");
-    let response = res.text().await.expect("Failed to get response body");
-    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let traces: Option<Vec<LocalizedTransactionTrace>> =
-        serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
-
-    assert!(traces.is_some());
-    // We expect 2 traces per transaction: CALL and CALL.
-    assert!(traces.unwrap().len() == 2 * TRACING_TRANSACTIONS_COUNT);
     drop(server_handle);
 }
 
@@ -322,6 +284,18 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
 
     // Compare traces
     assert_eq!(expected_trace, trace);
+
+    // Get the last trace from the trace vector, which is expected to be out of resources.
+    let run_out_of_resource_trace = traces.last().unwrap();
+
+    // Asser that the trace matches the expected default GethTrace for a transaction that runs out of resources.
+    match run_out_of_resource_trace {
+        TraceResult::Success { result, .. } => assert_eq!(
+            *result,
+            GethTrace::Default(reth_rpc_types::trace::geth::DefaultFrame { failed: true, ..Default::default() })
+        ),
+        TraceResult::Error { .. } => panic!("Expected a success trace result"),
+    };
 
     drop(server_handle);
 }

@@ -63,14 +63,14 @@ services:
       - starknet-explorer_prod:/var/lib/postgresql/data/
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.17
     pull_policy: always
     ports:
       - 3030:3030
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
       - STARKNET_NETWORK=http://starknet:6060
-      - RUST_LOG=kakarot_rpc=info
+      - RUST_LOG=info
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
       - MONGO_DATABASE_NAME=kakarot-local
       # These values are unique to Sepolia Testnet
@@ -80,6 +80,7 @@ services:
       - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e
       - ACCOUNT_CONTRACT_CLASS_HASH=0x1276d0b017701646f8646b69de6c3b3584edce71879678a679f28c07a9971cf
       - MAX_FELTS_IN_CALLDATA=30000
+      - TRANSACTION_MAX_RETRIES=10
       - RETRY_TX_INTERVAL=10
       - WHITE_LISTED_EIP_155_TRANSACTION_HASHES=0xeddf9e61fb9d8f5111840daef55e5fde0041f5702856532cdbb5a02998033d26,0xb6274b80bc7cda162df89894c7748a5cb7ba2eaa6004183c41a1837c3b072f1e,0x07471adfe8f4ec553c1199f495be97fc8be8e0626ae307281c22534460184ed1,0xb95343413e459a0f97461812111254163ae53467855c0d73e0f1e7c5b8442fa3
     restart: on-failure
@@ -93,12 +94,13 @@ services:
       - internal_prod
 
   apibara-dna:
-    image: quay.io/apibara/starknet:1.4.1
+    image: quay.io/apibara/starknet:1.5.0
     command:
       - start
       - --rpc=http://starknet:6060
       - --wait-for-rpc
       - --data=/data
+      - --head-refresh-interval-ms=1000
     ports:
       - 7171:7171
     volumes:

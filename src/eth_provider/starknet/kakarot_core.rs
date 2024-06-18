@@ -132,6 +132,19 @@ pub fn to_starknet_transaction(
     let mut signed_data = Vec::with_capacity(transaction.transaction.length());
     transaction.transaction.encode_without_signature(&mut signed_data);
 
+    // Signed data length after RLP encoding (used for calldata length check)
+    let signed_data_len = signed_data.len();
+
+    // Pack the calldata in 31-byte chunks
+    let mut signed_data: Vec<FieldElement> = std::iter::once(FieldElement::from(signed_data_len))
+        .chain(
+            signed_data
+                .as_slice()
+                .chunks(31)
+                .filter_map(|chunk_bytes| FieldElement::from_byte_slice_be(chunk_bytes).ok()),
+        )
+        .collect();
+
     // Prepare the calldata for the Starknet invoke transaction
     let capacity = 6 + signed_data.len();
 
@@ -160,7 +173,7 @@ pub fn to_starknet_transaction(
         signed_data.len().into(), // data length
         signed_data.len().into(), // calldata length
     ]);
-    calldata.append(&mut signed_data.into_iter().map(Into::into).collect());
+    calldata.append(&mut signed_data);
 
     Ok(BroadcastedInvokeTransaction::V1(BroadcastedInvokeTransactionV1 {
         max_fee: max_fee.into(),
@@ -214,7 +227,8 @@ mod tests {
             assert_eq!(tx.max_fee, FieldElement::ZERO);
 
             // Assert the length of calldata.
-            assert_eq!(tx.calldata.len(), transaction.transaction.length() + 6);
+            // We must adapt the check as we pack the calldata in 31-byte chunks.
+            assert_eq!(tx.calldata.len(), (transaction.transaction.length() + 30) / 31 + 1 + 6);
 
             // Assert the first 6 elements of calldata.
             assert_eq!(
@@ -224,8 +238,8 @@ mod tests {
                     *KAKAROT_ADDRESS,
                     *ETH_SEND_TRANSACTION,
                     FieldElement::ZERO,
-                    FieldElement::from(transaction.transaction.length()),
-                    FieldElement::from(transaction.transaction.length()),
+                    FieldElement::from((transaction.transaction.length() + 30) / 31 + 1),
+                    FieldElement::from((transaction.transaction.length() + 30) / 31 + 1),
                 ]
             );
 
@@ -252,16 +266,22 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "calldata exceeded limit of 22500: 30032")]
+    #[should_panic(expected = "calldata exceeded limit of 22500: 30008")]
     fn to_starknet_transaction_too_large_calldata_test() {
         // Test that an example create transaction from goerli decodes properly
         let tx_bytes = hex!("b901f202f901ee05228459682f008459682f11830209bf8080b90195608060405234801561001057600080fd5b50610175806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80630c49c36c14610030575b600080fd5b61003861004e565b604051610045919061011d565b60405180910390f35b60606020600052600f6020527f68656c6c6f2073746174656d696e64000000000000000000000000000000000060405260406000f35b600081519050919050565b600082825260208201905092915050565b60005b838110156100be5780820151818401526020810190506100a3565b838111156100cd576000848401525b50505050565b6000601f19601f8301169050919050565b60006100ef82610084565b6100f9818561008f565b93506101098185602086016100a0565b610112816100d3565b840191505092915050565b6000602082019050818103600083015261013781846100e4565b90509291505056fea264697066735822122051449585839a4ea5ac23cae4552ef8a96b64ff59d0668f76bfac3796b2bdbb3664736f6c63430008090033c080a0136ebffaa8fc8b9fda9124de9ccb0b1f64e90fbd44251b4c4ac2501e60b104f9a07eb2999eec6d185ef57e91ed099afb0a926c5b536f0155dd67e537c7476e1471");
 
+        // Create a large tx_bytes by repeating the original tx_bytes 31 times
+        let mut large_tx_bytes = Vec::new();
+        for _ in 0..31 {
+            large_tx_bytes.extend_from_slice(&tx_bytes);
+        }
+
         // Decode the transaction from the provided bytes
-        let mut transaction = TransactionSigned::decode(&mut &tx_bytes[..]).unwrap();
+        let mut transaction = TransactionSigned::decode(&mut &large_tx_bytes[..]).unwrap();
 
         // Set the input of the transaction to be a vector of 30,000 zero bytes
-        transaction.transaction.set_input(vec![0; 30000].into());
+        transaction.transaction.set_input(vec![0; 30000 * 31].into());
 
         // Attempt to convert the transaction into a Starknet transaction
         to_starknet_transaction(&transaction, Some(1), transaction.recover_signer().unwrap(), 100_000_000, 0).unwrap();

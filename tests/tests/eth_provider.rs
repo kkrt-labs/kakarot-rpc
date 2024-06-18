@@ -808,7 +808,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     eth_provider
         .database()
         .update_one::<StoredPendingTransaction>(
-            StoredPendingTransaction::new(transaction2.clone(), TRANSACTION_MAX_RETRIES + 1),
+            StoredPendingTransaction::new(transaction2.clone(), *TRANSACTION_MAX_RETRIES + 1),
             into_filter("tx.hash", &transaction2.hash, HASH_HEX_STRING_LEN),
             true,
         )
@@ -839,12 +839,12 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
 
     let mut pending_tx_hashes: Vec<B256> = Vec::new();
 
-    for i in 0..TRANSACTION_MAX_RETRIES + 2 {
+    for i in 0..*TRANSACTION_MAX_RETRIES + 2 {
         // Retrieve the retried transactions.
         let retried_transactions = eth_provider.retry_transactions().await.expect("Failed to retry transactions");
 
         // Assert that there is only one retried transaction before reaching retry limit.
-        assert_eq!(retried_transactions.len(), usize::from(i < TRANSACTION_MAX_RETRIES));
+        assert_eq!(retried_transactions.len(), usize::from(i < *TRANSACTION_MAX_RETRIES));
 
         // Retrieve the pending transactions.
         let pending_transactions = eth_provider
@@ -853,7 +853,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
             .await
             .expect("Failed get pending transactions");
 
-        if i < TRANSACTION_MAX_RETRIES {
+        if i < *TRANSACTION_MAX_RETRIES {
             // Ensure that the spurious transactions are dropped from the pending transactions collection
             assert_eq!(pending_transactions.len(), 1);
 

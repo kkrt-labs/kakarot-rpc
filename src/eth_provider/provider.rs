@@ -553,22 +553,18 @@ where
         let pending_transaction = self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?;
 
         // Number of retries for the transaction (0 if it's a new transaction)
-        let retries = pending_transaction.as_ref().map(|tx| tx.retries).unwrap_or_default();
+        let retries = pending_transaction.as_ref().map(|tx| tx.retries + 1).unwrap_or_default();
 
         // Serialize transaction document
         let transaction =
             from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
 
         // Update or insert the pending transaction in the database
-        if let Some(pending_transaction) = pending_transaction {
-            tracing::info!(
-                "Updating transaction {}, retries: {}.",
-                transaction.hash.to_string(),
-                pending_transaction.retries + 1
-            );
+        if pending_transaction.is_some() {
+            tracing::info!("Updating transaction {}, retries: {}.", transaction.hash.to_string(), retries);
             self.database
                 .update_one::<StoredPendingTransaction>(
-                    StoredPendingTransaction::new(transaction, pending_transaction.retries + 1),
+                    StoredPendingTransaction::new(transaction, retries),
                     filter,
                     true,
                 )
@@ -585,7 +581,7 @@ where
 
         // Convert the transaction to a Starknet transaction
         let starknet_transaction =
-            to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee, retries + 1)?;
+            to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee, retries)?;
 
         // Deploy EVM transaction signer if Hive feature is enabled
         #[cfg(feature = "hive")]
@@ -998,7 +994,7 @@ where
             // Check if the number of retries exceeds the maximum allowed retries
             // or if the transaction already exists in the database of finalized transactions
             let hash = tx.tx.hash;
-            if tx.retries + 1 > TRANSACTION_MAX_RETRIES
+            if tx.retries + 1 > *TRANSACTION_MAX_RETRIES
                 || self
                     .database
                     .get_one::<StoredTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN), None)

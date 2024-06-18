@@ -1,0 +1,83 @@
+---
+name: staging
+
+on: workflow_dispatch
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_TOKEN }}
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      # Install Python
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.10.14
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+      - name: Install Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Set up submodules
+        run: |
+          cd lib/kakarot
+          make setup && make build-sol && make build && make build-cairo1
+      - name: Run staging script
+        env:
+          PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
+          KAKAROT_STAGING_ACCOUNT_ADDRESS: "0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
+          KAKAROT_STAGING_PRIVATE_KEY: ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
+          EVM_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+          STARKNET_NETWORK: kakarot-staging
+          KAKAROT_STAGING_RPC_URL: https://juno-kakarot-testnet-stage.karnot.xyz
+          WEB3_HTTP_PROVIDER_URI: https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz
+        run: |
+          cd scripts
+          sh staging.sh
+      - name: Check diff in deployments
+        run: |
+          cd lib/kakarot
+          set +e
+          git diff --no-patch --exit-code -- deployments/kakarot-staging/
+          has_diff=$?
+          set -e
+          echo "has_diff=$has_diff" >> $GITHUB_ENV
+      - name: Create PR for deployment updates
+        if: ${{ env.has_diff == 1 }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          set +e
+          cd lib/kakarot
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git checkout -b update-staging-deployment-run-${{ github.run_id }}
+          git add deployments/kakarot-staging/
+          git commit -m "Update staging deployments from run ${{ github.run_id }}"
+          git push --set-upstream origin update-staging-deployment-run-${{ github.run_id }} --force
+          gh pr create --repo=kkrt-labs/kakarot --base=main --head=update-staging-deployment-run-${{ github.run_id }} \
+            --title "Update staging deployments from staging run ${{ github.run_id }}" \
+            --body "This PR updates the staging deployments for staging run ${{ github.run_id }}."

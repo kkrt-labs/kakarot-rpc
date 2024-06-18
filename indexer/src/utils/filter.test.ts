@@ -3,8 +3,12 @@ import {
   assertEquals,
   assertFalse,
 } from "https://deno.land/std@0.213.0/assert/mod.ts";
-import { ethValidationFailed, isKakarotTransaction } from "./filter.ts";
-import { Event, Transaction } from "../deps.ts";
+import {
+  ethValidationFailed,
+  isKakarotTransaction,
+  isRevertedWithOutOfResources,
+} from "./filter.ts";
+import { Event, Transaction, TransactionReceipt } from "../deps.ts";
 
 const event = (data: `0x${string}`[]) => {
   return {
@@ -92,9 +96,7 @@ Deno.test("isKakarotTransaction: no calldata", () => {
 });
 
 Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
-  const starknetTxCalldata: `0x${string}`[] = [
-    "0x1",
-  ];
+  const starknetTxCalldata: `0x${string}`[] = ["0x1"];
   const transaction: Transaction = {
     invokeV1: {
       senderAddress: "0x01",
@@ -112,33 +114,30 @@ Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
   assertFalse(failed);
 });
 
-Deno.test("isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS", () => {
-  const starknetTxCalldata: `0x${string}`[] = [
-    "0x1",
-    "0x2",
-  ];
-  const transaction: Transaction = {
-    invokeV1: {
-      senderAddress: "0x01",
-      calldata: starknetTxCalldata,
-    },
-    meta: {
-      hash: "0x02",
-      maxFee: "0x02",
-      nonce: "0x02",
-      signature: ["0x2"],
-      version: "1",
-    },
-  };
-  const failed = isKakarotTransaction(transaction);
-  assertEquals(failed, false);
-});
+Deno.test(
+  "isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS",
+  () => {
+    const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x2"];
+    const transaction: Transaction = {
+      invokeV1: {
+        senderAddress: "0x01",
+        calldata: starknetTxCalldata,
+      },
+      meta: {
+        hash: "0x02",
+        maxFee: "0x02",
+        nonce: "0x02",
+        signature: ["0x2"],
+        version: "1",
+      },
+    };
+    const failed = isKakarotTransaction(transaction);
+    assertEquals(failed, false);
+  },
+);
 
 Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
-  const starknetTxCalldata: `0x${string}`[] = [
-    "0x1",
-    "0x1",
-  ];
+  const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x1"];
   const transaction: Transaction = {
     invokeV1: {
       senderAddress: "0x01",
@@ -155,3 +154,55 @@ Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
   const success = isKakarotTransaction(transaction);
   assertEquals(success, true);
 });
+
+Deno.test(
+  "isRevertedWithOutOfResources: true on status reverted and revert reason",
+  () => {
+    const receipt: TransactionReceipt = {
+      executionStatus: "EXECUTION_STATUS_REVERTED",
+      transactionHash: "0x01",
+      transactionIndex: "0x01",
+      actualFee: "0x01",
+      contractAddress: "0x01",
+      l2ToL1Messages: [],
+      events: [],
+      revertReason: "RunResources has no remaining steps",
+    };
+    const success = isRevertedWithOutOfResources(receipt);
+    assertEquals(success, true);
+  },
+);
+
+Deno.test("isRevertedWithOutOfResources: false on status succeeded", () => {
+  const receipt: TransactionReceipt = {
+    executionStatus: "EXECUTION_STATUS_SUCCEEDED",
+    transactionHash: "0x01",
+    transactionIndex: "0x01",
+    actualFee: "0x01",
+    contractAddress: "0x01",
+    l2ToL1Messages: [],
+    events: [],
+    revertReason:
+      "Could not reach the end of the program. RunResources has no remaining steps",
+  };
+  const success = isRevertedWithOutOfResources(receipt);
+  assertEquals(success, false);
+});
+
+Deno.test(
+  "isRevertedWithOutOfResources: false on incorrect revert reason",
+  () => {
+    const receipt: TransactionReceipt = {
+      executionStatus: "EXECUTION_STATUS_REVERTED",
+      transactionHash: "0x01",
+      transactionIndex: "0x01",
+      actualFee: "0x01",
+      contractAddress: "0x01",
+      l2ToL1Messages: [],
+      events: [],
+      revertReason: "eth validation failed",
+    };
+    const success = isRevertedWithOutOfResources(receipt);
+    assertEquals(success, false);
+  },
+);

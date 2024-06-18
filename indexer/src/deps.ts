@@ -11,6 +11,7 @@ export type {
   EventWithTransaction,
   Transaction,
   TransactionReceipt,
+  TransactionWithReceipt,
 } from "https://esm.sh/@apibara/indexer@0.2.2/starknet";
 export type {
   Config,
@@ -43,6 +44,7 @@ export {
   bigIntToHex,
   bytesToBigInt,
   bytesToHex,
+  bytesToInt,
   concatBytes,
   generateAddress,
   hexToBytes,
