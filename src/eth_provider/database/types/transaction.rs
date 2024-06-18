@@ -8,7 +8,6 @@ use {arbitrary::Arbitrary, reth_primitives::TxType};
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[cfg_attr(any(test, feature = "arbitrary", feature = "testing"), derive(arbitrary::Arbitrary))]
 pub struct StoredTransaction {
-    #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
 }
 
@@ -65,7 +64,6 @@ impl<'a> StoredTransaction {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredPendingTransaction {
     /// Transaction object
-    #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
     /// Number of retries
     pub retries: u8,
