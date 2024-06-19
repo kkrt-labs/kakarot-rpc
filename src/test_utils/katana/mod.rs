@@ -29,7 +29,6 @@ use crate::eth_provider::{
     provider::EthDataProvider,
 };
 use crate::test_utils::eoa::KakarotEOA;
-use reth_primitives::Address;
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {

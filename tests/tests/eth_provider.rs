@@ -3,7 +3,7 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use kakarot_rpc::eth_provider::constant::{HASH_HEX_STRING_LEN, LIMIT_LOGS, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
+use kakarot_rpc::eth_provider::constant::{HASH_HEX_STRING_LEN, MAX_LOGS, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
 use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::eth_provider::utils::into_filter;
@@ -303,17 +303,20 @@ async fn test_get_logs_limit(#[future] katana: Katana, _setup: ()) {
     let provider = katana.eth_provider();
 
     // Set the limit of logs to be retrieved.
-    std::env::set_var("LIMIT_LOGS", "500");
+    std::env::set_var("MAX_LOGS", "500");
 
     // Add mock logs to the Katana instance's database.
-    // The number of logs added is LIMIT_LOGS + 20, ensuring there are more logs than the limit.
-    katana.add_mock_logs(((*LIMIT_LOGS).unwrap() + 20) as usize).await;
+    // The number of logs added is MAX_LOGS + 20, ensuring there are more logs than the limit.
+    katana.add_mock_logs(((*MAX_LOGS).unwrap() + 20) as usize).await;
 
     // Assert that the number of logs returned by filter_logs is equal to the limit.
-    // This ensures that the log retrieval respects the LIMIT_LOGS constraint.
-    assert_eq!(filter_logs(Filter::default(), provider.clone()).await.len(), (*LIMIT_LOGS).unwrap() as usize);
+    // This ensures that the log retrieval respects the MAX_LOGS constraint.
+    assert_eq!(filter_logs(Filter::default(), provider.clone()).await.len(), (*MAX_LOGS).unwrap() as usize);
 }
 
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_get_logs_block_filter(#[future] katana: Katana, _setup: ()) {
     // Get the Ethereum provider from Katana.
     let provider = katana.eth_provider();

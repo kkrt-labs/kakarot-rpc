@@ -12,7 +12,7 @@ lazy_static! {
     ).expect("failing to parse TRANSACTION_MAX_RETRIES");
 
     /// Maximum number of logs that can be fetched in a single request
-    pub static ref LIMIT_LOGS: Option<u64> = std::env::var("LIMIT_LOGS")
+    pub static ref MAX_LOGS: Option<u64> = std::env::var("MAX_LOGS")
         .ok()
         .and_then(|val| u64::from_str(&val).ok());
 }

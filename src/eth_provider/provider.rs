@@ -23,7 +23,7 @@ use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
 use super::constant::{
-    ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, LIMIT_LOGS,
+    ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS,
     TRANSACTION_MAX_RETRIES, U64_HEX_STRING_LEN,
 };
 use super::database::types::{
@@ -446,7 +446,7 @@ where
             self.database
                 .get_and_map_to::<_, StoredLog>(
                     database_filter,
-                    (*LIMIT_LOGS).map(|limit| FindOpts::default().with_limit(limit)),
+                    (*MAX_LOGS).map(|limit| FindOpts::default().with_limit(limit)),
                 )
                 .await?,
         ))
