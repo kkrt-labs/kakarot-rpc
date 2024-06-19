@@ -29,6 +29,7 @@ use crate::eth_provider::{
     provider::EthDataProvider,
 };
 use crate::test_utils::eoa::KakarotEOA;
+use reth_primitives::Address;
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
@@ -316,6 +317,58 @@ impl<'a> Katana {
                 .filter(|stored_log| stored_log.log.topics().len() >= min_topics)
                 .map(|stored_log| stored_log.log.clone())
                 .collect()
+        })
+    }
+
+    pub fn logs_by_address(&self, addresses: &[Address]) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| {
+                    let address = stored_log.log.address();
+                    addresses.iter().any(|addr| *addr == address)
+                })
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
+        })
+    }
+
+    pub fn logs_by_block_number(&self, block_number: u64) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| stored_log.log.block_number.unwrap_or_default() == block_number)
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
+        })
+    }
+
+    pub fn logs_by_block_range(&self, block_range: std::ops::Range<u64>) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| {
+                    let block_number = stored_log.log.block_number.unwrap_or_default();
+                    block_range.contains(&block_number)
+                })
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
+        })
+    }
+
+    pub fn logs_by_block_hash(&self, block_hash: B256) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| stored_log.log.block_hash.unwrap_or_default() == block_hash)
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
+        })
+    }
+
+    pub fn all_logs(&self) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter().filter_map(|data| data.extract_stored_log()).map(|stored_log| stored_log.log.clone()).collect()
         })
     }
 
