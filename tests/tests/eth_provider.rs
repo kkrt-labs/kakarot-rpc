@@ -881,8 +881,8 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let transaction1 = katana.eoa().mock_transaction_with_nonce(0).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
-        .update_one::<StoredPendingTransaction>(
-            transaction1.clone().into(),
+        .update_one(
+            StoredPendingTransaction::new(transaction1.clone(), 0),
             into_filter("tx.hash", &transaction1.hash, HASH_HEX_STRING_LEN),
             true,
         )
@@ -907,8 +907,8 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let transaction3 = katana.eoa().mock_transaction_with_nonce(2).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
-        .update_one::<StoredPendingTransaction>(
-            transaction3.clone().into(),
+        .update_one(
+            StoredPendingTransaction::new(transaction3.clone(), 0),
             into_filter("tx.hash", &transaction3.clone().hash, HASH_HEX_STRING_LEN),
             true,
         )

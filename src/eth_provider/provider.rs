@@ -17,7 +17,6 @@ use reth_rpc_types::{
     Transaction, TransactionReceipt, TransactionRequest, ValueOrArray,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
-use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
@@ -32,7 +31,6 @@ use super::database::types::{
 };
 use super::database::{CollectionName, Database};
 use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
-use super::starknet::kakarot_core::WHITE_LISTED_EIP_155_TRANSACTION_HASHES;
 use super::starknet::kakarot_core::{
     self,
     account_contract::AccountContractReader,
@@ -45,7 +43,7 @@ use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
-use crate::tracing::builder::TRACING_BLOCK_GAS_LIMIT;
+use crate::models::transaction::{transaction_retries, update_pending_transaction_in_database, validate_transaction};
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -529,58 +527,20 @@ where
         let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
             .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?;
 
-        // If the transaction gas limit is higher than the tracing
-        // block gas limit, prevent the transaction from being sent
-        // (it will revert anyway on the Starknet side). This assures
-        // that all transactions are traceable.
-        if transaction_signed.gas_limit() > TRACING_BLOCK_GAS_LIMIT {
-            return Err(TransactionError::GasOverflow.into());
-        }
+        let chain_id: u64 =
+            self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
+
+        // Validate the transaction
+        validate_transaction(&transaction_signed, chain_id)?;
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
 
-        // Get the chain id
-        let maybe_chain_id = transaction_signed.chain_id();
+        // Get the number of retries for the transaction
+        let retries = transaction_retries(&transaction_signed, &self.database).await?;
 
-        // Assert the chain is correct
-        // If the chain id is not the same as the RPC chain id, return an error
-        let rpc_chain_id: u64 =
-            self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
-        if !maybe_chain_id.map_or(true, |chain_id| chain_id == rpc_chain_id) {
-            return Err(TransactionError::InvalidChainId.into());
-        }
-
-        // If the transaction is a pre EIP-155 transaction, check hash is whitelisted
-        if maybe_chain_id.is_none() && !WHITE_LISTED_EIP_155_TRANSACTION_HASHES.contains(&transaction_signed.hash) {
-            return Err(TransactionError::InvalidTransactionType.into());
-        }
-
-        // Fetch pending transaction for hash
-        let filter = into_filter("tx.hash", &transaction_signed.hash, HASH_HEX_STRING_LEN);
-        let pending_transaction = self.database.get_one::<StoredPendingTransaction>(filter.clone(), None).await?;
-
-        // Number of retries for the transaction (0 if it's a new transaction)
-        let retries = pending_transaction.as_ref().map(|tx| tx.retries + 1).unwrap_or_default();
-
-        // Serialize transaction document
-        let transaction =
-            from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
-
-        // Update or insert the pending transaction in the database
-        if pending_transaction.is_some() {
-            tracing::info!("Updating transaction {}, retries: {}.", transaction.hash.to_string(), retries);
-            self.database
-                .update_one::<StoredPendingTransaction>(
-                    StoredPendingTransaction::new(transaction, retries),
-                    filter,
-                    true,
-                )
-                .await?;
-        } else {
-            tracing::info!("New transaction {} in pending pool.", transaction.hash.to_string());
-            self.database.update_one::<StoredPendingTransaction>(transaction.into(), filter, true).await?;
-        }
+        // Update or insert the transaction as pending in the database
+        update_pending_transaction_in_database(transaction_signed.clone(), retries, signer, &self.database).await?;
 
         // The max fee is always set to 0. This means that no fee is perceived by the
         // Starknet sequencer, which is the intended behavior has fee perception is
@@ -588,8 +548,7 @@ where
         let max_fee = 0;
 
         // Convert the transaction to a Starknet transaction
-        let starknet_transaction =
-            to_starknet_transaction(&transaction_signed, maybe_chain_id, signer, max_fee, retries)?;
+        let starknet_transaction = to_starknet_transaction(&transaction_signed, signer, max_fee, retries)?;
 
         // Deploy EVM transaction signer if Hive feature is enabled
         #[cfg(feature = "hive")]

@@ -218,7 +218,7 @@ impl<'a> Katana {
         for tx in txs {
             let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
             database
-                .update_one::<StoredPendingTransaction>(tx.into(), filter, true)
+                .update_one(StoredPendingTransaction::new(tx, 0), filter, true)
                 .await
                 .expect("Failed to update pending transaction in database");
         }

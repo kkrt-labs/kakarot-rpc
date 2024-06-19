@@ -84,12 +84,6 @@ impl<'a> StoredPendingTransaction {
     }
 }
 
-impl From<Transaction> for StoredPendingTransaction {
-    fn from(tx: Transaction) -> Self {
-        Self { tx, retries: 0 }
-    }
-}
-
 impl From<StoredPendingTransaction> for Transaction {
     fn from(tx: StoredPendingTransaction) -> Self {
         tx.tx
