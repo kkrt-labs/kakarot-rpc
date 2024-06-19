@@ -38,7 +38,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
 
         let receipt = reth_rpc_types::ReceiptWithBloom {
             receipt: reth_rpc_types::Receipt {
-                status: bool::arbitrary(u)?,
+                status: bool::arbitrary(u)?.into(),
                 cumulative_gas_used: u128::from(u64::arbitrary(u)?),
                 logs,
             },
