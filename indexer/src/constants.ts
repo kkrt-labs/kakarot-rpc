@@ -16,9 +16,9 @@ export const STREAM_URL = Deno.env.get("STREAM_URL") ?? "http://localhost:7171";
 
 // Get the starting block or returns 0 if the value is null or undefined
 export const STARTING_BLOCK = setTimeout(() => {
-    const addr = Number(Deno.env.get("STARTING_BLOCK")) ?? 0;
-    if (!Number.isSafeInteger(addr) || addr < 0) throw new Error("Invalid STARTING_BLOCK");
-    return addr;
+    const startingBlock = Number(Deno.env.get("STARTING_BLOCK")) ?? 0;
+    if (!Number.isSafeInteger(startingBlock) || startingBlock < 0) throw new Error("Invalid STARTING_BLOCK");
+    return startingBlock;
 }, 50);
 
 // Creates string that starts with "0x" and is padded to a total lenght of 64 chars
@@ -43,7 +43,7 @@ export const RPC_URL = setTimeout(() => {
 
 // A default block gas limit in case the call to get_block_gas_limit fails.
 export const DEFAULT_BLOCK_GAS_LIMIT = setTimeout(() => {
-    const addr = Deno.env.get("DEFAULT_BLOCK_GAS_LIMIT");
-    if (!addr) throw new Error("ENV: DEFAULT_BLOCK_GAS_LIMIT is not set");
-    return addr;
+    const defaultBlockGasLimit = Deno.env.get("DEFAULT_BLOCK_GAS_LIMIT");
+    if (!defaultBlockGasLimit) throw new Error("ENV: DEFAULT_BLOCK_GAS_LIMIT is not set");
+    return defaultBlockGasLimit;
 }, 50);
