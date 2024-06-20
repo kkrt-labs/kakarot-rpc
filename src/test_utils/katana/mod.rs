@@ -192,17 +192,13 @@ impl<'a> Katana {
         };
 
         // Create a vector to hold all the BSON documents to be inserted
-        let mut log_docs: Vec<Document> = Vec::with_capacity(n_logs);
-
-        // Loop to create and collect the specified number of logs.
-        for _ in 0..n_logs {
-            // Create a StoredLog object from the predefined log.
-            let stored_log = StoredLog { log: log.clone() };
-            // Serialize the StoredLog object to a BSON document.
-            let bson_doc = bson::to_document(&stored_log).expect("Failed to serialize StoredLog to BSON");
-            // Add the BSON document to the vector.
-            log_docs.push(bson_doc);
-        }
+        let log_docs: Vec<Document> = std::iter::repeat(log.clone())
+            .take(n_logs)
+            .map(|log| {
+                let stored_log = StoredLog { log };
+                bson::to_document(&stored_log).expect("Failed to serialize StoredLog to BSON")
+            })
+            .collect();
 
         // Insert all the BSON documents into the MongoDB collection at once.
         database
