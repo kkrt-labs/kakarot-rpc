@@ -4,18 +4,23 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
+use crate::eth_provider::database::CollectionName;
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
+use mongodb::bson;
 use mongodb::bson::doc;
+use mongodb::bson::Document;
 use mongodb::options::{UpdateModifications, UpdateOptions};
+use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
 use crate::eth_provider::database::types::{
     header::StoredHeader,
+    log::StoredLog,
     transaction::{StoredPendingTransaction, StoredTransaction},
 };
 use crate::eth_provider::utils::{format_hex, into_filter};
@@ -24,7 +29,6 @@ use crate::eth_provider::{
     provider::EthDataProvider,
 };
 use crate::test_utils::eoa::KakarotEOA;
-use reth_primitives::Address;
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
@@ -159,6 +163,50 @@ impl<'a> Katana {
     #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
+    }
+
+    /// Adds mock logs to the database.
+    pub async fn add_mock_logs(&self, n_logs: usize) {
+        // Get the Ethereum provider instance.
+        let provider = self.eth_provider();
+
+        // Get the database instance from the provider.
+        let database = provider.database();
+
+        // Create a mock log object with predefined values.
+        let log = Log {
+            inner: alloy_primitives::Log {
+                address: Address::with_last_byte(0x69),
+                data: alloy_primitives::LogData::new_unchecked(
+                    vec![B256::with_last_byte(0x69)],
+                    Bytes::from_static(&[0x69]),
+                ),
+            },
+            block_hash: Some(B256::with_last_byte(0x69)),
+            block_number: Some(0x69),
+            block_timestamp: None,
+            transaction_hash: Some(B256::with_last_byte(0x69)),
+            transaction_index: Some(0x69),
+            log_index: Some(0x69),
+            removed: false,
+        };
+
+        // Create a vector to hold all the BSON documents to be inserted
+        let log_docs: Vec<Document> = std::iter::repeat(log.clone())
+            .take(n_logs)
+            .map(|log| {
+                let stored_log = StoredLog { log };
+                bson::to_document(&stored_log).expect("Failed to serialize StoredLog to BSON")
+            })
+            .collect();
+
+        // Insert all the BSON documents into the MongoDB collection at once.
+        database
+            .inner()
+            .collection(StoredLog::collection_name())
+            .insert_many(log_docs, None)
+            .await
+            .expect("Failed to insert logs into the database");
     }
 
     /// Adds pending transactions to the database.

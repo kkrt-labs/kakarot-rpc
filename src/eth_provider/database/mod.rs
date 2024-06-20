@@ -18,6 +18,31 @@ use serde::{de::DeserializeOwned, Serialize};
 
 type DatabaseResult<T> = eyre::Result<T, KakarotError>;
 
+/// Struct for encapsulating find options for `MongoDB` queries.
+#[derive(Clone, Debug, Default)]
+pub struct FindOpts(FindOptions);
+
+impl FindOpts {
+    /// Sets the limit for the number of documents to retrieve.
+    #[must_use]
+    pub fn with_limit(mut self, limit: u64) -> Self {
+        self.0.limit = Some(i64::try_from(limit).unwrap_or(i64::MAX));
+        self
+    }
+
+    /// Sets the projection for the documents to retrieve.
+    #[must_use]
+    pub fn with_projection(mut self, projection: Document) -> Self {
+        self.0.projection = Some(projection);
+        self
+    }
+
+    /// Builds and returns the `FindOptions`.
+    pub fn build(self) -> FindOptions {
+        self.0
+    }
+}
+
 /// Wrapper around a `MongoDB` database
 #[derive(Clone, Debug)]
 pub struct Database(MongoDatabase);
@@ -49,13 +74,12 @@ impl Database {
     pub async fn get<T>(
         &self,
         filter: impl Into<Option<Document>>,
-        project: impl Into<Option<Document>>,
+        find_options: Option<FindOpts>,
     ) -> DatabaseResult<Vec<T>>
     where
         T: DeserializeOwned + CollectionName,
     {
-        let find_options = FindOptions::builder().projection(project).build();
-        Ok(self.collection::<T>().find(filter, find_options).await?.try_collect().await?)
+        Ok(self.collection::<T>().find(filter, find_options.unwrap_or_default().build()).await?.try_collect().await?)
     }
 
     /// Retrieves documents from a collection and converts them into another type.
@@ -64,13 +88,13 @@ impl Database {
     pub async fn get_and_map_to<D, T>(
         &self,
         filter: impl Into<Option<Document>>,
-        project: impl Into<Option<Document>>,
+        find_options: Option<FindOpts>,
     ) -> DatabaseResult<Vec<D>>
     where
         T: DeserializeOwned + CollectionName,
         D: From<T>,
     {
-        let stored_data: Vec<T> = self.get(filter, project).await?;
+        let stored_data: Vec<T> = self.get(filter, find_options).await?;
         Ok(stored_data.into_iter().map_into().collect())
     }
 
