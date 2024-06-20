@@ -33,7 +33,7 @@ lint:
     - trivy@0.52.2
     - trufflehog@3.78.1
     - yamllint@1.35.1
-    - deno@1.44.2
+    - deno@1.44.3
   ignore:
     - linters: [ALL]
       paths:

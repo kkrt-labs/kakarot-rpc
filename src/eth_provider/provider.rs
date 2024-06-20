@@ -14,7 +14,7 @@ use reth_rpc_types::serde_helpers::JsonStorageKey;
 use reth_rpc_types::txpool::TxpoolContent;
 use reth_rpc_types::{
     Block, BlockHashOrNumber, BlockTransactions, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
-    Transaction, TransactionReceipt, TransactionRequest, ValueOrArray,
+    Transaction, TransactionReceipt, TransactionRequest,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::SyncStatusType;
@@ -39,7 +39,7 @@ use super::starknet::kakarot_core::{
     starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, to_logs_filter};
+use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, topics_to_logs_filter};
 use crate::eth_provider::utils::format_hex;
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
@@ -361,7 +361,7 @@ where
         let account_contract = AccountContractReader::new(address, &self.starknet_provider);
         let maybe_nonce = account_contract.get_nonce().block_id(starknet_block_id).call().await;
 
-        if contract_not_found(&maybe_nonce) {
+        if contract_not_found(&maybe_nonce) || entrypoint_not_found(&maybe_nonce) {
             return Ok(U256::ZERO);
         }
         let nonce = maybe_nonce.map_err(KakarotError::from)?.nonce;
@@ -426,18 +426,13 @@ where
         // 4. Limit the number of logs returned
 
         // Convert the topics to a MongoDB filter and add it to the database filter
-        let logs_filter = to_logs_filter(&filter.topics);
+        let logs_filter = topics_to_logs_filter(&filter.topics);
         database_filter.extend(logs_filter);
 
         // Add the address filter if any
-        if let Some(addresses) = filter.address.to_value_or_array().map(|a| match a {
-            ValueOrArray::Value(address) => vec![address],
-            ValueOrArray::Array(addresses) => addresses,
-        }) {
-            database_filter.insert(
-                "log.address",
-                doc! {"$in": addresses.into_iter().map(|a| format_hex(a, ADDRESS_HEX_STRING_LEN)).collect::<Vec<_>>()},
-            );
+        let addresses = filter.address.iter().map(|a| format_hex(a, ADDRESS_HEX_STRING_LEN)).collect::<Vec<_>>();
+        if !addresses.is_empty() {
+            database_filter.insert("log.address", doc! {"$in": addresses});
         }
 
         Ok(FilterChanges::Logs(
@@ -480,10 +475,10 @@ where
 
         let end_block = self.tag_into_block_number(newest_block).await?;
         let end_block = end_block.to::<u64>();
-        let end_block_plus = end_block.saturating_add(1);
+        let end_block_plus_one = end_block.saturating_add(1);
 
         // 0 <= start_block <= end_block
-        let start_block = end_block_plus.saturating_sub(block_count.to());
+        let start_block = end_block_plus_one.saturating_sub(block_count.to());
 
         // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
         // This means we need to introduce a new type for the StoredHeader.
@@ -547,7 +542,7 @@ where
         // handled by the Kakarot execution layer through EVM gas accounting.
         let max_fee = 0;
 
-        // Convert the transaction to a Starknet transaction
+        // Convert the Ethereum transaction to a Starknet transaction
         let starknet_transaction = to_starknet_transaction(&transaction_signed, signer, max_fee, retries)?;
 
         // Deploy EVM transaction signer if Hive feature is enabled

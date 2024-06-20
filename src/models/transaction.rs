@@ -39,7 +39,7 @@ pub(crate) fn validate_transaction(transaction_signed: &TransactionSigned, chain
         return Err(TransactionError::InvalidChainId.into());
     }
 
-    // If the transaction is a pre EIP-155 transaction, check hash is whitelisted
+    // If the transaction is a pre EIP-155 transaction, check if hash is whitelisted
     if maybe_chain_id.is_none() && !WHITE_LISTED_EIP_155_TRANSACTION_HASHES.contains(&transaction_signed.hash) {
         return Err(TransactionError::InvalidTransactionType.into());
     }
@@ -107,10 +107,10 @@ pub(crate) fn transaction_data_to_starknet_calldata(
     let selector = *ETH_SEND_TRANSACTION + retries.into();
 
     // Retries are used to alter the transaction hash in order to avoid the
-    // DuplicateTx error from the Starknet gateway, encountered whenever
+    // `DuplicateTx` error from the Starknet gateway, encountered whenever
     // a transaction with the same hash is sent multiple times.
     // We add the retries to the selector in the calldata, since the selector
-    // is not used in by the EOA contract during the transaction execution.
+    // is not used by the EOA contract during the transaction execution.
     calldata.append(&mut vec![
         FieldElement::ONE,        // call array length
         *KAKAROT_ADDRESS,         // contract address

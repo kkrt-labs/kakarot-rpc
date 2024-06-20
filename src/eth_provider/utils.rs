@@ -11,7 +11,7 @@ use starknet::{
 };
 
 /// Converts an array of topics into a `MongoDB` filter.
-pub(crate) fn to_logs_filter(topics: &[Topic; 4]) -> Document {
+pub(crate) fn topics_to_logs_filter(topics: &[Topic; 4]) -> Document {
     // If all topics are None, return a filter that checks if the log.topics field exists
     if topics.iter().all(Topic::is_empty) {
         return doc! { "log.topics": {"$exists": true} };
@@ -144,7 +144,7 @@ mod tests {
         let topics = [Topic::default(), Topic::default(), Topic::default(), Topic::default()];
 
         // When
-        let filter = to_logs_filter(&topics);
+        let filter = topics_to_logs_filter(&topics);
 
         // Then
         assert_eq!(filter, doc! { "log.topics": {"$exists": true} });
@@ -161,7 +161,7 @@ mod tests {
         ];
 
         // When
-        let filter = to_logs_filter(&topics);
+        let filter = topics_to_logs_filter(&topics);
 
         // Then
         let and_filter = filter.get("$and").unwrap().as_array().unwrap();

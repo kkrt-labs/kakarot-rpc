@@ -98,10 +98,10 @@ pub fn to_starknet_transaction(
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
     let sender_address = starknet_address(signer);
 
-    // Step: Signature
+    // Transform the signature to a vector of field elements
     let signature: Vec<FieldElement> = transaction_signature_to_field_elements(transaction);
 
-    // Step: Calldata
+    // Transform the transaction's data to Starknet calldata
     let calldata = transaction_data_to_starknet_calldata(transaction, retries)?;
 
     Ok(BroadcastedInvokeTransaction::V1(BroadcastedInvokeTransactionV1 {
