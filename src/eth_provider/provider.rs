@@ -1,3 +1,4 @@
+use crate::eth_provider::database::FindOpts;
 use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -22,7 +23,7 @@ use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
 use super::constant::{
-    ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN,
+    ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS,
     TRANSACTION_MAX_RETRIES, U64_HEX_STRING_LEN,
 };
 use super::database::types::{
@@ -441,7 +442,14 @@ where
             );
         }
 
-        Ok(FilterChanges::Logs(self.database.get_and_map_to::<_, StoredLog>(database_filter, None).await?))
+        Ok(FilterChanges::Logs(
+            self.database
+                .get_and_map_to::<_, StoredLog>(
+                    database_filter,
+                    (*MAX_LOGS).map(|limit| FindOpts::default().with_limit(limit)),
+                )
+                .await?,
+        ))
     }
 
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
@@ -838,7 +846,10 @@ where
         } else {
             BlockTransactions::Hashes(
                 self.database
-                    .get_and_map_to::<_, StoredTransactionHash>(transactions_filter, doc! {"tx.hash": 1})
+                    .get_and_map_to::<_, StoredTransactionHash>(
+                        transactions_filter,
+                        Some(FindOpts::default().with_projection(doc! {"tx.hash": 1})),
+                    )
                     .await?,
             )
         };

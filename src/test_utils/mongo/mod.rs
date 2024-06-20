@@ -251,17 +251,6 @@ impl MongoFuzzer {
         Ok(())
     }
 
-    /// Gets the highest block number in the logs collection.
-    pub fn max_block_number_in_logs(&self) -> u64 {
-        self.documents
-            .get(&CollectionDB::Logs)
-            .unwrap()
-            .iter()
-            .map(|log| log.extract_stored_log().unwrap().log.block_number.unwrap_or_default())
-            .max()
-            .unwrap_or_default()
-    }
-
     /// Gets the highest block number in the transactions collection.
     pub fn max_block_number(&self) -> u64 {
         self.documents
@@ -310,6 +299,7 @@ impl MongoFuzzer {
         let mut modified_logs = (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone();
         for log in &mut modified_logs.receipt.logs {
             log.block_number = Some(transaction.block_number.unwrap_or_default());
+            log.block_hash = transaction.block_hash;
         }
 
         receipt.receipt.transaction_hash = transaction.hash;
