@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::eth_provider::database::CollectionName;
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
@@ -18,16 +17,13 @@ use reth_rpc_types::Log;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::eth_provider::database::types::{
-    header::StoredHeader,
-    log::StoredLog,
-    transaction::{StoredPendingTransaction, StoredTransaction},
-};
-use crate::eth_provider::utils::{format_hex, into_filter};
-use crate::eth_provider::{
-    constant::{HASH_HEX_STRING_LEN, U64_HEX_STRING_LEN},
-    provider::EthDataProvider,
-};
+use crate::eth_provider::database::ethereum::EthereumDatabase;
+use crate::eth_provider::database::filter;
+use crate::eth_provider::database::filter::format_hex;
+use crate::eth_provider::database::filter::EthDatabaseFilterBuilder;
+use crate::eth_provider::database::types::{header::StoredHeader, log::StoredLog, transaction::StoredTransaction};
+use crate::eth_provider::database::CollectionName;
+use crate::eth_provider::{constant::U64_HEX_STRING_LEN, provider::EthDataProvider};
 use crate::test_utils::eoa::KakarotEOA;
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
@@ -216,11 +212,7 @@ impl<'a> Katana {
 
         // Add the transactions to the database.
         for tx in txs {
-            let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
-            database
-                .update_one(StoredPendingTransaction::new(tx, 0), filter, true)
-                .await
-                .expect("Failed to update pending transaction in database");
+            database.upsert_pending_transaction(tx, 0).await.expect("Failed to update pending transaction in database");
         }
     }
 
@@ -234,11 +226,7 @@ impl<'a> Katana {
         // Add the transactions to the database.
         let tx_collection = database.collection::<StoredTransaction>();
         for tx in txs {
-            let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
-            database
-                .update_one::<StoredTransaction>(tx.into(), filter, true)
-                .await
-                .expect("Failed to update transaction in database");
+            database.upsert_transaction(tx).await.expect("Failed to update transaction in database");
         }
 
         // We use the unpadded block number to filter the transactions in the database and
@@ -260,7 +248,7 @@ impl<'a> Katana {
         // Same issue as the transactions, we need to update the block number to the padded version once added
         // to the database.
         let header_collection = database.collection::<StoredHeader>();
-        let filter = into_filter("header.number", &block_number, U64_HEX_STRING_LEN);
+        let filter = EthDatabaseFilterBuilder::<filter::Header>::default().with_block_number(block_number).build();
         database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
         header_collection
             .update_one(

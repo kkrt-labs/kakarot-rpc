@@ -1,4 +1,6 @@
+use crate::eth_provider::database::filter::format_hex;
 use crate::eth_provider::database::FindOpts;
+use crate::eth_provider::database::{ethereum::EthereumDatabase, filter};
 use alloy_rlp::{Decodable, Encodable};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -17,14 +19,15 @@ use reth_rpc_types::{
     Transaction, TransactionReceipt, TransactionRequest,
 };
 use reth_rpc_types::{SyncInfo, SyncStatus};
+use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
 use super::constant::{
-    ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS,
-    TRANSACTION_MAX_RETRIES, U64_HEX_STRING_LEN,
+    BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS, TRANSACTION_MAX_RETRIES,
 };
+use super::database::filter::EthDatabaseFilterBuilder;
 use super::database::types::{
     header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
     transaction::StoredTransaction, transaction::StoredTransactionHash,
@@ -39,11 +42,10 @@ use super::starknet::kakarot_core::{
     starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{contract_not_found, entrypoint_not_found, into_filter, split_u256, topics_to_logs_filter};
-use crate::eth_provider::utils::format_hex;
+use super::utils::{contract_not_found, entrypoint_not_found, split_u256};
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::{transaction_retries, update_pending_transaction_in_database, validate_transaction};
+use crate::models::transaction::validate_transaction;
 use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -213,11 +215,8 @@ where
 
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthProviderResult<Option<U256>> {
         Ok(if self.block_exists(hash.into()).await? {
-            Some(U256::from(
-                self.database
-                    .count::<StoredTransaction>(into_filter("tx.blockHash", &hash, HASH_HEX_STRING_LEN))
-                    .await?,
-            ))
+            let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_block_hash(&hash).build();
+            Some(U256::from(self.database.count::<StoredTransaction>(filter).await?))
         } else {
             None
         })
@@ -233,7 +232,8 @@ where
             return Ok(None);
         }
 
-        let filter = into_filter("tx.blockNumber", &block_number, BLOCK_NUMBER_HEX_STRING_LEN);
+        let filter =
+            EthDatabaseFilterBuilder::<filter::Transaction>::default().with_block_number(block_number.to()).build();
         let count = self.database.count::<StoredTransaction>(filter).await?;
         Ok(Some(U256::from(count)))
     }
@@ -277,10 +277,10 @@ where
         hash: B256,
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
-        let mut filter = into_filter("tx.blockHash", &hash, HASH_HEX_STRING_LEN);
-        let index: usize = index.into();
-
-        filter.insert("tx.transactionIndex", format_hex(index, U64_HEX_STRING_LEN));
+        let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
+            .with_block_hash(&hash)
+            .with_tx_index(&index)
+            .build();
         Ok(self.database.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
@@ -289,23 +289,17 @@ where
         number_or_tag: BlockNumberOrTag,
         index: Index,
     ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
-        let block_number = self.tag_into_block_number(number_or_tag).await?;
-        let mut filter = into_filter("tx.blockNumber", &block_number, BLOCK_NUMBER_HEX_STRING_LEN);
-        let index: usize = index.into();
-
-        filter.insert("tx.transactionIndex", format_hex(index, U64_HEX_STRING_LEN));
+        let block_number = self.tag_into_block_number(number_or_tag).await?.to();
+        let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
+            .with_block_number(block_number)
+            .with_tx_index(&index)
+            .build();
         Ok(self.database.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
     async fn transaction_receipt(&self, hash: B256) -> EthProviderResult<Option<TransactionReceipt>> {
-        Ok(self
-            .database
-            .get_one::<StoredTransactionReceipt>(
-                into_filter("receipt.transactionHash", &hash, HASH_HEX_STRING_LEN),
-                None,
-            )
-            .await?
-            .map(Into::into))
+        let filter = EthDatabaseFilterBuilder::<filter::Receipt>::default().with_tx_hash(&hash).build();
+        Ok(self.database.get_one::<StoredTransactionReceipt>(filter, None).await?.map(Into::into))
     }
 
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
@@ -395,11 +389,10 @@ where
         let block_hash = filter.get_block_hash();
 
         // Create the database filter.
-        let mut database_filter = if block_hash.is_some() {
+        let mut builder = EthDatabaseFilterBuilder::<filter::Log>::default();
+        builder = if block_hash.is_some() {
             // We filter by block hash on matching the exact block hash.
-            doc! {
-                "log.blockHash": format_hex(block_hash.unwrap(), HASH_HEX_STRING_LEN)
-            }
+            builder.with_block_hash(&block_hash.unwrap())
         } else {
             let current_block = self.block_number().await?;
             let current_block =
@@ -414,9 +407,7 @@ where
                 other => other,
             };
             // We filter by block number using $gte and $lte.
-            doc! {
-                "log.blockNumber": {"$gte": format_hex(from, BLOCK_NUMBER_HEX_STRING_LEN), "$lte": format_hex(to, BLOCK_NUMBER_HEX_STRING_LEN)},
-            }
+            builder.with_block_number_range(from, to)
         };
 
         // TODO: this will work for now but isn't very efficient. Would need to:
@@ -426,19 +417,15 @@ where
         // 4. Limit the number of logs returned
 
         // Convert the topics to a MongoDB filter and add it to the database filter
-        let logs_filter = topics_to_logs_filter(&filter.topics);
-        database_filter.extend(logs_filter);
+        builder = builder.with_topics(&filter.topics);
 
-        // Add the address filter if any
-        let addresses = filter.address.iter().map(|a| format_hex(a, ADDRESS_HEX_STRING_LEN)).collect::<Vec<_>>();
-        if !addresses.is_empty() {
-            database_filter.insert("log.address", doc! {"$in": addresses});
-        }
+        // Add the addresses
+        builder = builder.with_addresses(&filter.address.into_iter().collect::<Vec<_>>());
 
         Ok(FilterChanges::Logs(
             self.database
                 .get_and_map_to::<_, StoredLog>(
-                    database_filter,
+                    builder.build(),
                     (*MAX_LOGS).map(|limit| FindOpts::default().with_limit(limit)),
                 )
                 .await?,
@@ -532,10 +519,12 @@ where
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
 
         // Get the number of retries for the transaction
-        let retries = transaction_retries(&transaction_signed, &self.database).await?;
+        let retries = self.database.pending_transaction_retries(&transaction_signed.hash).await?;
 
-        // Update or insert the transaction as pending in the database
-        update_pending_transaction_in_database(transaction_signed.clone(), retries, signer, &self.database).await?;
+        // Upsert the transaction as pending in the database
+        let transaction =
+            from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
+        self.database.upsert_pending_transaction(transaction, retries).await?;
 
         // The max fee is always set to 0. This means that no fee is perceived by the
         // Starknet sequencer, which is the intended behavior has fee perception is
@@ -581,7 +570,8 @@ where
                     return Ok(None);
                 }
 
-                let filter = into_filter("receipt.blockNumber", &block_number, BLOCK_NUMBER_HEX_STRING_LEN);
+                let filter =
+                    EthDatabaseFilterBuilder::<filter::Receipt>::default().with_block_number(block_number.to()).build();
                 let tx: Vec<StoredTransactionReceipt> = self.database.get(filter, None).await?;
                 Ok(Some(tx.into_iter().map(Into::into).collect()))
             }
@@ -589,7 +579,8 @@ where
                 if !self.block_exists(hash.block_hash.into()).await? {
                     return Ok(None);
                 }
-                let filter = into_filter("receipt.blockHash", &hash.block_hash, HASH_HEX_STRING_LEN);
+                let filter =
+                    EthDatabaseFilterBuilder::<filter::Receipt>::default().with_block_hash(&hash.block_hash).build();
                 Ok(Some(self.database.get_and_map_to::<_, StoredTransactionReceipt>(filter, None).await?))
             }
         }
@@ -772,10 +763,12 @@ where
 
     /// Get a header from the database based on the filter.
     async fn header(&self, id: BlockHashOrNumber) -> EthProviderResult<Option<StoredHeader>> {
+        let builder = EthDatabaseFilterBuilder::<filter::Header>::default();
         let filter = match id {
-            BlockHashOrNumber::Hash(hash) => into_filter("header.hash", &hash, HASH_HEX_STRING_LEN),
-            BlockHashOrNumber::Number(number) => into_filter("header.number", &number, BLOCK_NUMBER_HEX_STRING_LEN),
-        };
+            BlockHashOrNumber::Hash(hash) => builder.with_block_hash(&hash),
+            BlockHashOrNumber::Number(number) => builder.with_block_number(number),
+        }
+        .build();
         self.database
             .get_one(filter, None)
             .await
@@ -789,19 +782,19 @@ where
         block_id: BlockHashOrNumber,
         full: bool,
     ) -> EthProviderResult<BlockTransactions> {
-        let transactions_filter = match block_id {
-            BlockHashOrNumber::Hash(hash) => into_filter("tx.blockHash", &hash, HASH_HEX_STRING_LEN),
-            BlockHashOrNumber::Number(number) => into_filter("tx.blockNumber", &number, BLOCK_NUMBER_HEX_STRING_LEN),
-        };
+        let builder = EthDatabaseFilterBuilder::<filter::Transaction>::default();
+        let filter = match block_id {
+            BlockHashOrNumber::Hash(hash) => builder.with_block_hash(&hash),
+            BlockHashOrNumber::Number(number) => builder.with_block_number(number),
+        }
+        .build();
         let block_transactions = if full {
-            BlockTransactions::Full(
-                self.database.get_and_map_to::<_, StoredTransaction>(transactions_filter, None).await?,
-            )
+            BlockTransactions::Full(self.database.get_and_map_to::<_, StoredTransaction>(filter, None).await?)
         } else {
             BlockTransactions::Hashes(
                 self.database
                     .get_and_map_to::<_, StoredTransactionHash>(
-                        transactions_filter,
+                        filter,
                         Some(FindOpts::default().with_projection(doc! {"tx.hash": 1})),
                     )
                     .await?,
@@ -956,22 +949,15 @@ where
 
         // Iterate over pending transactions fetched from the database
         for tx in self.database.get::<StoredPendingTransaction>(None, None).await? {
+            let hash = tx.tx.hash;
+            let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&hash).build();
             // Check if the number of retries exceeds the maximum allowed retries
             // or if the transaction already exists in the database of finalized transactions
-            let hash = tx.tx.hash;
-            if tx.retries + 1 > *TRANSACTION_MAX_RETRIES
-                || self
-                    .database
-                    .get_one::<StoredTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN), None)
-                    .await?
-                    .is_some()
-            {
+            if tx.retries + 1 > *TRANSACTION_MAX_RETRIES || self.database.transaction(&hash).await?.is_some() {
                 tracing::info!("Pruning pending transaction: {hash}");
 
                 // Delete the pending transaction from the database
-                self.database
-                    .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
-                    .await?;
+                self.database.delete_one::<StoredPendingTransaction>(filter).await?;
 
                 // Continue to the next iteration of the loop
                 continue;
@@ -984,9 +970,7 @@ where
                     tracing::info!("Pruning pending transaction: {hash}, conversion error: {error}");
                     // Delete the pending transaction from the database due conversion error
                     // Malformed transaction
-                    self.database
-                        .delete_one::<StoredPendingTransaction>(into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN))
-                        .await?;
+                    self.database.delete_one::<StoredPendingTransaction>(filter).await?;
                     // Continue to the next iteration of the loop
                     continue;
                 }

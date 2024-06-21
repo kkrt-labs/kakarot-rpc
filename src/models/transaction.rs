@@ -1,17 +1,14 @@
 use alloy_rlp::Encodable;
-use reth_primitives::{Address, Transaction, TransactionSigned, TransactionSignedEcRecovered};
-use reth_rpc_types_compat::transaction::from_recovered;
+use reth_primitives::{Transaction, TransactionSigned};
 use starknet_crypto::FieldElement;
 
 #[cfg(not(feature = "hive"))]
 use crate::eth_provider::starknet::kakarot_core::MAX_FELTS_IN_CALLDATA;
 use crate::{
     eth_provider::{
-        constant::HASH_HEX_STRING_LEN,
-        database::{types::transaction::StoredPendingTransaction, Database},
         error::{EthApiError, SignatureError, TransactionError},
         starknet::kakarot_core::{ETH_SEND_TRANSACTION, KAKAROT_ADDRESS, WHITE_LISTED_EIP_155_TRANSACTION_HASHES},
-        utils::{into_filter, split_u256},
+        utils::split_u256,
     },
     tracing::builder::TRACING_BLOCK_GAS_LIMIT,
 };
@@ -122,40 +119,4 @@ pub(crate) fn transaction_data_to_starknet_calldata(
     calldata.append(&mut signed_data);
 
     Ok(calldata)
-}
-
-pub(crate) async fn transaction_retries(
-    transaction_signed: &TransactionSigned,
-    db: &Database,
-) -> Result<u8, EthApiError> {
-    let hash = transaction_signed.hash;
-    // Get the pending transaction from the database and extract the retries
-    let filter = into_filter("tx.hash", &hash, HASH_HEX_STRING_LEN);
-    Ok(db
-        .get_one::<StoredPendingTransaction>(filter.clone(), None)
-        .await?
-        .map(|tx| tx.retries + 1)
-        .inspect(|retries| tracing::info!("Retrying {} with {} retries", hash, retries))
-        .or_else(|| {
-            tracing::info!("New transaction {} in pending pool", hash);
-            None
-        })
-        .unwrap_or_default())
-}
-
-pub(crate) async fn update_pending_transaction_in_database(
-    transaction_signed: TransactionSigned,
-    retries: u8,
-    signer: Address,
-    db: &Database,
-) -> Result<(), EthApiError> {
-    let filter = into_filter("tx.hash", &transaction_signed.hash, HASH_HEX_STRING_LEN);
-
-    // Convert the signed transaction to a rpc transaction
-    let transaction = from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed, signer));
-
-    // Update the transaction in the database
-    db.update_one(StoredPendingTransaction::new(transaction, retries), filter, true).await?;
-
-    Ok(())
 }
