@@ -6,7 +6,6 @@ use {
     super::mongo::RANDOM_BYTES_SIZE,
     crate::test_utils::evm_contract::KakarotEvmContract,
     alloy_dyn_abi::DynSolValue,
-    // ethers::abi::Token,
     reth_primitives::{Address, U256},
 };
 
@@ -40,11 +39,6 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     let contract = eoa
         .deploy_evm_contract(
             Some("ERC20"),
-            // (
-            //     Token::String("Test".into()),               // name
-            //     Token::String("TT".into()),                 // symbol
-            //     Token::Uint(ethers::types::U256::from(18)), // decimals
-            // ),
             &[
                 DynSolValue::String("Test".into()),   // name
                 DynSolValue::String("TT".into()),     // symbol

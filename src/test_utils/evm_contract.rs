@@ -56,17 +56,16 @@ pub struct TxLegacyInfo {
 
 pub trait EvmContract {
     fn load_contract_bytecode(contract_name: &str) -> Result<ContractObject, eyre::Error> {
-        let dot_sol = format!("{contract_name}.sol");
-        let dot_json = format!("{contract_name}.json");
+        // Construct the path to the compiled JSON file using the root project path and configuration.
+        let compiled_path = root_project_path!(Path::new(&load_config().out)
+            .join(format!("{contract_name}.sol"))
+            .join(format!("{contract_name}.json")));
 
-        let foundry_default_out = load_config().out;
-        let compiled_solidity_relative_path = Path::new(&foundry_default_out).join(dot_sol).join(dot_json);
-        let compiled_solidity_global_path = root_project_path!(&compiled_solidity_relative_path);
+        // Read the contents of the JSON file into a string.
+        let content = fs::read_to_string(compiled_path)?;
 
-        println!("compiled_solidity_global_path: {compiled_solidity_global_path:?}");
-
-        let compiled_solidity_file_content = fs::read_to_string(compiled_solidity_global_path)?;
-        Ok(serde_json::from_str(&compiled_solidity_file_content)?)
+        // Deserialize the JSON content into a `ContractObject` and return it.
+        Ok(serde_json::from_str(&content)?)
     }
 
     fn prepare_create_transaction(
