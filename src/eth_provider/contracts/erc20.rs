@@ -1,8 +1,5 @@
-use ethers::abi::AbiEncode;
-use ethers::core::types::Address as EthersAddress;
-use ethers::prelude::abigen;
+use alloy_sol_types::{sol, SolCall};
 use reth_primitives::Address;
-
 use reth_primitives::{BlockId, TxKind, U256};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::TransactionRequest;
@@ -11,15 +8,13 @@ use crate::eth_provider::error::{ExecutionError, KakarotError};
 use crate::eth_provider::provider::EthProviderResult;
 use crate::eth_provider::provider::EthereumProvider;
 
-// abigen generates a lot of unused code, needs to be benchmarked if performances ever become a
-// concern
-abigen!(
-    IERC20,
-    r#"[
-        function balanceOf(address account) external view returns (uint256)
-        function allowance(address owner, address spender) external view returns (uint256)
-    ]"#,
-);
+sol! {
+    #[sol(rpc)]
+    contract ERC20Contract {
+        function balanceOf(address account) external view returns (uint256);
+        function allowance(address owner, address spender) external view returns (uint256);
+    }
+}
 
 /// Abstraction for a Kakarot ERC20 contract.
 #[derive(Debug)]
@@ -34,9 +29,8 @@ impl<P: EthereumProvider> EthereumErc20<P> {
     }
 
     pub async fn balance_of(self, evm_address: Address, block_id: BlockId) -> EthProviderResult<U256> {
-        // Prepare the calldata for the bytecode function call
-        let address = EthersAddress::from_slice(evm_address.as_slice());
-        let calldata = IERC20Calls::BalanceOf(BalanceOfCall { account: address }).encode();
+        // Get the calldata for the function call.
+        let calldata = ERC20Contract::balanceOfCall { account: evm_address }.abi_encode();
 
         let request = TransactionRequest {
             from: Some(Address::default()),

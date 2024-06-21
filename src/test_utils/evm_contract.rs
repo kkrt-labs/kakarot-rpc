@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::Path;
 
-use ethers::abi::Tokenize;
-use ethers_solc::artifacts::CompactContractBytecode;
+use alloy_dyn_abi::{DynSolValue, JsonAbiExt};
+use alloy_json_abi::ContractObject;
 use foundry_config::{find_project_root_path, load_config};
 use reth_primitives::{Transaction, TxEip1559, TxKind, TxLegacy, U256};
 use starknet_crypto::FieldElement;
@@ -55,39 +55,41 @@ pub struct TxLegacyInfo {
 }
 
 pub trait EvmContract {
-    fn load_contract_bytecode(contract_name: &str) -> Result<CompactContractBytecode, eyre::Error> {
-        let dot_sol = format!("{contract_name}.sol");
-        let dot_json = format!("{contract_name}.json");
+    fn load_contract_bytecode(contract_name: &str) -> Result<ContractObject, eyre::Error> {
+        // Construct the path to the compiled JSON file using the root project path and configuration.
+        let compiled_path = root_project_path!(Path::new(&load_config().out)
+            .join(format!("{contract_name}.sol"))
+            .join(format!("{contract_name}.json")));
 
-        let foundry_default_out = load_config().out;
-        let compiled_solidity_relative_path = Path::new(&foundry_default_out).join(dot_sol).join(dot_json);
-        let compiled_solidity_global_path = root_project_path!(&compiled_solidity_relative_path);
+        // Read the contents of the JSON file into a string.
+        let content = fs::read_to_string(compiled_path)?;
 
-        let compiled_solidity_file_content = fs::read_to_string(compiled_solidity_global_path)?;
-        Ok(serde_json::from_str(&compiled_solidity_file_content)?)
+        // Deserialize the JSON content into a `ContractObject` and return it.
+        Ok(serde_json::from_str(&content)?)
     }
 
-    fn prepare_create_transaction<T: Tokenize>(
-        contract_bytecode: &CompactContractBytecode,
-        constructor_args: T,
+    fn prepare_create_transaction(
+        contract_bytecode: &ContractObject,
+        constructor_args: &[DynSolValue],
         tx_info: &TxCommonInfo,
     ) -> Result<Transaction, eyre::Error> {
+        // Get the ABI from the contract bytecode.
+        // Return an error if the ABI is not found.
         let abi = contract_bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
-        let bytecode = contract_bytecode
-            .bytecode
-            .as_ref()
-            .ok_or_else(|| eyre::eyre!("No bytecode found"))?
-            .object
-            .as_bytes()
-            .cloned()
-            .unwrap_or_default();
-        let params = constructor_args.into_tokens();
 
+        // Prepare the deployment data, which includes the bytecode and encoded constructor arguments (if any).
         let deploy_data = match abi.constructor() {
-            Some(constructor) => constructor.encode_input(bytecode.to_vec(), &params)?,
-            None => bytecode.to_vec(),
+            Some(constructor) => contract_bytecode
+                .bytecode
+                .clone()
+                .unwrap_or_default()
+                .into_iter()
+                .chain(constructor.abi_encode_input_raw(constructor_args)?)
+                .collect(),
+            None => contract_bytecode.bytecode.clone().unwrap_or_default().to_vec(),
         };
 
+        // Create and return an EIP-1559 transaction for contract creation.
         Ok(Transaction::Eip1559(TxEip1559 {
             chain_id: tx_info.chain_id.expect("chain id required"),
             nonce: tx_info.nonce,
@@ -98,45 +100,54 @@ pub trait EvmContract {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn prepare_call_transaction<T: Tokenize>(
+    fn prepare_call_transaction(
         &self,
         selector: &str,
-        args: T,
+        args: &[DynSolValue],
         tx_info: &TransactionInfo,
     ) -> Result<Transaction, eyre::Error>;
 }
 
 #[derive(Default, Debug)]
 pub struct KakarotEvmContract {
-    pub bytecode: CompactContractBytecode,
+    pub bytecode: ContractObject,
     pub starknet_address: FieldElement,
     pub evm_address: FieldElement,
 }
 
 impl KakarotEvmContract {
-    pub const fn new(
-        bytecode: CompactContractBytecode,
-        starknet_address: FieldElement,
-        evm_address: FieldElement,
-    ) -> Self {
+    pub const fn new(bytecode: ContractObject, starknet_address: FieldElement, evm_address: FieldElement) -> Self {
         Self { bytecode, starknet_address, evm_address }
     }
 }
 
 impl EvmContract for KakarotEvmContract {
-    fn prepare_call_transaction<T: Tokenize>(
+    fn prepare_call_transaction(
         &self,
         selector: &str,
-        args: T,
+        args: &[DynSolValue],
         tx_info: &TransactionInfo,
     ) -> Result<Transaction, eyre::Error> {
+        // Get the ABI from the bytecode.
+        // Return an error if the ABI is not found.
         let abi = self.bytecode.abi.as_ref().ok_or_else(|| eyre::eyre!("No ABI found"))?;
-        let params = args.into_tokens();
 
-        let data = abi.function(selector).and_then(|function| function.encode_input(&params))?;
+        // Get the function corresponding to the selector and encode the arguments
+        let data = abi
+            .function(selector)
+            .ok_or_else(|| eyre::eyre!("No function found with selector: {}", selector))
+            .and_then(|function| {
+            function
+                .first()
+                .ok_or_else(|| eyre::eyre!("No functions available"))?
+                .abi_encode_input(args)
+                .map_err(|_| eyre::eyre!("Failed to encode input"))
+        })?;
 
+        // Convert the EVM address to a `Felt252Wrapper`.
         let evm_address: Felt252Wrapper = self.evm_address.into();
 
+        // Create the transaction based on the transaction information type.
         let tx = match tx_info {
             TransactionInfo::FeeMarketInfo(fee_market) => Transaction::Eip1559(TxEip1559 {
                 chain_id: tx_info.chain_id().expect("chain id required"),

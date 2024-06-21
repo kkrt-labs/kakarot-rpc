@@ -1,6 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use ethers::abi::Tokenize;
+use alloy_dyn_abi::DynSolValue;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::test_utils::eoa::Eoa;
 use kakarot_rpc::test_utils::evm_contract::{
@@ -39,11 +39,11 @@ fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> r
 }
 
 /// Helper to set up the debug/tracing environment on Katana.
-pub async fn tracing<T: Tokenize>(
+pub async fn tracing(
     katana: &Katana,
     contract: &KakarotEvmContract,
     entry_point: &str,
-    get_args: Box<dyn Fn(u64) -> T>,
+    get_args: Box<dyn Fn(u64) -> Vec<DynSolValue>>,
 ) {
     let eoa = katana.eoa();
     let eoa_address = eoa.evm_address().expect("Failed to get eoa address");
@@ -58,7 +58,7 @@ pub async fn tracing<T: Tokenize>(
         let tx = contract
             .prepare_call_transaction(
                 entry_point,
-                get_args(nonce + i as u64),
+                &get_args(nonce + i as u64),
                 &TransactionInfo::FeeMarketInfo(TxFeeMarketInfo {
                     common: TxCommonInfo { nonce: nonce + i as u64, value: 0, chain_id: Some(chain_id) },
                     max_fee_per_gas,
@@ -129,7 +129,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     // Setup the Kakarot RPC server.
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
-    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| ())).await;
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| vec![])).await;
 
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
@@ -215,7 +215,7 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
     // Setup the Kakarot RPC server.
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
-    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| ())).await;
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| vec![])).await;
 
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
@@ -235,7 +235,7 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
     // Setup the Kakarot RPC server.
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
-    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| ())).await;
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| vec![])).await;
 
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");

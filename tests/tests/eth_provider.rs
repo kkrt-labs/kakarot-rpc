@@ -186,7 +186,7 @@ async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup
     let counter_address = counter_address.try_into().expect("Failed to convert EVM address");
 
     // When
-    eoa.call_evm_contract(&counter, "inc", (), 0).await.expect("Failed to increment counter");
+    eoa.call_evm_contract(&counter, "inc", &[], 0).await.expect("Failed to increment counter");
 
     // Then
     let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
@@ -239,7 +239,7 @@ async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract), _setup: ())
     let nonce_before = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
 
     // When
-    eoa.call_evm_contract(&counter, "inc", (), 0).await.expect("Failed to increment counter");
+    eoa.call_evm_contract(&counter, "inc", &[], 0).await.expect("Failed to increment counter");
 
     // Then
     let nonce_after = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
@@ -263,9 +263,8 @@ async fn test_get_code(#[future] counter: (Katana, KakarotEvmContract), _setup: 
     // Then
     let counter_bytecode = <KakarotEvmContract as EvmContract>::load_contract_bytecode("Counter")
         .expect("Failed to load counter bytecode");
-    let expected =
-        counter_bytecode.deployed_bytecode.unwrap().bytecode.unwrap().object.into_bytes().unwrap().as_ref().to_vec();
-    assert_eq!(bytecode, Bytes::from(expected));
+    let expected = counter_bytecode.deployed_bytecode.unwrap().0;
+    assert_eq!(bytecode, expected);
 }
 
 #[rstest]
@@ -736,7 +735,7 @@ async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEv
     let transaction = counter
         .prepare_call_transaction(
             "inc",
-            (),
+            &[],
             &TransactionInfo::LegacyInfo(TxLegacyInfo {
                 common: TxCommonInfo { nonce, ..Default::default() },
                 gas_price: 1,
