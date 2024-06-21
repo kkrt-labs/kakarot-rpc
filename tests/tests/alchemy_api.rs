@@ -32,8 +32,6 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
     let to = Address::from_slice(eoa.evm_address().unwrap().as_slice());
     let amount = U256::from(10_000);
 
-    println!("Address: {:?}", eoa.evm_address().unwrap().as_slice());
-
     eoa.call_evm_contract(&erc20, "mint", &[DynSolValue::Address(to), DynSolValue::Uint(amount, 256)], 0)
         .await
         .expect("Failed to mint ERC20 tokens");

@@ -1,5 +1,4 @@
-use alloy_provider::ProviderBuilder;
-use alloy_sol_types::sol;
+use alloy_sol_types::{sol, SolCall};
 use reth_primitives::Address;
 use reth_primitives::{BlockId, TxKind, U256};
 use reth_rpc_types::request::TransactionInput;
@@ -8,11 +7,10 @@ use reth_rpc_types::TransactionRequest;
 use crate::eth_provider::error::{ExecutionError, KakarotError};
 use crate::eth_provider::provider::EthProviderResult;
 use crate::eth_provider::provider::EthereumProvider;
-use crate::eth_rpc::config::RPCConfig;
 
 sol! {
     #[sol(rpc)]
-    contract MyContract {
+    contract ERC20Contract {
         function balanceOf(address account) external view returns (uint256);
         function allowance(address owner, address spender) external view returns (uint256);
     }
@@ -31,21 +29,8 @@ impl<P: EthereumProvider> EthereumErc20<P> {
     }
 
     pub async fn balance_of(self, evm_address: Address, block_id: BlockId) -> EthProviderResult<U256> {
-        // Prepare the calldata for the bytecode function call.
-        // Create a provider using the `ProviderBuilder`` and the RPC configuration from the environment.
-        let provider = ProviderBuilder::new()
-            .on_builtin(&RPCConfig::from_env().expect("Failed to load Kakarot RPC config").socket_addr)
-            .await
-            .expect("Failed to create provider via alloy `ProviderBuilder`");
-
-        // Initialize a call builder for the contract at address ZERO with the created provider.
-        let call_builder = MyContract::new(Address::ZERO, provider);
-
-        // Create a function call to the `balanceOf` method with the specified EVM address.
-        let function_call = call_builder.balanceOf(evm_address);
-
         // Get the calldata for the function call.
-        let calldata = function_call.calldata();
+        let calldata = ERC20Contract::balanceOfCall { account: evm_address }.abi_encode();
 
         let request = TransactionRequest {
             from: Some(Address::default()),
@@ -53,7 +38,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
             gas_price: Some(0),
             gas: Some(1_000_000),
             value: Some(U256::ZERO),
-            input: TransactionInput { input: Some(calldata.clone()), data: None },
+            input: TransactionInput { input: Some(calldata.into()), data: None },
             ..Default::default()
         };
 
