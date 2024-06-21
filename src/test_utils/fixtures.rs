@@ -2,8 +2,12 @@ use rstest::fixture;
 use tracing_subscriber::{filter, FmtSubscriber};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    super::katana::Katana, super::mongo::RANDOM_BYTES_SIZE, crate::test_utils::evm_contract::KakarotEvmContract,
-    ethers::abi::Token,
+    super::katana::Katana,
+    super::mongo::RANDOM_BYTES_SIZE,
+    crate::test_utils::evm_contract::KakarotEvmContract,
+    alloy_dyn_abi::DynSolValue,
+    // ethers::abi::Token,
+    reth_primitives::{Address, U256},
 };
 
 /// This fixture deploys a counter contract on Katana.
@@ -12,7 +16,7 @@ use {
 #[awt]
 pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     let eoa = katana.eoa();
-    let contract = eoa.deploy_evm_contract(Some("Counter"), ()).await.expect("Failed to deploy Counter contract");
+    let contract = eoa.deploy_evm_contract(Some("Counter"), &[]).await.expect("Failed to deploy Counter contract");
     (katana, contract)
 }
 
@@ -22,7 +26,7 @@ pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 #[awt]
 pub async fn contract_empty(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     let eoa = katana.eoa();
-    let contract = eoa.deploy_evm_contract(None, ()).await.expect("Failed to deploy empty contract");
+    let contract = eoa.deploy_evm_contract(None, &[]).await.expect("Failed to deploy empty contract");
     (katana, contract)
 }
 
@@ -36,11 +40,16 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     let contract = eoa
         .deploy_evm_contract(
             Some("ERC20"),
-            (
-                Token::String("Test".into()),               // name
-                Token::String("TT".into()),                 // symbol
-                Token::Uint(ethers::types::U256::from(18)), // decimals
-            ),
+            // (
+            //     Token::String("Test".into()),               // name
+            //     Token::String("TT".into()),                 // symbol
+            //     Token::Uint(ethers::types::U256::from(18)), // decimals
+            // ),
+            &[
+                DynSolValue::String("Test".into()),   // name
+                DynSolValue::String("TT".into()),     // symbol
+                DynSolValue::Uint(U256::from(18), 8), // decimals
+            ],
         )
         .await
         .expect("Failed to deploy ERC20 contract");
@@ -52,7 +61,7 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 #[fixture]
 #[awt]
 pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (Katana, KakarotEvmContract) {
-    use ethers::abi::Address;
+    // use ethers::abi::Address;
 
     let katana = counter.0;
     let counter = counter.1;
@@ -61,9 +70,12 @@ pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (
     let contract = eoa
         .deploy_evm_contract(
             Some("PlainOpcodes"),
-            (
-                Token::Address(counter_address), // counter address
-            ),
+            // (
+            //     Token::Address(counter_address), // counter address
+            // ),
+            &[
+                DynSolValue::Address(counter_address), // counter address
+            ],
         )
         .await
         .expect("Failed to deploy PlainOpcodes contract");

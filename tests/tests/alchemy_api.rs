@@ -1,6 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use ethers::abi::Token;
+use alloy_dyn_abi::DynSolValue;
+// use ethers::abi::Token;
 use kakarot_rpc::models::balance::TokenBalances;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
@@ -29,13 +30,16 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     // When
-    let to = ethers::abi::Address::from_slice(eoa.evm_address().unwrap().as_slice());
+    let to = Address::from_slice(eoa.evm_address().unwrap().as_slice());
     let amount = U256::from(10_000);
+
+    println!("Address: {:?}", eoa.evm_address().unwrap().as_slice());
 
     eoa.call_evm_contract(
         &erc20,
         "mint",
-        (Token::Address(to), Token::Uint(ethers::abi::Uint::from_big_endian(&amount.to_be_bytes::<32>()[..]))),
+        // (Token::Address(to), Token::Uint(ethers::abi::Uint::from_big_endian(&amount.to_be_bytes::<32>()[..]))),
+        &[DynSolValue::Address(to), DynSolValue::Uint(amount, 256)],
         0,
     )
     .await
