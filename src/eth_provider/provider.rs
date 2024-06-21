@@ -303,20 +303,29 @@ where
     }
 
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+        // Convert the optional block ID to a Starknet block ID, awaiting the result
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
+        // Create a new ERC20Reader instance for the Starknet native token
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
-        let balance = eth_contract
-            .balanceOf(&starknet_address(address))
-            .block_id(starknet_block_id)
-            .call()
-            .await
-            .map_err(KakarotError::from)?
-            .balance;
+        // Call the balanceOf method on the contract for the given address and block ID, awaiting the result
+        let res = eth_contract.balanceOf(&starknet_address(address)).block_id(starknet_block_id).call().await;
 
+        // Check if the contract was not found, returning a default balance of 0 if true
+        // The native token contract should be deployed on the Starknet network, so this should not happen and we want to avoid errors in this case
+        let balance = if contract_not_found(&res) {
+            return Ok(Default::default());
+        } else {
+            // Otherwise, extract the balance from the result, converting any errors to KakarotError
+            res.map_err(KakarotError::from)?.balance
+        };
+
+        // Convert the low and high parts of the balance to U256
         let low: U256 = into_via_wrapper!(balance.low);
         let high: U256 = into_via_wrapper!(balance.high);
+
+        // Combine the low and high parts to form the final balance and return it
         Ok(low + (high << 128))
     }
 
