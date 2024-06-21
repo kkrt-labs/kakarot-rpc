@@ -8,21 +8,22 @@ use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
 use katana_primitives::chain::ChainId;
 use katana_primitives::genesis::json::GenesisJson;
 use katana_primitives::genesis::Genesis;
+use mongodb::bson;
 use mongodb::bson::doc;
+use mongodb::bson::Document;
 use mongodb::options::{UpdateModifications, UpdateOptions};
+use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::eth_provider::database::types::{
-    header::StoredHeader,
-    transaction::{StoredPendingTransaction, StoredTransaction},
-};
-use crate::eth_provider::utils::{format_hex, into_filter};
-use crate::eth_provider::{
-    constant::{HASH_HEX_STRING_LEN, U64_HEX_STRING_LEN},
-    provider::EthDataProvider,
-};
+use crate::eth_provider::database::ethereum::EthereumDatabase;
+use crate::eth_provider::database::filter;
+use crate::eth_provider::database::filter::format_hex;
+use crate::eth_provider::database::filter::EthDatabaseFilterBuilder;
+use crate::eth_provider::database::types::{header::StoredHeader, log::StoredLog, transaction::StoredTransaction};
+use crate::eth_provider::database::CollectionName;
+use crate::eth_provider::{constant::U64_HEX_STRING_LEN, provider::EthDataProvider};
 use crate::test_utils::eoa::KakarotEOA;
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
@@ -160,6 +161,50 @@ impl<'a> Katana {
         &self.sequencer
     }
 
+    /// Adds mock logs to the database.
+    pub async fn add_mock_logs(&self, n_logs: usize) {
+        // Get the Ethereum provider instance.
+        let provider = self.eth_provider();
+
+        // Get the database instance from the provider.
+        let database = provider.database();
+
+        // Create a mock log object with predefined values.
+        let log = Log {
+            inner: alloy_primitives::Log {
+                address: Address::with_last_byte(0x69),
+                data: alloy_primitives::LogData::new_unchecked(
+                    vec![B256::with_last_byte(0x69)],
+                    Bytes::from_static(&[0x69]),
+                ),
+            },
+            block_hash: Some(B256::with_last_byte(0x69)),
+            block_number: Some(0x69),
+            block_timestamp: None,
+            transaction_hash: Some(B256::with_last_byte(0x69)),
+            transaction_index: Some(0x69),
+            log_index: Some(0x69),
+            removed: false,
+        };
+
+        // Create a vector to hold all the BSON documents to be inserted
+        let log_docs: Vec<Document> = std::iter::repeat(log.clone())
+            .take(n_logs)
+            .map(|log| {
+                let stored_log = StoredLog { log };
+                bson::to_document(&stored_log).expect("Failed to serialize StoredLog to BSON")
+            })
+            .collect();
+
+        // Insert all the BSON documents into the MongoDB collection at once.
+        database
+            .inner()
+            .collection(StoredLog::collection_name())
+            .insert_many(log_docs, None)
+            .await
+            .expect("Failed to insert logs into the database");
+    }
+
     /// Adds pending transactions to the database.
     pub async fn add_pending_transactions_to_database(&self, txs: Vec<Transaction>) {
         let provider = self.eth_provider();
@@ -167,11 +212,7 @@ impl<'a> Katana {
 
         // Add the transactions to the database.
         for tx in txs {
-            let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
-            database
-                .update_one::<StoredPendingTransaction>(tx.into(), filter, true)
-                .await
-                .expect("Failed to update pending transaction in database");
+            database.upsert_pending_transaction(tx, 0).await.expect("Failed to update pending transaction in database");
         }
     }
 
@@ -185,11 +226,7 @@ impl<'a> Katana {
         // Add the transactions to the database.
         let tx_collection = database.collection::<StoredTransaction>();
         for tx in txs {
-            let filter = into_filter("tx.hash", &tx.hash, HASH_HEX_STRING_LEN);
-            database
-                .update_one::<StoredTransaction>(tx.into(), filter, true)
-                .await
-                .expect("Failed to update transaction in database");
+            database.upsert_transaction(tx).await.expect("Failed to update transaction in database");
         }
 
         // We use the unpadded block number to filter the transactions in the database and
@@ -211,7 +248,7 @@ impl<'a> Katana {
         // Same issue as the transactions, we need to update the block number to the padded version once added
         // to the database.
         let header_collection = database.collection::<StoredHeader>();
-        let filter = into_filter("header.number", &block_number, U64_HEX_STRING_LEN);
+        let filter = EthDatabaseFilterBuilder::<filter::Header>::default().with_block_number(block_number).build();
         database.update_one(StoredHeader { header }, filter, true).await.expect("Failed to update header in database");
         header_collection
             .update_one(
@@ -263,6 +300,58 @@ impl<'a> Katana {
                 .filter(|stored_log| stored_log.log.topics().len() >= min_topics)
                 .map(|stored_log| stored_log.log.clone())
                 .collect()
+        })
+    }
+
+    pub fn logs_by_address(&self, addresses: &[Address]) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| {
+                    let address = stored_log.log.address();
+                    addresses.iter().any(|addr| *addr == address)
+                })
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
+        })
+    }
+
+    pub fn logs_by_block_number(&self, block_number: u64) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| stored_log.log.block_number.unwrap_or_default() == block_number)
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
+        })
+    }
+
+    pub fn logs_by_block_range(&self, block_range: std::ops::Range<u64>) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| {
+                    let block_number = stored_log.log.block_number.unwrap_or_default();
+                    block_range.contains(&block_number)
+                })
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
+        })
+    }
+
+    pub fn logs_by_block_hash(&self, block_hash: B256) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter()
+                .filter_map(|data| data.extract_stored_log())
+                .filter(|stored_log| stored_log.log.block_hash.unwrap_or_default() == block_hash)
+                .map(|stored_log| stored_log.log.clone())
+                .collect()
+        })
+    }
+
+    pub fn all_logs(&self) -> Vec<Log> {
+        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
+            logs.iter().filter_map(|data| data.extract_stored_log()).map(|stored_log| stored_log.log.clone()).collect()
         })
     }
 

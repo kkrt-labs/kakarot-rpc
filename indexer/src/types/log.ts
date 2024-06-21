@@ -1,5 +1,8 @@
 // Utils
-import { NULL_BLOCK_HASH, padBigint } from "../utils/hex.ts";
+import { padBigint } from "../utils/hex.ts";
+
+// Constants
+import { NULL_BLOCK_HASH } from "../constants.ts";
 
 // Starknet
 import { Event, hash } from "../deps.ts";

@@ -164,51 +164,80 @@ export function toTypedEthTx({
   transaction: Transaction;
 }): TypedTransaction | null {
   const calldata = transaction.invokeV1?.calldata;
+
+  // Validate calldata presence
   if (!calldata) {
-    console.error("No calldata");
-    console.error(JSON.stringify(transaction, null, 2));
+    console.error("No calldata", JSON.stringify(transaction, null, 2));
     return null;
   }
+
+  // Validate single call transaction
   const callArrayLen = BigInt(calldata[0]);
   // Multi-calls are not supported for now.
   if (callArrayLen !== 1n) {
-    console.error(`Invalid call array length ${callArrayLen}`);
-    console.error(JSON.stringify(transaction, null, 2));
+    console.error(
+      `Invalid call array length ${BigInt(calldata[0])}`,
+      JSON.stringify(transaction, null, 2),
+    );
     return null;
   }
 
-  // callArrayLen <- calldata[0]
-  // to <- calldata[1]
-  // selector <- calldata[2];
-  // dataOffset <- calldata[3]
-  // dataLength <- calldata[4]
-  // calldataLen <- calldata[5]
-  // signedDataLen <- calldata[6]
-  const bytes = unpackCallData(calldata);
-
+  // Validate signature length
   const signature = transaction.meta.signature;
   if (signature.length !== 5) {
-    console.error(`Invalid signature length ${signature.length}`);
-    console.error(JSON.stringify(transaction, null, 2));
+    console.error(
+      `Invalid signature length ${signature.length}`,
+      JSON.stringify(transaction, null, 2),
+    );
     return null;
   }
-  const r = uint256.uint256ToBN({ low: signature[0], high: signature[1] });
-  const s = uint256.uint256ToBN({ low: signature[2], high: signature[3] });
-  const v = BigInt(signature[4]);
 
+  // Extract signature components
+  const [rLow, rHigh, sLow, sHigh, vBigInt] = signature;
+  const r = uint256.uint256ToBN({ low: rLow, high: rHigh });
+  const s = uint256.uint256ToBN({ low: sLow, high: sHigh });
+  const v = BigInt(vBigInt);
+
+  // We first try to decode the calldata in the old format, and if it fails, we try the new format.
   try {
-    const ethTxUnsigned = fromSerializedData(bytes);
+    // Old format without 31 bytes chunks packing
+    // callArrayLen <- calldata[0]
+    // to <- calldata[1]
+    // selector <- calldata[2];
+    // dataOffset <- calldata[3]
+    // dataLength <- calldata[4]
+    // calldataLen <- calldata[5]
+    const oldFormatBytes = concatBytes(
+      ...calldata.slice(6).map((x) => bigIntToBytes(BigInt(x))),
+    );
+
+    const ethTxUnsigned = fromSerializedData(oldFormatBytes);
     return addSignature(ethTxUnsigned, r, s, v);
-  } catch (e) {
-    if (e instanceof Error) {
-      console.error(`Invalid transaction: ${e.message}`);
-    } else {
-      console.error(`Unknown throw ${e}`);
-      throw e;
+  } catch (_) {
+    try {
+      // If old format fails, try with 31 bytes chunks packing (new format)
+      // callArrayLen <- calldata[0]
+      // to <- calldata[1]
+      // selector <- calldata[2];
+      // dataOffset <- calldata[3]
+      // dataLength <- calldata[4]
+      // calldataLen <- calldata[5]
+      // signedDataLen <- calldata[6]
+      const newFormatBytes = unpackCallData(calldata);
+
+      const ethTxUnsigned = fromSerializedData(newFormatBytes);
+      return addSignature(ethTxUnsigned, r, s, v);
+    } catch (e) {
+      if (e instanceof Error) {
+        console.error(`Invalid transaction: ${e.message}`);
+      } else {
+        console.error(`Unknown throw ${e}`);
+        throw e;
+      }
+      // TODO: Ping alert webhooks
+      console.error(e);
+      return null;
     }
-    // TODO: Ping alert webhooks
-    console.error(e);
-    return null;
   }
 }
 

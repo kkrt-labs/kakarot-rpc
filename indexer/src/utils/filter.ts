@@ -1,71 +1,84 @@
 // Starknet
 import { Event, Transaction, TransactionReceipt } from "../deps.ts";
 
-const KAKAROT_ADDRESS = Deno.env.get("KAKAROT_ADDRESS");
-if (KAKAROT_ADDRESS === undefined) {
-  throw new Error("ENV: KAKAROT_ADDRESS is not set");
+// Constants
+import { KAKAROT_ADDRESS } from "../constants.ts";
+
+/**
+ * Determines if a given transaction is related to Kakarot.
+ *
+ * This function checks the calldata of the transaction to see if the
+ * `to` field matches the KAKAROT_ADDRESS. The calldata structure is
+ * expected to follow a specific format:
+ * - callArrayLen <- calldata[0]
+ * - to <- calldata[1]
+ * - selector <- calldata[2]
+ * - dataOffset <- calldata[3]
+ * - dataLength <- calldata[4]
+ * - calldataLen <- calldata[5]
+ * - signedDataLen <- calldata[6]
+ *
+ * @param {Transaction} transaction - The transaction to check.
+ * @returns {boolean} - Returns true if the transaction is related to Kakarot, otherwise false.
+ */
+export function isKakarotTransaction(transaction: Transaction): boolean {
+  return (
+    BigInt(transaction.invokeV1?.calldata?.[1] ?? 0) === BigInt(KAKAROT_ADDRESS)
+  );
 }
 
-export const isKakarotTransaction = (transaction: Transaction) => {
-  // Filter out transactions that are not related to Kakarot.
-  // callArrayLen <- calldata[0]
-  // to <- calldata[1]
-  // selector <- calldata[2];
-  // dataOffset <- calldata[3]
-  // dataLength <- calldata[4]
-  // calldataLen <- calldata[5]
-  // signedDataLen <- calldata[6]
-  const calldata = transaction.invokeV1?.calldata;
-  if (!calldata) {
-    console.error("No calldata in transaction");
-    console.error(JSON.stringify(transaction, null, 2));
-    return false;
-  }
-  const to = calldata[1];
-  if (!to) {
-    console.error("No `to` field in calldata of transaction");
-    console.error(JSON.stringify(transaction, null, 2));
-    return false;
-  }
-
-  if (BigInt(to) !== BigInt(KAKAROT_ADDRESS)) {
-    console.log("✅ Skipping transaction that is not related to Kakarot");
-    return false;
-  }
-  return true;
-};
-
-export const ethValidationFailed = (event: Event) => {
+/**
+ * Validates if an Ethereum validation has failed based on the event data.
+ *
+ * @param {Event} event - The event containing data to validate.
+ * @returns {boolean} - Returns true if the validation failed, otherwise false.
+ */
+export function ethValidationFailed(event: Event): boolean {
+  // We only need the data array to validate the event
   const { data } = event;
-  if (data.length === 0) {
-    return false;
-  }
 
-  const response_len = parseInt(data[0], 16);
+  // If data array is empty, return false (no validation failure)
+  if (!data.length) return false;
 
-  if (response_len + 1 >= data.length) {
+  // Parse the first element of data as the response length in hexadecimal
+  const responseLen = parseInt(data[0] ?? "", 16);
+
+  // Check if the data length is valid (greater than response length + 1)
+  const isValidLength = data.length > responseLen + 1;
+
+  // If data length is invalid, log an error and return false
+  if (!isValidLength) {
     console.error(
-      `Invalid event data length. Got ${data.length}, expected < ${
-        response_len + 1
+      `Invalid event data length. Got ${data.length}, expected > ${
+        responseLen + 1
       }`,
     );
     return false;
   }
 
-  const success = parseInt(data[1 + response_len], 16);
-  if (success == 1) {
-    return false;
-  }
+  // Parse the element at position (response length + 1) as success flag in hexadecimal
+  const success = parseInt(data[responseLen + 1] ?? "", 16);
 
-  const response = data.slice(1, 1 + response_len);
-  const msg = String.fromCharCode(...response.map((x) => parseInt(x, 16)));
+  // If success flag is set (1), return false (no validation failure)
+  if (success == 1) return false;
 
-  return msg.includes("eth validation failed");
-};
+  // Extract the response data slice, convert it to a string, and check if it includes "eth validation failed"
+  return String.fromCharCode(
+    ...data.slice(1, 1 + responseLen).map((x) => parseInt(x, 16)),
+  ).includes("eth validation failed");
+}
 
-export const isRevertedWithOutOfResources = (receipt: TransactionReceipt) => {
+/**
+ * Checks if a transaction receipt indicates that it was reverted due to running out of resources.
+ *
+ * @param {TransactionReceipt} receipt - The transaction receipt to check.
+ * @returns {boolean} - Returns true if the transaction was reverted due to out of resources, otherwise false.
+ */
+export function isRevertedWithOutOfResources(
+  receipt: TransactionReceipt,
+): boolean {
   return (
     receipt.executionStatus.includes("REVERTED") &&
-    receipt.revertReason?.includes("RunResources has no remaining steps")
+    (receipt.revertReason ?? "").includes("RunResources has no remaining steps")
   );
-};
+}

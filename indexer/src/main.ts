@@ -1,10 +1,21 @@
 // Utils
-import { NULL_BLOCK_HASH, padString, toHexString } from "./utils/hex.ts";
+import { padString, toHexString } from "./utils/hex.ts";
 import {
   ethValidationFailed,
   isKakarotTransaction,
   isRevertedWithOutOfResources,
 } from "./utils/filter.ts";
+
+// Constants
+import {
+  AUTH_TOKEN,
+  NULL_BLOCK_HASH,
+  SINK_OPTIONS,
+  SINK_TYPE,
+  STARTING_BLOCK,
+  STREAM_URL,
+  TRANSACTION_EXECUTED,
+} from "./constants.ts";
 
 // Types
 import {
@@ -25,7 +36,6 @@ import {
   BlockHeader,
   Config,
   EventWithTransaction,
-  hash,
   hexToBytes,
   NetworkOptions,
   SinkOptions,
@@ -33,28 +43,6 @@ import {
 } from "./deps.ts";
 // Eth
 import { Bloom, Trie } from "./deps.ts";
-
-const AUTH_TOKEN = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
-const TRANSACTION_EXECUTED = hash.getSelectorFromName("transaction_executed");
-
-const STREAM_URL = Deno.env.get("STREAM_URL") ?? "http://localhost:7171";
-const STARTING_BLOCK = Number(Deno.env.get("STARTING_BLOCK")) ?? 0;
-if (!Number.isSafeInteger(STARTING_BLOCK) || STARTING_BLOCK < 0) {
-  throw new Error("Invalid STARTING_BLOCK");
-}
-const SINK_TYPE = Deno.env.get("SINK_TYPE") ?? "console";
-if (SINK_TYPE !== "console" && SINK_TYPE !== "mongo") {
-  throw new Error("Invalid SINK_TYPE");
-}
-
-const sinkOptions = SINK_TYPE === "mongo"
-  ? {
-    connectionString: Deno.env.get("MONGO_CONNECTION_STRING") ??
-      "mongodb://mongo:mongo@mongo:27017",
-    database: Deno.env.get("MONGO_DATABASE_NAME") ?? "kakarot-test-db",
-    collectionNames: ["headers", "transactions", "receipts", "logs"],
-  }
-  : {};
 
 export const config: Config<NetworkOptions, SinkOptions> = {
   streamUrl: STREAM_URL,
@@ -73,7 +61,7 @@ export const config: Config<NetworkOptions, SinkOptions> = {
     transactions: [{ includeReverted: true }],
   },
   sinkType: SINK_TYPE,
-  sinkOptions: sinkOptions,
+  sinkOptions: SINK_OPTIONS,
 };
 
 export default async function transform({

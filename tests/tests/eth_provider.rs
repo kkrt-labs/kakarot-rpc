@@ -3,10 +3,10 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use kakarot_rpc::eth_provider::constant::{HASH_HEX_STRING_LEN, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
-use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
+use kakarot_rpc::eth_provider::constant::{MAX_LOGS, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
+use kakarot_rpc::eth_provider::database::ethereum::EthereumDatabase;
+use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::eth_provider::utils::into_filter;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa;
 use kakarot_rpc::test_utils::evm_contract::{EvmContract, TransactionInfo, TxCommonInfo, TxLegacyInfo};
@@ -283,12 +283,100 @@ async fn test_get_logs_block_range(#[future] katana: Katana, _setup: ()) {
     assert!(!logs.is_empty());
 }
 
+/// Utility function to filter logs using the Ethereum provider.
+/// Takes a filter and a provider, and returns the corresponding logs.
 async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider>) -> Vec<Log> {
+    // Call the provider to get logs using the filter.
     let logs = provider.get_logs(filter).await.expect("Failed to get logs");
+    // If the result contains logs, return them, otherwise panic with an error.
     match logs {
         FilterChanges::Logs(logs) => logs,
         _ => panic!("Expected logs"),
     }
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_limit(#[future] katana: Katana, _setup: ()) {
+    // Get the Ethereum provider from Katana.
+    let provider = katana.eth_provider();
+
+    // Set the limit of logs to be retrieved.
+    std::env::set_var("MAX_LOGS", "500");
+
+    // Add mock logs to the Katana instance's database.
+    // The number of logs added is MAX_LOGS + 20, ensuring there are more logs than the limit.
+    katana.add_mock_logs(((*MAX_LOGS).unwrap() + 20) as usize).await;
+
+    // Assert that the number of logs returned by filter_logs is equal to the limit.
+    // This ensures that the log retrieval respects the MAX_LOGS constraint.
+    assert_eq!(filter_logs(Filter::default(), provider.clone()).await.len(), (*MAX_LOGS).unwrap() as usize);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_block_filter(#[future] katana: Katana, _setup: ()) {
+    // Get the Ethereum provider from Katana.
+    let provider = katana.eth_provider();
+
+    // Get the first transaction from Katana.
+    let first_transaction = katana.first_transaction().unwrap();
+    let block_number = first_transaction.block_number.unwrap();
+    let block_hash = first_transaction.block_hash.unwrap();
+
+    // Get logs by block number from Katana.
+    let logs_katana_block_number = katana.logs_by_block_number(block_number);
+    // Get logs for a range of blocks from Katana.
+    let logs_katana_block_range = katana.logs_by_block_range(0..u64::MAX / 2);
+    // Get logs by block hash from Katana.
+    let logs_katana_block_hash = katana.logs_by_block_hash(block_hash);
+    // Get all logs from Katana.
+    let all_logs_katana = katana.all_logs();
+
+    // Verify logs filtered by block number.
+    assert_eq!(filter_logs(Filter::default().select(block_number), provider.clone()).await, logs_katana_block_number);
+    // Verify logs filtered by block hash.
+    assert_eq!(filter_logs(Filter::default().select(block_hash), provider.clone()).await, logs_katana_block_hash);
+    // Verify all logs.
+    assert_eq!(filter_logs(Filter::default().select(0..), provider.clone()).await, all_logs_katana);
+    // Verify logs filtered by a range of blocks.
+    assert_eq!(filter_logs(Filter::default().select(0..u64::MAX / 2), provider.clone()).await, logs_katana_block_range);
+    // Verify that filtering by an empty range returns an empty result.
+    assert!(filter_logs(Filter::default().select(0..0), provider.clone()).await.is_empty());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_get_logs_address_filter(#[future] katana: Katana, _setup: ()) {
+    // Get the Ethereum provider from Katana.
+    let provider = katana.eth_provider();
+
+    // Get all logs from Katana.
+    let all_logs_katana = katana.all_logs();
+
+    // Get the first log address, or default address if logs are empty.
+    let first_address = if all_logs_katana.is_empty() { Address::default() } else { all_logs_katana[0].address() };
+    // Verify logs filtered by the first address.
+    assert_eq!(
+        filter_logs(Filter::new().address(vec![first_address]), provider.clone()).await,
+        katana.logs_by_address(&[first_address])
+    );
+
+    // Create a vector to store a few addresses.
+    let some_addresses: Vec<_> = all_logs_katana.iter().take(2).map(Log::address).collect();
+    // Verify logs filtered by these few addresses.
+    assert_eq!(
+        filter_logs(Filter::new().address(some_addresses.clone()), provider.clone()).await,
+        katana.logs_by_address(&some_addresses)
+    );
+
+    // Create a vector to store all addresses.
+    let all_addresses: Vec<_> = all_logs_katana.iter().map(Log::address).collect();
+    // Verify that all logs are retrieved when filtered by all addresses.
+    assert_eq!(filter_logs(Filter::new().address(all_addresses), provider.clone()).await, all_logs_katana);
 }
 
 #[rstest]
@@ -771,12 +859,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     stored_transaction.tx.block_number = Some(1111);
 
     // Insert the transaction into the final transaction collection
-    let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_HEX_STRING_LEN);
-    eth_provider
-        .database()
-        .update_one::<StoredTransaction>(stored_transaction.tx.into(), filter, true)
-        .await
-        .expect("Failed to insert documents");
+    eth_provider.database().upsert_transaction(stored_transaction.tx).await.expect("Failed to insert documents");
 
     // Check if the final transaction is returned correctly by the `transaction_by_hash` method
     assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(1111));
@@ -793,11 +876,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let transaction1 = katana.eoa().mock_transaction_with_nonce(0).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
-        .update_one::<StoredPendingTransaction>(
-            transaction1.clone().into(),
-            into_filter("tx.hash", &transaction1.hash, HASH_HEX_STRING_LEN),
-            true,
-        )
+        .upsert_pending_transaction(transaction1.clone(), 0)
         .await
         .expect("Failed to insert pending transaction in database");
 
@@ -806,11 +885,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let transaction2 = katana.eoa().mock_transaction_with_nonce(1).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
-        .update_one::<StoredPendingTransaction>(
-            StoredPendingTransaction::new(transaction2.clone(), *TRANSACTION_MAX_RETRIES + 1),
-            into_filter("tx.hash", &transaction2.hash, HASH_HEX_STRING_LEN),
-            true,
-        )
+        .upsert_pending_transaction(transaction2.clone(), *TRANSACTION_MAX_RETRIES + 1)
         .await
         .expect("Failed to insert pending transaction in database");
 
@@ -819,20 +894,12 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let transaction3 = katana.eoa().mock_transaction_with_nonce(2).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
-        .update_one::<StoredPendingTransaction>(
-            transaction3.clone().into(),
-            into_filter("tx.hash", &transaction3.clone().hash, HASH_HEX_STRING_LEN),
-            true,
-        )
+        .upsert_pending_transaction(transaction3.clone(), 0)
         .await
         .expect("Failed to insert pending transaction in database");
     eth_provider
         .database()
-        .update_one::<StoredTransaction>(
-            transaction3.clone().into(),
-            into_filter("tx.hash", &transaction3.hash, HASH_HEX_STRING_LEN),
-            true,
-        )
+        .upsert_transaction(transaction3.clone())
         .await
         .expect("Failed to insert transaction in mined collection");
 
