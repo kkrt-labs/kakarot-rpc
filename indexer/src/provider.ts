@@ -1,6 +1,14 @@
 import { Contract, RpcProvider } from "./deps.ts";
-import { KAKAROT_ADDRESS, RPC_URL } from "./constants.ts";
+import { KAKAROT_ADDRESS } from "./constants.ts";
 
+// Get the URL of the Starknet Network
+const RPC_URL = (() => {
+  const rpcUrl = Deno.env.get("STARKNET_NETWORK");
+  if (!rpcUrl) throw new Error("ENV: STARKNET_NETWORK is not set");
+  return rpcUrl;
+})();
+
+// Get the RPC Provider from the Starknet Network
 export const PROVIDER = new RpcProvider({
   nodeUrl: RPC_URL,
 });

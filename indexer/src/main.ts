@@ -7,12 +7,13 @@ import {
 } from "./utils/filter.ts";
 
 // Constants
-import { 
-  AUTH_TOKEN, 
-  STREAM_URL, 
-  STARTING_BLOCK, 
-  SINK_TYPE, 
-  NULL_BLOCK_HASH, 
+import {
+  AUTH_TOKEN,
+  NULL_BLOCK_HASH,
+  SINK_OPTIONS,
+  SINK_TYPE,
+  STARTING_BLOCK,
+  STREAM_URL,
   TRANSACTION_EXECUTED,
 } from "./constants.ts";
 
@@ -43,15 +44,6 @@ import {
 // Eth
 import { Bloom, Trie } from "./deps.ts";
 
-const sinkOptions = SINK_TYPE === "mongo"
-  ? {
-    connectionString: Deno.env.get("MONGO_CONNECTION_STRING") ??
-      "mongodb://mongo:mongo@mongo:27017",
-    database: Deno.env.get("MONGO_DATABASE_NAME") ?? "kakarot-test-db",
-    collectionNames: ["headers", "transactions", "receipts", "logs"],
-  }
-  : {};
-
 export const config: Config<NetworkOptions, SinkOptions> = {
   streamUrl: STREAM_URL,
   authToken: AUTH_TOKEN,
@@ -69,7 +61,7 @@ export const config: Config<NetworkOptions, SinkOptions> = {
     transactions: [{ includeReverted: true }],
   },
   sinkType: SINK_TYPE,
-  sinkOptions: sinkOptions,
+  sinkOptions: SINK_OPTIONS,
 };
 
 export default async function transform({
