@@ -1,11 +1,8 @@
 // Starknet
 import { Event, Transaction, TransactionReceipt } from "../deps.ts";
 
-const KAKAROT_ADDRESS: string = (() => {
-  const addr = Deno.env.get("KAKAROT_ADDRESS");
-  if (!addr) throw new Error("ENV: KAKAROT_ADDRESS is not set");
-  return addr;
-})();
+// Constants
+import { KAKAROT_ADDRESS } from "../constants.ts";
 
 /**
  * Determines if a given transaction is related to Kakarot.
