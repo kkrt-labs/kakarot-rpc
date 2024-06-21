@@ -33,7 +33,9 @@ use super::database::types::{
     transaction::StoredTransaction, transaction::StoredTransactionHash,
 };
 use super::database::{CollectionName, Database};
-use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
+use super::error::{
+    EthApiError, EthereumDataFormatError, EvmError, ExecutionError, KakarotError, SignatureError, TransactionError,
+};
 use super::starknet::kakarot_core::{
     self,
     account_contract::AccountContractReader,
@@ -318,8 +320,8 @@ where
         if contract_not_found(&res) {
             return Ok(Default::default());
         }
-        // Otherwise, extract the balance from the result, converting any errors to KakarotError
-        let balance = res.map_err(KakarotError::from)?.balance;
+        // Otherwise, extract the balance from the result, converting any errors to ExecutionError
+        let balance = res.map_err(ExecutionError::from)?.balance;
 
         // Convert the low and high parts of the balance to U256
         let low: U256 = into_via_wrapper!(balance.low);
@@ -349,7 +351,7 @@ where
             return Ok(U256::ZERO.into());
         }
 
-        let storage = maybe_storage.map_err(KakarotError::from)?.value;
+        let storage = maybe_storage.map_err(ExecutionError::from)?.value;
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
         let storage: U256 = low + (high << 128);
@@ -367,7 +369,7 @@ where
         if contract_not_found(&maybe_nonce) || entrypoint_not_found(&maybe_nonce) {
             return Ok(U256::ZERO);
         }
-        let nonce = maybe_nonce.map_err(KakarotError::from)?.nonce;
+        let nonce = maybe_nonce.map_err(ExecutionError::from)?.nonce;
 
         // Get the protocol nonce as well, in edge cases where the protocol nonce is higher than the account nonce.
         // This can happen when an underlying Starknet transaction reverts => Account storage changes are reverted,
@@ -389,7 +391,7 @@ where
             return Ok(Bytes::default());
         }
 
-        let bytecode = bytecode.map_err(KakarotError::from)?.bytecode.0;
+        let bytecode = bytecode.map_err(ExecutionError::from)?.bytecode.0;
 
         Ok(Bytes::from(bytecode.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
     }
@@ -567,7 +569,7 @@ where
 
     async fn gas_price(&self) -> EthProviderResult<U256> {
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
-        let gas_price = kakarot_contract.get_base_fee().call().await.map_err(KakarotError::from)?.base_fee;
+        let gas_price = kakarot_contract.get_base_fee().call().await.map_err(ExecutionError::from)?.base_fee;
         Ok(into_via_wrapper!(gas_price))
     }
 
@@ -720,11 +722,11 @@ where
             .block_id(starknet_block_id)
             .call()
             .await
-            .map_err(KakarotError::from)?;
+            .map_err(ExecutionError::from)?;
 
         let return_data = call_output.return_data;
         if call_output.success == FieldElement::ZERO {
-            return Err(KakarotError::from(EvmError::from(return_data.0)).into());
+            return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
         Ok(return_data)
     }
@@ -755,11 +757,11 @@ where
             .block_id(starknet_block_id)
             .call()
             .await
-            .map_err(KakarotError::from)?;
+            .map_err(ExecutionError::from)?;
 
         let return_data = estimate_gas_output.return_data;
         if estimate_gas_output.success == FieldElement::ZERO {
-            return Err(KakarotError::from(EvmError::from(return_data.0)).into());
+            return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
         let required_gas = estimate_gas_output.required_gas.try_into().map_err(|_| TransactionError::GasOverflow)?;
         Ok(required_gas)
