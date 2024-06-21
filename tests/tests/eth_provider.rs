@@ -3,10 +3,10 @@
 use std::str::FromStr;
 use std::sync::Arc;
 
-use kakarot_rpc::eth_provider::constant::{HASH_HEX_STRING_LEN, MAX_LOGS, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
-use kakarot_rpc::eth_provider::database::types::transaction::{StoredPendingTransaction, StoredTransaction};
+use kakarot_rpc::eth_provider::constant::{MAX_LOGS, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
+use kakarot_rpc::eth_provider::database::ethereum::EthereumDatabase;
+use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::eth_provider::utils::into_filter;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa;
 use kakarot_rpc::test_utils::evm_contract::{EvmContract, TransactionInfo, TxCommonInfo, TxLegacyInfo};
@@ -858,12 +858,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     stored_transaction.tx.block_number = Some(1111);
 
     // Insert the transaction into the final transaction collection
-    let filter = into_filter("tx.hash", &stored_transaction.tx.hash, HASH_HEX_STRING_LEN);
-    eth_provider
-        .database()
-        .update_one::<StoredTransaction>(stored_transaction.tx.into(), filter, true)
-        .await
-        .expect("Failed to insert documents");
+    eth_provider.database().upsert_transaction(stored_transaction.tx).await.expect("Failed to insert documents");
 
     // Check if the final transaction is returned correctly by the `transaction_by_hash` method
     assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(1111));
@@ -880,11 +875,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let transaction1 = katana.eoa().mock_transaction_with_nonce(0).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
-        .update_one::<StoredPendingTransaction>(
-            transaction1.clone().into(),
-            into_filter("tx.hash", &transaction1.hash, HASH_HEX_STRING_LEN),
-            true,
-        )
+        .upsert_pending_transaction(transaction1.clone(), 0)
         .await
         .expect("Failed to insert pending transaction in database");
 
@@ -893,11 +884,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let transaction2 = katana.eoa().mock_transaction_with_nonce(1).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
-        .update_one::<StoredPendingTransaction>(
-            StoredPendingTransaction::new(transaction2.clone(), *TRANSACTION_MAX_RETRIES + 1),
-            into_filter("tx.hash", &transaction2.hash, HASH_HEX_STRING_LEN),
-            true,
-        )
+        .upsert_pending_transaction(transaction2.clone(), *TRANSACTION_MAX_RETRIES + 1)
         .await
         .expect("Failed to insert pending transaction in database");
 
@@ -906,20 +893,12 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
     let transaction3 = katana.eoa().mock_transaction_with_nonce(2).await.expect("Failed to get mock transaction");
     eth_provider
         .database()
-        .update_one::<StoredPendingTransaction>(
-            transaction3.clone().into(),
-            into_filter("tx.hash", &transaction3.clone().hash, HASH_HEX_STRING_LEN),
-            true,
-        )
+        .upsert_pending_transaction(transaction3.clone(), 0)
         .await
         .expect("Failed to insert pending transaction in database");
     eth_provider
         .database()
-        .update_one::<StoredTransaction>(
-            transaction3.clone().into(),
-            into_filter("tx.hash", &transaction3.hash, HASH_HEX_STRING_LEN),
-            true,
-        )
+        .upsert_transaction(transaction3.clone())
         .await
         .expect("Failed to insert transaction in mined collection");
 

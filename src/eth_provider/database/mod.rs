@@ -1,3 +1,5 @@
+pub mod ethereum;
+pub mod filter;
 pub mod types;
 
 use super::error::KakarotError;
