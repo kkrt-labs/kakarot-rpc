@@ -61,8 +61,6 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 #[fixture]
 #[awt]
 pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (Katana, KakarotEvmContract) {
-    // use ethers::abi::Address;
-
     let katana = counter.0;
     let counter = counter.1;
     let eoa = katana.eoa();
@@ -70,9 +68,6 @@ pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (
     let contract = eoa
         .deploy_evm_contract(
             Some("PlainOpcodes"),
-            // (
-            //     Token::Address(counter_address), // counter address
-            // ),
             &[
                 DynSolValue::Address(counter_address), // counter address
             ],

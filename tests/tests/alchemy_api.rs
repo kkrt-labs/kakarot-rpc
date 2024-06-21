@@ -1,7 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use alloy_dyn_abi::DynSolValue;
-// use ethers::abi::Token;
 use kakarot_rpc::models::balance::TokenBalances;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
@@ -35,15 +34,9 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
 
     println!("Address: {:?}", eoa.evm_address().unwrap().as_slice());
 
-    eoa.call_evm_contract(
-        &erc20,
-        "mint",
-        // (Token::Address(to), Token::Uint(ethers::abi::Uint::from_big_endian(&amount.to_be_bytes::<32>()[..]))),
-        &[DynSolValue::Address(to), DynSolValue::Uint(amount, 256)],
-        0,
-    )
-    .await
-    .expect("Failed to mint ERC20 tokens");
+    eoa.call_evm_contract(&erc20, "mint", &[DynSolValue::Address(to), DynSolValue::Uint(amount, 256)], 0)
+        .await
+        .expect("Failed to mint ERC20 tokens");
 
     // Then
     let reqwest_client = reqwest::Client::new();

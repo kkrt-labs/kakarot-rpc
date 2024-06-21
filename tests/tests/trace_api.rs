@@ -1,6 +1,5 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-// use ethers::abi::Tokenize;
 use alloy_dyn_abi::DynSolValue;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::test_utils::eoa::Eoa;

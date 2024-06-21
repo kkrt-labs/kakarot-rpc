@@ -4,8 +4,6 @@ use alloy_dyn_abi::DynSolValue;
 use alloy_json_abi::ContractObject;
 use alloy_signer_wallet::LocalWallet;
 use async_trait::async_trait;
-// use ethers::abi::Tokenize;
-// use ethers_solc::artifacts::CompactContractBytecode;
 use reth_primitives::{sign_message, Address, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
 use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::core::utils::get_selector_from_name;
@@ -101,13 +99,6 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
         let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
-
-        // // Empty bytecode if contract_name is None
-        // let bytecode = if let Some(name) = contract_name {
-        //     <KakarotEvmContract as EvmContract>::load_contract_bytecode(name)?
-        // } else {
-        //     CompactContractBytecode::default()
-        // };
 
         // Empty bytecode if contract_name is None
         let bytecode = if let Some(name) = contract_name {
