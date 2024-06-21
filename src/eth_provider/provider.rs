@@ -303,17 +303,18 @@ where
     }
 
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
-        // Convert the optional block ID to a Starknet block ID, awaiting the result
+        // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
-        // Create a new ERC20Reader instance for the Starknet native token
+        // Create a new `ERC20Reader` instance for the Starknet native token
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
-        // Call the balanceOf method on the contract for the given address and block ID, awaiting the result
+        // Call the `balanceOf` method on the contract for the given address and block ID, awaiting the result
         let res = eth_contract.balanceOf(&starknet_address(address)).block_id(starknet_block_id).call().await;
 
         // Check if the contract was not found, returning a default balance of 0 if true
-        // The native token contract should be deployed on the Starknet network, so this should not happen and we want to avoid errors in this case
+        // The native token contract should be deployed on Kakarot, so this should not happen
+        // We want to avoid errors in this case and return a default balance of 0
         let balance = if contract_not_found(&res) {
             return Ok(Default::default());
         } else {
