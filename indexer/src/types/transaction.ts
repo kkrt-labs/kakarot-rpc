@@ -17,9 +17,7 @@ import {
   isAccessListEIP2930Tx,
   isFeeMarketEIP1559TxData,
   isLegacyTx,
-  JsonRpcTx,
   LegacyTransaction,
-  PrefixedHexString,
   RLP,
   TransactionFactory,
   TransactionType,
@@ -31,40 +29,15 @@ import {
   JsonTx,
 } from "../deps.ts";
 
-type HexString = `0x${string}`
+//Interfaces
+import { 
+  HexString, 
+  ToEthTxRequest, 
+  ExtendedJsonRpcTx, 
+  TypedTxToEthTx, 
+  BuildTransactionEthFormat 
+} from "./interfaces.ts";
 
-interface ToEthTxRequest {
-  transaction: Transaction;
-  receipt: TransactionReceipt;
-  blockNumber: PrefixedHexString;
-  blockHash: PrefixedHexString;
-  isPendingBlock: boolean;
-}
-
-interface ExtendedJsonRpcTx extends JsonRpcTx {
-  yParity?: string,
-  isRunOutOfResources?: boolean 
-}
-
-interface TypedTransactionToEthTxRequest {
-  typedTransaction: TypedTransaction;
-  transaction?: Transaction;
-  receipt: TransactionReceipt;
-  blockNumber: PrefixedHexString;
-  blockHash: PrefixedHexString;
-  isPendingBlock: boolean;
-}
-
-interface BuildTransactionEthFormat {
-  typedTransaction: TypedTransaction;
-  jsonTx: JsonTx;
-  receipt: TransactionReceipt;
-  blockNumber: PrefixedHexString;
-  blockHash: PrefixedHexString;
-  isPendingBlock: boolean;
-  chainId: string | undefined;
-  index: string;
-}
 
 /**
  * Converts a transaction to the Ethereum transaction format.
@@ -110,15 +83,12 @@ export function toEthTx({
  * v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
  */
 function calculateChainId(typedTransaction: TypedTransaction, jsonTx: JsonTx): string | undefined {
+  const { v, chainId } = jsonTx;
+
   if (isLegacyTx(typedTransaction) && typedTransaction.supports(Capability.EIP155ReplayProtection)) {
-    if (jsonTx.v !== undefined) {
-      return bigIntToHex((BigInt(jsonTx.v) - 35n) / 2n);
-    } else {
-      console.error("jsonTx.v is undefined");
-      return undefined;
-    }
+    return v ?  bigIntToHex((BigInt(v) - 35n) / 2n) : (console.error("jsonTx.v is undefined"), undefined);
   }
-  return jsonTx.chainId;
+  return chainId;
 }
 
 /**
@@ -128,7 +98,7 @@ function calculateChainId(typedTransaction: TypedTransaction, jsonTx: JsonTx): s
  * @param jsonTx - The JSON representation of the transaction.
  * @param result - The transaction result object in Ethereum format.
  */
-function addYParityIfNeeded(
+function setYParityFlag(
   typedTransaction: TypedTransaction,
   jsonTx: JsonTx,
   result: ExtendedJsonRpcTx 
@@ -150,7 +120,7 @@ function addYParityIfNeeded(
  * @param receipt - The transaction receipt object.
  * @param result - The transaction result object in Ethereum format.
  */
-function addRunOutOfResourcesFlagIfNeeded(
+function flagResourceExhaustion(
   receipt: TransactionReceipt,
   result: ExtendedJsonRpcTx 
 ): void {
@@ -182,12 +152,12 @@ function buildTransactionEthFormat({
   chainId,
   index,
 }: BuildTransactionEthFormat): ExtendedJsonRpcTx | null {
-  if (jsonTx.v === undefined || jsonTx.r === undefined || jsonTx.s === undefined) {
+  if (!jsonTx.v || !jsonTx.r || !jsonTx.s) {
     console.error(`Transaction is not signed: {r: ${jsonTx.r}, s: ${jsonTx.s}, v: ${jsonTx.v}}`);
     return null;
   }
 
-  const result: ExtendedJsonRpcTx = {
+  return {
     blockHash: isPendingBlock ? null : blockHash,
     blockNumber,
     from: typedTransaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
@@ -209,9 +179,7 @@ function buildTransactionEthFormat({
     s: jsonTx.s,
     maxFeePerBlobGas: jsonTx.maxFeePerBlobGas,
     blobVersionedHashes: jsonTx.blobVersionedHashes,
-  };  
-
-  return result;
+  };
 }
 
 /**
@@ -230,7 +198,7 @@ export function typedTransactionToEthTx({
   blockNumber,
   blockHash,
   isPendingBlock,
-}: TypedTransactionToEthTxRequest): ExtendedJsonRpcTx | null {
+}: TypedTxToEthTx): ExtendedJsonRpcTx | null {
   const index = receipt.transactionIndex;
 
   if (!index) {
@@ -258,9 +226,9 @@ export function typedTransactionToEthTx({
     return null;
   }
 
-  addYParityIfNeeded(typedTransaction, jsonTx, result);
+  setYParityFlag(typedTransaction, jsonTx, result);
 
-  addRunOutOfResourcesFlagIfNeeded(receipt, result);
+  flagResourceExhaustion(receipt, result);
 
   return result;
 }
