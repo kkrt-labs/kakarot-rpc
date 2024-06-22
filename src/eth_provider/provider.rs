@@ -318,7 +318,7 @@ where
         if contract_not_found(&res) {
             return Ok(Default::default());
         }
-         // Otherwise, extract the balance from the result, converting any errors to KakarotError
+        // Otherwise, extract the balance from the result, converting any errors to KakarotError
         let balance = res.map_err(KakarotError::from)?.balance;
 
         // Convert the low and high parts of the balance to U256
