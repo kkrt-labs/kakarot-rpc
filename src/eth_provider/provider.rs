@@ -315,12 +315,11 @@ where
         // Check if the contract was not found, returning a default balance of 0 if true
         // The native token contract should be deployed on Kakarot, so this should not happen
         // We want to avoid errors in this case and return a default balance of 0
-        let balance = if contract_not_found(&res) {
+        if contract_not_found(&res) {
             return Ok(Default::default());
-        } else {
-            // Otherwise, extract the balance from the result, converting any errors to KakarotError
-            res.map_err(KakarotError::from)?.balance
-        };
+        }
+         // Otherwise, extract the balance from the result, converting any errors to KakarotError
+        let balance = res.map_err(KakarotError::from)?.balance;
 
         // Convert the low and high parts of the balance to U256
         let low: U256 = into_via_wrapper!(balance.low);
