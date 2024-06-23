@@ -44,12 +44,12 @@ export {
   bigIntToHex,
   bytesToBigInt,
   bytesToHex,
+  bytesToInt,
   concatBytes,
   generateAddress,
   hexToBytes,
   intToHex,
   stripHexPrefix,
-  bytesToInt,
 } from "https://esm.sh/@ethereumjs/util@9.0.1";
 export type { PrefixedHexString } from "https://esm.sh/@ethereumjs/util@9.0.1";
 
