@@ -367,13 +367,13 @@ mod tests {
     #[test]
     fn test_display_execution_error() {
         // Given
-        let err = EthApiError::Kakarot(KakarotError::Execution(ExecutionError::Evm(EvmError::InvalidCairoSelector)));
+        let err = EthApiError::Kakarot(KakarotError::Execution(ExecutionError::Evm(EvmError::BalanceError)));
 
         // When
         let display = format!("{err:?}");
 
         // Then
-        assert_eq!(display, "execution reverted: Evm(InvalidCairoSelector)");
+        assert_eq!(display, "execution reverted: Evm(BalanceError)");
     }
 
     #[test]
