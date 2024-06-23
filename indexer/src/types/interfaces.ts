@@ -18,33 +18,44 @@ export type HexString = `0x${string}`
  * Represents a request to convert a transaction to Ethereum transaction format.
  */
 export interface ToEthTxRequest {
-  transaction: Transaction; //  A Ethereum transaction.
-  receipt: TransactionReceipt; // The Ethereum receipt corresponding to a reverted out of resources transaction.
-  blockNumber: PrefixedHexString; // The block number in which the transaction was included, as a prefixed hex string.
-  blockHash: PrefixedHexString; // The hash of the block in which the transaction was included, as a prefixed hex string.
-  isPendingBlock: boolean; // Indicates if the transaction is in a pending block.
+  /** An Ethereum transaction. */
+  transaction: Transaction;
+  /** The Ethereum receipt corresponding to a reverted out of resources transaction. */
+  receipt: TransactionReceipt;
+  /** The block number in which the transaction was included, as a prefixed hex string. */
+  blockNumber: PrefixedHexString;
+  /** The hash of the block in which the transaction was included, as a prefixed hex string. */
+  blockHash: PrefixedHexString;
+  /** Indicates if the transaction is in a pending block. */
+  isPendingBlock: boolean;
 }
 
 /**
- * Represents an extended JSON-RPC transaction that includes additional fields:
- * - yParity: The y parity of the signature.
- * - isRunOutOfResources: A flag indicating if the transaction was reverted due to running out of resources.
+ * Represents an extended JSON-RPC transaction that includes additional fields.
  */
 export interface ExtendedJsonRpcTx extends JsonRpcTx {
-  yParity?: string, // The y parity of the signature.
-  isRunOutOfResources?: boolean // Indicates if the transaction is reverted due to running out of resources.
+  /** The y parity of the signature. */
+  yParity?: string;
+  /** Indicates if the transaction is reverted due to running out of resources. */
+  isRunOutOfResources?: boolean;
 }
 
 /**
  * Represents a typed transaction to Ethereum transaction conversion request.
  */
 export interface TypedTxToEthTx {
-  typedTransaction: TypedTransaction; // The typed transaction object.
-  transaction?: Transaction; // The Ethereum transaction object.
-  receipt: TransactionReceipt; // The Ethereum receipt corresponding to a reverted out of resources transaction.
-  blockNumber: PrefixedHexString; // The block number in which the transaction was included, as a prefixed hex string.
-  blockHash: PrefixedHexString; // The hash of the block in which the transaction was included, as a prefixed hex string.
-  isPendingBlock: boolean; // Indicates if the transaction is in a pending block.
+  /** The typed transaction object. */
+  typedTransaction: TypedTransaction;
+  /** The Ethereum transaction object. */
+  transaction?: Transaction;
+  /** The Ethereum receipt corresponding to a reverted out of resources transaction. */
+  receipt: TransactionReceipt;
+  /** The block number in which the transaction was included, as a prefixed hex string. */
+  blockNumber: PrefixedHexString;
+  /** The hash of the block in which the transaction was included, as a prefixed hex string. */
+  blockHash: PrefixedHexString;
+  /** Indicates if the transaction is in a pending block. */
+  isPendingBlock: boolean;
 }
 
 /**
@@ -53,12 +64,20 @@ export interface TypedTxToEthTx {
  * from the provided typed transaction and its JSON representation.
  */
 export interface BuildTransactionEthFormat {
-  typedTransaction: TypedTransaction; // The typed transaction object.
-  jsonTx: JsonTx; // The JSON representation of the transaction.
-  receipt: TransactionReceipt; // The Ethereum receipt corresponding to a reverted out of resources transaction.
-  blockNumber: PrefixedHexString; //  The block number in which the transaction was included, as a prefixed hex string.
-  blockHash: PrefixedHexString; // The hash of the block in which the transaction was included, as a prefixed hex string.
-  isPendingBlock: boolean; // Indicates if the transaction is in a pending block.
-  chainId: string | undefined; // The chain id of the transaction.
-  index: string; // The index of the transaction in the block.
+  /** The typed transaction object. */
+  typedTransaction: TypedTransaction;
+  /** The JSON representation of the transaction. */
+  jsonTx: JsonTx;
+  /** The Ethereum receipt corresponding to a reverted out of resources transaction. */
+  receipt: TransactionReceipt;
+  /** The block number in which the transaction was included, as a prefixed hex string. */
+  blockNumber: PrefixedHexString;
+  /** The hash of the block in which the transaction was included, as a prefixed hex string. */
+  blockHash: PrefixedHexString;
+  /** Indicates if the transaction is in a pending block. */
+  isPendingBlock: boolean;
+  /** The chain id of the transaction. */
+  chainId: string | undefined;
+  /** The index of the transaction in the block. */
+  index: string;
 }
