@@ -353,12 +353,9 @@ function fromSerializedData(bytes: Uint8Array): TypedTransaction {
     // will check if v >= 37. Since we pass it [v, r, s] = [chain_id, 0, 0], we need to force
     // the chain id to be >= 37. This value will be updated during the call to addSignature.
     values[6] = bigIntToBytes(37n);
-
-    const typedTransaction = LegacyTransaction.fromValuesArray(
+    return LegacyTransaction.fromValuesArray(
       values as TxValuesArray[TransactionType.Legacy],
-    )
-    
-    return typedTransaction;
+    );
   }
 }
 
