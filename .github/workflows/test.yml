@@ -13,7 +13,48 @@ jobs:
       - uses: denoland/setup-deno@v1
         with:
           deno-version: v1.x
-      - run: KAKAROT_ADDRESS=0x1 deno test --allow-env
+      - name: Run Tests with Coverage
+        run: KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile
+      - name: Generate Coverage Report
+        run: deno coverage cov_profile --lcov --output=cov_profile.lcov
+      - name: Install lcov
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lcov bc
+      - name: Generate HTML report from lcov
+        run: |
+          genhtml -o cov_profile/html cov_profile.lcov
+      - name: Extract coverage percentage from HTML
+        run: |
+          coverage_percentage=$(grep -oP '(?<=<td class="headerCovTableEntryMed">)[^<]+' cov_profile/html/index.html)
+          coverage_percentage=${coverage_percentage%\%}
+      - name: Download previous coverage percentage
+        uses: actions/download-artifact@v4
+        with:
+          name: previous-coverage-percentage
+          path: .
+      - name: Compare coverage percentage
+        run: |
+          if [ -f previous-coverage-percentage/coverage_percentage.txt ]; then
+            previous_coverage=$(cat previous-coverage-percentage/coverage_percentage.txt)
+            echo "Previous coverage percentage was $previous_coverage%"
+            current_coverage=$(cat coverage_percentage.txt)
+            echo "Current coverage percentage is $current_coverage%"
+            change=$(echo "$previous_coverage - $current_coverage" | bc)
+            echo "Coverage change is $change%"
+            if (( $(echo "$change > 5.0" | bc -l) )); then
+              echo "Coverage dropped by more than 5%!"
+              exit 1
+            fi
+          else
+            echo "No previous coverage percentage found. Uploading current coverage as reference."
+          fi
+      - name: Upload current coverage percentage
+        uses: actions/upload-artifact@v4
+        with:
+          name: previous-coverage-percentage
+          path: coverage_percentage.txt
+
   test-rust:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 30
