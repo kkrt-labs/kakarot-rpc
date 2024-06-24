@@ -26,7 +26,7 @@ jobs:
           genhtml -o cov_profile/html cov_profile.lcov
       - name: Extract coverage percentage from HTML
         run: |
-          coverage_percentage=$(grep -oP '(?<=<td class="headerCovTableEntryMed">)[^<]+' cov_profile/html/index.html)
+          coverage_percentage=$(grep -A 3 'Functions:' cov_profile/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
           coverage_percentage=${coverage_percentage%\%}
           echo $coverage_percentage > coverage_percentage.txt
       - name: Download previous coverage percentage
