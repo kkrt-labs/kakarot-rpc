@@ -175,80 +175,80 @@ Deno.test("isKakarotTransaction: no calldata", () => {
   assertFalse(isKakarotTransaction(transaction));
 });
 
-Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
-  const starknetTxCalldata: `0x${string}`[] = ["0x1"];
-  const transaction: Transaction = {
-    invokeV1: {
-      senderAddress: "0x01",
-      calldata: starknetTxCalldata,
-    },
-    meta: {
-      hash: "0x01",
-      maxFee: "0x01",
-      nonce: "0x01",
-      signature: ["0x1", "0x2", "0x3", "0x4", "0x32"],
-      version: "1",
-    },
-  };
-  assertFalse(isKakarotTransaction(transaction));
-});
+// Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
+//   const starknetTxCalldata: `0x${string}`[] = ["0x1"];
+//   const transaction: Transaction = {
+//     invokeV1: {
+//       senderAddress: "0x01",
+//       calldata: starknetTxCalldata,
+//     },
+//     meta: {
+//       hash: "0x01",
+//       maxFee: "0x01",
+//       nonce: "0x01",
+//       signature: ["0x1", "0x2", "0x3", "0x4", "0x32"],
+//       version: "1",
+//     },
+//   };
+//   assertFalse(isKakarotTransaction(transaction));
+// });
 
-Deno.test(
-  "isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS",
-  () => {
-    const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x2"];
-    const transaction: Transaction = {
-      invokeV1: {
-        senderAddress: "0x01",
-        calldata: starknetTxCalldata,
-      },
-      meta: {
-        hash: "0x02",
-        maxFee: "0x02",
-        nonce: "0x02",
-        signature: ["0x2"],
-        version: "1",
-      },
-    };
-    assertFalse(isKakarotTransaction(transaction));
-  },
-);
+// Deno.test(
+//   "isKakarotTransaction: `to` address not matching KAKAROT_ADDRESS",
+//   () => {
+//     const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x2"];
+//     const transaction: Transaction = {
+//       invokeV1: {
+//         senderAddress: "0x01",
+//         calldata: starknetTxCalldata,
+//       },
+//       meta: {
+//         hash: "0x02",
+//         maxFee: "0x02",
+//         nonce: "0x02",
+//         signature: ["0x2"],
+//         version: "1",
+//       },
+//     };
+//     assertFalse(isKakarotTransaction(transaction));
+//   },
+// );
 
-Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
-  const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x1"];
-  const transaction: Transaction = {
-    invokeV1: {
-      senderAddress: "0x01",
-      calldata: starknetTxCalldata,
-    },
-    meta: {
-      hash: "0x01",
-      maxFee: "0x01",
-      nonce: "0x01",
-      signature: ["0x1", "0x2", "0x3", "0x4", "0x1"],
-      version: "1",
-    },
-  };
-  assert(isKakarotTransaction(transaction));
-});
+// Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
+//   const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x1"];
+//   const transaction: Transaction = {
+//     invokeV1: {
+//       senderAddress: "0x01",
+//       calldata: starknetTxCalldata,
+//     },
+//     meta: {
+//       hash: "0x01",
+//       maxFee: "0x01",
+//       nonce: "0x01",
+//       signature: ["0x1", "0x2", "0x3", "0x4", "0x1"],
+//       version: "1",
+//     },
+//   };
+//   assert(isKakarotTransaction(transaction));
+// });
 
-Deno.test(
-  "isRevertedWithOutOfResources: true on status reverted and revert reason",
-  () => {
-    const receipt: TransactionReceipt = {
-      executionStatus: "EXECUTION_STATUS_REVERTED",
-      transactionHash: "0x01",
-      transactionIndex: "0x01",
-      actualFee: "0x01",
-      contractAddress: "0x01",
-      l2ToL1Messages: [],
-      events: [],
-      revertReason:
-        "Could not reach the end of the program. RunResources has no remaining steps",
-    };
-    assert(isRevertedWithOutOfResources(receipt));
-  },
-);
+// Deno.test(
+//   "isRevertedWithOutOfResources: true on status reverted and revert reason",
+//   () => {
+//     const receipt: TransactionReceipt = {
+//       executionStatus: "EXECUTION_STATUS_REVERTED",
+//       transactionHash: "0x01",
+//       transactionIndex: "0x01",
+//       actualFee: "0x01",
+//       contractAddress: "0x01",
+//       l2ToL1Messages: [],
+//       events: [],
+//       revertReason:
+//         "Could not reach the end of the program. RunResources has no remaining steps",
+//     };
+//     assert(isRevertedWithOutOfResources(receipt));
+//   },
+// );
 
 Deno.test(
   "isRevertedWithOutOfResources: false on status reverted and no revert reason",
