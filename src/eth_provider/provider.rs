@@ -527,7 +527,7 @@ where
         validate_transaction(&transaction_signed, chain_id)?;
 
         // Recover the signer from the transaction
-        let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
+        let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
 
         // Get the number of retries for the transaction
         let retries = self.database.pending_transaction_retries(&transaction_signed.hash).await?;
@@ -939,7 +939,7 @@ where
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?
                 .get_invoke_request(false)
                 .await
-                .map_err(|_| SignatureError::SignError)?;
+                .map_err(|_| SignatureError::SigningFailure)?;
             self.starknet_provider.add_invoke_transaction(tx).await.map_err(KakarotError::from)?;
 
             *nonce += 1u8.into();

@@ -176,9 +176,9 @@ pub enum CairoError {
 #[derive(Debug, Error)]
 pub enum EvmError {
     #[error("validation failed")]
-    ValidationError,
+    Validation,
     #[error("state modification error")]
-    StateModificationError,
+    StateModification,
     #[error("unknown opcode")]
     UnknownOpcode,
     #[error("invalid jump dest")]
@@ -186,7 +186,7 @@ pub enum EvmError {
     #[error("caller is not a Kakarot EOA")]
     NotKakarotEoaCaller,
     #[error("function limited to view call")]
-    ViewFunctionError,
+    ViewFunction,
     #[error("stack overflow")]
     StackOverflow,
     #[error("stack underflow")]
@@ -202,11 +202,11 @@ pub enum EvmError {
     #[error("invalid cairo selector")]
     InvalidCairoSelector,
     #[error("precompile wrong input length")]
-    PrecompileInputLengthError,
+    PrecompileInputLength,
     #[error("precompile flag error")]
-    PrecompileFlagError,
+    PrecompileFlag,
     #[error("transfer amount exceeds balance")]
-    BalanceError,
+    Balance,
     #[error("address collision")]
     AddressCollision,
     #[error("out of gas")]
@@ -226,12 +226,12 @@ impl From<Vec<FieldElement>> for EvmError {
         let revert_reason = maybe_revert_reason.unwrap(); // safe unwrap
         let trimmed = revert_reason.trim_start_matches("Kakarot: ").trim_start_matches("Precompile: ");
         match trimmed {
-            "eth validation failed" => Self::ValidationError,
-            "StateModificationError" => Self::StateModificationError,
+            "eth validation failed" => Self::Validation,
+            "StateModificationError" => Self::StateModification,
             "UnknownOpcode" => Self::UnknownOpcode,
             "invalidJumpDestError" => Self::InvalidJumpDest,
             "caller contract is not a Kakarot account" => Self::NotKakarotEoaCaller,
-            "entrypoint should only be called in view mode" => Self::ViewFunctionError,
+            "entrypoint should only be called in view mode" => Self::ViewFunction,
             "StackOverflow" => Self::StackOverflow,
             "StackUnderflow" => Self::StackUnderflow,
             "OutOfBoundsRead" => Self::OutOfBoundsRead,
@@ -243,9 +243,9 @@ impl From<Vec<FieldElement>> for EvmError {
                 Self::NotImplementedPrecompile(s.trim_start_matches("NotImplementedPrecompile ").to_string())
             }
             "invalidCairoSelector" => Self::InvalidCairoSelector,
-            "wrong input_length" => Self::PrecompileInputLengthError,
-            "flag error" => Self::PrecompileFlagError,
-            "transfer amount exceeds balance" => Self::BalanceError,
+            "wrong input_length" => Self::PrecompileInputLength,
+            "flag error" => Self::PrecompileFlag,
+            "transfer amount exceeds balance" => Self::Balance,
             "addressCollision" => Self::AddressCollision,
             s if s.contains("outOfGas") => Self::OutOfGas,
             _ => Self::Other(bytes.into()),
@@ -289,10 +289,10 @@ impl From<&TransactionError> for EthRpcErrorCode {
 pub enum SignatureError {
     /// Thrown when signer recovery fails.
     #[error("could not recover signer")]
-    RecoveryError,
+    Recovery,
     /// Thrown when signing fails.
-    #[error("failed to sign")]
-    SignError,
+    #[error("failed to sign transaction")]
+    SigningFailure,
     /// Thrown when signature is missing.
     #[error("missing signature")]
     MissingSignature,
@@ -408,7 +408,7 @@ mod tests {
     #[test]
     fn test_display_execution_error() {
         // Given
-        let err = EthApiError::Execution(ExecutionError::Evm(EvmError::BalanceError));
+        let err = EthApiError::Execution(ExecutionError::Evm(EvmError::Balance));
 
         // When
         let display = format!("{err}");
