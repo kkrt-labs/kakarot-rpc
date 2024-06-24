@@ -1,7 +1,6 @@
 [build]
 pre-build = [
-  # rust-bindgen dependencies: llvm-dev libclang-dev (>= 5.0) clang (>= 5.0)
-  "apt-get update && apt-get install -y --no-install-recommends llvm-dev libclang-6.0-dev clang-6.0",
   "dpkg --add-architecture $CROSS_DEB_ARCH",
-  "apt-get update && apt-get --assume-yes install libssl-dev:$CROSS_DEB_ARCH",
+  # rust-bindgen dependencies: llvm-dev libclang-dev (>= 5.0) clang (>= 5.0)
+  "apt-get update && apt-get install -y --no-install-recommends llvm-dev libclang-6.0-dev clang-6.0 libssl-dev:$CROSS_DEB_ARCH",
 ]
