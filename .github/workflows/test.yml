@@ -28,18 +28,20 @@ jobs:
         run: |
           coverage_percentage=$(grep -oP '(?<=<td class="headerCovTableEntryMed">)[^<]+' cov_profile/html/index.html)
           coverage_percentage=${coverage_percentage%\%}
+          echo $coverage_percentage > coverage_percentage.txt
       - name: Download previous coverage percentage
         uses: actions/download-artifact@v4
         with:
           name: previous-coverage-percentage
           path: .
+        continue-on-error: true
       - name: Compare coverage percentage
         run: |
+          current_coverage=$(cat coverage_percentage.txt)
+          echo "Current coverage percentage is $current_coverage%"
           if [ -f previous-coverage-percentage/coverage_percentage.txt ]; then
             previous_coverage=$(cat previous-coverage-percentage/coverage_percentage.txt)
             echo "Previous coverage percentage was $previous_coverage%"
-            current_coverage=$(cat coverage_percentage.txt)
-            echo "Current coverage percentage is $current_coverage%"
             change=$(echo "$previous_coverage - $current_coverage" | bc)
             echo "Coverage change is $change%"
             if (( $(echo "$change > 5.0" | bc -l) )); then
