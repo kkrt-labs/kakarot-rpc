@@ -33,7 +33,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: previous-coverage-percentage
-          path: .
         continue-on-error: true
       - name: Compare coverage percentage
         run: |
