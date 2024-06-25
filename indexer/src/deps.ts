@@ -34,6 +34,7 @@ export {
 
 export type {
   JsonRpcTx,
+  JsonTx,
   TxValuesArray,
   TypedTransaction,
   TypedTxData,
