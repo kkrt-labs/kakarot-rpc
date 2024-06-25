@@ -30,7 +30,7 @@ import {
 } from "./types/receipt.ts";
 import { JsonRpcLog, toEthLog } from "./types/log.ts";
 import { createTrieData, TrieData } from "./types/tries.ts";
-import { StoreItem } from "./types/storeItem.ts";
+import { Collection, StoreItem } from "./types/storeItem.ts";
 // Starknet
 import {
   BlockHeader,
@@ -117,7 +117,7 @@ export default async function transform({
         isPendingBlock,
       });
 
-      return { ...eventExtended, ethTx: ethTx };
+      return { ...eventExtended, ethTx };
     })
     // Can be null if:
     // 1. The typed transaction if missing a signature param (v, r, s).
@@ -175,15 +175,15 @@ export default async function transform({
 
     // Add all the eth data to the store.
     store.push({
-      collection: "transactions",
+      collection: Collection.Transactions,
       data: { tx: eventExtended.ethTx },
     });
     store.push({
-      collection: "receipts",
+      collection: Collection.Receipts,
       data: { receipt: eventExtended.ethReceipt },
     });
     eventExtended.ethLogs.forEach((ethLog) =>
-      store.push({ collection: "logs", data: { log: ethLog } })
+      store.push({ collection: Collection.Logs, data: { log: ethLog } })
     );
 
     // Add the logs bloom of the receipt to the block logs bloom.
@@ -249,7 +249,7 @@ export default async function transform({
         cumulativeGasUsages.find((gas, i) => {
           return (
             Number(transactionWithReceiptExtended.ethTx.transactionIndex) >=
-              cumulativeGasUsages.length - 1 - i && gas !== undefined
+              cumulativeGasUsages.length - 1 - i && gas
           );
         }) ?? 0n;
 
@@ -268,9 +268,12 @@ export default async function transform({
     });
 
   filteredTransactions.forEach((transaction) => {
-    store.push({ collection: "transactions", data: { tx: transaction.ethTx } });
     store.push({
-      collection: "receipts",
+      collection: Collection.Transactions,
+      data: { tx: transaction.ethTx },
+    });
+    store.push({
+      collection: Collection.Receipts,
       data: {
         receipt: transaction.ethReceipt,
       },
@@ -288,7 +291,7 @@ export default async function transform({
     isPendingBlock,
   });
   store.push({
-    collection: "headers",
+    collection: Collection.Headers,
     data: { header: ethHeader },
   });
 
