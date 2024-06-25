@@ -9,18 +9,13 @@
 
 ## Description
 
-Returns transaction base fee per gas and effective priority fee per gas for the
-requested/supported block range.
+Returns transaction base fee per gas and effective priority fee per gas for the requested/supported block range.
 
 Kakarot Specificity:
 
-- Since Kakarot has no fee market, this will return the base fee over a range of
-  blocks (since priority fee is always null, we get `gasPrice == baseFee` all
-  the time).
-- The reward percentile logic does not apply, and the gasUsed ratio is hardcoded
-  to 1.
+- Since Kakarot has no fee market, this will return the base fee over a range of blocks (since priority fee is always null, we get `gasPrice == baseFee` all the time).
+- The reward percentile logic does not apply, and the gasUsed ratio is hardcoded to 1.
 
 Note:
 
-- Using this endpoint is discouraged and is made somewhat compatible to avoid
-  breaking existing backend logic.
+- Using this endpoint is discouraged and is made somewhat compatible to avoid breaking existing backend logic.

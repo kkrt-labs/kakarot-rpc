@@ -9,10 +9,8 @@
 
 ## Description
 
-Submits an EVM call by wrapping the EVM compatible transaction object into a
-Starknet call.
+Submits an EVM call by wrapping the EVM compatible transaction object into a Starknet call.
 
 Kakarot Specificity:
 
-- Call the Kakarot Cairo smart contract's entrypoint: `eth_call` with the EVM
-  transaction fields as argument
+- Call the Kakarot Cairo smart contract's entrypoint: `eth_call` with the EVM transaction fields as argument

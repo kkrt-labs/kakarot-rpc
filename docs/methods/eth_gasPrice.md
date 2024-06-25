@@ -18,5 +18,4 @@ For this reason:
 
 - gasPrice == baseFee
 - priority fee is generally a variable that isn't used.
-  - setting a EIP-1559 transaction with `maxPriorityFeePerGas > 0` has no
-    effect.
+  - setting a EIP-1559 transaction with `maxPriorityFeePerGas > 0` has no effect.

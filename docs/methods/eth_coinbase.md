@@ -12,5 +12,5 @@
 Returns the Ethereum account controlled by the Kakarot zkEVM sequencer.
 
 Kakarot specifity: since Kakarot set of Cairo programs run on the StarknetOS
-(i.e. on an underlying CairoVM client), the coinbase is the EVM representation
-of a Starknet account that collects the fees.
+(i.e. on an underlying CairoVM client),
+the coinbase is the EVM representation of a Starknet account that collects the fees.

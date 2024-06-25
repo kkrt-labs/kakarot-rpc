@@ -11,13 +11,8 @@
 
 Returns the value from a storage position at a given address.
 
-Kakarot specificity: note that Kakarot zkEVM is implemented as a set of Cairo
-Programs running on an underlying StarknetOS chain (so-called CairoVM chain).
+Kakarot specificity: note that Kakarot zkEVM is implemented as a set of Cairo Programs running on an underlying StarknetOS chain (so-called CairoVM chain).
 
-Every deployed EVM smart contract is a Starknet smart contract under the hood.
-The EVM storage layout is reproduced inside the Starknet storage.
+Every deployed EVM smart contract is a Starknet smart contract under the hood. The EVM storage layout is reproduced inside the Starknet storage.
 
-Querying a storage slot in Kakarot amounts to querying the underlying Starknet
-smart contract storage using the Starknet JSON RPC specification. The
-Kakarot-RPC handles this logic under-the-hood at no additional abstraction cost
-or trust assumption.
+Querying a storage slot in Kakarot amounts to querying the underlying Starknet smart contract storage using the Starknet JSON RPC specification. The Kakarot-RPC handles this logic under-the-hood at no additional abstraction cost or trust assumption.
