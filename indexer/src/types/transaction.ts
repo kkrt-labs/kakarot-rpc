@@ -10,13 +10,16 @@ import {
   AccessListEIP2930Transaction,
   bigIntToBytes,
   bigIntToHex,
+  bytesToBigInt,
   Capability,
   concatBytes,
   FeeMarketEIP1559Transaction,
+  hexToBytes,
   intToHex,
   isAccessListEIP2930Tx,
   isFeeMarketEIP1559TxData,
   isLegacyTx,
+  JsonTx,
   LegacyTransaction,
   RLP,
   TransactionFactory,
@@ -24,20 +27,16 @@ import {
   TxValuesArray,
   TypedTransaction,
   TypedTxData,
-  hexToBytes,
-  bytesToBigInt,
-  JsonTx,
 } from "../deps.ts";
 
 //Interfaces
-import { 
-  HexString, 
-  ToEthTxRequest, 
-  ExtendedJsonRpcTx, 
-  TypedTxToEthTx, 
-  BuildTransactionEthFormat 
+import {
+  BuildTransactionEthFormat,
+  ExtendedJsonRpcTx,
+  HexString,
+  ToEthTxRequest,
+  TypedTxToEthTx,
 } from "./interfaces.ts";
-
 
 /**
  * Converts a transaction to the Ethereum transaction format.
@@ -56,7 +55,7 @@ export function toEthTx({
   blockNumber,
   blockHash,
   isPendingBlock,
-}: ToEthTxRequest ): ExtendedJsonRpcTx | null {
+}: ToEthTxRequest): ExtendedJsonRpcTx | null {
   const typedEthTx = toTypedEthTx({ transaction });
   if (!typedEthTx) {
     return null;
@@ -82,11 +81,19 @@ export function toEthTx({
  * the chain ID is calculated from the `v` value using the formula:
  * v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
  */
-function calculateChainId(typedTransaction: TypedTransaction, jsonTx: JsonTx): string | undefined {
+function calculateChainId(
+  typedTransaction: TypedTransaction,
+  jsonTx: JsonTx,
+): string | undefined {
   const { v, chainId } = jsonTx;
 
-  if (isLegacyTx(typedTransaction) && typedTransaction.supports(Capability.EIP155ReplayProtection)) {
-    return v ?  bigIntToHex((BigInt(v) - 35n) / 2n) : (console.error("jsonTx.v is undefined"), undefined);
+  if (
+    isLegacyTx(typedTransaction) &&
+    typedTransaction.supports(Capability.EIP155ReplayProtection)
+  ) {
+    return v
+      ? bigIntToHex((BigInt(v) - 35n) / 2n)
+      : (console.error("jsonTx.v is undefined"), undefined);
   }
   return chainId;
 }
@@ -101,7 +108,7 @@ function calculateChainId(typedTransaction: TypedTransaction, jsonTx: JsonTx): s
 function setYParityFlag(
   typedTransaction: TypedTransaction,
   jsonTx: JsonTx,
-  result: ExtendedJsonRpcTx 
+  result: ExtendedJsonRpcTx,
 ): void {
   // Check if the transaction is an EIP-1559 or EIP-2930 transaction
   if (
@@ -122,7 +129,7 @@ function setYParityFlag(
  */
 function flagRunOutOfResources(
   receipt: TransactionReceipt,
-  result: ExtendedJsonRpcTx 
+  result: ExtendedJsonRpcTx,
 ): void {
   // Check if the transaction was reverted due to running out of resources
   if (isRevertedWithOutOfResources(receipt)) {
@@ -153,7 +160,9 @@ function buildTransactionEthFormat({
   index,
 }: BuildTransactionEthFormat): ExtendedJsonRpcTx | null {
   if (!jsonTx.v || !jsonTx.r || !jsonTx.s) {
-    console.error(`Transaction is not signed: {r: ${jsonTx.r}, s: ${jsonTx.s}, v: ${jsonTx.v}}`);
+    console.error(
+      `Transaction is not signed: {r: ${jsonTx.r}, s: ${jsonTx.s}, v: ${jsonTx.v}}`,
+    );
     return null;
   }
 
@@ -220,7 +229,7 @@ export function typedTransactionToEthTx({
     isPendingBlock,
     chainId,
     index,
-  })
+  });
 
   if (!result) {
     return null;

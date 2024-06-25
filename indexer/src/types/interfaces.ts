@@ -4,15 +4,15 @@ import { Transaction, TransactionReceipt } from "../deps.ts";
 // Eth
 import {
   JsonRpcTx,
+  JsonTx,
   PrefixedHexString,
   TypedTransaction,
-  JsonTx,
 } from "../deps.ts";
 
 /**
  * Represents a hexadecimal string with a `0x` prefix.
  */
-export type HexString = `0x${string}`
+export type HexString = `0x${string}`;
 
 /**
  * Represents a request to convert a transaction to Ethereum transaction format.

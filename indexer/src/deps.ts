@@ -34,10 +34,10 @@ export {
 
 export type {
   JsonRpcTx,
+  JsonTx,
   TxValuesArray,
   TypedTransaction,
   TypedTxData,
-  JsonTx,
 } from "https://esm.sh/@ethereumjs/tx@5.1.0";
 
 export {
