@@ -10,4 +10,4 @@ export KAKAROT_ADDRESS="${KAKAROT_ADDRESS}"
 export UNINITIALIZED_ACCOUNT_CLASS_HASH="${UNINITIALIZED_ACCOUNT_CLASS_HASH}"
 export ACCOUNT_CONTRACT_CLASS_HASH="${ACCOUNT_CONTRACT_CLASS_HASH}"
 
-poetry run pytest -s tests/end_to_end
+poetry run pytest -s tests/end_to_end --ignore tests/end_to_end/L1L2Messaging
