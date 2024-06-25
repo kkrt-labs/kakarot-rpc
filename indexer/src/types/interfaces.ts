@@ -20,7 +20,7 @@ export type HexString = `0x${string}`
 export interface ToEthTxRequest {
   /** An Ethereum transaction. */
   transaction: Transaction;
-  /** The Ethereum receipt corresponding to a reverted out of resources transaction. */
+  /** An Ethereum receipt. */
   receipt: TransactionReceipt;
   /** The block number in which the transaction was included, as a prefixed hex string. */
   blockNumber: PrefixedHexString;
