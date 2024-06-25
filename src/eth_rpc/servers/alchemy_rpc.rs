@@ -23,6 +23,8 @@ impl<P: EthereumProvider> AlchemyRpc<P> {
 impl<P: EthereumProvider + Send + Sync + 'static> AlchemyApiServer for AlchemyRpc<P> {
     #[tracing::instrument(skip_all, ret, fields(address = %address, token_addresses = ?token_addresses))]
     async fn token_balances(&self, address: Address, token_addresses: Vec<Address>) -> Result<TokenBalances> {
+        tracing::info!("Serving alchemy_getTokenBalances");
+
         let block_id = BlockId::Number(BlockNumberOrTag::Latest);
         let handles = token_addresses.into_iter().map(|token_addr| {
             let token = EthereumErc20::new(token_addr, &self.eth_provider);

@@ -29,6 +29,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     /// Returns an RLP-encoded header.
     #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
     async fn raw_header(&self, block_id: BlockId) -> Result<Bytes> {
+        tracing::info!("Serving debug_getRawHeader");
+
         let mut res = Vec::new();
         if let Some(header) = self
             .eth_provider
@@ -47,6 +49,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     /// Returns an RLP-encoded block.
     #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
     async fn raw_block(&self, block_id: BlockId) -> Result<Bytes> {
+        tracing::info!("Serving debug_getRawBlock");
+
         let block = match block_id {
             BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.into(), true).await?,
             BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
@@ -65,6 +69,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     /// If this is a pooled EIP-4844 transaction, the blob sidecar is included.
     #[tracing::instrument(skip(self), err, fields(hash = ?hash))]
     async fn raw_transaction(&self, hash: B256) -> Result<Option<Bytes>> {
+        tracing::info!("Serving debug_getRawTransaction");
+
         let transaction = self.eth_provider.transaction_by_hash(hash).await?;
 
         if let Some(tx) = transaction {
@@ -89,6 +95,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
     #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
     async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
+        tracing::info!("Serving debug_getRawTransactions");
+
         let transactions = self.eth_provider.block_transactions(Some(block_id)).await?.unwrap_or_default();
         let mut raw_transactions = Vec::with_capacity(transactions.len());
 
@@ -114,6 +122,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     /// Returns an array of EIP-2718 binary-encoded receipts.
     #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
     async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
+        tracing::info!("Serving debug_getRawReceipts");
+
         let receipts = self.eth_provider.block_receipts(Some(block_id)).await?.unwrap_or_default();
 
         // Initializes an empty vector to store the raw receipts
@@ -161,6 +171,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         block_number: BlockNumberOrTag,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<Vec<TraceResult>> {
+        tracing::info!("Serving debug_traceBlockByNumber");
+
         let provider = Arc::new(&self.eth_provider);
         let tracer = TracerBuilder::new(provider)
             .await?
@@ -179,6 +191,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         block_hash: B256,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<Vec<TraceResult>> {
+        tracing::info!("Serving debug_traceBlockByHash");
+
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?
             .with_block_id(BlockId::Hash(block_hash.into()))
@@ -196,6 +210,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         transaction_hash: B256,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<GethTrace> {
+        tracing::info!("Serving debug_traceTransaction");
+
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?
             .with_transaction_hash(transaction_hash)
