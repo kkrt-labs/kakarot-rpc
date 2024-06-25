@@ -17,7 +17,7 @@ export type HexString = `0x${string}`;
 /**
  * Represents a request to convert a transaction to Ethereum transaction format.
  */
-export interface ToEthTxRequest {
+export interface TransactionContext {
   /** An Ethereum transaction. */
   transaction: Transaction;
   /** An Ethereum receipt. */
@@ -43,12 +43,12 @@ export interface ExtendedJsonRpcTx extends JsonRpcTx {
 /**
  * Represents a typed transaction to Ethereum transaction conversion request.
  */
-export interface TypedTxToEthTx {
+export interface TypedTransactionContext {
   /** The typed transaction object. */
   typedTransaction: TypedTransaction;
   /** The Ethereum transaction object. */
   transaction?: Transaction;
-  /** The Ethereum receipt. */
+  /** An Ethereum receipt. */
   receipt: TransactionReceipt;
   /** The block number in which the transaction was included, as a prefixed hex string. */
   blockNumber: PrefixedHexString;
@@ -63,7 +63,7 @@ export interface TypedTxToEthTx {
  * This interface is used to construct an Ethereum formatted transaction
  * from the provided typed transaction and its JSON representation.
  */
-export interface BuildTransactionEthFormat {
+export interface TransactionConversionInput {
   /** The typed transaction object. */
   typedTransaction: TypedTransaction;
   /** The JSON representation of the transaction. */

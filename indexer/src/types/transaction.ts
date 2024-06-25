@@ -31,11 +31,11 @@ import {
 
 //Interfaces
 import {
-  BuildTransactionEthFormat,
   ExtendedJsonRpcTx,
   HexString,
-  ToEthTxRequest,
-  TypedTxToEthTx,
+  TransactionContext,
+  TransactionConversionInput,
+  TypedTransactionContext,
 } from "./interfaces.ts";
 
 /**
@@ -55,7 +55,7 @@ export function toEthTx({
   blockNumber,
   blockHash,
   isPendingBlock,
-}: ToEthTxRequest): ExtendedJsonRpcTx | null {
+}: TransactionContext): ExtendedJsonRpcTx | null {
   const typedEthTx = toTypedEthTx({ transaction });
   if (!typedEthTx) {
     return null;
@@ -81,7 +81,7 @@ export function toEthTx({
  * the chain ID is calculated from the `v` value using the formula:
  * v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
  */
-function calculateChainId(
+function chainId(
   typedTransaction: TypedTransaction,
   jsonTx: JsonTx,
 ): string | undefined {
@@ -150,7 +150,7 @@ function flagRunOutOfResources(
  * @param index - The index of the transaction in the block.
  * @returns - The transaction in the Ethereum format, or null if the transaction is not signed.
  */
-function buildTransactionEthFormat({
+function transactionEthFormat({
   typedTransaction,
   jsonTx,
   blockNumber,
@@ -158,7 +158,7 @@ function buildTransactionEthFormat({
   isPendingBlock,
   chainId,
   index,
-}: BuildTransactionEthFormat): ExtendedJsonRpcTx | null {
+}: TransactionConversionInput): ExtendedJsonRpcTx | null {
   if (!jsonTx.v || !jsonTx.r || !jsonTx.s) {
     console.error(
       `Transaction is not signed: {r: ${jsonTx.r}, s: ${jsonTx.s}, v: ${jsonTx.v}}`,
@@ -207,7 +207,7 @@ export function typedTransactionToEthTx({
   blockNumber,
   blockHash,
   isPendingBlock,
-}: TypedTxToEthTx): ExtendedJsonRpcTx | null {
+}: TypedTransactionContext): ExtendedJsonRpcTx | null {
   const index = receipt.transactionIndex;
 
   if (!index) {
@@ -218,16 +218,14 @@ export function typedTransactionToEthTx({
 
   const jsonTx = typedTransaction.toJSON();
 
-  const chainId = calculateChainId(typedTransaction, jsonTx);
-
-  const result = buildTransactionEthFormat({
+  const result = transactionEthFormat({
     typedTransaction,
     jsonTx,
     receipt,
     blockNumber,
     blockHash,
     isPendingBlock,
-    chainId,
+    chainId: chainId(typedTransaction, jsonTx),
     index,
   });
 
