@@ -41,9 +41,7 @@ jobs:
           ref: ${{ github.base_ref }}
       - name: Run Tests with Coverage on base branch
         run: KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_main
-      - name: Generate Coverage Report on base branch
-        run: deno coverage cov_profile_main --lcov --output=cov_profile_main.lcov
-      - name: Generate HTML report from lcov for the base branch
+      - name: Generate HTML report from for the base branch
         run: deno coverage cov_profile_main --html
       - name: Extract coverage percentage from HTML for the base branch
         run: |
