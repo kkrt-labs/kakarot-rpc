@@ -6,12 +6,17 @@ import { JsonRpcReceipt } from "./receipt.ts";
 import { JsonRpcTx } from "../deps.ts";
 import { JsonRpcBlock } from "./header.ts";
 
-type Collection = "transactions" | "logs" | "receipts" | "headers";
+export enum Collection {
+  Transactions = "transactions",
+  Logs = "logs",
+  Receipts = "receipts",
+  Headers = "headers",
+}
 
 export type StoreItem<C = Collection> = {
   collection: C;
-  data: C extends "transactions" ? { tx: JsonRpcTx }
-    : C extends "logs" ? { log: JsonRpcLog }
-    : C extends "receipts" ? { receipt: JsonRpcReceipt }
+  data: C extends Collection.Transactions ? { tx: JsonRpcTx }
+    : C extends Collection.Logs ? { log: JsonRpcLog }
+    : C extends Collection.Receipts ? { receipt: JsonRpcReceipt }
     : { header: JsonRpcBlock };
 };
