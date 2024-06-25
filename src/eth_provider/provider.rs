@@ -33,7 +33,9 @@ use super::database::types::{
     transaction::StoredTransaction, transaction::StoredTransactionHash,
 };
 use super::database::{CollectionName, Database};
-use super::error::{EthApiError, EthereumDataFormatError, EvmError, KakarotError, SignatureError, TransactionError};
+use super::error::{
+    EthApiError, EthereumDataFormatError, EvmError, ExecutionError, KakarotError, SignatureError, TransactionError,
+};
 use super::starknet::kakarot_core::{
     self,
     account_contract::AccountContractReader,
@@ -303,20 +305,29 @@ where
     }
 
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+        // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
+        // Create a new `ERC20Reader` instance for the Starknet native token
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
-        let balance = eth_contract
-            .balanceOf(&starknet_address(address))
-            .block_id(starknet_block_id)
-            .call()
-            .await
-            .map_err(KakarotError::from)?
-            .balance;
+        // Call the `balanceOf` method on the contract for the given address and block ID, awaiting the result
+        let res = eth_contract.balanceOf(&starknet_address(address)).block_id(starknet_block_id).call().await;
 
+        // Check if the contract was not found, returning a default balance of 0 if true
+        // The native token contract should be deployed on Kakarot, so this should not happen
+        // We want to avoid errors in this case and return a default balance of 0
+        if contract_not_found(&res) {
+            return Ok(Default::default());
+        }
+        // Otherwise, extract the balance from the result, converting any errors to ExecutionError
+        let balance = res.map_err(ExecutionError::from)?.balance;
+
+        // Convert the low and high parts of the balance to U256
         let low: U256 = into_via_wrapper!(balance.low);
         let high: U256 = into_via_wrapper!(balance.high);
+
+        // Combine the low and high parts to form the final balance and return it
         Ok(low + (high << 128))
     }
 
@@ -340,7 +351,7 @@ where
             return Ok(U256::ZERO.into());
         }
 
-        let storage = maybe_storage.map_err(KakarotError::from)?.value;
+        let storage = maybe_storage.map_err(ExecutionError::from)?.value;
         let low: U256 = into_via_wrapper!(storage.low);
         let high: U256 = into_via_wrapper!(storage.high);
         let storage: U256 = low + (high << 128);
@@ -358,7 +369,7 @@ where
         if contract_not_found(&maybe_nonce) || entrypoint_not_found(&maybe_nonce) {
             return Ok(U256::ZERO);
         }
-        let nonce = maybe_nonce.map_err(KakarotError::from)?.nonce;
+        let nonce = maybe_nonce.map_err(ExecutionError::from)?.nonce;
 
         // Get the protocol nonce as well, in edge cases where the protocol nonce is higher than the account nonce.
         // This can happen when an underlying Starknet transaction reverts => Account storage changes are reverted,
@@ -380,7 +391,7 @@ where
             return Ok(Bytes::default());
         }
 
-        let bytecode = bytecode.map_err(KakarotError::from)?.bytecode.0;
+        let bytecode = bytecode.map_err(ExecutionError::from)?.bytecode.0;
 
         Ok(Bytes::from(bytecode.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
     }
@@ -516,7 +527,7 @@ where
         validate_transaction(&transaction_signed, chain_id)?;
 
         // Recover the signer from the transaction
-        let signer = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
+        let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
 
         // Get the number of retries for the transaction
         let retries = self.database.pending_transaction_retries(&transaction_signed.hash).await?;
@@ -558,7 +569,7 @@ where
 
     async fn gas_price(&self) -> EthProviderResult<U256> {
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
-        let gas_price = kakarot_contract.get_base_fee().call().await.map_err(KakarotError::from)?.base_fee;
+        let gas_price = kakarot_contract.get_base_fee().call().await.map_err(ExecutionError::from)?.base_fee;
         Ok(into_via_wrapper!(gas_price))
     }
 
@@ -711,11 +722,11 @@ where
             .block_id(starknet_block_id)
             .call()
             .await
-            .map_err(KakarotError::from)?;
+            .map_err(ExecutionError::from)?;
 
         let return_data = call_output.return_data;
         if call_output.success == FieldElement::ZERO {
-            return Err(KakarotError::from(EvmError::from(return_data.0)).into());
+            return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
         Ok(return_data)
     }
@@ -746,11 +757,11 @@ where
             .block_id(starknet_block_id)
             .call()
             .await
-            .map_err(KakarotError::from)?;
+            .map_err(ExecutionError::from)?;
 
         let return_data = estimate_gas_output.return_data;
         if estimate_gas_output.success == FieldElement::ZERO {
-            return Err(KakarotError::from(EvmError::from(return_data.0)).into());
+            return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
         let required_gas = estimate_gas_output.required_gas.try_into().map_err(|_| TransactionError::GasOverflow)?;
         Ok(required_gas)
@@ -928,7 +939,7 @@ where
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversionError))?
                 .get_invoke_request(false)
                 .await
-                .map_err(|_| SignatureError::SignError)?;
+                .map_err(|_| SignatureError::SigningFailure)?;
             self.starknet_provider.add_invoke_transaction(tx).await.map_err(KakarotError::from)?;
 
             *nonce += 1u8.into();

@@ -15,3 +15,7 @@ jobs:
   tests:
     name: Rust tests
     uses: ./.github/workflows/test.yml
+
+  indexer_formatting:
+    name: Deno formatting
+    uses: ./.github/workflows/indexer_formatting.yml

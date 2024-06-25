@@ -39,11 +39,13 @@ where
 {
     #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {
+        tracing::info!("Serving eth_blockNumber");
         Ok(self.eth_provider.block_number().await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn syncing(&self) -> Result<SyncStatus> {
+        tracing::info!("Serving eth_syncing");
         Ok(self.eth_provider.syncing().await?)
     }
 
@@ -53,31 +55,37 @@ where
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn accounts(&self) -> Result<Vec<Address>> {
+        tracing::info!("Serving eth_accounts");
         Ok(Vec::new())
     }
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn chain_id(&self) -> Result<Option<U64>> {
+        tracing::info!("Serving eth_chainId");
         Ok(self.eth_provider.chain_id().await?)
     }
 
     #[tracing::instrument(skip(self), ret, err, fields(hash = %hash))]
     async fn block_by_hash(&self, hash: B256, full: bool) -> Result<Option<RichBlock>> {
+        tracing::info!("Serving eth_getBlockByHash");
         Ok(self.eth_provider.block_by_hash(hash, full).await?)
     }
 
     #[tracing::instrument(skip(self), err, fields(number = %number, full = full))]
     async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
+        tracing::info!("Serving eth_getBlockByNumber");
         Ok(self.eth_provider.block_by_number(number, full).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err, fields(hash = %hash))]
     async fn block_transaction_count_by_hash(&self, hash: B256) -> Result<Option<U256>> {
+        tracing::info!("Serving eth_getBlockTransactionCountByHash");
         Ok(self.eth_provider.block_transaction_count_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err, fields(number = %number))]
     async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<Option<U256>> {
+        tracing::info!("Serving eth_getBlockTransactionCountByNumber");
         Ok(self.eth_provider.block_transaction_count_by_number(number).await?)
     }
 
@@ -111,11 +119,13 @@ where
 
     #[tracing::instrument(skip(self), ret, err, fields(hash = %hash))]
     async fn transaction_by_hash(&self, hash: B256) -> Result<Option<Transaction>> {
+        tracing::info!("Serving eth_getTransactionByHash");
         Ok(self.eth_provider.transaction_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err, fields(hash = %hash, index = ?index))]
     async fn transaction_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<Transaction>> {
+        tracing::info!("Serving eth_getTransactionByBlockHashAndIndex");
         Ok(self.eth_provider.transaction_by_block_hash_and_index(hash, index).await?)
     }
 
@@ -125,41 +135,49 @@ where
         number: BlockNumberOrTag,
         index: Index,
     ) -> Result<Option<Transaction>> {
+        tracing::info!("Serving eth_getTransactionByBlockNumberAndIndex");
         Ok(self.eth_provider.transaction_by_block_number_and_index(number, index).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err, fields(hash = %hash))]
     async fn transaction_receipt(&self, hash: B256) -> Result<Option<TransactionReceipt>> {
+        tracing::info!("Serving eth_getTransactionReceipt");
         Ok(self.eth_provider.transaction_receipt(hash).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err, fields(address = %address, block_id = ?block_id))]
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
+        tracing::info!("Serving eth_getBalance");
         Ok(self.eth_provider.balance(address, block_id).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err, fields(address = %address, index = ?index, block_id = ?block_id))]
     async fn storage_at(&self, address: Address, index: JsonStorageKey, block_id: Option<BlockId>) -> Result<B256> {
+        tracing::info!("Serving eth_getStorageAt");
         Ok(self.eth_provider.storage_at(address, index, block_id).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err, fields(address = %address, block_id = ?block_id))]
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
+        tracing::info!("Serving eth_getTransactionCount");
         Ok(self.eth_provider.transaction_count(address, block_id).await?)
     }
 
     #[tracing::instrument(skip(self), err, fields(address = %address, block_id = ?block_id))]
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes> {
+        tracing::info!("Serving eth_getCode");
         Ok(self.eth_provider.get_code(address, block_id).await?)
     }
 
     #[tracing::instrument(skip(self), err, fields(filter = ?filter))]
     async fn get_logs(&self, filter: Filter) -> Result<FilterChanges> {
+        tracing::info!("Serving eth_getLogs");
         Ok(self.eth_provider.get_logs(filter).await?)
     }
 
     #[tracing::instrument(skip(self, request), err, fields(block_id = ?block_id, gas_limit = request.gas))]
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<Bytes> {
+        tracing::info!("Serving eth_call");
         Ok(self.eth_provider.call(request, block_id).await?)
     }
 
@@ -173,11 +191,13 @@ where
 
     #[tracing::instrument(skip(self, request), err, fields(block_id = ?block_id, gas_limit = request.gas))]
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<U256> {
+        tracing::info!("Serving eth_estimateGas");
         Ok(self.eth_provider.estimate_gas(request, block_id).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn gas_price(&self) -> Result<U256> {
+        tracing::info!("Serving eth_gasPrice");
         Ok(self.eth_provider.gas_price().await?)
     }
 
@@ -188,11 +208,13 @@ where
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
+        tracing::info!("Serving eth_feeHistory");
         Ok(self.eth_provider.fee_history(block_count, newest_block, reward_percentiles).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn max_priority_fee_per_gas(&self) -> Result<U256> {
+        tracing::info!("Serving eth_maxPriorityFeePerGas");
         Ok(U256::from(*MAX_PRIORITY_FEE_PER_GAS))
     }
 
@@ -229,6 +251,7 @@ where
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn send_raw_transaction(&self, bytes: Bytes) -> Result<B256> {
+        tracing::info!("Serving eth_sendRawTransaction");
         Ok(self.eth_provider.send_raw_transaction(bytes).await?)
     }
 

@@ -1,0 +1,20 @@
+---
+name: Format indexer
+
+on:
+  workflow_call:
+
+jobs:
+  deno-formatting:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: indexer
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+      - name: Run formatting
+        run: deno fmt --check indexer/
