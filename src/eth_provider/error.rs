@@ -1,4 +1,4 @@
-use alloy_sol_types::SolType;
+use alloy_sol_types::decode_revert_reason;
 use jsonrpsee::types::ErrorObject;
 use reth_primitives::{Bytes, B256};
 use reth_rpc_types::BlockHashOrNumber;
@@ -26,8 +26,8 @@ pub enum EthRpcErrorCode {
     JsonRpcVersionUnsupported = -32006,
 }
 
-impl From<EthApiError> for EthRpcErrorCode {
-    fn from(error: EthApiError) -> Self {
+impl From<&EthApiError> for EthRpcErrorCode {
+    fn from(error: &EthApiError) -> Self {
         match error {
             EthApiError::UnknownBlock(_) | EthApiError::UnknownBlockNumber(_) | EthApiError::TransactionNotFound(_) => {
                 Self::ResourceNotFound
@@ -36,52 +36,56 @@ impl From<EthApiError> for EthRpcErrorCode {
             | EthApiError::EthereumDataFormat(_)
             | EthApiError::CalldataExceededLimit(_, _) => Self::InvalidParams,
             EthApiError::Transaction(err) => err.into(),
-            EthApiError::Unsupported(_) => Self::InternalError,
-            EthApiError::Kakarot(err) => err.into(),
+            EthApiError::Unsupported(_) | EthApiError::Kakarot(_) => Self::InternalError,
+            EthApiError::Execution(_) => Self::ExecutionError,
         }
     }
 }
 
 /// Error that can occur when interacting with the ETH Api.
-#[derive(Error)]
+#[derive(Debug, Error)]
 pub enum EthApiError {
     /// When a block is not found
-    #[error("unknown block {0}")]
     UnknownBlock(BlockHashOrNumber),
     /// When an unknown block number is encountered
-    #[error("unknown block number {0:?}")]
     UnknownBlockNumber(Option<u64>),
     /// When a transaction is not found
-    #[error("transaction not found {0}")]
     TransactionNotFound(B256),
     /// Error related to transaction
-    #[error("transaction error: {0}")]
     Transaction(#[from] TransactionError),
     /// Error related to signing
-    #[error("signature error: {0}")]
     Signature(#[from] SignatureError),
     /// Unsupported feature
-    #[error("unsupported: {0}")]
     Unsupported(&'static str),
     /// Ethereum data format error
-    #[error("ethereum data format error: {0}")]
     EthereumDataFormat(#[from] EthereumDataFormatError),
-    /// Other Kakarot error
-    #[error("kakarot error: {0}")]
+    /// Execution error
+    Execution(#[from] ExecutionError),
+    /// Kakarot related error (database, ...)
     Kakarot(KakarotError),
     /// Error related to transaction calldata being too large.
-    #[error("calldata exceeded limit of {0}: {1}")]
     CalldataExceededLimit(usize, usize),
 }
 
-impl std::fmt::Debug for EthApiError {
+impl std::fmt::Display for EthApiError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::UnknownBlock(block) => write!(f, "unknown block {block}"),
+            Self::UnknownBlockNumber(block) => write!(f, "unknown block number {block:?}"),
+            Self::TransactionNotFound(tx) => write!(f, "transaction not found {tx}"),
+            Self::Transaction(err) => write!(f, "{err}"),
+            Self::Signature(err) => write!(f, "{err}"),
+            Self::Unsupported(feature) => write!(f, "unsupported: {feature}"),
+            Self::EthereumDataFormat(err) => write!(f, "ethereum data format error: {err}"),
+            Self::Execution(err) => write!(f, "{err}"),
             Self::Kakarot(KakarotError::Provider(err)) => {
+                // We use Debug here otherwise we risk losing some information on contract error
                 write!(f, "starknet provider error: {err:?}")
             }
-            Self::Kakarot(KakarotError::Execution(err)) => write!(f, "execution reverted: {err:?}"),
-            _ => write!(f, "{self}"),
+            Self::Kakarot(err) => write!(f, "kakarot error: {err}"),
+            Self::CalldataExceededLimit(limit, actual) => {
+                write!(f, "calldata exceeded limit of {limit}: {actual}")
+            }
         }
     }
 }
@@ -89,8 +93,13 @@ impl std::fmt::Debug for EthApiError {
 /// Constructs a JSON-RPC error object, consisting of `code` and `message`.
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
-        let msg = format!("{value:?}");
-        ErrorObject::owned(EthRpcErrorCode::from(value) as i32, msg, None::<()>)
+        let msg = format!("{value}");
+        let code = EthRpcErrorCode::from(&value);
+        let data = match value {
+            EthApiError::Execution(ExecutionError::Evm(EvmError::Other(ref b))) => Some(b),
+            _ => None,
+        };
+        ErrorObject::owned(code as i32, msg, data)
     }
 }
 
@@ -108,19 +117,6 @@ pub enum KakarotError {
     /// Error related to the database deserialization.
     #[error(transparent)]
     DatabaseDeserialization(#[from] mongodb::bson::de::Error),
-    /// Error related to execution.
-    #[error(transparent)]
-    Execution(#[from] ExecutionError),
-}
-
-impl From<cainome::cairo_serde::Error> for KakarotError {
-    fn from(error: cainome::cairo_serde::Error) -> Self {
-        let error = error.to_string();
-        if error.contains("RunResources has no remaining steps.") {
-            return ExecutionError::from(CairoError::VmOutOfResources).into();
-        }
-        ExecutionError::Other(error).into()
-    }
 }
 
 impl From<KakarotError> for EthApiError {
@@ -129,26 +125,44 @@ impl From<KakarotError> for EthApiError {
     }
 }
 
-impl From<KakarotError> for EthRpcErrorCode {
-    fn from(value: KakarotError) -> Self {
-        match value {
-            KakarotError::Execution(_) => Self::ExecutionError,
-            _ => Self::InternalError,
-        }
-    }
-}
-
 /// Error related to execution errors, by the EVM or Cairo vm.
 #[derive(Debug, Error)]
 pub enum ExecutionError {
     /// Error related to the EVM execution failures.
-    #[error(transparent)]
     Evm(#[from] EvmError),
     /// Error related to the Cairo vm execution failures.
-    #[error(transparent)]
     CairoVm(#[from] CairoError),
-    #[error("{0}")]
+    /// Other execution error.
     Other(String),
+}
+
+impl From<cainome::cairo_serde::Error> for ExecutionError {
+    fn from(error: cainome::cairo_serde::Error) -> Self {
+        let error = error.to_string();
+        if error.contains("RunResources has no remaining steps.") {
+            return Self::CairoVm(CairoError::VmOutOfResources);
+        }
+        Self::Other(error)
+    }
+}
+
+impl std::fmt::Display for ExecutionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("execution reverted")?;
+        match self {
+            Self::Evm(err) => match err {
+                EvmError::Other(b) => {
+                    if let Some(reason) = decode_revert_reason(b.as_ref()) {
+                        write!(f, ": {reason}")?;
+                    }
+                    Ok(())
+                }
+                _ => write!(f, ": {err}"),
+            },
+            Self::CairoVm(err) => write!(f, ": {err}"),
+            Self::Other(err) => write!(f, ": {err}"),
+        }
+    }
 }
 
 /// Error related to the Cairo vm execution failures.
@@ -162,17 +176,17 @@ pub enum CairoError {
 #[derive(Debug, Error)]
 pub enum EvmError {
     #[error("validation failed")]
-    ValidationError,
+    Validation,
     #[error("state modification error")]
-    StateModificationError,
+    StateModification,
     #[error("unknown opcode")]
     UnknownOpcode,
     #[error("invalid jump dest")]
     InvalidJumpDest,
-    #[error("invalid caller")]
+    #[error("caller is not a Kakarot EOA")]
     NotKakarotEoaCaller,
-    #[error("view function error")]
-    ViewFunctionError,
+    #[error("function limited to view call")]
+    ViewFunction,
     #[error("stack overflow")]
     StackOverflow,
     #[error("stack underflow")]
@@ -187,24 +201,18 @@ pub enum EvmError {
     NotImplementedPrecompile(String),
     #[error("invalid cairo selector")]
     InvalidCairoSelector,
-    #[error("precompile input error")]
-    PrecompileInputError,
+    #[error("precompile wrong input length")]
+    PrecompileInputLength,
     #[error("precompile flag error")]
-    PrecompileFlagError,
-    #[error("balance error")]
-    BalanceError,
+    PrecompileFlag,
+    #[error("transfer amount exceeds balance")]
+    Balance,
     #[error("address collision")]
     AddressCollision,
     #[error("out of gas")]
     OutOfGas,
     #[error("{0}")]
-    Other(String),
-}
-
-impl From<EvmError> for KakarotError {
-    fn from(value: EvmError) -> Self {
-        Self::Execution(ExecutionError::Evm(value))
-    }
+    Other(Bytes),
 }
 
 impl From<Vec<FieldElement>> for EvmError {
@@ -212,18 +220,18 @@ impl From<Vec<FieldElement>> for EvmError {
         let bytes = value.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<_>>();
         let maybe_revert_reason = String::from_utf8(bytes.clone());
         if maybe_revert_reason.is_err() {
-            return Self::Other(decode_err(&bytes));
+            return Self::Other(bytes.into());
         }
 
         let revert_reason = maybe_revert_reason.unwrap(); // safe unwrap
         let trimmed = revert_reason.trim_start_matches("Kakarot: ").trim_start_matches("Precompile: ");
         match trimmed {
-            "eth validation failed" => Self::ValidationError,
-            "StateModificationError" => Self::StateModificationError,
+            "eth validation failed" => Self::Validation,
+            "StateModificationError" => Self::StateModification,
             "UnknownOpcode" => Self::UnknownOpcode,
             "invalidJumpDestError" => Self::InvalidJumpDest,
             "caller contract is not a Kakarot account" => Self::NotKakarotEoaCaller,
-            "entrypoint should only be called in view mode" => Self::ViewFunctionError,
+            "entrypoint should only be called in view mode" => Self::ViewFunction,
             "StackOverflow" => Self::StackOverflow,
             "StackUnderflow" => Self::StackUnderflow,
             "OutOfBoundsRead" => Self::OutOfBoundsRead,
@@ -235,21 +243,14 @@ impl From<Vec<FieldElement>> for EvmError {
                 Self::NotImplementedPrecompile(s.trim_start_matches("NotImplementedPrecompile ").to_string())
             }
             "invalidCairoSelector" => Self::InvalidCairoSelector,
-            "wrong input_len" => Self::PrecompileInputError,
-            "flag error" => Self::PrecompileFlagError,
-            "transfer amount exceeds balance" => Self::BalanceError,
+            "wrong input_length" => Self::PrecompileInputLength,
+            "flag error" => Self::PrecompileFlag,
+            "transfer amount exceeds balance" => Self::Balance,
             "addressCollision" => Self::AddressCollision,
             s if s.contains("outOfGas") => Self::OutOfGas,
-            _ => Self::Other(decode_err(&bytes)),
+            _ => Self::Other(bytes.into()),
         }
     }
-}
-
-fn decode_err(bytes: &[u8]) -> String {
-    // Skip the first 4 bytes which is the function selector
-    let msg = &bytes.get(4..);
-    let maybe_decoded_msg = msg.and_then(|msg| alloy_sol_types::sol_data::String::abi_decode(msg, true).ok());
-    maybe_decoded_msg.map_or_else(|| format!("{}", bytes.iter().collect::<Bytes>()), |s| s)
 }
 
 /// Error related to a transaction.
@@ -273,8 +274,8 @@ pub enum TransactionError {
     Tracing(Box<dyn std::error::Error + Send + Sync>),
 }
 
-impl From<TransactionError> for EthRpcErrorCode {
-    fn from(error: TransactionError) -> Self {
+impl From<&TransactionError> for EthRpcErrorCode {
+    fn from(error: &TransactionError) -> Self {
         match error {
             TransactionError::InvalidChainId | TransactionError::InvalidTransactionType => Self::InvalidInput,
             TransactionError::GasOverflow => Self::TransactionRejected,
@@ -288,10 +289,10 @@ impl From<TransactionError> for EthRpcErrorCode {
 pub enum SignatureError {
     /// Thrown when signer recovery fails.
     #[error("could not recover signer")]
-    RecoveryError,
+    Recovery,
     /// Thrown when signing fails.
-    #[error("failed to sign")]
-    SignError,
+    #[error("failed to sign transaction")]
+    SigningFailure,
     /// Thrown when signature is missing.
     #[error("missing signature")]
     MissingSignature,
@@ -339,41 +340,81 @@ mod tests {
     }
 
     #[test]
-    fn test_decode_evm_error() {
+    fn test_decode_revert_message() {
         // Given
-        let bytes: Vec<_> = vec![
+        let b: Vec<_> = vec![
             0x08u8, 0xc3, 0x79, 0xa0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x17, 0x46, 0x61, 0x75,
             0x63, 0x65, 0x74, 0x3a, 0x20, 0x43, 0x6c, 0x61, 0x69, 0x6d, 0x20, 0x74, 0x6f, 0x6f, 0x20, 0x73, 0x6f, 0x6f,
             0x6e, 0x2e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ]
-        .into_iter()
-        .map(FieldElement::from)
-        .collect();
+        ];
+        let bytes = b.clone().into_iter().map(FieldElement::from).collect::<Vec<_>>();
 
         // When
         let evm_err: EvmError = bytes.into();
+        let json_rpsee_error: ErrorObject<'static> = EthApiError::Execution(ExecutionError::Evm(evm_err)).into();
 
         // Then
-        if let EvmError::Other(err) = evm_err {
-            assert_eq!(err, "Faucet: Claim too soon.");
-        } else {
-            panic!("Expected EvmError::Other, got {evm_err:?}");
-        }
+        assert_eq!(json_rpsee_error.message(), "execution reverted: revert: Faucet: Claim too soon.");
+        assert_eq!(json_rpsee_error.code(), 3);
+        assert_eq!(format!("{}", json_rpsee_error.data().unwrap()), format!("\"{}\"", Bytes::from(b)));
+    }
+
+    #[test]
+    fn test_decode_undecodable_message() {
+        // Given
+        let b = vec![
+            0x6cu8, 0xa7, 0xb8, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x71,
+            0x52, 0xe0, 0x85, 0x5b, 0xab, 0x82, 0xb8, 0xe1, 0x0b, 0x86, 0x92, 0xe5, 0x84, 0xad, 0x03, 0x4b, 0xd2, 0x29,
+            0x12,
+        ];
+        let bytes = b.clone().into_iter().map(FieldElement::from).collect::<Vec<_>>();
+
+        // When
+        let evm_err: EvmError = bytes.into();
+        let json_rpsee_error: ErrorObject<'static> = EthApiError::Execution(ExecutionError::Evm(evm_err)).into();
+
+        // Then
+        assert_eq!(json_rpsee_error.message(), "execution reverted");
+        assert_eq!(json_rpsee_error.code(), 3);
+        assert_eq!(format!("{}", json_rpsee_error.data().unwrap()), format!("\"{}\"", Bytes::from(b)));
+    }
+
+    #[test]
+    fn test_decode_kakarot_evm_error() {
+        // Given
+        let bytes = vec![
+            0x4bu8, 0x61, 0x6b, 0x61, 0x72, 0x6f, 0x74, 0x3a, 0x20, 0x65, 0x6e, 0x74, 0x72, 0x79, 0x70, 0x6f, 0x69,
+            0x6e, 0x74, 0x20, 0x73, 0x68, 0x6f, 0x75, 0x6c, 0x64, 0x20, 0x6f, 0x6e, 0x6c, 0x79, 0x20, 0x62, 0x65, 0x20,
+            0x63, 0x61, 0x6c, 0x6c, 0x65, 0x64, 0x20, 0x69, 0x6e, 0x20, 0x76, 0x69, 0x65, 0x77, 0x20, 0x6d, 0x6f, 0x64,
+            0x65,
+        ]
+        .into_iter()
+        .map(FieldElement::from)
+        .collect::<Vec<_>>();
+
+        // When
+        let evm_err: EvmError = bytes.into();
+        let json_rpsee_error: ErrorObject<'static> = EthApiError::Execution(ExecutionError::Evm(evm_err)).into();
+
+        // Then
+        assert_eq!(json_rpsee_error.message(), "execution reverted: function limited to view call");
+        assert_eq!(json_rpsee_error.code(), 3);
+        assert!(json_rpsee_error.data().is_none());
     }
 
     #[test]
     fn test_display_execution_error() {
         // Given
-        let err = EthApiError::Kakarot(KakarotError::Execution(ExecutionError::Evm(EvmError::BalanceError)));
+        let err = EthApiError::Execution(ExecutionError::Evm(EvmError::Balance));
 
         // When
-        let display = format!("{err:?}");
+        let display = format!("{err}");
 
         // Then
-        assert_eq!(display, "execution reverted: Evm(BalanceError)");
+        assert_eq!(display, "execution reverted: transfer amount exceeds balance");
     }
 
     #[test]
@@ -418,10 +459,10 @@ mod tests {
         ));
 
         // When
-        let eth_err: KakarotError = err.into();
-        let display = format!("{eth_err:?}");
+        let eth_err: ExecutionError = err.into();
+        let display = format!("{eth_err}");
 
         // Then
-        assert_eq!(display, "Execution(CairoVm(VmOutOfResources))");
+        assert_eq!(display, "execution reverted: cairo vm out of resources");
     }
 }

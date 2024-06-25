@@ -28,7 +28,7 @@ pub(crate) fn validate_transaction(transaction_signed: &TransactionSigned, chain
     }
 
     // Recover the signer from the transaction
-    let _ = transaction_signed.recover_signer().ok_or(SignatureError::RecoveryError)?;
+    let _ = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
 
     // Assert the chain is correct
     let maybe_chain_id = transaction_signed.chain_id();

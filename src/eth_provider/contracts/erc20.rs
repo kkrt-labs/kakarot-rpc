@@ -4,7 +4,7 @@ use reth_primitives::{BlockId, TxKind, U256};
 use reth_rpc_types::request::TransactionInput;
 use reth_rpc_types::TransactionRequest;
 
-use crate::eth_provider::error::{ExecutionError, KakarotError};
+use crate::eth_provider::error::ExecutionError;
 use crate::eth_provider::provider::EthProviderResult;
 use crate::eth_provider::provider::EthereumProvider;
 
@@ -44,7 +44,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
 
         let ret = self.provider.call(request, Some(block_id)).await?;
         let balance = U256::try_from_be_slice(&ret)
-            .ok_or_else(|| KakarotError::from(ExecutionError::Other("failed to deserialize balance".to_string())))?;
+            .ok_or_else(|| ExecutionError::Other("failed to deserialize balance".to_string()))?;
 
         Ok(balance)
     }
