@@ -47,7 +47,7 @@ import {
  * @param blockHash - The block hash of the transaction in hex.
  * @param isPendingBlock - Whether the block is pending.
  * @returns - The transaction in the Ethereum format, or null if the transaction is invalid.
- *  * Acknowledgement: Code taken from <https://github.com/ethereumjs/ethereumjs-monorepo>
+ * Acknowledgement: Code taken from <https://github.com/ethereumjs/ethereumjs-monorepo>
  */
 export function toEthTx({
   transaction,
@@ -337,7 +337,7 @@ export function toTypedEthTx({
  * For EIP1559 = [0x02 || rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, destination, amount, data, access_list])]
  * For EIP2930 = [0x01 || rlp([chainId, nonce, gasPrice, gasLimit, to, value, data, accessList])]
  * @returns - Decoded unsigned transaction.
- * @throws - Error if the transaction type is invalid or the RLP encoding is not an array.
+ * @throws - Error if the transaction is a BlobEIP4844Tx or the rlp encoding is not an array.
  */
 function fromSerializedData(bytes: Uint8Array): TypedTransaction {
   const txType = bytes[0];
@@ -373,8 +373,9 @@ function fromSerializedData(bytes: Uint8Array): TypedTransaction {
  * @param r - Signature r value.
  * @param s - Signature s value.
  * @param v - Signature v value. In case of EIP155ReplayProtection, must include the chain ID.
- * @returns - The signed transaction.
- * @throws - Error if the transaction type is invalid or if v param is < 35 for a LegacyTx.
+ * @returns - Passed transaction with the signature added.
+ * @throws - Error if the transaction is a BlobEIP4844Tx or if v param is < 35 for a
+ *         LegacyTx.
  */
 function addSignature(
   tx: TypedTransaction,
