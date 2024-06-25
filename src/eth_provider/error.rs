@@ -181,8 +181,12 @@ pub enum EvmError {
     OutOfBoundsRead,
     #[error("unknown precompile {0}")]
     UnknownPrecompile(String),
+    #[error("unauthorized precompile")]
+    UnauthorizedPrecompile,
     #[error("not implemented precompile {0}")]
     NotImplementedPrecompile(String),
+    #[error("invalid cairo selector")]
+    InvalidCairoSelector,
     #[error("precompile input error")]
     PrecompileInputError,
     #[error("precompile flag error")]
@@ -226,13 +230,15 @@ impl From<Vec<FieldElement>> for EvmError {
             s if s.contains("UnknownPrecompile") => {
                 Self::UnknownPrecompile(s.trim_start_matches("UnknownPrecompile ").to_string())
             }
+            "unauthorizedPrecompile" => Self::UnauthorizedPrecompile,
             s if s.contains("NotImplementedPrecompile") => {
                 Self::NotImplementedPrecompile(s.trim_start_matches("NotImplementedPrecompile ").to_string())
             }
-            "wrong input_length" => Self::PrecompileInputError,
+            "invalidCairoSelector" => Self::InvalidCairoSelector,
+            "wrong input_len" => Self::PrecompileInputError,
             "flag error" => Self::PrecompileFlagError,
             "transfer amount exceeds balance" => Self::BalanceError,
-            "AddressCollision" => Self::AddressCollision,
+            "addressCollision" => Self::AddressCollision,
             s if s.contains("outOfGas") => Self::OutOfGas,
             _ => Self::Other(decode_err(&bytes)),
         }
