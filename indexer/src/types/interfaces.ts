@@ -68,7 +68,7 @@ export interface BuildTransactionEthFormat {
   typedTransaction: TypedTransaction;
   /** The JSON representation of the transaction. */
   jsonTx: JsonTx;
-  /** The Ethereum receipt corresponding to a reverted out of resources transaction. */
+  /** The Ethereum receipt. */
   receipt: TransactionReceipt;
   /** The block number in which the transaction was included, as a prefixed hex string. */
   blockNumber: PrefixedHexString;
