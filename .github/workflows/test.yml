@@ -31,7 +31,6 @@ jobs:
           genhtml -o cov_profile/html cov_profile.lcov
       - name: Extract coverage percentage from HTML for the target branch
         run: |
-          cat cov_profile/html/index.html
           coverage_percentage=$(grep -A 3 'Functions:' cov_profile/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
           coverage_percentage=${coverage_percentage%\%}
           echo $coverage_percentage > coverage_percentage.txt
@@ -49,7 +48,6 @@ jobs:
           genhtml -o cov_profile_main/html cov_profile_main.lcov
       - name: Extract coverage percentage from HTML for the base branch
         run: |
-          cat cov_profile_main/html/index.html
           coverage_percentage_main=$(grep -A 3 'Functions:' cov_profile_main/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
           coverage_percentage_main=${coverage_percentage_main%\%}
           echo $coverage_percentage_main > coverage_percentage_main.txt
