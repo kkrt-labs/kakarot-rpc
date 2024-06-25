@@ -30,15 +30,11 @@ jobs:
           cat cov_profile/html/index.html
           coverage_percentage=$(grep -A 3 "<div class='fl pad1y space-right2'>" cov_profile/html/index.html | grep "<span class='strong'>" | awk -F'[<>]' '{gsub("%","",$3); print $3}')
           echo $coverage_percentage > curr_coverage_percentage.txt
-      - name: Upload current coverage percentage
-        uses: actions/upload-artifact@v4
-        with:
-          name: curr-coverage-percentage
-          path: curr_coverage_percentage.txt
       # Checkout base branch and run tests
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.base_ref }}
+          clean: false
       - name: Run Tests with Coverage on base branch
         run: KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_main
       - name: Generate HTML report from for the base branch
@@ -47,10 +43,6 @@ jobs:
         run: |
           coverage_percentage_main=$(grep -A 3 "<div class='fl pad1y space-right2'>" cov_profile_main/html/index.html | grep "<span class='strong'>" | awk -F'[<>]' '{gsub("%","",$3); print $3}')
           echo $coverage_percentage_main > coverage_percentage_main.txt
-      - name: Download coverage percentages
-        uses: actions/download-artifact@v4
-        with:
-          name: curr-coverage-percentage
       - name: Compare coverage percentage
         run: |
           previous_coverage=$(awk '{print $2}' coverage_percentage_main.txt)
