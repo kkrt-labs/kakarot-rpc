@@ -1,267 +1,266 @@
 ---
-  name: test
-  
-  on:
-    workflow_call:
-  
-  jobs:
-    test-deno:
-      runs-on: ubuntu-latest
-      timeout-minutes: 30
-      steps:
-        - uses: actions/checkout@v4
-        - uses: denoland/setup-deno@v1
-          with:
-            deno-version: v1.x
-        # Checkout target branch and run tests
-        - name: Checkout target branch
-          run: |
-            git fetch origin ${{ github.head_ref }}
-            git checkout ${{ github.head_ref }}
-        - name: Run Tests with Coverage on target branch
-          run: KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile
-        - name: Generate Coverage Report on target branch
-          run: deno coverage cov_profile --lcov --output=cov_profile.lcov
-        - name: Install lcov
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y lcov bc
-        - name: Generate HTML report from lcov for the target branch
-          run: |
-            genhtml -o cov_profile/html cov_profile.lcov
-        - name: Extract coverage percentage from HTML for the target branch
-          run: |
-            cat cov_profile/html/index.html
-            coverage_percentage=$(grep -A 3 'Functions:' cov_profile/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
-            coverage_percentage=${coverage_percentage%\%}
-            echo $coverage_percentage > coverage_percentage.txt
-        # Checkout base branch and run tests
-        - name: Checkout base branch
-          run: |
-            git fetch origin ${{ github.base_ref }}
-            git checkout ${{ github.base_ref }}
-        - name: Run Tests with Coverage on base branch
-          run: KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_main
-        - name: Generate Coverage Report on base branch
-          run: deno coverage cov_profile_main --lcov --output=cov_profile_main.lcov
-        - name: Generate HTML report from lcov for the base branch
-          run: |
-            genhtml -o cov_profile_main/html cov_profile_main.lcov
-        - name: Extract coverage percentage from HTML for the base branch
-          run: |
-            cat cov_profile_main/html/index.html
-            coverage_percentage_main=$(grep -A 3 'Functions:' cov_profile_main/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
-            coverage_percentage_main=${coverage_percentage_main%\%}
-            echo $coverage_percentage_main > coverage_percentage_main.txt
-        - name: Compare coverage percentage
-          run: |
-            current_coverage=$(cat coverage_percentage.txt)
-            echo "Current coverage percentage is $current_coverage%"
-            previous_coverage=$(cat coverage_percentage_main.txt)
-            echo "Previous coverage percentage was $previous_coverage%"
-            change=$(echo "$previous_coverage - $current_coverage" | bc)
-            echo "Coverage change is $change%"
-            if (( $(echo "$change > 5.0" | bc -l) )); then
-              echo "Coverage dropped by more than 5%!"
-              exit 1
-            fi
-  
-    test-rust:
-      runs-on: ubuntu-latest-16-cores
-      timeout-minutes: 30
-      steps:
-        - uses: actions/checkout@v4
-        - name: Setup rust env
-          uses: actions-rs/toolchain@v1
-          with:
-            profile: minimal
-            components: llvm-tools-preview, rustfmt, clippy
-            override: true
-            toolchain: 1.76.0
-        - name: Retrieve cached dependencies
-          uses: Swatinem/rust-cache@v2
-        # nextest setup
-        - uses: taiki-e/install-action@nextest
-        # Install Foundry
-        - name: install foundry
-          uses: foundry-rs/foundry-toolchain@v1
-          with:
-            version: nightly
-        # Install Python
-        - name: Set up Python 3.10
-          uses: actions/setup-python@v5
-          with:
-            python-version: 3.10.14
-        - name: Load cached Poetry installation
-          id: cached-poetry
-          uses: actions/cache@v4
-          with:
-            path: ~/.local
-            key: poetry-${{ runner.os }}
-        - name: Install Poetry
-          if: steps.cached-poetry.outputs.cache-hit != 'true'
-          uses: snok/install-poetry@v1
-          with:
-            virtualenvs-create: true
-            virtualenvs-in-project: true
-            installer-parallel: true
-        - name: Load cached venv
-          id: cached-poetry-dependencies
-          uses: actions/cache@v4
-          with:
-            path: .venv
-            key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-        - name: Setup the Kakarot submodule
-          run: make setup
-        # Create dump
-        - name: Create dump
-          run: ./scripts/make_with_env.sh katana-genesis
-        - name: Lint
-          run: |
-            cargo check &&
-            cargo fmt --all -- --check &&
-            cargo clippy --workspace --all-features --all-targets -- -D warnings
-        - name: Test code
-          run: make test
-  
-    # Inspired by Reth CI.
-    # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/hive.yml>
-    hive-prepare:
-      runs-on: ubuntu-latest-16-cores
-      timeout-minutes: 45
-      steps:
-        - uses: actions/checkout@v4
-          with:
-            submodules: recursive
-        - name: Set up Docker Buildx
-          uses: docker/setup-buildx-action@v2
-        - run: mkdir artifacts
-        - name: Build Hive
-          uses: docker/build-push-action@v4
-          with:
-            push: false
-            tags: hive
-            context: .
-            file: ./docker/hive/Dockerfile
-            platforms: linux/amd64
-            build-args: |
-              GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
-              APIBARA_STARKNET_BIN_DIR=ns4qwsl6fgbv7mxhxpnaqhd66wnic8i6
-              APIBARA_SINK_BIN_DIR=sci7y4a8r7yz05094pl88h3d7vv1s98f
-            outputs: type=docker,dest=./artifacts/kakarot_image.tar
-        - name: Checkout hive tests
-          uses: actions/checkout@v4
-          with:
-            repository: kkrt-labs/hive
-            ref: master
-            path: hivetests
-        - name: Set up Go
-          uses: actions/setup-go@v5
-          with:
-            go-version: "1.22"
-        - name: Compile hive
-          run: |
-            cd hivetests
-            go build hive.go
-            mv ./hive ../artifacts/
-        - name: Upload artifacts
-          uses: actions/upload-artifact@v4
-          with:
-            name: artifacts
-            path: ./artifacts
-  
-    hive-test:
-      runs-on: ubuntu-latest-16-cores
-      timeout-minutes: 45
-      needs: hive-prepare
-      strategy:
-        fail-fast: false
-        matrix:
-          sim: [ethereum/rpc]
-          include:
-            - sim: ethereum/rpc-compat
-              include:
-                - debug_getRawReceipts
-                - debug_getRawTransaction/get-tx$
-                - debug_getRawBlock/get-invalid-number$
-                - eth_blockNumber/simple-test$
-                - eth_call/call-simple-contract$
-                - eth_call/call-simple-transfer$
-                - eth_chainId/get-chain-id$
-                - eth_estimateGas/estimate-simple-contract$
-                - eth_estimateGas/estimate-simple-transfer$
-                - eth_getBalance/get-balance$
-                - eth_getBlockByHash/get-block-by-empty-hash$
-                - eth_getBlockByHash/get-block-by-notfound-hash$
-                - eth_getBlockByNumber/get-finalized$
-                - eth_getBlockByNumber/get-latest$
-                - eth_getBlockByNumber/get-safe$
-                - eth_getBlockByNumber/get-block-notfound$
-                - eth_getBlockByNumber/get-block-n$
-                - eth_getBlockReceipts/get-block-receipts-0$
-                - eth_getBlockReceipts/get-block-receipts-earliest$
-                - eth_getBlockReceipts/get-block-receipts-empty$
-                - eth_getBlockReceipts/get-block-receipts-latest$
-                - eth_getBlockReceipts/get-block-receipts-future$
-                - eth_getBlockReceipts/get-block-receipts-n$
-                - eth_getBlockReceipts/get-block-receipts-not-found$
-                - eth_getBlockTransactionCountByNumber/get-block-n$
-                - eth_getBlockTransactionCountByNumber/get-genesis$
-                - eth_getCode/get-code$
-                - eth_getStorage/get-storage$
-                - eth_getTransactionByBlockNumberAndIndex/get-block-n$
-                - eth_getTransactionByHash/get-access-list$
-                - eth_getTransactionByHash/get-dynamic-fee$
-                - eth_getTransactionByHash/get-empty-tx$
-                - eth_getTransactionByHash/get-legacy-create$
-                - eth_getTransactionByHash/get-legacy-input$
-                - eth_getTransactionByHash/get-legacy-tx$
-                - eth_getTransactionByHash/get-notfound-tx$
-                - eth_getTransactionReceipt/get-access-list$
-                - eth_getTransactionReceipt/get-dynamic-fee$
-                - eth_getTransactionReceipt/get-empty-tx$
-                - eth_getTransactionReceipt/get-legacy-receipt$
-                - eth_getTransactionReceipt/get-notfound-tx$
-                - eth_getTransactionReceipt/get-legacy-contract$
-                - eth_getTransactionReceipt/get-legacy-input$
-                - eth_sendRawTransaction/send-access-list-transaction$
-                - eth_sendRawTransaction/send-dynamic-fee-access-list-transaction$
-                - eth_sendRawTransaction/send-dynamic-fee-transaction$
-                - eth_sendRawTransaction/send-legacy-transaction$
-                - eth_getTransactionCount/get-account-nonce$
-                - eth_syncing/check-syncing$
-      steps:
-        - name: Download artifacts
-          uses: actions/download-artifact@v4
-          with:
-            name: artifacts
-            path: /tmp
-        - name: Load Docker image
-          run: |
-            docker load --input /tmp/kakarot_image.tar
-            docker image ls -a
-        - name: Move hive binary
-          run: |
-            mv /tmp/hive /usr/local/bin
-            chmod +x /usr/local/bin/hive
-        - name: Checkout hive tests
-          uses: actions/checkout@v4
-          with:
-            repository: kkrt-labs/hive
-            ref: master
-            path: hivetests
-        - name: Run ${{ matrix.sim }} simulator
-          run: |
-            cd hivetests
-            hive --sim "${{ matrix.sim }}$" --sim.limit "/${{join(matrix.include, '|')}}" --client kakarot
-        - name: Print logs
-          if: always()
-          run: |
-            cd hivetests
-            echo "Logs:"
-            cat workspace/logs/*.log
-            echo "Kakarot logs:"
-            cat workspace/logs/kakarot/*.log
-            echo "Details logs:"
-            cat workspace/logs/details/*.log
-  
+name: test
+
+on:
+  workflow_call:
+
+jobs:
+  test-deno:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      # Checkout target branch and run tests
+      - name: Checkout target branch
+        run: |
+          git fetch origin ${{ github.head_ref }}
+          git checkout ${{ github.head_ref }}
+      - name: Run Tests with Coverage on target branch
+        run: KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile
+      - name: Generate Coverage Report on target branch
+        run: deno coverage cov_profile --lcov --output=cov_profile.lcov
+      - name: Install lcov
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lcov bc
+      - name: Generate HTML report from lcov for the target branch
+        run: |
+          genhtml -o cov_profile/html cov_profile.lcov
+      - name: Extract coverage percentage from HTML for the target branch
+        run: |
+          cat cov_profile/html/index.html
+          coverage_percentage=$(grep -A 3 'Functions:' cov_profile/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
+          coverage_percentage=${coverage_percentage%\%}
+          echo $coverage_percentage > coverage_percentage.txt
+      # Checkout base branch and run tests
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout ${{ github.base_ref }}
+      - name: Run Tests with Coverage on base branch
+        run: KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_main
+      - name: Generate Coverage Report on base branch
+        run: deno coverage cov_profile_main --lcov --output=cov_profile_main.lcov
+      - name: Generate HTML report from lcov for the base branch
+        run: |
+          genhtml -o cov_profile_main/html cov_profile_main.lcov
+      - name: Extract coverage percentage from HTML for the base branch
+        run: |
+          cat cov_profile_main/html/index.html
+          coverage_percentage_main=$(grep -A 3 'Functions:' cov_profile_main/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
+          coverage_percentage_main=${coverage_percentage_main%\%}
+          echo $coverage_percentage_main > coverage_percentage_main.txt
+      - name: Compare coverage percentage
+        run: |
+          current_coverage=$(cat coverage_percentage.txt)
+          echo "Current coverage percentage is $current_coverage%"
+          previous_coverage=$(cat coverage_percentage_main.txt)
+          echo "Previous coverage percentage was $previous_coverage%"
+          change=$(echo "$previous_coverage - $current_coverage" | bc)
+          echo "Coverage change is $change%"
+          if (( $(echo "$change > 5.0" | bc -l) )); then
+            echo "Coverage dropped by more than 5%!"
+            exit 1
+          fi
+
+  test-rust:
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup rust env
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          components: llvm-tools-preview, rustfmt, clippy
+          override: true
+          toolchain: 1.76.0
+      - name: Retrieve cached dependencies
+        uses: Swatinem/rust-cache@v2
+      # nextest setup
+      - uses: taiki-e/install-action@nextest
+      # Install Foundry
+      - name: install foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      # Install Python
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.10.14
+      - name: Load cached Poetry installation
+        id: cached-poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: poetry-${{ runner.os }}
+      - name: Install Poetry
+        if: steps.cached-poetry.outputs.cache-hit != 'true'
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Setup the Kakarot submodule
+        run: make setup
+      # Create dump
+      - name: Create dump
+        run: ./scripts/make_with_env.sh katana-genesis
+      - name: Lint
+        run: |
+          cargo check &&
+          cargo fmt --all -- --check &&
+          cargo clippy --workspace --all-features --all-targets -- -D warnings
+      - name: Test code
+        run: make test
+
+  # Inspired by Reth CI.
+  # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/hive.yml>
+  hive-prepare:
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - run: mkdir artifacts
+      - name: Build Hive
+        uses: docker/build-push-action@v4
+        with:
+          push: false
+          tags: hive
+          context: .
+          file: ./docker/hive/Dockerfile
+          platforms: linux/amd64
+          build-args: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
+            APIBARA_STARKNET_BIN_DIR=ns4qwsl6fgbv7mxhxpnaqhd66wnic8i6
+            APIBARA_SINK_BIN_DIR=sci7y4a8r7yz05094pl88h3d7vv1s98f
+          outputs: type=docker,dest=./artifacts/kakarot_image.tar
+      - name: Checkout hive tests
+        uses: actions/checkout@v4
+        with:
+          repository: kkrt-labs/hive
+          ref: master
+          path: hivetests
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Compile hive
+        run: |
+          cd hivetests
+          go build hive.go
+          mv ./hive ../artifacts/
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifacts
+          path: ./artifacts
+
+  hive-test:
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 45
+    needs: hive-prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        sim: [ethereum/rpc]
+        include:
+          - sim: ethereum/rpc-compat
+            include:
+              - debug_getRawReceipts
+              - debug_getRawTransaction/get-tx$
+              - debug_getRawBlock/get-invalid-number$
+              - eth_blockNumber/simple-test$
+              - eth_call/call-simple-contract$
+              - eth_call/call-simple-transfer$
+              - eth_chainId/get-chain-id$
+              - eth_estimateGas/estimate-simple-contract$
+              - eth_estimateGas/estimate-simple-transfer$
+              - eth_getBalance/get-balance$
+              - eth_getBlockByHash/get-block-by-empty-hash$
+              - eth_getBlockByHash/get-block-by-notfound-hash$
+              - eth_getBlockByNumber/get-finalized$
+              - eth_getBlockByNumber/get-latest$
+              - eth_getBlockByNumber/get-safe$
+              - eth_getBlockByNumber/get-block-notfound$
+              - eth_getBlockByNumber/get-block-n$
+              - eth_getBlockReceipts/get-block-receipts-0$
+              - eth_getBlockReceipts/get-block-receipts-earliest$
+              - eth_getBlockReceipts/get-block-receipts-empty$
+              - eth_getBlockReceipts/get-block-receipts-latest$
+              - eth_getBlockReceipts/get-block-receipts-future$
+              - eth_getBlockReceipts/get-block-receipts-n$
+              - eth_getBlockReceipts/get-block-receipts-not-found$
+              - eth_getBlockTransactionCountByNumber/get-block-n$
+              - eth_getBlockTransactionCountByNumber/get-genesis$
+              - eth_getCode/get-code$
+              - eth_getStorage/get-storage$
+              - eth_getTransactionByBlockNumberAndIndex/get-block-n$
+              - eth_getTransactionByHash/get-access-list$
+              - eth_getTransactionByHash/get-dynamic-fee$
+              - eth_getTransactionByHash/get-empty-tx$
+              - eth_getTransactionByHash/get-legacy-create$
+              - eth_getTransactionByHash/get-legacy-input$
+              - eth_getTransactionByHash/get-legacy-tx$
+              - eth_getTransactionByHash/get-notfound-tx$
+              - eth_getTransactionReceipt/get-access-list$
+              - eth_getTransactionReceipt/get-dynamic-fee$
+              - eth_getTransactionReceipt/get-empty-tx$
+              - eth_getTransactionReceipt/get-legacy-receipt$
+              - eth_getTransactionReceipt/get-notfound-tx$
+              - eth_getTransactionReceipt/get-legacy-contract$
+              - eth_getTransactionReceipt/get-legacy-input$
+              - eth_sendRawTransaction/send-access-list-transaction$
+              - eth_sendRawTransaction/send-dynamic-fee-access-list-transaction$
+              - eth_sendRawTransaction/send-dynamic-fee-transaction$
+              - eth_sendRawTransaction/send-legacy-transaction$
+              - eth_getTransactionCount/get-account-nonce$
+              - eth_syncing/check-syncing$
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: artifacts
+          path: /tmp
+      - name: Load Docker image
+        run: |
+          docker load --input /tmp/kakarot_image.tar
+          docker image ls -a
+      - name: Move hive binary
+        run: |
+          mv /tmp/hive /usr/local/bin
+          chmod +x /usr/local/bin/hive
+      - name: Checkout hive tests
+        uses: actions/checkout@v4
+        with:
+          repository: kkrt-labs/hive
+          ref: master
+          path: hivetests
+      - name: Run ${{ matrix.sim }} simulator
+        run: |
+          cd hivetests
+          hive --sim "${{ matrix.sim }}$" --sim.limit "/${{join(matrix.include, '|')}}" --client kakarot
+      - name: Print logs
+        if: always()
+        run: |
+          cd hivetests
+          echo "Logs:"
+          cat workspace/logs/*.log
+          echo "Kakarot logs:"
+          cat workspace/logs/kakarot/*.log
+          echo "Details logs:"
+          cat workspace/logs/details/*.log

@@ -28,6 +28,7 @@
 vscode
 broadcast
 .idea
+.DS_Store
 
 # ignore genesis.json
 .hive
