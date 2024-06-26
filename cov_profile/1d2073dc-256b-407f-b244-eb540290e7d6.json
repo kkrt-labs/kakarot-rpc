@@ -1,0 +1,46 @@
+{
+  "scriptId": "311",
+  "url": "file:///home/dzns/rust/onlydust/kakarot-rpc-functions/kakarot-rpc/indexer/src/utils/hex.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 1089, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "toHexString",
+      "ranges": [
+        { "startOffset": 126, "endOffset": 215, "count": 2 },
+        { "startOffset": 175, "endOffset": 205, "count": 1 },
+        { "startOffset": 206, "endOffset": 212, "count": 1 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "padString",
+      "ranges": [
+        { "startOffset": 325, "endOffset": 431, "count": 5 },
+        { "startOffset": 394, "endOffset": 401, "count": 1 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "padBigint",
+      "ranges": [
+        { "startOffset": 535, "endOffset": 648, "count": 6 },
+        { "startOffset": 612, "endOffset": 617, "count": 1 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "padBytes",
+      "ranges": [
+        { "startOffset": 820, "endOffset": 1088, "count": 6 },
+        { "startOffset": 887, "endOffset": 906, "count": 1 },
+        { "startOffset": 937, "endOffset": 972, "count": 2 },
+        { "startOffset": 972, "endOffset": 1087, "count": 4 }
+      ],
+      "isBlockCoverage": true
+    }
+  ]
+}

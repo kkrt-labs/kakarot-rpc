@@ -81,7 +81,7 @@ export function toEthTx({
  * the chain ID is calculated from the `v` value using the formula:
  * v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
  */
-function chainId(
+export function chainId(
   typedTransaction: TypedTransaction,
   jsonTx: JsonTx,
 ): string | undefined {
@@ -105,7 +105,7 @@ function chainId(
  * @param jsonTx - The JSON representation of the transaction.
  * @param result - The transaction result object in Ethereum format.
  */
-function setYParityFlag(
+export function setYParityFlag(
   typedTransaction: TypedTransaction,
   jsonTx: JsonTx,
   result: ExtendedJsonRpcTx,
@@ -127,7 +127,7 @@ function setYParityFlag(
  * @param receipt - The transaction receipt object.
  * @param result - The transaction result object in Ethereum format.
  */
-function setFlagRunOutOfResources(
+export function setFlagRunOutOfResources(
   receipt: TransactionReceipt,
   result: ExtendedJsonRpcTx,
 ): void {
@@ -150,7 +150,7 @@ function setFlagRunOutOfResources(
  * @param index - The index of the transaction in the block.
  * @returns - The transaction in the Ethereum format, or null if the transaction is not signed.
  */
-function transactionEthFormat({
+export function transactionEthFormat({
   typedTransaction,
   jsonTx,
   blockNumber,

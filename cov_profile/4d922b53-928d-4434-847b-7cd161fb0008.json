@@ -1,0 +1,11 @@
+{
+  "scriptId": "339",
+  "url": "file:///home/dzns/rust/onlydust/kakarot-rpc-functions/kakarot-rpc/indexer/src/deps.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 742, "count": 1 }],
+      "isBlockCoverage": true
+    }
+  ]
+}
