@@ -504,7 +504,6 @@ Deno.test("toTypedEthTx EIP2930 Transaction before release with 31 bytes chunks 
   assertEquals(ethTx.accessList, tx.accessList);
 });
 
-// // ADICIONADO POR DZNES
 Deno.test("toEthTx returns null for invalid transaction", () => {
   const result = toEthTx({
     transaction: {} as Transaction,
