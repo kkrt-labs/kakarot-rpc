@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use kakarot_rpc::eth_provider::constant::{MAX_LOGS, STARKNET_MODULUS, TRANSACTION_MAX_RETRIES};
-use kakarot_rpc::eth_provider::database::ethereum::EthereumDatabase;
+use kakarot_rpc::eth_provider::database::ethereum::EthereumTransactionStore;
 use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
 use kakarot_rpc::eth_provider::provider::EthereumProvider;
 use kakarot_rpc::models::felt::Felt252Wrapper;
