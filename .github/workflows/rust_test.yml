@@ -11,11 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup rust env
-        uses: actions-rs/toolchain@v2
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          components: llvm-tools-preview, rustfmt, clippy
-          override: true
+          components: rustfmt, clippy
           toolchain: 1.76.0
       - name: Retrieve cached dependencies
         uses: Swatinem/rust-cache@v2
