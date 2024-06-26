@@ -127,7 +127,7 @@ function setYParityFlag(
  * @param receipt - The transaction receipt object.
  * @param result - The transaction result object in Ethereum format.
  */
-function flagRunOutOfResources(
+function setFlagRunOutOfResources(
   receipt: TransactionReceipt,
   result: ExtendedJsonRpcTx,
 ): void {
@@ -236,7 +236,7 @@ export function typedTransactionToEthTx({
 
   setYParityFlag(typedTransaction, jsonTx, result);
 
-  flagRunOutOfResources(receipt, result);
+  setFlagRunOutOfResources(receipt, result);
 
   return result;
 }
