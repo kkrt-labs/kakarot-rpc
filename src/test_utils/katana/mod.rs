@@ -17,7 +17,7 @@ use reth_rpc_types::Log;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 
-use crate::eth_provider::database::ethereum::EthereumDatabase;
+use crate::eth_provider::database::ethereum::EthereumTransactionStore;
 use crate::eth_provider::database::filter;
 use crate::eth_provider::database::filter::format_hex;
 use crate::eth_provider::database::filter::EthDatabaseFilterBuilder;

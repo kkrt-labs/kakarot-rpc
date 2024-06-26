@@ -76,11 +76,12 @@ impl Database {
     pub async fn get<T>(
         &self,
         filter: impl Into<Option<Document>>,
-        find_options: Option<FindOpts>,
+        find_options: impl Into<Option<FindOpts>>,
     ) -> DatabaseResult<Vec<T>>
     where
         T: DeserializeOwned + CollectionName,
     {
+        let find_options = find_options.into();
         Ok(self.collection::<T>().find(filter, find_options.unwrap_or_default().build()).await?.try_collect().await?)
     }
 

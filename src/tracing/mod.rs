@@ -271,7 +271,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 /// Returns the environment with the transaction env updated to the given transaction.
 fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> TracerResult<EnvWithHandlerCfg> {
     // Convert the transaction to an ec recovered transaction and update the env with it.
-    let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
+    let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversion)?;
 
     let tx_env = tx_env_with_recovered(&tx_ec_recovered);
     Ok(EnvWithHandlerCfg {

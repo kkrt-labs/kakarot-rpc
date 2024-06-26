@@ -2,7 +2,7 @@ use std::fmt::{Display, LowerHex};
 
 use mongodb::bson::{doc, Document};
 use reth_primitives::{Address, B256};
-use reth_rpc_types::{Index, Topic};
+use reth_rpc_types::{BlockHashOrNumber, Index, Topic};
 
 use crate::eth_provider::constant::{
     ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, HASH_HEX_STRING_LEN, LOGS_TOPICS_HEX_STRING_LEN,
@@ -164,6 +164,15 @@ impl<T: BlockFiltering + Display + Default> EthDatabaseFilterBuilder<T> {
         let key = format!("{}.{}", self.target, self.target.block_number());
         self.filter.insert(key, format_hex(number, BLOCK_NUMBER_HEX_STRING_LEN));
         self
+    }
+
+    /// Adds a filter on the block hash or number.
+    #[must_use]
+    pub fn with_block_hash_or_number(self, block_hash_or_number: BlockHashOrNumber) -> Self {
+        match block_hash_or_number {
+            BlockHashOrNumber::Hash(hash) => self.with_block_hash(&hash),
+            BlockHashOrNumber::Number(number) => self.with_block_number(number),
+        }
     }
 }
 
