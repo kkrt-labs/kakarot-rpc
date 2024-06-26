@@ -1,0 +1,49 @@
+{
+  "scriptId": "311",
+  "url": "file:///home/dzns/rust/onlydust/kakarot-rpc-functions/kakarot-rpc/indexer/src/utils/filter.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 0, "endOffset": 2743, "count": 1 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "isKakarotTransaction",
+      "ranges": [
+        { "startOffset": 710, "endOffset": 843, "count": 6 },
+        { "startOffset": 791, "endOffset": 806, "count": 4 },
+        { "startOffset": 807, "endOffset": 811, "count": 4 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "ethValidationFailed",
+      "ranges": [
+        { "startOffset": 1082, "endOffset": 2253, "count": 5 },
+        { "startOffset": 1287, "endOffset": 1300, "count": 1 },
+        { "startOffset": 1300, "endOffset": 1415, "count": 4 },
+        { "startOffset": 1415, "endOffset": 1420, "count": 0 },
+        { "startOffset": 1640, "endOffset": 1762, "count": 1 },
+        { "startOffset": 1762, "endOffset": 1900, "count": 3 },
+        { "startOffset": 1900, "endOffset": 1905, "count": 0 },
+        { "startOffset": 2002, "endOffset": 2015, "count": 1 },
+        { "startOffset": 2015, "endOffset": 2252, "count": 2 }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [{ "startOffset": 2194, "endOffset": 2214, "count": 60 }],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "isRevertedWithOutOfResources",
+      "ranges": [
+        { "startOffset": 2557, "endOffset": 2742, "count": 4 },
+        { "startOffset": 2660, "endOffset": 2739, "count": 3 },
+        { "startOffset": 2685, "endOffset": 2690, "count": 1 }
+      ],
+      "isBlockCoverage": true
+    }
+  ]
+}
