@@ -168,8 +168,8 @@ impl<T: BlockFiltering + Display + Default> EthDatabaseFilterBuilder<T> {
 
     /// Adds a filter on the block hash or number.
     #[must_use]
-    pub fn with_block_hash_or_number(self, hash_or_number: BlockHashOrNumber) -> Self {
-        match hash_or_number {
+    pub fn with_block_hash_or_number(self, block_hash_or_number: BlockHashOrNumber) -> Self {
+        match block_hash_or_number {
             BlockHashOrNumber::Hash(hash) => self.with_block_hash(&hash),
             BlockHashOrNumber::Number(number) => self.with_block_number(number),
         }

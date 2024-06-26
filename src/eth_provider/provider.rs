@@ -164,8 +164,8 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>> {
-        let hash_or_number = self.block_id_into_block_number_or_hash(*block_id).await?;
-        Ok(self.database.header(hash_or_number).await?)
+        let block_hash_or_number = self.block_id_into_block_number_or_hash(*block_id).await?;
+        Ok(self.database.header(block_hash_or_number).await?)
     }
 
     async fn block_number(&self) -> EthProviderResult<U64> {
@@ -578,14 +578,14 @@ where
         &self,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
-        let hash_or_number = self
+        let block_hash_or_number = self
             .block_id_into_block_number_or_hash(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)))
             .await?;
-        if !self.database.block_exists(hash_or_number).await? {
+        if !self.database.block_exists(block_hash_or_number).await? {
             return Ok(None);
         }
 
-        Ok(Some(self.database.transactions(hash_or_number).await?))
+        Ok(Some(self.database.transactions(block_hash_or_number).await?))
     }
 
     async fn txpool_transactions(&self) -> EthProviderResult<Vec<Transaction>> {
