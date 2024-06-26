@@ -93,7 +93,6 @@ pub fn starknet_address(address: Address) -> FieldElement {
 pub fn to_starknet_transaction(
     transaction: &TransactionSigned,
     signer: Address,
-    max_fee: u64,
     retries: u8,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
     let sender_address = starknet_address(signer);
@@ -104,8 +103,11 @@ pub fn to_starknet_transaction(
     // Transform the transaction's data to Starknet calldata
     let calldata = transaction_data_to_starknet_calldata(transaction, retries)?;
 
+    // The max fee is always set to 0. This means that no fee is perceived by the
+    // Starknet sequencer, which is the intended behavior has fee perception is
+    // handled by the Kakarot execution layer through EVM gas accounting.
     Ok(BroadcastedInvokeTransaction::V1(BroadcastedInvokeTransactionV1 {
-        max_fee: max_fee.into(),
+        max_fee: 0u8.into(),
         signature,
         nonce: transaction.nonce().into(),
         sender_address,
@@ -130,7 +132,6 @@ mod tests {
         if let BroadcastedInvokeTransaction::V1(tx) = to_starknet_transaction(
             &transaction,
             Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap(),
-            0,
             0,
         )
         .unwrap()
@@ -212,6 +213,6 @@ mod tests {
         transaction.transaction.set_input(vec![0; 30000 * 31].into());
 
         // Attempt to convert the transaction into a Starknet transaction
-        to_starknet_transaction(&transaction, transaction.recover_signer().unwrap(), 100_000_000, 0).unwrap();
+        to_starknet_transaction(&transaction, transaction.recover_signer().unwrap(), 0).unwrap();
     }
 }
