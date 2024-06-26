@@ -45,9 +45,9 @@ impl EthereumTransactionStore for Database {
         Ok(self.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
-    async fn transactions(&self, hash_or_number: BlockHashOrNumber) -> Result<Vec<Transaction>, EthApiError> {
+    async fn transactions(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Vec<Transaction>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
-            .with_block_hash_or_number(hash_or_number)
+            .with_block_hash_or_number(block_hash_or_number)
             .build();
 
         Ok(self.get::<StoredTransaction>(filter, None).await?.into_iter().map(Into::into).collect())

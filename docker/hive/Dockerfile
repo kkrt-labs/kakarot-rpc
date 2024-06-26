@@ -142,7 +142,7 @@ ENV ALLOW_NET=""
 ### Port 8545: https://github.com/ethereum/hive/blob/master/simulators/ethereum/rpc/helper.go#L50
 ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
-ENV RUST_LOG=kakarot_rpc=info
+ENV RUST_LOG=info
 ENV MAX_FELTS_IN_CALLDATA=30000
 ENV TRANSACTION_MAX_RETRIES=10
 ENV MAX_LOGS=10000

@@ -104,10 +104,10 @@ pub fn to_starknet_transaction(
     let calldata = transaction_data_to_starknet_calldata(transaction, retries)?;
 
     // The max fee is always set to 0. This means that no fee is perceived by the
-    // Starknet sequencer, which is the intended behavior has fee perception is
+    // Starknet sequencer, which is the intended behavior as fee perception is
     // handled by the Kakarot execution layer through EVM gas accounting.
     Ok(BroadcastedInvokeTransaction::V1(BroadcastedInvokeTransactionV1 {
-        max_fee: 0u8.into(),
+        max_fee: FieldElement::ZERO,
         signature,
         nonce: transaction.nonce().into(),
         sender_address,

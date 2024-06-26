@@ -47,14 +47,14 @@ echo "Launching mongo..."
 mongod --bind_ip 0.0.0.0 --noauth &
 ## DNA
 echo "Launching DNA..."
-starknet start --rpc=http://localhost:5050 --wait-for-rpc --head-refresh-interval-ms=500 --data=/data &
+starknet start --rpc=http://localhost:5050 --wait-for-rpc --head-refresh-interval-ms=300 --data=/data &
 # ## Indexer
 echo "Launching indexer..."
 sink-mongo run /usr/src/app/code/indexer/src/main.ts &
 
 ### 3.5. Await the Indexer to be healthy
 echo "Waiting for the indexer to start..."
-sleep 8
+sleep 9
 
 # 4. Start the Kakarot RPC service
 echo "Launching Kakarot RPC..."
