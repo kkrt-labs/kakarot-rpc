@@ -95,7 +95,7 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
             return Ok(*hash);
         }
 
-        let block_number = number.try_into().map_err(|_| EthereumDataFormatError::PrimitiveError)?;
+        let block_number = number.try_into().map_err(|_| EthereumDataFormatError::Primitive)?;
         let hash = Handle::current().block_on(async {
             let hash = cache
                 .db

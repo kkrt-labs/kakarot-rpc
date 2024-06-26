@@ -306,16 +306,16 @@ pub enum SignatureError {
 pub enum EthereumDataFormatError {
     /// Error related to conversion in header.
     #[error("header conversion error")]
-    HeaderConversionError,
+    HeaderConversion,
     /// Error related to conversion in receipt.
     #[error("header conversion error")]
-    ReceiptConversionError,
+    ReceiptConversion,
     /// Error related to conversion in transaction.
     #[error("transaction conversion error")]
-    TransactionConversionError,
+    TransactionConversion,
     /// Error related to starknet to eth conversion or vice versa.
     #[error("primitive conversion error")]
-    PrimitiveError,
+    Primitive,
 }
 
 #[cfg(test)]

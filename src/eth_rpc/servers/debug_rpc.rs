@@ -38,7 +38,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .await?
             .map(Header::try_from)
             .transpose()
-            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::HeaderConversionError))?
+            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::HeaderConversion))?
         {
             header.encode(&mut res);
         }
@@ -58,7 +58,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         let mut raw_block = Vec::new();
         if let Some(block) = block {
             let block =
-                Block::try_from(block.inner).map_err(|_| EthApiError::from(EthereumDataFormatError::PrimitiveError))?;
+                Block::try_from(block.inner).map_err(|_| EthApiError::from(EthereumDataFormatError::Primitive))?;
             block.encode(&mut raw_block);
         }
         Ok(raw_block.into())
@@ -75,8 +75,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         if let Some(tx) = transaction {
             let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx =
-                tx.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::PrimitiveError))?;
+            let tx = tx.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::Primitive))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
@@ -102,8 +101,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
 
         for t in transactions {
             let signature = t.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx =
-                t.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::PrimitiveError))?;
+            let tx = t.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::Primitive))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
                 reth_primitives::Signature {
@@ -134,11 +132,11 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             // Converts the transaction type to a u8 and then tries to convert it into TxType
             let tx_type = Into::<u8>::into(receipt.transaction_type())
                 .try_into()
-                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversionError))?;
+                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversion))?;
 
             // Tries to convert the cumulative gas used to u64
             let cumulative_gas_used = TryInto::<u64>::try_into(receipt.inner.cumulative_gas_used())
-                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversionError))?;
+                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversion))?;
 
             // Creates a ReceiptWithBloom from the receipt data
             raw_receipts.push(
