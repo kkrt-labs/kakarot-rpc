@@ -163,6 +163,7 @@ function transactionEthFormat({
     console.error(
       `Transaction is not signed: {r: ${jsonTx.r}, s: ${jsonTx.s}, v: ${jsonTx.v}}`,
     );
+    // TODO: Ping alert webhooks
     return null;
   }
 
