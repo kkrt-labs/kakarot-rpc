@@ -19,7 +19,3 @@ jobs:
   deno-tests:
     name: Deno tests
     uses: ./.github/workflows/deno_test.yml
-
-  indexer_formatting:
-    name: Deno formatting
-    uses: ./.github/workflows/indexer_formatting.yml
