@@ -1,10 +1,11 @@
 use futures::future::join_all;
-use jsonrpsee::core::{async_trait, RpcResult as Result};
+use jsonrpsee::core::{async_trait, RpcResult};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag};
 
 use crate::eth_provider::contracts::erc20::EthereumErc20;
+use crate::eth_provider::error::EthApiError;
 use crate::eth_rpc::api::alchemy_api::AlchemyApiServer;
-use crate::models::balance::FutureTokenBalance;
+use crate::models::balance::TokenBalanceFuture;
 use crate::{eth_provider::provider::EthereumProvider, models::balance::TokenBalances};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
@@ -22,7 +23,7 @@ impl<P: EthereumProvider> AlchemyRpc<P> {
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> AlchemyApiServer for AlchemyRpc<P> {
     #[tracing::instrument(skip_all, ret, fields(address = %address, token_addresses = ?token_addresses))]
-    async fn token_balances(&self, address: Address, token_addresses: Vec<Address>) -> Result<TokenBalances> {
+    async fn token_balances(&self, address: Address, token_addresses: Vec<Address>) -> RpcResult<TokenBalances> {
         tracing::info!("Serving alchemy_getTokenBalances");
 
         let block_id = BlockId::Number(BlockNumberOrTag::Latest);
@@ -30,10 +31,10 @@ impl<P: EthereumProvider + Send + Sync + 'static> AlchemyApiServer for AlchemyRp
             let token = EthereumErc20::new(token_addr, &self.eth_provider);
             let balance = token.balance_of(address, block_id);
 
-            FutureTokenBalance::new(Box::pin(balance), token_addr)
+            TokenBalanceFuture::new(Box::pin(balance), token_addr)
         });
 
-        let token_balances = join_all(handles).await;
+        let token_balances = join_all(handles).await.into_iter().collect::<Result<Vec<_>, EthApiError>>()?;
 
         Ok(TokenBalances { address, token_balances })
     }

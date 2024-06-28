@@ -1,3 +1,6 @@
+#![cfg_attr(not(any(test, feature = "testing")), warn(unused_crate_dependencies))]
+use tracing_subscriber as _;
+
 pub mod config;
 pub mod eth_provider;
 pub mod eth_rpc;
