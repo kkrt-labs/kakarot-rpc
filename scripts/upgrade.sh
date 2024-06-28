@@ -72,6 +72,10 @@ elif [ "${ENV}" = "production" ]; then
 		echo "Please provide the EVM_PRIVATE_KEY environment variable"
 		exit 1
 	fi
+	if [ -z "${KAKAROT_SEPOLIA_ACCOUNT_ADDRESS}" ]; then
+		echo "Please provide the KAKAROT_SEPOLIA_ACCOUNT_ADDRESS environment variable"
+		exit 1
+	fi
 	if [ -z "${KAKAROT_SEPOLIA_PRIVATE_KEY}" ]; then
 		echo "Please provide the KAKAROT_SEPOLIA_PRIVATE_KEY environment variable"
 		exit 1
