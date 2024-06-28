@@ -44,22 +44,12 @@ jobs:
       - uses: software-mansion/setup-scarb@v1
         with:
           scarb-version: 0.7.0
-      - name: Set up submodules
-        run: |
-          cd lib/kakarot
-          make setup && make build-sol && make build && make build-cairo1
       - name: Run staging script
         env:
-          PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: python
-          KAKAROT_STAGING_ACCOUNT_ADDRESS: "0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
           KAKAROT_STAGING_PRIVATE_KEY: ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
-          EVM_PRIVATE_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
-          STARKNET_NETWORK: kakarot-staging
-          KAKAROT_STAGING_RPC_URL: https://juno-kakarot-testnet-stage.karnot.xyz
-          WEB3_HTTP_PROVIDER_URI: https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz
         run: |
           cd scripts
-          sh staging.sh
+          sh upgrade.sh deploy test staging
       - name: Check diff in deployments
         run: |
           cd lib/kakarot
