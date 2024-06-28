@@ -54,7 +54,7 @@ lazy_static! {
     static ref RPC_CONFIG: KakarotRpcConfig = KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config");
     pub static ref DEPLOY_WALLET: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> =
         SingleOwnerAccount::new(
-            JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network.provider_url().expect("Incorrect provider URL"))),
+            JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 FieldElement::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
                     .expect("Failed to parse deployer private key")
