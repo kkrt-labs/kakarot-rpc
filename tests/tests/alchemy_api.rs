@@ -54,7 +54,7 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
     let balances: TokenBalances =
         serde_json::from_value(raw.get("result").cloned().unwrap()).expect("Failed to deserialize response body");
-    let erc20_balance = balances.token_balances[0].token_balance.expect("Failed to get ERC20 balance");
+    let erc20_balance = balances.token_balances[0].token_balance;
 
     assert_eq!(amount, erc20_balance);
     drop(server_handle);

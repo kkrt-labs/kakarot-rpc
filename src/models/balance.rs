@@ -1,17 +1,17 @@
+use std::fmt;
 use std::pin::Pin;
 use std::task::Poll;
 
-use futures::{Future, FutureExt};
+use futures::{future::BoxFuture, Future, FutureExt};
 use reth_primitives::{Address, U256};
 use serde::{Deserialize, Serialize};
 
-use crate::eth_provider::error::EthApiError;
+use crate::eth_provider::provider::EthProviderResult;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenBalance {
     pub token_address: Address,
-    pub token_balance: Option<U256>,
-    pub error: Option<String>,
+    pub token_balance: U256,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -20,22 +20,31 @@ pub struct TokenBalances {
     pub token_balances: Vec<TokenBalance>,
 }
 
-type BalanceOfResult = Result<U256, EthApiError>;
-
-#[derive(Debug)]
-pub struct FutureTokenBalance<F: Future<Output = BalanceOfResult>> {
-    pub balance: F,
+pub struct TokenBalanceFuture<'a> {
+    pub balance: BoxFuture<'a, EthProviderResult<U256>>,
     pub token_address: Address,
 }
 
-impl<F: Future<Output = BalanceOfResult>> FutureTokenBalance<F> {
-    pub const fn new(balance: F, token_address: Address) -> Self {
-        Self { balance, token_address }
+impl<'a> fmt::Debug for TokenBalanceFuture<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TokenBalanceFuture")
+            .field("balance", &"...")
+            .field("token_address", &self.token_address)
+            .finish()
     }
 }
 
-impl<F: Future<Output = BalanceOfResult> + Unpin> Future for FutureTokenBalance<F> {
-    type Output = TokenBalance;
+impl<'a> TokenBalanceFuture<'a> {
+    pub fn new<F>(balance: F, token_address: Address) -> Self
+    where
+        F: Future<Output = EthProviderResult<U256>> + Send + 'a,
+    {
+        Self { balance: Box::pin(balance), token_address }
+    }
+}
+
+impl<'a> Future for TokenBalanceFuture<'a> {
+    type Output = EthProviderResult<TokenBalance>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
         let balance = self.balance.poll_unpin(cx);
@@ -43,10 +52,8 @@ impl<F: Future<Output = BalanceOfResult> + Unpin> Future for FutureTokenBalance<
 
         match balance {
             Poll::Ready(output) => match output {
-                Ok(balance) => Poll::Ready(TokenBalance { token_address, token_balance: Some(balance), error: None }),
-                Err(error) => {
-                    Poll::Ready(TokenBalance { token_address, token_balance: None, error: Some(error.to_string()) })
-                }
+                Ok(token_balance) => Poll::Ready(Ok(TokenBalance { token_address, token_balance })),
+                Err(err) => Poll::Ready(Err(err)),
             },
             Poll::Pending => Poll::Pending,
         }
