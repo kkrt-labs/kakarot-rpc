@@ -64,7 +64,7 @@ pub fn katana_config() -> StarknetConfig {
 /// Returns a `TestSequencer` configured for Kakarot.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 async fn katana_sequencer() -> TestSequencer {
-    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None, messaging: None }, katana_config()).await
+    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, katana_config()).await
 }
 
 /// Represents the Katana test environment.

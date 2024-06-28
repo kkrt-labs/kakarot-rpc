@@ -368,7 +368,6 @@ dependencies = [
  "alloy-rpc-types-eth",
  "alloy-rpc-types-trace",
  "alloy-transport",
- "alloy-transport-http",
  "async-stream",
  "async-trait",
  "auto_impl",
@@ -377,12 +376,10 @@ dependencies = [
  "futures-utils-wasm",
  "lru 0.12.2",
  "pin-project",
- "reqwest 0.12.3",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
- "url",
 ]
 
 [[package]]
@@ -417,14 +414,12 @@ dependencies = [
  "alloy-transport-http",
  "futures",
  "pin-project",
- "reqwest 0.12.3",
  "serde",
  "serde_json",
  "tokio",
  "tokio-stream",
  "tower",
  "tracing",
- "url",
 ]
 
 [[package]]
@@ -571,7 +566,6 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd9899da7d011b4fe4c406a524ed3e3f963797dbc93b45479d60341d3a27b252"
 dependencies = [
- "alloy-json-abi 0.7.6",
  "alloy-sol-macro-input",
  "const-hex",
  "heck 0.5.0",
@@ -590,13 +584,11 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d32d595768fdc61331a132b6f65db41afae41b9b97d36c21eb1b955c422a7e60"
 dependencies = [
- "alloy-json-abi 0.7.6",
  "const-hex",
  "dunce",
  "heck 0.5.0",
  "proc-macro2",
  "quote",
- "serde_json",
  "syn 2.0.58",
  "syn-solidity",
 ]
@@ -625,7 +617,6 @@ version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a49042c6d3b66a9fe6b2b5a8bf0d39fc2ae1ee0310a2a26ffedd79fb097878dd"
 dependencies = [
- "alloy-json-abi 0.7.6",
  "alloy-primitives 0.7.6",
  "alloy-sol-macro",
  "const-hex",
@@ -654,12 +645,7 @@ name = "alloy-transport-http"
 version = "0.1.0"
 source = "git+https://github.com/alloy-rs/alloy?rev=00d81d7#00d81d7882a0bee4720d6d6a1db4c8f164ebb9d0"
 dependencies = [
- "alloy-json-rpc",
  "alloy-transport",
- "reqwest 0.12.3",
- "serde_json",
- "tower",
- "tracing",
  "url",
 ]
 
@@ -2891,7 +2877,7 @@ version = "2.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12d0939f42d40fb1d975cae073d7d4f82d83de4ba2149293115525245425f909"
 dependencies = [
- "env_logger 0.10.2",
+ "env_logger",
  "hashbrown 0.14.3",
  "indexmap 2.2.6",
  "itertools 0.11.0",
@@ -4440,15 +4426,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "env_filter"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a009aa4810eb158359dda09d0c87378e4bbb89b5a801f016885a4707ba24f7ea"
-dependencies = [
- "log",
-]
-
-[[package]]
 name = "env_logger"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4459,16 +4436,6 @@ dependencies = [
  "log",
  "regex",
  "termcolor",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.11.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38b35839ba51819680ba087cd351788c9a3c476841207e0b8cee0b04722343b9"
-dependencies = [
- "env_filter",
- "log",
 ]
 
 [[package]]
@@ -6025,23 +5992,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "governor"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68a7f542ee6b35af73b06abc0dad1c1bae89964e4e253bc4b587b91c9637867b"
-dependencies = [
- "cfg-if",
- "futures",
- "futures-timer",
- "no-std-compat",
- "nonzero_ext",
- "parking_lot 0.12.1",
- "portable-atomic",
- "smallvec",
- "spinning_top",
-]
-
-[[package]]
 name = "group"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6434,22 +6384,6 @@ dependencies = [
  "native-tls",
  "tokio",
  "tokio-native-tls",
-]
-
-[[package]]
-name = "hyper-tls"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70206fc6890eaca9fde8a0bf71caa2ddfc9fe045ac9e5c70df101a7dbde866e0"
-dependencies = [
- "bytes",
- "http-body-util",
- "hyper 1.3.1",
- "hyper-util",
- "native-tls",
- "tokio",
- "tokio-native-tls",
- "tower-service",
 ]
 
 [[package]]
@@ -7415,7 +7349,6 @@ dependencies = [
  "alloy-dyn-abi",
  "alloy-json-abi 0.7.6",
  "alloy-primitives 0.7.6",
- "alloy-provider",
  "alloy-rlp",
  "alloy-signer-wallet",
  "alloy-sol-types",
@@ -7425,22 +7358,18 @@ dependencies = [
  "auto_impl",
  "bytes",
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome.git?tag=v0.2.6)",
- "cairo-lang-starknet 2.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "dojo-test-utils",
  "dotenvy",
  "ef-testing",
- "env_logger 0.11.3",
  "eyre",
  "foundry-config",
  "futures",
- "governor",
  "hex",
  "http-body-util",
  "hyper 1.3.1",
  "hyper-util",
  "itertools 0.12.1",
  "jsonrpsee 0.21.0",
- "katana-core",
  "katana-primitives",
  "lazy_static",
  "log",
@@ -7486,15 +7415,7 @@ name = "katana-core"
 version = "0.7.0-alpha.0"
 source = "git+https://github.com/dojoengine/dojo?tag=v0.7.0-alpha.0#2b2dc1bf35e4568bda7341f17267a931b49148b0"
 dependencies = [
- "alloy-contract",
- "alloy-network",
  "alloy-primitives 0.7.6",
- "alloy-provider",
- "alloy-rpc-types",
- "alloy-signer",
- "alloy-signer-wallet",
- "alloy-sol-types",
- "alloy-transport",
  "anyhow",
  "async-trait",
  "cairo-lang-casm 2.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -8526,12 +8447,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "no-std-compat"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b93853da6d84c2e3c7d730d6473e8817692dd89be387eb01b94d7f108ecb5b8c"
-
-[[package]]
 name = "nom"
 version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8540,12 +8455,6 @@ dependencies = [
  "memchr",
  "minimal-lexical",
 ]
-
-[[package]]
-name = "nonzero_ext"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38bf9645c8b145698bb0b18a4637dcacbc421ea49bef2317e4fd8065a387cf21"
 
 [[package]]
 name = "ntapi"
@@ -9861,7 +9770,7 @@ dependencies = [
  "http-body 0.4.6",
  "hyper 0.14.28",
  "hyper-rustls 0.24.2",
- "hyper-tls 0.5.0",
+ "hyper-tls",
  "ipnet",
  "js-sys",
  "log",
@@ -9906,23 +9815,19 @@ dependencies = [
  "http-body 1.0.0",
  "http-body-util",
  "hyper 1.3.1",
- "hyper-tls 0.6.0",
  "hyper-util",
  "ipnet",
  "js-sys",
  "log",
  "mime",
- "native-tls",
  "once_cell",
  "percent-encoding",
  "pin-project-lite",
- "rustls-pemfile 2.1.2",
  "serde",
  "serde_json",
  "serde_urlencoded",
  "sync_wrapper",
  "tokio",
- "tokio-native-tls",
  "tower-service",
  "url",
  "wasm-bindgen",
@@ -12737,15 +12642,6 @@ name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
-
-[[package]]
-name = "spinning_top"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d96d2d1d716fb500937168cc09353ffdc7a012be8475ac7308e1bdf0e3923300"
-dependencies = [
- "lock_api",
-]
 
 [[package]]
 name = "spki"
