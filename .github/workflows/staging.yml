@@ -1,7 +1,8 @@
 ---
 name: staging
 
-on: workflow_dispatch
+# on: workflow_dispatch
+on: [pull_request]
 
 jobs:
   stage:
@@ -49,7 +50,7 @@ jobs:
           KAKAROT_STAGING_PRIVATE_KEY: ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
         run: |
           cd scripts
-          sh upgrade.sh deploy test staging
+          sh upgrade.sh deploy test --staging
       - name: Check diff in deployments
         run: |
           cd lib/kakarot
