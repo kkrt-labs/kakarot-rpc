@@ -2,12 +2,19 @@
 
 # Function to display usage
 usage() {
-	echo "Usage: $0 [test] [deploy]"
-	exit 1
+    echo "Usage: $0 [COMMAND] [OPTION]"
+    echo "Commands:"
+    echo "  test         Run tests"
+    echo "  deploy       Run deployments"
+    echo "Options:"
+    echo "  --staging    Use staging environment for command"
+    echo "  --production Use production environment for command"
+    exit 1
 }
 
 # Check if at least one argument is passed
-if [ $# -eq 0 ]; then
+if [ $# -lt 2 ]; then
+	echo "Please provide at least one command and one environment"
 	usage
 fi
 
@@ -25,8 +32,11 @@ for arg in "$@"; do
 	deploy)
 		run_deploy=true
 		;;
-	staging | production)
-		ENV="${arg}"
+	--staging)
+		ENV="staging"
+		;;
+	--production)
+		ENV="sepolia"
 		;;
 	*)
 		echo "Unknown argument: ${arg}"
@@ -41,18 +51,12 @@ if [ -z "${ENV}" ]; then
 	exit 1
 fi
 
-# Check if the environment is valid
-if [ "${ENV}" != "staging" ] && [ "${ENV}" != "production" ]; then
-	echo "Please provide a valid environment for the upgrade: production or staging"
-	exit 1
-fi
-
 cd ../lib/kakarot || exit
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION="python"
+export STARKNET_NETWORK="kakarot-${ENV}"
 
 # Set the environment variables based on the provided environment
 if [ "${ENV}" = "staging" ]; then
-	export STARKNET_NETWORK="kakarot-staging"
 	export EVM_PRIVATE_KEY="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 	export KAKAROT_STAGING_RPC_URL="https://juno-kakarot-testnet-stage.karnot.xyz"
 	export WEB3_HTTP_PROVIDER_URI="https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz"
@@ -62,10 +66,8 @@ if [ "${ENV}" = "staging" ]; then
 		exit 1
 	fi
 
-	ENV="staging"
 	SKIP="--ignore tests/end_to_end/L1L2Messaging"
-elif [ "${ENV}" = "production" ]; then
-	export STARKNET_NETWORK="kakarot-sepolia"
+elif [ "${ENV}" = "sepolia" ]; then
 	export KAKAROT_SEPOLIA_RPC_URL="https://juno-kakarot-dev.karnot.xyz/"
 	export WEB3_HTTP_PROVIDER_URI="https://sepolia-rpc.kakarot.org"
 	if [ -z "${EVM_PRIVATE_KEY}" ]; then
@@ -81,7 +83,6 @@ elif [ "${ENV}" = "production" ]; then
 		exit 1
 	fi
 
-	ENV="sepolia"
 	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/test_kakarot.py --ignore tests/end_to_end/CairoPrecompiles -k 'not test_should_return_starknet_timestamp'"
 fi
 
