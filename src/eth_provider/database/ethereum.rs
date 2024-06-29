@@ -380,8 +380,8 @@ mod tests {
 
         // Test retrieving an upserted pending transaction by its hash
         assert_eq!(
-            database.pending_transaction(&mock_pending_transaction.clone().tx.hash).await.unwrap(),
-            Some(mock_pending_transaction.clone().tx)
+            database.pending_transaction(&mock_pending_transaction.tx.hash).await.unwrap(),
+            Some(mock_pending_transaction.tx)
         );
     }
 }
