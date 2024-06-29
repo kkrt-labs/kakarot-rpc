@@ -7,11 +7,11 @@ use reth_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, RichBl
 
 use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
 
-use super::filter;
 use super::types::header::StoredHeader;
+use super::{filter, FindOpts};
 use super::{
     filter::EthDatabaseFilterBuilder,
-    types::transaction::{StoredPendingTransaction, StoredTransaction},
+    types::transaction::{StoredPendingTransaction, StoredTransaction, StoredTransactionHash},
     Database,
 };
 
@@ -58,7 +58,12 @@ impl EthereumTransactionStore for Database {
             .with_block_hash_or_number(block_hash_or_number)
             .build();
 
-        Ok(self.get::<StoredTransaction>(filter, None).await?.into_iter().map(|tx| tx.tx.hash).collect())
+        Ok(self
+            .get::<StoredTransactionHash>(filter, FindOpts::default().with_projection(doc! {"tx.hash": 1}))
+            .await?
+            .into_iter()
+            .map(|tx| tx.tx_hash.hash)
+            .collect())
     }
 
     async fn pending_transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError> {
