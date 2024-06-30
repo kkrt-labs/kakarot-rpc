@@ -47,7 +47,7 @@ fn load_genesis() -> Genesis {
 /// Returns a `StarknetConfig` instance customized for Kakarot.
 /// If `with_dumped_state` is true, the config will be initialized with the dumped state.
 pub fn katana_config() -> StarknetConfig {
-    let max_steps = std::u32::MAX;
+    let max_steps = u32::MAX;
     StarknetConfig {
         disable_fee: true,
         env: Environment {
@@ -74,7 +74,7 @@ pub struct Katana {
     pub sequencer: TestSequencer,
     /// The Kakarot EOA (Externally Owned Account) instance.
     pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
-    /// Mock data stored in a HashMap, representing the database.
+    /// Mock data stored in a `HashMap`, representing the database.
     pub mock_data: HashMap<CollectionDB, Vec<StoredData>>,
     /// The port number used for communication.
     pub port: u16,

@@ -68,13 +68,13 @@ pub enum CollectionDB {
 /// Type alias for the different types of stored data associated with each `CollectionDB`.
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum StoredData {
-    /// Represents a stored header associated with a CollectionDB.
+    /// Represents a stored header associated with a `CollectionDB`.
     StoredHeader(StoredHeader),
-    /// Represents a stored transaction associated with a CollectionDB.
+    /// Represents a stored transaction associated with a `CollectionDB`.
     StoredTransaction(StoredTransaction),
-    /// Represents a stored transaction receipt associated with a CollectionDB.
+    /// Represents a stored transaction receipt associated with a `CollectionDB`.
     StoredTransactionReceipt(StoredTransactionReceipt),
-    /// Represents a stored log associated with a CollectionDB.
+    /// Represents a stored log associated with a `CollectionDB`.
     StoredLog(StoredLog),
 }
 
@@ -132,7 +132,7 @@ impl Serialize for StoredData {
 pub struct MongoFuzzer {
     /// Documents to insert into each collection.
     documents: HashMap<CollectionDB, Vec<StoredData>>,
-    /// Connection to the MongoDB database.
+    /// Connection to the `MongoDB` database.
     mongodb: Database,
     /// Random bytes size.
     rnd_bytes_size: usize,

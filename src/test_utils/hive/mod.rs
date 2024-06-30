@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use ef_testing::evm_sequencer::account::KakarotAccount;
 use katana_primitives::{
     contract::ContractAddress,
-    genesis::json::{GenesisContractJson, GenesisJson},
+    genesis::json::{ClassNameOrHash, GenesisContractJson, GenesisJson},
 };
 use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
@@ -106,7 +106,7 @@ impl HiveGenesisConfig {
                 Ok((
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
-                        class: Some(account_contract_class_hash.0.into()),
+                        class: Some(ClassNameOrHash::Hash(account_contract_class_hash.0.into())),
                         balance: Some(info.balance),
                         nonce: None,
                         storage: Some(kakarot_account_storage.into_iter().collect()),
