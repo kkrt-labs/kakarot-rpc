@@ -200,7 +200,7 @@ impl<'a> Katana {
         database
             .inner()
             .collection(StoredLog::collection_name())
-            .insert_many(log_docs, None)
+            .insert_many(log_docs)
             .await
             .expect("Failed to insert logs into the database");
     }
@@ -240,8 +240,8 @@ impl<'a> Katana {
             .update_many(
                 doc! {"tx.blockNumber": &unpadded_block_number},
                 UpdateModifications::Document(doc! {"$set": {"tx.blockNumber": &padded_block_number}}),
-                UpdateOptions::builder().upsert(true).build(),
             )
+            .with_options(UpdateOptions::builder().upsert(true).build())
             .await
             .expect("Failed to update block number");
 
@@ -254,8 +254,8 @@ impl<'a> Katana {
             .update_one(
                 doc! {"header.number": unpadded_block_number},
                 UpdateModifications::Document(doc! {"$set": {"header.number": padded_block_number}}),
-                UpdateOptions::builder().upsert(true).build(),
             )
+            .with_options(UpdateOptions::builder().upsert(true).build())
             .await
             .expect("Failed to update block number");
     }

@@ -345,8 +345,8 @@ mod tests {
             db_client.database_with_options(
                 "local",
                 DatabaseOptions::builder()
-                    .read_concern(ReadConcern::MAJORITY)
-                    .write_concern(WriteConcern::MAJORITY)
+                    .read_concern(ReadConcern::majority())
+                    .write_concern(WriteConcern::majority())
                     .build(),
             ),
         );

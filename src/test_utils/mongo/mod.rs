@@ -157,8 +157,8 @@ impl MongoFuzzer {
             .database_with_options(
                 "kakarot",
                 DatabaseOptions::builder()
-                    .read_concern(ReadConcern::MAJORITY)
-                    .write_concern(WriteConcern::MAJORITY)
+                    .read_concern(ReadConcern::majority())
+                    .write_concern(WriteConcern::majority())
                     .build(),
             )
             .into();
@@ -364,8 +364,8 @@ impl MongoFuzzer {
                     .update_one(
                         doc! {&key: serialized_data.get_document(doc).unwrap().get_str(value).unwrap()},
                         UpdateModifications::Document(doc! {"$set": serialized_data.clone()}),
-                        UpdateOptions::builder().upsert(true).build(),
                     )
+                    .with_options(UpdateOptions::builder().upsert(true).build())
                     .await
                     .expect("Failed to insert documents");
 
@@ -377,8 +377,8 @@ impl MongoFuzzer {
                     .update_one(
                         doc! {&block_key: &number},
                         UpdateModifications::Document(doc! {"$set": {&block_key: padded_number}}),
-                        UpdateOptions::builder().upsert(true).build(),
                     )
+                    .with_options(UpdateOptions::builder().upsert(true).build())
                     .await
                     .expect("Failed to insert documents");
             }
@@ -536,6 +536,6 @@ mod tests {
         }
 
         // Drop the inner MongoDB database.
-        database.inner().drop(None).await.unwrap();
+        database.inner().drop().await.unwrap();
     }
 }

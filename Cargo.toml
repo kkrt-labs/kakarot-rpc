@@ -86,10 +86,7 @@ futures = { version = "0.3.30", default-features = false }
 itertools = { version = "0.12.1", default-features = false }
 lazy_static = { version = "1.4.0", default-features = false }
 log = { version = "0.4.21", default-features = false }
-mongodb = { version = "2.8.2", default-features = false, features = [
-  "tokio-runtime",
-] }
-
+mongodb = { version = "3.0", default-features = false, features = ["rustls-tls", "compat-3-0-0"]}
 thiserror = { version = "1.0.58", default-features = false }
 tokio = { version = "1.37.0", features = ["macros"] }
 tower = { version = "0.4.13", default-features = false }
