@@ -59,6 +59,10 @@ test: katana-genesis load-env
 test-target: load-env
 	cargo test --tests --features testing $(TARGET) -- --nocapture
 
+test-target1: load-env
+	cargo test --package kakarot-rpc --test entry --all-features -- tests::eth_provider --show-output
+	# cargo test --package kakarot-rpc --test entry --all-features -- tests --show-output
+
 benchmark:
 	cd benchmarks && bun i && bun run benchmark
 

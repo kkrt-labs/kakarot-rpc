@@ -17,11 +17,11 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::str::FromStr;
 use strum::{EnumIter, IntoEnumIterator};
-use testcontainers::clients::{self, Cli};
-use testcontainers::{GenericImage, RunnableImage};
+use testcontainers::ContainerAsync;
+use testcontainers::{core::IntoContainerPort, runners::AsyncRunner};
+use testcontainers::{core::WaitFor, Image};
 
 lazy_static! {
-    pub static ref DOCKER_CLI: Cli = clients::Cli::default();
     pub static ref CHAIN_ID: U256 = U256::from(1);
 
     pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
@@ -50,6 +50,23 @@ pub fn generate_port_number() -> u16 {
     let socket = std::net::UdpSocket::bind(address).expect("Cannot bind to socket");
     let local_addr = socket.local_addr().expect("Cannot get local address");
     local_addr.port()
+}
+
+#[derive(Default, Debug)]
+pub struct MongoContainer;
+
+impl Image for MongoContainer {
+    fn name(&self) -> &str {
+        "mongo"
+    }
+
+    fn tag(&self) -> &str {
+        "6.0.13"
+    }
+
+    fn ready_conditions(&self) -> Vec<WaitFor> {
+        vec![WaitFor::Nothing]
+    }
 }
 
 /// Enumeration of collections in the database.
@@ -136,21 +153,23 @@ pub struct MongoFuzzer {
     mongodb: Database,
     /// Random bytes size.
     rnd_bytes_size: usize,
-    // Port number
+    /// Port number
     port: u16,
+    /// Container
+    pub container: ContainerAsync<MongoContainer>,
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl MongoFuzzer {
     /// Asynchronously creates a new instance of `MongoFuzzer`.
     pub async fn new(rnd_bytes_size: usize) -> Self {
-        // Generate a random port number.
-        let port = generate_port_number();
+        let node = MongoContainer.start().await.expect("Failed to start MongoDB container");
+        let host_ip = node.get_host().await.expect("Failed to get host IP");
+        let host_port = node.get_host_port_ipv4(27017.tcp()).await.expect("Failed to get host port");
+        let url = format!("mongodb://{host_ip}:{host_port}/");
 
         // Initialize a MongoDB client with the generated port number.
-        let mongo_client = Client::with_uri_str(format!("mongodb://{}:{}", "0.0.0.0", port))
-            .await
-            .expect("Failed to init mongo Client");
+        let mongo_client = Client::with_uri_str(url).await.expect("Failed to init mongo Client");
 
         // Create a MongoDB database named "kakarot" with specified options.
         let mongodb = mongo_client
@@ -163,23 +182,15 @@ impl MongoFuzzer {
             )
             .into();
 
-        Self { documents: Default::default(), mongodb, rnd_bytes_size, port }
+        Self { documents: Default::default(), mongodb, rnd_bytes_size, port: host_port, container: node }
     }
 
     /// Obtains an immutable reference to the documents `HashMap`.
-
     pub const fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
         &self.documents
     }
 
-    /// Get `MongoDB` image
-    pub fn mongo_image(&self) -> RunnableImage<GenericImage> {
-        let image = GenericImage::new("mongo".to_string(), "6.0.13".to_string());
-        RunnableImage::from(image).with_mapped_port((self.port, 27017))
-    }
-
     /// Get port number
-
     pub const fn port(&self) -> u16 {
         self.port
     }
@@ -496,8 +507,8 @@ mod tests {
         // Generate a MongoDB fuzzer
         let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
 
-        // Run docker
-        let _c = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
+        // // Run docker
+        // let _c = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
 
         // Mocks a database with 100 transactions, receipts and headers.
         let database = mongo_fuzzer.mock_database(100).await;

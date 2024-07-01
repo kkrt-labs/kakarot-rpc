@@ -16,6 +16,7 @@ use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
+use testcontainers::ContainerAsync;
 
 use crate::eth_provider::database::ethereum::EthereumTransactionStore;
 use crate::eth_provider::database::filter;
@@ -26,14 +27,15 @@ use crate::eth_provider::database::CollectionName;
 use crate::eth_provider::{constant::U64_HEX_STRING_LEN, provider::EthDataProvider};
 use crate::test_utils::eoa::KakarotEOA;
 
+use super::mongo::MongoContainer;
+
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    super::mongo::{CollectionDB, MongoFuzzer, StoredData, DOCKER_CLI},
+    super::mongo::{CollectionDB, MongoFuzzer, StoredData},
     dojo_test_utils::sequencer::SequencerConfig,
     reth_primitives::{TxType, B256},
     reth_rpc_types::{Header, Transaction},
     std::str::FromStr as _,
-    testcontainers::{Container, GenericImage},
 };
 
 fn load_genesis() -> Genesis {
@@ -63,7 +65,7 @@ pub fn katana_config() -> StarknetConfig {
 
 /// Returns a `TestSequencer` configured for Kakarot.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-async fn katana_sequencer() -> TestSequencer {
+pub async fn katana_sequencer() -> TestSequencer {
     TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, katana_config()).await
 }
 
@@ -80,7 +82,7 @@ pub struct Katana {
     pub port: u16,
     /// Option to store the Docker container instance.
     /// It holds `Some` when the container is running, and `None` otherwise.
-    pub container: Option<Container<'static, GenericImage>>,
+    pub container: Option<ContainerAsync<MongoContainer>>,
 }
 
 impl<'a> Katana {
@@ -108,9 +110,6 @@ impl<'a> Katana {
         let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;
         // Get the port number for communication.
         let port = mongo_fuzzer.port();
-
-        // Run a Docker container with the MongoDB image.
-        let container = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
 
         // Add random transactions to the MongoDB database.
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
@@ -145,7 +144,7 @@ impl<'a> Katana {
         let eoa = KakarotEOA::new(pk, eth_provider);
 
         // Return a new instance of Katana with initialized fields.
-        Self { sequencer, eoa, mock_data, port, container: Some(container) }
+        Self { sequencer, eoa, mock_data, port, container: Some(mongo_fuzzer.container) }
     }
 
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {
