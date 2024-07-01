@@ -7,7 +7,7 @@ use crate::eth_provider::database::types::{
     header::StoredHeader,
     log::StoredLog,
     receipt::StoredTransactionReceipt,
-    transaction::{StoredPendingTransaction, StoredTransaction, StoredTransactionHash},
+    transaction::{StoredPendingTransaction, StoredTransaction},
 };
 use futures::TryStreamExt;
 use itertools::Itertools;
@@ -204,13 +204,6 @@ impl CollectionName for StoredTransaction {
 impl CollectionName for StoredPendingTransaction {
     fn collection_name() -> &'static str {
         "transactions_pending"
-    }
-}
-
-/// Implement [`CollectionName`] for [`StoredTransactionHash`]
-impl CollectionName for StoredTransactionHash {
-    fn collection_name() -> &'static str {
-        "transactions"
     }
 }
 
