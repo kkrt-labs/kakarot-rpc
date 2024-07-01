@@ -5,12 +5,6 @@ use std::str::FromStr;
 lazy_static! {
     pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
 
-    /// Maximum number of times a transaction can be retried
-    pub static ref TRANSACTION_MAX_RETRIES: u8 = u8::from_str(
-        &std::env::var("TRANSACTION_MAX_RETRIES")
-            .unwrap_or_else(|_| panic!("Missing environment variable TRANSACTION_MAX_RETRIES"))
-    ).expect("failing to parse TRANSACTION_MAX_RETRIES");
-
     /// Maximum number of logs that can be fetched in a single request
     pub static ref MAX_LOGS: Option<u64> = std::env::var("MAX_LOGS")
         .ok()
