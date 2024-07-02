@@ -2,7 +2,6 @@ import { RpcProvider } from "npm:starknet@5.24.3";
 import {
   assert,
   assertArrayIncludes,
-  assertEquals,
   assertExists,
 } from "https://deno.land/std@0.213.0/assert/mod.ts";
 import {
@@ -11,15 +10,17 @@ import {
   EventWithTransaction,
   LegacyTransaction,
   TransactionWithReceipt,
+  PrefixedHexString
 } from "./deps.ts";
 import transform from "./main.ts";
 import { TRANSACTION_EXECUTED } from "./constants.ts";
 import { toTypedEthTx } from "./types/transaction.ts";
+import { padString } from "./utils/hex.ts";
 
 const provider = new RpcProvider({
   nodeUrl: "https://juno-kakarot-dev.karnot.xyz/",
 });
-const targetCount = 100;
+const targetCount = 1000;
 const transactions = await collectTransactions(targetCount);
 
 async function fetchBlock(blockNumber: number) {
@@ -33,7 +34,7 @@ async function collectTransactions(targetCount: number) {
   let transactions: TransactionWithReceipt[] = [];
   let events: EventWithTransaction[] = [];
 
-  let blockObj = await provider.getBlock(7500); // Should be "latest". with 7500 or lower works, with 8000 or higher it doesn't. (Invalid transaction: invalid RLP: total length is larger than the data)
+  let blockObj = await provider.getBlock("latest");
   let blockNumber = blockObj.block_number;
 
   while (transactionsList.length < targetCount) {
@@ -106,7 +107,7 @@ function transformTransactionsAndEvents(
       },
       invokeV1: {
         senderAddress: tx.sender_address,
-        calldata: tx.calldata,
+        calldata: tx.calldata.map((x: PrefixedHexString) => padString(x, 32)),
       },
     };
 
