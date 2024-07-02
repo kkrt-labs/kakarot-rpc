@@ -1,27 +1,17 @@
 import { RpcProvider } from "npm:starknet@5.24.3";
 import {
-  assert,
-  assertArrayIncludes,
-  assertExists,
-} from "https://deno.land/std@0.213.0/assert/mod.ts";
-import {
   BlockHeader,
   Event,
   EventWithTransaction,
-  LegacyTransaction,
   PrefixedHexString,
   TransactionWithReceipt,
-} from "./deps.ts";
-import transform from "./main.ts";
-import { TRANSACTION_EXECUTED } from "./constants.ts";
-import { toTypedEthTx } from "./types/transaction.ts";
-import { padString } from "./utils/hex.ts";
+} from "../indexer/src/deps.ts";
+import { TRANSACTION_EXECUTED } from "../indexer/src/constants.ts";
+import { padString } from "../indexer/src/utils/hex.ts";
 
 const provider = new RpcProvider({
   nodeUrl: "https://juno-kakarot-dev.karnot.xyz/",
 });
-const targetCount = 1000;
-const transactions = await collectTransactions(targetCount);
 
 async function fetchBlock(blockNumber: number) {
   const block = await provider.getBlock(blockNumber);
@@ -29,7 +19,8 @@ async function fetchBlock(blockNumber: number) {
 }
 async function collectTransactions(targetCount: number) {
   const transactionsList: any[] = [];
-  const blocksList: any[] = [];
+  const eventsList: any[] = [];
+  const headersList: any[] = [];
   let header: BlockHeader = {} as BlockHeader;
   let transactions: TransactionWithReceipt[] = [];
   let events: EventWithTransaction[] = [];
@@ -54,8 +45,6 @@ async function collectTransactions(targetCount: number) {
       );
       return { ...tx, ...receipt };
     });
-    transactionsList.push(...transactionReceipts);
-    blocksList.push(block);
 
     blockNumber -= 1;
 
@@ -66,6 +55,10 @@ async function collectTransactions(targetCount: number) {
     transactions = transformationResult.transformedTransactions;
     events = transformationResult.eventsWithTransaction;
 
+    transactionsList.push(transactions);
+    headersList.push(header);
+    eventsList.push(events);
+
     if (blockNumber < 0) {
       throw new Error(
         "Reached genesis block without collecting enough transactions.",
@@ -73,7 +66,7 @@ async function collectTransactions(targetCount: number) {
     }
   }
 
-  return { header, events, transactions };
+  return { headersList, eventsList, transactionsList };
 }
 
 function transformBlockHeader(block: any): BlockHeader {
@@ -118,12 +111,13 @@ function transformTransactionsAndEvents(
       actualFee: tx.actual_fee,
       contractAddress: tx.contractAddress,
       l2ToL1Messages: tx.messages_sent,
-      events: tx.events.map((evt: any, evtIndex: number) => ({
-        fromAddress: evt.from_address,
-        keys: evt.keys,
-        data: evt.data,
-        index: evtIndex,
-      })),
+      events: tx.events
+        .map((evt: any, evtIndex: number) => ({
+          fromAddress: evt.from_address,
+          keys: evt.keys,
+          data: evt.data,
+          index: evtIndex,
+        })),
     };
 
     transformedTransactions.push({
@@ -147,20 +141,18 @@ function transformTransactionsAndEvents(
 
   return { transformedTransactions, eventsWithTransaction };
 }
+async function main() {
+  try {
+    const targetCount = 100;
+    const transactions = await collectTransactions(targetCount);
 
-Deno.test("transform with real data", async () => {
-  const result = await transform({
-    header: transactions.header,
-    events: transactions.events,
-    transactions: transactions.transactions,
-  });
-  assertExists(result);
-  assert(result.length > 1);
-});
-
-Deno.test("toTypedEthTx with real data", async () => {
-  const ethTx = toTypedEthTx({
-    transaction: transactions.transactions[0].transaction,
-  }) as LegacyTransaction;
-  assertExists(ethTx);
-});
+    await Deno.writeTextFile(
+      "transactions.json",
+      JSON.stringify(transactions, null, 2),
+    );
+    console.log("Transactions saved to transactions.json");
+  } catch (error) {
+    console.error("Error collecting transactions:", error);
+  }
+}
+await main();

@@ -28,26 +28,18 @@ jobs:
         with:
           deno-version: v1.x
       # Checkout target branch and run tests
-      - name: Install lcov
+      - name: Run Tests with Coverage on target branch
+        run: DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --allow-read --coverage=cov_profile
+      - name: Generate Coverage Report on target branch
+        run: deno coverage cov_profile --html
+      - name: Install bc
         run: |
           sudo apt-get update
-          sudo apt-get install -y lcov
-      - name: Run Tests with Coverage on target branch
-        run: |
-          KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_1 --ignore=indexer/src/transform.test.ts,indexer/src/testnetData.test.ts
-          deno coverage cov_profile_1 --lcov > cov_profile_1.lcov
-          DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --coverage=cov_profile_2 --allow-net indexer/src/transform.test.ts indexer/src/testnetData.test.ts
-          deno coverage cov_profile_2 --lcov > cov_profile_2.lcov
-      - name: Combine coverage profiles on target branch
-        run: |
-          lcov --add-tracefile cov_profile_1.lcov --add-tracefile cov_profile_2.lcov --output-file total_coverage.lcov
+          sudo apt-get install -y bc
       - name: Extract coverage percentage from HTML for the target branch
         run: |
-          genhtml -o cov_profile/html total_coverage.lcov
           cat cov_profile/html/index.html
-          coverage_percentage=$(grep -A 3 'Functions:' cov_profile/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
-          coverage_percentage=${coverage_percentage%\%}
-          echo $coverage_percentage
+          coverage_percentage=$(grep -A 3 "<div class='fl pad1y space-right2'>" cov_profile/html/index.html | grep "<span class='strong'>" | awk -F'[<>]' '{gsub("%","",$3); print $3}')
           echo $coverage_percentage > curr_coverage_percentage.txt
       # Checkout base branch and run tests
       - uses: actions/checkout@v4
@@ -55,35 +47,18 @@ jobs:
           ref: ${{ github.base_ref }}
           clean: false
       - name: Run Tests with Coverage on base branch
-        run: |
-          KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_1_main --ignore=indexer/src/transform.test.ts,indexer/src/testnetData.test.ts
-          deno coverage cov_profile_1_main --lcov > cov_profile_1_main.lcov
-          if [[ -f "indexer/src/testnetData.test.ts" ]]; then
-            DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --coverage=cov_profile_2 --allow-net indexer/src/transform.test.ts indexer/src/testnetData.test.ts
-            deno coverage cov_profile_2_main --lcov > cov_profile_2_main.lcov
-          fi
-      - name: Combine coverage profiles on base branch
-        run: |
-            if [[ -f "cov_profile_2_main.lcov" ]]; then
-              lcov --add-tracefile cov_profile_1_main.lcov --add-tracefile cov_profile_2_main.lcov --output-file total_coverage_main.lcov
-            fi
+        run: DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --allow-read --coverage=cov_profile_main
+      - name: Generate HTML report from for the base branch
+        run: deno coverage cov_profile_main --html
       - name: Extract coverage percentage from HTML for the base branch
         run: |
-          if [[ -f "total_coverage_main.lcov" ]]; then
-            genhtml -o cov_profile/html total_coverage_main.lcov
-          else
-            genhtml -o cov_profile/html cov_profile_1_main.lcov
-          fi
-          cat cov_profile/html/index.html
-          coverage_percentage_main=$(grep -A 3 'Functions:' cov_profile/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
-          coverage_percentage_main=${coverage_percentage_main%\%}
-          echo $coverage_percentage_main
+          coverage_percentage_main=$(grep -A 3 "<div class='fl pad1y space-right2'>" cov_profile_main/html/index.html | grep "<span class='strong'>" | awk -F'[<>]' '{gsub("%","",$3); print $3}')
           echo $coverage_percentage_main > coverage_percentage_main.txt
       - name: Compare coverage percentage
         run: |
-          previous_coverage=$(cat coverage_percentage_main.txt)
+          previous_coverage=$(awk '{print $2}' coverage_percentage_main.txt)
           echo "Previous coverage percentage was $previous_coverage%"
-          current_coverage=$(cat curr_coverage_percentage.txt)
+          current_coverage=$(awk '{print $2}' curr_coverage_percentage.txt)
           echo "Current coverage percentage is $current_coverage%"
           change=$(echo "$previous_coverage - $current_coverage" | bc)
           echo "Coverage change is $change%"
