@@ -58,14 +58,22 @@ jobs:
         run: |
           KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_1_main --ignore=indexer/src/transform.test.ts,indexer/src/testnetData.test.ts
           deno coverage cov_profile_1_main --lcov > cov_profile_1_main.lcov
-          DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --coverage=cov_profile_2 --allow-net indexer/src/transform.test.ts indexer/src/testnetData.test.ts
-          deno coverage cov_profile_2_main --lcov > cov_profile_2_main.lcov
+          if [[ -f "indexer/src/testnetData.test.ts" ]]; then
+            DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --coverage=cov_profile_2 --allow-net indexer/src/transform.test.ts indexer/src/testnetData.test.ts
+            deno coverage cov_profile_2_main --lcov > cov_profile_2_main.lcov
+          fi
       - name: Combine coverage profiles on base branch
         run: |
-            lcov --add-tracefile cov_profile_1_main.lcov --add-tracefile cov_profile_2_main.lcov --output-file total_coverage_main.lcov
+            if [[ -f "cov_profile_2_main.lcov" ]]; then
+              lcov --add-tracefile cov_profile_1_main.lcov --add-tracefile cov_profile_2_main.lcov --output-file total_coverage_main.lcov
+            fi
       - name: Extract coverage percentage from HTML for the base branch
         run: |
-          genhtml -o cov_profile/html total_coverage_main.lcov
+          if [[ -f "total_coverage_main.lcov" ]]; then
+            genhtml -o cov_profile/html total_coverage_main.lcov
+          else
+            genhtml -o cov_profile/html cov_profile_1_main.lcov
+          fi
           cat cov_profile/html/index.html
           coverage_percentage_main=$(grep -A 3 'Functions:' cov_profile/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
           coverage_percentage_main=${coverage_percentage_main%\%}
