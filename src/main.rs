@@ -35,10 +35,15 @@ async fn main() -> Result<()> {
     let db_client =
         mongodb::Client::with_uri_str(var("MONGO_CONNECTION_STRING").expect("Missing MONGO_CONNECTION_STRING .env"))
             .await?;
-    let db = Database::new(db_client.database_with_options(
-        &var("MONGO_DATABASE_NAME").expect("Missing MONGO_DATABASE_NAME from .env"),
-        DatabaseOptions::builder().read_concern(ReadConcern::MAJORITY).write_concern(WriteConcern::MAJORITY).build(),
-    ));
+    let db = Database::new(
+        db_client.database_with_options(
+            &var("MONGO_DATABASE_NAME").expect("Missing MONGO_DATABASE_NAME from .env"),
+            DatabaseOptions::builder()
+                .read_concern(ReadConcern::majority())
+                .write_concern(WriteConcern::majority())
+                .build(),
+        ),
+    );
 
     // Setup hive
     #[cfg(feature = "hive")]

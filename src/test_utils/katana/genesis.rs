@@ -10,6 +10,7 @@ use katana_primitives::contract::{StorageKey, StorageValue};
 use katana_primitives::genesis::allocation::DevAllocationsGenerator;
 use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
 use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
+use katana_primitives::genesis::json::ClassNameOrHash;
 use katana_primitives::genesis::json::GenesisAccountJson;
 use katana_primitives::genesis::json::{FeeTokenConfigJson, GenesisJson};
 use katana_primitives::{
@@ -150,7 +151,7 @@ impl KatanaGenesisBuilder<Uninitialized> {
                 let artifact = serde_json::from_str(&artifact).expect("Failed to parse artifact");
                 let class_hash =
                     compute_class_hash(&artifact).inspect_err(|e| eprint!("Failed to compute class hash: {e:?}")).ok();
-                (path, GenesisClassJson { class: PathOrFullArtifact::Artifact(artifact), class_hash })
+                (path, GenesisClassJson { class: PathOrFullArtifact::Artifact(artifact), class_hash, name: None })
             })
             .collect::<Vec<_>>();
 
@@ -214,7 +215,7 @@ impl KatanaGenesisBuilder<Loaded> {
         .collect();
 
         let kakarot = GenesisContractJson {
-            class: Some(kakarot_class_hash),
+            class: Some(ClassNameOrHash::Hash(kakarot_class_hash)),
             balance: None,
             nonce: None,
             storage: Some(kakarot_storage),
@@ -247,7 +248,7 @@ impl KatanaGenesisBuilder<Initialized> {
         .collect();
 
         let eoa = GenesisContractJson {
-            class: Some(account_contract_class_hash),
+            class: Some(ClassNameOrHash::Hash(account_contract_class_hash)),
             balance: None,
             nonce: None,
             storage: Some(eoa_storage),

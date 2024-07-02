@@ -310,9 +310,9 @@ mod tests {
     use crate::eth_provider::database::Database;
     use crate::eth_provider::provider::EthDataProvider;
     use builder::TracerBuilder;
-    use hex::FromHex;
     use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
     use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+    use std::str::FromStr;
     use std::sync::Arc;
     use url::Url;
 
@@ -345,8 +345,8 @@ mod tests {
             db_client.database_with_options(
                 "local",
                 DatabaseOptions::builder()
-                    .read_concern(ReadConcern::MAJORITY)
-                    .write_concern(WriteConcern::MAJORITY)
+                    .read_concern(ReadConcern::majority())
+                    .write_concern(WriteConcern::majority())
                     .build(),
             ),
         );
@@ -355,7 +355,7 @@ mod tests {
         let tracer = TracerBuilder::new(eth_provider)
             .await
             .unwrap()
-            .with_transaction_hash(B256::from_hex("INSERT THE TRANSACTION HASH YOU WISH TO DEBUG").unwrap())
+            .with_transaction_hash(B256::from_str("INSERT THE TRANSACTION HASH YOU WISH TO DEBUG").unwrap())
             .await
             .unwrap()
             .with_tracing_options(TracingInspectorConfig::default_parity().into())
