@@ -33,6 +33,7 @@ async function collectTransactions(targetCount: number) {
 
     while (transactionsList.length < targetCount) {
         const block = await fetchBlock(blockNumber);
+        console.log(`Block ${blockNumber} fetched, ${transactionsList.length} transactions collected.`)
         let getTransactionReceipts = await Promise.all(block.transactions.map(tx => provider.getTransactionReceipt(tx)));
         let getTransaction = await Promise.all(block.transactions.map(tx => provider.getTransaction(tx)));
         let transactionReceipts = getTransaction.map(tx => {
@@ -128,6 +129,7 @@ Deno.test("transform with real data", async () => {
     const result = await transform({ header: transactions.header, events: transactions.events, transactions: transactions.transactions });
     const collections = result.map(entry => entry.collection);
     const requiredCollections = ["transactions", "receipts", "logs", "headers"];
+    assertExists(result);
     assert(result.length > 1);
     requiredCollections.forEach(collection => {
         assertArrayIncludes(collections, [collection], `${collection} is missing`);
