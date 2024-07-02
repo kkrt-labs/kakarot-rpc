@@ -56,16 +56,16 @@ jobs:
           clean: false
       - name: Run Tests with Coverage on base branch
         run: |
-          KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_1 --ignore=indexer/src/transform.test.ts,indexer/src/testnetData.test.ts
-          deno coverage cov_profile_1 --lcov > cov_profile_1.lcov
+          KAKAROT_ADDRESS=0x1 deno test --allow-env --coverage=cov_profile_1_main --ignore=indexer/src/transform.test.ts,indexer/src/testnetData.test.ts
+          deno coverage cov_profile_1_main --lcov > cov_profile_1_main.lcov
           DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --coverage=cov_profile_2 --allow-net indexer/src/transform.test.ts indexer/src/testnetData.test.ts
-          deno coverage cov_profile_2 --lcov > cov_profile_2.lcov
+          deno coverage cov_profile_2_main --lcov > cov_profile_2_main.lcov
       - name: Combine coverage profiles on base branch
         run: |
-            lcov --add-tracefile cov_profile_1.lcov --add-tracefile cov_profile_2.lcov --output-file total_coverage.lcov
+            lcov --add-tracefile cov_profile_1_main.lcov --add-tracefile cov_profile_2_main.lcov --output-file total_coverage_main.lcov
       - name: Extract coverage percentage from HTML for the base branch
         run: |
-          genhtml -o cov_profile/html total_coverage.lcov
+          genhtml -o cov_profile/html total_coverage_main.lcov
           cat cov_profile/html/index.html
           coverage_percentage_main=$(grep -A 3 'Functions:' cov_profile/html/index.html| awk 'NR==4' | grep -o '[0-9]\+\.[0-9]\+')
           coverage_percentage_main=${coverage_percentage_main%\%}
