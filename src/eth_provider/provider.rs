@@ -23,9 +23,7 @@ use starknet::core::types::SyncStatusType;
 use starknet::core::utils::get_storage_var_address;
 use starknet_crypto::FieldElement;
 
-use super::constant::{
-    BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS, TRANSACTION_MAX_RETRIES,
-};
+use super::constant::{BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS};
 use super::database::ethereum::EthereumBlockStore;
 use super::database::filter::EthDatabaseFilterBuilder;
 use super::database::types::{
@@ -850,53 +848,5 @@ where
         };
 
         Ok(())
-    }
-}
-
-impl<SP> EthDataProvider<SP>
-where
-    SP: starknet::providers::Provider + Send + Sync,
-{
-    pub async fn retry_transactions(&self) -> EthProviderResult<Vec<B256>> {
-        // Initialize an empty vector to store the hashes of retried transactions
-        let mut transactions_retried = Vec::new();
-
-        // Iterate over pending transactions fetched from the database
-        for tx in self.database.get::<StoredPendingTransaction>(None, None).await? {
-            let hash = tx.tx.hash;
-            let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&hash).build();
-            // Check if the number of retries exceeds the maximum allowed retries
-            // or if the transaction already exists in the database of finalized transactions
-            if tx.retries + 1 > *TRANSACTION_MAX_RETRIES || self.database.transaction(&hash).await?.is_some() {
-                tracing::info!("Pruning pending transaction: {hash}");
-
-                // Delete the pending transaction from the database
-                self.database.delete_one::<StoredPendingTransaction>(filter).await?;
-
-                // Continue to the next iteration of the loop
-                continue;
-            }
-
-            // Generate primitive transaction, handle error if any
-            let transaction = match TransactionSignedEcRecovered::try_from(tx.tx.clone()) {
-                Ok(transaction) => transaction,
-                Err(error) => {
-                    tracing::info!("Pruning pending transaction: {hash}, conversion error: {error}");
-                    // Delete the pending transaction from the database due conversion error
-                    // Malformed transaction
-                    self.database.delete_one::<StoredPendingTransaction>(filter).await?;
-                    // Continue to the next iteration of the loop
-                    continue;
-                }
-            };
-
-            tracing::info!("Retrying transaction: {hash}");
-
-            // Create a signed transaction and send it
-            transactions_retried.push(self.send_raw_transaction(transaction.into_signed().envelope_encoded()).await?);
-        }
-
-        // Return the hashes of retried transactions
-        Ok(transactions_retried)
     }
 }
