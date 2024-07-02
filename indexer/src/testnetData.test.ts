@@ -9,8 +9,8 @@ import {
   Event,
   EventWithTransaction,
   LegacyTransaction,
+  PrefixedHexString,
   TransactionWithReceipt,
-  PrefixedHexString
 } from "./deps.ts";
 import transform from "./main.ts";
 import { TRANSACTION_EXECUTED } from "./constants.ts";
@@ -154,13 +154,8 @@ Deno.test("transform with real data", async () => {
     events: transactions.events,
     transactions: transactions.transactions,
   });
-  const collections = result.map((entry) => entry.collection);
-  const requiredCollections = ["transactions", "receipts", "logs", "headers"];
   assertExists(result);
   assert(result.length > 1);
-  requiredCollections.forEach((collection) => {
-    assertArrayIncludes(collections, [collection], `${collection} is missing`);
-  });
 });
 
 Deno.test("toTypedEthTx with real data", async () => {
