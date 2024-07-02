@@ -134,8 +134,13 @@ walkdir = { version = "2.5", default-features = false, optional = true }
 # Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
 # see https://github.com/dojoengine/dojo/issues/563
 # When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.3-alpha.0", default-features = false, optional = true }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.3-alpha.0", default-features = false, features = [
+# dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.3-alpha.0", default-features = false, optional = true }
+# katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.3-alpha.0", default-features = false, features = [
+#   "serde",
+# ], optional = true }
+
+dojo-test-utils = { git = 'https://github.com/tcoratger/dojo', rev = "c85fba5", default-features = false, optional = true }
+katana-primitives = { git = 'https://github.com/tcoratger/dojo', rev = "c85fba5", default-features = false, features = [
   "serde",
 ], optional = true }
 
