@@ -79,7 +79,7 @@ async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
     let first_pending_tx = katana
         .eth_provider()
         .database()
-        .get_one::<StoredPendingTransaction>(None, None)
+        .get_first::<StoredPendingTransaction>()
         .await
         .expect("Failed to get the first pending transaction")
         .unwrap();
@@ -112,7 +112,7 @@ async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
     let first_pending_tx = katana
         .eth_provider()
         .database()
-        .get_one::<StoredPendingTransaction>(None, None)
+        .get_first::<StoredPendingTransaction>()
         .await
         .expect("Failed to get the first pending transaction")
         .unwrap();
@@ -170,7 +170,7 @@ async fn test_txpool_inspect(#[future] katana: Katana, _setup: ()) {
     let first_pending_tx = katana
         .eth_provider()
         .database()
-        .get_one::<StoredPendingTransaction>(None, None)
+        .get_first::<StoredPendingTransaction>()
         .await
         .expect("Failed to get the first pending transaction")
         .unwrap();
