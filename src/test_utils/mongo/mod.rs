@@ -221,8 +221,7 @@ impl MongoFuzzer {
 
     /// Adds a hardcoded transaction to the collection of transactions.
     pub fn add_hardcoded_transaction(&mut self, tx_type: Option<TxType>) -> Result<(), Box<dyn std::error::Error>> {
-        let builder = TransactionBuilder::default().with_tx_type(tx_type.unwrap_or_default());
-        self.add_custom_transaction(builder)
+        self.add_custom_transaction(TransactionBuilder::default().with_tx_type(tx_type.unwrap_or_default()))
     }
 
     /// Adds random logs to the collection of logs.
@@ -403,84 +402,12 @@ impl TransactionBuilder {
 
     /// Builds the transaction based on the specified values.
     fn build(self, rnd_bytes_size: usize) -> Result<StoredTransaction, Box<dyn std::error::Error>> {
-        if let Some(tx_type) = self.tx_type {
-            return Ok(match tx_type {
-                TxType::Eip1559 => StoredTransaction {
-                    tx: reth_rpc_types::Transaction {
-                        hash: *EIP1599_TX_HASH,
-                        block_hash: Some(*BLOCK_HASH),
-                        block_number: Some(BLOCK_NUMBER),
-                        transaction_index: Some(0),
-                        from: *RECOVERED_EIP1599_TX_ADDRESS,
-                        to: Some(Address::ZERO),
-                        gas_price: Some(10),
-                        gas: 100,
-                        max_fee_per_gas: Some(10),
-                        max_priority_fee_per_gas: Some(1),
-                        signature: Some(reth_rpc_types::Signature {
-                            r: *TEST_SIG_R,
-                            s: *TEST_SIG_S,
-                            v: *TEST_SIG_V,
-                            y_parity: Some(reth_rpc_types::Parity(true)),
-                        }),
-                        chain_id: Some(1),
-                        access_list: Some(Default::default()),
-                        transaction_type: Some(TxType::Eip1559.into()),
-                        ..Default::default()
-                    },
-                },
-                TxType::Legacy => StoredTransaction {
-                    tx: reth_rpc_types::Transaction {
-                        hash: *LEGACY_TX_HASH,
-                        block_hash: Some(*BLOCK_HASH),
-                        block_number: Some(BLOCK_NUMBER),
-                        transaction_index: Some(0),
-                        from: *RECOVERED_LEGACY_TX_ADDRESS,
-                        to: Some(Address::ZERO),
-                        gas_price: Some(10),
-                        gas: 100,
-                        signature: Some(reth_rpc_types::Signature {
-                            r: *TEST_SIG_R,
-                            s: *TEST_SIG_S,
-                            // EIP-155 legacy transaction: v = {0,1} + CHAIN_ID * 2 + 35
-                            v: CHAIN_ID.saturating_mul(U256::from(2)).saturating_add(U256::from(35)),
-                            y_parity: Default::default(),
-                        }),
-                        chain_id: Some(1),
-                        blob_versioned_hashes: Default::default(),
-                        transaction_type: Some(TxType::Legacy.into()),
-                        ..Default::default()
-                    },
-                },
-                TxType::Eip2930 => StoredTransaction {
-                    tx: reth_rpc_types::Transaction {
-                        hash: *EIP2930_TX_HASH,
-                        block_hash: Some(*BLOCK_HASH),
-                        block_number: Some(BLOCK_NUMBER),
-                        transaction_index: Some(0),
-                        from: *RECOVERED_EIP2930_TX_ADDRESS,
-                        to: Some(Address::ZERO),
-                        gas_price: Some(10),
-                        gas: 100,
-                        signature: Some(reth_rpc_types::Signature {
-                            r: *TEST_SIG_R,
-                            s: *TEST_SIG_S,
-                            v: *TEST_SIG_V,
-                            y_parity: Some(reth_rpc_types::Parity(true)),
-                        }),
-                        chain_id: Some(1),
-                        access_list: Some(Default::default()),
-                        transaction_type: Some(TxType::Eip2930.into()),
-                        ..Default::default()
-                    },
-                },
-                TxType::Eip4844 => unimplemented!(),
-            });
-        }
-
-        Ok(StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(&{
-            (0..rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>()
-        }))?)
+        Ok(match self.tx_type {
+            Some(tx_type) => StoredTransaction::mock_tx_with_type(tx_type),
+            None => StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
+                &(0..rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
+            ))?,
+        })
     }
 }
 
