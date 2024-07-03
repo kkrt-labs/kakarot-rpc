@@ -6,10 +6,16 @@ import {
   LegacyTransaction,
   RLP,
   Transaction,
+  TransactionWithReceipt,
 } from "../deps.ts";
 import { packCallData, toTypedEthTx, unpackCallData } from "./transaction.ts";
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/assert_equals.ts";
 import { Common } from "https://esm.sh/v135/@ethereumjs/common@4.1.0/denonext/common.mjs";
+
+const jsonData = await Deno.readTextFile(
+  "indexer/src/test-data/transactionsData.json",
+);
+const transactionsData = JSON.parse(jsonData);
 
 Deno.test("toTypedEthTx Legacy Transaction", () => {
   // Given
@@ -489,4 +495,15 @@ Deno.test("toTypedEthTx EIP2930 Transaction before release with 31 bytes chunks 
   assertEquals(ethTx.type, 1);
   assertEquals(ethTx.data, tx.data);
   assertEquals(ethTx.accessList, tx.accessList);
+});
+
+Deno.test("toTypedEthTx with real data", async () => {
+  transactionsData.transactionsList.forEach(
+    (transactions: TransactionWithReceipt[]) => {
+      const ethTx = toTypedEthTx({
+        transaction: transactions[0].transaction,
+      }) as LegacyTransaction;
+      assertExists(ethTx);
+    },
+  );
 });
