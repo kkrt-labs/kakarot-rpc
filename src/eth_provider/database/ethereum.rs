@@ -408,15 +408,14 @@ mod tests {
         assert_eq!(database.header(first_block_hash.into()).await.unwrap().unwrap(), header_block_hash);
 
         let mut rng = rand::thread_rng();
-        let false_block_hash = BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>())));
-
         // Test retrieving non-existing header by block hash
-        assert_eq!(database.header(false_block_hash).await.unwrap(), None);
-
-        let false_block_number = BlockHashOrNumber::from(rng.gen::<u64>());
+        assert_eq!(
+            database.header(BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>()))).into()).await.unwrap(),
+            None
+        );
 
         // Test retrieving non-existing header by block number
-        assert_eq!(database.header(false_block_number).await.unwrap(), None);
+        assert_eq!(database.header(rng.gen::<u64>().into()).await.unwrap(), None);
     }
 
     async fn test_get_blocks(database: &Database, mongo_fuzzer: &MongoFuzzer, u: &mut arbitrary::Unstructured<'_>) {
@@ -476,15 +475,18 @@ mod tests {
             .is_some());
 
         let mut rng = rand::thread_rng();
-        let false_block_hash = BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>())));
 
         // Test retrieving non-existing block by block hash
-        assert_eq!(database.block(false_block_hash.into(), false).await.unwrap(), None);
-
-        let false_block_number = BlockHashOrNumber::from(rng.gen::<u64>());
+        assert_eq!(
+            database
+                .block(BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>()))).into(), false)
+                .await
+                .unwrap(),
+            None
+        );
 
         // Test retrieving non-existing block by block number
-        assert_eq!(database.block(false_block_number.into(), false).await.unwrap(), None);
+        assert_eq!(database.block(rng.gen::<u64>().into(), false).await.unwrap(), None);
 
         // test withdrawals_root raises an error
         let block_number: u64 = 2;
@@ -546,14 +548,16 @@ mod tests {
         assert_eq!(database.transaction_count(first_block_hash.into()).await.unwrap().unwrap(), transaction_count);
 
         let mut rng = rand::thread_rng();
-        let false_block_hash = BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>())));
-
         // Test retrieving non-existing transaction count by block hash
-        assert_eq!(database.transaction_count(false_block_hash).await.unwrap(), None);
-
-        let false_block_number = BlockHashOrNumber::from(rng.gen::<u64>());
+        assert_eq!(
+            database
+                .transaction_count(BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>()))).into())
+                .await
+                .unwrap(),
+            None
+        );
 
         // Test retrieving non-existing transaction count by block number
-        assert_eq!(database.transaction_count(false_block_number).await.unwrap(), None);
+        assert_eq!(database.transaction_count(rng.gen::<u64>().into()).await.unwrap(), None);
     }
 }
