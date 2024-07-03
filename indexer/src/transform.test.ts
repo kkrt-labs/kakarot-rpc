@@ -23,7 +23,7 @@ import {
   TypedTransaction,
 } from "./deps.ts";
 
-const jsonData = await Deno.readTextFile("transactionsData.json");
+const jsonData = await Deno.readTextFile("indexer/src/test-data/transactionsData.json");
 const transactionsData = JSON.parse(jsonData);
 
 async function transformData(

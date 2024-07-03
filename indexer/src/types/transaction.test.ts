@@ -11,7 +11,7 @@ import { packCallData, toTypedEthTx, unpackCallData } from "./transaction.ts";
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/assert_equals.ts";
 import { Common } from "https://esm.sh/v135/@ethereumjs/common@4.1.0/denonext/common.mjs";
 
-const jsonData = await Deno.readTextFile("transactionsData.json");
+const jsonData = await Deno.readTextFile("indexer/src/test-data/transactionsData.json");
 const transactionsData = JSON.parse(jsonData);
 
 Deno.test("toTypedEthTx Legacy Transaction", () => {

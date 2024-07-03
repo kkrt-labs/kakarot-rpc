@@ -147,7 +147,7 @@ async function main() {
     const transactions = await collectTransactions(targetCount);
 
     await Deno.writeTextFile(
-      "transactions.json",
+      "indexer/src/test-data/transactionsData.json",
       JSON.stringify(transactions, null, 2),
     );
     console.log("Transactions saved to transactions.json");
