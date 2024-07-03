@@ -16,17 +16,43 @@ import {
   BlockHeader,
   Event,
   EventWithTransaction,
+  JsonRpcBlock,
   JsonRpcTx,
   Transaction,
   TransactionReceipt,
   TransactionWithReceipt,
   TypedTransaction,
 } from "./deps.ts";
+import { JsonRpcReceipt } from "./types/receipt.ts";
 
 const jsonData = await Deno.readTextFile(
   "indexer/src/test-data/transactionsData.json",
 );
 const transactionsData = JSON.parse(jsonData);
+
+function assertHasHeader(data: any): asserts data is { header: JsonRpcBlock } {
+  if (!data || typeof data.header === "undefined") {
+    throw new Error("Expected header not found in result data");
+  }
+}
+function assertHasReceipt(
+  data: any,
+): asserts data is { receipt: JsonRpcReceipt } {
+  if (!data || typeof data.receipt === "undefined") {
+    throw new Error("Expected receipt not found in result data");
+  }
+}
+function assertHasTx(data: any): asserts data is { tx: JsonRpcTx } {
+  if (!data || typeof data.tx === "undefined") {
+    throw new Error("Expected tx not found in result data");
+  }
+}
+
+function assertHasLog(data: any): asserts data is { log: JsonRpcLog } {
+  if (!data || typeof data.log === "undefined") {
+    throw new Error("Expected log not found in result data");
+  }
+}
 
 async function transformData(
   header: BlockHeader,
@@ -86,7 +112,7 @@ async function transformData(
 
   return { result, expectedHeader, ethTx, ethLogs, ethReceipt };
 }
-const header: BlockHeader = {
+const mockHeader: BlockHeader = {
   blockNumber: "2000",
   blockHash:
     "0x0286731b9083ab0be4a875726f3da0c3c6be2a909f980bd6dccdabe75dde18f5",
@@ -96,7 +122,7 @@ const header: BlockHeader = {
   timestamp: "1717093503",
   sequencerAddress: "0x1",
 };
-const transaction: Transaction = {
+const mockTransaction: Transaction = {
   meta: {
     hash: "0x361b1ace0f195cb103f8e60c71b168ddfcd4f2bb0d547a1070b473b49ada8b",
     maxFee: "0x7529e57561d443a1",
@@ -199,7 +225,7 @@ const transaction: Transaction = {
     ],
   },
 };
-const receipt: TransactionReceipt = {
+const mockReceipt: TransactionReceipt = {
   executionStatus: "EXECUTION_STATUS_SUCCEEDED",
   transactionHash:
     "0x361b1ace0f195cb103f8e60c71b168ddfcd4f2bb0d547a1070b473b49ada8b",
@@ -324,7 +350,7 @@ const receipt: TransactionReceipt = {
     },
   ],
 };
-const event: Event = {
+const mockEvent: Event = {
   fromAddress:
     "0x4f57d7d15274d9fe832c88aafd80ecc90a8db5696913ddc39cf24af4eba3538",
   keys: [
@@ -369,54 +395,53 @@ const event: Event = {
   ],
   index: 4,
 };
-const events: EventWithTransaction[] = [
+const mockEvents: EventWithTransaction[] = [
   {
-    transaction,
-    receipt,
-    event,
+    transaction: mockTransaction,
+    receipt: mockReceipt,
+    event: mockEvent,
   },
 ];
-const transactions: TransactionWithReceipt[] = [
+const mockTransactions: TransactionWithReceipt[] = [
   {
-    transaction,
-    receipt,
+    transaction: mockTransaction,
+    receipt: mockReceipt,
   },
 ];
 
 Deno.test("transform with no events or transactions", async () => {
-  const events: EventWithTransaction[] = [];
-  const transactions: TransactionWithReceipt[] = [];
-
-  const result = await transform({ header, events, transactions });
+  const result = await transform({
+    header: mockHeader,
+    events: [],
+    transactions: [],
+  });
 
   const expectedHeader = await toEthHeader({
-    header: header,
+    header: mockHeader,
     gasUsed: BigInt(0),
     logsBloom: new Bloom(new Uint8Array(256)),
     receiptRoot: new Uint8Array(),
     transactionRoot: new Uint8Array(),
-    blockNumber: padString(toHexString(header.blockNumber), 8),
-    blockHash: header.blockHash,
+    blockNumber: padString(toHexString(mockHeader.blockNumber), 8),
+    blockHash: mockHeader.blockHash,
     isPendingBlock: false,
   });
 
   assertEquals(result.length, 1);
   assertEquals(result[0].collection, "headers");
-  if ("header" in result[0].data) {
-    assertEquals(result[0].data.header.number, expectedHeader.number);
-    assertEquals(result[0].data.header.hash, expectedHeader.hash);
-    assertEquals(result[0].data.header.parentHash, expectedHeader.parentHash);
-    assertEquals(result[0].data.header.sha3Uncles, expectedHeader.sha3Uncles);
-    assertEquals(result[0].data.header.stateRoot, expectedHeader.stateRoot);
-    assertEquals(result[0].data.header.gasLimit, expectedHeader.gasLimit);
-    assertEquals(
-      result[0].data.header.withdrawalsRoot,
-      expectedHeader.withdrawalsRoot,
-    );
-    assertEquals(result[0].data.header.transactions.length, 0);
-  } else {
-    throw new Error("Expected header not found in result data");
-  }
+
+  assertHasHeader(result[0].data);
+  assertEquals(result[0].data.header.number, expectedHeader.number);
+  assertEquals(result[0].data.header.hash, expectedHeader.hash);
+  assertEquals(result[0].data.header.parentHash, expectedHeader.parentHash);
+  assertEquals(result[0].data.header.sha3Uncles, expectedHeader.sha3Uncles);
+  assertEquals(result[0].data.header.stateRoot, expectedHeader.stateRoot);
+  assertEquals(result[0].data.header.gasLimit, expectedHeader.gasLimit);
+  assertEquals(
+    result[0].data.header.withdrawalsRoot,
+    expectedHeader.withdrawalsRoot,
+  );
+  assertEquals(result[0].data.header.transactions.length, 0);
 });
 
 Deno.test("transform without logs", async () => {
@@ -502,93 +527,90 @@ Deno.test("transform without logs", async () => {
       },
     ],
   };
-  const events: EventWithTransaction[] = [
+  const mockEvents: EventWithTransaction[] = [
     {
-      transaction,
+      transaction: mockTransaction,
       receipt: receiptWithoutLog,
-      event,
+      event: mockEvent,
     },
   ];
-  const transactions: TransactionWithReceipt[] = [
+  const mockTransactions: TransactionWithReceipt[] = [
     {
-      transaction,
+      transaction: mockTransaction,
       receipt: receiptWithoutLog,
     },
   ];
 
   const { result, expectedHeader, ethTx, ethLogs, ethReceipt } =
     await transformData(
-      header,
-      events,
-      transactions,
-      transaction,
+      mockHeader,
+      mockEvents,
+      mockTransactions,
+      mockTransaction,
       receiptWithoutLog,
-      event,
+      mockEvent,
     );
 
   assertEquals(result.length, 3);
-  if ("tx" in result[0].data) assertEquals(result[0].data.tx, ethTx);
-  else throw new Error("Expected tx not found in result data");
-  if ("receipt" in result[1].data) {
-    assertEquals(result[1].data.receipt, ethReceipt);
-  } else throw new Error("Expected receipt not found in result data");
-  if ("header" in result[2].data) {
-    assertEquals(result[2].data.header.number, expectedHeader.number);
-    assertEquals(result[2].data.header.hash, expectedHeader.hash);
-    assertEquals(result[2].data.header.parentHash, expectedHeader.parentHash);
-    assertEquals(result[2].data.header.sha3Uncles, expectedHeader.sha3Uncles);
-    assertEquals(result[2].data.header.stateRoot, expectedHeader.stateRoot);
-    assertEquals(result[2].data.header.gasLimit, expectedHeader.gasLimit);
-    assertEquals(
-      result[2].data.header.withdrawalsRoot,
-      expectedHeader.withdrawalsRoot,
-    );
-    assertEquals(result[2].data.header.transactions.length, 0);
-  } else {
-    throw new Error("Expected header not found in result data");
-  }
+
+  assertHasTx(result[0].data);
+  assertEquals(result[0].data.tx, ethTx);
+
+  assertHasReceipt(result[1].data);
+  assertEquals(result[1].data.receipt, ethReceipt);
+
+  assertHasHeader(result[2].data);
+  assertEquals(result[2].data.header.number, expectedHeader.number);
+  assertEquals(result[2].data.header.hash, expectedHeader.hash);
+  assertEquals(result[2].data.header.parentHash, expectedHeader.parentHash);
+  assertEquals(result[2].data.header.sha3Uncles, expectedHeader.sha3Uncles);
+  assertEquals(result[2].data.header.stateRoot, expectedHeader.stateRoot);
+  assertEquals(result[2].data.header.gasLimit, expectedHeader.gasLimit);
+  assertEquals(
+    result[2].data.header.withdrawalsRoot,
+    expectedHeader.withdrawalsRoot,
+  );
+  assertEquals(result[2].data.header.transactions.length, 0);
 });
 
 Deno.test("transform with logs events and trasaction", async () => {
   const { result, expectedHeader, ethTx, ethLogs, ethReceipt } =
     await transformData(
-      header,
-      events,
-      transactions,
-      transaction,
-      receipt,
-      event,
+      mockHeader,
+      mockEvents,
+      mockTransactions,
+      mockTransaction,
+      mockReceipt,
+      mockEvent,
     );
 
   assertEquals(result.length, 4);
-  if ("tx" in result[0].data) assertEquals(result[0].data.tx, ethTx);
-  else throw new Error("Expected tx not found in result data");
-  if ("receipt" in result[1].data) {
-    assertEquals(result[1].data.receipt, ethReceipt);
-  } else throw new Error("Expected receipt not found in result data");
-  if ("log" in result[2].data) assertEquals(result[2].data.log, ethLogs[0]);
-  else throw new Error("Expected log not found in result data");
-  if ("header" in result[3].data) {
-    assertEquals(result[3].data.header.number, expectedHeader.number);
-    assertEquals(result[3].data.header.hash, expectedHeader.hash);
-    assertEquals(result[3].data.header.parentHash, expectedHeader.parentHash);
-    assertEquals(result[3].data.header.sha3Uncles, expectedHeader.sha3Uncles);
-    assertEquals(result[3].data.header.stateRoot, expectedHeader.stateRoot);
-    assertEquals(result[3].data.header.gasLimit, expectedHeader.gasLimit);
-    assertEquals(
-      result[3].data.header.withdrawalsRoot,
-      expectedHeader.withdrawalsRoot,
-    );
-    assertEquals(result[3].data.header.transactions.length, 0);
-  } else {
-    throw new Error("Expected header not found in result data");
-  }
+
+  assertHasTx(result[0].data);
+  assertEquals(result[0].data.tx, ethTx);
+
+  assertHasReceipt(result[1].data);
+  assertEquals(result[1].data.receipt, ethReceipt);
+
+  assertHasLog(result[2].data);
+  assertEquals(result[2].data.log, ethLogs[0]);
+
+  assertHasHeader(result[3].data);
+  assertEquals(result[3].data.header.number, expectedHeader.number);
+  assertEquals(result[3].data.header.hash, expectedHeader.hash);
+  assertEquals(result[3].data.header.parentHash, expectedHeader.parentHash);
+  assertEquals(result[3].data.header.sha3Uncles, expectedHeader.sha3Uncles);
+  assertEquals(result[3].data.header.stateRoot, expectedHeader.stateRoot);
+  assertEquals(result[3].data.header.gasLimit, expectedHeader.gasLimit);
+  assertEquals(
+    result[3].data.header.withdrawalsRoot,
+    expectedHeader.withdrawalsRoot,
+  );
+  assertEquals(result[3].data.header.transactions.length, 0);
 });
 
 Deno.test("transform with real data", async () => {
-  const headersList = transactionsData.headersList;
-  const eventsList = transactionsData.eventsList;
-  const transactionsList = transactionsData.transactionsList;
+  const { headersList, eventsList, transactionsList } = transactionsData;
 
   for (let i = 0; i < headersList.length; i++) {
     const header = headersList[i];
