@@ -66,6 +66,7 @@ export async function toEthHeader({
     : BigInt(timestampUnix / 1000);
 
   // Determine the block identifier based on whether the block is pending or finalized
+  // ⚠️ StarknetJS: blockIdentifier is a block hash if value is BigInt or String, otherwise it's a block number.
   const blockIdentifier = isPendingBlock ? "pending" : blockHash;
 
   // Function to handle KAKAROT calls with error handling and default values
