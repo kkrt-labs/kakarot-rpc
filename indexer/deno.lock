@@ -2,11 +2,93 @@
   "version": "3",
   "packages": {
     "specifiers": {
-      "npm:@types/node": "npm:@types/node@18.16.19"
+      "npm:@types/node": "npm:@types/node@18.16.19",
+      "npm:sinon": "npm:sinon@18.0.0"
     },
     "npm": {
+      "@sinonjs/commons@2.0.0": {
+        "integrity": "sha512-uLa0j859mMrg2slwQYdO/AkrOfmH+X6LTVmNTS9CqexuE2IvVORIkSpJLqePAbEnKJ77aMmCwr1NUZ57120Xcg==",
+        "dependencies": {
+          "type-detect": "type-detect@4.0.8"
+        }
+      },
+      "@sinonjs/commons@3.0.1": {
+        "integrity": "sha512-K3mCHKQ9sVh8o1C9cxkwxaOmXoAMlDxC1mYyHrjqOWEcBjYr76t96zL2zlj5dUGZ3HSw240X1qgH3Mjf1yJWpQ==",
+        "dependencies": {
+          "type-detect": "type-detect@4.0.8"
+        }
+      },
+      "@sinonjs/fake-timers@11.2.2": {
+        "integrity": "sha512-G2piCSxQ7oWOxwGSAyFHfPIsyeJGXYtc6mFbnFA+kRXkiEnTl8c/8jul2S329iFBnDI9HGoeWWAZvuvOkZccgw==",
+        "dependencies": {
+          "@sinonjs/commons": "@sinonjs/commons@3.0.1"
+        }
+      },
+      "@sinonjs/samsam@8.0.0": {
+        "integrity": "sha512-Bp8KUVlLp8ibJZrnvq2foVhP0IVX2CIprMJPK0vqGqgrDa0OHVKeZyBykqskkrdxV6yKBPmGasO8LVjAKR3Gew==",
+        "dependencies": {
+          "@sinonjs/commons": "@sinonjs/commons@2.0.0",
+          "lodash.get": "lodash.get@4.4.2",
+          "type-detect": "type-detect@4.0.8"
+        }
+      },
+      "@sinonjs/text-encoding@0.7.2": {
+        "integrity": "sha512-sXXKG+uL9IrKqViTtao2Ws6dy0znu9sOaP1di/jKGW1M6VssO8vlpXCQcpZ+jisQ1tTFAC5Jo/EOzFbggBagFQ==",
+        "dependencies": {}
+      },
       "@types/node@18.16.19": {
         "integrity": "sha512-IXl7o+R9iti9eBW4Wg2hx1xQDig183jj7YLn8F7udNceyfkbn1ZxmzZXuak20gR40D7pIkIY1kYGx5VIGbaHKA==",
+        "dependencies": {}
+      },
+      "diff@5.2.0": {
+        "integrity": "sha512-uIFDxqpRZGZ6ThOk84hEfqWoHx2devRFvpTZcTHur85vImfaxUbTW9Ryh4CpCuDnToOP1CEtXKIgytHBPVff5A==",
+        "dependencies": {}
+      },
+      "has-flag@4.0.0": {
+        "integrity": "sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==",
+        "dependencies": {}
+      },
+      "just-extend@6.2.0": {
+        "integrity": "sha512-cYofQu2Xpom82S6qD778jBDpwvvy39s1l/hrYij2u9AMdQcGRpaBu6kY4mVhuno5kJVi1DAz4aiphA2WI1/OAw==",
+        "dependencies": {}
+      },
+      "lodash.get@4.4.2": {
+        "integrity": "sha512-z+Uw/vLuy6gQe8cfaFWD7p0wVv8fJl3mbzXh33RS+0oW2wvUqiRXiQ69gLWSLpgB5/6sU+r6BlQR0MBILadqTQ==",
+        "dependencies": {}
+      },
+      "nise@6.0.0": {
+        "integrity": "sha512-K8ePqo9BFvN31HXwEtTNGzgrPpmvgciDsFz8aztFjt4LqKO/JeFD8tBOeuDiCMXrIl/m1YvfH8auSpxfaD09wg==",
+        "dependencies": {
+          "@sinonjs/commons": "@sinonjs/commons@3.0.1",
+          "@sinonjs/fake-timers": "@sinonjs/fake-timers@11.2.2",
+          "@sinonjs/text-encoding": "@sinonjs/text-encoding@0.7.2",
+          "just-extend": "just-extend@6.2.0",
+          "path-to-regexp": "path-to-regexp@6.2.2"
+        }
+      },
+      "path-to-regexp@6.2.2": {
+        "integrity": "sha512-GQX3SSMokngb36+whdpRXE+3f9V8UzyAorlYvOGx87ufGHehNTn5lCxrKtLyZ4Yl/wEKnNnr98ZzOwwDZV5ogw==",
+        "dependencies": {}
+      },
+      "sinon@18.0.0": {
+        "integrity": "sha512-+dXDXzD1sBO6HlmZDd7mXZCR/y5ECiEiGCBSGuFD/kZ0bDTofPYc6JaeGmPSF+1j1MejGUWkORbYOLDyvqCWpA==",
+        "dependencies": {
+          "@sinonjs/commons": "@sinonjs/commons@3.0.1",
+          "@sinonjs/fake-timers": "@sinonjs/fake-timers@11.2.2",
+          "@sinonjs/samsam": "@sinonjs/samsam@8.0.0",
+          "diff": "diff@5.2.0",
+          "nise": "nise@6.0.0",
+          "supports-color": "supports-color@7.2.0"
+        }
+      },
+      "supports-color@7.2.0": {
+        "integrity": "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==",
+        "dependencies": {
+          "has-flag": "has-flag@4.0.0"
+        }
+      },
+      "type-detect@4.0.8": {
+        "integrity": "sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g==",
         "dependencies": {}
       }
     }
