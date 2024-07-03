@@ -85,6 +85,14 @@ impl Database {
         Ok(self.collection::<T>().find(filter, find_options.unwrap_or_default().build()).await?.try_collect().await?)
     }
 
+    /// Get all documents from a collection
+    pub async fn get_all<T>(&self) -> DatabaseResult<Vec<T>>
+    where
+        T: DeserializeOwned + CollectionName,
+    {
+        Ok(self.collection::<T>().find(None, FindOpts::default().build()).await?.try_collect().await?)
+    }
+
     /// Retrieves documents from a collection and converts them into another type.
     ///
     /// Returns a vector of documents of type `D` if successful, or an error.
@@ -101,6 +109,18 @@ impl Database {
         Ok(stored_data.into_iter().map_into().collect())
     }
 
+    /// Retrieves all documents from a collection and converts them into another type.
+    ///
+    /// Returns a vector of documents of type `D` if successful, or an error.
+    pub async fn get_all_and_map_to<D, T>(&self) -> DatabaseResult<Vec<D>>
+    where
+        T: DeserializeOwned + CollectionName,
+        D: From<T>,
+    {
+        let stored_data: Vec<T> = self.get_all().await?;
+        Ok(stored_data.into_iter().map_into().collect())
+    }
+
     /// Get a single document from a collection
     pub async fn get_one<T>(
         &self,
@@ -112,6 +132,14 @@ impl Database {
     {
         let find_one_option = FindOneOptions::builder().sort(sort).build();
         Ok(self.collection::<T>().find_one(filter, find_one_option).await?)
+    }
+
+    /// Get the first document from a collection
+    pub async fn get_first<T>(&self) -> DatabaseResult<Option<T>>
+    where
+        T: DeserializeOwned + Unpin + Send + Sync + CollectionName,
+    {
+        Ok(self.collection::<T>().find_one(None, None).await?)
     }
 
     /// Get a single document from aggregated collections

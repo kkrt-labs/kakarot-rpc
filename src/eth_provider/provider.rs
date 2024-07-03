@@ -587,7 +587,7 @@ where
     }
 
     async fn txpool_transactions(&self) -> EthProviderResult<Vec<Transaction>> {
-        Ok(self.database.get_and_map_to::<Transaction, StoredPendingTransaction>(None, None).await?)
+        Ok(self.database.get_all_and_map_to::<Transaction, StoredPendingTransaction>().await?)
     }
 
     async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {

@@ -138,7 +138,7 @@ where
 
     /// Returns all pending transactions.
     async fn pending_transactions(&self) -> Result<Vec<StoredPendingTransaction>> {
-        Ok(self.database.get(None, None).await?)
+        Ok(self.database.get_all().await?)
     }
 
     /// Returns true if the transaction should be retried. A transaction should be retried if it has
@@ -206,7 +206,7 @@ mod tests {
 
             // Retrieve the pending transactions.
             let pending_transactions =
-                db.get::<StoredPendingTransaction>(None, None).await.expect("Failed get pending transactions");
+                db.get_all::<StoredPendingTransaction>().await.expect("Failed get pending transactions");
 
             if i + 1 < *TRANSACTION_MAX_RETRIES {
                 // Ensure that the spurious transactions are dropped from the pending transactions collection

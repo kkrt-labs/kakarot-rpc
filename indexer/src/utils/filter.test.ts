@@ -215,7 +215,10 @@ Deno.test(
 );
 
 Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
-  const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x1"];
+  const starknetTxCalldata: `0x${string}`[] = [
+    "0x1",
+    "0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda",
+  ];
   const transaction: Transaction = {
     invokeV1: {
       senderAddress: "0x01",
