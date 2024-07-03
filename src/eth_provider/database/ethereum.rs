@@ -62,7 +62,6 @@ impl EthereumTransactionStore for Database {
             .get_one::<StoredPendingTransaction>(filter, None)
             .await?
             .map(|tx| tx.retries + 1)
-            .inspect(|retries| tracing::info!("Retrying {} with {} retries", hash, retries))
             .or_else(|| {
                 tracing::info!("New transaction {} in pending pool", hash);
                 None

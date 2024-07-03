@@ -3,17 +3,18 @@ use std::sync::Arc;
 
 use dotenvy::dotenv;
 use eyre::Result;
-use kakarot_rpc::config::KakarotRpcConfig;
-use kakarot_rpc::eth_provider::database::Database;
-use kakarot_rpc::eth_provider::pending_pool::start_retry_service;
-use kakarot_rpc::eth_provider::provider::EthDataProvider;
-use kakarot_rpc::eth_rpc::config::RPCConfig;
-use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
-use kakarot_rpc::eth_rpc::run_server;
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use tracing_subscriber::{filter, util::SubscriberInitExt};
+
+use kakarot_rpc::config::KakarotRpcConfig;
+use kakarot_rpc::eth_provider::database::Database;
+use kakarot_rpc::eth_provider::provider::EthDataProvider;
+use kakarot_rpc::eth_rpc::config::RPCConfig;
+use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
+use kakarot_rpc::eth_rpc::run_server;
+use kakarot_rpc::retry::RetryHandler;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -43,9 +44,14 @@ async fn main() -> Result<()> {
     #[cfg(feature = "hive")]
     setup_hive(&starknet_provider).await?;
 
-    // Setup the retry service
-    let eth_provider = EthDataProvider::new(db, Arc::new(starknet_provider)).await?;
-    tokio::spawn(start_retry_service(eth_provider.clone()));
+    // Setup the eth provider
+    let eth_provider = EthDataProvider::new(db.clone(), Arc::new(starknet_provider)).await?;
+
+    // Setup the retry handler
+    let retry_handler = RetryHandler::new(eth_provider.clone(), db);
+    retry_handler.start(&tokio::runtime::Handle::current());
+
+    // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_provider).rpc_module()?;
 
     // Start the RPC server
@@ -53,7 +59,7 @@ async fn main() -> Result<()> {
 
     let url = format!("http://{socket_addr}");
 
-    println!("RPC Server running on {url}...");
+    tracing::info!("RPC Server running on {url}...");
 
     server_handle.stopped().await;
 
