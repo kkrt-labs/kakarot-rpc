@@ -7,11 +7,11 @@ use reth_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, RichBl
 
 use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
 
+use super::filter;
 use super::types::header::StoredHeader;
-use super::{filter, FindOpts};
 use super::{
     filter::EthDatabaseFilterBuilder,
-    types::transaction::{StoredPendingTransaction, StoredTransaction, StoredTransactionHash},
+    types::transaction::{StoredPendingTransaction, StoredTransaction},
     Database,
 };
 
@@ -24,8 +24,6 @@ pub trait EthereumTransactionStore {
     async fn transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError>;
     /// Returns all transactions for the given block hash or number.
     async fn transactions(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Vec<Transaction>, EthApiError>;
-    /// Returns all transactions hashes for the given block hash or number.
-    async fn transaction_hashes(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Vec<B256>, EthApiError>;
     /// Returns the pending transaction with the given hash. Returns None if the
     /// transaction is not found.
     async fn pending_transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError>;
@@ -53,19 +51,6 @@ impl EthereumTransactionStore for Database {
         Ok(self.get::<StoredTransaction>(filter, None).await?.into_iter().map(Into::into).collect())
     }
 
-    async fn transaction_hashes(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Vec<B256>, EthApiError> {
-        let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
-            .with_block_hash_or_number(block_hash_or_number)
-            .build();
-
-        Ok(self
-            .get::<StoredTransactionHash>(filter, FindOpts::default().with_projection(doc! {"tx.hash": 1}))
-            .await?
-            .into_iter()
-            .map(|tx| tx.tx_hash.hash)
-            .collect())
-    }
-
     async fn pending_transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(hash).build();
         Ok(self.get_one::<StoredPendingTransaction>(filter, None).await?.map(Into::into))
@@ -77,7 +62,6 @@ impl EthereumTransactionStore for Database {
             .get_one::<StoredPendingTransaction>(filter, None)
             .await?
             .map(|tx| tx.retries + 1)
-            .inspect(|retries| tracing::info!("Retrying {} with {} retries", hash, retries))
             .or_else(|| {
                 tracing::info!("New transaction {} in pending pool", hash);
                 None
@@ -287,12 +271,6 @@ mod tests {
 
         // Test retrieving transactions by block hash
         assert_eq!(database.transactions(first_block_hash.into()).await.unwrap(), transactions_first_block_hash);
-
-        // Test retrieving transaction hashes by block hash
-        assert_eq!(
-            database.transaction_hashes(first_block_hash.into()).await.unwrap(),
-            transactions_first_block_hash.iter().map(|tx| tx.hash).collect::<Vec<_>>()
-        );
     }
 
     async fn test_get_transactions_by_block_number(database: &Database, mongo_fuzzer: &MongoFuzzer) {
@@ -321,12 +299,6 @@ mod tests {
 
         // Test retrieving transactions by block number
         assert_eq!(database.transactions(first_block_number.into()).await.unwrap(), transactions_first_block_number);
-
-        // Test retrieving transaction hashes by block number
-        assert_eq!(
-            database.transaction_hashes(first_block_number.into()).await.unwrap(),
-            transactions_first_block_number.iter().map(|tx| tx.hash).collect::<Vec<_>>()
-        );
     }
 
     async fn test_upsert_pending_transactions(unstructured: &mut arbitrary::Unstructured<'_>, database: &Database) {
