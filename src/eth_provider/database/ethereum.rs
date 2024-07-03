@@ -409,10 +409,7 @@ mod tests {
 
         let mut rng = rand::thread_rng();
         // Test retrieving non-existing header by block hash
-        assert_eq!(
-            database.header(BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>()))).into()).await.unwrap(),
-            None
-        );
+        assert_eq!(database.header(B256::from(U256::from(rng.gen::<u64>())).into()).await.unwrap(), None);
 
         // Test retrieving non-existing header by block number
         assert_eq!(database.header(rng.gen::<u64>().into()).await.unwrap(), None);
@@ -477,13 +474,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         // Test retrieving non-existing block by block hash
-        assert_eq!(
-            database
-                .block(BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>()))).into(), false)
-                .await
-                .unwrap(),
-            None
-        );
+        assert_eq!(database.block(B256::from(U256::from(rng.gen::<u64>())).into(), false).await.unwrap(), None);
 
         // Test retrieving non-existing block by block number
         assert_eq!(database.block(rng.gen::<u64>().into(), false).await.unwrap(), None);
@@ -549,13 +540,7 @@ mod tests {
 
         let mut rng = rand::thread_rng();
         // Test retrieving non-existing transaction count by block hash
-        assert_eq!(
-            database
-                .transaction_count(BlockHashOrNumber::from(B256::from(U256::from(rng.gen::<u64>()))).into())
-                .await
-                .unwrap(),
-            None
-        );
+        assert_eq!(database.transaction_count(B256::from(U256::from(rng.gen::<u64>())).into()).await.unwrap(), None);
 
         // Test retrieving non-existing transaction count by block number
         assert_eq!(database.transaction_count(rng.gen::<u64>().into()).await.unwrap(), None);
