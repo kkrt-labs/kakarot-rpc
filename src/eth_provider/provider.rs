@@ -589,7 +589,7 @@ where
     }
 
     async fn txpool_transactions(&self) -> EthProviderResult<Vec<Transaction>> {
-        Ok(self.database.get_and_map_to::<Transaction, StoredPendingTransaction>(None, None).await?)
+        Ok(self.database.get_all_and_map_to::<Transaction, StoredPendingTransaction>().await?)
     }
 
     async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {
@@ -862,7 +862,7 @@ where
         let mut transactions_retried = Vec::new();
 
         // Iterate over pending transactions fetched from the database
-        for tx in self.database.get::<StoredPendingTransaction>(None, None).await? {
+        for tx in self.database.get_all::<StoredPendingTransaction>().await? {
             let hash = tx.tx.hash;
             let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&hash).build();
             // Check if the number of retries exceeds the maximum allowed retries

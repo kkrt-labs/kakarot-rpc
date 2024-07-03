@@ -503,13 +503,13 @@ mod tests {
         let database = mongo_fuzzer.mock_database(100).await;
 
         // Retrieves stored headers from the database.
-        let _ = database.get::<StoredHeader>(None, None).await.unwrap();
+        let _ = database.get_all::<StoredHeader>().await.unwrap();
 
         // Retrieves stored transactions from the database.
-        let transactions = database.get::<StoredTransaction>(None, None).await.unwrap();
+        let transactions = database.get_all::<StoredTransaction>().await.unwrap();
 
         // Retrieves stored receipts from the database.
-        let receipts = database.get::<StoredTransactionReceipt>(None, None).await.unwrap();
+        let receipts = database.get_all::<StoredTransactionReceipt>().await.unwrap();
 
         // Iterates through transactions and receipts in parallel.
         for (transaction, receipt) in transactions.iter().zip(receipts.iter()) {

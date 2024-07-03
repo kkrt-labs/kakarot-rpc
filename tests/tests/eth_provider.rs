@@ -706,7 +706,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
 
     // Retrieve the transaction from the database
     let tx: Option<StoredPendingTransaction> =
-        eth_provider.database().get_one(None, None).await.expect("Failed to get transaction");
+        eth_provider.database().get_first().await.expect("Failed to get transaction");
 
     // Assert that the number of retries is 0
     assert_eq!(0, tx.clone().unwrap().retries);
@@ -800,7 +800,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 
     // Retrieve the transaction from the database
     let tx: Option<StoredPendingTransaction> =
-        eth_provider.database().get_one(None, None).await.expect("Failed to get transaction");
+        eth_provider.database().get_first().await.expect("Failed to get transaction");
 
     // Assert that no transaction is found
     assert!(tx.is_none());
@@ -847,7 +847,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
 
     // Retrieve the pending transaction from the database
     let mut stored_transaction: StoredPendingTransaction =
-        eth_provider.database().get_one(None, None).await.expect("Failed to get transaction").unwrap();
+        eth_provider.database().get_first().await.expect("Failed to get transaction").unwrap();
 
     let tx = stored_transaction.clone().tx;
 
@@ -914,7 +914,7 @@ async fn test_retry_transactions(#[future] katana: Katana, _setup: ()) {
         // Retrieve the pending transactions.
         let pending_transactions = eth_provider
             .database()
-            .get::<StoredPendingTransaction>(None, None)
+            .get_all::<StoredPendingTransaction>()
             .await
             .expect("Failed get pending transactions");
 
