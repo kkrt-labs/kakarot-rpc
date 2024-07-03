@@ -117,7 +117,7 @@ impl Database {
         T: DeserializeOwned + CollectionName,
         D: From<T>,
     {
-        let stored_data: Vec<T> = self.get(None, None).await?;
+        let stored_data: Vec<T> = self.get_all().await?;
         Ok(stored_data.into_iter().map_into().collect())
     }
 
