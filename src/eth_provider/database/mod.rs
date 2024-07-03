@@ -140,14 +140,6 @@ impl Database {
     {
         let doc = mongodb::bson::to_document(&doc).map_err(mongodb::error::Error::custom)?;
 
-        // self.collection::<T>()
-        //     .update_one(
-        //         filter.into(),
-        //         UpdateModifications::Document(doc! {"$set": doc}),
-        //         UpdateOptions::builder().upsert(upsert).build(),
-        //     )
-        //     .await?;
-
         self.collection::<T>()
             .update_one(filter.into(), UpdateModifications::Document(doc! {"$set": doc}))
             .with_options(UpdateOptions::builder().upsert(upsert).build())

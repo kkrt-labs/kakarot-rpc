@@ -507,9 +507,6 @@ mod tests {
         // Generate a MongoDB fuzzer
         let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
 
-        // // Run docker
-        // let _c = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
-
         // Mocks a database with 100 transactions, receipts and headers.
         let database = mongo_fuzzer.mock_database(100).await;
 

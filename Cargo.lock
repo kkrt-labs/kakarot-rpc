@@ -4504,7 +4504,7 @@ dependencies = [
 [[package]]
 name = "dojo-lang"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler 2.6.3 (git+https://github.com/starkware-libs/cairo?rev=d9984ef58e2f704909e271f2f01327f520ded632)",
@@ -4551,7 +4551,7 @@ dependencies = [
 [[package]]
 name = "dojo-metrics"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "anyhow",
  "hyper 0.14.29",
@@ -4570,7 +4570,7 @@ dependencies = [
 [[package]]
 name = "dojo-test-utils"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -4605,7 +4605,7 @@ dependencies = [
 [[package]]
 name = "dojo-types"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?rev=ec18eea5)",
  "crypto-bigint 0.5.5",
@@ -4622,7 +4622,7 @@ dependencies = [
 [[package]]
 name = "dojo-world"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -7923,7 +7923,7 @@ dependencies = [
 [[package]]
 name = "katana-cairo"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "cairo-lang-casm 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
  "cairo-lang-runner 2.6.3 (git+https://github.com/starkware-libs/cairo?tag=v2.6.3)",
@@ -7937,7 +7937,7 @@ dependencies = [
 [[package]]
 name = "katana-core"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -7975,7 +7975,7 @@ dependencies = [
 [[package]]
 name = "katana-db"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "anyhow",
  "cairo-vm",
@@ -7995,7 +7995,7 @@ dependencies = [
 [[package]]
 name = "katana-executor"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "alloy-primitives",
  "blockifier 0.6.0-rc.2",
@@ -8015,7 +8015,7 @@ dependencies = [
 [[package]]
 name = "katana-primitives"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8039,7 +8039,7 @@ dependencies = [
 [[package]]
 name = "katana-provider"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -8056,7 +8056,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "anyhow",
  "cainome 0.2.3 (git+https://github.com/cartridge-gg/cainome?rev=ec18eea5)",
@@ -8093,7 +8093,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc-api"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -8105,7 +8105,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc-types"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -8126,7 +8126,7 @@ dependencies = [
 [[package]]
 name = "katana-rpc-types-builder"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -8139,7 +8139,7 @@ dependencies = [
 [[package]]
 name = "katana-tasks"
 version = "0.7.3-alpha.1"
-source = "git+https://github.com/tcoratger/dojo?rev=c85fba5#c85fba5bacb6dd581ea5e808282da2248b72fcc8"
+source = "git+https://github.com/dojoengine/dojo?rev=f134883#f1348833a9bfcbd505d4121fbf4f900d78421eee"
 dependencies = [
  "futures",
  "rayon",

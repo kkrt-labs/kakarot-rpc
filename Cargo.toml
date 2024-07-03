@@ -129,50 +129,16 @@ tokio-util = { version = "0.7", features = [
 tokio-stream = { version = "0.1", default-features = false, optional = true }
 walkdir = { version = "2.5", default-features = false, optional = true }
 
-
-# In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
-# Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
-# see https://github.com/dojoengine/dojo/issues/563
-# When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-# dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.3-alpha.0", default-features = false, optional = true }
-# katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.3-alpha.0", default-features = false, features = [
-#   "serde",
-# ], optional = true }
-
-dojo-test-utils = { git = 'https://github.com/tcoratger/dojo', rev = "c85fba5", default-features = false, optional = true }
-katana-primitives = { git = 'https://github.com/tcoratger/dojo', rev = "c85fba5", default-features = false, features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "f134883", default-features = false, optional = true }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', rev = "f134883", default-features = false, features = [
   "serde",
 ], optional = true }
 
 
-# [patch."https://github.com/starkware-libs/blockifier"]
-# blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979" }
-
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-# # we patch starknet_api because the version v0.7.0-rc.0 was removed from crates.io
-# # we need v0.7.0-rc.0 to be compatible with dojo.
-# starknet_api = { git = "https://github.com/starkware-libs/starknet-api.git", tag = "v0.7.0-rc.0" }
-
-# alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-# alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-# alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-# alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-# alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-# alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
 alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-# alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-
-# revm = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
-# revm-interpreter = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
-# revm-precompile = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
-# revm-primitives = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
-
-# revm-interpreter = { version = "6.0.0", default-features = false }
-# revm-primitives = { version = "5.0.0", default-features = false }
-# revm = { version = "5.0.0", default-features = false }
-# revm-precompile = { version = "5.0.0", default-features = false }
 
 [dev-dependencies]
 hex = { version = "0.4", default-features = false }
@@ -218,9 +184,3 @@ required-features = ["testing"]
 [[bin]]
 name = "hive_chain"
 required-features = ["testing"]
-
-[profile.dev]
-debug-assertions = false
-
-[profile.test]
-debug-assertions = false
