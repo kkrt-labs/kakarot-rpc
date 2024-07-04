@@ -149,7 +149,7 @@ impl Serialize for StoredData {
 pub struct MongoFuzzer {
     /// Documents to insert into each collection.
     documents: HashMap<CollectionDB, Vec<StoredData>>,
-    /// Connection to the `MongoDB` database.
+    /// Connection to the [`MongoDB`] database.
     mongodb: Database,
     /// Random bytes size.
     rnd_bytes_size: usize,
