@@ -111,7 +111,7 @@ alloy-primitives = { version = "0.7.2", default-features = false, optional = tru
 alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
 anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
-ef-testing = { git = "https://github.com/tcoratger/ef-tests", rev = "f4a8af7", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "0fc2eec", default-features = false, features = [
   "v0",
 ], optional = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master", optional = true }

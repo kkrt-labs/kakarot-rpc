@@ -1759,7 +1759,7 @@ dependencies = [
 [[package]]
 name = "build-utils"
 version = "0.1.0"
-source = "git+https://github.com/tcoratger/ef-tests?rev=f4a8af7#f4a8af7b811ff7cb500a8bfee07dcaf45a7c4ba7"
+source = "git+https://github.com/kkrt-labs/ef-tests?rev=0fc2eec#0fc2eec971150c8c6dbcc90a9b9d273918fe71ef"
 dependencies = [
  "alloy-rlp",
  "eyre",
@@ -4728,7 +4728,7 @@ dependencies = [
 [[package]]
 name = "ef-testing"
 version = "0.1.0"
-source = "git+https://github.com/tcoratger/ef-tests?rev=f4a8af7#f4a8af7b811ff7cb500a8bfee07dcaf45a7c4ba7"
+source = "git+https://github.com/kkrt-labs/ef-tests?rev=0fc2eec#0fc2eec971150c8c6dbcc90a9b9d273918fe71ef"
 dependencies = [
  "alloy-rlp",
  "async-trait",
@@ -12798,7 +12798,7 @@ checksum = "f638d531eccd6e23b980caf34876660d38e265409d8e99b397ab71eb3612fad0"
 [[package]]
 name = "sequencer"
 version = "0.1.0"
-source = "git+https://github.com/tcoratger/ef-tests?rev=f4a8af7#f4a8af7b811ff7cb500a8bfee07dcaf45a7c4ba7"
+source = "git+https://github.com/kkrt-labs/ef-tests?rev=0fc2eec#0fc2eec971150c8c6dbcc90a9b9d273918fe71ef"
 dependencies = [
  "blockifier 0.7.0-dev.1",
  "eyre",
