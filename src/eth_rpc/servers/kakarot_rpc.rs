@@ -70,8 +70,6 @@ where
                 .try_into_v1()
                 .map_err(|_| EthApiError::from(EthereumDataFormatError::TransactionConversion))?;
 
-            let chain_id = self.starknet_provider.chain_id().await.unwrap();
-
             // Compute the hash on elements
             let transaction_hash = compute_hash_on_elements(&[
                 Felt::from_bytes_be_slice(b"invoke"),

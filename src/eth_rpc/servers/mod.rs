@@ -6,3 +6,4 @@ pub mod net_rpc;
 pub mod trace_rpc;
 pub mod txpool_rpc;
 pub mod web3_rpc;
+pub mod kakarot_rpc;
