@@ -24,6 +24,7 @@ pub enum KakarotRpcModule {
     Debug,
     Trace,
     Txpool,
+    KakarotRpc,
 }
 
 #[derive(Debug)]
@@ -48,6 +49,7 @@ where
         let debug_rpc_module = DebugRpc::new(eth_provider.clone()).into_rpc();
         let trace_rpc_module = TraceRpc::new(eth_provider.clone()).into_rpc();
         let txpool_rpc_module = TxpoolRpc::new(eth_provider).into_rpc();
+        let kakarot_rpc_module = KakarotRpc::new(eth_provider.clone()).into_rpc();
 
         let mut modules = HashMap::new();
 
@@ -58,6 +60,7 @@ where
         modules.insert(KakarotRpcModule::Debug, debug_rpc_module.into());
         modules.insert(KakarotRpcModule::Trace, trace_rpc_module.into());
         modules.insert(KakarotRpcModule::Txpool, txpool_rpc_module.into());
+        modules.insert(KakarotRpcModule::KakarotRpc, kakarot_rpc_module.into());
 
         Self { modules, _phantom: PhantomData }
     }

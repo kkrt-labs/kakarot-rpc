@@ -1510,7 +1510,7 @@ dependencies = [
  "sha2 0.10.8",
  "sha3",
  "starknet-crypto 0.5.2",
- "starknet_api 0.12.0-dev.0",
+ "starknet_api 0.12.0-dev.3",
  "strum 0.24.1",
  "strum_macros 0.24.3",
  "thiserror",
@@ -4735,7 +4735,7 @@ dependencies = [
  "serde_yaml",
  "starknet 0.6.0",
  "starknet-crypto 0.6.2",
- "starknet_api 0.12.0-dev.0",
+ "starknet_api 0.12.0-dev.3",
  "thiserror",
  "tokio",
  "tracing",
@@ -7948,7 +7948,7 @@ dependencies = [
  "serde_json",
  "serde_with 2.3.3",
  "starknet 0.11.0",
- "starknet_api 0.12.0-dev.0",
+ "starknet_api 0.12.0-dev.3",
  "strum 0.26.3",
  "strum_macros 0.26.4",
  "testcontainers",
@@ -8339,7 +8339,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e310b3a6b5907f99202fcdb4960ff45b93735d7c7d96b760fcff8db2dc0e103d"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -9334,7 +9334,7 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "681030a937600a36906c185595136d26abfebb4aa9c65701cefcaf8578bb982b"
 dependencies = [
- "proc-macro-crate 1.1.3",
+ "proc-macro-crate 3.1.0",
  "proc-macro2",
  "quote",
  "syn 2.0.71",
@@ -12960,7 +12960,7 @@ dependencies = [
  "serde",
  "serde_json",
  "starknet 0.6.0",
- "starknet_api 0.12.0-dev.0",
+ "starknet_api 0.12.0-dev.3",
  "thiserror",
  "tracing",
 ]
@@ -14076,18 +14076,21 @@ dependencies = [
 
 [[package]]
 name = "starknet_api"
-version = "0.12.0-dev.0"
+version = "0.12.0-dev.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d83d0987fc20eb9d39e39ce768534718174c30bc6532fa5c6e493a611b5f4303"
+checksum = "ecb64884b0f5521a09e242557d5264068c6077502a2fc5aa0878199dbd6e057a"
 dependencies = [
+ "bitvec 1.0.1",
  "cairo-lang-starknet-classes 2.6.4",
  "derive_more",
  "hex",
  "indexmap 2.2.6",
+ "itertools 0.12.1",
  "once_cell",
  "primitive-types",
  "serde",
  "serde_json",
+ "sha3",
  "starknet-crypto 0.5.2",
  "starknet-types-core 0.0.11",
  "strum 0.24.1",
