@@ -42,7 +42,7 @@ use super::starknet::kakarot_core::{
     starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
 };
 use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{contract_not_found, entrypoint_not_found, split_u256};
+use super::utils::{class_hash_not_declared, contract_not_found, entrypoint_not_found, split_u256};
 use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
 use crate::models::felt::Felt252Wrapper;
 use crate::models::transaction::validate_transaction;
@@ -295,10 +295,11 @@ where
         // Call the `balanceOf` method on the contract for the given address and block ID, awaiting the result
         let res = eth_contract.balanceOf(&starknet_address(address)).block_id(starknet_block_id).call().await;
 
-        // Check if the contract was not found, returning a default balance of 0 if true
+        // Check if the contract was not found or the class hash not declared,
+        // returning a default balance of 0 if true.
         // The native token contract should be deployed on Kakarot, so this should not happen
         // We want to avoid errors in this case and return a default balance of 0
-        if contract_not_found(&res) {
+        if contract_not_found(&res) || class_hash_not_declared(&res) {
             return Ok(Default::default());
         }
         // Otherwise, extract the balance from the result, converting any errors to ExecutionError
