@@ -1,9 +1,8 @@
 use alloy_rlp::Encodable;
-use arbitrary::Arbitrary;
 use async_trait::async_trait;
 use mongodb::bson::doc;
 use reth_primitives::constants::EMPTY_ROOT_HASH;
-use reth_primitives::{TransactionSigned, B256, B64, U256};
+use reth_primitives::{TransactionSigned, B256, U256};
 use reth_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, RichBlock, Transaction};
 
 use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
@@ -139,6 +138,7 @@ impl EthereumBlockStore for Database {
         }
 
         let transactions = self.transactions(block_hash_or_number).await?;
+
         let block_transactions = if full {
             BlockTransactions::Full(transactions.clone())
         } else {
@@ -397,15 +397,14 @@ mod tests {
             .header
             .clone();
 
-        let first_block_hash = header_block_hash.hash.unwrap();
-
         // Test retrieving header by block hash
-        assert_eq!(database.header(first_block_hash.into()).await.unwrap().unwrap(), header_block_hash);
-
-        let first_block_number = header_block_hash.number.unwrap();
+        assert_eq!(database.header(header_block_hash.hash.unwrap().into()).await.unwrap().unwrap(), header_block_hash);
 
         // Test retrieving header by block number
-        assert_eq!(database.header(first_block_hash.into()).await.unwrap().unwrap(), header_block_hash);
+        assert_eq!(
+            database.header(header_block_hash.number.unwrap().into()).await.unwrap().unwrap(),
+            header_block_hash
+        );
 
         let mut rng = rand::thread_rng();
         // Test retrieving non-existing header by block hash
@@ -429,47 +428,56 @@ mod tests {
 
         let block_hash = header.hash.unwrap();
 
-        assert!(database
-            .block(block_hash.into(), true)
-            .await
-            .unwrap()
-            .unwrap()
-            .inner
-            .transactions
-            .as_transactions()
-            .is_some());
+        let block: RichBlock = {
+            let transactions: Vec<Transaction> = mongo_fuzzer
+                .documents()
+                .get(&CollectionDB::Transactions)
+                .unwrap()
+                .iter()
+                .filter_map(|transaction| {
+                    let stored_transaction = transaction.extract_stored_transaction().unwrap();
+                    if stored_transaction.tx.block_hash.unwrap() == block_hash {
+                        Some(stored_transaction.tx.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
 
-        assert!(database
-            .block(block_hash.into(), false)
-            .await
-            .unwrap()
-            .unwrap()
-            .inner
-            .transactions
-            .as_hashes()
-            .is_some());
+            let block_transactions = BlockTransactions::Hashes(transactions.iter().map(|tx| tx.hash).collect());
 
-        let first_block_number = header.number.unwrap();
+            let signed_transactions = transactions
+                .into_iter()
+                .map(|tx| TransactionSigned::try_from(tx).map_err(|_| EthereumDataFormatError::TransactionConversion))
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
 
-        assert!(database
-            .block(first_block_number.into(), true)
-            .await
-            .unwrap()
-            .unwrap()
-            .inner
-            .transactions
-            .as_transactions()
-            .is_some());
+            let block = reth_primitives::Block {
+                body: signed_transactions,
+                header: reth_primitives::Header::try_from(header.clone())
+                    .map_err(|_| EthereumDataFormatError::Primitive)
+                    .unwrap(),
+                withdrawals: Some(Default::default()),
+                ..Default::default()
+            };
 
-        assert!(database
-            .block(first_block_number.into(), false)
-            .await
-            .unwrap()
-            .unwrap()
-            .inner
-            .transactions
-            .as_hashes()
-            .is_some());
+            let size = block.length();
+
+            Block {
+                header: header.clone(),
+                transactions: block_transactions,
+                size: Some(U256::from(size)),
+                withdrawals: Some(Default::default()),
+                ..Default::default()
+            }
+            .into()
+        };
+
+        // Test retrieving block by block hash
+        assert_eq!(database.block(block_hash.into(), true).await.unwrap().unwrap(), block);
+
+        // Test retrieving block by block number
+        assert_eq!(database.block(header.number.unwrap().into(), true).await.unwrap().unwrap(), block);
 
         let mut rng = rand::thread_rng();
 
@@ -482,30 +490,17 @@ mod tests {
         // test withdrawals_root raises an error
         let block_number: u64 = 2;
 
-        let faulty_header = Header {
-            hash: Some(B256::arbitrary(u).unwrap()),
-            total_difficulty: Some(U256::arbitrary(u).unwrap()),
-            mix_hash: Some(B256::arbitrary(u).unwrap()),
-            nonce: Some(B64::arbitrary(u).unwrap()),
-            withdrawals_root: Some(rng.gen::<B256>()),
-            base_fee_per_gas: Some(u128::from(u64::arbitrary(u).unwrap())),
-            blob_gas_used: Some(u128::from(u64::arbitrary(u).unwrap())),
-            excess_blob_gas: Some(u128::from(u64::arbitrary(u).unwrap())),
-            gas_limit: u128::from(u64::arbitrary(u).unwrap()),
-            gas_used: u128::from(u64::arbitrary(u).unwrap()),
-            number: Some(block_number),
-            ..Header::arbitrary(u).unwrap()
-        };
+        let mut faulty_header = StoredHeader::arbitrary_with_optional_fields(u).unwrap();
+        faulty_header.header.withdrawals_root = Some(rng.gen::<B256>());
+        faulty_header.header.number = Some(block_number);
 
         let filter = EthDatabaseFilterBuilder::<filter::Header>::default().with_block_number(block_number).build();
 
         database
-            .update_one(StoredHeader { header: faulty_header }, filter, true)
+            .update_one(StoredHeader { header: faulty_header.header }, filter, true)
             .await
             .expect("Failed to update header in database");
 
-        //TODO: errors need refactoring
-        //assert_eq!(database.block(block_number.into(), true).await, Err(EthApiError::Unsupported("withdrawals")))
         assert!(database.block(block_number.into(), true).await.is_err());
     }
 
