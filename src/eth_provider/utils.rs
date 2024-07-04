@@ -34,6 +34,21 @@ pub(crate) fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
     }
 }
 
+#[inline]
+pub(crate) fn class_hash_not_declared<T>(err: &Result<T, Error>) -> bool {
+    match err {
+        Ok(_) => false,
+        Err(err) => {
+            matches!(
+                err,
+                Error::Provider(ProviderError::StarknetError(StarknetError::ContractError(ContractErrorData {
+                    revert_error
+                }))) if revert_error.contains("is not declared.")
+            )
+        }
+    }
+}
+
 /// Checks if the error is an entrypoint not found error.
 #[inline]
 pub(crate) fn entrypoint_not_found<T>(err: &Result<T, Error>) -> bool {
@@ -67,5 +82,17 @@ mod tests {
             // Assertion to check the equality with the original U256 value
             assert_eq!(U256::from_str(&combined_hex).unwrap(), value);
         });
+    }
+
+    #[test]
+    fn test_class_hash_not_declared() {
+        let err = Error::Provider(ProviderError::StarknetError(StarknetError::ContractError(ContractErrorData {
+            revert_error: "\"Error in the called contract (0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7):
+                           \\nError at pc=0:104:\\nGot an exception while executing a hint: Class with ClassHash(\\n    StarkFelt(\\n
+                            \\\"0x0000000000000000000000000000000000000000000000000000000000000000\\\",\\n    ),\\n) is not declared.\\nCairo traceback (most recent call last):\\n
+                            Unknown location (pc=0:1678)\\nUnknown location (pc=0:1664)\\n\"".to_string(),
+        })));
+
+        assert!(class_hash_not_declared::<()>(&Err(err)));
     }
 }
