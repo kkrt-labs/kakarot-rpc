@@ -1,6 +1,8 @@
 use crate::eth_provider::provider::EthereumProvider;
 use crate::eth_rpc::api::kakarot_api::KakarotApiServer;
 use jsonrpsee::core::{async_trait, RpcResult};
+use jsonrpsee::core::{async_trait, RpcResult};
+use reth_primitives::B256;
 use starknet::core::types::FieldElement;
 use starknet::{
     types::{Transaction, TransactionSigned, TransactionSignedEcRecovered},
@@ -8,11 +10,6 @@ use starknet::{
     Provider,
 };
 use std::convert::TryInto;
-// use reth_primitives::TransactionSignedEcRecovered;
-// use reth_primitives::{
-//     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
-// };
-use reth_primitives::B256;
 
 #[derive(Debug)]
 pub struct KakarotRpc<P: EthereumProvider> {
