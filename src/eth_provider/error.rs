@@ -266,7 +266,7 @@ pub enum TransactionError {
     #[error("gas overflow")]
     GasOverflow,
     /// Thrown when the transaction isn't the
-    /// `BlockTransactions::FullTransactions` variant.
+    /// [`BlockTransactions::FullTransactions`] variant.
     #[error("expected full transactions")]
     ExpectedFullTransactions,
     /// Thrown if the tracing fails
