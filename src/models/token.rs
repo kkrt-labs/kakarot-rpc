@@ -59,3 +59,10 @@ impl<'a> Future for TokenBalanceFuture<'a> {
         }
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TokenMetadata {
+    pub decimals: U256,
+    pub name: String,
+    pub symbol: String,
+}
