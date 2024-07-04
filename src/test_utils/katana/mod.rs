@@ -76,7 +76,7 @@ pub struct Katana {
     pub sequencer: TestSequencer,
     /// The Kakarot EOA (Externally Owned Account) instance.
     pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
-    /// Mock data stored in a `HashMap`, representing the database.
+    /// Mock data stored in a [`HashMap`], representing the database.
     pub mock_data: HashMap<CollectionDB, Vec<StoredData>>,
     /// The port number used for communication.
     pub port: u16,
