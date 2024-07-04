@@ -96,13 +96,9 @@ impl Database {
     where
         T: DeserializeOwned + CollectionName + Sync + Send,
     {
-        Ok(self
-            .collection::<T>()
-            .find(Default::default())
-            .with_options(FindOpts::default().build())
-            .await?
-            .try_collect()
-            .await?)
+        let find_options = FindOpts::default().build();
+
+        Ok(self.collection::<T>().find(Default::default()).with_options(find_options).await?.try_collect().await?)
     }
 
     /// Retrieves documents from a collection and converts them into another type.
@@ -142,10 +138,11 @@ impl Database {
     where
         T: DeserializeOwned + Unpin + Send + Sync + CollectionName,
     {
+        let find_one_options = FindOneOptions::builder().sort(sort).build();
         Ok(self
             .collection::<T>()
             .find_one(Into::<Option<Document>>::into(filter).unwrap_or_default())
-            .with_options(FindOneOptions::builder().sort(sort).build())
+            .with_options(find_one_options)
             .await?)
     }
 
@@ -173,10 +170,11 @@ impl Database {
         T: Serialize + CollectionName + Sync + Send,
     {
         let doc = mongodb::bson::to_document(&doc).map_err(mongodb::error::Error::custom)?;
+        let update_options = UpdateOptions::builder().upsert(upsert).build();
 
         self.collection::<T>()
             .update_one(filter.into(), UpdateModifications::Document(doc! {"$set": doc}))
-            .with_options(UpdateOptions::builder().upsert(upsert).build())
+            .with_options(update_options)
             .await?;
 
         Ok(())

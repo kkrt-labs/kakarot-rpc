@@ -82,16 +82,16 @@ pub enum CollectionDB {
     Logs,
 }
 
-/// Type alias for the different types of stored data associated with each `CollectionDB`.
+/// Type alias for the different types of stored data associated with each [`CollectionDB`].
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum StoredData {
     /// Represents a stored header associated with a [`CollectionDB`].
     StoredHeader(StoredHeader),
-    /// Represents a stored transaction associated with a `CollectionDB`.
+    /// Represents a stored transaction associated with a [`CollectionDB`].
     StoredTransaction(StoredTransaction),
-    /// Represents a stored transaction receipt associated with a `CollectionDB`.
+    /// Represents a stored transaction receipt associated with a [`CollectionDB`].
     StoredTransactionReceipt(StoredTransactionReceipt),
-    /// Represents a stored log associated with a `CollectionDB`.
+    /// Represents a stored log associated with a [`CollectionDB`].
     StoredLog(StoredLog),
 }
 
