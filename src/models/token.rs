@@ -1,68 +1,31 @@
-use std::fmt;
-use std::pin::Pin;
-use std::task::Poll;
-
-use futures::{future::BoxFuture, Future, FutureExt};
 use reth_primitives::{Address, U256};
 use serde::{Deserialize, Serialize};
 
-use crate::eth_provider::provider::EthProviderResult;
-
+/// Represents the balance of a specific ERC20 token.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenBalance {
+    /// The address of the ERC20 token.
     pub token_address: Address,
+    /// The balance of the ERC20 token.
     pub token_balance: U256,
 }
 
+/// Represents the balances of multiple ERC20 tokens for a specific address.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenBalances {
+    /// The address for which the token balances are queried.
     pub address: Address,
+    /// A list of token balances associated with the address.
     pub token_balances: Vec<TokenBalance>,
 }
 
-pub struct TokenBalanceFuture<'a> {
-    pub balance: BoxFuture<'a, EthProviderResult<U256>>,
-    pub token_address: Address,
-}
-
-impl<'a> fmt::Debug for TokenBalanceFuture<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TokenBalanceFuture")
-            .field("balance", &"...")
-            .field("token_address", &self.token_address)
-            .finish()
-    }
-}
-
-impl<'a> TokenBalanceFuture<'a> {
-    pub fn new<F>(balance: F, token_address: Address) -> Self
-    where
-        F: Future<Output = EthProviderResult<U256>> + Send + 'a,
-    {
-        Self { balance: Box::pin(balance), token_address }
-    }
-}
-
-impl<'a> Future for TokenBalanceFuture<'a> {
-    type Output = EthProviderResult<TokenBalance>;
-
-    fn poll(mut self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
-        let balance = self.balance.poll_unpin(cx);
-        let token_address = self.token_address;
-
-        match balance {
-            Poll::Ready(output) => match output {
-                Ok(token_balance) => Poll::Ready(Ok(TokenBalance { token_address, token_balance })),
-                Err(err) => Poll::Ready(Err(err)),
-            },
-            Poll::Pending => Poll::Pending,
-        }
-    }
-}
-
+/// Represents the metadata (decimals, name, symbol) of an ERC20 token.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenMetadata {
+    /// The number of decimals the token uses.
     pub decimals: U256,
+    /// The name of the token.
     pub name: String,
+    /// The symbol of the token.
     pub symbol: String,
 }
