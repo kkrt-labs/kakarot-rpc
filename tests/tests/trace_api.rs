@@ -8,7 +8,7 @@ use kakarot_rpc::test_utils::evm_contract::{
     EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
 };
 use kakarot_rpc::test_utils::fixtures::plain_opcodes;
-use kakarot_rpc::test_utils::fixtures::{setup};
+use kakarot_rpc::test_utils::fixtures::setup;
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
