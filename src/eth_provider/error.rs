@@ -34,7 +34,8 @@ impl From<&EthApiError> for EthRpcErrorCode {
             }
             EthApiError::Signature(_)
             | EthApiError::EthereumDataFormat(_)
-            | EthApiError::CalldataExceededLimit(_, _) => Self::InvalidParams,
+            | EthApiError::CalldataExceededLimit(_, _)
+            | EthApiError::RethEthApi(_) => Self::InvalidParams,
             EthApiError::Transaction(err) => err.into(),
             EthApiError::Unsupported(_) | EthApiError::Kakarot(_) => Self::InternalError,
             EthApiError::Execution(_) => Self::ExecutionError,
@@ -65,6 +66,8 @@ pub enum EthApiError {
     Kakarot(KakarotError),
     /// Error related to transaction calldata being too large.
     CalldataExceededLimit(usize, usize),
+    /// Reth Eth API error
+    RethEthApi(#[from] reth_rpc::eth::error::EthApiError),
 }
 
 impl std::fmt::Display for EthApiError {
@@ -75,6 +78,7 @@ impl std::fmt::Display for EthApiError {
             Self::TransactionNotFound(tx) => write!(f, "transaction not found {tx}"),
             Self::Transaction(err) => write!(f, "{err}"),
             Self::Signature(err) => write!(f, "{err}"),
+            Self::RethEthApi(err) => write!(f, "{err}"),
             Self::Unsupported(feature) => write!(f, "unsupported: {feature}"),
             Self::EthereumDataFormat(err) => write!(f, "ethereum data format error: {err}"),
             Self::Execution(err) => write!(f, "{err}"),

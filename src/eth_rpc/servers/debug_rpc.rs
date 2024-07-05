@@ -228,6 +228,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         block_number: Option<BlockId>,
         opts: Option<GethDebugTracingCallOptions>,
     ) -> Result<GethTrace> {
+        tracing::info!("Serving debug_traceCall");
+
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?
             .with_block_id(block_number.unwrap_or_default())
@@ -235,6 +237,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .with_tracing_options(opts.unwrap_or_default().into())
             .build()?;
 
-        Ok(tracer.debug_transaction_request(request)?)
+        Ok(tracer.debug_transaction_request(&request)?)
     }
 }

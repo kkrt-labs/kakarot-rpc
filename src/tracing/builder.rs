@@ -26,6 +26,38 @@ pub enum TracingOptions {
     GethCall(GethDebugTracingCallOptions),
 }
 
+impl TracingOptions {
+    /// Returns `Some` with a reference to [`GethDebugTracingOptions`] if this is `Geth`,
+    /// otherwise returns `None`.
+    pub const fn as_geth(&self) -> Option<&GethDebugTracingOptions> {
+        if let Self::Geth(ref options) = self {
+            Some(options)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with a reference to [`TracingInspectorConfig`] if this is `Parity`,
+    /// otherwise returns `None`.
+    pub const fn as_parity(&self) -> Option<&TracingInspectorConfig> {
+        if let Self::Parity(ref config) = self {
+            Some(config)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with a reference to [`GethDebugTracingCallOptions`] if this is `GethCall`,
+    /// otherwise returns `None`.
+    pub const fn as_geth_call(&self) -> Option<&GethDebugTracingCallOptions> {
+        if let Self::GethCall(ref options) = self {
+            Some(options)
+        } else {
+            None
+        }
+    }
+}
+
 impl Default for TracingOptions {
     fn default() -> Self {
         GethDebugTracingOptions::default().into()
