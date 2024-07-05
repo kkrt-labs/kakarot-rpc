@@ -129,6 +129,17 @@ impl<'a> Katana {
             .expect("Failed to add Legacy transaction in the database");
         // Add a hardcoded logs to the MongoDB database.
         mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
+        // Add a hardcoded header to the MongoDB database.
+        let max_block_number = mongo_fuzzer.documents().get(&CollectionDB::Headers).map_or(0, |headers| {
+            headers
+                .iter()
+                .map(|data| data.extract_stored_header().and_then(|h| h.header.number).unwrap_or_default())
+                .max()
+                .unwrap_or_default()
+        });
+        mongo_fuzzer
+            .add_hardcoded_block_header_with_base_fee(max_block_number + 1, 0)
+            .expect("Failed to add header in the database");
 
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
@@ -266,6 +277,23 @@ impl<'a> Katana {
             .and_then(|transactions| transactions.first())
             .and_then(|data| data.extract_stored_transaction())
             .map(|stored_tx| stored_tx.tx.clone())
+    }
+
+    /// Retrieves the current block number
+    pub fn block_number(&self) -> u64 {
+        self.mock_data
+            .get(&CollectionDB::Headers)
+            .and_then(|headers| {
+                headers
+                    .iter()
+                    .map(|data| {
+                        data.extract_stored_header()
+                            .and_then(|stored_header| stored_header.header.number)
+                            .unwrap_or_default()
+                    })
+                    .max()
+            })
+            .unwrap_or_default()
     }
 
     /// Retrieves the most recent stored transaction based on block number
