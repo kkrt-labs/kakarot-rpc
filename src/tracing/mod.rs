@@ -74,7 +74,7 @@ impl TracingResult {
             }]),
             TracingOptions::Parity(_) => Self::Parity(
                 TracingInspector::default()
-                    .as_parity_builder()
+                    .into_parity_builder()
                     .into_localized_transaction_traces(TransactionInfo::from(tx)),
             ),
         }
@@ -123,7 +123,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                     let res = transact_in_place(evm)?;
 
                     // Get call traces
-                    let call_frame = inspector.as_geth_builder().geth_call_traces(
+                    let call_frame = inspector.into_geth_builder().geth_call_traces(
                         tracer_config.into_call_config().map_err(|err| TransactionError::Tracing(err.into()))?,
                         res.result.gas_used(),
                     );
@@ -153,7 +153,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         let res = transact_in_place(evm)?;
         let gas_used = res.result.gas_used();
         let return_value = res.result.into_output().unwrap_or_default();
-        let frame = inspector.as_geth_builder().geth_traces(gas_used, return_value, config);
+        let frame = inspector.into_geth_builder().geth_traces(gas_used, return_value, config);
         Ok((
             TracingResult::Geth(vec![TraceResult::Success { result: frame.into(), tx_hash: Some(tx.hash) }]),
             res.state,
@@ -190,7 +190,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
         // Return Parity trace result
         Ok((
-            TracingResult::Parity(inspector.as_parity_builder().into_localized_transaction_traces(transaction_info)),
+            TracingResult::Parity(inspector.into_parity_builder().into_localized_transaction_traces(transaction_info)),
             res.state,
         ))
     }
@@ -280,7 +280,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                     let res = transact_in_place(evm)?;
 
                     // Get the call traces from the inspector.
-                    let frame = inspector.as_geth_builder().geth_call_traces(call_config, res.result.gas_used());
+                    let frame = inspector.into_geth_builder().geth_call_traces(call_config, res.result.gas_used());
 
                     // Return the obtained call traces.
                     return Ok(frame.into());
