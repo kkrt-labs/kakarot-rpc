@@ -140,6 +140,7 @@ impl EthereumBlockStore for Database {
         // The withdrawals are not supported, hence the withdrawals_root should always be empty.
         if let Some(withdrawals_root) = header.withdrawals_root {
             if withdrawals_root != EMPTY_ROOT_HASH {
+                dbg!(withdrawals_root);
                 return Err(EthApiError::Unsupported("withdrawals"));
             }
         }
@@ -490,20 +491,16 @@ mod tests {
         assert_eq!(database.block(rng.gen::<u64>().into(), false).await.unwrap(), None);
 
         // test withdrawals_root raises an error
-        let block_number: u64 = 2;
-
         let mut faulty_header = StoredHeader::arbitrary_with_optional_fields(u).unwrap();
         faulty_header.header.withdrawals_root = Some(rng.gen::<B256>());
-        faulty_header.header.number = Some(block_number);
 
-        let filter = EthDatabaseFilterBuilder::<filter::Header>::default().with_block_number(block_number).build();
+        let filter = EthDatabaseFilterBuilder::<filter::Header>::default()
+            .with_block_hash(&faulty_header.header.hash.unwrap())
+            .build();
 
-        database
-            .update_one(StoredHeader { header: faulty_header.header }, filter, true)
-            .await
-            .expect("Failed to update header in database");
+        database.update_one(faulty_header.clone(), filter, true).await.expect("Failed to update header in database");
 
-        assert!(database.block(block_number.into(), true).await.is_err());
+        assert!(database.block(faulty_header.clone().header.hash.unwrap().into(), true).await.is_err());
     }
 
     async fn test_get_transaction_count(database: &Database, mongo_fuzzer: &MongoFuzzer) {
