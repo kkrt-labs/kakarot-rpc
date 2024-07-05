@@ -8,7 +8,7 @@ use kakarot_rpc::test_utils::evm_contract::{
     EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
 };
 use kakarot_rpc::test_utils::fixtures::plain_opcodes;
-use kakarot_rpc::test_utils::fixtures::{erc20, setup};
+use kakarot_rpc::test_utils::fixtures::{setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
@@ -29,13 +29,6 @@ use rstest::*;
 use serde_json::{json, Value};
 use starknet::core::types::MaybePendingBlockWithTxHashes;
 use starknet::providers::Provider;
-
-sol! {
-    #[sol(rpc)]
-    contract ERC20Contract {
-        function mint(address to, uint256 amount) external;
-    }
-}
 
 /// The block number on which tracing will be performed.
 const TRACING_BLOCK_NUMBER: u64 = 0x3;
@@ -386,35 +379,46 @@ async fn test_trace_call(#[future] plain_opcodes: (Katana, KakarotEvmContract), 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_trace_call_mint(#[future] erc20: (Katana, KakarotEvmContract), _setup: ()) {
-    // Given
-    let katana = erc20.0;
-    let erc20_contract = erc20.1;
+async fn test_trace_call_counter(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Test function for tracing a call to a counter contract
 
+    // Extract Katana instance and get the EOA's EVM address
+    let katana = plain_opcodes.0;
     let evm_address = katana.eoa().evm_address().expect("Failed to get eoa address");
+    let plain_opcodes = plain_opcodes.1;
 
-    // Start Kakarot RPC server
+    // Perform tracing setup
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| vec![])).await;
+
+    // Start the Kakarot RPC server
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
-    // Get the calldata for the function call.
-    let calldata = ERC20Contract::mintCall { to: Address::new([3; 20]), amount: U256::from(10) }.abi_encode();
+    // Define a Solidity contract interface for the counter
+    sol! {
+        #[sol(rpc)]
+        contract CounterContract {
+            function incForLoop(uint256 iterations) external;
+        }
+    }
 
-    let evm_erc20_address = Address::from_slice(&erc20_contract.evm_address.to_bytes_be()[12..]);
+    // Prepare the calldata for invoking the incForLoop function with 5 iterations
+    let calldata = CounterContract::incForLoopCall { iterations: U256::from(5) }.abi_encode();
+    let contract_address = Address::from_slice(&plain_opcodes.evm_address.to_bytes_be()[12..]);
 
-    // Define the mint transaction request
+    // Define the transaction request
     let request = TransactionRequest {
         from: Some(evm_address),
-        to: Some(TxKind::Call(evm_erc20_address)),
+        to: Some(TxKind::Call(contract_address)),
         gas: Some(210_000),
         gas_price: Some(1_000_000_000_000_000_000_000),
         value: Some(U256::ZERO),
         nonce: Some(2),
-        input: TransactionInput { input: Some(calldata.clone().into()), data: Some(calldata.into()) },
+        input: TransactionInput { input: Some(calldata.clone().into()), data: None },
         ..Default::default()
     };
 
-    // Build trace_call options
+    // Configure tracing options
     let call_opts = GethDebugTracingCallOptions {
         tracing_options: GethDebugTracingOptions::default()
             .with_tracer(GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer))
@@ -424,7 +428,7 @@ async fn test_trace_call_mint(#[future] erc20: (Katana, KakarotEvmContract), _se
         block_overrides: Default::default(),
     };
 
-    // Construct and send trace_call RPC request
+    // Send a trace_call RPC request
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -432,8 +436,7 @@ async fn test_trace_call_mint(#[future] erc20: (Katana, KakarotEvmContract), _se
         .body(
             RawRpcParamsBuilder::new("debug_traceCall")
                 .add_param(request)
-                // .add_param(Some(BlockId::Number(TRACING_BLOCK_NUMBER.into())))
-                .add_param(None::<BlockId>)
+                .add_param(Some(BlockId::Number(TRACING_BLOCK_NUMBER.into())))
                 .add_param(call_opts)
                 .build(),
         )
@@ -441,25 +444,27 @@ async fn test_trace_call_mint(#[future] erc20: (Katana, KakarotEvmContract), _se
         .await
         .expect("Failed to call Debug RPC");
 
-    // Process response
+    // Process the response
     let response = res.text().await.expect("Failed to get response body");
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
     let trace: GethTrace =
         serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result from trace");
 
-    // Assert trace result matches expectations
+    // Assert that the trace result matches expectations
     assert_eq!(
         trace,
         GethTrace::CallTracer(CallFrame {
-            from: katana.eoa().evm_address().expect("Failed to get EOA address"),
-            gas: U256::default(),
-            gas_used: U256::default(),
-            to: Some(evm_erc20_address),
+            from: evm_address,
+            gas: U256::from(210_000),
+            gas_used: U256::from(21410),
+            to: Some(contract_address),
             value: Some(U256::ZERO),
             typ: "CALL".to_string(),
+            input: calldata.into(),
             ..Default::default()
         })
     );
 
+    // Clean up by dropping the server handle
     drop(server_handle);
 }
