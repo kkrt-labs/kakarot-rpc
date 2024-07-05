@@ -1,12 +1,12 @@
 use eyre::eyre;
-use starknet::core::types::FieldElement;
+use starknet::core::types::Felt;
 use std::env::var;
 use url::Url;
 
-fn env_var_to_field_element(var_name: &str) -> Result<FieldElement, eyre::Error> {
+fn env_var_to_field_element(var_name: &str) -> Result<Felt, eyre::Error> {
     let env_var = var(var_name).map_err(|_| eyre!("missing env var: {var_name}"))?;
 
-    Ok(FieldElement::from_hex_be(&env_var)?)
+    Ok(Felt::from_hex(&env_var)?)
 }
 
 #[derive(Clone, Debug)]
@@ -15,11 +15,11 @@ pub struct KakarotRpcConfig {
     /// Starknet network.
     pub network_url: Url,
     /// Kakarot contract address.
-    pub kakarot_address: FieldElement,
+    pub kakarot_address: Felt,
     /// Uninitialized account class hash.
-    pub uninitialized_account_class_hash: FieldElement,
+    pub uninitialized_account_class_hash: Felt,
     /// Account contract class hash.
-    pub account_contract_class_hash: FieldElement,
+    pub account_contract_class_hash: Felt,
 }
 
 impl KakarotRpcConfig {
