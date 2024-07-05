@@ -1,12 +1,8 @@
-use std::fmt;
-use std::pin::Pin;
-use std::task::Poll;
-
+use crate::eth_provider::provider::EthProviderResult;
 use futures::{future::BoxFuture, Future, FutureExt};
 use reth_primitives::{Address, U256};
 use serde::{Deserialize, Serialize};
-
-use crate::eth_provider::provider::EthProviderResult;
+use std::{fmt, pin::Pin, task::Poll};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenBalance {

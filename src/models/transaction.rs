@@ -1,7 +1,3 @@
-use alloy_rlp::Encodable;
-use reth_primitives::{Transaction, TransactionSigned};
-use starknet_crypto::FieldElement;
-
 #[cfg(not(feature = "hive"))]
 use crate::eth_provider::starknet::kakarot_core::MAX_FELTS_IN_CALLDATA;
 use crate::{
@@ -12,6 +8,9 @@ use crate::{
     },
     tracing::builder::TRACING_BLOCK_GAS_LIMIT,
 };
+use alloy_rlp::Encodable;
+use reth_primitives::{Transaction, TransactionSigned};
+use starknet_crypto::FieldElement;
 
 /// Validates the signed ethereum transaction.
 /// The validation checks the following:

@@ -1,14 +1,14 @@
+use super::{database::EthDatabaseSnapshot, Tracer, TracerResult};
 use crate::eth_provider::{
     error::{EthApiError, TransactionError},
     provider::EthereumProvider,
 };
 use reth_primitives::{B256, U256};
 use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
-use reth_rpc_types::trace::geth::GethDebugTracingOptions;
-use reth_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header};
+use reth_rpc_types::{
+    trace::geth::GethDebugTracingOptions, Block, BlockHashOrNumber, BlockId, BlockTransactions, Header,
+};
 use revm_inspectors::tracing::TracingInspectorConfig;
-
-use super::{database::EthDatabaseSnapshot, Tracer, TracerResult};
 
 #[derive(Debug)]
 pub struct Floating;

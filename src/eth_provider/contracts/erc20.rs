@@ -1,14 +1,12 @@
 #![allow(clippy::pub_underscore_fields)]
 
+use crate::eth_provider::{
+    error::ExecutionError,
+    provider::{EthProviderResult, EthereumProvider},
+};
 use alloy_sol_types::{sol, SolCall};
-use reth_primitives::Address;
-use reth_primitives::{BlockId, TxKind, U256};
-use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::TransactionRequest;
-
-use crate::eth_provider::error::ExecutionError;
-use crate::eth_provider::provider::EthProviderResult;
-use crate::eth_provider::provider::EthereumProvider;
+use reth_primitives::{Address, BlockId, TxKind, U256};
+use reth_rpc_types::{request::TransactionInput, TransactionRequest};
 
 sol! {
     #[sol(rpc)]

@@ -1,24 +1,31 @@
-use std::sync::Arc;
-
+use crate::{
+    eth_provider::{
+        provider::{EthDataProvider, EthereumProvider},
+        starknet::kakarot_core::starknet_address,
+    },
+    models::felt::Felt252Wrapper,
+    test_utils::{
+        evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo},
+        tx_waiter::watch_tx,
+    },
+};
 use alloy_dyn_abi::DynSolValue;
 use alloy_json_abi::ContractObject;
 use alloy_signer_wallet::LocalWallet;
 use async_trait::async_trait;
-use reth_primitives::{sign_message, Address, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
-use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
-use starknet::core::utils::get_selector_from_name;
-use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
-
-use crate::eth_provider::provider::{EthDataProvider, EthereumProvider};
-use crate::eth_provider::starknet::kakarot_core::starknet_address;
-use crate::models::felt::Felt252Wrapper;
-use crate::test_utils::evm_contract::{
-    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
+use reth_primitives::{
+    sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, B256, U256,
 };
-use crate::test_utils::tx_waiter::watch_tx;
-use reth_primitives::TransactionSignedEcRecovered;
 use reth_rpc_types_compat::transaction::from_recovered;
+use starknet::{
+    core::{
+        types::{MaybePendingTransactionReceipt, TransactionReceipt},
+        utils::get_selector_from_name,
+    },
+    providers::Provider,
+};
+use starknet_crypto::FieldElement;
+use std::sync::Arc;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
 

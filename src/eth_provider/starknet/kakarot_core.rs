@@ -1,8 +1,10 @@
-use std::str::FromStr;
-
-use crate::models::{
-    felt::Felt252Wrapper,
-    transaction::{transaction_data_to_starknet_calldata, transaction_signature_to_field_elements},
+use crate::{
+    eth_provider::provider::EthProviderResult,
+    into_via_wrapper,
+    models::{
+        felt::Felt252Wrapper,
+        transaction::{transaction_data_to_starknet_calldata, transaction_signature_to_field_elements},
+    },
 };
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
@@ -16,8 +18,7 @@ use starknet::{
     macros::selector,
 };
 use starknet_crypto::FieldElement;
-
-use crate::{eth_provider::provider::EthProviderResult, into_via_wrapper};
+use std::str::FromStr;
 
 // Contract ABIs
 

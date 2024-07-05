@@ -1,14 +1,16 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use alloy_dyn_abi::DynSolValue;
-use kakarot_rpc::models::balance::TokenBalances;
-use kakarot_rpc::models::felt::Felt252Wrapper;
-use kakarot_rpc::test_utils::eoa::Eoa as _;
-use kakarot_rpc::test_utils::evm_contract::KakarotEvmContract;
-use kakarot_rpc::test_utils::fixtures::{erc20, setup};
-use kakarot_rpc::test_utils::katana::Katana;
-use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
+use kakarot_rpc::{
+    models::{balance::TokenBalances, felt::Felt252Wrapper},
+    test_utils::{
+        eoa::Eoa as _,
+        evm_contract::KakarotEvmContract,
+        fixtures::{erc20, setup},
+        katana::Katana,
+        rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
+    },
+};
 use reth_primitives::{Address, U256};
 use rstest::*;
 use serde_json::Value;

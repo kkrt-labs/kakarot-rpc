@@ -1,10 +1,9 @@
-use std::time::Duration;
-
 use anyhow::Result;
 use starknet::{
     core::types::{ExecutionResult, FieldElement, StarknetError},
     providers::{Provider, ProviderError},
 };
+use std::time::Duration;
 use tracing::info;
 
 /// Code taken from
