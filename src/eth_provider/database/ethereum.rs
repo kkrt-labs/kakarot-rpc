@@ -499,7 +499,7 @@ mod tests {
 
         database.update_one(faulty_header.clone(), filter, true).await.expect("Failed to update header in database");
 
-        assert!(database.block(faulty_header.clone().header.hash.unwrap().into(), true).await.is_err());
+        assert!(database.block(faulty_header.header.hash.unwrap().into(), true).await.is_err());
     }
 
     async fn test_get_transaction_count(database: &Database, mongo_fuzzer: &MongoFuzzer) {
