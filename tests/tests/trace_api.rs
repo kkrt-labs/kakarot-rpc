@@ -11,11 +11,11 @@ use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
 use reth_primitives::{Address, Bytes, B256, U256};
-use reth_rpc_types::other::OtherFields;
 use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
 use reth_rpc_types::trace::parity::{
     Action, CallAction, CallOutput, CallType, LocalizedTransactionTrace, TraceOutput, TransactionTrace,
 };
+use reth_rpc_types::OtherFields;
 use rstest::*;
 use serde_json::{json, Value};
 use starknet::core::types::MaybePendingBlockWithTxHashes;
