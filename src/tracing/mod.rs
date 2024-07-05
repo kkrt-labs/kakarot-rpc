@@ -45,24 +45,23 @@ enum TracingResult {
 
 impl TracingResult {
     /// Converts the tracing result into Geth traces.
-    fn as_geth(self) -> Option<Vec<TraceResult>> {
-        if let Self::Geth(traces) = self {
-            Some(traces)
+    fn as_geth(&self) -> Option<Vec<TraceResult>> {
+        if let Self::Geth(ref traces) = self {
+            Some(traces.clone())
         } else {
             None
         }
     }
 
     /// Converts the tracing result into Parity traces.
-    fn as_parity(self) -> Option<Vec<LocalizedTransactionTrace>> {
-        if let Self::Parity(traces) = self {
-            Some(traces)
+    fn as_parity(&self) -> Option<Vec<LocalizedTransactionTrace>> {
+        if let Self::Parity(ref traces) = self {
+            Some(traces.clone())
         } else {
             None
         }
     }
-
-    /// Creates a default failure `TracingResult` based on the `TracingOptions`.
+    /// Creates a default failure [`TracingResult`] based on the [`TracingOptions`].
     fn default_failure(tracing_options: &TracingOptions, tx: &reth_rpc_types::Transaction) -> Self {
         match tracing_options {
             TracingOptions::Geth(_) | TracingOptions::GethCall(_) => Self::Geth(vec![TraceResult::Success {
@@ -304,7 +303,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// which is then used to transact and trace the transaction.
     fn trace_transactions<T>(
         self,
-        convert_result: fn(TracingResult) -> Option<Vec<T>>,
+        convert_result: fn(&TracingResult) -> Option<Vec<T>>,
         transactions: &[reth_rpc_types::Transaction],
     ) -> TracerResult<Vec<T>> {
         let mut traces = Vec::with_capacity(self.transactions.len());
@@ -332,7 +331,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                     }
                 };
 
-            traces.extend(convert_result(res).unwrap_or_default());
+            traces.extend(convert_result(&res).unwrap_or_default());
 
             // Only commit to the database if there are more transactions to process.
             if transactions.peek().is_some() {
