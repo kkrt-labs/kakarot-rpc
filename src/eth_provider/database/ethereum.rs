@@ -446,7 +446,7 @@ mod tests {
                 })
                 .collect();
 
-            let block_transactions = BlockTransactions::Hashes(transactions.iter().map(|tx| tx.hash).collect());
+            let block_transactions = BlockTransactions::Full(transactions.clone());
 
             let signed_transactions = transactions
                 .into_iter()
