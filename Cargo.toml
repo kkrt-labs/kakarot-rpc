@@ -22,20 +22,20 @@ rust.missing_debug_implementations = "warn"
 rust.unreachable_pub = "warn"
 rustdoc.all = "warn"
 rust.unused_must_use = "deny"
-rust.rust_2018_idioms = "deny"
+rust.rust_2018_idioms = { level = "deny", priority = -1 }
 
 [lints.clippy]
 # all lints that are on by default (correctness, suspicious, style, complexity, perf)
-all = "warn"
+all = { level = "warn", priority = -1 }
 
 # new lints that are still under development
-nursery = "warn"
+nursery = { level = "warn", priority = -1 }
 # avoid lints that are too pedantic
 future_not_send = "allow"
 fallible_impl_from = "allow"
 
 # lints which are rather strict or have occasional false positives
-pedantic = "warn"
+pedantic = { level = "warn", priority = -1 }
 # avoid lints that are too pedantic
 must_use_candidate = "allow"
 cast_possible_truncation = "allow"
@@ -58,124 +58,96 @@ starknet-crypto = { version = "0.6.1", default-features = false }
 alloy-rlp = { version = "0.3.4", default-features = false }
 alloy-sol-types = { version = "0.7.2", default-features = false }
 alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-jsonrpsee = { version = "0.21.0", features = ["macros", "server"] }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0-rc.1", default-features = false, features = [
+jsonrpsee = { version = "0.23", features = ["macros", "server"] }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0", default-features = false, features = [
   "alloy-compat",
 ] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0-rc.1", default-features = false, features = [
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0", default-features = false, features = [
   "arbitrary",
 ] }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0-rc.1", default-features = false }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0-rc.1", default-features = false }
-reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0-rc.1", default-features = false }
-reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0-rc.1", default-features = false }
-revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "70e721d" }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0", default-features = false }
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0", default-features = false }
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0", default-features = false }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.0", default-features = false }
+revm-inspectors = "0.1"
 
 # Serde
-serde = { version = "1.0.198", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0.115", default-features = false }
+serde = { version = "1", default-features = false, features = ["derive"] }
+serde_json = { version = "1", default-features = false }
 
 # Others
-async-trait = { version = "0.1.80", default-features = false }
-auto_impl = { version = "1.1.0", default-features = false }
-bytes = { version = "1.6.0", default-features = false }
-dotenvy = { version = "0.15.7", default-features = false }
-eyre = { version = "0.6.12", default-features = false }
+async-trait = { version = "0.1", default-features = false }
+auto_impl = { version = "1", default-features = false }
+bytes = { version = "1.6", default-features = false }
+dotenvy = { version = "0.15", default-features = false }
+eyre = { version = "0.6", default-features = false }
 
-futures = { version = "0.3.30", default-features = false }
-itertools = { version = "0.12.1", default-features = false }
-lazy_static = { version = "1.4.0", default-features = false }
-log = { version = "0.4.21", default-features = false }
-mongodb = { version = "2.8.2", default-features = false, features = [
-  "tokio-runtime",
-] }
-
-thiserror = { version = "1.0.58", default-features = false }
-tokio = { version = "1.37.0", features = ["macros"] }
-tower = { version = "0.4.13", default-features = false }
-tower-http = { version = "0.4.4", features = ["cors"] }
-tracing = { version = "0.1.40", default-features = false }
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-url = { version = "2.5.0", default-features = false }
+futures = { version = "0.3", default-features = false }
+itertools = { version = "0.13", default-features = false }
+lazy_static = { version = "1", default-features = false }
+log = { version = "0.4", default-features = false }
+mongodb = { version = "3.0", default-features = false, features = ["rustls-tls", "compat-3-0-0"]}
+thiserror = { version = "1", default-features = false }
+tokio = { version = "1", features = ["macros"] }
+tower = { version = "0.4", default-features = false }
+tower-http = { version = "0.5", features = ["cors"] }
+tracing = { version = "0.1", default-features = false }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+url = { version = "2.5", default-features = false }
 
 # Prometheus
-prometheus = { version = "0.13.0", default-features = false }
-hyper = { version = "1.3.1", default-features = false }
-hyper-util = { version = "0.1.3", default-features = false, features = [
+prometheus = { version = "0.13", default-features = false }
+hyper = { version = "1", default-features = false }
+hyper-util = { version = "0.1", default-features = false, features = [
   "server",
 ] }
-http-body-util = { version = "0.1.1", default-features = false }
+http-body-util = { version = "0.1", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
 
 # Testing crates
-alloy-dyn-abi = { version = "0.7.6", default-features = false, optional = true }
+alloy-dyn-abi = { version = "0.7.6", default-features = false }
 alloy-json-abi = { version = "0.7.6", default-features = false, optional = true }
 alloy-primitives = { version = "0.7.2", default-features = false, optional = true }
 alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
-anyhow = { version = "1.0.82", default-features = false, optional = true }
+anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
-ef-testing = { git = "https://github.com/kkrt-labs/ef-tests.git", rev = "ccd9042", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "0fc2eec", default-features = false, features = [
   "v0",
 ], optional = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master", optional = true }
-rand = { version = "0.8.5", default-features = false, optional = true }
-rayon = { version = "1.10.0", default-features = false, optional = true }
-rstest = { version = "0.19.0", default-features = false, optional = true }
+rand = { version = "0.8", default-features = false, optional = true }
+rayon = { version = "1", default-features = false, optional = true }
+rstest = { version = "0.21", default-features = false, optional = true }
 serde_with = { version = "2.3.1", default-features = false, optional = true }
-starknet_api = { version = "0.7.0-dev.0", default-features = false, optional = true }
-strum = { version = "0.26.2", default-features = false, optional = true }
-strum_macros = { version = "0.26.2", default-features = false, optional = true }
-testcontainers = { version = "0.15.0", default-features = false, optional = true }
-tokio-util = { version = "0.7.10", features = [
+starknet_api = { version = "0.12.0-dev.0", default-features = false, optional = true }
+strum = { version = "0.26", default-features = false, optional = true }
+strum_macros = { version = "0.26", default-features = false, optional = true }
+testcontainers = { version = "0.19", default-features = false, optional = true }
+tokio-util = { version = "0.7", features = [
   "codec",
 ], default-features = false, optional = true }
-tokio-stream = { version = "0.1.15", default-features = false, optional = true }
-walkdir = { version = "2.5.0", default-features = false, optional = true }
+tokio-stream = { version = "0.1", default-features = false, optional = true }
+walkdir = { version = "2.5", default-features = false, optional = true }
 
-
-# In order to use dojo-test-utils, we need to explicitly declare the same patches as them in our Cargo.toml
-# Otherwise, underlying dependencies of dojo will not be patched and we will get a compilation error
-# see https://github.com/dojoengine/dojo/issues/563
-# When making changes to the rev, please also update to make file to the same rev in the `install-katana` rule.
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", default-features = false, optional = true }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v0.7.0-alpha.0", default-features = false, features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "f134883", default-features = false, optional = true }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', rev = "f134883", default-features = false, features = [
   "serde",
 ], optional = true }
 
 
-[patch."https://github.com/starkware-libs/blockifier"]
-blockifier = { git = "https://github.com/dojoengine/blockifier", rev = "d38b979" }
-
 [patch.crates-io]
 cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
 cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-# we patch starknet_api because the version v0.7.0-rc.0 was removed from crates.io
-# we need v0.7.0-rc.0 to be compatible with dojo.
-starknet_api = { git = "https://github.com/starkware-libs/starknet-api.git", tag = "v0.7.0-rc.0" }
-
-alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-alloy-json-rpc = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-alloy-network = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-alloy-provider = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-alloy-signer = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
 alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-alloy-transport = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
-
-revm = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
-revm-interpreter = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
-revm-precompile = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
-revm-primitives = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
 
 [dev-dependencies]
-hex = { version = "0.4.3", default-features = false }
-proptest = { version = "1.4.0", default-features = false }
-reqwest = { version = "0.12.3", default-features = false }
-toml = { version = "0.8.12", default-features = false }
+hex = { version = "0.4", default-features = false }
+proptest = { version = "1.5", default-features = false }
+reqwest = { version = "0.12", default-features = false }
+toml = { version = "0.8", default-features = false }
 
 [features]
 testing = [
-  "alloy-dyn-abi",
   "alloy-json-abi",
   "alloy-primitives",
   "alloy-signer-wallet",

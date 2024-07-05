@@ -19,9 +19,8 @@ import {
   isAccessListEIP2930Tx,
   isFeeMarketEIP1559TxData,
   isLegacyTx,
-  JsonRpcTx,
+  JsonTx,
   LegacyTransaction,
-  PrefixedHexString,
   RLP,
   TransactionFactory,
   TransactionType,
@@ -30,14 +29,24 @@ import {
   TypedTxData,
 } from "../deps.ts";
 
+//Interfaces
+import {
+  ExtendedJsonRpcTx,
+  HexString,
+  TransactionContext,
+  TransactionConversionInput,
+  TypedTransactionContext,
+} from "./interfaces.ts";
+
 /**
- * @param transaction - A Kakarot transaction.
- * @param receipt The transaction receipt of the transaction.
+ * Converts a transaction to the Ethereum transaction format.
+ *
+ * @param transaction - The transaction object to be converted.
+ * @param receipt - The transaction receipt object.
  * @param blockNumber - The block number of the transaction in hex.
  * @param blockHash - The block hash of the transaction in hex.
  * @param isPendingBlock - Whether the block is pending.
  * @returns - The transaction in the Ethereum format, or null if the transaction is invalid.
- *
  * Acknowledgement: Code taken from <https://github.com/ethereumjs/ethereumjs-monorepo>
  */
 export function toEthTx({
@@ -46,17 +55,12 @@ export function toEthTx({
   blockNumber,
   blockHash,
   isPendingBlock,
-}: {
-  transaction: Transaction;
-  receipt: TransactionReceipt;
-  blockNumber: PrefixedHexString;
-  blockHash: PrefixedHexString;
-  isPendingBlock: boolean;
-}): (JsonRpcTx & { yParity?: string; isRunOutOfResources?: boolean }) | null {
+}: TransactionContext): ExtendedJsonRpcTx | null {
   const typedEthTx = toTypedEthTx({ transaction });
   if (!typedEthTx) {
     return null;
   }
+
   return typedTransactionToEthTx({
     typedTransaction: typedEthTx,
     receipt,
@@ -67,14 +71,136 @@ export function toEthTx({
 }
 
 /**
- * @param typeTransaction - Typed transaction to be converted.
- * @param receipt The transaction receipt of the transaction.
+ * Calculates the chain ID from the transaction.
+ *
+ * @param typedTransaction - The typed transaction object.
+ * @param jsonTx - The JSON representation of the transaction.
+ * @returns - The chain ID as a string, or undefined if the chain ID cannot be determined.
+ *
+ * If the transaction is a legacy transaction that supports EIP-155 replay protection,
+ * the chain ID is calculated from the `v` value using the formula:
+ * v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
+ */
+export function chainId(
+  typedTransaction: TypedTransaction,
+  jsonTx: JsonTx,
+): string | undefined {
+  const { v, chainId } = jsonTx;
+
+  if (
+    isLegacyTx(typedTransaction) &&
+    typedTransaction.supports(Capability.EIP155ReplayProtection)
+  ) {
+    return v
+      ? bigIntToHex((BigInt(v) - 35n) / 2n)
+      : (console.error("jsonTx.v is undefined"), undefined);
+  }
+  return chainId;
+}
+
+/**
+ * Adds the yParity field to the transaction result if it is an EIP-1559 or EIP-2930 transaction.
+ *
+ * @param typedTransaction - The typed transaction object.
+ * @param jsonTx - The JSON representation of the transaction.
+ * @param result - The transaction result object in Ethereum format.
+ */
+export function setYParityFlag(
+  typedTransaction: TypedTransaction,
+  jsonTx: JsonTx,
+  result: ExtendedJsonRpcTx,
+): void {
+  // Check if the transaction is an EIP-1559 or EIP-2930 transaction
+  if (
+    isFeeMarketEIP1559TxData(typedTransaction) ||
+    isAccessListEIP2930Tx(typedTransaction)
+  ) {
+    // Add the yParity field to the result
+    result.yParity = jsonTx.v;
+  }
+}
+
+/**
+ * Adds the isRunOutOfResources flag to the transaction result if the transaction
+ * was reverted due to running out of resources.
+ *
+ * @param receipt - The transaction receipt object.
+ * @param result - The transaction result object in Ethereum format.
+ */
+export function setFlagRunOutOfResources(
+  receipt: TransactionReceipt,
+  result: ExtendedJsonRpcTx,
+): void {
+  // Check if the transaction was reverted due to running out of resources
+  if (isRevertedWithOutOfResources(receipt)) {
+    // Set the isRunOutOfResources flag to true in the result
+    result.isRunOutOfResources = true;
+  }
+}
+
+/**
+ * Builds the Ethereum formatted transaction from the given typed transaction and its JSON representation.
+ *
+ * @param typedTransaction - The typed transaction object to be converted.
+ * @param jsonTx - The JSON representation of the transaction.
+ * @param blockNumber - The block number of the transaction in hex.
+ * @param blockHash - The block hash of the transaction in hex.
+ * @param isPendingBlock - Whether the block is pending.
+ * @param chainId - The chain ID for the transaction.
+ * @param index - The index of the transaction in the block.
+ * @returns - The transaction in the Ethereum format, or null if the transaction is not signed.
+ */
+export function transactionEthFormat({
+  typedTransaction,
+  jsonTx,
+  blockNumber,
+  blockHash,
+  isPendingBlock,
+  chainId,
+  index,
+}: TransactionConversionInput): ExtendedJsonRpcTx | null {
+  if (!jsonTx.v || !jsonTx.r || !jsonTx.s) {
+    console.error(
+      `Transaction is not signed: {r: ${jsonTx.r}, s: ${jsonTx.s}, v: ${jsonTx.v}}`,
+    );
+    // TODO: Ping alert webhooks
+    return null;
+  }
+
+  return {
+    blockHash: isPendingBlock ? null : blockHash,
+    blockNumber,
+    from: typedTransaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
+    gas: jsonTx.gasLimit!,
+    gasPrice: jsonTx.gasPrice ?? jsonTx.maxFeePerGas!,
+    maxFeePerGas: jsonTx.maxFeePerGas,
+    maxPriorityFeePerGas: jsonTx.maxPriorityFeePerGas,
+    type: intToHex(typedTransaction.type),
+    accessList: jsonTx.accessList,
+    chainId,
+    hash: padBytes(typedTransaction.hash(), 32),
+    input: jsonTx.data!,
+    nonce: jsonTx.nonce!,
+    to: typedTransaction.to?.toString() ?? null,
+    transactionIndex: isPendingBlock ? null : padBigint(BigInt(index ?? 0), 8),
+    value: jsonTx.value!,
+    v: jsonTx.v,
+    r: jsonTx.r,
+    s: jsonTx.s,
+    maxFeePerBlobGas: jsonTx.maxFeePerBlobGas,
+    blobVersionedHashes: jsonTx.blobVersionedHashes,
+  };
+}
+
+/**
+ * Converts a typed transaction to the Ethereum transaction format.
+ *
+ * @param typedTransaction - Typed transaction to be converted.
+ * @param receipt - The transaction receipt of the transaction.
  * @param blockNumber - The block number of the transaction in hex.
  * @param blockHash - The block hash of the transaction in hex.
  * @param isPendingBlock - Whether the block is pending.
  * @returns - The transaction in the Ethereum format, or null if the transaction is invalid.
- *
- * Acknowledgement: Code taken from <https://github.com/ethereumjs/ethereumjs-monorepo>
  */
 export function typedTransactionToEthTx({
   typedTransaction,
@@ -82,13 +208,7 @@ export function typedTransactionToEthTx({
   blockNumber,
   blockHash,
   isPendingBlock,
-}: {
-  typedTransaction: TypedTransaction;
-  receipt: TransactionReceipt;
-  blockNumber: PrefixedHexString;
-  blockHash: PrefixedHexString;
-  isPendingBlock: boolean;
-}): (JsonRpcTx & { yParity?: string; isRunOutOfResources?: boolean }) | null {
+}: TypedTransactionContext): ExtendedJsonRpcTx | null {
   const index = receipt.transactionIndex;
 
   if (!index) {
@@ -97,66 +217,35 @@ export function typedTransactionToEthTx({
     );
   }
 
-  const txJSON = typedTransaction.toJSON();
-  if (!txJSON.r || !txJSON.s || !txJSON.v) {
-    console.error(
-      `Transaction is not signed: {r: ${txJSON.r}, s: ${txJSON.s}, v: ${txJSON.v}}`,
-    );
-    // TODO: Ping alert webhooks
+  const jsonTx = typedTransaction.toJSON();
+
+  const result = transactionEthFormat({
+    typedTransaction,
+    jsonTx,
+    receipt,
+    blockNumber,
+    blockHash,
+    isPendingBlock,
+    chainId: chainId(typedTransaction, jsonTx),
+    index,
+  });
+
+  if (!result) {
     return null;
   }
-  // If the transaction is a legacy, we can calculate it from the v value.
-  // v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
-  const chainId = isLegacyTx(typedTransaction) &&
-      typedTransaction.supports(Capability.EIP155ReplayProtection)
-    ? bigIntToHex((BigInt(txJSON.v) - 35n) / 2n)
-    : txJSON.chainId;
 
-  const result: JsonRpcTx & {
-    yParity?: string;
-    isRunOutOfResources?: boolean;
-  } = {
-    blockHash: isPendingBlock ? null : blockHash,
-    blockNumber,
-    from: typedTransaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
-    gas: txJSON.gasLimit!,
-    gasPrice: txJSON.gasPrice ?? txJSON.maxFeePerGas!,
-    maxFeePerGas: txJSON.maxFeePerGas,
-    maxPriorityFeePerGas: txJSON.maxPriorityFeePerGas,
-    type: intToHex(typedTransaction.type),
-    accessList: txJSON.accessList,
-    chainId,
-    hash: padBytes(typedTransaction.hash(), 32),
-    input: txJSON.data!,
-    nonce: txJSON.nonce!,
-    to: typedTransaction.to?.toString() ?? null,
-    transactionIndex: isPendingBlock ? null : padBigint(BigInt(index ?? 0), 8),
-    value: txJSON.value!,
-    v: txJSON.v,
-    r: txJSON.r,
-    s: txJSON.s,
-    maxFeePerBlobGas: txJSON.maxFeePerBlobGas,
-    blobVersionedHashes: txJSON.blobVersionedHashes,
-  };
-  // Adding yParity for EIP-1559 and EIP-2930 transactions
-  // To fit the Ethereum format, we need to add the yParity field.
-  if (
-    isFeeMarketEIP1559TxData(typedTransaction) ||
-    isAccessListEIP2930Tx(typedTransaction)
-  ) {
-    result.yParity = txJSON.v;
-  }
+  setYParityFlag(typedTransaction, jsonTx, result);
 
-  if (isRevertedWithOutOfResources(receipt)) {
-    result.isRunOutOfResources = true;
-  }
+  setFlagRunOutOfResources(receipt, result);
 
   return result;
 }
 
 /**
+ * Converts a Kakarot transaction to a typed Ethereum transaction.
+ *
  * @param transaction - A Kakarot transaction.
- * @returns - The Typed transaction in the Ethereum format
+ * @returns - The Typed transaction in the Ethereum format, or null if invalid.
  */
 export function toTypedEthTx({
   transaction,
@@ -242,7 +331,9 @@ export function toTypedEthTx({
 }
 
 /**
- * @param bytes - The bytes of the rlp encoded transaction without signature.
+ * Decodes an RLP encoded transaction into a TypedTransaction object.
+ *
+ * @param bytes - The bytes of the RLP encoded transaction without signature.
  * For Legacy = rlp([nonce, gasprice, startgas, to, value, data, chainid, 0, 0])
  * For EIP1559 = [0x02 || rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, destination, amount, data, access_list])]
  * For EIP2930 = [0x01 || rlp([chainId, nonce, gasPrice, gasLimit, to, value, data, accessList])]
@@ -277,6 +368,8 @@ function fromSerializedData(bytes: Uint8Array): TypedTransaction {
 }
 
 /**
+ * Adds a signature to a typed transaction.
+ *
  * @param tx - Typed transaction to be signed.
  * @param r - Signature r value.
  * @param s - Signature s value.
@@ -354,8 +447,8 @@ function addSignature(
  * each chunk into a hexadecimal string. The resulting hexadecimal strings are padded to ensure
  * each string represents 64 hexadecimal characters (32 bytes) before being prefixed with '0x'.
  */
-export function packCallData(input: Uint8Array): `0x${string}`[] {
-  const serializedTx: `0x${string}`[] = [];
+export function packCallData(input: Uint8Array): HexString[] {
+  const serializedTx: HexString[] = [];
 
   // Process the input bytes in chunks of 31 bytes each and pack them into hexadecimal strings.
   for (let i = 0; i < input.length; i += 31) {
@@ -364,7 +457,7 @@ export function packCallData(input: Uint8Array): `0x${string}`[] {
 
     // Convert the chunk into a BigInt, then into a hexadecimal string, padding to 64 characters.
     const hexString = ("0x" +
-      bytesToBigInt(chunk).toString(16).padStart(64, "0")) as `0x${string}`;
+      bytesToBigInt(chunk).toString(16).padStart(64, "0")) as HexString;
 
     // Push the resulting hexadecimal string into the serializedTx array.
     serializedTx.push(hexString);
@@ -386,9 +479,9 @@ export function packCallData(input: Uint8Array): `0x${string}`[] {
  *  - The last element is sliced based on the remaining length required to match the byte length of calldata
  *    specified by the sixth element in the input array.
  */
-export function unpackCallData(input: `0x${string}`[]): Uint8Array {
+export function unpackCallData(input: HexString[]): Uint8Array {
   // Convert a hex string to bytes and remove the first byte.
-  const hexToBytesSlice = (x: `0x${string}`) => hexToBytes(x).slice(1);
+  const hexToBytesSlice = (x: HexString) => hexToBytes(x).slice(1);
 
   // Process the main part of the calldata, converting and slicing each chunk, then concatenating them.
   const calldataCore = concatBytes(...input.slice(7, -1).map(hexToBytesSlice));

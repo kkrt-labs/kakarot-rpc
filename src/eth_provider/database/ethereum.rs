@@ -188,16 +188,13 @@ impl EthereumBlockStore for Database {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::mongo::{CollectionDB, MongoFuzzer, DOCKER_CLI, RANDOM_BYTES_SIZE};
+    use crate::test_utils::mongo::{CollectionDB, MongoFuzzer, RANDOM_BYTES_SIZE};
     use rand::{self, Rng};
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_ethereum_transaction_store() {
         // Initialize MongoDB fuzzer
         let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
-
-        // Start MongoDB Docker container
-        let _c = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
 
         // Mock a database with 100 transactions, receipts, and headers
         let database = mongo_fuzzer.mock_database(100).await;
@@ -363,9 +360,6 @@ mod tests {
     async fn test_ethereum_block_store() {
         // Initialize MongoDB fuzzer
         let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
-
-        // Start MongoDB Docker container
-        let _c = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
 
         // Mock a database with 100 transactions, receipts, and headers
         let database = mongo_fuzzer.mock_database(100).await;
