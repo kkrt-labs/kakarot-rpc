@@ -108,9 +108,8 @@ pub trait EthereumBlockStore {
 #[async_trait]
 impl EthereumBlockStore for Database {
     async fn latest_header(&self) -> Result<Option<Header>, EthApiError> {
-        let filter = EthDatabaseFilterBuilder::<filter::Header>::default().build();
         Ok(self
-            .get_one::<StoredHeader>(filter, Some(doc! { "number": -1 }))
+            .get_one::<StoredHeader>(None, doc! { "header.number": -1 })
             .await
             .inspect_err(|err| tracing::error!("internal error: {:?}", err))
             .map(|maybe_sh| maybe_sh.map(|sh| sh.header))?)
