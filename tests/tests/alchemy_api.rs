@@ -1,6 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use ethers::abi::Token;
+use alloy_dyn_abi::DynSolValue;
 use kakarot_rpc::models::balance::TokenBalances;
 use kakarot_rpc::models::felt::Felt252Wrapper;
 use kakarot_rpc::test_utils::eoa::Eoa as _;
@@ -29,17 +29,12 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     // When
-    let to = ethers::abi::Address::from_slice(eoa.evm_address().unwrap().as_slice());
+    let to = Address::from_slice(eoa.evm_address().unwrap().as_slice());
     let amount = U256::from(10_000);
 
-    eoa.call_evm_contract(
-        &erc20,
-        "mint",
-        (Token::Address(to), Token::Uint(ethers::abi::Uint::from_big_endian(&amount.to_be_bytes::<32>()[..]))),
-        0,
-    )
-    .await
-    .expect("Failed to mint ERC20 tokens");
+    eoa.call_evm_contract(&erc20, "mint", &[DynSolValue::Address(to), DynSolValue::Uint(amount, 256)], 0)
+        .await
+        .expect("Failed to mint ERC20 tokens");
 
     // Then
     let reqwest_client = reqwest::Client::new();
@@ -59,7 +54,7 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
     let balances: TokenBalances =
         serde_json::from_value(raw.get("result").cloned().unwrap()).expect("Failed to deserialize response body");
-    let erc20_balance = balances.token_balances[0].token_balance.expect("Failed to get ERC20 balance");
+    let erc20_balance = balances.token_balances[0].token_balance;
 
     assert_eq!(amount, erc20_balance);
     drop(server_handle);

@@ -5,11 +5,10 @@ use std::str::FromStr;
 lazy_static! {
     pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
 
-    /// Maximum number of times a transaction can be retried
-    pub static ref TRANSACTION_MAX_RETRIES: u8 = u8::from_str(
-        &std::env::var("TRANSACTION_MAX_RETRIES")
-            .unwrap_or_else(|_| panic!("Missing environment variable TRANSACTION_MAX_RETRIES"))
-    ).expect("failing to parse TRANSACTION_MAX_RETRIES");
+    /// Maximum number of logs that can be fetched in a single request
+    pub static ref MAX_LOGS: Option<u64> = std::env::var("MAX_LOGS")
+        .ok()
+        .and_then(|val| u64::from_str(&val).ok());
 }
 
 /// Gas limit for estimate gas and call
@@ -49,7 +48,7 @@ lazy_static! {
     static ref RPC_CONFIG: KakarotRpcConfig = KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config");
     pub static ref DEPLOY_WALLET: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> =
         SingleOwnerAccount::new(
-            JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network.provider_url().expect("Incorrect provider URL"))),
+            JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 FieldElement::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
                     .expect("Failed to parse deployer private key")

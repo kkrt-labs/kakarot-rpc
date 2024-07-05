@@ -51,7 +51,7 @@ impl TryFrom<Felt252Wrapper> for Address {
     fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
         EthAddress::from_felt(&felt)
             .map(|eth_address| Self::from_slice(eth_address.as_bytes()))
-            .map_err(|_| EthereumDataFormatError::PrimitiveError)
+            .map_err(|_| EthereumDataFormatError::Primitive)
     }
 }
 
@@ -59,7 +59,7 @@ impl TryFrom<B256> for Felt252Wrapper {
     type Error = EthereumDataFormatError;
 
     fn try_from(value: B256) -> Result<Self, Self::Error> {
-        Ok(Self(FieldElement::from_bytes_be(value.as_ref()).map_err(|_| EthereumDataFormatError::PrimitiveError)?))
+        Ok(Self(FieldElement::from_bytes_be(value.as_ref()).map_err(|_| EthereumDataFormatError::Primitive)?))
     }
 }
 
@@ -67,7 +67,7 @@ impl TryFrom<U256> for Felt252Wrapper {
     type Error = EthereumDataFormatError;
 
     fn try_from(u256: U256) -> Result<Self, Self::Error> {
-        Ok(Self(FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| EthereumDataFormatError::PrimitiveError)?))
+        Ok(Self(FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| EthereumDataFormatError::Primitive)?))
     }
 }
 
@@ -110,7 +110,7 @@ macro_rules! into_via_try_wrapper {
     ($val: expr) => {{
         let intermediate: Result<_, $crate::eth_provider::error::EthereumDataFormatError> =
             TryInto::<$crate::models::felt::Felt252Wrapper>::try_into($val)
-                .map_err(|_| $crate::eth_provider::error::EthereumDataFormatError::PrimitiveError)
+                .map_err(|_| $crate::eth_provider::error::EthereumDataFormatError::Primitive)
                 .map(Into::into);
         intermediate
     }};
@@ -146,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "PrimitiveError")]
+    #[should_panic(expected = "Primitive")]
     fn test_address_try_from_felt_should_fail() {
         // Given
         let address: Felt252Wrapper = FieldElement::from_hex_be(OVERFLOW_ADDRESS).unwrap().into();
@@ -169,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "PrimitiveError")]
+    #[should_panic(expected = "Primitive")]
     fn test_felt_try_from_b256_should_fail() {
         // Given
         let hash = B256::from_str(OVERFLOW_FELT).unwrap();
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "PrimitiveError")]
+    #[should_panic(expected = "Primitive")]
     fn test_felt_try_from_u256_should_fail() {
         // Given
         let hash = U256::from_str_radix(OVERFLOW_FELT, 16).unwrap();

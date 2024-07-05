@@ -1,6 +1,5 @@
 import {
   assert,
-  assertEquals,
   assertFalse,
 } from "https://deno.land/std@0.213.0/assert/mod.ts";
 import {
@@ -55,27 +54,109 @@ Deno.test("ethValidationFailed: failed transaction", () => {
     "0x0",
     "0x0",
   ]);
-  const failed = ethValidationFailed(x);
-  assert(failed);
+  assert(ethValidationFailed(x));
 });
+
+Deno.test(
+  "ethValidationFailed: wrong failure message should not be taken into account",
+  () => {
+    const x = event([
+      "0x1e",
+      "0x4b",
+      "0x61",
+      "0x6b",
+      "0x61",
+      "0x72",
+      "0x6f",
+      "0x74",
+      "0x3a",
+      "0x20",
+      "0x65",
+      "0x74",
+      "0x68",
+      "0x20",
+      "0x76",
+      "0x61",
+      "0x6c",
+      "0x69",
+      "0x64",
+      "0x61",
+      "0x74",
+      "0x69",
+      "0x6f",
+      "0x65", // Modify this randomly to change the output message
+      "0x20",
+      "0x66",
+      "0x61",
+      "0x69",
+      "0x6c",
+      "0x65",
+      "0x64",
+      "0x0",
+      "0x0",
+    ]);
+    assertFalse(ethValidationFailed(x));
+  },
+);
 
 Deno.test("ethValidationFailed: empty data", () => {
   const x = event([]);
-  const failed = ethValidationFailed(x);
-  assertFalse(failed);
+  assertFalse(ethValidationFailed(x));
 });
 
 Deno.test("ethValidationFailed: success true", () => {
   const x = event(["0x1", "0x1", "0x1", "0x1"]);
-  const failed = ethValidationFailed(x);
-  assertFalse(failed);
+  assertFalse(ethValidationFailed(x));
 });
 
 Deno.test("ethValidationFailed: incorrect data length", () => {
   const x = event(["0x10"]);
-  const failed = ethValidationFailed(x);
-  assertFalse(failed);
+  assertFalse(ethValidationFailed(x));
 });
+
+Deno.test(
+  "isKakarotTransaction: InvokeTransactionV0 should not be indexed",
+  () => {
+    const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x1"];
+    const transaction: Transaction = {
+      invokeV0: {
+        contractAddress: "0x01",
+        entryPointSelector: "0x01",
+        calldata: starknetTxCalldata,
+      },
+      meta: {
+        hash: "0x01",
+        maxFee: "0x01",
+        nonce: "0x01",
+        signature: ["0x1", "0x2", "0x3", "0x4", "0x32"],
+        version: "1",
+      },
+    };
+    assertFalse(isKakarotTransaction(transaction));
+  },
+);
+
+Deno.test(
+  "isKakarotTransaction: L1HandlerTransaction should not be indexed",
+  () => {
+    const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x1"];
+    const transaction: Transaction = {
+      l1Handler: {
+        contractAddress: "0x01",
+        entryPointSelector: "0x01",
+        calldata: starknetTxCalldata,
+      },
+      meta: {
+        hash: "0x01",
+        maxFee: "0x01",
+        nonce: "0x01",
+        signature: ["0x1", "0x2", "0x3", "0x4", "0x32"],
+        version: "1",
+      },
+    };
+    assertFalse(isKakarotTransaction(transaction));
+  },
+);
 
 Deno.test("isKakarotTransaction: no calldata", () => {
   const transaction: Transaction = {
@@ -91,8 +172,7 @@ Deno.test("isKakarotTransaction: no calldata", () => {
       version: "1",
     },
   };
-  const failed = isKakarotTransaction(transaction);
-  assertFalse(failed);
+  assertFalse(isKakarotTransaction(transaction));
 });
 
 Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
@@ -110,8 +190,7 @@ Deno.test("isKakarotTransaction: no `to` field in calldata", () => {
       version: "1",
     },
   };
-  const failed = isKakarotTransaction(transaction);
-  assertFalse(failed);
+  assertFalse(isKakarotTransaction(transaction));
 });
 
 Deno.test(
@@ -131,13 +210,15 @@ Deno.test(
         version: "1",
       },
     };
-    const failed = isKakarotTransaction(transaction);
-    assertEquals(failed, false);
+    assertFalse(isKakarotTransaction(transaction));
   },
 );
 
 Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
-  const starknetTxCalldata: `0x${string}`[] = ["0x1", "0x1"];
+  const starknetTxCalldata: `0x${string}`[] = [
+    "0x1",
+    "0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda",
+  ];
   const transaction: Transaction = {
     invokeV1: {
       senderAddress: "0x01",
@@ -151,8 +232,7 @@ Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
       version: "1",
     },
   };
-  const success = isKakarotTransaction(transaction);
-  assertEquals(success, true);
+  assert(isKakarotTransaction(transaction));
 });
 
 Deno.test(
@@ -166,10 +246,26 @@ Deno.test(
       contractAddress: "0x01",
       l2ToL1Messages: [],
       events: [],
-      revertReason: "RunResources has no remaining steps",
+      revertReason:
+        "Could not reach the end of the program. RunResources has no remaining steps",
     };
-    const success = isRevertedWithOutOfResources(receipt);
-    assertEquals(success, true);
+    assert(isRevertedWithOutOfResources(receipt));
+  },
+);
+
+Deno.test(
+  "isRevertedWithOutOfResources: false on status reverted and no revert reason",
+  () => {
+    const receipt: TransactionReceipt = {
+      executionStatus: "EXECUTION_STATUS_REVERTED",
+      transactionHash: "0x01",
+      transactionIndex: "0x01",
+      actualFee: "0x01",
+      contractAddress: "0x01",
+      l2ToL1Messages: [],
+      events: [],
+    };
+    assertFalse(isRevertedWithOutOfResources(receipt));
   },
 );
 
@@ -185,8 +281,7 @@ Deno.test("isRevertedWithOutOfResources: false on status succeeded", () => {
     revertReason:
       "Could not reach the end of the program. RunResources has no remaining steps",
   };
-  const success = isRevertedWithOutOfResources(receipt);
-  assertEquals(success, false);
+  assertFalse(isRevertedWithOutOfResources(receipt));
 });
 
 Deno.test(
@@ -202,7 +297,6 @@ Deno.test(
       events: [],
       revertReason: "eth validation failed",
     };
-    const success = isRevertedWithOutOfResources(receipt);
-    assertEquals(success, false);
+    assertFalse(isRevertedWithOutOfResources(receipt));
   },
 );

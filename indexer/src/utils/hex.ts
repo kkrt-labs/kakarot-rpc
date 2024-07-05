@@ -6,8 +6,6 @@ import {
   stripHexPrefix,
 } from "../deps.ts";
 
-export const NULL_BLOCK_HASH = padString("0x", 32);
-
 /**
  * @param hex - A decimal string.
  */

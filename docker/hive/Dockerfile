@@ -1,7 +1,7 @@
 # trunk-ignore-all(terrascan/AC_DOCKER_0047)
 
 # CairoVM Chain
-FROM ghcr.io/dojoengine/dojo:v0.7.0-alpha.0 as katana
+FROM ghcr.io/dojoengine/dojo:v0.7.3-alpha.0 as katana
 
 # Indexer service
 ### Apibara DNA indexer and indexer
@@ -77,7 +77,7 @@ COPY . .
 # Similar to `make setup` but we remove the `make build-sol` step
 # which uses docker to build the experimental solidity contracts.
 # Using docker in docker is not supported in the current setup.
-RUN chmod +x ./scripts/extract_abi.sh \ 
+RUN chmod +x ./scripts/extract_abi.sh \
     && git submodule update --init --recursive \
     && cd lib/kakarot && make setup && make build \
     && mv build/ssj/contracts_Cairo1Helpers.contract_class.json build/cairo1_helpers.json && rm -fr build/ssj && cd ../.. \
@@ -142,9 +142,10 @@ ENV ALLOW_NET=""
 ### Port 8545: https://github.com/ethereum/hive/blob/master/simulators/ethereum/rpc/helper.go#L50
 ENV KAKAROT_RPC_URL=0.0.0.0:8545
 ENV STARKNET_NETWORK=http://localhost:5050
-ENV RUST_LOG=kakarot_rpc=info
+ENV RUST_LOG=info
 ENV MAX_FELTS_IN_CALLDATA=30000
 ENV TRANSACTION_MAX_RETRIES=10
+ENV MAX_LOGS=10000
 ENV RETRY_TX_INTERVAL=10
 ENV DEFAULT_BLOCK_GAS_LIMIT=7000000
 

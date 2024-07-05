@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use alloy_dyn_abi::DynSolValue;
+use alloy_json_abi::ContractObject;
 use alloy_signer_wallet::LocalWallet;
 use async_trait::async_trait;
-use ethers::abi::Tokenize;
-use ethers_solc::artifacts::CompactContractBytecode;
 use reth_primitives::{sign_message, Address, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
 use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
 use starknet::core::utils::get_selector_from_name;
@@ -91,10 +91,10 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
     /// Deploys an EVM contract given a contract name and constructor arguments
     /// Returns a `KakarotEvmContract` instance
-    pub async fn deploy_evm_contract<T: Tokenize>(
+    pub async fn deploy_evm_contract(
         &self,
         contract_name: Option<&str>,
-        constructor_args: T,
+        constructor_args: &[DynSolValue],
     ) -> Result<KakarotEvmContract, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
@@ -104,7 +104,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let bytecode = if let Some(name) = contract_name {
             <KakarotEvmContract as EvmContract>::load_contract_bytecode(name)?
         } else {
-            CompactContractBytecode::default()
+            ContractObject::default()
         };
 
         let expected_address = {
@@ -164,11 +164,11 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     /// Calls a `KakarotEvmContract` function and returns the Starknet transaction hash
     /// The transaction is signed and sent by the EOA
     /// The transaction is waited for until it is confirmed
-    pub async fn call_evm_contract<T: Tokenize>(
+    pub async fn call_evm_contract(
         &self,
         contract: &KakarotEvmContract,
         function: &str,
-        args: T,
+        args: &[DynSolValue],
         value: u128,
     ) -> Result<Transaction, eyre::Error> {
         let nonce = self.nonce().await?.try_into()?;

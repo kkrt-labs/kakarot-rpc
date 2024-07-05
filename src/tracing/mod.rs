@@ -186,8 +186,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         let res = transact_in_place(evm)?;
 
         // Create transaction info
-        let mut transaction_info = TransactionInfo::from(tx);
-        transaction_info.base_fee = Some(block_base_fee);
+        let transaction_info = TransactionInfo::from(tx).with_base_fee(block_base_fee);
 
         // Return Parity trace result
         Ok((
@@ -339,7 +338,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 /// Returns the environment with the transaction env updated to the given transaction.
 fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> TracerResult<EnvWithHandlerCfg> {
     // Convert the transaction to an ec recovered transaction and update the env with it.
-    let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversionError)?;
+    let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversion)?;
 
     let tx_env = tx_env_with_recovered(&tx_ec_recovered);
     Ok(EnvWithHandlerCfg {
@@ -455,9 +454,9 @@ mod tests {
     use crate::eth_provider::database::Database;
     use crate::eth_provider::provider::EthDataProvider;
     use builder::TracerBuilder;
-    use hex::FromHex;
     use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
     use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+    use std::str::FromStr;
     use std::sync::Arc;
     use url::Url;
 
@@ -490,8 +489,8 @@ mod tests {
             db_client.database_with_options(
                 "local",
                 DatabaseOptions::builder()
-                    .read_concern(ReadConcern::MAJORITY)
-                    .write_concern(WriteConcern::MAJORITY)
+                    .read_concern(ReadConcern::majority())
+                    .write_concern(WriteConcern::majority())
                     .build(),
             ),
         );
@@ -500,7 +499,7 @@ mod tests {
         let tracer = TracerBuilder::new(eth_provider)
             .await
             .unwrap()
-            .with_transaction_hash(B256::from_hex("INSERT THE TRANSACTION HASH YOU WISH TO DEBUG").unwrap())
+            .with_transaction_hash(B256::from_str("INSERT THE TRANSACTION HASH YOU WISH TO DEBUG").unwrap())
             .await
             .unwrap()
             .with_tracing_options(TracingInspectorConfig::default_parity().into())

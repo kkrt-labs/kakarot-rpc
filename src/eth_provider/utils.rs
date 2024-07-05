@@ -1,65 +1,9 @@
-use std::fmt::LowerHex;
-
-use super::constant::LOGS_TOPICS_HEX_STRING_LEN;
 use cainome::cairo_serde::Error;
-use mongodb::bson::{doc, Document};
 use reth_primitives::{U128, U256};
-use reth_rpc_types::{Topic, ValueOrArray};
 use starknet::{
     core::types::{ContractErrorData, StarknetError},
     providers::ProviderError,
 };
-
-/// Converts an array of topics into a `MongoDB` filter.
-pub(crate) fn to_logs_filter(topics: &[Topic; 4]) -> Document {
-    // If all topics are None, return a filter that checks if the log.topics field exists
-    if topics.iter().all(Topic::is_empty) {
-        return doc! { "log.topics": {"$exists": true} };
-    }
-
-    let mut filter = vec![];
-
-    // Iterate over the topics and add the filter to the filter vector
-    for (index, topic_set) in topics.iter().enumerate() {
-        // If the topic is None, skip it.
-        if let Some(t) = topic_set.to_value_or_array() {
-            let key = format!("log.topics.{index}");
-            let topics = match t {
-                ValueOrArray::Value(t) => vec![t],
-                ValueOrArray::Array(t) => t,
-            };
-            let topics = topics.iter().map(|t| format_hex(t, LOGS_TOPICS_HEX_STRING_LEN)).collect::<Vec<_>>();
-            if topics.len() == 1 {
-                // If the topic array has only one element, use an equality filter
-                filter.push(doc! {key: topics[0].clone()});
-            } else {
-                // If the topic array has more than one element, use an $in filter
-                filter.push(doc! {key: {"$in": topics}});
-            }
-        }
-    }
-
-    doc! {"$and": filter}
-}
-
-pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
-    // Add 2 to the width to account for the 0x prefix.
-    let s = format!("{:#0width$x}", value, width = width + 2);
-    // `s.len() < width` can happen because of the LowerHex implementation
-    // for Uint, which just formats 0 into 0x0, ignoring the width.
-    if s.len() < width {
-        return format!("0x{:0>width$}", &s[2..], width = width);
-    }
-    s
-}
-
-/// Converts a key and value into a `MongoDB` filter.
-pub fn into_filter<T>(key: &str, value: &T, width: usize) -> Document
-where
-    T: LowerHex,
-{
-    doc! {key: format_hex(value, width)}
-}
 
 /// Splits a U256 value into two generic values implementing the From<u128> trait
 #[inline]
@@ -90,6 +34,21 @@ pub(crate) fn contract_not_found<T>(err: &Result<T, Error>) -> bool {
     }
 }
 
+#[inline]
+pub(crate) fn class_hash_not_declared<T>(err: &Result<T, Error>) -> bool {
+    match err {
+        Ok(_) => false,
+        Err(err) => {
+            matches!(
+                err,
+                Error::Provider(ProviderError::StarknetError(StarknetError::ContractError(ContractErrorData {
+                    revert_error
+                }))) if revert_error.contains("is not declared.")
+            )
+        }
+    }
+}
+
 /// Checks if the error is an entrypoint not found error.
 #[inline]
 pub(crate) fn entrypoint_not_found<T>(err: &Result<T, Error>) -> bool {
@@ -108,26 +67,7 @@ pub(crate) fn entrypoint_not_found<T>(err: &Result<T, Error>) -> bool {
 mod tests {
     use super::*;
     use proptest::prelude::*;
-    use reth_primitives::B256;
-    use reth_rpc_types::FilterSet;
     use std::str::FromStr;
-
-    #[test]
-    fn test_into_filter_with_padding() {
-        assert_eq!(into_filter::<u64>("test_key", &0x1234, 10), doc! {"test_key": "0x0000001234"});
-        assert_eq!(
-            into_filter::<B256>(
-                "test_key",
-                &B256::from_str("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3").unwrap(),
-                64
-            ),
-            doc! {"test_key": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3"}
-        );
-        assert_eq!(
-            into_filter::<B256>("test_key", &B256::default(), 64),
-            doc! {"test_key": format!("0x{}", "0".repeat(64))}
-        );
-    }
 
     #[test]
     fn test_split_u256() {
@@ -145,53 +85,14 @@ mod tests {
     }
 
     #[test]
-    fn test_log_filter_empty() {
-        // Given
-        let topics = [Topic::default(), Topic::default(), Topic::default(), Topic::default()];
+    fn test_class_hash_not_declared() {
+        let err = Error::Provider(ProviderError::StarknetError(StarknetError::ContractError(ContractErrorData {
+            revert_error: "\"Error in the called contract (0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7):
+                           \\nError at pc=0:104:\\nGot an exception while executing a hint: Class with ClassHash(\\n    StarkFelt(\\n
+                            \\\"0x0000000000000000000000000000000000000000000000000000000000000000\\\",\\n    ),\\n) is not declared.\\nCairo traceback (most recent call last):\\n
+                            Unknown location (pc=0:1678)\\nUnknown location (pc=0:1664)\\n\"".to_string(),
+        })));
 
-        // When
-        let filter = to_logs_filter(&topics);
-
-        // Then
-        assert_eq!(filter, doc! { "log.topics": {"$exists": true} });
-    }
-
-    #[test]
-    fn test_log_filter() {
-        // Given
-        let topics: [FilterSet<B256>; 4] = [
-            vec![B256::left_padding_from(&[1]), B256::left_padding_from(&[2])].into(),
-            B256::left_padding_from(&[3]).into(),
-            B256::left_padding_from(&[4]).into(),
-            vec![B256::left_padding_from(&[5]), B256::left_padding_from(&[6])].into(),
-        ];
-
-        // When
-        let filter = to_logs_filter(&topics);
-
-        // Then
-        let and_filter = filter.get("$and").unwrap().as_array().unwrap();
-        let first_topic_filter = and_filter[0].as_document().unwrap().clone();
-        assert!(
-            first_topic_filter
-                == doc! { "log.topics.0": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000000000000000000000000000002"]} }
-                || first_topic_filter
-                    == doc! { "log.topics.0": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000002", "0x0000000000000000000000000000000000000000000000000000000000000001"]} }
-        );
-        assert_eq!(
-            and_filter[1].as_document().unwrap().clone(),
-            doc! { "log.topics.1": "0x0000000000000000000000000000000000000000000000000000000000000003" }
-        );
-        assert_eq!(
-            and_filter[2].as_document().unwrap().clone(),
-            doc! { "log.topics.2": "0x0000000000000000000000000000000000000000000000000000000000000004" }
-        );
-        let fourth_topic_filter = and_filter[3].as_document().unwrap().clone();
-        assert!(
-            fourth_topic_filter
-                == doc! { "log.topics.3": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000005", "0x0000000000000000000000000000000000000000000000000000000000000006"]} }
-                || fourth_topic_filter
-                    == doc! { "log.topics.3": {"$in": ["0x0000000000000000000000000000000000000000000000000000000000000006", "0x0000000000000000000000000000000000000000000000000000000000000005"]} }
-        );
+        assert!(class_hash_not_declared::<()>(&Err(err)));
     }
 }

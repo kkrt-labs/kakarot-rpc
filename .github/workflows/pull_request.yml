@@ -12,6 +12,10 @@ jobs:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
 
-  tests:
+  rust-tests:
     name: Rust tests
-    uses: ./.github/workflows/test.yml
+    uses: ./.github/workflows/rust_test.yml
+
+  deno-tests:
+    name: Deno tests
+    uses: ./.github/workflows/deno_test.yml

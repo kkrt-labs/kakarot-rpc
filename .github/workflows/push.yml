@@ -13,3 +13,7 @@ jobs:
   spell_check:
     name: Spell check
     uses: ./.github/workflows/spell_check.yml
+
+  deno-tests:
+    name: Deno tests
+    uses: ./.github/workflows/deno_test.yml

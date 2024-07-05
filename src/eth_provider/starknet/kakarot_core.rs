@@ -1,13 +1,13 @@
 use std::str::FromStr;
 
-#[cfg(not(feature = "hive"))]
-use crate::eth_provider::error::EthApiError;
-use crate::models::felt::Felt252Wrapper;
-use alloy_rlp::Encodable;
+use crate::models::{
+    felt::Felt252Wrapper,
+    transaction::{transaction_data_to_starknet_calldata, transaction_signature_to_field_elements},
+};
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
 use lazy_static::lazy_static;
-use reth_primitives::{Address, Transaction, TransactionSigned, B256};
+use reth_primitives::{Address, TransactionSigned, B256};
 use starknet::{
     core::{
         types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1},
@@ -17,10 +17,7 @@ use starknet::{
 };
 use starknet_crypto::FieldElement;
 
-use crate::{
-    eth_provider::{provider::EthProviderResult, utils::split_u256},
-    into_via_wrapper,
-};
+use crate::{eth_provider::provider::EthProviderResult, into_via_wrapper};
 
 // Contract ABIs
 
@@ -59,7 +56,6 @@ lazy_static! {
 
     // Contract class hashes
     pub static ref UNINITIALIZED_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH");
-    pub static ref CONTRACT_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("CONTRACT_ACCOUNT_CLASS_HASH");
 
     // Contract selectors
     pub static ref ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
@@ -96,87 +92,22 @@ pub fn starknet_address(address: Address) -> FieldElement {
 /// Convert a Ethereum transaction into a Starknet transaction
 pub fn to_starknet_transaction(
     transaction: &TransactionSigned,
-    chain_id: Option<u64>,
     signer: Address,
-    max_fee: u64,
     retries: u8,
 ) -> EthProviderResult<BroadcastedInvokeTransaction> {
     let sender_address = starknet_address(signer);
 
-    // Step: Signature
-    // Extract the signature from the Ethereum Transaction
-    // and place it in the Starknet signature InvokeTransaction vector
-    let signature: Vec<FieldElement> = {
-        let transaction_signature = transaction.signature();
+    // Transform the signature to a vector of field elements
+    let signature: Vec<FieldElement> = transaction_signature_to_field_elements(transaction);
 
-        let mut signature = Vec::with_capacity(5);
-        signature.extend_from_slice(&split_u256(transaction_signature.r));
-        signature.extend_from_slice(&split_u256(transaction_signature.s));
+    // Transform the transaction's data to Starknet calldata
+    let calldata = transaction_data_to_starknet_calldata(transaction, retries)?;
 
-        // Push the last element of the signature
-        // In case of a Legacy Transaction, it is v := {0, 1} + chain_id * 2 + 35
-        // or {0, 1} + 27 for pre EIP-155 transactions.
-        // Else, it is odd_y_parity
-        if let Transaction::Legacy(_) = transaction.transaction {
-            signature.push(transaction_signature.v(chain_id).into());
-        } else {
-            signature.push(u64::from(transaction_signature.odd_y_parity).into());
-        }
-
-        signature
-    };
-
-    // Step: Calldata
-    // RLP encode the transaction without the signature
-    // Example: For Legacy Transactions: rlp([nonce, gas_price, gas_limit, to, value, data, chain_id, 0, 0])
-    let mut signed_data = Vec::with_capacity(transaction.transaction.length());
-    transaction.transaction.encode_without_signature(&mut signed_data);
-
-    // Signed data length after RLP encoding (used for calldata length check)
-    let signed_data_len = signed_data.len();
-
-    // Pack the calldata in 31-byte chunks
-    let mut signed_data: Vec<FieldElement> = std::iter::once(FieldElement::from(signed_data_len))
-        .chain(
-            signed_data
-                .as_slice()
-                .chunks(31)
-                .filter_map(|chunk_bytes| FieldElement::from_byte_slice_be(chunk_bytes).ok()),
-        )
-        .collect();
-
-    // Prepare the calldata for the Starknet invoke transaction
-    let capacity = 6 + signed_data.len();
-
-    // Check if call data is too large
-    #[cfg(not(feature = "hive"))]
-    if capacity > *MAX_FELTS_IN_CALLDATA {
-        return Err(EthApiError::CalldataExceededLimit(*MAX_FELTS_IN_CALLDATA as u64, capacity as u64));
-    }
-
-    let mut calldata = Vec::with_capacity(capacity);
-
-    // assert that the selector < FieldElement::MAX - retries
-    assert!(*ETH_SEND_TRANSACTION < FieldElement::MAX - retries.into());
-    let selector = *ETH_SEND_TRANSACTION + retries.into();
-
-    // Retries are used to alter the transaction hash in order to avoid the
-    // DuplicateTx error from the Starknet gateway, encountered whenever
-    // a transaction with the same hash is sent multiple times.
-    // We add the retries to the selector in the calldata, since the selector
-    // is not used in by the EOA contract during the transaction execution.
-    calldata.append(&mut vec![
-        FieldElement::ONE,        // call array length
-        *KAKAROT_ADDRESS,         // contract address
-        selector,                 // selector + retries
-        FieldElement::ZERO,       // data offset
-        signed_data.len().into(), // data length
-        signed_data.len().into(), // calldata length
-    ]);
-    calldata.append(&mut signed_data);
-
+    // The max fee is always set to 0. This means that no fee is perceived by the
+    // Starknet sequencer, which is the intended behavior as fee perception is
+    // handled by the Kakarot execution layer through EVM gas accounting.
     Ok(BroadcastedInvokeTransaction::V1(BroadcastedInvokeTransactionV1 {
-        max_fee: max_fee.into(),
+        max_fee: FieldElement::ZERO,
         signature,
         nonce: transaction.nonce().into(),
         sender_address,
@@ -188,8 +119,8 @@ pub fn to_starknet_transaction(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_rlp::Decodable;
-    use reth_primitives::{hex, transaction::TxEip2930, Bytes, Signature, TxKind, U256};
+    use alloy_rlp::{Decodable, Encodable};
+    use reth_primitives::{hex, transaction::TxEip2930, Bytes, Signature, Transaction, TxKind, U256};
 
     #[test]
     fn test_to_starknet_transaction() {
@@ -200,9 +131,7 @@ mod tests {
         // Invoke the function to convert the transaction to Starknet format.
         if let BroadcastedInvokeTransaction::V1(tx) = to_starknet_transaction(
             &transaction,
-            Some(1_802_203_764),
             Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap(),
-            0,
             0,
         )
         .unwrap()
@@ -266,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "calldata exceeded limit of 22500: 30008")]
+    #[should_panic(expected = "CalldataExceededLimit(22500, 30008)")]
     fn to_starknet_transaction_too_large_calldata_test() {
         // Test that an example create transaction from goerli decodes properly
         let tx_bytes = hex!("b901f202f901ee05228459682f008459682f11830209bf8080b90195608060405234801561001057600080fd5b50610175806100206000396000f3fe608060405234801561001057600080fd5b506004361061002b5760003560e01c80630c49c36c14610030575b600080fd5b61003861004e565b604051610045919061011d565b60405180910390f35b60606020600052600f6020527f68656c6c6f2073746174656d696e64000000000000000000000000000000000060405260406000f35b600081519050919050565b600082825260208201905092915050565b60005b838110156100be5780820151818401526020810190506100a3565b838111156100cd576000848401525b50505050565b6000601f19601f8301169050919050565b60006100ef82610084565b6100f9818561008f565b93506101098185602086016100a0565b610112816100d3565b840191505092915050565b6000602082019050818103600083015261013781846100e4565b90509291505056fea264697066735822122051449585839a4ea5ac23cae4552ef8a96b64ff59d0668f76bfac3796b2bdbb3664736f6c63430008090033c080a0136ebffaa8fc8b9fda9124de9ccb0b1f64e90fbd44251b4c4ac2501e60b104f9a07eb2999eec6d185ef57e91ed099afb0a926c5b536f0155dd67e537c7476e1471");
@@ -284,6 +213,6 @@ mod tests {
         transaction.transaction.set_input(vec![0; 30000 * 31].into());
 
         // Attempt to convert the transaction into a Starknet transaction
-        to_starknet_transaction(&transaction, Some(1), transaction.recover_signer().unwrap(), 100_000_000, 0).unwrap();
+        to_starknet_transaction(&transaction, transaction.recover_signer().unwrap(), 0).unwrap();
     }
 }

@@ -26,6 +26,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> TraceApiServer for TraceRpc<P>
     #[allow(clippy::blocks_in_conditions)]
     #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
     async fn trace_block(&self, block_id: BlockId) -> Result<Option<Vec<LocalizedTransactionTrace>>> {
+        tracing::info!("Serving debug_traceBlock");
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?
             .with_block_id(block_id)

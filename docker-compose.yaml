@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   starknet:
-    image: ghcr.io/dojoengine/dojo:v0.7.0-alpha.0
+    image: ghcr.io/dojoengine/dojo:v0.7.3-alpha.0
     command:
       - katana
       - --disable-fee
@@ -23,7 +23,7 @@ services:
     restart: on-failure
 
   kakarot-deployer:
-    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.8.1
+    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.8.5-alpha.1
     # Always pull the latest image, until we use release tags
     pull_policy: always
     environment:
@@ -64,10 +64,7 @@ services:
         condition: service_completed_successfully
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:latest
-    # Always pull the latest image, until we use release tags
-    # TODO: use release tags
-    pull_policy: always
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.19
     ports:
       - 3030:3030
     environment:
@@ -78,6 +75,7 @@ services:
       - MONGO_DATABASE_NAME=kakarot-local
       - MAX_FELTS_IN_CALLDATA=30000
       - TRANSACTION_MAX_RETRIES=10
+      - MAX_LOGS=10000
       - RETRY_TX_INTERVAL=1
       - WHITE_LISTED_EIP_155_TRANSACTION_HASHES=0xeddf9e61fb9d8f5111840daef55e5fde0041f5702856532cdbb5a02998033d26,0xb6274b80bc7cda162df89894c7748a5cb7ba2eaa6004183c41a1837c3b072f1e,0x07471adfe8f4ec553c1199f495be97fc8be8e0626ae307281c22534460184ed1,0xb95343413e459a0f97461812111254163ae53467855c0d73e0f1e7c5b8442fa3
     volumes:
@@ -99,6 +97,7 @@ services:
       - --rpc=http://starknet:5050
       - --wait-for-rpc
       - --data=/data
+      - --head-refresh-interval-ms=500
     ports:
       - 7171:7171
     volumes:
