@@ -105,7 +105,7 @@ http-body-util = { version = "0.1", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
 
 # Testing crates
-alloy-dyn-abi = { version = "0.7.6", default-features = false, optional = true }
+alloy-dyn-abi = { version = "0.7.6", default-features = false }
 alloy-json-abi = { version = "0.7.6", default-features = false, optional = true }
 alloy-primitives = { version = "0.7.2", default-features = false, optional = true }
 alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
@@ -148,7 +148,6 @@ toml = { version = "0.8", default-features = false }
 
 [features]
 testing = [
-  "alloy-dyn-abi",
   "alloy-json-abi",
   "alloy-primitives",
   "alloy-signer-wallet",
