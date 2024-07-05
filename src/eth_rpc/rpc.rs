@@ -52,9 +52,8 @@ where
         let net_rpc_module = NetRpc::new(eth_provider.clone()).into_rpc();
         let debug_rpc_module = DebugRpc::new(eth_provider.clone()).into_rpc();
         let trace_rpc_module = TraceRpc::new(eth_provider.clone()).into_rpc();
-        let kakarot_rpc_module = KakarotRpc::new(eth_provider.clone(), starknet_provider).into_rpc();
-        let txpool_rpc_module = TxpoolRpc::new(eth_provider).into_rpc();
         let kakarot_rpc_module = KakarotRpc::new(eth_provider.clone()).into_rpc();
+        let txpool_rpc_module = TxpoolRpc::new(eth_provider).into_rpc();
 
         let mut modules = HashMap::new();
 

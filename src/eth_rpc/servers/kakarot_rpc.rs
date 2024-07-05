@@ -41,6 +41,18 @@ impl ToElements for BroadcastedInvokeTransaction {
         }
     }
 }
+trait ToElements {
+    fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, &'static str>;
+}
+
+impl ToElements for BroadcastedInvokeTransaction {
+    fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, &'static str> {
+        match self {
+            BroadcastedInvokeTransaction::V1(tx_v1) => Ok(tx_v1),
+            BroadcastedInvokeTransaction::V3(_) => Err("Transaction is V3, cannot convert to V1"),
+        }
+    }
+}
 
 #[async_trait]
 impl<EP, SP> KakarotApiServer for KakarotRpc<EP, SP>
@@ -51,7 +63,8 @@ where
     #[instrument(skip(self))]
     async fn get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<Option<B256>> {
         // Retrieve the stored transaction from the database.
-        let transaction = self.eth_provider.transaction_by_hash(hash).await?;
+        let transaction: reth_rpc_types::Transaction =
+            self.eth_provider.transaction_by_hash(hash).await.unwrap().unwrap();
 
         if let Some(transaction) = transaction {
             // Convert the `Transaction` instance to a `TransactionSigned` instance.
