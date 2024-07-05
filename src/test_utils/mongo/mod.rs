@@ -17,11 +17,11 @@ use std::collections::HashMap;
 use std::ops::Range;
 use std::str::FromStr;
 use strum::{EnumIter, IntoEnumIterator};
-use testcontainers::clients::{self, Cli};
-use testcontainers::{GenericImage, RunnableImage};
+use testcontainers::ContainerAsync;
+use testcontainers::{core::IntoContainerPort, runners::AsyncRunner};
+use testcontainers::{core::WaitFor, Image};
 
 lazy_static! {
-    pub static ref DOCKER_CLI: Cli = clients::Cli::default();
     pub static ref CHAIN_ID: U256 = U256::from(1);
 
     pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
@@ -52,6 +52,23 @@ pub fn generate_port_number() -> u16 {
     local_addr.port()
 }
 
+#[derive(Default, Debug)]
+pub struct MongoImage;
+
+impl Image for MongoImage {
+    fn name(&self) -> &str {
+        "mongo"
+    }
+
+    fn tag(&self) -> &str {
+        "6.0.13"
+    }
+
+    fn ready_conditions(&self) -> Vec<WaitFor> {
+        vec![WaitFor::Nothing]
+    }
+}
+
 /// Enumeration of collections in the database.
 #[derive(Eq, Hash, PartialEq, Clone, Debug, EnumIter)]
 pub enum CollectionDB {
@@ -65,16 +82,16 @@ pub enum CollectionDB {
     Logs,
 }
 
-/// Type alias for the different types of stored data associated with each `CollectionDB`.
+/// Type alias for the different types of stored data associated with each [`CollectionDB`].
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub enum StoredData {
-    /// Represents a stored header associated with a CollectionDB.
+    /// Represents a stored header associated with a [`CollectionDB`].
     StoredHeader(StoredHeader),
-    /// Represents a stored transaction associated with a CollectionDB.
+    /// Represents a stored transaction associated with a [`CollectionDB`].
     StoredTransaction(StoredTransaction),
-    /// Represents a stored transaction receipt associated with a CollectionDB.
+    /// Represents a stored transaction receipt associated with a [`CollectionDB`].
     StoredTransactionReceipt(StoredTransactionReceipt),
-    /// Represents a stored log associated with a CollectionDB.
+    /// Represents a stored log associated with a [`CollectionDB`].
     StoredLog(StoredLog),
 }
 
@@ -132,54 +149,48 @@ impl Serialize for StoredData {
 pub struct MongoFuzzer {
     /// Documents to insert into each collection.
     documents: HashMap<CollectionDB, Vec<StoredData>>,
-    /// Connection to the MongoDB database.
+    /// Connection to the [`MongoDB`] database.
     mongodb: Database,
     /// Random bytes size.
     rnd_bytes_size: usize,
-    // Port number
+    /// Port number
     port: u16,
+    /// Container
+    pub container: ContainerAsync<MongoImage>,
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl MongoFuzzer {
     /// Asynchronously creates a new instance of `MongoFuzzer`.
     pub async fn new(rnd_bytes_size: usize) -> Self {
-        // Generate a random port number.
-        let port = generate_port_number();
+        let node = MongoImage.start().await.expect("Failed to start MongoDB container");
+        let host_ip = node.get_host().await.expect("Failed to get host IP");
+        let host_port = node.get_host_port_ipv4(27017.tcp()).await.expect("Failed to get host port");
+        let url = format!("mongodb://{host_ip}:{host_port}/");
 
         // Initialize a MongoDB client with the generated port number.
-        let mongo_client = Client::with_uri_str(format!("mongodb://{}:{}", "0.0.0.0", port))
-            .await
-            .expect("Failed to init mongo Client");
+        let mongo_client = Client::with_uri_str(url).await.expect("Failed to init mongo Client");
 
         // Create a MongoDB database named "kakarot" with specified options.
         let mongodb = mongo_client
             .database_with_options(
                 "kakarot",
                 DatabaseOptions::builder()
-                    .read_concern(ReadConcern::MAJORITY)
-                    .write_concern(WriteConcern::MAJORITY)
+                    .read_concern(ReadConcern::majority())
+                    .write_concern(WriteConcern::majority())
                     .build(),
             )
             .into();
 
-        Self { documents: Default::default(), mongodb, rnd_bytes_size, port }
+        Self { documents: Default::default(), mongodb, rnd_bytes_size, port: host_port, container: node }
     }
 
     /// Obtains an immutable reference to the documents `HashMap`.
-
     pub const fn documents(&self) -> &HashMap<CollectionDB, Vec<StoredData>> {
         &self.documents
     }
 
-    /// Get `MongoDB` image
-    pub fn mongo_image(&self) -> RunnableImage<GenericImage> {
-        let image = GenericImage::new("mongo".to_string(), "6.0.13".to_string());
-        RunnableImage::from(image).with_mapped_port((self.port, 27017))
-    }
-
     /// Get port number
-
     pub const fn port(&self) -> u16 {
         self.port
     }
@@ -363,8 +374,8 @@ impl MongoFuzzer {
                     .update_one(
                         doc! {&key: serialized_data.get_document(doc).unwrap().get_str(value).unwrap()},
                         UpdateModifications::Document(doc! {"$set": serialized_data.clone()}),
-                        UpdateOptions::builder().upsert(true).build(),
                     )
+                    .with_options(UpdateOptions::builder().upsert(true).build())
                     .await
                     .expect("Failed to insert documents");
 
@@ -376,8 +387,8 @@ impl MongoFuzzer {
                     .update_one(
                         doc! {&block_key: &number},
                         UpdateModifications::Document(doc! {"$set": {&block_key: padded_number}}),
-                        UpdateOptions::builder().upsert(true).build(),
                     )
+                    .with_options(UpdateOptions::builder().upsert(true).build())
                     .await
                     .expect("Failed to insert documents");
             }
@@ -423,9 +434,6 @@ mod tests {
         // Generate a MongoDB fuzzer
         let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
 
-        // Run docker
-        let _c = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
-
         // Mocks a database with 100 transactions, receipts and headers.
         let database = mongo_fuzzer.mock_database(100).await;
 
@@ -463,6 +471,6 @@ mod tests {
         }
 
         // Drop the inner MongoDB database.
-        database.inner().drop(None).await.unwrap();
+        database.inner().drop().await.unwrap();
     }
 }

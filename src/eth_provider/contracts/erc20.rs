@@ -1,3 +1,5 @@
+#![allow(clippy::pub_underscore_fields)]
+
 use alloy_dyn_abi::DynSolType;
 use alloy_sol_types::{sol, SolCall};
 use reth_primitives::Address;
