@@ -140,7 +140,6 @@ impl EthereumBlockStore for Database {
         // The withdrawals are not supported, hence the withdrawals_root should always be empty.
         if let Some(withdrawals_root) = header.withdrawals_root {
             if withdrawals_root != EMPTY_ROOT_HASH {
-                dbg!(withdrawals_root);
                 return Err(EthApiError::Unsupported("withdrawals"));
             }
         }
