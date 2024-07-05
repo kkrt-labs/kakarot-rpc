@@ -6,6 +6,6 @@ use starknet::core::types::FieldElement;
 #[rpc(server, namespace = "kakarot")]
 #[async_trait]
 pub trait KakarotApi {
-    #[method(name = "kakarot_getStarknetTransactionHash")]
+    #[method(name = "getStarknetTransactionHash")]
     async fn kakarot_get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> Result<FieldElement>;
 }

@@ -21,27 +21,51 @@ impl<P: EthereumProvider> KakarotRpc<P> {
         Self { eth_provider }
     }
 }
+trait ToElements {
+    fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, &'static str>;
+}
+
+impl ToElements for BroadcastedInvokeTransaction {
+    fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, &'static str> {
+        match self {
+            BroadcastedInvokeTransaction::V1(tx_v1) => Ok(tx_v1),
+            BroadcastedInvokeTransaction::V3(_) => Err("Transaction is V3, cannot convert to V1"),
+        }
+    }
+}
 
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> KakarotApiServer for KakarotRpc<P> {
     async fn kakarot_get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<FieldElement> {
         // Retrieve the stored transaction from the database.
-        let transaction = self.eth_provider.transaction_by_hash(hash).await?;
+        let transaction: reth_rpc_types::Transaction =
+            self.eth_provider.transaction_by_hash(hash).await.unwrap().unwrap();
 
         // Convert the `Transaction` instance to a `TransactionSigned` instance.
-        let transaction_signed_ec_recovered: TransactionSignedEcRecovered = transaction.try_into()?;
-        let transaction_signed = transaction_signed_ec_recovered.to_components();
+        let transaction_signed_ec_recovered: reth_primitives::TransactionSignedEcRecovered =
+            <reth_rpc_types::Transaction as TryInto<reth_primitives::TransactionSignedEcRecovered>>::try_into(
+                transaction,
+            )
+            .unwrap();
+        let (transaction_signed, _address) = transaction_signed_ec_recovered.to_components();
 
         // Retrieve the signer of the transaction.
-        let signer = transaction_signed.recover_signer()?;
+        let signer = transaction_signed.recover_signer().unwrap();
 
         // Create the Starknet transaction.
-        let starknet_transaction = to_starknet_transaction(transaction_signed, signer, 0, retries)?;
+        let starknet_transaction =
+            (to_starknet_transaction(&transaction_signed, signer, retries).unwrap()).try_into_v1().unwrap();
 
-        // Compute the hash of the transaction.
-        let hash = compute_hash_on_elements(&starknet_transaction.to_elements())?;
+        let mut data_to_hash: Vec<FieldElement> = vec![];
+        data_to_hash.push(starknet_transaction.sender_address);
+        data_to_hash.extend(starknet_transaction.calldata.clone());
+        data_to_hash.push(starknet_transaction.max_fee);
+        data_to_hash.extend(starknet_transaction.signature.clone());
+        data_to_hash.push(starknet_transaction.nonce);
 
-        // Return the computed hash.
-        Ok(hash)
+        // Compute the hash on elements
+        let transaction_hash = compute_hash_on_elements(&data_to_hash);
+
+        Ok(transaction_hash)
     }
 }
