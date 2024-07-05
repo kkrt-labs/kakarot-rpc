@@ -27,7 +27,7 @@ use crate::eth_provider::database::CollectionName;
 use crate::eth_provider::{constant::U64_HEX_STRING_LEN, provider::EthDataProvider};
 use crate::test_utils::eoa::KakarotEOA;
 
-use super::mongo::MongoContainer;
+use super::mongo::MongoImage;
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
@@ -82,7 +82,7 @@ pub struct Katana {
     pub port: u16,
     /// Option to store the Docker container instance.
     /// It holds `Some` when the container is running, and `None` otherwise.
-    pub container: Option<ContainerAsync<MongoContainer>>,
+    pub container: Option<ContainerAsync<MongoImage>>,
 }
 
 impl<'a> Katana {

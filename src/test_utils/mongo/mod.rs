@@ -53,9 +53,9 @@ pub fn generate_port_number() -> u16 {
 }
 
 #[derive(Default, Debug)]
-pub struct MongoContainer;
+pub struct MongoImage;
 
-impl Image for MongoContainer {
+impl Image for MongoImage {
     fn name(&self) -> &str {
         "mongo"
     }
@@ -156,14 +156,14 @@ pub struct MongoFuzzer {
     /// Port number
     port: u16,
     /// Container
-    pub container: ContainerAsync<MongoContainer>,
+    pub container: ContainerAsync<MongoImage>,
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl MongoFuzzer {
     /// Asynchronously creates a new instance of `MongoFuzzer`.
     pub async fn new(rnd_bytes_size: usize) -> Self {
-        let node = MongoContainer.start().await.expect("Failed to start MongoDB container");
+        let node = MongoImage.start().await.expect("Failed to start MongoDB container");
         let host_ip = node.get_host().await.expect("Failed to get host IP");
         let host_port = node.get_host_port_ipv4(27017.tcp()).await.expect("Failed to get host port");
         let url = format!("mongodb://{host_ip}:{host_port}/");
