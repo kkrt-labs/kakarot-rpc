@@ -1,11 +1,11 @@
-use futures::future::join_all;
-use jsonrpsee::core::{async_trait, RpcResult};
-use reth_primitives::{Address, BlockId, BlockNumberOrTag};
 use crate::{
     eth_provider::{contracts::erc20::EthereumErc20, error::EthApiError, provider::EthereumProvider},
     eth_rpc::api::alchemy_api::AlchemyApiServer,
     models::balance::{TokenBalanceFuture, TokenBalances},
 };
+use futures::future::join_all;
+use jsonrpsee::core::{async_trait, RpcResult};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
