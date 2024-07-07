@@ -1,13 +1,13 @@
 #![allow(clippy::blocks_in_conditions)]
 
+use crate::{
+    eth_provider::{contracts::erc20::EthereumErc20, error::EthApiError, provider::EthereumProvider},
+    eth_rpc::api::alchemy_api::AlchemyApiServer,
+    models::token::{TokenBalance, TokenBalances, TokenMetadata},
+};
 use futures::future::join_all;
 use jsonrpsee::core::{async_trait, RpcResult};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
-use crate::eth_provider::contracts::erc20::EthereumErc20;
-use crate::eth_provider::error::EthApiError;
-use crate::eth_provider::provider::EthereumProvider;
-use crate::eth_rpc::api::alchemy_api::AlchemyApiServer;
-use crate::models::token::{TokenBalance, TokenBalances, TokenMetadata};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
