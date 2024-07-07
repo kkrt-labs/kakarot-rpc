@@ -1,3 +1,8 @@
+use alloy_rlp::Encodable;
+use reth_primitives::{Transaction, TransactionSigned};
+use reth_rpc_types::Header;
+use starknet_crypto::FieldElement;
+
 #[cfg(not(feature = "hive"))]
 use crate::eth_provider::starknet::kakarot_core::MAX_FELTS_IN_CALLDATA;
 use crate::{
@@ -17,7 +22,19 @@ use starknet_crypto::FieldElement;
 /// - The transaction gas limit is lower than the tracing block gas limit.
 /// - The transaction chain id (if any) is the same as the one provided.
 /// - The transaction hash is whitelisted for pre EIP-155 transactions.
-pub(crate) fn validate_transaction(transaction_signed: &TransactionSigned, chain_id: u64) -> Result<(), EthApiError> {
+/// - The transaction signature can be recovered.
+/// - The transaction base fee is lower than the max fee per gas.
+/// - The transaction max priority fee is lower than the max fee per gas.
+/// - The transaction gas limit is lower than the block's gas limit.
+///
+/// # Errors
+///
+/// Returns an error if the transaction is invalid.
+pub(crate) fn validate_transaction(
+    transaction_signed: &TransactionSigned,
+    chain_id: u64,
+    previous_block_header: &Header,
+) -> Result<(), EthApiError> {
     // If the transaction gas limit is higher than the tracing
     // block gas limit, prevent the transaction from being sent
     // (it will revert anyway on the Starknet side). This assures
@@ -38,6 +55,29 @@ pub(crate) fn validate_transaction(transaction_signed: &TransactionSigned, chain
     // If the transaction is a pre EIP-155 transaction, check if hash is whitelisted
     if maybe_chain_id.is_none() && !WHITE_LISTED_EIP_155_TRANSACTION_HASHES.contains(&transaction_signed.hash) {
         return Err(TransactionError::InvalidTransactionType.into());
+    }
+
+    let base_fee = previous_block_header.base_fee_per_gas.unwrap_or_default();
+    let max_fee_per_gas = transaction_signed.max_fee_per_gas();
+
+    // Check if the base fee is lower than the max fee per gas
+    if base_fee > max_fee_per_gas {
+        return Err(TransactionError::FeeCapTooLow(max_fee_per_gas, base_fee).into());
+    }
+
+    let max_priority_fee_per_gas = transaction_signed.max_priority_fee_per_gas().unwrap_or_default();
+
+    // Check if the max priority fee is lower than the max fee per gas
+    if max_priority_fee_per_gas > max_fee_per_gas {
+        return Err(TransactionError::TipAboveFeeCap(max_fee_per_gas, max_priority_fee_per_gas).into());
+    }
+
+    let transaction_gas_limit = transaction_signed.gas_limit().into();
+    let block_gas_limit = previous_block_header.gas_limit;
+
+    // Check if the transaction gas limit is lower than the block's gas limit
+    if transaction_gas_limit > block_gas_limit {
+        return Err(TransactionError::ExceedsBlockGasLimit(transaction_gas_limit, block_gas_limit).into());
     }
 
     Ok(())

@@ -41,7 +41,7 @@ async fn test_block_number(#[future] katana: Katana, _setup: ()) {
 
     // Then
     // Catch the most recent block number of the mocked Mongo Database
-    let expected = U64::from(katana.most_recent_transaction().unwrap().block_number.unwrap());
+    let expected = U64::from(katana.block_number());
     assert_eq!(block_number, expected);
 }
 
@@ -82,7 +82,7 @@ async fn test_block_by_hash(#[future] katana: Katana, _setup: ()) {
 async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
-    let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
+    let block_number = katana.block_number();
 
     // When: Retrieving block by specific block number
     let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), false).await.unwrap().unwrap();
@@ -523,7 +523,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // Retrieve the most recent block number.
-    let newest_block = katana.most_recent_transaction().unwrap().block_number.unwrap();
+    let newest_block = katana.block_number();
 
     // To ensure that the range includes all mocked blocks.
     let block_count = u64::MAX;

@@ -171,13 +171,12 @@ where
     }
 
     async fn block_number(&self) -> EthProviderResult<U64> {
-        let sort = doc! { "header.number": -1 };
-        let block_number = match self.database.get_one::<StoredHeader>(None, sort).await? {
+        let block_number = match self.database.latest_header().await? {
             // In case the database is empty, use the starknet provider
             None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
             Some(header) => {
-                let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;
-                let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
+                let number = header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;
+                let is_pending_block = header.hash.unwrap_or_default().is_zero();
                 U64::from(if is_pending_block { number - 1 } else { number })
             }
         };
@@ -509,7 +508,8 @@ where
             self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
 
         // Validate the transaction
-        validate_transaction(&transaction_signed, chain_id)?;
+        let latest_block_header = self.database.latest_header().await?.ok_or(EthApiError::UnknownBlockNumber(None))?;
+        validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;

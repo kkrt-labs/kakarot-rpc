@@ -265,6 +265,15 @@ pub enum TransactionError {
     /// Thrown when the gas used overflows u128.
     #[error("gas overflow")]
     GasOverflow,
+    /// Thrown when the max fee per gas is lower than the base fee.
+    #[error("max fee per gas {0} lower than base fee {1}")]
+    FeeCapTooLow(u128, u128),
+    /// Thrown when the max fee per gas is lower than the max priority fee per gas.
+    #[error("max fee per gas {0} lower than max priority fee per gas {1}")]
+    TipAboveFeeCap(u128, u128),
+    /// Thrown when the gas limit exceeds the block's gas limit.
+    #[error("transaction gas limit {0} exceeds block gas limit {1}")]
+    ExceedsBlockGasLimit(u128, u128),
     /// Thrown when the transaction isn't the
     /// [`BlockTransactions::FullTransactions`] variant.
     #[error("expected full transactions")]
@@ -278,8 +287,12 @@ impl From<&TransactionError> for EthRpcErrorCode {
     fn from(error: &TransactionError) -> Self {
         match error {
             TransactionError::InvalidChainId | TransactionError::InvalidTransactionType => Self::InvalidInput,
-            TransactionError::GasOverflow => Self::TransactionRejected,
-            TransactionError::ExpectedFullTransactions | TransactionError::Tracing(_) => Self::InternalError,
+            TransactionError::GasOverflow
+            | TransactionError::FeeCapTooLow(_, _)
+            | TransactionError::TipAboveFeeCap(_, _) => Self::TransactionRejected,
+            TransactionError::ExpectedFullTransactions
+            | TransactionError::Tracing(_)
+            | TransactionError::ExceedsBlockGasLimit(_, _) => Self::InternalError,
         }
     }
 }

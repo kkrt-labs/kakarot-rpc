@@ -83,6 +83,8 @@ impl EthereumTransactionStore for Database {
 /// blocks.
 #[async_trait]
 pub trait EthereumBlockStore {
+    /// Returns the latest block header.
+    async fn latest_header(&self) -> Result<Option<Header>, EthApiError>;
     /// Returns the header for the given hash or number. Returns None if the
     /// header is not found.
     async fn header(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Option<Header>, EthApiError>;
@@ -104,6 +106,13 @@ pub trait EthereumBlockStore {
 
 #[async_trait]
 impl EthereumBlockStore for Database {
+    async fn latest_header(&self) -> Result<Option<Header>, EthApiError> {
+        Ok(self
+            .get_one::<StoredHeader>(None, doc! { "header.number": -1 })
+            .await
+            .inspect_err(|err| tracing::error!("internal error: {:?}", err))
+            .map(|maybe_sh| maybe_sh.map(|sh| sh.header))?)
+    }
     async fn header(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Option<Header>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Header>::default()
             .with_block_hash_or_number(block_hash_or_number)

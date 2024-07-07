@@ -28,6 +28,7 @@ use starknet_crypto::FieldElement;
 use std::sync::Arc;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
+pub const TX_GAS_PRICE: u128 = 10;
 
 /// EOA is an Ethereum-like Externally Owned Account (EOA) that can sign transactions and send them to the underlying Starknet provider.
 #[async_trait]
@@ -125,6 +126,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
                 chain_id: chain_id.try_into()?,
                 nonce,
                 gas_limit: TX_GAS_LIMIT,
+                max_fee_per_gas: TX_GAS_PRICE,
                 ..Default::default()
             })
         } else {
@@ -209,6 +211,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().try_into()?,
             nonce: self.nonce().await?.try_into()?,
             gas_limit: TX_GAS_LIMIT,
+            max_fee_per_gas: TX_GAS_PRICE,
             to: TxKind::Call(to),
             value: U256::from(value),
             ..Default::default()
@@ -230,7 +233,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
                 gas_limit: 21000,
                 to: TxKind::Call(Address::random()),
                 value: U256::from(1000),
-                max_fee_per_gas: 875_000_000,
+                max_fee_per_gas: TX_GAS_PRICE,
                 ..Default::default()
             }))?,
             self.evm_address()?,

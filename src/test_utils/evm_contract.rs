@@ -1,11 +1,10 @@
-use super::eoa::TX_GAS_LIMIT;
+use super::eoa::{TX_GAS_LIMIT, TX_GAS_PRICE};
 use crate::{models::felt::Felt252Wrapper, root_project_path};
 use alloy_dyn_abi::{DynSolValue, JsonAbiExt};
 use alloy_json_abi::ContractObject;
 use foundry_config::{find_project_root_path, load_config};
 use reth_primitives::{Transaction, TxEip1559, TxKind, TxLegacy, U256};
 use starknet_crypto::FieldElement;
-use std::{fs, path::Path};
 
 #[derive(Clone, Debug)]
 pub enum TransactionInfo {
@@ -89,6 +88,7 @@ pub trait EvmContract {
             chain_id: tx_info.chain_id.expect("chain id required"),
             nonce: tx_info.nonce,
             gas_limit: TX_GAS_LIMIT,
+            max_fee_per_gas: TX_GAS_PRICE,
             input: deploy_data.into(),
             ..Default::default()
         }))
