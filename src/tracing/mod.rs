@@ -1,31 +1,31 @@
 pub mod builder;
 mod database;
 
+use self::database::EthDatabaseSnapshot;
+use crate::{
+    eth_provider::{
+        error::{EthApiError, EthereumDataFormatError, TransactionError},
+        provider::EthereumProvider,
+    },
+    tracing::builder::TracingOptions,
+};
 use eyre::eyre;
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::ConfigureEvm;
-use reth_primitives::revm::env::tx_env_with_recovered;
-use reth_primitives::ruint::FromUintError;
-use reth_primitives::B256;
-use reth_revm::primitives::{Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState};
-use reth_revm::{Database, DatabaseCommit};
-use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
+use reth_primitives::{revm::env::tx_env_with_recovered, ruint::FromUintError, B256};
+use reth_revm::{
+    primitives::{Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
+    Database, DatabaseCommit,
+};
 use reth_rpc_types::{
     trace::{
-        geth::{GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions},
+        geth::{GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions, GethTrace, TraceResult},
         parity::LocalizedTransactionTrace,
     },
     TransactionInfo,
 };
 use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
 use std::collections::HashMap;
-
-use self::database::EthDatabaseSnapshot;
-use crate::eth_provider::{
-    error::{EthApiError, EthereumDataFormatError, TransactionError},
-    provider::EthereumProvider,
-};
-use crate::tracing::builder::TracingOptions;
 
 pub type TracerResult<T> = Result<T, EthApiError>;
 
@@ -307,13 +307,11 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::eth_provider::database::Database;
-    use crate::eth_provider::provider::EthDataProvider;
+    use crate::eth_provider::{database::Database, provider::EthDataProvider};
     use builder::TracerBuilder;
     use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
     use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
-    use std::str::FromStr;
-    use std::sync::Arc;
+    use std::{str::FromStr, sync::Arc};
     use url::Url;
 
     #[tokio::test(flavor = "multi_thread")]

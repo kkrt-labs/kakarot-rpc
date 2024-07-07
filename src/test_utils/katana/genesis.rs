@@ -1,21 +1,24 @@
-use std::collections::HashMap;
-use std::fs;
-use std::marker::PhantomData;
-use std::path::PathBuf;
-
-use crate::eth_provider::utils::split_u256;
+use crate::{
+    eth_provider::utils::split_u256,
+    test_utils::constants::{
+        ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION,
+        KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT,
+        KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
+        KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+    },
+};
 use alloy_signer_wallet::LocalWallet;
 use eyre::{eyre, OptionExt, Result};
-use katana_primitives::contract::{StorageKey, StorageValue};
-use katana_primitives::genesis::allocation::DevAllocationsGenerator;
-use katana_primitives::genesis::constant::DEFAULT_FEE_TOKEN_ADDRESS;
-use katana_primitives::genesis::constant::DEFAULT_PREFUNDED_ACCOUNT_BALANCE;
-use katana_primitives::genesis::json::ClassNameOrHash;
-use katana_primitives::genesis::json::GenesisAccountJson;
-use katana_primitives::genesis::json::{FeeTokenConfigJson, GenesisJson};
 use katana_primitives::{
-    contract::ContractAddress,
-    genesis::json::{GenesisClassJson, GenesisContractJson, PathOrFullArtifact},
+    contract::{ContractAddress, StorageKey, StorageValue},
+    genesis::{
+        allocation::DevAllocationsGenerator,
+        constant::{DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE},
+        json::{
+            ClassNameOrHash, FeeTokenConfigJson, GenesisAccountJson, GenesisClassJson, GenesisContractJson,
+            GenesisJson, PathOrFullArtifact,
+        },
+    },
 };
 use lazy_static::lazy_static;
 use rayon::prelude::*;
@@ -23,19 +26,16 @@ use reth_primitives::{B256, U256};
 use serde::Serialize;
 use serde_json::Value;
 use serde_with::serde_as;
-use starknet::core::serde::unsigned_field_element::UfeHex;
-use starknet::core::types::contract::legacy::LegacyContractClass;
-use starknet::core::types::contract::SierraClass;
-use starknet::core::types::FieldElement;
-use starknet::core::utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness};
-use walkdir::WalkDir;
-
-use crate::test_utils::constants::{
-    ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION,
-    KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_CAIRO1_HELPERS_CLASS_HASH,
-    KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO,
-    KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+use starknet::core::{
+    serde::unsigned_field_element::UfeHex,
+    types::{
+        contract::{legacy::LegacyContractClass, SierraClass},
+        FieldElement,
+    },
+    utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness},
 };
+use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf};
+use walkdir::WalkDir;
 
 lazy_static! {
     static ref SALT: FieldElement = FieldElement::from_bytes_be(&[0u8; 32]).unwrap();

@@ -1,13 +1,11 @@
-use std::fmt::{Display, LowerHex};
-
-use mongodb::bson::{doc, Document};
-use reth_primitives::{Address, B256};
-use reth_rpc_types::{BlockHashOrNumber, Index, Topic};
-
 use crate::eth_provider::constant::{
     ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, HASH_HEX_STRING_LEN, LOGS_TOPICS_HEX_STRING_LEN,
     U64_HEX_STRING_LEN,
 };
+use mongodb::bson::{doc, Document};
+use reth_primitives::{Address, B256};
+use reth_rpc_types::{BlockHashOrNumber, Index, Topic};
+use std::fmt::{Display, LowerHex};
 
 /// A trait that defines possible key filters for blocks in the
 /// Ethereum database.

@@ -1,8 +1,12 @@
-use crate::eth_provider::constant::U64_HEX_STRING_LEN;
-use crate::eth_provider::database::types::{
-    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+use crate::eth_provider::{
+    constant::U64_HEX_STRING_LEN,
+    database::{
+        types::{
+            header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+        },
+        CollectionName, Database,
+    },
 };
-use crate::eth_provider::database::{CollectionName, Database};
 use arbitrary::Arbitrary;
 use lazy_static::lazy_static;
 use mongodb::{
@@ -13,13 +17,13 @@ use mongodb::{
 use reth_primitives::{Address, TxType, B256, U256};
 use reth_rpc_types::Transaction;
 use serde::{Serialize, Serializer};
-use std::collections::HashMap;
-use std::ops::Range;
-use std::str::FromStr;
+use std::{collections::HashMap, ops::Range, str::FromStr};
 use strum::{EnumIter, IntoEnumIterator};
-use testcontainers::ContainerAsync;
-use testcontainers::{core::IntoContainerPort, runners::AsyncRunner};
-use testcontainers::{core::WaitFor, Image};
+use testcontainers::{
+    core::{IntoContainerPort, WaitFor},
+    runners::AsyncRunner,
+    ContainerAsync, Image,
+};
 
 lazy_static! {
     pub static ref CHAIN_ID: U256 = U256::from(1);

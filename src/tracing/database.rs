@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::eth_provider::{
     error::{EthApiError, EthereumDataFormatError},
     provider::EthereumProvider,
@@ -11,6 +9,7 @@ use reth_revm::{
     Database, DatabaseCommit,
 };
 use reth_rpc_types::{serde_helpers::JsonStorageKey, BlockHashOrNumber, BlockId, BlockNumberOrTag};
+use std::collections::HashMap;
 use tokio::runtime::Handle;
 
 #[derive(Debug)]

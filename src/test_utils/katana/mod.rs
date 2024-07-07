@@ -1,34 +1,36 @@
 pub mod genesis;
 
-use std::collections::HashMap;
-use std::path::Path;
-use std::sync::Arc;
-
+use crate::{
+    eth_provider::{
+        constant::U64_HEX_STRING_LEN,
+        database::{
+            ethereum::EthereumTransactionStore,
+            filter,
+            filter::{format_hex, EthDatabaseFilterBuilder},
+            types::{header::StoredHeader, log::StoredLog, transaction::StoredTransaction},
+            CollectionName,
+        },
+        provider::EthDataProvider,
+    },
+    test_utils::eoa::KakarotEOA,
+};
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
-use katana_primitives::chain::ChainId;
-use katana_primitives::genesis::json::GenesisJson;
-use katana_primitives::genesis::Genesis;
-use mongodb::bson;
-use mongodb::bson::doc;
-use mongodb::bson::Document;
-use mongodb::options::{UpdateModifications, UpdateOptions};
+use katana_primitives::{
+    chain::ChainId,
+    genesis::{json::GenesisJson, Genesis},
+};
+use mongodb::{
+    bson,
+    bson::{doc, Document},
+    options::{UpdateModifications, UpdateOptions},
+};
 use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use std::{collections::HashMap, path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
 
-use crate::eth_provider::database::ethereum::EthereumTransactionStore;
-use crate::eth_provider::database::filter;
-use crate::eth_provider::database::filter::format_hex;
-use crate::eth_provider::database::filter::EthDatabaseFilterBuilder;
-use crate::eth_provider::database::types::{header::StoredHeader, log::StoredLog, transaction::StoredTransaction};
-use crate::eth_provider::database::CollectionName;
-use crate::eth_provider::{constant::U64_HEX_STRING_LEN, provider::EthDataProvider};
-use crate::test_utils::eoa::KakarotEOA;
-
 use super::mongo::MongoImage;
-
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     super::mongo::{CollectionDB, MongoFuzzer, StoredData},

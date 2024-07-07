@@ -1,20 +1,15 @@
-use std::env::var;
-use std::sync::Arc;
-
 use dotenvy::dotenv;
 use eyre::Result;
+use kakarot_rpc::{
+    config::KakarotRpcConfig,
+    eth_provider::{database::Database, provider::EthDataProvider},
+    eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
+    retry::RetryHandler,
+};
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use std::{env::var, sync::Arc};
 use tracing_subscriber::{filter, util::SubscriberInitExt};
-
-use kakarot_rpc::config::KakarotRpcConfig;
-use kakarot_rpc::eth_provider::database::Database;
-use kakarot_rpc::eth_provider::provider::EthDataProvider;
-use kakarot_rpc::eth_rpc::config::RPCConfig;
-use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
-use kakarot_rpc::eth_rpc::run_server;
-use kakarot_rpc::retry::RetryHandler;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -75,8 +70,7 @@ async fn main() -> Result<()> {
 #[cfg(feature = "hive")]
 async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<()> {
     use kakarot_rpc::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
-    use starknet::accounts::ConnectedAccount;
-    use starknet::providers::Provider as _;
+    use starknet::{accounts::ConnectedAccount, providers::Provider as _};
     use starknet_crypto::FieldElement;
 
     let chain_id = starknet_provider.chain_id().await?;

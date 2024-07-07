@@ -1,6 +1,39 @@
-use crate::eth_provider::database::filter::format_hex;
-use crate::eth_provider::database::FindOpts;
-use crate::eth_provider::database::{ethereum::EthereumTransactionStore, filter};
+use super::{
+    constant::{BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS},
+    database::{
+        ethereum::EthereumBlockStore,
+        filter::EthDatabaseFilterBuilder,
+        types::{
+            header::StoredHeader,
+            log::StoredLog,
+            receipt::StoredTransactionReceipt,
+            transaction::{StoredPendingTransaction, StoredTransaction},
+        },
+        CollectionName, Database,
+    },
+    error::{
+        EthApiError, EthereumDataFormatError, EvmError, ExecutionError, KakarotError, SignatureError, TransactionError,
+    },
+    starknet::{
+        kakarot_core::{
+            self,
+            account_contract::AccountContractReader,
+            core::{CallInput, KakarotCoreReader, Uint256},
+            starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
+        },
+        ERC20Reader, STARKNET_NATIVE_TOKEN,
+    },
+    utils::{class_hash_not_declared, contract_not_found, entrypoint_not_found, split_u256},
+};
+use crate::{
+    eth_provider::database::{ethereum::EthereumTransactionStore, filter, filter::format_hex, FindOpts},
+    into_via_try_wrapper, into_via_wrapper,
+    models::{
+        block::{EthBlockId, EthBlockNumberOrTag},
+        felt::Felt252Wrapper,
+        transaction::validate_transaction,
+    },
+};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -11,42 +44,13 @@ use mongodb::bson::doc;
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
-use reth_rpc_types::serde_helpers::JsonStorageKey;
-use reth_rpc_types::txpool::TxpoolContent;
 use reth_rpc_types::{
-    BlockHashOrNumber, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock, Transaction, TransactionReceipt,
-    TransactionRequest,
+    serde_helpers::JsonStorageKey, txpool::TxpoolContent, BlockHashOrNumber, FeeHistory, Filter, FilterChanges, Header,
+    Index, RichBlock, SyncInfo, SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
 };
-use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
-use starknet::core::types::SyncStatusType;
-use starknet::core::utils::get_storage_var_address;
+use starknet::core::{types::SyncStatusType, utils::get_storage_var_address};
 use starknet_crypto::FieldElement;
-
-use super::constant::{BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS};
-use super::database::ethereum::EthereumBlockStore;
-use super::database::filter::EthDatabaseFilterBuilder;
-use super::database::types::{
-    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
-    transaction::StoredTransaction,
-};
-use super::database::{CollectionName, Database};
-use super::error::{
-    EthApiError, EthereumDataFormatError, EvmError, ExecutionError, KakarotError, SignatureError, TransactionError,
-};
-use super::starknet::kakarot_core::{
-    self,
-    account_contract::AccountContractReader,
-    core::KakarotCoreReader,
-    core::{CallInput, Uint256},
-    starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
-};
-use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{class_hash_not_declared, contract_not_found, entrypoint_not_found, split_u256};
-use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
-use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::validate_transaction;
-use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
@@ -809,9 +813,10 @@ where
     /// Starknet.
     async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
         use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
-        use starknet::accounts::{Call, Execution};
-        use starknet::core::types::BlockTag;
-        use starknet::core::utils::get_selector_from_name;
+        use starknet::{
+            accounts::{Call, Execution},
+            core::{types::BlockTag, utils::get_selector_from_name},
+        };
 
         let signer_starknet_address = starknet_address(signer);
         let account_contract = AccountContractReader::new(signer_starknet_address, &self.starknet_provider);

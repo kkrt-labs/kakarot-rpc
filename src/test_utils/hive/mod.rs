@@ -1,5 +1,10 @@
-use std::collections::HashMap;
-
+use super::{
+    constants::{
+        ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_IMPLEMENTATION, ACCOUNT_NONCE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
+        OWNABLE_OWNER,
+    },
+    katana::genesis::{KatanaGenesisBuilder, Loaded},
+};
 use ef_testing::evm_sequencer::account::KakarotAccount;
 use katana_primitives::{
     contract::ContractAddress,
@@ -10,14 +15,7 @@ use serde::{Deserialize, Serialize};
 use starknet::core::utils::get_storage_var_address;
 use starknet_api::core::ClassHash;
 use starknet_crypto::FieldElement;
-
-use super::{
-    constants::{
-        ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_IMPLEMENTATION, ACCOUNT_NONCE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
-        OWNABLE_OWNER,
-    },
-    katana::genesis::{KatanaGenesisBuilder, Loaded},
-};
+use std::collections::HashMap;
 
 /// Types from <https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58>
 #[derive(Serialize, Deserialize, Clone, Debug)]
