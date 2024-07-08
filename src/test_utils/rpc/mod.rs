@@ -1,7 +1,5 @@
 use super::katana::Katana;
-use crate::eth_rpc::config::RPCConfig;
-use crate::eth_rpc::rpc::KakarotRpcModuleBuilder;
-use crate::eth_rpc::run_server;
+use crate::eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server};
 use jsonrpsee::server::ServerHandle;
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};

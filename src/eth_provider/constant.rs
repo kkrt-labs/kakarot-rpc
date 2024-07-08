@@ -1,6 +1,19 @@
 use lazy_static::lazy_static;
 use reth_primitives::U256;
 use std::str::FromStr;
+#[cfg(feature = "hive")]
+use {
+    crate::config::KakarotRpcConfig,
+    starknet::{
+        accounts::{ExecutionEncoding, SingleOwnerAccount},
+        providers::{jsonrpc::HttpTransport, JsonRpcClient},
+        signers::{LocalWallet, SigningKey},
+    },
+    starknet_crypto::FieldElement,
+    std::sync::Arc,
+    std::{env::var, sync::OnceLock},
+    tokio::sync::Mutex,
+};
 
 lazy_static! {
     pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
@@ -25,20 +38,6 @@ pub const BLOCK_NUMBER_HEX_STRING_LEN: usize = U64_HEX_STRING_LEN;
 pub const ADDRESS_HEX_STRING_LEN: usize = 40;
 /// Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
 pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x0800_0000_0000_0011]);
-
-#[cfg(feature = "hive")]
-use {
-    crate::config::KakarotRpcConfig,
-    starknet::{
-        accounts::{ExecutionEncoding, SingleOwnerAccount},
-        providers::{jsonrpc::HttpTransport, JsonRpcClient},
-        signers::{LocalWallet, SigningKey},
-    },
-    starknet_crypto::FieldElement,
-    std::sync::Arc,
-    std::{env::var, sync::OnceLock},
-    tokio::sync::Mutex,
-};
 
 #[cfg(feature = "hive")]
 pub static CHAIN_ID: OnceLock<FieldElement> = OnceLock::new();

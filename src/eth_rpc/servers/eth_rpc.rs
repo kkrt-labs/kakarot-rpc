@@ -1,18 +1,16 @@
 #![allow(clippy::blocks_in_conditions)]
 
+use crate::{
+    eth_provider::{constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, provider::EthereumProvider},
+    eth_rpc::api::eth_api::EthApiServer,
+};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
-use reth_rpc_types::serde_helpers::JsonStorageKey;
 use reth_rpc_types::{
-    AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock,
-    SyncStatus, Transaction, TransactionReceipt, TransactionRequest, Work,
+    serde_helpers::JsonStorageKey, AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter,
+    FilterChanges, Index, RichBlock, SyncStatus, Transaction, TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
-
-use crate::eth_provider::constant::MAX_PRIORITY_FEE_PER_GAS;
-use crate::eth_provider::error::EthApiError;
-use crate::eth_provider::provider::EthereumProvider;
-use crate::eth_rpc::api::eth_api::EthApiServer;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]

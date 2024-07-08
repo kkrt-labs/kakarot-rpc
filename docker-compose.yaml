@@ -16,8 +16,22 @@ services:
       - "0"
       - --chain-id
       - KKRT
+      - --messaging
+      - /app/.katana/messaging_config.json
+    volumes:
+      - .katana:/app/.katana
     ports:
       - 5050:5050
+    networks:
+      - internal
+    restart: on-failure
+
+  anvil:
+    platform: linux/amd64
+    image: ghcr.io/foundry-rs/foundry:latest
+    command: ["anvil --host 0.0.0.0 --port 8545"]
+    ports:
+      - 8545:8545
     networks:
       - internal
     restart: on-failure
@@ -154,6 +168,7 @@ services:
 
 networks:
   internal:
+    driver: bridge
 
 volumes:
   deployments:

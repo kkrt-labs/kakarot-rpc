@@ -1,19 +1,18 @@
+use super::{
+    filter,
+    filter::EthDatabaseFilterBuilder,
+    types::{
+        header::StoredHeader,
+        transaction::{StoredPendingTransaction, StoredTransaction},
+    },
+    Database,
+};
+use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 use mongodb::bson::doc;
-use reth_primitives::constants::EMPTY_ROOT_HASH;
-use reth_primitives::{TransactionSigned, B256, U256};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, TransactionSigned, B256, U256};
 use reth_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, RichBlock, Transaction};
-
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
-
-use super::filter;
-use super::types::header::StoredHeader;
-use super::{
-    filter::EthDatabaseFilterBuilder,
-    types::transaction::{StoredPendingTransaction, StoredTransaction},
-    Database,
-};
 
 /// Trait for interacting with a database that stores Ethereum typed
 /// transaction data.

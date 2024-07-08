@@ -1,8 +1,7 @@
+use crate::eth_provider::error::EthereumDataFormatError;
 use reth_primitives::{Address, B256, U256, U64};
 use starknet::core::types::{EthAddress, FieldElement};
 use std::ops::{Deref, DerefMut};
-
-use crate::eth_provider::error::EthereumDataFormatError;
 
 #[derive(Clone, Debug)]
 pub struct Felt252Wrapper(FieldElement);
