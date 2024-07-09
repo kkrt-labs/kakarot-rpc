@@ -387,7 +387,7 @@ mod tests {
     }
 
     async fn test_get_header(database: &Database, mongo_fuzzer: &MongoFuzzer) {
-        let header_block_hash = mongo_fuzzer
+        let header_block_hash = &mongo_fuzzer
             .documents()
             .get(&CollectionDB::Headers)
             .unwrap()
@@ -395,16 +395,15 @@ mod tests {
             .unwrap()
             .extract_stored_header()
             .unwrap()
-            .header
-            .clone();
+            .header;
 
         // Test retrieving header by block hash
-        assert_eq!(database.header(header_block_hash.hash.unwrap().into()).await.unwrap().unwrap(), header_block_hash);
+        assert_eq!(database.header(header_block_hash.hash.unwrap().into()).await.unwrap().unwrap(), *header_block_hash);
 
         // Test retrieving header by block number
         assert_eq!(
             database.header(header_block_hash.number.unwrap().into()).await.unwrap().unwrap(),
-            header_block_hash
+            *header_block_hash
         );
 
         let mut rng = rand::thread_rng();
@@ -416,7 +415,7 @@ mod tests {
     }
 
     async fn test_get_blocks(database: &Database, mongo_fuzzer: &MongoFuzzer, u: &mut arbitrary::Unstructured<'_>) {
-        let header = mongo_fuzzer
+        let header = &mongo_fuzzer
             .documents()
             .get(&CollectionDB::Headers)
             .unwrap()
@@ -424,8 +423,7 @@ mod tests {
             .unwrap()
             .extract_stored_header()
             .unwrap()
-            .header
-            .clone();
+            .header;
 
         let block_hash = header.hash.unwrap();
 
@@ -502,7 +500,7 @@ mod tests {
     }
 
     async fn test_get_transaction_count(database: &Database, mongo_fuzzer: &MongoFuzzer) {
-        let header_block_hash = mongo_fuzzer
+        let header_block_hash = &mongo_fuzzer
             .documents()
             .get(&CollectionDB::Headers)
             .unwrap()
@@ -510,8 +508,7 @@ mod tests {
             .unwrap()
             .extract_stored_header()
             .unwrap()
-            .header
-            .clone();
+            .header;
 
         let first_block_hash = header_block_hash.hash.unwrap();
 
