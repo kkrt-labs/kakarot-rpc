@@ -11,16 +11,9 @@ use crate::{
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Block, Bytes, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
-use reth_rpc_types::trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult};
-use reth_rpc_types::{BlockId, BlockNumberOrTag, TransactionRequest};
-
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, SignatureError};
-use crate::eth_provider::provider::EthereumProvider;
-use crate::eth_rpc::api::debug_api::DebugApiServer;
-use crate::tracing::builder::TracerBuilder;
 use reth_rpc_types::{
-    trace::geth::{GethDebugTracingOptions, GethTrace, TraceResult},
-    BlockId, BlockNumberOrTag,
+    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult},
+    BlockId, BlockNumberOrTag, TransactionRequest,
 };
 use std::sync::Arc;
 

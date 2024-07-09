@@ -12,25 +12,18 @@ use crate::{
 use eyre::eyre;
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::ConfigureEvm;
-use reth_primitives::revm::env::tx_env_with_recovered;
-use reth_primitives::ruint::FromUintError;
-use reth_primitives::B256;
-use reth_revm::primitives::CfgEnvWithHandlerCfg;
-use reth_revm::primitives::{Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState};
-use reth_revm::{Database, DatabaseCommit};
-use reth_rpc::eth::revm_utils::build_call_evm_env;
-use reth_rpc_types::trace::geth::{GethTrace, TraceResult};
-use reth_rpc_types::{
-    trace::{
-        geth::{GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions, GethDebugTracingOptions},
 use reth_primitives::{revm::env::tx_env_with_recovered, ruint::FromUintError, B256};
 use reth_revm::{
-    primitives::{Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
+    primitives::{CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
     Database, DatabaseCommit,
 };
+use reth_rpc::eth::revm_utils::build_call_evm_env;
 use reth_rpc_types::{
     trace::{
-        geth::{GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions, GethTrace, TraceResult},
+        geth::{
+            GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions, GethDebugTracingOptions,
+            GethTrace, TraceResult,
+        },
         parity::LocalizedTransactionTrace,
     },
     TransactionInfo, TransactionRequest,
@@ -54,7 +47,7 @@ enum TracingResult {
 
 impl TracingResult {
     /// Converts the tracing result into Geth traces.
-    fn as_geth(&self) -> Option<&Vec<TraceResult>> {
+    const fn as_geth(&self) -> Option<&Vec<TraceResult>> {
         if let Self::Geth(traces) = self {
             Some(traces)
         } else {
@@ -63,7 +56,7 @@ impl TracingResult {
     }
 
     /// Converts the tracing result into Parity traces.
-    fn as_parity(&self) -> Option<&Vec<LocalizedTransactionTrace>> {
+    const fn as_parity(&self) -> Option<&Vec<LocalizedTransactionTrace>> {
         if let Self::Parity(traces) = self {
             Some(traces)
         } else {

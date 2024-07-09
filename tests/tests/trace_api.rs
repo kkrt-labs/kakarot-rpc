@@ -2,29 +2,6 @@
 #![cfg(feature = "testing")]
 use alloy_dyn_abi::DynSolValue;
 use alloy_sol_types::{sol, SolCall};
-use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::test_utils::eoa::Eoa;
-use kakarot_rpc::test_utils::evm_contract::{
-    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
-};
-use kakarot_rpc::test_utils::fixtures::plain_opcodes;
-use kakarot_rpc::test_utils::fixtures::setup;
-use kakarot_rpc::test_utils::katana::Katana;
-use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
-use reth_primitives::Address;
-use reth_primitives::BlockId;
-use reth_primitives::{Bytes, TxKind, B256, U256};
-use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::trace::geth::{
-    CallFrame, GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions, GethDebugTracingOptions,
-    GethTrace, TraceResult,
-};
-use reth_rpc_types::trace::parity::{
-    Action, CallAction, CallOutput, CallType, LocalizedTransactionTrace, TraceOutput, TransactionTrace,
-};
-use reth_rpc_types::OtherFields;
-use reth_rpc_types::TransactionRequest;
 use kakarot_rpc::{
     eth_provider::provider::EthereumProvider,
     test_utils::{
@@ -35,13 +12,17 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::{Address, Bytes, B256, U256};
+use reth_primitives::{Address, BlockId, Bytes, TxKind, B256, U256};
 use reth_rpc_types::{
+    request::TransactionInput,
     trace::{
-        geth::{GethTrace, TraceResult},
+        geth::{
+            CallFrame, GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions,
+            GethDebugTracingOptions, GethTrace, TraceResult,
+        },
         parity::{Action, CallAction, CallOutput, CallType, LocalizedTransactionTrace, TraceOutput, TransactionTrace},
     },
-    OtherFields,
+    OtherFields, TransactionRequest,
 };
 use rstest::*;
 use serde_json::{json, Value};

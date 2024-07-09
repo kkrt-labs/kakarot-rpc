@@ -5,10 +5,9 @@ use crate::eth_provider::{
 };
 use reth_primitives::{B256, U256};
 use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
-use reth_rpc_types::trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions};
-use reth_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header};
 use reth_rpc_types::{
-    trace::geth::GethDebugTracingOptions, Block, BlockHashOrNumber, BlockId, BlockTransactions, Header,
+    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
+    Block, BlockHashOrNumber, BlockId, BlockTransactions, Header,
 };
 use revm_inspectors::tracing::TracingInspectorConfig;
 
