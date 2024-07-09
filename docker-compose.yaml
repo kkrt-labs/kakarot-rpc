@@ -1,6 +1,19 @@
 version: "3.2"
 
 services:
+  anvil:
+    platform: linux/amd64
+    image: ghcr.io/foundry-rs/foundry:latest
+    command: ["anvil --host 0.0.0.0 --port 8545 --load-state /app/.anvil/state.json"]
+    # Initial state has the StarknetMessaging and L1KakarotMessaging contracts deployed
+    volumes:
+      - .anvil:/app/.anvil
+    ports:
+      - 8545:8545
+    networks:
+      - internal
+    restart: on-failure
+
   starknet:
     image: ghcr.io/dojoengine/dojo:v0.7.3-alpha.0
     command:
@@ -18,20 +31,11 @@ services:
       - KKRT
       - --messaging
       - /app/.katana/messaging_config.json
+      # Config uses StarknetMessaging contract Anvil is instanciated with
     volumes:
       - .katana:/app/.katana
     ports:
       - 5050:5050
-    networks:
-      - internal
-    restart: on-failure
-
-  anvil:
-    platform: linux/amd64
-    image: ghcr.io/foundry-rs/foundry:latest
-    command: ["anvil --host 0.0.0.0 --port 8545"]
-    ports:
-      - 8545:8545
     networks:
       - internal
     restart: on-failure
