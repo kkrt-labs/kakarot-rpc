@@ -4,35 +4,14 @@ import { bigIntToHex, Event, JsonRpcTx } from "../deps.ts";
 
 // Mock for hexToBytes
 const mockHexToBytes = (hex: string): Uint8Array => {
-  if (hex === "0x1234") return new Uint8Array([0x12, 0x34]);
-  if (hex === "0x5678") return new Uint8Array([0x56, 0x78]);
-  if (hex === "0xabcdef") return new Uint8Array([0xab, 0xcd, 0xef]);
-  if (hex === "0x1234567890abcdef1234567890abcdef12345678") {
-    return new Uint8Array([
-      0x12,
-      0x34,
-      0x56,
-      0x78,
-      0x90,
-      0xab,
-      0xcd,
-      0xef,
-      0x12,
-      0x34,
-      0x56,
-      0x78,
-      0x90,
-      0xab,
-      0xcd,
-      0xef,
-      0x12,
-      0x34,
-      0x56,
-      0x78,
-    ]);
-  }
-  if (hex === "0x") return new Uint8Array([]);
-  throw new Error("Unexpected hex input");
+  // Remove the '0x' prefix if present
+  const cleanedHex = hex.startsWith("0x") ? hex.slice(2) : hex;
+
+  // Match pairs of hex characters
+  const hexPairs = cleanedHex.match(/.{1,2}/g) || [];
+
+  // Convert pairs to integers and create a Uint8Array
+  return new Uint8Array(hexPairs.map((x) => parseInt(x, 16)));
 };
 
 Deno.test("fromJsonRpcLog with valid input", () => {
