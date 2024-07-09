@@ -45,18 +45,18 @@ enum TracingResult {
 
 impl TracingResult {
     /// Converts the tracing result into Geth traces.
-    fn as_geth(&self) -> Option<Vec<TraceResult>> {
-        if let Self::Geth(ref traces) = self {
-            Some(traces.clone())
+    fn as_geth(&self) -> Option<&Vec<TraceResult>> {
+        if let Self::Geth(traces) = self {
+            Some(traces)
         } else {
             None
         }
     }
 
     /// Converts the tracing result into Parity traces.
-    fn as_parity(&self) -> Option<Vec<LocalizedTransactionTrace>> {
-        if let Self::Parity(ref traces) = self {
-            Some(traces.clone())
+    fn as_parity(&self) -> Option<&Vec<LocalizedTransactionTrace>> {
+        if let Self::Parity(traces) = self {
+            Some(traces)
         } else {
             None
         }
@@ -301,12 +301,12 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Traces the provided transactions using the given closure.
     /// The function `transact_and_get_traces` closure uses the `env` and `db` to create an evm
     /// which is then used to transact and trace the transaction.
-    fn trace_transactions<T>(
+    fn trace_transactions<T: Clone>(
         self,
-        convert_result: fn(&TracingResult) -> Option<Vec<T>>,
+        convert_result: fn(&TracingResult) -> Option<&Vec<T>>,
         transactions: &[reth_rpc_types::Transaction],
     ) -> TracerResult<Vec<T>> {
-        let mut traces = Vec::with_capacity(self.transactions.len());
+        let mut traces: Vec<T> = Vec::with_capacity(self.transactions.len());
         let mut transactions = transactions.iter().peekable();
         let mut db = self.db;
 
@@ -331,7 +331,9 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                     }
                 };
 
-            traces.extend(convert_result(&res).unwrap_or_default());
+            if let Some(result) = convert_result(&res) {
+                traces.extend(result.iter().cloned());
+            }
 
             // Only commit to the database if there are more transactions to process.
             if transactions.peek().is_some() {
