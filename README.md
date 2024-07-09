@@ -121,6 +121,7 @@ TL;DR:
 - [Rust](https://www.rust-lang.org/tools/install): The codebase is written in Rust to ensure high performance, maintainability, and a developer-friendly experience.
 - [Docker](https://docs.docker.com/engine/install): Required for containerizing and running the various services and components in a consistent environment.
 - [Python](https://www.python.org/): Used primarily for interacting with and building our Kakarot programs.
+- [Poetry](https://python-poetry.org/docs/): A Python dependency management tool used for managing the dependencies of our Kakarot programs.
 - [Deno](https://docs.deno.com/runtime/manual/): A JavaScript runtime used for our indexing service, based on the [Apibara](https://www.apibara.com/docs) third-party service.
 - Make: Utilized to interact with the `Makefile` for running commands such as building the project or executing tests.
 
