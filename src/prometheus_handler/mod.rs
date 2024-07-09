@@ -22,6 +22,9 @@ use hyper_util::{
     rt::{TokioExecutor, TokioIo},
     server,
 };
+use prometheus::{core::Collector, Encoder, TextEncoder};
+use std::net::SocketAddr;
+
 pub use prometheus::{
     self,
     core::{
@@ -30,8 +33,6 @@ pub use prometheus::{
     },
     exponential_buckets, Error as PrometheusError, Histogram, HistogramOpts, HistogramVec, Opts, Registry,
 };
-use prometheus::{core::Collector, Encoder, TextEncoder};
-use std::net::SocketAddr;
 
 mod sourced;
 

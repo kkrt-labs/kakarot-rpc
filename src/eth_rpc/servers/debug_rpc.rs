@@ -1,6 +1,13 @@
 #![allow(clippy::blocks_in_conditions)]
-use std::sync::Arc;
 
+use crate::{
+    eth_provider::{
+        error::{EthApiError, EthereumDataFormatError, SignatureError},
+        provider::EthereumProvider,
+    },
+    eth_rpc::api::debug_api::DebugApiServer,
+    tracing::builder::TracerBuilder,
+};
 use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Block, Bytes, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
@@ -11,6 +18,11 @@ use crate::eth_provider::error::{EthApiError, EthereumDataFormatError, Signature
 use crate::eth_provider::provider::EthereumProvider;
 use crate::eth_rpc::api::debug_api::DebugApiServer;
 use crate::tracing::builder::TracerBuilder;
+use reth_rpc_types::{
+    trace::geth::{GethDebugTracingOptions, GethTrace, TraceResult},
+    BlockId, BlockNumberOrTag,
+};
+use std::sync::Arc;
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]

@@ -25,10 +25,27 @@ use reth_rpc_types::trace::parity::{
 };
 use reth_rpc_types::OtherFields;
 use reth_rpc_types::TransactionRequest;
+use kakarot_rpc::{
+    eth_provider::provider::EthereumProvider,
+    test_utils::{
+        eoa::Eoa,
+        evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo},
+        fixtures::{plain_opcodes, setup},
+        katana::Katana,
+        rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
+    },
+};
+use reth_primitives::{Address, Bytes, B256, U256};
+use reth_rpc_types::{
+    trace::{
+        geth::{GethTrace, TraceResult},
+        parity::{Action, CallAction, CallOutput, CallType, LocalizedTransactionTrace, TraceOutput, TransactionTrace},
+    },
+    OtherFields,
+};
 use rstest::*;
 use serde_json::{json, Value};
-use starknet::core::types::MaybePendingBlockWithTxHashes;
-use starknet::providers::Provider;
+use starknet::{core::types::MaybePendingBlockWithTxHashes, providers::Provider};
 
 /// The block number on which tracing will be performed.
 const TRACING_BLOCK_NUMBER: u64 = 0x3;

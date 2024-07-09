@@ -1,17 +1,4 @@
 #![allow(clippy::used_underscore_binding)]
-use std::{
-    fmt,
-    str::FromStr,
-    time::{Duration, Instant},
-};
-#[cfg(test)]
-use {futures::lock::Mutex, std::sync::Arc};
-
-use eyre::Result;
-use lazy_static::lazy_static;
-use reth_primitives::{TransactionSignedEcRecovered, B256};
-use tokio::runtime::Handle;
-
 use crate::eth_provider::{
     database::{
         ethereum::EthereumTransactionStore,
@@ -21,6 +8,17 @@ use crate::eth_provider::{
     },
     provider::EthereumProvider,
 };
+use eyre::Result;
+use lazy_static::lazy_static;
+use reth_primitives::{TransactionSignedEcRecovered, B256};
+use std::{
+    fmt,
+    str::FromStr,
+    time::{Duration, Instant},
+};
+use tokio::runtime::Handle;
+#[cfg(test)]
+use {futures::lock::Mutex, std::sync::Arc};
 
 lazy_static! {
     // Interval between retries of transactions (in seconds)
@@ -153,8 +151,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::fixtures::{katana, setup};
-    use crate::test_utils::katana::Katana;
+    use crate::test_utils::{
+        fixtures::{katana, setup},
+        katana::Katana,
+    };
     use rstest::*;
 
     #[rstest]

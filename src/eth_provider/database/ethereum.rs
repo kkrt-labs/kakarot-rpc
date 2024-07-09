@@ -1,19 +1,18 @@
+use super::{
+    filter,
+    filter::EthDatabaseFilterBuilder,
+    types::{
+        header::StoredHeader,
+        transaction::{StoredPendingTransaction, StoredTransaction},
+    },
+    Database,
+};
+use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 use mongodb::bson::doc;
-use reth_primitives::constants::EMPTY_ROOT_HASH;
-use reth_primitives::{TransactionSigned, B256, U256};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, TransactionSigned, B256, U256};
 use reth_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, RichBlock, Transaction};
-
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
-
-use super::filter;
-use super::types::header::StoredHeader;
-use super::{
-    filter::EthDatabaseFilterBuilder,
-    types::transaction::{StoredPendingTransaction, StoredTransaction},
-    Database,
-};
 
 /// Trait for interacting with a database that stores Ethereum typed
 /// transaction data.
@@ -145,6 +144,7 @@ impl EthereumBlockStore for Database {
         }
 
         let transactions = self.transactions(block_hash_or_number).await?;
+
         let block_transactions = if full {
             BlockTransactions::Full(transactions.clone())
         } else {
@@ -197,6 +197,7 @@ impl EthereumBlockStore for Database {
 mod tests {
     use super::*;
     use crate::test_utils::mongo::{CollectionDB, MongoFuzzer, RANDOM_BYTES_SIZE};
+    use rand::{self, Rng};
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_ethereum_transaction_store() {
@@ -361,5 +362,176 @@ mod tests {
             database.pending_transaction(&mock_pending_transaction.tx.hash).await.unwrap(),
             Some(mock_pending_transaction.tx)
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_ethereum_block_store() {
+        // Initialize MongoDB fuzzer
+        let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
+
+        // Mock a database with 100 transactions, receipts, and headers
+        let database = mongo_fuzzer.mock_database(100).await;
+
+        // Generate random bytes for test data
+        let bytes: Vec<u8> = (0..RANDOM_BYTES_SIZE).map(|_| rand::random()).collect();
+        let mut unstructured = arbitrary::Unstructured::new(&bytes);
+
+        // Test fetching existing and none existing header via blockhash and blocknumber from database
+        test_get_header(&database, &mongo_fuzzer).await;
+
+        // Test fetching existing and none existing block via blockhash and blocknumber from database
+        test_get_blocks(&database, &mongo_fuzzer, &mut unstructured).await;
+
+        // Test fetching existing and none existing transaction counts via blockhash and blocknumber from database
+        test_get_transaction_count(&database, &mongo_fuzzer).await;
+    }
+
+    async fn test_get_header(database: &Database, mongo_fuzzer: &MongoFuzzer) {
+        let header_block_hash = &mongo_fuzzer
+            .documents()
+            .get(&CollectionDB::Headers)
+            .unwrap()
+            .first()
+            .unwrap()
+            .extract_stored_header()
+            .unwrap()
+            .header;
+
+        // Test retrieving header by block hash
+        assert_eq!(database.header(header_block_hash.hash.unwrap().into()).await.unwrap().unwrap(), *header_block_hash);
+
+        // Test retrieving header by block number
+        assert_eq!(
+            database.header(header_block_hash.number.unwrap().into()).await.unwrap().unwrap(),
+            *header_block_hash
+        );
+
+        let mut rng = rand::thread_rng();
+        // Test retrieving non-existing header by block hash
+        assert_eq!(database.header(rng.gen::<B256>().into()).await.unwrap(), None);
+
+        // Test retrieving non-existing header by block number
+        assert_eq!(database.header(rng.gen::<u64>().into()).await.unwrap(), None);
+    }
+
+    async fn test_get_blocks(database: &Database, mongo_fuzzer: &MongoFuzzer, u: &mut arbitrary::Unstructured<'_>) {
+        let header = &mongo_fuzzer
+            .documents()
+            .get(&CollectionDB::Headers)
+            .unwrap()
+            .first()
+            .unwrap()
+            .extract_stored_header()
+            .unwrap()
+            .header;
+
+        let block_hash = header.hash.unwrap();
+
+        let block: RichBlock = {
+            let transactions: Vec<Transaction> = mongo_fuzzer
+                .documents()
+                .get(&CollectionDB::Transactions)
+                .unwrap()
+                .iter()
+                .filter_map(|transaction| {
+                    let stored_transaction = transaction.extract_stored_transaction().unwrap();
+                    if stored_transaction.tx.block_hash.unwrap() == block_hash {
+                        Some(stored_transaction.tx.clone())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            let block_transactions = BlockTransactions::Full(transactions.clone());
+
+            let signed_transactions = transactions
+                .into_iter()
+                .map(|tx| TransactionSigned::try_from(tx).map_err(|_| EthereumDataFormatError::TransactionConversion))
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+
+            let block = reth_primitives::Block {
+                body: signed_transactions,
+                header: reth_primitives::Header::try_from(header.clone())
+                    .map_err(|_| EthereumDataFormatError::Primitive)
+                    .unwrap(),
+                withdrawals: Some(Default::default()),
+                ..Default::default()
+            };
+
+            let size = block.length();
+
+            Block {
+                header: header.clone(),
+                transactions: block_transactions,
+                size: Some(U256::from(size)),
+                withdrawals: Some(Default::default()),
+                ..Default::default()
+            }
+            .into()
+        };
+
+        // Test retrieving block by block hash
+        assert_eq!(database.block(block_hash.into(), true).await.unwrap().unwrap(), block);
+
+        // Test retrieving block by block number
+        assert_eq!(database.block(header.number.unwrap().into(), true).await.unwrap().unwrap(), block);
+
+        let mut rng = rand::thread_rng();
+
+        // Test retrieving non-existing block by block hash
+        assert_eq!(database.block(rng.gen::<B256>().into(), false).await.unwrap(), None);
+
+        // Test retrieving non-existing block by block number
+        assert_eq!(database.block(rng.gen::<u64>().into(), false).await.unwrap(), None);
+
+        // test withdrawals_root raises an error
+        let mut faulty_header = StoredHeader::arbitrary_with_optional_fields(u).unwrap();
+        faulty_header.header.withdrawals_root = Some(rng.gen::<B256>());
+
+        let filter = EthDatabaseFilterBuilder::<filter::Header>::default()
+            .with_block_hash(&faulty_header.header.hash.unwrap())
+            .build();
+
+        database.update_one(faulty_header.clone(), filter, true).await.expect("Failed to update header in database");
+
+        assert!(database.block(faulty_header.header.hash.unwrap().into(), true).await.is_err());
+    }
+
+    async fn test_get_transaction_count(database: &Database, mongo_fuzzer: &MongoFuzzer) {
+        let header_block_hash = &mongo_fuzzer
+            .documents()
+            .get(&CollectionDB::Headers)
+            .unwrap()
+            .first()
+            .unwrap()
+            .extract_stored_header()
+            .unwrap()
+            .header;
+
+        let first_block_hash = header_block_hash.hash.unwrap();
+
+        let transaction_count: U256 = U256::from(
+            mongo_fuzzer
+                .documents()
+                .get(&CollectionDB::Transactions)
+                .unwrap()
+                .iter()
+                .filter(|transaction| {
+                    transaction.extract_stored_transaction().unwrap().tx.block_hash.unwrap() == first_block_hash
+                })
+                .count(),
+        );
+
+        // Test retrieving header by block hash
+        assert_eq!(database.transaction_count(first_block_hash.into()).await.unwrap().unwrap(), transaction_count);
+
+        let mut rng = rand::thread_rng();
+        // Test retrieving non-existing transaction count by block hash
+        assert_eq!(database.transaction_count(rng.gen::<B256>().into()).await.unwrap(), None);
+
+        // Test retrieving non-existing transaction count by block number
+        assert_eq!(database.transaction_count(rng.gen::<u64>().into()).await.unwrap(), None);
     }
 }
