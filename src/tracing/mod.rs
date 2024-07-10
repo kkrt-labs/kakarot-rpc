@@ -11,8 +11,8 @@ use crate::{
 };
 use eyre::eyre;
 use reth_evm_ethereum::EthEvmConfig;
-use reth_node_api::ConfigureEvm;
-use reth_primitives::{revm::env::tx_env_with_recovered, ruint::FromUintError, B256};
+use reth_node_api::{ConfigureEvm, ConfigureEvmEnv};
+use reth_primitives::{ruint::FromUintError, B256};
 use reth_revm::{
     primitives::{Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
     Database, DatabaseCommit,
@@ -273,7 +273,8 @@ fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> Trac
     // Convert the transaction to an ec recovered transaction and update the env with it.
     let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversion)?;
 
-    let tx_env = tx_env_with_recovered(&tx_ec_recovered);
+    let tx_env = EthEvmConfig::default().tx_env(&tx_ec_recovered);
+
     Ok(EnvWithHandlerCfg {
         env: Env::boxed(env.env.cfg.clone(), env.env.block.clone(), tx_env),
         handler_cfg: env.handler_cfg,

@@ -1,7 +1,4 @@
-use crate::eth_provider::{
-    error::{EthApiError, EthereumDataFormatError},
-    provider::EthereumProvider,
-};
+use crate::eth_provider::{error::EthApiError, provider::EthereumProvider};
 use reth_primitives::{Address, B256, U256};
 use reth_revm::{
     db::{AccountState, CacheDB, DbAccount},
@@ -88,13 +85,13 @@ impl<P: EthereumProvider + Send + Sync> Database for EthDatabaseSnapshot<P> {
     /// # Panics
     ///
     /// Panics if called from a non-async runtime.
-    fn block_hash(&mut self, number: U256) -> Result<B256, Self::Error> {
+    fn block_hash(&mut self, block_number: u64) -> Result<B256, Self::Error> {
         let cache = &self.cache;
-        if let Some(hash) = cache.block_hashes.get(&number) {
+        let number = U256::from(block_number);
+        if let Some(hash) = cache.block_hashes.get(&U256::from(number)) {
             return Ok(*hash);
         }
 
-        let block_number = number.try_into().map_err(|_| EthereumDataFormatError::Primitive)?;
         let hash = Handle::current().block_on(async {
             let hash = cache
                 .db
