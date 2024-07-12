@@ -46,7 +46,6 @@ install-katana:
 	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.7.3-alpha.0 katana
 
 katana-genesis: install-katana
-	rm -fr .katana/ && mkdir .katana
 	cargo run --bin katana_genesis --features testing
 
 run-katana: katana-genesis
