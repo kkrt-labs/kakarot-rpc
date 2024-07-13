@@ -78,7 +78,7 @@ where
 
             loop {
                 let start_time_fn = Instant::now();
-                if let Err(err) = self.retry_and_prune().await {
+                if let Err(err) = self.process_pending_transactions().await {
                     tracing::error!("Error while retrying transactions: {:?}", err);
                 }
                 let elapsed_time_ms = start_time_fn.elapsed().as_millis();
@@ -93,8 +93,9 @@ where
         });
     }
 
-    /// Retries and prunes pending transactions.
-    async fn retry_and_prune(&self) -> Result<()> {
+    /// Processes all current pending transactions by retrying them
+    /// and pruning them if necessary.
+    async fn process_pending_transactions(&self) -> Result<()> {
         let pending_transactions = self.pending_transactions().await?;
         for transaction in pending_transactions {
             if self.should_retry(&transaction).await? {
@@ -192,7 +193,7 @@ mod tests {
 
         for i in 0..*TRANSACTION_MAX_RETRIES + 2 {
             // Retry transactions.
-            retry_handler.retry_and_prune().await.expect("Failed to retry transactions");
+            retry_handler.process_pending_transactions().await.expect("Failed to retry transactions");
 
             // Retrieve the retried transactions.
             let retried = retry_handler.retried.lock().await.clone();

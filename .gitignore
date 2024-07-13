@@ -34,5 +34,9 @@ artifacts/
 build/
 .kakarot/
 
+# ignore katana dump directory
+.katana/
+!.katana/messaging_config.json
+
 # ignore proptest-regressions
 /proptest-regressions

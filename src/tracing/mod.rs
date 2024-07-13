@@ -11,8 +11,8 @@ use crate::{
 };
 use eyre::eyre;
 use reth_evm_ethereum::EthEvmConfig;
-use reth_node_api::ConfigureEvm;
-use reth_primitives::{revm::env::tx_env_with_recovered, ruint::FromUintError, B256};
+use reth_node_api::{ConfigureEvm, ConfigureEvmEnv};
+use reth_primitives::{ruint::FromUintError, B256};
 use reth_revm::{
     primitives::{CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
     Database, DatabaseCommit,
@@ -301,8 +301,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     }
 
     /// Traces the provided transactions using the given closure.
-    /// The function `transact_and_get_traces` closure uses the `env` and `db` to create an evm
-    /// which is then used to transact and trace the transaction.
+    /// The `convert_result` closure takes the resulting tracing result
+    /// and converts it into the desired type.
     fn trace_transactions<T: Clone>(
         self,
         convert_result: fn(&TracingResult) -> Option<&Vec<T>>,
@@ -352,7 +352,8 @@ fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> Trac
     // Convert the transaction to an ec recovered transaction and update the env with it.
     let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversion)?;
 
-    let tx_env = tx_env_with_recovered(&tx_ec_recovered);
+    let tx_env = EthEvmConfig::default().tx_env(&tx_ec_recovered);
+
     Ok(EnvWithHandlerCfg {
         env: Env::boxed(env.env.cfg.clone(), env.env.block.clone(), tx_env),
         handler_cfg: env.handler_cfg,

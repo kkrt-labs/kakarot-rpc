@@ -18,7 +18,7 @@ import {
 
 // Events containing these keys are not
 // ETH logs and should be ignored.
-const IGNORED_KEYS = [
+export const IGNORED_KEYS = [
   BigInt(hash.getSelectorFromName("transaction_executed")),
   BigInt(hash.getSelectorFromName("evm_contract_deployed")),
   BigInt(hash.getSelectorFromName("Transfer")),
@@ -47,30 +47,28 @@ export function toEthLog({
   blockHash: PrefixedHexString;
   isPendingBlock: boolean;
 }): JsonRpcLog | null {
-  const keys = event.keys ?? [];
+  const { keys, data } = event;
+  const { transactionIndex, hash } = transaction;
 
   // The event must have at least one key (since the first key is the address)
   // and an odd number of keys (since each topic is split into two keys).
   // <https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/evm.cairo#L169>
-  if (keys.length < 1 || keys.length % 2 !== 1) {
-    console.error(`Invalid event ${event}`);
+  //
+  // We also want to filter out ignored events which aren't ETH logs.
+  if (
+    keys?.length < 1 || keys.length % 2 !== 1 ||
+    IGNORED_KEYS.includes(BigInt(keys[0]))
+  ) {
     return null;
   }
 
-  // Filter out ignored events which aren't ETH logs.
-  if (IGNORED_KEYS.includes(BigInt(keys[0]))) {
-    return null;
-  }
-
-  // The address is the first key of the event.
-  const address = padBigint(BigInt(keys[0]), 20);
   // data field is FieldElement[] where each FieldElement represents a byte of data.
   // We convert it to a hex string and add leading zeros to make it a valid hex byte string.
   // Example: [1, 2, 3] -> "010203"
-  const data = event.data ?? [];
-  const paddedData = data
-    .map((d) => BigInt(d).toString(16).padStart(2, "0"))
-    .join("");
+  const paddedData =
+    data?.map((d) => BigInt(d).toString(16).padStart(2, "0")).join("") || "";
+
+  // Construct topics array
   const topics: string[] = [];
   for (let i = 1; i < keys.length; i += 2) {
     // EVM Topics are u256, therefore are split into two felt keys, of at most
@@ -84,11 +82,12 @@ export function toEthLog({
   return {
     removed: false,
     logIndex: null,
-    transactionIndex: bigIntToHex(BigInt(transaction.transactionIndex ?? 0)),
-    transactionHash: transaction.hash,
+    transactionIndex: bigIntToHex(BigInt(transactionIndex ?? 0)),
+    transactionHash: hash,
     blockHash: isPendingBlock ? NULL_BLOCK_HASH : blockHash,
     blockNumber,
-    address,
+    // The address is the first key of the event.
+    address: padBigint(BigInt(keys[0]), 20),
     data: `0x${paddedData}`,
     topics,
   };
