@@ -334,7 +334,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 };
 
             if let Some(result) = convert_result(&res) {
-                traces.extend(result.iter().cloned());
+                result.iter().for_each(|item| traces.push(item.clone()));
             }
 
             // Only commit to the database if there are more transactions to process.
