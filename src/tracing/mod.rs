@@ -230,8 +230,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     }
 
     /// Traces the provided transactions using the given closure.
-    /// The function `transact_and_get_traces` closure uses the `env` and `db` to create an evm
-    /// which is then used to transact and trace the transaction.
+    /// The `convert_result` closure takes the resulting tracing result
+    /// and converts it into the desired type.
     fn trace_transactions<T>(
         self,
         convert_result: fn(TracingResult) -> Option<Vec<T>>,
