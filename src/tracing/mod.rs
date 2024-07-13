@@ -17,7 +17,7 @@ use reth_revm::{
     primitives::{CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
     Database, DatabaseCommit,
 };
-use reth_rpc::eth::revm_utils::build_call_evm_env;
+use reth_rpc_eth_types::revm_utils::build_call_evm_env;
 use reth_rpc_types::{
     trace::{
         geth::{
@@ -259,6 +259,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 // Only support CallTracer for now.
                 GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer) => {
                     // Build the EVM environment using the provided configuration and request.
+
                     let env = build_call_evm_env(
                         CfgEnvWithHandlerCfg { cfg_env: self.env.cfg.clone(), handler_cfg: self.env.handler_cfg },
                         self.env.block.clone(),

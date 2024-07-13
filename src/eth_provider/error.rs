@@ -67,7 +67,7 @@ pub enum EthApiError {
     /// Error related to transaction calldata being too large.
     CalldataExceededLimit(usize, usize),
     /// Reth Eth API error
-    RethEthApi(#[from] reth_rpc::eth::error::EthApiError),
+    RethEthApi(#[from] reth_rpc_eth_types::EthApiError),
 }
 
 impl std::fmt::Display for EthApiError {
