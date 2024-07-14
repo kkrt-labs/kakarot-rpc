@@ -12,8 +12,8 @@ use alloy_rlp::Encodable;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Block, Bytes, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
 use reth_rpc_types::{
-    trace::geth::{GethDebugTracingOptions, GethTrace, TraceResult},
-    BlockId, BlockNumberOrTag,
+    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult},
+    BlockId, BlockNumberOrTag, TransactionRequest,
 };
 use std::sync::Arc;
 
@@ -32,7 +32,7 @@ impl<P: EthereumProvider> DebugRpc<P> {
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P> {
     /// Returns an RLP-encoded header.
-    #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
+    #[tracing::instrument(skip(self), err)]
     async fn raw_header(&self, block_id: BlockId) -> Result<Bytes> {
         tracing::info!("Serving debug_getRawHeader");
 
@@ -52,7 +52,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     }
 
     /// Returns an RLP-encoded block.
-    #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
+    #[tracing::instrument(skip(self), err)]
     async fn raw_block(&self, block_id: BlockId) -> Result<Bytes> {
         tracing::info!("Serving debug_getRawBlock");
 
@@ -72,7 +72,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     /// Returns a EIP-2718 binary-encoded transaction.
     ///
     /// If this is a pooled EIP-4844 transaction, the blob sidecar is included.
-    #[tracing::instrument(skip(self), err, fields(hash = ?hash))]
+    #[tracing::instrument(skip(self), err)]
     async fn raw_transaction(&self, hash: B256) -> Result<Option<Bytes>> {
         tracing::info!("Serving debug_getRawTransaction");
 
@@ -97,7 +97,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     }
 
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
-    #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
+    #[tracing::instrument(skip(self), err)]
     async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
         tracing::info!("Serving debug_getRawTransactions");
 
@@ -123,7 +123,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     }
 
     /// Returns an array of EIP-2718 binary-encoded receipts.
-    #[tracing::instrument(skip(self), err, fields(block_id = ?block_id))]
+    #[tracing::instrument(skip(self), err)]
     async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
         tracing::info!("Serving debug_getRawReceipts");
 
@@ -168,7 +168,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     }
 
     /// Returns the Geth debug trace for the given block number.
-    #[tracing::instrument(skip(self), err, fields(block_number = ?block_number, opts = ?opts))]
+    #[tracing::instrument(skip(self), err)]
     async fn trace_block_by_number(
         &self,
         block_number: BlockNumberOrTag,
@@ -188,7 +188,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     }
 
     /// Returns the Geth debug trace for the given block hash.
-    #[tracing::instrument(skip(self), err, fields(block_hash = ?block_hash, opts = ?opts))]
+    #[tracing::instrument(skip(self), err)]
     async fn trace_block_by_hash(
         &self,
         block_hash: B256,
@@ -207,7 +207,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     }
 
     /// Returns the Geth debug trace for the given transaction hash.
-    #[tracing::instrument(skip(self), err, fields(transaction_hash = ?transaction_hash, opts = ?opts))]
+    #[tracing::instrument(skip(self), err)]
     async fn trace_transaction(
         &self,
         transaction_hash: B256,
@@ -223,5 +223,25 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
             .build()?;
 
         Ok(tracer.debug_transaction(transaction_hash)?)
+    }
+
+    /// Runs an `eth_call` within the context of a given block execution and returns the Geth debug trace.
+    #[tracing::instrument(skip(self), err)]
+    async fn trace_call(
+        &self,
+        request: TransactionRequest,
+        block_number: Option<BlockId>,
+        opts: Option<GethDebugTracingCallOptions>,
+    ) -> Result<GethTrace> {
+        tracing::info!("Serving debug_traceCall");
+
+        let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
+            .await?
+            .with_block_id(block_number.unwrap_or_default())
+            .await?
+            .with_tracing_options(opts.unwrap_or_default().into())
+            .build()?;
+
+        Ok(tracer.debug_transaction_request(&request)?)
     }
 }

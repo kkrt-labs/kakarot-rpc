@@ -1,6 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use alloy_dyn_abi::DynSolValue;
+use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
     eth_provider::provider::EthereumProvider,
     test_utils::{
@@ -11,13 +12,17 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::{Address, Bytes, B256, U256};
+use reth_primitives::{Address, BlockId, Bytes, TxKind, B256, U256};
 use reth_rpc_types::{
+    request::TransactionInput,
     trace::{
-        geth::{GethTrace, TraceResult},
+        geth::{
+            CallFrame, GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions,
+            GethDebugTracingOptions, GethTrace, TraceResult,
+        },
         parity::{Action, CallAction, CallOutput, CallType, LocalizedTransactionTrace, TraceOutput, TransactionTrace},
     },
-    OtherFields,
+    OtherFields, TransactionRequest,
 };
 use rstest::*;
 use serde_json::{json, Value};
@@ -299,5 +304,165 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
         TraceResult::Error { .. } => panic!("Expected a success trace result"),
     };
 
+    drop(server_handle);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_trace_call(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Setup the Kakarot RPC server.
+    let katana = plain_opcodes.0;
+    let plain_opcodes = plain_opcodes.1;
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| vec![])).await;
+
+    let (server_addr, server_handle) =
+        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+    // Create the transaction request
+    let request = TransactionRequest {
+        from: Some(katana.eoa().evm_address().expect("Failed to get eoa address")),
+        to: Some(TxKind::Call(Address::ZERO)),
+        gas: Some(21000),
+        gas_price: Some(10),
+        value: Some(U256::ZERO),
+        nonce: Some(2),
+        ..Default::default()
+    };
+
+    // Define the call options
+    let call_opts = GethDebugTracingCallOptions {
+        tracing_options: GethDebugTracingOptions::default()
+            .with_tracer(GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer)),
+        state_overrides: Default::default(),
+        block_overrides: Default::default(),
+    };
+
+    // Send the trace_call RPC request.
+    let reqwest_client = reqwest::Client::new();
+    let res = reqwest_client
+        .post(format!("http://localhost:{}", server_addr.port()))
+        .header("Content-Type", "application/json")
+        .body(
+            RawRpcParamsBuilder::new("debug_traceCall")
+                .add_param(request)
+                .add_param(Some(BlockId::Number(TRACING_BLOCK_NUMBER.into())))
+                .add_param(call_opts)
+                .build(),
+        )
+        .send()
+        .await
+        .expect("Failed to call Debug RPC");
+    let response = res.text().await.expect("Failed to get response body");
+    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
+    let trace: GethTrace = serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
+
+    // Assert that the trace contains expected data
+    assert_eq!(
+        trace,
+        GethTrace::CallTracer(CallFrame {
+            from: katana.eoa().evm_address().expect("Failed to get eoa address"),
+            gas: U256::from(21000),
+            gas_used: U256::from(21000),
+            to: Some(Address::ZERO),
+            value: Some(U256::ZERO),
+            typ: "CALL".to_string(),
+            ..Default::default()
+        })
+    );
+
+    drop(server_handle);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_trace_call_counter(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Test function for tracing a call to a counter contract
+
+    // Extract Katana instance and get the EOA's EVM address
+    let katana = plain_opcodes.0;
+    let evm_address = katana.eoa().evm_address().expect("Failed to get eoa address");
+    let plain_opcodes = plain_opcodes.1;
+
+    // Perform tracing setup
+    tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| vec![])).await;
+
+    // Start the Kakarot RPC server
+    let (server_addr, server_handle) =
+        start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+    // Define a Solidity contract interface for the counter
+    sol! {
+        #[sol(rpc)]
+        contract CounterContract {
+            function incForLoop(uint256 iterations) external;
+        }
+    }
+
+    // Prepare the calldata for invoking the incForLoop function with 5 iterations
+    let calldata = CounterContract::incForLoopCall { iterations: U256::from(5) }.abi_encode();
+    let contract_address = Address::from_slice(&plain_opcodes.evm_address.to_bytes_be()[12..]);
+
+    // Define the transaction request
+    let request = TransactionRequest {
+        from: Some(evm_address),
+        to: Some(TxKind::Call(contract_address)),
+        gas: Some(210_000),
+        gas_price: Some(1_000_000_000_000_000_000_000),
+        value: Some(U256::ZERO),
+        nonce: Some(2),
+        input: TransactionInput { input: Some(calldata.clone().into()), data: None },
+        ..Default::default()
+    };
+
+    // Configure tracing options
+    let call_opts = GethDebugTracingCallOptions {
+        tracing_options: GethDebugTracingOptions::default()
+            .with_tracer(GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer))
+            .with_timeout(std::time::Duration::from_secs(300))
+            .with_call_config(reth_rpc_types::trace::geth::CallConfig { only_top_call: Some(false), with_log: None }),
+        state_overrides: Default::default(),
+        block_overrides: Default::default(),
+    };
+
+    // Send a trace_call RPC request
+    let reqwest_client = reqwest::Client::new();
+    let res = reqwest_client
+        .post(format!("http://localhost:{}", server_addr.port()))
+        .header("Content-Type", "application/json")
+        .body(
+            RawRpcParamsBuilder::new("debug_traceCall")
+                .add_param(request)
+                .add_param(Some(BlockId::Number(TRACING_BLOCK_NUMBER.into())))
+                .add_param(call_opts)
+                .build(),
+        )
+        .send()
+        .await
+        .expect("Failed to call Debug RPC");
+
+    // Process the response
+    let response = res.text().await.expect("Failed to get response body");
+    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
+    let trace: GethTrace =
+        serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result from trace");
+
+    // Assert that the trace result matches expectations
+    assert_eq!(
+        trace,
+        GethTrace::CallTracer(CallFrame {
+            from: evm_address,
+            gas: U256::from(210_000),
+            gas_used: U256::from(21410),
+            to: Some(contract_address),
+            value: Some(U256::ZERO),
+            typ: "CALL".to_string(),
+            input: calldata.into(),
+            ..Default::default()
+        })
+    );
+
+    // Clean up by dropping the server handle
     drop(server_handle);
 }

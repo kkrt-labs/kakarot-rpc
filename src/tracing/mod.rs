@@ -14,15 +14,19 @@ use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::{ConfigureEvm, ConfigureEvmEnv};
 use reth_primitives::{ruint::FromUintError, B256};
 use reth_revm::{
-    primitives::{Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
+    primitives::{CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
     Database, DatabaseCommit,
 };
+use reth_rpc_eth_types::revm_utils::build_call_evm_env;
 use reth_rpc_types::{
     trace::{
-        geth::{GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingOptions, GethTrace, TraceResult},
+        geth::{
+            GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions, GethDebugTracingOptions,
+            GethTrace, TraceResult,
+        },
         parity::LocalizedTransactionTrace,
     },
-    TransactionInfo,
+    TransactionInfo, TransactionRequest,
 };
 use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
 use std::collections::HashMap;
@@ -43,7 +47,7 @@ enum TracingResult {
 
 impl TracingResult {
     /// Converts the tracing result into Geth traces.
-    fn into_geth(self) -> Option<Vec<TraceResult>> {
+    const fn as_geth(&self) -> Option<&Vec<TraceResult>> {
         if let Self::Geth(traces) = self {
             Some(traces)
         } else {
@@ -52,18 +56,17 @@ impl TracingResult {
     }
 
     /// Converts the tracing result into Parity traces.
-    fn into_parity(self) -> Option<Vec<LocalizedTransactionTrace>> {
+    const fn as_parity(&self) -> Option<&Vec<LocalizedTransactionTrace>> {
         if let Self::Parity(traces) = self {
             Some(traces)
         } else {
             None
         }
     }
-
-    /// Creates a default failure `TracingResult` based on the `TracingOptions`.
+    /// Creates a default failure [`TracingResult`] based on the [`TracingOptions`].
     fn default_failure(tracing_options: &TracingOptions, tx: &reth_rpc_types::Transaction) -> Self {
         match tracing_options {
-            TracingOptions::Geth(_) => Self::Geth(vec![TraceResult::Success {
+            TracingOptions::Geth(_) | TracingOptions::GethCall(_) => Self::Geth(vec![TraceResult::Success {
                 result: GethTrace::Default(reth_rpc_types::trace::geth::DefaultFrame {
                     failed: true,
                     ..Default::default()
@@ -196,14 +199,14 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Trace the block in the parity format.
     pub fn trace_block(self) -> TracerResult<Option<Vec<LocalizedTransactionTrace>>> {
         let txs = self.transactions.clone();
-        Ok(Some(self.trace_transactions(TracingResult::into_parity, &txs)?))
+        Ok(Some(self.trace_transactions(TracingResult::as_parity, &txs)?))
     }
 
     /// Returns the debug trace in the Geth.
     /// Currently only supports the call tracer or the default tracer.
     pub fn debug_block(self) -> TracerResult<Vec<TraceResult>> {
         let txs = self.transactions.clone();
-        self.trace_transactions(TracingResult::into_geth, &txs)
+        self.trace_transactions(TracingResult::as_geth, &txs)
     }
 
     pub fn debug_transaction(mut self, transaction_hash: B256) -> TracerResult<GethTrace> {
@@ -211,7 +214,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
             if tx.hash == transaction_hash {
                 // We only want to trace the transaction with the given hash.
                 let trace = self
-                    .trace_transactions(TracingResult::into_geth, &[tx])?
+                    .trace_transactions(TracingResult::as_geth, &[tx])?
                     .first()
                     .cloned()
                     .ok_or(TransactionError::Tracing(eyre!("No trace found").into()))?;
@@ -229,15 +232,84 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         Err(EthApiError::TransactionNotFound(transaction_hash))
     }
 
+    /// Debugs a transaction request by tracing it using the provided tracing options.
+    ///
+    /// This function returns an error if the tracing options are not supported or if there is an issue
+    /// with the EVM environment or transaction execution.
+    pub fn debug_transaction_request(self, request: &TransactionRequest) -> TracerResult<GethTrace> {
+        // Attempt to get Geth tracing options from the provided tracing options.
+        let opts = self
+            .tracing_options
+            .as_geth_call()
+            .ok_or_else(|| {
+                // Return an error if the tracing options are not supported.
+                EthApiError::Transaction(TransactionError::Tracing(
+                    eyre!("only `GethDebugTracingCallOptions` tracing options are supported for call tracing").into(),
+                ))
+            })?
+            .clone();
+
+        // Extract the tracing options from the obtained Geth tracing options.
+        let GethDebugTracingCallOptions { tracing_options, .. } = opts;
+        let GethDebugTracingOptions { tracer, tracer_config, .. } = tracing_options;
+
+        // Check if a tracer is provided.
+        if let Some(tracer) = tracer {
+            match tracer {
+                // Only support CallTracer for now.
+                GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer) => {
+                    // Build the EVM environment using the provided configuration and request.
+
+                    let env = build_call_evm_env(
+                        CfgEnvWithHandlerCfg { cfg_env: self.env.cfg.clone(), handler_cfg: self.env.handler_cfg },
+                        self.env.block.clone(),
+                        request.clone(),
+                    )?;
+
+                    // Convert the tracer configuration into call configuration.
+                    let call_config =
+                        tracer_config.into_call_config().map_err(|err| TransactionError::Tracing(err.into()))?;
+
+                    // Create a new tracing inspector with the call configuration.
+                    let mut inspector =
+                        TracingInspector::new(TracingInspectorConfig::from_geth_call_config(&call_config));
+
+                    // Build EVM with environment and inspector.
+                    let eth_evm_config = EthEvmConfig::default();
+                    let evm = eth_evm_config.evm_with_env_and_inspector(self.db, env, &mut inspector);
+
+                    // Execute the transaction.
+                    let res = transact_in_place(evm)?;
+
+                    // Get the call traces from the inspector.
+                    let frame = inspector.into_geth_builder().geth_call_traces(call_config, res.result.gas_used());
+
+                    // Return the obtained call traces.
+                    return Ok(frame.into());
+                }
+
+                // Return an error for unsupported tracers.
+                _ => {
+                    return Err(EthApiError::Transaction(TransactionError::Tracing(
+                        eyre!("only call tracer is currently supported").into(),
+                    )))
+                }
+            }
+        }
+
+        // Return a default Geth trace if no tracer is provided.
+        Ok(GethTrace::Default(Default::default()))
+    }
+
     /// Traces the provided transactions using the given closure.
     /// The `convert_result` closure takes the resulting tracing result
     /// and converts it into the desired type.
-    fn trace_transactions<T>(
+    fn trace_transactions<T: Clone>(
         self,
-        convert_result: fn(TracingResult) -> Option<Vec<T>>,
+        convert_result: fn(&TracingResult) -> Option<&Vec<T>>,
         transactions: &[reth_rpc_types::Transaction],
     ) -> TracerResult<Vec<T>> {
-        let mut traces = Vec::with_capacity(self.transactions.len());
+        let mut traces: Vec<T> = Vec::with_capacity(self.transactions.len());
         let mut transactions = transactions.iter().peekable();
         let mut db = self.db;
 
@@ -253,10 +325,18 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                         TracingOptions::Parity(tracing_config) => {
                             Self::trace_parity(env, &mut db, tx, *tracing_config)?
                         }
+                        TracingOptions::GethCall(_) => {
+                            return Err(EthApiError::Transaction(TransactionError::Tracing(
+                                eyre!("`TracingOptions::GethCall` is not supported in `trace_transactions` context")
+                                    .into(),
+                            )))
+                        }
                     }
                 };
 
-            traces.extend(convert_result(res).unwrap_or_default());
+            if let Some(result) = convert_result(&res) {
+                traces.append(&mut result.clone());
+            }
 
             // Only commit to the database if there are more transactions to process.
             if transactions.peek().is_some() {

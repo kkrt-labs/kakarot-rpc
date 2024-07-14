@@ -6,7 +6,8 @@ use crate::eth_provider::{
 use reth_primitives::{B256, U256};
 use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
 use reth_rpc_types::{
-    trace::geth::GethDebugTracingOptions, Block, BlockHashOrNumber, BlockId, BlockTransactions, Header,
+    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
+    Block, BlockHashOrNumber, BlockId, BlockTransactions, Header,
 };
 use revm_inspectors::tracing::TracingInspectorConfig;
 
@@ -22,6 +23,40 @@ pub enum TracingOptions {
     Geth(GethDebugTracingOptions),
     /// Parity tracing options.
     Parity(TracingInspectorConfig),
+    /// Geth debug call tracing options.
+    GethCall(GethDebugTracingCallOptions),
+}
+
+impl TracingOptions {
+    /// Returns `Some` with a reference to [`GethDebugTracingOptions`] if this is `Geth`,
+    /// otherwise returns `None`.
+    pub const fn as_geth(&self) -> Option<&GethDebugTracingOptions> {
+        if let Self::Geth(ref options) = self {
+            Some(options)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with a reference to [`TracingInspectorConfig`] if this is `Parity`,
+    /// otherwise returns `None`.
+    pub const fn as_parity(&self) -> Option<&TracingInspectorConfig> {
+        if let Self::Parity(ref config) = self {
+            Some(config)
+        } else {
+            None
+        }
+    }
+
+    /// Returns `Some` with a reference to [`GethDebugTracingCallOptions`] if this is `GethCall`,
+    /// otherwise returns `None`.
+    pub const fn as_geth_call(&self) -> Option<&GethDebugTracingCallOptions> {
+        if let Self::GethCall(ref options) = self {
+            Some(options)
+        } else {
+            None
+        }
+    }
 }
 
 impl Default for TracingOptions {
@@ -39,6 +74,12 @@ impl From<GethDebugTracingOptions> for TracingOptions {
 impl From<TracingInspectorConfig> for TracingOptions {
     fn from(config: TracingInspectorConfig) -> Self {
         Self::Parity(config)
+    }
+}
+
+impl From<GethDebugTracingCallOptions> for TracingOptions {
+    fn from(options: GethDebugTracingCallOptions) -> Self {
+        Self::GethCall(options)
     }
 }
 
@@ -113,7 +154,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
         .ok_or(match block_id {
             BlockId::Hash(hash) => EthApiError::UnknownBlock(hash.block_hash.into()),
             BlockId::Number(number) => {
-                EthApiError::UnknownBlock(BlockHashOrNumber::Number(number.as_number().unwrap()))
+                EthApiError::UnknownBlock(BlockHashOrNumber::Number(number.as_number().unwrap_or_default()))
             }
         })?;
 

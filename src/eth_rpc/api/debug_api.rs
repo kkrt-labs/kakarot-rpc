@@ -1,8 +1,8 @@
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
 use reth_primitives::{Bytes, B256};
 use reth_rpc_types::{
-    trace::geth::{GethDebugTracingOptions, GethTrace, TraceResult},
-    BlockId, BlockNumberOrTag,
+    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult},
+    BlockId, BlockNumberOrTag, TransactionRequest,
 };
 
 /// Debug API
@@ -55,5 +55,14 @@ pub trait DebugApi {
         &self,
         transaction_hash: B256,
         opts: Option<GethDebugTracingOptions>,
+    ) -> Result<GethTrace>;
+
+    /// Runs an `eth_call` within the context of a given block execution and returns the Geth debug trace.
+    #[method(name = "traceCall")]
+    async fn trace_call(
+        &self,
+        request: TransactionRequest,
+        block_number: Option<BlockId>,
+        opts: Option<GethDebugTracingCallOptions>,
     ) -> Result<GethTrace>;
 }
