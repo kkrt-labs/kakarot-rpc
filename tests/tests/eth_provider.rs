@@ -25,8 +25,7 @@ use reth_rpc_types::{
     RpcBlockHash, Topic, TransactionRequest,
 };
 use rstest::*;
-use starknet::core::types::BlockTag;
-use starknet::core::types::Felt;
+use starknet::core::types::{BlockTag, Felt};
 use std::{str::FromStr, sync::Arc};
 
 #[rstest]
