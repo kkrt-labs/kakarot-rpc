@@ -52,7 +52,7 @@ export function toEthLog({
 
   // Log events originated from kakarot address only
   if (fromAddress !== KAKAROT_ADDRESS) {
-    return null
+    return null;
   }
 
   // The event must have at least one key (since the first key is the address)
