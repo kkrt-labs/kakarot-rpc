@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use reth_primitives::U256;
+use starknet::core::types::Felt;
 use std::str::FromStr;
 #[cfg(feature = "hive")]
 use {

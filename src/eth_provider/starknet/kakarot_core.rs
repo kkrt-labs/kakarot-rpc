@@ -10,10 +10,9 @@ use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, TransactionSigned, B256};
-use starknet::core::types::Felt;
 use starknet::{
     core::{
-        types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1},
+        types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, Felt},
         utils::get_contract_address,
     },
     macros::selector,

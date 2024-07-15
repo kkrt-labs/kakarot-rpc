@@ -38,7 +38,7 @@ use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf};
 use walkdir::WalkDir;
 
 lazy_static! {
-    static ref SALT: Felt = Felt::from_bytes_be(&[0u8; 32]).unwrap();
+    static ref SALT: Felt = Felt::from_bytes_be(&[0u8; 32]);
 }
 
 #[serde_as]
@@ -332,7 +332,7 @@ impl KatanaGenesisBuilder<Initialized> {
 
     #[allow(clippy::unused_self)]
     fn evm_address(&self, pk: B256) -> Result<Felt> {
-        Ok(Felt::from_bytes_be_slice(&LocalWallet::from_bytes(&pk)?.address().into_array())?)
+        Ok(Felt::from_bytes_be_slice(&LocalWallet::from_bytes(&pk)?.address().into_array()))
     }
 
     pub fn cache_load(&self, key: &str) -> Result<Felt> {

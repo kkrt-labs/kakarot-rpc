@@ -12,8 +12,7 @@ use katana_primitives::{
 };
 use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::Felt;
-use starknet::core::utils::get_storage_var_address;
+use starknet::core::{types::Felt, utils::get_storage_var_address};
 use starknet_api::core::ClassHash;
 use std::collections::HashMap;
 
@@ -53,7 +52,7 @@ impl HiveGenesisConfig {
     /// Convert the [`HiveGenesisConfig`] into a [`GenesisJson`] using an [`KatanaGenesisBuilder`]<[Loaded]>. The [Loaded]
     /// marker type indicates that the Kakarot contract classes need to have been loaded into the builder.
     pub fn try_into_genesis_json(self, builder: KatanaGenesisBuilder<Loaded>) -> Result<GenesisJson, eyre::Error> {
-        let coinbase_address = Felt::from_bytes_be_slice(self.coinbase.as_slice())?;
+        let coinbase_address = Felt::from_bytes_be_slice(self.coinbase.as_slice());
         let builder = builder.with_kakarot(coinbase_address)?;
 
         // Get the current state of the builder.
@@ -67,7 +66,7 @@ impl HiveGenesisConfig {
             .alloc
             .into_iter()
             .map(|(address, info)| {
-                let evm_address = Felt::from_bytes_be_slice(address.as_slice())?;
+                let evm_address = Felt::from_bytes_be_slice(address.as_slice());
                 let starknet_address = builder.compute_starknet_address(evm_address)?.0;
 
                 // Store the mapping from EVM to Starknet address.
@@ -168,10 +167,8 @@ mod tests {
     fn test_genesis_accounts() {
         // Then
         for (address, account) in HIVE_GENESIS.alloc.clone() {
-            let starknet_address = GENESIS_BUILDER
-                .compute_starknet_address(Felt::from_bytes_be_slice(address.as_slice()).unwrap())
-                .unwrap()
-                .0;
+            let starknet_address =
+                GENESIS_BUILDER.compute_starknet_address(Felt::from_bytes_be_slice(address.as_slice())).unwrap().0;
             let contract = GENESIS.contracts.get(&ContractAddress::new(starknet_address)).unwrap();
 
             // Check the balance

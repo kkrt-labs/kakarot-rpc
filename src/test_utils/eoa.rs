@@ -17,10 +17,9 @@ use reth_primitives::{
     sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, B256, U256,
 };
 use reth_rpc_types_compat::transaction::from_recovered;
-use starknet::core::types::Felt;
 use starknet::{
     core::{
-        types::{MaybePendingTransactionReceipt, TransactionReceipt},
+        types::{Felt, TransactionReceipt},
         utils::get_selector_from_name,
     },
     providers::Provider,
@@ -118,7 +117,6 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let expected_address = {
             let expected_eth_address = self.evm_address().expect("Failed to get EVM address").create(nonce);
             Felt::from_bytes_be_slice(expected_eth_address.as_slice())
-                .expect("Failed to convert address to field element")
         };
 
         let tx = if contract_name.is_none() {
@@ -155,7 +153,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             .await
             .expect("Failed to get transaction receipt after retries");
 
-        let MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) = maybe_receipt else {
+        let TransactionReceipt::Invoke(receipt) = maybe_receipt.receipt else {
             return Err(eyre::eyre!("Failed to deploy contract"));
         };
 
@@ -195,7 +193,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let tx_hash = self.send_transaction(tx_signed).await?;
 
         let bytes = tx_hash.0;
-        let starknet_tx_hash = Felt::from_bytes_be(&bytes).unwrap();
+        let starknet_tx_hash = Felt::from_bytes_be(&bytes);
 
         watch_tx(self.eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
             .await

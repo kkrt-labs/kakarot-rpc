@@ -50,8 +50,10 @@ use reth_rpc_types::{
     Index, RichBlock, SyncInfo, SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
 };
 use reth_rpc_types_compat::transaction::from_recovered;
-use starknet::core::types::Felt;
-use starknet::core::{types::SyncStatusType, utils::get_storage_var_address};
+use starknet::core::{
+    types::{Felt, SyncStatusType},
+    utils::get_storage_var_address,
+};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
@@ -818,7 +820,7 @@ where
     async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
         use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::{
-            accounts::{Call, Execution},
+            accounts::{Call, ExecutionV1},
             core::{types::BlockTag, utils::get_selector_from_name},
         };
 
@@ -831,7 +833,7 @@ where
             .await;
 
         if contract_not_found(&maybe_is_initialized) {
-            let execution = Execution::new(
+            let execution = ExecutionV1::new(
                 vec![Call {
                     to: *KAKAROT_ADDRESS,
                     selector: get_selector_from_name("deploy_externally_owned_account").unwrap(),
