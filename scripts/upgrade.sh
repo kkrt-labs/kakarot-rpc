@@ -77,7 +77,7 @@ elif [ "${ENV}" = "sepolia" ]; then
 		exit 1
 	fi
 	if [ -z "${KAKAROT_SEPOLIA_PRIVATE_KEY}" ]; then
-		echo "Please provide the KAKAROT_SEPOLIA_PRIVATE_KEY environment variable. The private key should be loaded using gpg: gpg -r recipient@kakarot.org --decrypt path/to/encripted/key.gpg"
+		echo "Please provide the KAKAROT_SEPOLIA_PRIVATE_KEY environment variable. The private key should be loaded using gpg: gpg -r recipient@kakarot.org --decrypt path/to/encrypted/key.gpg"
 		exit 1
 	fi
 
