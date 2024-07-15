@@ -22,7 +22,7 @@ lint:
     - git-diff-check
     - hadolint@2.12.0
     - markdownlint@0.41.0
-    - osv-scanner@1.8.1
+    - osv-scanner@1.8.2
     - oxipng@9.1.1
     - prettier@3.3.2
     - rustfmt@1.65.0
@@ -33,7 +33,7 @@ lint:
     - trivy@0.52.2
     - trufflehog@3.79.0
     - yamllint@1.35.1
-    - deno@1.44.4
+    - deno@1.45.1
   ignore:
     - linters: [ALL]
       paths:
