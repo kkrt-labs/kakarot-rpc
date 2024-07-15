@@ -17,7 +17,7 @@ use starknet::{
     },
     macros::selector,
 };
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use std::str::FromStr;
 
 // Contract ABIs
@@ -29,37 +29,37 @@ pub mod account_contract {
 
 #[allow(clippy::too_many_arguments)]
 pub mod core {
-    use super::{abigen_legacy, FieldElement};
+    use super::{abigen_legacy, Felt};
     abigen_legacy!(KakarotCore, "./.kakarot/artifacts/kakarot.json");
 
     #[derive(Debug)]
     pub struct CallInput {
-        pub(crate) nonce: FieldElement,
-        pub(crate) from: FieldElement,
+        pub(crate) nonce: Felt,
+        pub(crate) from: Felt,
         pub(crate) to: self::Option,
-        pub(crate) gas_limit: FieldElement,
-        pub(crate) gas_price: FieldElement,
+        pub(crate) gas_limit: Felt,
+        pub(crate) gas_price: Felt,
         pub(crate) value: Uint256,
-        pub(crate) calldata: Vec<FieldElement>,
+        pub(crate) calldata: Vec<Felt>,
     }
 }
 
-fn env_var_to_field_element(var_name: &str) -> FieldElement {
+fn env_var_to_field_element(var_name: &str) -> Felt {
     dotenv().ok();
     let env_var = std::env::var(var_name).unwrap_or_else(|_| panic!("Missing environment variable {var_name}"));
 
-    FieldElement::from_str(&env_var).unwrap_or_else(|_| panic!("Invalid hex string for {var_name}"))
+    Felt::from_str(&env_var).unwrap_or_else(|_| panic!("Invalid hex string for {var_name}"))
 }
 
 lazy_static! {
     // Contract addresses
-    pub static ref KAKAROT_ADDRESS: FieldElement = env_var_to_field_element("KAKAROT_ADDRESS");
+    pub static ref KAKAROT_ADDRESS: Felt = env_var_to_field_element("KAKAROT_ADDRESS");
 
     // Contract class hashes
-    pub static ref UNINITIALIZED_ACCOUNT_CLASS_HASH: FieldElement = env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH");
+    pub static ref UNINITIALIZED_ACCOUNT_CLASS_HASH: Felt = env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH");
 
     // Contract selectors
-    pub static ref ETH_SEND_TRANSACTION: FieldElement = selector!("eth_send_transaction");
+    pub static ref ETH_SEND_TRANSACTION: Felt = selector!("eth_send_transaction");
 
     // Maximum number of felts (bytes) in calldata
     pub static ref MAX_FELTS_IN_CALLDATA: usize = usize::from_str(
@@ -80,13 +80,13 @@ lazy_static! {
 // Kakarot utils
 /// Compute the starknet address given a eth address
 #[inline]
-pub fn starknet_address(address: Address) -> FieldElement {
+pub fn starknet_address(address: Address) -> Felt {
     let evm_address = into_via_wrapper!(address);
     get_contract_address(
         evm_address,
         *UNINITIALIZED_ACCOUNT_CLASS_HASH,
         &[*KAKAROT_ADDRESS, evm_address],
-        FieldElement::ZERO,
+        Felt::ZERO,
     )
 }
 
@@ -99,7 +99,7 @@ pub fn to_starknet_transaction(
     let sender_address = starknet_address(signer);
 
     // Transform the signature to a vector of field elements
-    let signature: Vec<FieldElement> = transaction_signature_to_field_elements(transaction);
+    let signature: Vec<Felt> = transaction_signature_to_field_elements(transaction);
 
     // Transform the transaction's data to Starknet calldata
     let calldata = transaction_data_to_starknet_calldata(transaction, retries)?;
@@ -108,7 +108,7 @@ pub fn to_starknet_transaction(
     // Starknet sequencer, which is the intended behavior as fee perception is
     // handled by the Kakarot execution layer through EVM gas accounting.
     Ok(BroadcastedInvokeTransaction::V1(BroadcastedInvokeTransactionV1 {
-        max_fee: FieldElement::ZERO,
+        max_fee: Felt::ZERO,
         signature,
         nonce: transaction.nonce().into(),
         sender_address,
@@ -141,20 +141,20 @@ mod tests {
             assert_eq!(
                 tx.signature,
                 vec![
-                    FieldElement::from(255_389_455_834_799_815_707_633_470_637_690_197_142_u128),
-                    FieldElement::from(131_015_958_324_370_192_097_986_834_655_742_602_650_u128),
-                    FieldElement::from(263_740_705_169_547_910_390_939_684_488_449_712_973_u128),
-                    FieldElement::from(164_374_192_806_466_935_713_473_791_294_001_132_486_u128),
-                    FieldElement::ONE,
+                    Felt::from(255_389_455_834_799_815_707_633_470_637_690_197_142_u128),
+                    Felt::from(131_015_958_324_370_192_097_986_834_655_742_602_650_u128),
+                    Felt::from(263_740_705_169_547_910_390_939_684_488_449_712_973_u128),
+                    Felt::from(164_374_192_806_466_935_713_473_791_294_001_132_486_u128),
+                    Felt::ONE,
                 ]
             );
 
             // Transaction nonce assertion.
-            assert_eq!(tx.nonce, FieldElement::from(33_u128));
+            assert_eq!(tx.nonce, Felt::from(33_u128));
 
             // Assertion for transaction properties.
             assert!(!tx.is_query);
-            assert_eq!(tx.max_fee, FieldElement::ZERO);
+            assert_eq!(tx.max_fee, Felt::ZERO);
 
             // Assert the length of calldata.
             // We must adapt the check as we pack the calldata in 31-byte chunks.
@@ -164,12 +164,12 @@ mod tests {
             assert_eq!(
                 tx.calldata[0..6],
                 vec![
-                    FieldElement::ONE,
+                    Felt::ONE,
                     *KAKAROT_ADDRESS,
                     *ETH_SEND_TRANSACTION,
-                    FieldElement::ZERO,
-                    FieldElement::from((transaction.transaction.length() + 30) / 31 + 1),
-                    FieldElement::from((transaction.transaction.length() + 30) / 31 + 1),
+                    Felt::ZERO,
+                    Felt::from((transaction.transaction.length() + 30) / 31 + 1),
+                    Felt::from((transaction.transaction.length() + 30) / 31 + 1),
                 ]
             );
 
@@ -177,17 +177,17 @@ mod tests {
             assert_eq!(
                 tx.sender_address,
                 get_contract_address(
-                    FieldElement::from(Felt252Wrapper::from(
+                    Felt::from(Felt252Wrapper::from(
                         Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap()
                     )),
                     *UNINITIALIZED_ACCOUNT_CLASS_HASH,
                     &[
                         *KAKAROT_ADDRESS,
-                        FieldElement::from(Felt252Wrapper::from(
+                        Felt::from(Felt252Wrapper::from(
                             Address::from_str("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266").unwrap()
                         )),
                     ],
-                    FieldElement::ZERO,
+                    Felt::ZERO,
                 )
             );
         } else {

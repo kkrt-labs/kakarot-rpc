@@ -9,7 +9,6 @@ use {
         providers::{jsonrpc::HttpTransport, JsonRpcClient},
         signers::{LocalWallet, SigningKey},
     },
-    starknet_crypto::FieldElement,
     std::sync::Arc,
     std::{env::var, sync::OnceLock},
     tokio::sync::Mutex,
@@ -40,7 +39,7 @@ pub const ADDRESS_HEX_STRING_LEN: usize = 40;
 pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x0800_0000_0000_0011]);
 
 #[cfg(feature = "hive")]
-pub static CHAIN_ID: OnceLock<FieldElement> = OnceLock::new();
+pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
 
 #[cfg(feature = "hive")]
 lazy_static! {
@@ -49,13 +48,13 @@ lazy_static! {
         SingleOwnerAccount::new(
             JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-                FieldElement::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
+                Felt::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
                     .expect("Failed to parse deployer private key")
             )),
-            FieldElement::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
+            Felt::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
                 .expect("Failed to parse deployer address"),
             *CHAIN_ID.get().expect("Failed to get chain id"),
             ExecutionEncoding::New
         );
-    pub static ref DEPLOY_WALLET_NONCE: Arc<Mutex<FieldElement>> = Arc::new(Mutex::new(FieldElement::ZERO));
+    pub static ref DEPLOY_WALLET_NONCE: Arc<Mutex<Felt>> = Arc::new(Mutex::new(Felt::ZERO));
 }

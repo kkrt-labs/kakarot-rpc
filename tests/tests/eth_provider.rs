@@ -26,7 +26,7 @@ use reth_rpc_types::{
 };
 use rstest::*;
 use starknet::core::types::BlockTag;
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use std::{str::FromStr, sync::Arc};
 
 #[rstest]
@@ -664,7 +664,7 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     assert_eq!(
         some_starknet_block_hash,
         starknet::core::types::BlockId::Hash(
-            FieldElement::from_bytes_be(
+            Felt::from_bytes_be(
                 &U256::from_be_slice(transaction.block_hash.unwrap().as_slice())
                     .wrapping_rem(STARKNET_MODULUS)
                     .to_be_bytes()
@@ -763,7 +763,7 @@ async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEv
         .expect("failed to send transaction");
 
     let bytes = tx_hash.0;
-    let starknet_tx_hash = FieldElement::from_bytes_be(&bytes).unwrap();
+    let starknet_tx_hash = Felt::from_bytes_be(&bytes).unwrap();
 
     watch_tx(eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
         .await

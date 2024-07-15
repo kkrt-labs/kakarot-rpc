@@ -1,6 +1,6 @@
 use anyhow::Result;
 use starknet::{
-    core::types::{ExecutionResult, FieldElement, StarknetError},
+    core::types::{ExecutionResult, Felt, StarknetError},
     providers::{Provider, ProviderError},
 };
 use std::time::Duration;
@@ -11,7 +11,7 @@ use tracing::info;
 /// Credits to Jonathan Lei
 pub async fn watch_tx<P>(
     provider: P,
-    transaction_hash: FieldElement,
+    transaction_hash: Felt,
     poll_interval: Duration,
     count: usize,
 ) -> Result<()>

@@ -2,8 +2,9 @@ use alloy_sol_types::decode_revert_reason;
 use jsonrpsee::types::ErrorObject;
 use reth_primitives::{Bytes, B256};
 use reth_rpc_types::BlockHashOrNumber;
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use thiserror::Error;
+use num_traits::cast::ToPrimitive;
 
 /// List of JSON-RPC error codes from ETH rpc spec.
 /// <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md>
@@ -219,9 +220,9 @@ pub enum EvmError {
     Other(Bytes),
 }
 
-impl From<Vec<FieldElement>> for EvmError {
-    fn from(value: Vec<FieldElement>) -> Self {
-        let bytes = value.into_iter().filter_map(|x| u8::try_from(x).ok()).collect::<Vec<_>>();
+impl From<Vec<Felt>> for EvmError {
+    fn from(value: Vec<Felt>) -> Self {
+        let bytes = value.into_iter().filter_map(|x|  x.to_u8()).collect::<Vec<_>>();
         let maybe_revert_reason = String::from_utf8(bytes.clone());
         if maybe_revert_reason.is_err() {
             return Self::Other(bytes.into());
@@ -367,7 +368,7 @@ mod tests {
             0x63, 0x65, 0x74, 0x3a, 0x20, 0x43, 0x6c, 0x61, 0x69, 0x6d, 0x20, 0x74, 0x6f, 0x6f, 0x20, 0x73, 0x6f, 0x6f,
             0x6e, 0x2e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ];
-        let bytes = b.clone().into_iter().map(FieldElement::from).collect::<Vec<_>>();
+        let bytes = b.clone().into_iter().map(Felt::from).collect::<Vec<_>>();
 
         // When
         let evm_err: EvmError = bytes.into();
@@ -387,7 +388,7 @@ mod tests {
             0x52, 0xe0, 0x85, 0x5b, 0xab, 0x82, 0xb8, 0xe1, 0x0b, 0x86, 0x92, 0xe5, 0x84, 0xad, 0x03, 0x4b, 0xd2, 0x29,
             0x12,
         ];
-        let bytes = b.clone().into_iter().map(FieldElement::from).collect::<Vec<_>>();
+        let bytes = b.clone().into_iter().map(Felt::from).collect::<Vec<_>>();
 
         // When
         let evm_err: EvmError = bytes.into();
@@ -409,7 +410,7 @@ mod tests {
             0x65,
         ]
         .into_iter()
-        .map(FieldElement::from)
+        .map(Felt::from)
         .collect::<Vec<_>>();
 
         // When

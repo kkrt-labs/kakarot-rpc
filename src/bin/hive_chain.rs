@@ -6,7 +6,7 @@ use starknet::{
     core::types::BroadcastedInvokeTransaction,
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use std::{path::Path, str::FromStr};
 use tokio::{fs::File, io::AsyncReadExt};
 use tokio_stream::StreamExt;
@@ -52,7 +52,7 @@ async fn main() -> eyre::Result<()> {
     }
 
     let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str(&std::env::var("STARKNET_NETWORK")?)?));
-    let mut current_nonce = FieldElement::ZERO;
+    let mut current_nonce = Felt::ZERO;
 
     for (block_number, body) in bodies.into_iter().enumerate() {
         while provider.block_number().await? < block_number as u64 {
@@ -74,7 +74,7 @@ async fn main() -> eyre::Result<()> {
             provider.add_invoke_transaction(starknet_tx).await?;
 
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            current_nonce += FieldElement::ONE;
+            current_nonce += Felt::ONE;
         }
     }
 

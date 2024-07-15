@@ -50,7 +50,8 @@ use reth_rpc_types::{
 };
 use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::{types::SyncStatusType, utils::get_storage_var_address};
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
+use num_traits::cast::ToPrimitive;
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
@@ -378,7 +379,7 @@ where
 
         let bytecode = bytecode.map_err(ExecutionError::from)?.bytecode.0;
 
-        Ok(Bytes::from(bytecode.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
+        Ok(Bytes::from(bytecode.into_iter().filter_map(|x| x.to_u8()).collect::<Vec<_>>()))
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
@@ -430,7 +431,7 @@ where
 
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
         let output = self.call_helper(request, block_id).await?;
-        Ok(Bytes::from(output.0.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
+        Ok(Bytes::from(output.0.into_iter().filter_map(|x| x.to_u8()).collect::<Vec<_>>()))
     }
 
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
@@ -611,7 +612,11 @@ where
         // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
-        let chain_id = (FieldElement::from(u32::MAX) & starknet_provider.chain_id().await?).try_into().unwrap(); // safe unwrap
+        let chain_id_option = starknet_provider.chain_id().await?.to_u32();
+        let chain_id = match chain_id_option {
+            Some(id) => (u32::MAX & id).try_into().unwrap(), // safe unwrap
+            None => panic!("Chain ID is None"), // or handle this case differently
+        };
         Ok(Self { database, starknet_provider, chain_id })
     }
 
@@ -630,9 +635,9 @@ where
         let to: kakarot_core::core::Option = {
             match request.to {
                 Some(TxKind::Call(to)) => {
-                    kakarot_core::core::Option { is_some: FieldElement::ONE, value: into_via_wrapper!(to) }
+                    kakarot_core::core::Option { is_some: Felt::ONE, value: into_via_wrapper!(to) }
                 }
-                _ => kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO },
+                _ => kakarot_core::core::Option { is_some: Felt::ZERO, value: Felt::ZERO },
             }
         };
 
@@ -640,7 +645,7 @@ where
         let from = into_via_wrapper!(request.from.unwrap_or_default());
 
         let data = request.input.into_input().unwrap_or_default();
-        let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
+        let calldata: Vec<Felt> = data.into_iter().map_into().collect();
 
         let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or(CALL_REQUEST_GAS_LIMIT))?;
 
@@ -655,7 +660,7 @@ where
         };
 
         let value =
-            Uint256 { low: into_via_try_wrapper!(request.value.unwrap_or_default())?, high: FieldElement::ZERO };
+            Uint256 { low: into_via_try_wrapper!(request.value.unwrap_or_default())?, high: Felt::ZERO };
 
         // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
         //  when we can simulate the transaction instead of calling `eth_call`
@@ -663,7 +668,7 @@ where
             match request.nonce {
                 Some(nonce) => into_via_wrapper!(nonce),
                 None => match request.from {
-                    None => FieldElement::ZERO,
+                    None => Felt::ZERO,
                     Some(address) => into_via_try_wrapper!(self.transaction_count(address, block_id).await?)?,
                 },
             }
@@ -677,7 +682,7 @@ where
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<CairoArrayLegacy<FieldElement>> {
+    ) -> EthProviderResult<CairoArrayLegacy<Felt>> {
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
@@ -692,7 +697,7 @@ where
                 &call_input.value,
                 &call_input.calldata.len().into(),
                 &CairoArrayLegacy(call_input.calldata),
-                &FieldElement::ZERO,
+                &Felt::ZERO,
                 &CairoArrayLegacy(vec![]),
             )
             .block_id(starknet_block_id)
@@ -701,7 +706,7 @@ where
             .map_err(ExecutionError::from)?;
 
         let return_data = call_output.return_data;
-        if call_output.success == FieldElement::ZERO {
+        if call_output.success == Felt::ZERO {
             return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
         Ok(return_data)
@@ -727,7 +732,7 @@ where
                 &call_input.value,
                 &call_input.calldata.len().into(),
                 &CairoArrayLegacy(call_input.calldata),
-                &FieldElement::ZERO,
+                &Felt::ZERO,
                 &CairoArrayLegacy(vec![]),
             )
             .block_id(starknet_block_id)
@@ -736,10 +741,10 @@ where
             .map_err(ExecutionError::from)?;
 
         let return_data = estimate_gas_output.return_data;
-        if estimate_gas_output.success == FieldElement::ZERO {
+        if estimate_gas_output.success == Felt::ZERO {
             return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
-        let required_gas = estimate_gas_output.required_gas.try_into().map_err(|_| TransactionError::GasOverflow)?;
+        let required_gas = estimate_gas_output.required_gas.to_u128().ok_or(TransactionError::GasOverflow)?;
         Ok(required_gas)
     }
 
