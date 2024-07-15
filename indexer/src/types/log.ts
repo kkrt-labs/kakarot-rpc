@@ -2,7 +2,7 @@
 import { padBigint } from "../utils/hex.ts";
 
 // Constants
-import { NULL_BLOCK_HASH } from "../constants.ts";
+import { KAKAROT_ADDRESS, NULL_BLOCK_HASH } from "../constants.ts";
 
 // Starknet
 import { Event, hash } from "../deps.ts";
@@ -47,8 +47,13 @@ export function toEthLog({
   blockHash: PrefixedHexString;
   isPendingBlock: boolean;
 }): JsonRpcLog | null {
-  const { keys, data } = event;
+  const { keys, data, fromAddress } = event;
   const { transactionIndex, hash } = transaction;
+
+  // TODO: add comment for context of the below check
+  if (fromAddress !== KAKAROT_ADDRESS) {
+    return null
+  }
 
   // The event must have at least one key (since the first key is the address)
   // and an odd number of keys (since each topic is split into two keys).
