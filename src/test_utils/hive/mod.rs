@@ -12,9 +12,9 @@ use katana_primitives::{
 };
 use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
+use starknet::core::types::Felt;
 use starknet::core::utils::get_storage_var_address;
 use starknet_api::core::ClassHash;
-use starknet::core::types::Felt;
 use std::collections::HashMap;
 
 /// Types from <https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58>

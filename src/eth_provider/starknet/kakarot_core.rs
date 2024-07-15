@@ -10,6 +10,7 @@ use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
 use lazy_static::lazy_static;
 use reth_primitives::{Address, TransactionSigned, B256};
+use starknet::core::types::Felt;
 use starknet::{
     core::{
         types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1},
@@ -17,7 +18,6 @@ use starknet::{
     },
     macros::selector,
 };
-use starknet::core::types::Felt;
 use std::str::FromStr;
 
 // Contract ABIs
@@ -82,12 +82,7 @@ lazy_static! {
 #[inline]
 pub fn starknet_address(address: Address) -> Felt {
     let evm_address = into_via_wrapper!(address);
-    get_contract_address(
-        evm_address,
-        *UNINITIALIZED_ACCOUNT_CLASS_HASH,
-        &[*KAKAROT_ADDRESS, evm_address],
-        Felt::ZERO,
-    )
+    get_contract_address(evm_address, *UNINITIALIZED_ACCOUNT_CLASS_HASH, &[*KAKAROT_ADDRESS, evm_address], Felt::ZERO)
 }
 
 /// Convert a Ethereum transaction into a Starknet transaction

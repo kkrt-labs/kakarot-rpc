@@ -41,6 +41,7 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::{eyre, Result};
 use itertools::Itertools;
 use mongodb::bson::doc;
+use num_traits::cast::ToPrimitive;
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
@@ -49,9 +50,8 @@ use reth_rpc_types::{
     Index, RichBlock, SyncInfo, SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
 };
 use reth_rpc_types_compat::transaction::from_recovered;
-use starknet::core::{types::SyncStatusType, utils::get_storage_var_address};
 use starknet::core::types::Felt;
-use num_traits::cast::ToPrimitive;
+use starknet::core::{types::SyncStatusType, utils::get_storage_var_address};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
@@ -615,7 +615,7 @@ where
         let chain_id_option = starknet_provider.chain_id().await?.to_u32();
         let chain_id = match chain_id_option {
             Some(id) => (u32::MAX & id).try_into().unwrap(), // safe unwrap
-            None => panic!("Chain ID is None"), // or handle this case differently
+            None => panic!("Chain ID is None"),              // or handle this case differently
         };
         Ok(Self { database, starknet_provider, chain_id })
     }
@@ -659,8 +659,7 @@ where
             into_via_try_wrapper!(gas_price)?
         };
 
-        let value =
-            Uint256 { low: into_via_try_wrapper!(request.value.unwrap_or_default())?, high: Felt::ZERO };
+        let value = Uint256 { low: into_via_try_wrapper!(request.value.unwrap_or_default())?, high: Felt::ZERO };
 
         // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
         //  when we can simulate the transaction instead of calling `eth_call`

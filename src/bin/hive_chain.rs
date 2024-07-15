@@ -2,11 +2,11 @@ use alloy_rlp::Decodable;
 use eyre::OptionExt;
 use kakarot_rpc::eth_provider::starknet::kakarot_core::to_starknet_transaction;
 use reth_primitives::{bytes::Buf, Block, BlockBody, BytesMut};
+use starknet::core::types::Felt;
 use starknet::{
     core::types::BroadcastedInvokeTransaction,
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
-use starknet::core::types::Felt;
 use std::{path::Path, str::FromStr};
 use tokio::{fs::File, io::AsyncReadExt};
 use tokio_stream::StreamExt;

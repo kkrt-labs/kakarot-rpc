@@ -1,10 +1,10 @@
 use alloy_sol_types::decode_revert_reason;
 use jsonrpsee::types::ErrorObject;
+use num_traits::cast::ToPrimitive;
 use reth_primitives::{Bytes, B256};
 use reth_rpc_types::BlockHashOrNumber;
 use starknet::core::types::Felt;
 use thiserror::Error;
-use num_traits::cast::ToPrimitive;
 
 /// List of JSON-RPC error codes from ETH rpc spec.
 /// <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1474.md>
@@ -222,7 +222,7 @@ pub enum EvmError {
 
 impl From<Vec<Felt>> for EvmError {
     fn from(value: Vec<Felt>) -> Self {
-        let bytes = value.into_iter().filter_map(|x|  x.to_u8()).collect::<Vec<_>>();
+        let bytes = value.into_iter().filter_map(|x| x.to_u8()).collect::<Vec<_>>();
         let maybe_revert_reason = String::from_utf8(bytes.clone());
         if maybe_revert_reason.is_err() {
             return Self::Other(bytes.into());

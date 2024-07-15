@@ -17,6 +17,7 @@ use reth_primitives::{
     sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, B256, U256,
 };
 use reth_rpc_types_compat::transaction::from_recovered;
+use starknet::core::types::Felt;
 use starknet::{
     core::{
         types::{MaybePendingTransactionReceipt, TransactionReceipt},
@@ -24,7 +25,6 @@ use starknet::{
     },
     providers::Provider,
 };
-use starknet::core::types::Felt;
 use std::sync::Arc;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;

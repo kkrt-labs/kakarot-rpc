@@ -144,10 +144,10 @@ pub(crate) fn transaction_data_to_starknet_calldata(
     // We add the retries to the selector in the calldata, since the selector
     // is not used by the EOA contract during the transaction execution.
     calldata.append(&mut vec![
-        Felt::ONE,        // call array length
+        Felt::ONE,                // call array length
         *KAKAROT_ADDRESS,         // contract address
         selector,                 // selector + retries
-        Felt::ZERO,       // data offset
+        Felt::ZERO,               // data offset
         signed_data.len().into(), // data length
         signed_data.len().into(), // calldata length
     ]);

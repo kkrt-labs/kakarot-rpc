@@ -9,12 +9,7 @@ use tracing::info;
 /// Code taken from
 /// <https://github.com/xJonathanLEI/starkli/blob/42c7cfc42102e399f76896ebbbc5291393f40d7e/src/utils.rs#L13>
 /// Credits to Jonathan Lei
-pub async fn watch_tx<P>(
-    provider: P,
-    transaction_hash: Felt,
-    poll_interval: Duration,
-    count: usize,
-) -> Result<()>
+pub async fn watch_tx<P>(provider: P, transaction_hash: Felt, poll_interval: Duration, count: usize) -> Result<()>
 where
     P: Provider,
 {
