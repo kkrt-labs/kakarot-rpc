@@ -51,20 +51,31 @@ impl<P: EthereumProvider + Send + Sync + 'static> KakarotApiServer for KakarotRp
 
         // Retrieve the signer of the transaction.
         let signer = transaction_signed.recover_signer().unwrap();
-
         // Create the Starknet transaction.
         let starknet_transaction =
             (to_starknet_transaction(&transaction_signed, signer, retries).unwrap()).try_into_v1().unwrap();
 
-        let mut data_to_hash: Vec<FieldElement> = vec![];
-        data_to_hash.push(starknet_transaction.sender_address);
-        data_to_hash.extend(starknet_transaction.calldata.clone());
-        data_to_hash.push(starknet_transaction.max_fee);
-        data_to_hash.extend(starknet_transaction.signature.clone());
-        data_to_hash.push(starknet_transaction.nonce);
+        // invoke prefix
+        const PREFIX_INVOKE: FieldElement = FieldElement::from_mont([
+            18443034532770911073,
+            18446744073709551615,
+            18446744073709551615,
+            513398556346534256,
+        ]);
+
+        let chain_id = FieldElement::from(transaction_signed.chain_id().expect("Chain ID is None"));
 
         // Compute the hash on elements
-        let transaction_hash = compute_hash_on_elements(&data_to_hash);
+        let transaction_hash = compute_hash_on_elements(&[
+            PREFIX_INVOKE,
+            FieldElement::ONE,
+            starknet_transaction.sender_address,
+            FieldElement::ZERO,
+            starknet_transaction.max_fee,
+            compute_hash_on_elements(&starknet_transaction.calldata),
+            chain_id,
+            starknet_transaction.nonce,
+        ]);
 
         Ok(transaction_hash)
     }
