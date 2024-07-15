@@ -120,7 +120,7 @@ pub(crate) fn transaction_data_to_starknet_calldata(
 
     // Pack the calldata in 31-byte chunks
     let mut signed_data: Vec<Felt> = std::iter::once(Felt::from(signed_data.len()))
-        .chain(signed_data.chunks(31).filter_map(|chunk_bytes| Some(Felt::from_bytes_be_slice(chunk_bytes))))
+        .chain(signed_data.chunks(31).map(Felt::from_bytes_be_slice))
         .collect();
 
     // Prepare the calldata for the Starknet invoke transaction

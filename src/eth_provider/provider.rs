@@ -51,7 +51,7 @@ use reth_rpc_types::{
 };
 use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::{
-    types::{Felt, SyncStatusType},
+    types::{BroadcastedInvokeTransaction, Felt, SyncStatusType},
     utils::get_storage_var_address,
 };
 
@@ -615,10 +615,11 @@ where
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
         let chain_id_option = starknet_provider.chain_id().await?.to_u32();
-        let chain_id = match chain_id_option {
-            Some(id) => (u32::MAX & id).try_into().unwrap(), // safe unwrap
-            None => panic!("Chain ID is None"),              // or handle this case differently
-        };
+        let chain_id = chain_id_option.map_or_else(
+            || panic!("Chain ID is None"), // handle the None case
+            |id| (u32::MAX & id).into(),   // safe unwrap
+        );
+
         Ok(Self { database, starknet_provider, chain_id })
     }
 
@@ -853,9 +854,12 @@ where
                 .get_invoke_request(false)
                 .await
                 .map_err(|_| SignatureError::SigningFailure)?;
-            self.starknet_provider.add_invoke_transaction(tx).await.map_err(KakarotError::from)?;
+            self.starknet_provider
+                .add_invoke_transaction(BroadcastedInvokeTransaction::V1(tx))
+                .await
+                .map_err(KakarotError::from)?;
 
-            *nonce += 1u8.into();
+            *nonce += Felt::from(1);
             drop(nonce);
         };
 
