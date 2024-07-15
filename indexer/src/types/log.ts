@@ -50,7 +50,7 @@ export function toEthLog({
   const { keys, data, fromAddress } = event;
   const { transactionIndex, hash } = transaction;
 
-  // TODO: add comment for context of the below check
+  // Log events originated from kakarot address only
   if (fromAddress !== KAKAROT_ADDRESS) {
     return null
   }
