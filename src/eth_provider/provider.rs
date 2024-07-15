@@ -26,13 +26,18 @@ use super::{
     utils::{class_hash_not_declared, contract_not_found, entrypoint_not_found, split_u256},
 };
 use crate::{
-    eth_provider::database::{ethereum::EthereumTransactionStore, filter, filter::format_hex, FindOpts},
+    eth_provider::database::{
+        ethereum::EthereumTransactionStore,
+        filter::{self, format_hex},
+        FindOpts,
+    },
     into_via_try_wrapper, into_via_wrapper,
     models::{
         block::{EthBlockId, EthBlockNumberOrTag},
         felt::Felt252Wrapper,
         transaction::validate_transaction,
     },
+    tracing::database::EthDatabaseSnapshot,
 };
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
@@ -41,12 +46,22 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::{eyre, Result};
 use itertools::Itertools;
 use mongodb::bson::doc;
+use reth_evm_ethereum::EthEvmConfig;
+use reth_node_api::ConfigureEvm;
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
+use reth_revm::{
+    primitives::{AccountInfo, BlockEnv, Bytecode, CfgEnv, CfgEnvWithHandlerCfg, HandlerCfg, SpecId},
+    Database as RevmDatabase, DatabaseRef,
+};
+use reth_rpc_eth_types::{error::ensure_success, revm_utils::prepare_call_env};
 use reth_rpc_types::{
-    serde_helpers::JsonStorageKey, txpool::TxpoolContent, BlockHashOrNumber, FeeHistory, Filter, FilterChanges, Header,
-    Index, RichBlock, SyncInfo, SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
+    serde_helpers::JsonStorageKey,
+    state::{EvmOverrides, StateOverride},
+    txpool::TxpoolContent,
+    BlockHashOrNumber, BlockOverrides, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock, SyncInfo,
+    SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
 };
 use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::core::{types::SyncStatusType, utils::get_storage_var_address};
@@ -113,7 +128,13 @@ pub trait EthereumProvider {
     /// Returns the logs for the given filter.
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges>;
     /// Returns the result of a call.
-    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
+    async fn call(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+        state_overrides: Option<StateOverride>,
+        block_overrides: Option<Box<BlockOverrides>>,
+    ) -> EthProviderResult<Bytes>;
     /// Returns the result of a estimate gas.
     async fn estimate_gas(&self, call: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256>;
     /// Returns the fee history given a block count and a newest block number.
@@ -157,6 +178,41 @@ where
     /// Returns a reference to the database.
     pub const fn database(&self) -> &Database {
         &self.database
+    }
+}
+
+impl<SP> DatabaseRef for EthDataProvider<SP>
+where
+    SP: starknet::providers::Provider + Send + Sync,
+{
+    type Error = EthApiError;
+
+    fn basic_ref(&self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
+        tokio::task::block_in_place(|| {
+            let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
+            database_snapshot.basic(address)
+        })
+    }
+
+    fn code_by_hash_ref(&self, code_hash: B256) -> Result<Bytecode, Self::Error> {
+        tokio::task::block_in_place(|| {
+            let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
+            database_snapshot.code_by_hash(code_hash)
+        })
+    }
+
+    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+        tokio::task::block_in_place(|| {
+            let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
+            database_snapshot.storage(address, index)
+        })
+    }
+
+    fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
+        tokio::task::block_in_place(|| {
+            let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
+            database_snapshot.block_hash(number)
+        })
     }
 }
 
@@ -428,7 +484,65 @@ where
         ))
     }
 
-    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
+    async fn call(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+        state_overrides: Option<StateOverride>,
+        block_overrides: Option<Box<BlockOverrides>>,
+    ) -> EthProviderResult<Bytes> {
+        // Create the EVM overrides from the state and block overrides.
+        let evm_overrides = EvmOverrides::new(state_overrides, block_overrides);
+
+        // Check if either state_overrides or block_overrides is present.
+        if evm_overrides.has_state() || evm_overrides.has_block() {
+            // Create the configuration environment with the chain ID.
+            let cfg_env = CfgEnv::default().with_chain_id(self.chain_id().await?.unwrap_or_default().to());
+
+            // Retrieve the block header details.
+            let Header { number, timestamp, miner, base_fee_per_gas, difficulty, .. } =
+                self.header(&block_id.unwrap_or_default()).await?.unwrap_or_default();
+
+            // Create the block environment with the retrieved header details and transaction request.
+            let block_env = BlockEnv {
+                number: U256::from(number.unwrap_or_default()),
+                timestamp: U256::from(timestamp),
+                gas_limit: U256::from(request.gas.unwrap_or_default()),
+                coinbase: miner,
+                basefee: U256::from(base_fee_per_gas.unwrap_or_default()),
+                prevrandao: Some(B256::from_slice(&difficulty.to_be_bytes::<32>()[..])),
+                ..Default::default()
+            };
+
+            // Combine the configuration environment with the handler configuration.
+            let cfg_env_with_handler_cfg =
+                CfgEnvWithHandlerCfg { cfg_env, handler_cfg: HandlerCfg::new(SpecId::CANCUN) };
+
+            // Create a snapshot of the Ethereum database using the block ID.
+            let mut db = EthDatabaseSnapshot::new(self, block_id.unwrap_or_default());
+
+            // Prepare the call environment with the transaction request, gas limit, and overrides.
+            let env = prepare_call_env(
+                cfg_env_with_handler_cfg,
+                block_env,
+                request.clone(),
+                request.gas.unwrap_or_default().try_into().expect("Gas limit is too large"),
+                &mut db.cache,
+                evm_overrides,
+            )?;
+
+            // Execute the transaction using the configured EVM.
+            let res = tokio::task::block_in_place(|| {
+                EthEvmConfig::default().evm_with_env(db, env).transact().map_err(|err| {
+                    <TransactionError as Into<EthApiError>>::into(TransactionError::Overrides(err.into()))
+                })
+            })?;
+
+            // Ensure the transaction was successful and return the result.
+            return Ok(ensure_success(res.result)?);
+        }
+
+        // If no state or block overrides are present, call the helper function to execute the call.
         let output = self.call_helper(request, block_id).await?;
         Ok(Bytes::from(output.0.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
     }

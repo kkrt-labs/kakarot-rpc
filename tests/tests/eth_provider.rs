@@ -1,16 +1,18 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
     eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
+        error::{EthApiError, TransactionError},
         provider::EthereumProvider,
     },
     models::felt::Felt252Wrapper,
     test_utils::{
         eoa::Eoa,
         evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxLegacyInfo},
-        fixtures::{contract_empty, counter, katana, setup},
+        fixtures::{contract_empty, counter, katana, plain_opcodes, setup},
         katana::Katana,
         mongo::{BLOCK_HASH, BLOCK_NUMBER},
         tx_waiter::watch_tx,
@@ -20,14 +22,15 @@ use reth_primitives::{
     sign_message, transaction::Signature, Address, BlockNumberOrTag, Bytes, Transaction, TransactionSigned, TxEip1559,
     TxKind, B256, U256, U64,
 };
+use reth_rpc_eth_types::{EthApiError as RethEthApiError, RevertError, RpcInvalidTransactionError};
 use reth_rpc_types::{
-    request::TransactionInput, serde_helpers::JsonStorageKey, Filter, FilterBlockOption, FilterChanges, Log,
-    RpcBlockHash, Topic, TransactionRequest,
+    request::TransactionInput, serde_helpers::JsonStorageKey, state::AccountOverride, Filter, FilterBlockOption,
+    FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest,
 };
 use rstest::*;
 use starknet::core::types::BlockTag;
 use starknet_crypto::FieldElement;
-use std::{str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 #[rstest]
 #[awt]
@@ -807,6 +810,179 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 
     // Assert that no transaction is found
     assert!(tx.is_none());
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_call_without_overrides(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+
+    // Create the transaction request
+    let request = TransactionRequest {
+        from: Some(katana.eoa().evm_address().expect("Failed to get eoa address")),
+        to: Some(TxKind::Call(Address::ZERO)),
+        gas: Some(21000),
+        gas_price: Some(10),
+        value: Some(U256::from(1)),
+        nonce: Some(2),
+        ..Default::default()
+    };
+
+    // Call the Ethereum provider with the created transaction request
+    let _ = eth_provider.call(request, None, None, None).await.expect("Failed to call");
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Extract Katana instance from the plain_opcodes tuple
+    let katana = plain_opcodes.0;
+
+    // Obtain an Ethereum provider instance from the Katana instance
+    let eth_provider = katana.eth_provider();
+
+    // Convert KakarotEvmContract's EVM address to an Address type
+    let contract_address = Address::from_slice(&plain_opcodes.1.evm_address.to_bytes_be()[12..]);
+
+    // Get the EOA (Externally Owned Account) address from Katana
+    let eoa_address = katana.eoa().evm_address().expect("Failed to get eoa address");
+
+    // Create the first transaction request
+    let request1 = TransactionRequest {
+        from: Some(eoa_address),
+        to: Some(TxKind::Call(Address::ZERO)),
+        gas: Some(21000),
+        gas_price: Some(10),
+        value: Some(U256::from(1)),
+        ..Default::default()
+    };
+
+    // Initialize state override with the EOA address having a high balance
+    let mut state_override1: HashMap<Address, AccountOverride> = HashMap::new();
+    state_override1
+        .insert(eoa_address, AccountOverride { balance: Some(U256::from(1_000_000_000)), ..Default::default() });
+
+    // Perform the first call with state override and high balance
+    // The transaction should succeed
+    let _ = eth_provider
+        .call(request1, None, Some(state_override1.clone()), None)
+        .await
+        .expect("Failed to call for a simple transfer");
+
+    // Create the second transaction request with a higher value
+    let request2 = TransactionRequest {
+        from: Some(eoa_address),
+        to: Some(TxKind::Call(Address::ZERO)),
+        gas: Some(21000),
+        gas_price: Some(10),
+        value: Some(U256::from(1_000_000_001)),
+        ..Default::default()
+    };
+
+    // Attempt to call and handle the result
+    match eth_provider.call(request2, None, Some(state_override1.clone()), None).await {
+        // If call succeeds, panic as an error was expected
+        Ok(_) => panic!("Expected an error but got a success response"),
+        // If call fails, check if the error is due to insufficient funds
+        Err(e) => match e {
+            EthApiError::Transaction(TransactionError::Overrides(err)) => {
+                assert_eq!(
+                    err.to_string(),
+                    "transaction validation error: lack of funds (1000000000) for max fee (1000210001)",
+                );
+            }
+            // If a different error occurs, panic
+            _ => panic!("Expected a transaction error but got a different error: {e:?}"),
+        },
+    }
+
+    // Define a Solidity contract interface for the counter
+    sol! {
+        #[sol(rpc)]
+        contract CounterContract {
+            function incForLoop(uint256 iterations) external;
+        }
+    }
+
+    // Prepare the calldata for invoking the incForLoop function with 5 iterations
+    let calldata = CounterContract::incForLoopCall { iterations: U256::from(5) }.abi_encode();
+
+    // Define the transaction request for invoking the incForLoop function
+    let request3 = TransactionRequest {
+        from: Some(eoa_address),
+        to: Some(TxKind::Call(contract_address)),
+        gas: Some(210_000),
+        gas_price: Some(1_000_000_000_000_000_000_000),
+        value: Some(U256::ZERO),
+        nonce: Some(2),
+        input: TransactionInput { input: Some(calldata.clone().into()), data: None },
+        ..Default::default()
+    };
+
+    // Perform the call to invoke the incForLoop function without state override
+    let _ = eth_provider
+        .call(request3, None, None, None)
+        .await
+        .expect("Failed to call incForLoopCall in Kakarot constract");
+
+    // Define another Solidity contract with a different interface and bytecode
+    sol! {
+        #[sol(rpc, bytecode = "60803461006357601f61014838819003918201601f19168301916001600160401b038311848410176100675780849260209460405283398101031261006357518015158091036100635760ff80195f54169116175f5560405160cc908161007c8239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe60808060405260043610156011575f80fd5b5f3560e01c9081638bf1799f14607a575063b09a261614602f575f80fd5b346076576040366003190112607657602435801515810360765715606f57604060015b81516004356001600160a01b0316815260ff919091166020820152f35b60405f6052565b5f80fd5b346076575f36600319011260765760209060ff5f541615158152f3fea264697066735822122043709781c9bdc30c530978abf5db25a4b4ccfebf989baafd2ba404519a7f7e8264736f6c63430008180033")]
+        contract MyContract {
+            bool public myState;
+
+            constructor(bool myState_) {
+                myState = myState_;
+            }
+
+            function doStuff(uint a, bool b) external pure returns(address c, bytes32 d) {
+                return (address(uint160(a)), bytes32(uint256(b ? 1 : 0)));
+            }
+        }
+    }
+
+    // Extract the bytecode for the MyContract contract
+    let bytecode = &MyContract::BYTECODE[..];
+
+    // State override with the MyContract bytecode and maximum balance
+    let mut state_override2: HashMap<Address, AccountOverride> = HashMap::new();
+    state_override2.insert(
+        contract_address,
+        AccountOverride { code: Some(bytecode.into()), balance: Some(U256::MAX), ..Default::default() },
+    );
+    state_override2.insert(eoa_address, AccountOverride { balance: Some(U256::MAX), ..Default::default() });
+
+    // Prepare the calldata for invoking the doStuff function with specific parameters
+    let calldata = MyContract::doStuffCall { a: U256::from(0x69), b: true }.abi_encode();
+
+    // Define the transaction request for invoking the doStuff function
+    let request4 = TransactionRequest {
+        from: Some(eoa_address),
+        to: Some(TxKind::Call(contract_address)),
+        gas: Some(210_000),
+        gas_price: Some(1_000_000_000_000_000_000_000),
+        value: Some(U256::ZERO),
+        nonce: Some(2),
+        input: TransactionInput { input: Some(calldata.clone().into()), data: None },
+        ..Default::default()
+    };
+
+    // Attempt to call and handle the result
+    match eth_provider.call(request4, None, Some(state_override2), None).await {
+        // If call succeeds, panic as an error was expected
+        Ok(_) => panic!("Expected an error but got a success response"),
+        // If call fails, check if the error is due to a transaction revert
+        Err(e) => match e {
+            EthApiError::RethEthApi(RethEthApiError::InvalidTransaction(RpcInvalidTransactionError::Revert(err))) => {
+                assert_eq!(err.to_string(), RevertError::new(Default::default()).to_string());
+            }
+            // If a different error occurs, panic
+            _ => panic!("Expected an invalid transaction revert error but got a different error: {e:?}"),
+        },
+    }
 }
 
 #[rstest]

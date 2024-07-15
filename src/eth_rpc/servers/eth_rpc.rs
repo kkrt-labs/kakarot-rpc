@@ -7,8 +7,9 @@ use crate::{
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
 use reth_rpc_types::{
-    serde_helpers::JsonStorageKey, AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter,
-    FilterChanges, Index, RichBlock, SyncStatus, Transaction, TransactionReceipt, TransactionRequest, Work,
+    serde_helpers::JsonStorageKey, state::StateOverride, AccessListWithGasUsed, BlockOverrides,
+    EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus, Transaction,
+    TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
 
@@ -174,9 +175,15 @@ where
     }
 
     #[tracing::instrument(skip(self, request), err, fields(block_id = ?block_id, gas_limit = request.gas))]
-    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<Bytes> {
+    async fn call(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+        state_overrides: Option<StateOverride>,
+        block_overrides: Option<Box<BlockOverrides>>,
+    ) -> Result<Bytes> {
         tracing::info!("Serving eth_call");
-        Ok(self.eth_provider.call(request, block_id).await?)
+        Ok(self.eth_provider.call(request, block_id, state_overrides, block_overrides).await?)
     }
 
     async fn create_access_list(
