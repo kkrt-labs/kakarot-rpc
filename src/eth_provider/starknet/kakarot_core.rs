@@ -66,15 +66,15 @@ lazy_static! {
         &std::env::var("MAX_FELTS_IN_CALLDATA")
             .unwrap_or_else(|_| panic!("Missing environment variable MAX_FELTS_IN_CALLDATA"))
     ).expect("failing to parse MAX_FELTS_IN_CALLDATA");
+}
 
-    // List of white listed EIP-155 transactions hashes
-    pub static ref WHITE_LISTED_EIP_155_TRANSACTION_HASHES: Vec<B256> = std::env::var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES")
+pub fn get_white_listed_eip_155_transaction_hashes() -> Vec<B256> {
+    std::env::var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES")
         .unwrap_or_else(|_| panic!("Missing environment variable WHITE_LISTED_EIP_155_TRANSACTION_HASHES"))
         .replace(' ', "")
         .split(',')
         .map(|hash| B256::from_str(hash).unwrap())
-        .collect();
-
+        .collect()
 }
 
 // Kakarot utils
