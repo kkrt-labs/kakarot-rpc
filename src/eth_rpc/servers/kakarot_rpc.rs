@@ -48,8 +48,8 @@ trait ToElements {
 impl ToElements for BroadcastedInvokeTransaction {
     fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, &'static str> {
         match self {
-            BroadcastedInvokeTransaction::V1(tx_v1) => Ok(tx_v1),
-            BroadcastedInvokeTransaction::V3(_) => Err("Transaction is V3, cannot convert to V1"),
+            Self::V1(tx_v1) => Ok(tx_v1),
+            Self::V3(_) => Err("Transaction is V3, cannot convert to V1"),
         }
     }
 }
