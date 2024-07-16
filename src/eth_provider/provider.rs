@@ -50,8 +50,10 @@ use reth_rpc_types::{
     Index, RichBlock, SyncInfo, SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
 };
 use reth_rpc_types_compat::transaction::from_recovered;
+#[cfg(feature = "hive")]
+use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::core::{
-    types::{BroadcastedInvokeTransaction, Felt, SyncStatusType},
+    types::{Felt, SyncStatusType},
     utils::get_storage_var_address,
 };
 

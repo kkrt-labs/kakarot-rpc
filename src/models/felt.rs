@@ -54,19 +54,15 @@ impl TryFrom<Felt252Wrapper> for Address {
     }
 }
 
-impl TryFrom<B256> for Felt252Wrapper {
-    type Error = EthereumDataFormatError;
-
-    fn try_from(value: B256) -> Result<Self, Self::Error> {
-        Ok(Self(Felt::from_bytes_be(value.as_ref())))
+impl From<B256> for Felt252Wrapper {
+    fn from(value: B256) -> Self {
+        Self(Felt::from_bytes_be(value.as_ref()))
     }
 }
 
-impl TryFrom<U256> for Felt252Wrapper {
-    type Error = EthereumDataFormatError;
-
-    fn try_from(u256: U256) -> Result<Self, Self::Error> {
-        Ok(Self(Felt::from_bytes_be(&u256.to_be_bytes())))
+impl From<U256> for Felt252Wrapper {
+    fn from(u256: U256) -> Self {
+        Self(Felt::from_bytes_be(&u256.to_be_bytes()))
     }
 }
 
@@ -160,7 +156,7 @@ mod tests {
         let hash = B256::from_slice(&Felt::MAX.to_bytes_be());
 
         // When
-        let hash = Felt252Wrapper::try_from(hash).unwrap();
+        let hash = Felt252Wrapper::from(hash);
 
         // Then
         let expected_hash = Felt::MAX;
@@ -168,13 +164,12 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Primitive")]
     fn test_felt_try_from_b256_should_fail() {
         // Given
         let hash = B256::from_str(OVERFLOW_FELT).unwrap();
 
         // When
-        Felt252Wrapper::try_from(hash).unwrap();
+        assert_eq!(Felt252Wrapper::from(hash).0, Felt::ZERO,);
     }
 
     #[test]
@@ -183,7 +178,7 @@ mod tests {
         let hash = U256::try_from_be_slice(&Felt::MAX.to_bytes_be()).unwrap();
 
         // When
-        let hash = Felt252Wrapper::try_from(hash).unwrap();
+        let hash = Felt252Wrapper::from(hash);
 
         // Then
         let expected_hash = Felt::MAX;
@@ -191,12 +186,11 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Primitive")]
     fn test_felt_try_from_u256_should_fail() {
         // Given
         let hash = U256::from_str_radix(OVERFLOW_FELT, 16).unwrap();
 
         // When
-        Felt252Wrapper::try_from(hash).unwrap();
+        assert_eq!(Felt252Wrapper::from(hash).0, Felt::ZERO,);
     }
 }

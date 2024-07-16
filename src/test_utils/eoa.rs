@@ -136,7 +136,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         };
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
-        let tx_hash: Felt252Wrapper = tx_hash.try_into().expect("Tx Hash should fit into Felt252Wrapper");
+        let tx_hash: Felt252Wrapper = tx_hash.into();
 
         watch_tx(
             self.eth_provider.starknet_provider(),
