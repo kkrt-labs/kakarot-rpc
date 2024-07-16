@@ -616,11 +616,8 @@ where
         // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
-        let chain_id_option = starknet_provider.chain_id().await?.to_u32();
-        let chain_id = chain_id_option.map_or_else(
-            || panic!("Chain ID is None"), // handle the None case
-            |id| (u32::MAX & id).into(),   // safe unwrap
-        );
+        let chain_id =
+            (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
 
         Ok(Self { database, starknet_provider, chain_id })
     }
