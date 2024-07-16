@@ -12,8 +12,7 @@ use super::{
         CollectionName, Database,
     },
     error::{
-        CallError, EthApiError, EthereumDataFormatError, EvmError, ExecutionError, KakarotError, SignatureError,
-        TransactionError,
+        EthApiError, EthereumDataFormatError, EvmError, ExecutionError, KakarotError, SignatureError, TransactionError,
     },
     starknet::{
         kakarot_core::{
@@ -642,12 +641,6 @@ where
 
         let data = request.input.into_input().unwrap_or_default();
         let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
-
-        let gas_limit = request.gas.unwrap_or(CALL_REQUEST_GAS_LIMIT);
-
-        if gas_limit > CALL_REQUEST_GAS_LIMIT {
-            return Err(CallError::ExceedsBlockGasLimit(gas_limit, CALL_REQUEST_GAS_LIMIT).into());
-        }
 
         let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or(CALL_REQUEST_GAS_LIMIT))?;
 

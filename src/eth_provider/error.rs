@@ -36,7 +36,6 @@ impl From<&EthApiError> for EthRpcErrorCode {
             | EthApiError::EthereumDataFormat(_)
             | EthApiError::CalldataExceededLimit(_, _)
             | EthApiError::RethEthApi(_) => Self::InvalidParams,
-            EthApiError::Call(err) => err.into(),
             EthApiError::Transaction(err) => err.into(),
             EthApiError::Unsupported(_) | EthApiError::Kakarot(_) => Self::InternalError,
             EthApiError::Execution(_) => Self::ExecutionError,
@@ -55,8 +54,6 @@ pub enum EthApiError {
     TransactionNotFound(B256),
     /// Error related to transaction
     Transaction(#[from] TransactionError),
-    /// Error related to a call
-    Call(#[from] CallError),
     /// Error related to signing
     Signature(#[from] SignatureError),
     /// Unsupported feature
@@ -80,7 +77,6 @@ impl std::fmt::Display for EthApiError {
             Self::UnknownBlockNumber(block) => write!(f, "unknown block number {block:?}"),
             Self::TransactionNotFound(tx) => write!(f, "transaction not found {tx}"),
             Self::Transaction(err) => write!(f, "{err}"),
-            Self::Call(err) => write!(f, "{err}"),
             Self::Signature(err) => write!(f, "{err}"),
             Self::RethEthApi(err) => write!(f, "{err}"),
             Self::Unsupported(feature) => write!(f, "unsupported: {feature}"),
@@ -301,22 +297,6 @@ impl From<&TransactionError> for EthRpcErrorCode {
             TransactionError::ExpectedFullTransactions
             | TransactionError::Tracing(_)
             | TransactionError::ExceedsBlockGasLimit(_, _) => Self::InternalError,
-        }
-    }
-}
-
-/// Error related to a call.
-#[derive(Debug, Error)]
-pub enum CallError {
-    /// Thrown when the call gas limit exceeds the block's gas limit.
-    #[error("call gas limit {0} exceeds block gas limit {1}")]
-    ExceedsBlockGasLimit(u128, u128),
-}
-
-impl From<&CallError> for EthRpcErrorCode {
-    fn from(error: &CallError) -> Self {
-        match error {
-            CallError::ExceedsBlockGasLimit(_, _) => Self::InvalidParams,
         }
     }
 }
