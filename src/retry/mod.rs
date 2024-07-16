@@ -9,7 +9,6 @@ use crate::eth_provider::{
     provider::EthereumProvider,
 };
 use eyre::Result;
-use lazy_static::lazy_static;
 use reth_primitives::{TransactionSignedEcRecovered, B256};
 use std::{
     fmt,
