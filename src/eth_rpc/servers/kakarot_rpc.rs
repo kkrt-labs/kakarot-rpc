@@ -1,10 +1,16 @@
-use crate::eth_provider::{provider::EthereumProvider, starknet::kakarot_core::to_starknet_transaction};
-use crate::eth_rpc::api::kakarot_api::KakarotApiServer;
+use crate::{
+    eth_provider::{provider::EthereumProvider, starknet::kakarot_core::to_starknet_transaction},
+    eth_rpc::api::kakarot_api::KakarotApiServer,
+};
 use jsonrpsee::core::{async_trait, RpcResult};
 use reth_primitives::B256;
-use starknet::core::crypto::compute_hash_on_elements;
-use starknet::core::types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, FieldElement};
-use starknet::providers::Provider;
+use starknet::{
+    core::{
+        crypto::compute_hash_on_elements,
+        types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, FieldElement},
+    },
+    providers::Provider,
+};
 use std::convert::TryInto;
 
 #[derive(Debug)]

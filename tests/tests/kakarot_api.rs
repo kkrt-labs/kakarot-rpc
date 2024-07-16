@@ -1,12 +1,14 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
-use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::test_utils::eoa::Eoa;
-use kakarot_rpc::test_utils::fixtures::{katana, setup};
-use kakarot_rpc::test_utils::katana::Katana;
-use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
+use kakarot_rpc::{
+    eth_provider::{database::types::transaction::StoredPendingTransaction, provider::EthereumProvider},
+    test_utils::{
+        eoa::Eoa,
+        fixtures::{katana, setup},
+        katana::Katana,
+        rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
+    },
+};
 use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, U256};
 use rstest::*;
 use serde_json::Value;
