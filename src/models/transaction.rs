@@ -3,7 +3,7 @@ use crate::eth_provider::starknet::kakarot_core::MAX_FELTS_IN_CALLDATA;
 use crate::{
     eth_provider::{
         error::{EthApiError, SignatureError, TransactionError},
-        starknet::kakarot_core::{ETH_SEND_TRANSACTION, KAKAROT_ADDRESS, WHITE_LISTED_EIP_155_TRANSACTION_HASHES},
+        starknet::kakarot_core::{get_white_listed_eip_155_transaction_hashes, ETH_SEND_TRANSACTION, KAKAROT_ADDRESS},
         utils::split_u256,
     },
     tracing::builder::TRACING_BLOCK_GAS_LIMIT,
@@ -49,7 +49,7 @@ pub(crate) fn validate_transaction(
     }
 
     // If the transaction is a pre EIP-155 transaction, check if hash is whitelisted
-    if maybe_chain_id.is_none() && !WHITE_LISTED_EIP_155_TRANSACTION_HASHES.contains(&transaction_signed.hash) {
+    if maybe_chain_id.is_none() && !get_white_listed_eip_155_transaction_hashes().contains(&transaction_signed.hash) {
         return Err(TransactionError::InvalidTransactionType.into());
     }
 
