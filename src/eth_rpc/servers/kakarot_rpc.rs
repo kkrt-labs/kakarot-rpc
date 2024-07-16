@@ -68,15 +68,16 @@ impl<P: EthereumProvider + Send + Sync + 'static> KakarotApiServer for KakarotRp
         // Compute the hash on elements
         let transaction_hash = compute_hash_on_elements(&[
             PREFIX_INVOKE,
+            // FieldElement::from_byte_slice_be(INVOKE_PREFIX).unwrap(),
             FieldElement::ONE,
             starknet_transaction.sender_address,
             FieldElement::ZERO,
-            starknet_transaction.max_fee,
             compute_hash_on_elements(&starknet_transaction.calldata),
-            chain_id,
+            starknet_transaction.max_fee,
+            FieldElement::from(chain_id),
             starknet_transaction.nonce,
         ]);
 
-        Ok(transaction_hash)
+        Ok(B256::from_slice(&transaction_hash.to_bytes_be()[..]))
     }
 }
