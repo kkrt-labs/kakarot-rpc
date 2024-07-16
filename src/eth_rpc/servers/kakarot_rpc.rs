@@ -36,7 +36,7 @@ impl ToElements for BroadcastedInvokeTransaction {
 
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> KakarotApiServer for KakarotRpc<P> {
-    async fn kakarot_get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<FieldElement> {
+    async fn kakarot_get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<B256> {
         // Retrieve the stored transaction from the database.
         let transaction: reth_rpc_types::Transaction =
             self.eth_provider.transaction_by_hash(hash).await.unwrap().unwrap();

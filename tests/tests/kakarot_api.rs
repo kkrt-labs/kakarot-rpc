@@ -1,17 +1,15 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
+use kakarot_rpc::eth_provider::provider::EthereumProvider;
+use kakarot_rpc::test_utils::eoa::Eoa;
 use kakarot_rpc::test_utils::fixtures::{katana, setup};
 use kakarot_rpc::test_utils::katana::Katana;
 use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
 use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
+use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, U256};
 use rstest::*;
 use serde_json::Value;
-use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
-use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use reth_primitives::{
-    sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, U256,
-};
-use kakarot_rpc::test_utils::eoa::Eoa;
 
 #[rstest]
 #[awt]
@@ -66,12 +64,7 @@ async fn test_kakarot_get_starknet_transaction_hash(#[future] katana: Katana, _s
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::new("kakarot_getStarknetTransactionHash")
-                .add_param(hash)
-                .add_param(retries)
-                .build(),
-        )
+        .body(RawRpcParamsBuilder::new("kakarot_getStarknetTransactionHash").add_param(hash).add_param(retries).build())
         .send()
         .await
         .expect("kakarot_getStarknetTransactionHash error");
