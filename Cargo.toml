@@ -1,6 +1,6 @@
 [package]
 name = "kakarot-rpc"
-version = "0.6.19"
+version = "0.6.20"
 edition = "2021"
 authors = [
   "Abdelhamid Bakhta <@abdelhamidbakhta>",
@@ -89,7 +89,10 @@ futures = { version = "0.3", default-features = false }
 itertools = { version = "0.13", default-features = false }
 lazy_static = { version = "1", default-features = false }
 log = { version = "0.4", default-features = false }
-mongodb = { version = "3.0", default-features = false, features = ["rustls-tls", "compat-3-0-0"]}
+mongodb = { version = "3.0", default-features = false, features = [
+  "rustls-tls",
+  "compat-3-0-0",
+] }
 thiserror = { version = "1", default-features = false }
 tokio = { version = "1", features = ["macros"] }
 tower = { version = "0.4", default-features = false }
