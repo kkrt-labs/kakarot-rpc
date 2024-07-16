@@ -68,7 +68,6 @@ reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.
 ] }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
-reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
@@ -89,7 +88,10 @@ futures = { version = "0.3", default-features = false }
 itertools = { version = "0.13", default-features = false }
 lazy_static = { version = "1", default-features = false }
 log = { version = "0.4", default-features = false }
-mongodb = { version = "3.0", default-features = false, features = ["rustls-tls", "compat-3-0-0"]}
+mongodb = { version = "3.0", default-features = false, features = [
+  "rustls-tls",
+  "compat-3-0-0",
+] }
 thiserror = { version = "1", default-features = false }
 tokio = { version = "1", features = ["macros"] }
 tower = { version = "0.4", default-features = false }
