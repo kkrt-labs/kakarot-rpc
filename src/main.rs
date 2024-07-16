@@ -45,14 +45,15 @@ async fn main() -> Result<()> {
     setup_hive(&starknet_provider).await?;
 
     // Setup the eth provider
-    let eth_provider = EthDataProvider::new(db.clone(), Arc::new(starknet_provider)).await?;
+    let starknet_provider = Arc::new(starknet_provider);
+    let eth_provider = EthDataProvider::new(db.clone(), starknet_provider.clone()).await?;
 
     // Setup the retry handler
     let retry_handler = RetryHandler::new(eth_provider.clone(), db);
     retry_handler.start(&tokio::runtime::Handle::current());
 
     // Setup the RPC module
-    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_provider).rpc_module()?;
+    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_provider, starknet_provider).rpc_module()?;
 
     // Start the RPC server
     let (socket_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;

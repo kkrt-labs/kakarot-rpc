@@ -1,7 +1,6 @@
 use jsonrpsee::core::RpcResult as Result;
 use jsonrpsee::proc_macros::rpc;
 use reth_primitives::B256;
-use starknet::core::types::FieldElement;
 
 #[rpc(server, namespace = "kakarot")]
 #[async_trait]

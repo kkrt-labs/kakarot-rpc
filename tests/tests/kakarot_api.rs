@@ -71,7 +71,7 @@ async fn test_kakarot_get_starknet_transaction_hash(#[future] katana: Katana, _s
     let response = res.text().await.expect("Failed to get response body");
     let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
     let result_starknet_transaction_hash = raw["result"].as_str().unwrap();
-    let tx_return_str = format!("{:?}", tx_return);
+    let tx_return_str = format!("{tx_return:?}");
 
     assert_eq!(result_starknet_transaction_hash, tx_return_str);
 
