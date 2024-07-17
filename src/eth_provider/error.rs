@@ -307,7 +307,7 @@ pub enum TransactionError {
     Tracing(Box<dyn std::error::Error + Send + Sync>),
     /// Thrown if the call with state or block overrides fails
     #[error("tracing error: {0}")]
-    Overrides(Box<dyn std::error::Error + Send + Sync>),
+    Call(Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl From<&TransactionError> for EthRpcErrorCode {
@@ -319,7 +319,7 @@ impl From<&TransactionError> for EthRpcErrorCode {
             | TransactionError::TipAboveFeeCap(_, _) => Self::TransactionRejected,
             TransactionError::ExpectedFullTransactions
             | TransactionError::Tracing(_)
-            | TransactionError::Overrides(_)
+            | TransactionError::Call(_)
             | TransactionError::ExceedsBlockGasLimit(_, _) => Self::InternalError,
         }
     }

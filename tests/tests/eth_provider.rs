@@ -888,7 +888,7 @@ async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, Kakarot
         Ok(_) => panic!("Expected an error but got a success response"),
         // If call fails, check if the error is due to insufficient funds
         Err(e) => match e {
-            EthApiError::Transaction(TransactionError::Overrides(err)) => {
+            EthApiError::Transaction(TransactionError::Call(err)) => {
                 assert_eq!(
                     err.to_string(),
                     "transaction validation error: lack of funds (1000000000) for max fee (1000210001)",
