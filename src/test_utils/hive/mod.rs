@@ -181,7 +181,7 @@ mod tests {
                 let low =
                     U256::from_be_slice(contract.storage.as_ref().unwrap().get(&key).unwrap().to_bytes_be().as_slice());
                 let high = U256::from_be_slice(
-                    contract.storage.as_ref().unwrap().get(&(key + Felt::from(1))).unwrap().to_bytes_be().as_slice(),
+                    contract.storage.as_ref().unwrap().get(&(key + Felt::ONE)).unwrap().to_bytes_be().as_slice(),
                 );
                 let actual_value = low + (high << 128);
                 assert_eq!(actual_value, value);
