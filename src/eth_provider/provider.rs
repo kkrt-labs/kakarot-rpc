@@ -183,41 +183,6 @@ where
     }
 }
 
-// impl<SP> DatabaseRef for EthDataProvider<SP>
-// where
-//     SP: starknet::providers::Provider + Send + Sync,
-// {
-//     type Error = EthApiError;
-
-//     fn basic_ref(&self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
-//         tokio::task::block_in_place(|| {
-//             let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
-//             database_snapshot.basic(address)
-//         })
-//     }
-
-//     fn code_by_hash_ref(&self, code_hash: B256) -> Result<Bytecode, Self::Error> {
-//         tokio::task::block_in_place(|| {
-//             let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
-//             database_snapshot.code_by_hash(code_hash)
-//         })
-//     }
-
-//     fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
-//         tokio::task::block_in_place(|| {
-//             let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
-//             database_snapshot.storage(address, index)
-//         })
-//     }
-
-//     fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
-//         tokio::task::block_in_place(|| {
-//             let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
-//             database_snapshot.block_hash(number)
-//         })
-//     }
-// }
-
 #[async_trait]
 impl<SP> EthereumProvider for EthDataProvider<SP>
 where
