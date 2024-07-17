@@ -9,7 +9,7 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, U256};
+use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
 use rstest::*;
 use serde_json::Value;
 
@@ -70,12 +70,12 @@ async fn test_kakarot_get_starknet_transaction_hash(#[future] katana: Katana, _s
         .send()
         .await
         .expect("kakarot_getStarknetTransactionHash error");
-    let response = res.text().await.expect("Failed to get response body");
-    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let result_starknet_transaction_hash = raw["result"].as_str().unwrap();
-    let tx_return_str = format!("{tx_return:?}");
+    let result_starknet_transaction_hash: B256 =
+        serde_json::from_str(&res.text().await.expect("Failed to get response body"))
+            .and_then(|raw: Value| serde_json::from_value(raw["result"].clone()))
+            .expect("Failed to deserialize result");
 
-    assert_eq!(result_starknet_transaction_hash, tx_return_str);
+    assert_eq!(result_starknet_transaction_hash, tx_return);
 
     drop(server_handle);
 }

@@ -25,14 +25,14 @@ impl<EP, SP> KakarotRpc<EP, SP> {
     }
 }
 trait ToElements {
-    fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, &'static str>;
+    fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, eyre::Error>;
 }
 
 impl ToElements for BroadcastedInvokeTransaction {
-    fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, &'static str> {
+    fn try_into_v1(self) -> Result<BroadcastedInvokeTransactionV1, eyre::Error> {
         match self {
             Self::V1(tx_v1) => Ok(tx_v1),
-            Self::V3(_) => Err("Transaction is V3, cannot convert to V1"),
+            Self::V3(_) => Err(eyre::eyre!("Transaction is V3, cannot convert to V1")),
         }
     }
 }
@@ -43,18 +43,15 @@ where
     EP: EthereumProvider + Send + Sync + 'static,
     SP: Provider + Send + Sync + 'static,
 {
-    async fn kakarot_get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<B256> {
+    async fn get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<B256> {
         // Retrieve the stored transaction from the database.
         let transaction: reth_rpc_types::Transaction =
             self.eth_provider.transaction_by_hash(hash).await.unwrap().unwrap();
 
         // Convert the `Transaction` instance to a `TransactionSigned` instance.
         let transaction_signed_ec_recovered: reth_primitives::TransactionSignedEcRecovered =
-            <reth_rpc_types::Transaction as TryInto<reth_primitives::TransactionSignedEcRecovered>>::try_into(
-                transaction,
-            )
-            .unwrap();
-        let (transaction_signed, _address) = transaction_signed_ec_recovered.to_components();
+            transaction.try_into().unwrap();
+        let (transaction_signed, _) = transaction_signed_ec_recovered.to_components();
 
         // Retrieve the signer of the transaction.
         let signer = transaction_signed.recover_signer().unwrap();
