@@ -102,7 +102,7 @@ impl HiveGenesisConfig {
 
                 let key = get_storage_var_address("ERC20_allowances", &[starknet_address, kakarot_address])?;
                 fee_token_storage.insert(key, u128::MAX.into());
-                fee_token_storage.insert(key + Felt::from(1), u128::MAX.into());
+                fee_token_storage.insert(key + Felt::ONE, u128::MAX.into());
 
                 Ok((
                     ContractAddress::new(starknet_address),
