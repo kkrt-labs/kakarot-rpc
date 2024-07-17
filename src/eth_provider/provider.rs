@@ -858,7 +858,7 @@ where
                 .await
                 .map_err(KakarotError::from)?;
 
-            *nonce += Felt::from(1);
+            *nonce += Felt::ONE;
             drop(nonce);
         };
 
