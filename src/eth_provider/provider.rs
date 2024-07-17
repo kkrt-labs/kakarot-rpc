@@ -52,7 +52,10 @@ use reth_node_api::ConfigureEvm;
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
-use reth_revm::primitives::{BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, HandlerCfg, SpecId};
+use reth_revm::{
+    db::CacheDB,
+    primitives::{BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, HandlerCfg, SpecId},
+};
 use reth_rpc_eth_types::{error::ensure_success, revm_utils::prepare_call_env};
 use reth_rpc_types::{
     serde_helpers::JsonStorageKey,
@@ -486,8 +489,7 @@ where
                 CfgEnvWithHandlerCfg { cfg_env, handler_cfg: HandlerCfg::new(SpecId::CANCUN) };
 
             // Create a snapshot of the Ethereum database using the block ID.
-            // let mut db = EthDatabaseSnapshot::new(self, block_id.unwrap_or_default());
-            let mut db = EthCacheDatabase::new(EthDatabase::new(self, block_id.unwrap_or_default()));
+            let mut db = EthCacheDatabase(CacheDB::new(EthDatabase::new(self, block_id.unwrap_or_default())));
 
             // Prepare the call environment with the transaction request, gas limit, and overrides.
             let env = prepare_call_env(
@@ -495,7 +497,7 @@ where
                 block_env,
                 request.clone(),
                 request.gas.unwrap_or_default().try_into().expect("Gas limit is too large"),
-                &mut db,
+                &mut db.0,
                 evm_overrides,
             )?;
 

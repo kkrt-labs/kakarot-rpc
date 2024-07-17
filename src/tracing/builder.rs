@@ -1,10 +1,14 @@
-use super::{database::EthDatabaseSnapshot, Tracer, TracerResult};
+use super::{Tracer, TracerResult};
 use crate::eth_provider::{
+    database::state::{EthCacheDatabase, EthDatabase},
     error::{EthApiError, TransactionError},
     provider::EthereumProvider,
 };
 use reth_primitives::{B256, U256};
-use reth_revm::primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId};
+use reth_revm::{
+    db::CacheDB,
+    primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId},
+};
 use reth_rpc_types::{
     trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
     Block, BlockHashOrNumber, BlockId, BlockTransactions, Header,
@@ -184,7 +188,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
 
         let env = self.init_env_with_handler_config();
         // DB should use the state of the parent block
-        let db = EthDatabaseSnapshot::new(self.eth_provider, self.block.header.parent_hash.into());
+        let db =
+            EthCacheDatabase(CacheDB::new(EthDatabase::new(self.eth_provider, self.block.header.parent_hash.into())));
 
         let tracing_options = self.tracing_options;
 

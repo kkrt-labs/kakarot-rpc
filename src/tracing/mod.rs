@@ -1,9 +1,8 @@
 pub mod builder;
-mod database;
 
-use self::database::EthDatabaseSnapshot;
 use crate::{
     eth_provider::{
+        database::state::EthCacheDatabase,
         error::{EthApiError, EthereumDataFormatError, TransactionError},
         provider::EthereumProvider,
     },
@@ -86,7 +85,7 @@ impl TracingResult {
 pub struct Tracer<P: EthereumProvider + Send + Sync> {
     transactions: Vec<reth_rpc_types::Transaction>,
     env: EnvWithHandlerCfg,
-    db: EthDatabaseSnapshot<P>,
+    db: EthCacheDatabase<P>,
     tracing_options: TracingOptions,
 }
 
@@ -94,7 +93,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Traces the transaction with Geth tracing options and returns the resulting traces and state.
     fn trace_geth(
         env: EnvWithHandlerCfg,
-        db: &mut EthDatabaseSnapshot<P>,
+        db: &mut EthCacheDatabase<P>,
         tx: &reth_rpc_types::Transaction,
         opts: GethDebugTracingOptions,
     ) -> TracingStateResult {
@@ -164,7 +163,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Traces the transaction with Parity tracing options and returns the resulting traces and state.
     fn trace_parity(
         env: EnvWithHandlerCfg,
-        db: &mut EthDatabaseSnapshot<P>,
+        db: &mut EthCacheDatabase<P>,
         tx: &reth_rpc_types::Transaction,
         tracing_config: TracingInspectorConfig,
     ) -> TracingStateResult {
