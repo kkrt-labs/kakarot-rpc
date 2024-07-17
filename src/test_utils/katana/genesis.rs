@@ -283,7 +283,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let key = get_storage_var_address("ERC20_balances", &[*starknet_address])?;
         let amount_split = split_u256::<u128>(amount);
 
-        let storage = [(key, amount_split[0].into()), (key + Felt::from(1), amount_split[1].into())].into_iter();
+        let storage = [(key, amount_split[0].into()), (key + Felt::ONE, amount_split[1].into())].into_iter();
         self.fee_token_storage.extend(storage);
 
         eoa.balance = Some(amount);
