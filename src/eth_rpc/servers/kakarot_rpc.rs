@@ -45,8 +45,7 @@ where
 {
     async fn get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<B256> {
         // Retrieve the stored transaction from the database.
-        let transaction: reth_rpc_types::Transaction =
-            self.eth_provider.transaction_by_hash(hash).await.unwrap().unwrap();
+        let transaction = self.eth_provider.transaction_by_hash(hash).await.unwrap().unwrap();
 
         // Convert the `Transaction` instance to a `TransactionSigned` instance.
         let transaction_signed_ec_recovered: reth_primitives::TransactionSignedEcRecovered =
