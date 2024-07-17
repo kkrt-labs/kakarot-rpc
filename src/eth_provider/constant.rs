@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use reth_primitives::U256;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 #[cfg(feature = "hive")]
 use {
@@ -58,4 +59,18 @@ lazy_static! {
             ExecutionEncoding::New
         );
     pub static ref DEPLOY_WALLET_NONCE: Arc<Mutex<Felt>> = Arc::new(Mutex::new(Felt::ZERO));
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+// Struct used to return the constant values from the kakarot_getConfig endpoint
+pub struct Constant {
+    pub max_priority_fee_per_gas: u64,
+    pub max_logs: Option<u64>,
+    pub call_request_gas_limit: u128,
+    pub hash_hex_string_len: usize,
+    pub logs_topics_hex_string_len: usize,
+    pub u64_hex_string_len: usize,
+    pub block_number_hex_string_len: usize,
+    pub address_hex_string_len: usize,
+    pub starknet_modulus: U256,
 }

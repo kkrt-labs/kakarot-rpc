@@ -1,5 +1,9 @@
 use crate::{
     eth_provider::{
+        constant::{
+            Constant, ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN,
+            LOGS_TOPICS_HEX_STRING_LEN, MAX_LOGS, MAX_PRIORITY_FEE_PER_GAS, STARKNET_MODULUS, U64_HEX_STRING_LEN,
+        },
         error::{EthApiError, EthereumDataFormatError, SignatureError},
         provider::EthereumProvider,
         starknet::kakarot_core::to_starknet_transaction,
@@ -99,5 +103,19 @@ where
         } else {
             Ok(None)
         }
+    }
+
+    async fn get_config(&self) -> RpcResult<Constant> {
+        Ok(Constant {
+            max_logs: *MAX_LOGS,
+            max_priority_fee_per_gas: *MAX_PRIORITY_FEE_PER_GAS,
+            call_request_gas_limit: CALL_REQUEST_GAS_LIMIT,
+            hash_hex_string_len: HASH_HEX_STRING_LEN,
+            logs_topics_hex_string_len: LOGS_TOPICS_HEX_STRING_LEN,
+            u64_hex_string_len: U64_HEX_STRING_LEN,
+            block_number_hex_string_len: BLOCK_NUMBER_HEX_STRING_LEN,
+            address_hex_string_len: ADDRESS_HEX_STRING_LEN,
+            starknet_modulus: STARKNET_MODULUS,
+        })
     }
 }
