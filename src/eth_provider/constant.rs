@@ -25,7 +25,7 @@ lazy_static! {
 }
 
 /// Gas limit for estimate gas and call
-pub const CALL_REQUEST_GAS_LIMIT: u128 = 5_000_000;
+pub const CALL_REQUEST_GAS_LIMIT: u128 = 50_000_000;
 /// Number of characters for representing a U256 in a hex string form. Used for padding hashes
 pub const HASH_HEX_STRING_LEN: usize = 64;
 /// Number of characters for representing logs topics in a hex string form. Used for padding logs topics
