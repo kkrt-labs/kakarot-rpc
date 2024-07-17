@@ -11,7 +11,7 @@ use crate::{
 use alloy_rlp::Encodable;
 use reth_primitives::{Transaction, TransactionSigned};
 use reth_rpc_types::Header;
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 
 /// Validates the signed ethereum transaction.
 /// The validation checks the following:
@@ -79,10 +79,10 @@ pub(crate) fn validate_transaction(
     Ok(())
 }
 
-/// Returns the transaction's signature as a [`Vec<FieldElement>`].
+/// Returns the transaction's signature as a [`Vec<Felt>`].
 /// Fields r and s are split into two 16-bytes chunks both converted
-/// to [`FieldElement`].
-pub(crate) fn transaction_signature_to_field_elements(transaction_signed: &TransactionSigned) -> Vec<FieldElement> {
+/// to [`Felt`].
+pub(crate) fn transaction_signature_to_field_elements(transaction_signed: &TransactionSigned) -> Vec<Felt> {
     let transaction_signature = transaction_signed.signature();
 
     let mut signature = Vec::with_capacity(5);
@@ -103,24 +103,24 @@ pub(crate) fn transaction_signature_to_field_elements(transaction_signed: &Trans
     signature
 }
 
-/// Returns the transaction's data RLP encoded without the signature as a [`Vec<FieldElement>`].
+/// Returns the transaction's data RLP encoded without the signature as a [`Vec<Felt>`].
 /// The data is appended to the Starknet invoke transaction calldata.
 ///
 /// # Example
 ///
 /// For Legacy Transactions: rlp([nonce, `gas_price`, `gas_limit`, to, value, data, `chain_id`, 0, 0])
-/// is then converted to a [`Vec<FieldElement>`], packing the data in 31-byte chunks.
+/// is then converted to a [`Vec<Felt>`], packing the data in 31-byte chunks.
 #[allow(clippy::unnecessary_wraps)]
 pub(crate) fn transaction_data_to_starknet_calldata(
     transaction_signed: &TransactionSigned,
     retries: u8,
-) -> Result<Vec<FieldElement>, EthApiError> {
+) -> Result<Vec<Felt>, EthApiError> {
     let mut signed_data = Vec::with_capacity(transaction_signed.transaction.length());
     transaction_signed.transaction.encode_without_signature(&mut signed_data);
 
     // Pack the calldata in 31-byte chunks
-    let mut signed_data: Vec<FieldElement> = std::iter::once(FieldElement::from(signed_data.len()))
-        .chain(signed_data.chunks(31).filter_map(|chunk_bytes| FieldElement::from_byte_slice_be(chunk_bytes).ok()))
+    let mut signed_data: Vec<Felt> = std::iter::once(Felt::from(signed_data.len()))
+        .chain(signed_data.chunks(31).map(Felt::from_bytes_be_slice))
         .collect();
 
     // Prepare the calldata for the Starknet invoke transaction
@@ -134,9 +134,9 @@ pub(crate) fn transaction_data_to_starknet_calldata(
 
     let mut calldata = Vec::with_capacity(capacity);
 
-    // assert that the selector < FieldElement::MAX - retries
-    assert!(*ETH_SEND_TRANSACTION < FieldElement::MAX - retries.into());
-    let selector = *ETH_SEND_TRANSACTION + retries.into();
+    // assert that the selector < Felt::MAX - retries
+    assert!(*ETH_SEND_TRANSACTION < Felt::MAX - Felt::from(retries));
+    let selector = *ETH_SEND_TRANSACTION + Felt::from(retries);
 
     // Retries are used to alter the transaction hash in order to avoid the
     // `DuplicateTx` error from the Starknet gateway, encountered whenever
@@ -144,10 +144,10 @@ pub(crate) fn transaction_data_to_starknet_calldata(
     // We add the retries to the selector in the calldata, since the selector
     // is not used by the EOA contract during the transaction execution.
     calldata.append(&mut vec![
-        FieldElement::ONE,        // call array length
+        Felt::ONE,                // call array length
         *KAKAROT_ADDRESS,         // contract address
         selector,                 // selector + retries
-        FieldElement::ZERO,       // data offset
+        Felt::ZERO,               // data offset
         signed_data.len().into(), // data length
         signed_data.len().into(), // calldata length
     ]);

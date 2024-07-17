@@ -1,6 +1,6 @@
 use dotenvy::dotenv;
 use kakarot_rpc::test_utils::{hive::HiveGenesisConfig, katana::genesis::KatanaGenesisBuilder};
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use std::{env::var, path::Path};
 
 fn main() {
@@ -27,7 +27,7 @@ fn main() {
     let genesis_json =
         hive_genesis.try_into_genesis_json(builder.clone()).expect("Failed to convert hive genesis to katana genesis");
 
-    let builder = builder.with_kakarot(FieldElement::ZERO).expect("Failed to set up Kakarot");
+    let builder = builder.with_kakarot(Felt::ZERO).expect("Failed to set up Kakarot");
     let manifest = builder.manifest();
 
     // Write the genesis json to the file.

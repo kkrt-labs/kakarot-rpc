@@ -16,7 +16,7 @@ services:
     restart: on-failure
 
   starknet:
-    image: ghcr.io/dojoengine/dojo:v0.7.3-alpha.0
+    image: ghcr.io/dojoengine/dojo:v1.0.0-alpha.0
     command:
       - katana
       - --disable-fee

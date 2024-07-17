@@ -1,18 +1,18 @@
 use crate::eth_provider::error::EthereumDataFormatError;
 use reth_primitives::{Address, B256, U256, U64};
-use starknet::core::types::{EthAddress, FieldElement};
+use starknet::core::types::{EthAddress, Felt};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Clone, Debug)]
-pub struct Felt252Wrapper(FieldElement);
+pub struct Felt252Wrapper(Felt);
 
-impl From<FieldElement> for Felt252Wrapper {
-    fn from(felt: FieldElement) -> Self {
+impl From<Felt> for Felt252Wrapper {
+    fn from(felt: Felt) -> Self {
         Self(felt)
     }
 }
 
-impl From<Felt252Wrapper> for FieldElement {
+impl From<Felt252Wrapper> for Felt {
     fn from(felt: Felt252Wrapper) -> Self {
         felt.0
     }
@@ -22,7 +22,7 @@ impl From<Felt252Wrapper> for FieldElement {
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
         // safe unwrap since H160 is 20 bytes
-        Self(FieldElement::from_byte_slice_be(address.as_slice()).unwrap())
+        Self(Felt::from_bytes_be_slice(address.as_slice()))
     }
 }
 
@@ -40,7 +40,7 @@ impl From<u64> for Felt252Wrapper {
 
 impl From<u128> for Felt252Wrapper {
     fn from(value: u128) -> Self {
-        Self(FieldElement::from(value))
+        Self(Felt::from(value))
     }
 }
 
@@ -54,19 +54,15 @@ impl TryFrom<Felt252Wrapper> for Address {
     }
 }
 
-impl TryFrom<B256> for Felt252Wrapper {
-    type Error = EthereumDataFormatError;
-
-    fn try_from(value: B256) -> Result<Self, Self::Error> {
-        Ok(Self(FieldElement::from_bytes_be(value.as_ref()).map_err(|_| EthereumDataFormatError::Primitive)?))
+impl From<B256> for Felt252Wrapper {
+    fn from(value: B256) -> Self {
+        Self(Felt::from_bytes_be(value.as_ref()))
     }
 }
 
-impl TryFrom<U256> for Felt252Wrapper {
-    type Error = EthereumDataFormatError;
-
-    fn try_from(u256: U256) -> Result<Self, Self::Error> {
-        Ok(Self(FieldElement::from_bytes_be(&u256.to_be_bytes()).map_err(|_| EthereumDataFormatError::Primitive)?))
+impl From<U256> for Felt252Wrapper {
+    fn from(u256: U256) -> Self {
+        Self(Felt::from_bytes_be(&u256.to_be_bytes()))
     }
 }
 
@@ -77,7 +73,7 @@ impl From<Felt252Wrapper> for U256 {
 }
 
 impl Deref for Felt252Wrapper {
-    type Target = FieldElement;
+    type Target = Felt;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -134,7 +130,7 @@ mod tests {
     #[test]
     fn test_address_try_from_felt_should_pass() {
         // Given
-        let address: Felt252Wrapper = FieldElement::from_hex_be(MAX_ADDRESS).unwrap().into();
+        let address: Felt252Wrapper = Felt::from_hex(MAX_ADDRESS).unwrap().into();
 
         // When
         let address = Address::try_from(address).unwrap();
@@ -148,7 +144,7 @@ mod tests {
     #[should_panic(expected = "Primitive")]
     fn test_address_try_from_felt_should_fail() {
         // Given
-        let address: Felt252Wrapper = FieldElement::from_hex_be(OVERFLOW_ADDRESS).unwrap().into();
+        let address: Felt252Wrapper = Felt::from_hex(OVERFLOW_ADDRESS).unwrap().into();
 
         // When
         Address::try_from(address).unwrap();
@@ -157,46 +153,44 @@ mod tests {
     #[test]
     fn test_felt_try_from_b256_should_pass() {
         // Given
-        let hash = B256::from_slice(&FieldElement::MAX.to_bytes_be());
+        let hash = B256::from_slice(&Felt::MAX.to_bytes_be());
 
         // When
-        let hash = Felt252Wrapper::try_from(hash).unwrap();
+        let hash = Felt252Wrapper::from(hash);
 
         // Then
-        let expected_hash = FieldElement::MAX;
+        let expected_hash = Felt::MAX;
         assert_eq!(expected_hash, hash.0);
     }
 
     #[test]
-    #[should_panic(expected = "Primitive")]
     fn test_felt_try_from_b256_should_fail() {
         // Given
         let hash = B256::from_str(OVERFLOW_FELT).unwrap();
 
         // When
-        Felt252Wrapper::try_from(hash).unwrap();
+        assert_eq!(Felt252Wrapper::from(hash).0, Felt::ZERO,);
     }
 
     #[test]
     fn test_felt_try_from_u256_should_pass() {
         // Given
-        let hash = U256::try_from_be_slice(&FieldElement::MAX.to_bytes_be()).unwrap();
+        let hash = U256::try_from_be_slice(&Felt::MAX.to_bytes_be()).unwrap();
 
         // When
-        let hash = Felt252Wrapper::try_from(hash).unwrap();
+        let hash = Felt252Wrapper::from(hash);
 
         // Then
-        let expected_hash = FieldElement::MAX;
+        let expected_hash = Felt::MAX;
         assert_eq!(expected_hash, hash.0);
     }
 
     #[test]
-    #[should_panic(expected = "Primitive")]
     fn test_felt_try_from_u256_should_fail() {
         // Given
         let hash = U256::from_str_radix(OVERFLOW_FELT, 16).unwrap();
 
         // When
-        Felt252Wrapper::try_from(hash).unwrap();
+        assert_eq!(Felt252Wrapper::from(hash).0, Felt::ZERO,);
     }
 }
