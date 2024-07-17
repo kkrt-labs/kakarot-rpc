@@ -259,7 +259,7 @@ impl KatanaGenesisBuilder<Initialized> {
 
         // Set the allowance for the EOA to the Kakarot contract.
         let key = get_storage_var_address("ERC20_allowances", &[*starknet_address, kakarot_address])?;
-        let storage = [(key, u128::MAX.into()), (key + Felt::from(1), u128::MAX.into())].into_iter();
+        let storage = [(key, u128::MAX.into()), (key + Felt::ONE, u128::MAX.into())].into_iter();
         self.fee_token_storage.extend(storage);
 
         // Write the address to the Kakarot evm to starknet mapping
