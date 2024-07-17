@@ -46,9 +46,9 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::{eyre, Result};
 use itertools::Itertools;
 use mongodb::bson::doc;
+use num_traits::cast::ToPrimitive;
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::ConfigureEvm;
-use num_traits::cast::ToPrimitive;
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
