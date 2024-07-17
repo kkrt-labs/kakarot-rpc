@@ -1,5 +1,5 @@
 pub mod builder;
-pub mod database;
+mod database;
 
 use self::database::EthDatabaseSnapshot;
 use crate::{

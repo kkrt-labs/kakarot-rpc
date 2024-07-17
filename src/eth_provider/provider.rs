@@ -3,6 +3,7 @@ use super::{
     database::{
         ethereum::EthereumBlockStore,
         filter::EthDatabaseFilterBuilder,
+        state::{EthCacheDatabase, EthDatabase},
         types::{
             header::StoredHeader,
             log::StoredLog,
@@ -37,7 +38,6 @@ use crate::{
         felt::Felt252Wrapper,
         transaction::validate_transaction,
     },
-    tracing::database::EthDatabaseSnapshot,
 };
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
@@ -52,10 +52,7 @@ use reth_node_api::ConfigureEvm;
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
-use reth_revm::{
-    primitives::{AccountInfo, BlockEnv, Bytecode, CfgEnv, CfgEnvWithHandlerCfg, HandlerCfg, SpecId},
-    Database as RevmDatabase, DatabaseRef,
-};
+use reth_revm::primitives::{BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, HandlerCfg, SpecId};
 use reth_rpc_eth_types::{error::ensure_success, revm_utils::prepare_call_env};
 use reth_rpc_types::{
     serde_helpers::JsonStorageKey,
@@ -186,40 +183,40 @@ where
     }
 }
 
-impl<SP> DatabaseRef for EthDataProvider<SP>
-where
-    SP: starknet::providers::Provider + Send + Sync,
-{
-    type Error = EthApiError;
+// impl<SP> DatabaseRef for EthDataProvider<SP>
+// where
+//     SP: starknet::providers::Provider + Send + Sync,
+// {
+//     type Error = EthApiError;
 
-    fn basic_ref(&self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
-        tokio::task::block_in_place(|| {
-            let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
-            database_snapshot.basic(address)
-        })
-    }
+//     fn basic_ref(&self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
+//         tokio::task::block_in_place(|| {
+//             let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
+//             database_snapshot.basic(address)
+//         })
+//     }
 
-    fn code_by_hash_ref(&self, code_hash: B256) -> Result<Bytecode, Self::Error> {
-        tokio::task::block_in_place(|| {
-            let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
-            database_snapshot.code_by_hash(code_hash)
-        })
-    }
+//     fn code_by_hash_ref(&self, code_hash: B256) -> Result<Bytecode, Self::Error> {
+//         tokio::task::block_in_place(|| {
+//             let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
+//             database_snapshot.code_by_hash(code_hash)
+//         })
+//     }
 
-    fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
-        tokio::task::block_in_place(|| {
-            let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
-            database_snapshot.storage(address, index)
-        })
-    }
+//     fn storage_ref(&self, address: Address, index: U256) -> Result<U256, Self::Error> {
+//         tokio::task::block_in_place(|| {
+//             let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
+//             database_snapshot.storage(address, index)
+//         })
+//     }
 
-    fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
-        tokio::task::block_in_place(|| {
-            let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
-            database_snapshot.block_hash(number)
-        })
-    }
-}
+//     fn block_hash_ref(&self, number: u64) -> Result<B256, Self::Error> {
+//         tokio::task::block_in_place(|| {
+//             let mut database_snapshot = EthDatabaseSnapshot::new(self, BlockId::default());
+//             database_snapshot.block_hash(number)
+//         })
+//     }
+// }
 
 #[async_trait]
 impl<SP> EthereumProvider for EthDataProvider<SP>
@@ -524,7 +521,8 @@ where
                 CfgEnvWithHandlerCfg { cfg_env, handler_cfg: HandlerCfg::new(SpecId::CANCUN) };
 
             // Create a snapshot of the Ethereum database using the block ID.
-            let mut db = EthDatabaseSnapshot::new(self, block_id.unwrap_or_default());
+            // let mut db = EthDatabaseSnapshot::new(self, block_id.unwrap_or_default());
+            let mut db = EthCacheDatabase::new(EthDatabase::new(self, block_id.unwrap_or_default()));
 
             // Prepare the call environment with the transaction request, gas limit, and overrides.
             let env = prepare_call_env(
@@ -532,7 +530,7 @@ where
                 block_env,
                 request.clone(),
                 request.gas.unwrap_or_default().try_into().expect("Gas limit is too large"),
-                &mut db.cache,
+                &mut db,
                 evm_overrides,
             )?;
 

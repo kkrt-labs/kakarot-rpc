@@ -11,9 +11,9 @@ use tokio::runtime::Handle;
 
 #[derive(Debug)]
 #[allow(clippy::redundant_pub_crate)]
-pub struct EthDatabaseSnapshot<P: EthereumProvider + Send + Sync> {
-    pub cache: CacheDB<P>,
-    pub block_id: BlockId,
+pub(crate) struct EthDatabaseSnapshot<P: EthereumProvider + Send + Sync> {
+    cache: CacheDB<P>,
+    block_id: BlockId,
 }
 
 impl<P: EthereumProvider + Send + Sync> EthDatabaseSnapshot<P> {
