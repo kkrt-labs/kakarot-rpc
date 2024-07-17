@@ -4,7 +4,7 @@ use alloy_dyn_abi::{DynSolValue, JsonAbiExt};
 use alloy_json_abi::ContractObject;
 use foundry_config::{find_project_root_path, load_config};
 use reth_primitives::{Transaction, TxEip1559, TxKind, TxLegacy, U256};
-use starknet_crypto::FieldElement;
+use starknet::core::types::Felt;
 use std::{fs, path::Path};
 
 #[derive(Clone, Debug)]
@@ -107,12 +107,12 @@ pub trait EvmContract {
 #[derive(Default, Debug)]
 pub struct KakarotEvmContract {
     pub bytecode: ContractObject,
-    pub starknet_address: FieldElement,
-    pub evm_address: FieldElement,
+    pub starknet_address: Felt,
+    pub evm_address: Felt,
 }
 
 impl KakarotEvmContract {
-    pub const fn new(bytecode: ContractObject, starknet_address: FieldElement, evm_address: FieldElement) -> Self {
+    pub const fn new(bytecode: ContractObject, starknet_address: Felt, evm_address: Felt) -> Self {
         Self { bytecode, starknet_address, evm_address }
     }
 }

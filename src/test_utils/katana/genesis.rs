@@ -30,7 +30,7 @@ use starknet::core::{
     serde::unsigned_field_element::UfeHex,
     types::{
         contract::{legacy::LegacyContractClass, SierraClass},
-        FieldElement,
+        Felt,
     },
     utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness},
 };
@@ -38,12 +38,12 @@ use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf};
 use walkdir::WalkDir;
 
 lazy_static! {
-    static ref SALT: FieldElement = FieldElement::from_bytes_be(&[0u8; 32]).unwrap();
+    static ref SALT: Felt = Felt::from_bytes_be(&[0u8; 32]);
 }
 
 #[serde_as]
 #[derive(Serialize, Debug)]
-pub struct Hex(#[serde_as(as = "UfeHex")] pub FieldElement);
+pub struct Hex(#[serde_as(as = "UfeHex")] pub Felt);
 
 #[derive(Serialize, Debug)]
 pub struct KatanaManifest {
@@ -60,13 +60,13 @@ pub struct Initialized;
 
 #[derive(Debug, Clone, Default)]
 pub struct KatanaGenesisBuilder<T = Uninitialized> {
-    coinbase: FieldElement,
+    coinbase: Felt,
     classes: Vec<GenesisClassJson>,
-    class_hashes: HashMap<String, FieldElement>,
+    class_hashes: HashMap<String, Felt>,
     contracts: HashMap<ContractAddress, GenesisContractJson>,
     accounts: HashMap<ContractAddress, GenesisAccountJson>,
     fee_token_storage: HashMap<StorageKey, StorageValue>,
-    cache: HashMap<String, FieldElement>,
+    cache: HashMap<String, Felt>,
     status: PhantomData<T>,
 }
 
@@ -122,19 +122,19 @@ impl<T> KatanaGenesisBuilder<T> {
         self
     }
 
-    fn kakarot_class_hash(&self) -> Result<FieldElement> {
+    fn kakarot_class_hash(&self) -> Result<Felt> {
         self.class_hashes.get("kakarot").copied().ok_or_eyre("Missing Kakarot class hash")
     }
 
-    pub fn account_contract_class_hash(&self) -> Result<FieldElement> {
+    pub fn account_contract_class_hash(&self) -> Result<Felt> {
         self.class_hashes.get("account_contract").copied().ok_or_eyre("Missing account contract class hash")
     }
 
-    pub fn uninitialized_account_class_hash(&self) -> Result<FieldElement> {
+    pub fn uninitialized_account_class_hash(&self) -> Result<Felt> {
         self.class_hashes.get("uninitialized_account").copied().ok_or_eyre("Missing uninitialized account class hash")
     }
 
-    pub fn cairo1_helpers_class_hash(&self) -> Result<FieldElement> {
+    pub fn cairo1_helpers_class_hash(&self) -> Result<Felt> {
         self.class_hashes.get("cairo1_helpers").copied().ok_or_eyre("Missing cairo1 helpers class hash")
     }
 }
@@ -173,7 +173,7 @@ impl KatanaGenesisBuilder<Uninitialized> {
 impl KatanaGenesisBuilder<Loaded> {
     /// Add the Kakarot contract to the genesis. Updates the state to [Initialized].
     /// Once in the [Initialized] status, the builder can be built.
-    pub fn with_kakarot(mut self, coinbase_address: FieldElement) -> Result<KatanaGenesisBuilder<Initialized>> {
+    pub fn with_kakarot(mut self, coinbase_address: Felt) -> Result<KatanaGenesisBuilder<Initialized>> {
         let kakarot_class_hash = self.kakarot_class_hash()?;
 
         let account_contract_class_hash = self.account_contract_class_hash()?;
@@ -187,7 +187,7 @@ impl KatanaGenesisBuilder<Loaded> {
             kakarot_class_hash,
             &UdcUniqueness::NotUnique,
             &[
-                FieldElement::ZERO,
+                Felt::ZERO,
                 DEFAULT_FEE_TOKEN_ADDRESS.0,
                 account_contract_class_hash,
                 uninitialized_account_class_hash,
@@ -207,8 +207,8 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr(KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH)?, uninitialized_account_class_hash),
             (storage_addr(KAKAROT_CAIRO1_HELPERS_CLASS_HASH)?, cairo1_helpers_class_hash),
             (storage_addr(KAKAROT_COINBASE)?, coinbase_address),
-            (storage_addr(KAKAROT_BASE_FEE)?, FieldElement::ZERO),
-            (storage_addr(KAKAROT_PREV_RANDAO)?, FieldElement::ZERO),
+            (storage_addr(KAKAROT_BASE_FEE)?, Felt::ZERO),
+            (storage_addr(KAKAROT_PREV_RANDAO)?, Felt::ZERO),
             (storage_addr(KAKAROT_BLOCK_GAS_LIMIT)?, block_gas_limit),
         ]
         .into_iter()
@@ -259,7 +259,7 @@ impl KatanaGenesisBuilder<Initialized> {
 
         // Set the allowance for the EOA to the Kakarot contract.
         let key = get_storage_var_address("ERC20_allowances", &[*starknet_address, kakarot_address])?;
-        let storage = [(key, u128::MAX.into()), (key + 1u8.into(), u128::MAX.into())].into_iter();
+        let storage = [(key, u128::MAX.into()), (key + Felt::ONE, u128::MAX.into())].into_iter();
         self.fee_token_storage.extend(storage);
 
         // Write the address to the Kakarot evm to starknet mapping
@@ -283,7 +283,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let key = get_storage_var_address("ERC20_balances", &[*starknet_address])?;
         let amount_split = split_u256::<u128>(amount);
 
-        let storage = [(key, amount_split[0].into()), (key + 1u8.into(), amount_split[1].into())].into_iter();
+        let storage = [(key, amount_split[0].into()), (key + Felt::ONE, amount_split[1].into())].into_iter();
         self.fee_token_storage.extend(storage);
 
         eoa.balance = Some(amount);
@@ -318,7 +318,7 @@ impl KatanaGenesisBuilder<Initialized> {
     }
 
     /// Compute the Starknet address for the given Ethereum address.
-    pub fn compute_starknet_address(&self, evm_address: FieldElement) -> Result<ContractAddress> {
+    pub fn compute_starknet_address(&self, evm_address: Felt) -> Result<ContractAddress> {
         let kakarot_address = self.cache_load("kakarot_address")?;
         let uninitialized_account_class_hash = self.uninitialized_account_class_hash()?;
 
@@ -326,29 +326,29 @@ impl KatanaGenesisBuilder<Initialized> {
             evm_address,
             uninitialized_account_class_hash,
             &[kakarot_address, evm_address],
-            FieldElement::ZERO,
+            Felt::ZERO,
         )))
     }
 
     #[allow(clippy::unused_self)]
-    fn evm_address(&self, pk: B256) -> Result<FieldElement> {
-        Ok(FieldElement::from_byte_slice_be(&LocalWallet::from_bytes(&pk)?.address().into_array())?)
+    fn evm_address(&self, pk: B256) -> Result<Felt> {
+        Ok(Felt::from_bytes_be_slice(&LocalWallet::from_bytes(&pk)?.address().into_array()))
     }
 
-    pub fn cache_load(&self, key: &str) -> Result<FieldElement> {
+    pub fn cache_load(&self, key: &str) -> Result<Felt> {
         self.cache.get(key).copied().ok_or(eyre!("Cache miss for {key} address"))
     }
 
-    pub const fn cache(&self) -> &HashMap<String, FieldElement> {
+    pub const fn cache(&self) -> &HashMap<String, Felt> {
         &self.cache
     }
 
-    pub const fn class_hashes(&self) -> &HashMap<String, FieldElement> {
+    pub const fn class_hashes(&self) -> &HashMap<String, Felt> {
         &self.class_hashes
     }
 }
 
-fn compute_class_hash(class: &Value) -> Result<FieldElement> {
+fn compute_class_hash(class: &Value) -> Result<Felt> {
     if let Ok(sierra) = serde_json::from_value::<SierraClass>(class.clone()) {
         Ok(sierra.class_hash()?)
     } else {
@@ -357,6 +357,6 @@ fn compute_class_hash(class: &Value) -> Result<FieldElement> {
     }
 }
 
-fn storage_addr(var_name: &str) -> Result<FieldElement> {
+fn storage_addr(var_name: &str) -> Result<Felt> {
     Ok(get_storage_var_address(var_name, &[])?)
 }

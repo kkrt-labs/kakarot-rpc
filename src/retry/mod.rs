@@ -9,7 +9,6 @@ use crate::eth_provider::{
     provider::EthereumProvider,
 };
 use eyre::Result;
-use lazy_static::lazy_static;
 use reth_primitives::{TransactionSignedEcRecovered, B256};
 use std::{
     fmt,
@@ -20,19 +19,16 @@ use tokio::runtime::Handle;
 #[cfg(test)]
 use {futures::lock::Mutex, std::sync::Arc};
 
-lazy_static! {
-    // Interval between retries of transactions (in seconds)
-    pub static ref RETRY_TX_INTERVAL: u64 = u64::from_str(
-        &std::env::var("RETRY_TX_INTERVAL")
-            .expect("Missing environment variable RETRY_TX_INTERVAL")
-    ).expect("failing to parse RETRY_TX_INTERVAL");
+pub fn get_retry_tx_interval() -> u64 {
+    u64::from_str(&std::env::var("RETRY_TX_INTERVAL").expect("Missing environment variable RETRY_TX_INTERVAL"))
+        .expect("failing to parse RETRY_TX_INTERVAL")
+}
 
-    /// Maximum number of times a transaction can be retried
-    pub static ref TRANSACTION_MAX_RETRIES: u8 = u8::from_str(
-        &std::env::var("TRANSACTION_MAX_RETRIES")
-            .expect("Missing environment variable TRANSACTION_MAX_RETRIES")
-    ).expect("failing to parse TRANSACTION_MAX_RETRIES");
-
+pub fn get_transaction_max_retries() -> u8 {
+    u8::from_str(
+        &std::env::var("TRANSACTION_MAX_RETRIES").expect("Missing environment variable TRANSACTION_MAX_RETRIES"),
+    )
+    .expect("failing to parse TRANSACTION_MAX_RETRIES")
 }
 
 /// The [`RetryHandler`] is responsible for retrying transactions that have failed.
@@ -88,7 +84,7 @@ where
                     last_print_time = Instant::now();
                 }
 
-                tokio::time::sleep(Duration::from_secs(*RETRY_TX_INTERVAL)).await;
+                tokio::time::sleep(Duration::from_secs(get_retry_tx_interval())).await;
             }
         });
     }
@@ -143,7 +139,7 @@ where
     /// Returns true if the transaction should be retried. A transaction should be retried if it has
     /// not been executed and the number of retries is less than the maximum number of retries.
     async fn should_retry(&self, transaction: &StoredPendingTransaction) -> Result<bool> {
-        let max_retries_reached = transaction.retries + 1 >= *TRANSACTION_MAX_RETRIES;
+        let max_retries_reached = transaction.retries + 1 >= get_transaction_max_retries();
         let transaction_executed = self.database.transaction(&transaction.tx.hash).await?.is_some();
         Ok(!max_retries_reached && !transaction_executed)
     }
@@ -176,7 +172,7 @@ mod tests {
         // Insert the transaction into the pending transactions collection with TRANSACTION_MAX_RETRIES + 1 retry
         // Shouldn't be retried as it has reached the maximum number of retries
         let transaction2 = katana.eoa().mock_transaction_with_nonce(1).await.expect("Failed to get mock transaction");
-        db.upsert_pending_transaction(transaction2.clone(), *TRANSACTION_MAX_RETRIES + 1)
+        db.upsert_pending_transaction(transaction2.clone(), get_transaction_max_retries() + 1)
             .await
             .expect("Failed to insert pending transaction in database");
 
@@ -191,7 +187,7 @@ mod tests {
         let mut pending_tx_hashes: Vec<B256> = Vec::new();
         let mut last_retried_transactions_hashes_len = retry_handler.retried.lock().await.len();
 
-        for i in 0..*TRANSACTION_MAX_RETRIES + 2 {
+        for i in 0..get_transaction_max_retries() + 2 {
             // Retry transactions.
             retry_handler.process_pending_transactions().await.expect("Failed to retry transactions");
 
@@ -203,13 +199,13 @@ mod tests {
             last_retried_transactions_hashes_len = retried.len();
 
             // Assert that there is only one retried transaction before reaching retry limit.
-            assert_eq!(retried_transaction_hashes.len(), usize::from(i + 1 < *TRANSACTION_MAX_RETRIES));
+            assert_eq!(retried_transaction_hashes.len(), usize::from(i + 1 < get_transaction_max_retries()));
 
             // Retrieve the pending transactions.
             let pending_transactions =
                 db.get_all::<StoredPendingTransaction>().await.expect("Failed get pending transactions");
 
-            if i + 1 < *TRANSACTION_MAX_RETRIES {
+            if i + 1 < get_transaction_max_retries() {
                 // Ensure that the spurious transactions are dropped from the pending transactions collection
                 assert_eq!(pending_transactions.len(), 1);
 

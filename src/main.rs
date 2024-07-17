@@ -70,11 +70,10 @@ async fn main() -> Result<()> {
 #[cfg(feature = "hive")]
 async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<()> {
     use kakarot_rpc::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
-    use starknet::{accounts::ConnectedAccount, providers::Provider as _};
-    use starknet_crypto::FieldElement;
+    use starknet::{accounts::ConnectedAccount, core::types::Felt, providers::Provider as _};
 
     let chain_id = starknet_provider.chain_id().await?;
-    let chain_id: u64 = (FieldElement::from(u64::MAX) & chain_id).try_into()?;
+    let chain_id: u64 = (Felt::from(u64::MAX).to_bigint() & chain_id.to_bigint()).try_into()?;
 
     CHAIN_ID.set(chain_id.into()).expect("Failed to set chain id");
 

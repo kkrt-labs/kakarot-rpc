@@ -4,7 +4,8 @@ services:
   anvil:
     platform: linux/amd64
     image: ghcr.io/foundry-rs/foundry:latest
-    command: ["anvil --host 0.0.0.0 --port 8545 --load-state /app/.anvil/state.json"]
+    command:
+      ["anvil --host 0.0.0.0 --port 8545 --load-state /app/.anvil/state.json"]
     # Initial state has the StarknetMessaging and L1KakarotMessaging contracts deployed
     volumes:
       - .anvil:/app/.anvil
@@ -15,7 +16,7 @@ services:
     restart: on-failure
 
   starknet:
-    image: ghcr.io/dojoengine/dojo:v0.7.3-alpha.0
+    image: ghcr.io/dojoengine/dojo:v1.0.0-alpha.0
     command:
       - katana
       - --disable-fee
@@ -82,7 +83,7 @@ services:
         condition: service_completed_successfully
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.19
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.20
     ports:
       - 3030:3030
     environment:
