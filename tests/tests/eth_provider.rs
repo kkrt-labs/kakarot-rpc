@@ -816,36 +816,8 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_call_without_overrides(#[future] katana: Katana, _setup: ()) {
-    // Given
-    let eth_provider = katana.eth_provider();
-
-    // Create the transaction request
-    let request = TransactionRequest {
-        from: Some(katana.eoa().evm_address().expect("Failed to get eoa address")),
-        to: Some(TxKind::Call(Address::ZERO)),
-        gas: Some(21000),
-        gas_price: Some(10),
-        value: Some(U256::from(1)),
-        nonce: Some(2),
-        ..Default::default()
-    };
-
-    // Call the Ethereum provider with the created transaction request
-    let _ = eth_provider.call(request, None, None, None).await.expect("Failed to call");
-}
-
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
-    // Extract Katana instance from the plain_opcodes tuple
-    let katana = plain_opcodes.0;
-
     // Obtain an Ethereum provider instance from the Katana instance
     let eth_provider = katana.eth_provider();
-
-    // Convert KakarotEvmContract's EVM address to an Address type
-    let contract_address = Address::from_slice(&plain_opcodes.1.evm_address.to_bytes_be()[12..]);
 
     // Get the EOA (Externally Owned Account) address from Katana
     let eoa_address = katana.eoa().evm_address().expect("Failed to get eoa address");
@@ -860,20 +832,56 @@ async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, Kakarot
         ..Default::default()
     };
 
-    // Initialize state override with the EOA address having a high balance
-    let mut state_override1: HashMap<Address, AccountOverride> = HashMap::new();
-    state_override1
-        .insert(eoa_address, AccountOverride { balance: Some(U256::from(1_000_000_000)), ..Default::default() });
-
     // Perform the first call with state override and high balance
     // The transaction should succeed
-    let _ = eth_provider
-        .call(request1, None, Some(state_override1.clone()), None)
-        .await
-        .expect("Failed to call for a simple transfer");
+    let _ = eth_provider.call(request1, None, None, None).await.expect("Failed to call for a simple transfer");
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_call_with_state_override_balance_success(#[future] katana: Katana, _setup: ()) {
+    // Obtain an Ethereum provider instance from the Katana instance
+    let eth_provider = katana.eth_provider();
+
+    // Generate an EOA address
+    let eoa_address = Address::from_str("0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5").unwrap();
 
     // Create the second transaction request with a higher value
-    let request2 = TransactionRequest {
+    let request = TransactionRequest {
+        from: Some(eoa_address),
+        to: Some(TxKind::Call(Address::ZERO)),
+        gas: Some(21000),
+        gas_price: Some(10),
+        value: Some(U256::from(1_000_000)),
+        ..Default::default()
+    };
+
+    // Initialize state override with the EOA address having a lower balance than the required value
+    let mut state_override: HashMap<Address, AccountOverride> = HashMap::new();
+    state_override
+        .insert(eoa_address, AccountOverride { balance: Some(U256::from(1_000_000_000)), ..Default::default() });
+
+    // Attempt to call and handle the result
+    // Should succeed as the EOA balance is higher than the required value
+    let _ = eth_provider
+        .call(request, None, Some(state_override.clone()), None)
+        .await
+        .expect("Failed to call for a simple transfer");
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_call_with_state_override_balance_failure(#[future] katana: Katana, _setup: ()) {
+    // Obtain an Ethereum provider instance from the Katana instance
+    let eth_provider = katana.eth_provider();
+
+    // Get the EOA (Externally Owned Account) address from Katana
+    let eoa_address = katana.eoa().evm_address().expect("Failed to get eoa address");
+
+    // Create the second transaction request with a higher value
+    let request = TransactionRequest {
         from: Some(eoa_address),
         to: Some(TxKind::Call(Address::ZERO)),
         gas: Some(21000),
@@ -882,8 +890,14 @@ async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, Kakarot
         ..Default::default()
     };
 
+    // Initialize state override with the EOA address having a lower balance than the required value
+    let mut state_override: HashMap<Address, AccountOverride> = HashMap::new();
+    state_override
+        .insert(eoa_address, AccountOverride { balance: Some(U256::from(1_000_000_000)), ..Default::default() });
+
     // Attempt to call and handle the result
-    match eth_provider.call(request2, None, Some(state_override1.clone()), None).await {
+    // Should fail as the EOA balance is lower than the required value
+    match eth_provider.call(request, None, Some(state_override.clone()), None).await {
         // If call succeeds, panic as an error was expected
         Ok(_) => panic!("Expected an error but got a success response"),
         // If call fails, check if the error is due to insufficient funds
@@ -898,6 +912,23 @@ async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, Kakarot
             _ => panic!("Expected a transaction error but got a different error: {e:?}"),
         },
     }
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_call_with_state_override_bytecode(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Extract Katana instance from the plain_opcodes tuple
+    let katana = plain_opcodes.0;
+
+    // Obtain an Ethereum provider instance from the Katana instance
+    let eth_provider = katana.eth_provider();
+
+    // Convert KakarotEvmContract's EVM address to an Address type
+    let contract_address = Address::from_slice(&plain_opcodes.1.evm_address.to_bytes_be()[12..]);
+
+    // Get the EOA (Externally Owned Account) address from Katana
+    let eoa_address = katana.eoa().evm_address().expect("Failed to get eoa address");
 
     // Define a Solidity contract interface for the counter
     sol! {
@@ -911,7 +942,7 @@ async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, Kakarot
     let calldata = CounterContract::incForLoopCall { iterations: U256::from(5) }.abi_encode();
 
     // Define the transaction request for invoking the incForLoop function
-    let request3 = TransactionRequest {
+    let request = TransactionRequest {
         from: Some(eoa_address),
         to: Some(TxKind::Call(contract_address)),
         gas: Some(210_000),
@@ -923,8 +954,9 @@ async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, Kakarot
     };
 
     // Perform the call to invoke the incForLoop function without state override
+    // Attest that the transaction succeeds
     let _ = eth_provider
-        .call(request3, None, None, None)
+        .call(request.clone(), None, None, None)
         .await
         .expect("Failed to call incForLoopCall in Kakarot constract");
 
@@ -947,31 +979,18 @@ async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, Kakarot
     // Extract the bytecode for the MyContract contract
     let bytecode = &MyContract::BYTECODE[..];
 
-    // State override with the MyContract bytecode and maximum balance
-    let mut state_override2: HashMap<Address, AccountOverride> = HashMap::new();
-    state_override2.insert(
+    // State override with the MyContract bytecode
+    // Change the contract bytecode
+    let mut state_override: HashMap<Address, AccountOverride> = HashMap::new();
+    state_override.insert(
         contract_address,
         AccountOverride { code: Some(bytecode.into()), balance: Some(U256::MAX), ..Default::default() },
     );
-    state_override2.insert(eoa_address, AccountOverride { balance: Some(U256::MAX), ..Default::default() });
 
-    // Prepare the calldata for invoking the doStuff function with specific parameters
-    let calldata = MyContract::doStuffCall { a: U256::from(0x69), b: true }.abi_encode();
-
-    // Define the transaction request for invoking the doStuff function
-    let request4 = TransactionRequest {
-        from: Some(eoa_address),
-        to: Some(TxKind::Call(contract_address)),
-        gas: Some(210_000),
-        gas_price: Some(1_000_000_000_000_000_000_000),
-        value: Some(U256::ZERO),
-        nonce: Some(2),
-        input: TransactionInput { input: Some(calldata.clone().into()), data: None },
-        ..Default::default()
-    };
-
-    // Attempt to call and handle the result
-    match eth_provider.call(request4, None, Some(state_override2), None).await {
+    // Attempt to call the incForLoop function which doesn't exist in the MyContract contract
+    //
+    // Should fail as the contract bytecode is different now with state override
+    match eth_provider.call(request, None, Some(state_override), None).await {
         // If call succeeds, panic as an error was expected
         Ok(_) => panic!("Expected an error but got a success response"),
         // If call fails, check if the error is due to a transaction revert
@@ -983,6 +1002,68 @@ async fn test_call_with_state_override(#[future] plain_opcodes: (Katana, Kakarot
             _ => panic!("Expected an invalid transaction revert error but got a different error: {e:?}"),
         },
     }
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_call_with_state_override_bytecode1(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
+    // Extract Katana instance from the plain_opcodes tuple
+    let katana = plain_opcodes.0;
+
+    // Obtain an Ethereum provider instance from the Katana instance
+    let eth_provider = katana.eth_provider();
+
+    // Convert KakarotEvmContract's EVM address to an Address type
+    let contract_address = Address::from_slice(&plain_opcodes.1.evm_address.to_bytes_be()[12..]);
+
+    // Get the EOA (Externally Owned Account) address from Katana
+    let eoa_address = katana.eoa().evm_address().expect("Failed to get eoa address");
+
+    // Define another Solidity contract with a different interface and bytecode
+    sol! {
+        #[sol(rpc, bytecode = "6080806040523460135760df908160198239f35b600080fdfe6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033")]
+        #[derive(Debug)]
+        contract Counter {
+            uint256 public number;
+
+            function setNumber(uint256 newNumber) public {
+                number = newNumber;
+            }
+
+            function increment() public {
+                number++;
+            }
+        }
+    }
+
+    // Extract the bytecode for the counter contract
+    let bytecode = &Counter::BYTECODE[..];
+
+    // Prepare the calldata for invoking the setNumber function
+    let calldata = Counter::setNumberCall { newNumber: U256::from(10) }.abi_encode();
+
+    // State override with the Counter bytecode
+    let mut state_override: HashMap<Address, AccountOverride> = HashMap::new();
+    state_override.insert(contract_address, AccountOverride { code: Some(bytecode.into()), ..Default::default() });
+
+    // Define the transaction request for invoking the setNumber function
+    let request = TransactionRequest {
+        from: Some(eoa_address),
+        to: Some(TxKind::Call(contract_address)),
+        gas: Some(210_000),
+        gas_price: Some(1_000_000_000_000_000_000_000),
+        value: Some(U256::ZERO),
+        nonce: Some(2),
+        input: TransactionInput { input: Some(calldata.clone().into()), data: None },
+        ..Default::default()
+    };
+
+    // Attempt to call the setNumber function and handle the result
+    let _ = eth_provider
+        .call(request, None, Some(state_override), None)
+        .await
+        .expect("Failed to set number in Counter contract");
 }
 
 #[rstest]
