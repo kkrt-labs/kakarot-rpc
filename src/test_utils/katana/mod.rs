@@ -136,12 +136,8 @@ impl<'a> Katana {
         // Add a hardcoded logs to the MongoDB database.
         mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
         // Add a hardcoded header to the MongoDB database.
-        let max_block_number = mongo_fuzzer
-            .headers
-            .iter()
-            .map(|header| header.header.number.unwrap_or_default())
-            .max()
-            .unwrap_or_default();
+        let max_block_number =
+            mongo_fuzzer.headers.iter().map(|header| header.number.unwrap_or_default()).max().unwrap_or_default();
         mongo_fuzzer
             .add_hardcoded_block_header_with_base_fee(max_block_number + 1, 0)
             .expect("Failed to add header in the database");
@@ -283,30 +279,26 @@ impl<'a> Katana {
 
     /// Retrieves the first stored transaction
     pub fn first_transaction(&self) -> Option<Transaction> {
-        self.transactions.first().map(|stored_tx| stored_tx.tx.clone())
+        self.transactions.first().map(Into::into)
     }
 
     /// Retrieves the current block number
     pub fn block_number(&self) -> u64 {
-        self.headers
-            .iter()
-            .map(|stored_header| stored_header.header.number.unwrap_or_default())
-            .max()
-            .unwrap_or_default()
+        self.headers.iter().map(|header| header.number.unwrap_or_default()).max().unwrap_or_default()
     }
 
     /// Retrieves the most recent stored transaction based on block number
     pub fn most_recent_transaction(&self) -> Option<Transaction> {
         self.transactions
             .iter()
-            .max_by_key(|stored_transactions| stored_transactions.tx.block_number.unwrap_or_default())
-            .map(|stored_tx| stored_tx.tx.clone())
+            .max_by_key(|stored_transaction| stored_transaction.block_number.unwrap_or_default())
+            .map(Into::into)
     }
 
     /// Retrieves the stored header by hash
     pub fn header_by_hash(&self, hash: B256) -> Option<Header> {
         self.headers.iter().find_map(|stored_header| {
-            if stored_header.header.hash == Some(hash) {
+            if stored_header.hash == Some(hash) {
                 Some(stored_header.header.clone())
             } else {
                 None
@@ -315,29 +307,22 @@ impl<'a> Katana {
     }
 
     pub fn logs_with_min_topics(&self, min_topics: usize) -> Vec<Log> {
-        self.logs
-            .iter()
-            .filter(|stored_log| stored_log.log.topics().len() >= min_topics)
-            .map(|stored_log| stored_log.log.clone())
-            .collect()
+        self.logs.iter().filter(|stored_log| stored_log.topics().len() >= min_topics).map(Into::into).collect()
     }
 
     pub fn logs_by_address(&self, addresses: &[Address]) -> Vec<Log> {
         self.logs
             .iter()
-            .filter(|stored_log| {
-                let address = stored_log.log.address();
-                addresses.iter().any(|addr| *addr == address)
-            })
-            .map(|stored_log| stored_log.log.clone())
+            .filter(|stored_log| addresses.iter().any(|addr| *addr == stored_log.address()))
+            .map(Into::into)
             .collect()
     }
 
     pub fn logs_by_block_number(&self, block_number: u64) -> Vec<Log> {
         self.logs
             .iter()
-            .filter(|stored_log| stored_log.log.block_number.unwrap_or_default() == block_number)
-            .map(|stored_log| stored_log.log.clone())
+            .filter(|stored_log| stored_log.block_number.unwrap_or_default() == block_number)
+            .map(Into::into)
             .collect()
     }
 
@@ -345,22 +330,22 @@ impl<'a> Katana {
         self.logs
             .iter()
             .filter(|stored_log| {
-                let block_number = stored_log.log.block_number.unwrap_or_default();
+                let block_number = stored_log.block_number.unwrap_or_default();
                 block_range.contains(&block_number)
             })
-            .map(|stored_log| stored_log.log.clone())
+            .map(Into::into)
             .collect()
     }
 
     pub fn logs_by_block_hash(&self, block_hash: B256) -> Vec<Log> {
         self.logs
             .iter()
-            .filter(|stored_log| stored_log.log.block_hash.unwrap_or_default() == block_hash)
-            .map(|stored_log| stored_log.log.clone())
+            .filter(|stored_log| stored_log.block_hash.unwrap_or_default() == block_hash)
+            .map(Into::into)
             .collect()
     }
 
     pub fn all_logs(&self) -> Vec<Log> {
-        self.logs.iter().map(|stored_log| stored_log.log.clone()).collect()
+        self.logs.iter().map(Into::into).collect()
     }
 }

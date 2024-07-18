@@ -11,7 +11,7 @@ use arbitrary::Arbitrary;
 use lazy_static::lazy_static;
 use mongodb::{
     bson::{self, doc, Document},
-    options::{DatabaseOptions, ReadConcern, UpdateModifications, WriteConcern},
+    options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client, Collection,
 };
 use reth_primitives::{Address, TxType, B256, U256};
@@ -219,7 +219,7 @@ impl MongoFuzzer {
 
     /// Gets the highest block number in the transactions collection.
     pub fn max_block_number(&self) -> u64 {
-        self.headers.iter().map(|header| header.header.number.unwrap_or_default()).max().unwrap_or_default()
+        self.headers.iter().map(|header| header.number.unwrap_or_default()).max().unwrap_or_default()
     }
 
     /// Adds a hardcoded transaction to the collection of transactions.
@@ -335,6 +335,7 @@ impl MongoFuzzer {
                     doc! {&key: serialized_data.get_document(doc).unwrap().get_str(value).unwrap()},
                     UpdateModifications::Document(doc! {"$set": serialized_data.clone()}),
                 )
+                .with_options(UpdateOptions::builder().upsert(true).build())
                 .await
                 .expect("Failed to insert documents");
 
@@ -347,6 +348,7 @@ impl MongoFuzzer {
                     doc! {&block_key: &number},
                     UpdateModifications::Document(doc! {"$set": {&block_key: padded_number}}),
                 )
+                .with_options(UpdateOptions::builder().upsert(true).build())
                 .await
                 .expect("Failed to insert documents");
         }
@@ -403,28 +405,34 @@ mod tests {
         // Retrieves stored receipts from the database.
         let receipts = database.get_all::<StoredTransactionReceipt>().await.unwrap();
 
+        // Transactions should not be empty.
+        assert!(!receipts.is_empty());
+
+        // Transactions should not be empty.
+        assert!(!transactions.is_empty());
+
         // Iterates through transactions and receipts in parallel.
         for (transaction, receipt) in transactions.iter().zip(receipts.iter()) {
             // Asserts equality between transaction block hash and receipt block hash.
-            assert_eq!(transaction.tx.block_hash, receipt.receipt.block_hash);
+            assert_eq!(transaction.block_hash, receipt.receipt.block_hash);
 
             // Asserts equality between transaction block number and receipt block number.
-            assert_eq!(transaction.tx.block_number, receipt.receipt.block_number);
+            assert_eq!(transaction.block_number, receipt.receipt.block_number);
 
             // Asserts equality between transaction hash and receipt transaction hash.
-            assert_eq!(transaction.tx.hash, receipt.receipt.transaction_hash);
+            assert_eq!(transaction.hash, receipt.receipt.transaction_hash);
 
             // Asserts equality between transaction index and receipt transaction index.
-            assert_eq!(transaction.tx.transaction_index, receipt.receipt.transaction_index);
+            assert_eq!(transaction.transaction_index, receipt.receipt.transaction_index);
 
             // Asserts equality between transaction sender and receipt sender.
-            assert_eq!(transaction.tx.from, receipt.receipt.from);
+            assert_eq!(transaction.from, receipt.receipt.from);
 
             // Asserts equality between transaction recipient and receipt recipient.
-            assert_eq!(transaction.tx.to, receipt.receipt.to);
+            assert_eq!(transaction.to, receipt.receipt.to);
 
             // Asserts equality between transaction type and receipt type.
-            assert_eq!(transaction.tx.transaction_type.unwrap(), Into::<u8>::into(receipt.receipt.transaction_type()));
+            assert_eq!(transaction.transaction_type.unwrap(), Into::<u8>::into(receipt.receipt.transaction_type()));
         }
 
         // Drop the inner MongoDB database.

@@ -1,6 +1,7 @@
 use reth_primitives::B256;
 use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     crate::test_utils::mongo::{
@@ -104,9 +105,23 @@ impl From<StoredTransaction> for Transaction {
     }
 }
 
+impl From<&StoredTransaction> for Transaction {
+    fn from(tx: &StoredTransaction) -> Self {
+        tx.tx.clone()
+    }
+}
+
 impl From<Transaction> for StoredTransaction {
     fn from(tx: Transaction) -> Self {
         Self { tx }
+    }
+}
+
+impl Deref for StoredTransaction {
+    type Target = Transaction;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tx
     }
 }
 
@@ -173,6 +188,20 @@ impl<'a> StoredPendingTransaction {
 impl From<StoredPendingTransaction> for Transaction {
     fn from(tx: StoredPendingTransaction) -> Self {
         tx.tx
+    }
+}
+
+impl From<&StoredPendingTransaction> for Transaction {
+    fn from(tx: &StoredPendingTransaction) -> Self {
+        tx.tx.clone()
+    }
+}
+
+impl Deref for StoredPendingTransaction {
+    type Target = Transaction;
+
+    fn deref(&self) -> &Self::Target {
+        &self.tx
     }
 }
 

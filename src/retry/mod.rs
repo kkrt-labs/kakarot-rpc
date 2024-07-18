@@ -97,7 +97,7 @@ where
             if self.should_retry(&transaction).await? {
                 self.retry_transaction(transaction).await?;
             } else {
-                self.prune_transaction(transaction.tx.hash).await?;
+                self.prune_transaction(transaction.hash).await?;
             }
         }
         Ok(())
@@ -105,7 +105,7 @@ where
 
     /// Retries a transaction and prunes it if the conversion to a primitive transaction fails.
     async fn retry_transaction(&self, transaction: StoredPendingTransaction) -> Result<()> {
-        let hash = transaction.tx.hash;
+        let hash = transaction.hash;
         tracing::info!("Retrying transaction {hash} with {} retries", transaction.retries + 1);
 
         // Generate primitive transaction, handle error if any
@@ -140,7 +140,7 @@ where
     /// not been executed and the number of retries is less than the maximum number of retries.
     async fn should_retry(&self, transaction: &StoredPendingTransaction) -> Result<bool> {
         let max_retries_reached = transaction.retries + 1 >= get_transaction_max_retries();
-        let transaction_executed = self.database.transaction(&transaction.tx.hash).await?.is_some();
+        let transaction_executed = self.database.transaction(&transaction.hash).await?.is_some();
         Ok(!max_retries_reached && !transaction_executed)
     }
 }
