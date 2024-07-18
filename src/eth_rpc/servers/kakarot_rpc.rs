@@ -7,11 +7,14 @@ use reth_primitives::B256;
 use starknet::{
     core::{
         crypto::compute_hash_on_elements,
-        types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, FieldElement},
+        types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1},
     },
     providers::Provider,
 };
 use std::convert::TryInto;
+use starknet_crypto::FieldElement;
+use jsonrpsee_types::ErrorObject;
+use jsonrpsee_types::error::INVALID_PARAMS_CODE;
 
 #[derive(Debug)]
 pub struct KakarotRpc<EP, SP> {
@@ -45,18 +48,46 @@ where
 {
     async fn get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<B256> {
         // Retrieve the stored transaction from the database.
-        let transaction = self.eth_provider.transaction_by_hash(hash).await.unwrap().unwrap();
+        let transaction = self.eth_provider.transaction_by_hash(hash).await
+            .map_err(ErrorObject::from)?
+            .ok_or_else(|| ErrorObject::owned(
+                INVALID_PARAMS_CODE,
+                "Transaction not found",
+                None::<()>
+            ))?;
 
         // Convert the `Transaction` instance to a `TransactionSigned` instance.
-        let transaction_signed_ec_recovered: reth_primitives::TransactionSignedEcRecovered =
-            transaction.try_into().unwrap();
+        let transaction_signed_ec_recovered: reth_primitives::TransactionSignedEcRecovered = transaction
+            .try_into()
+            .map_err(|_| ErrorObject::owned(
+                INVALID_PARAMS_CODE,
+                "Failed to convert transaction",
+                None::<()>
+            ))?;
+
         let (transaction_signed, _) = transaction_signed_ec_recovered.to_components();
 
         // Retrieve the signer of the transaction.
-        let signer = transaction_signed.recover_signer().unwrap();
+        let signer = transaction_signed
+            .recover_signer()
+            .ok_or_else(|| ErrorObject::owned(
+                INVALID_PARAMS_CODE,
+                "Failed to recover signer",
+                None::<()>
+            ))?;
         // Create the Starknet transaction.
-        let starknet_transaction =
-            (to_starknet_transaction(&transaction_signed, signer, retries).unwrap()).try_into_v1().unwrap();
+        let starknet_transaction = to_starknet_transaction(&transaction_signed, signer, retries)
+            .map_err(|_| ErrorObject::owned(
+                INVALID_PARAMS_CODE,
+                "Failed to convert to StarkNet transaction",
+                None::<()>
+            ))?
+            .try_into_v1()
+            .map_err(|_| ErrorObject::owned(
+                INVALID_PARAMS_CODE,
+                "Failed to convert StarkNet transaction to version 1",
+                None::<()>
+            ))?;
 
         let chain_id = self.starknet_provider.chain_id().await.unwrap();
 
