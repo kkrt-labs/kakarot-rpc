@@ -11,7 +11,7 @@ use crate::{
 };
 use alloy_dyn_abi::DynSolValue;
 use alloy_json_abi::ContractObject;
-use alloy_signer_wallet::LocalWallet;
+use alloy_signer_local::PrivateKeySigner;
 use async_trait::async_trait;
 use reth_primitives::{
     sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, B256, U256,
@@ -36,7 +36,7 @@ pub trait Eoa<P: Provider + Send + Sync> {
         Ok(starknet_address(self.evm_address()?))
     }
     fn evm_address(&self) -> Result<Address, eyre::Error> {
-        let wallet = LocalWallet::from_bytes(&self.private_key())?;
+        let wallet = PrivateKeySigner::from_bytes(&self.private_key())?;
         Ok(wallet.address())
     }
     fn private_key(&self) -> B256;
