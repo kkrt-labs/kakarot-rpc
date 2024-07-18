@@ -196,7 +196,7 @@ impl EthereumBlockStore for Database {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::mongo::{CollectionDB, MongoFuzzer, RANDOM_BYTES_SIZE};
+    use crate::test_utils::mongo::{MongoFuzzer, RANDOM_BYTES_SIZE};
     use rand::{self, Rng};
 
     #[tokio::test(flavor = "multi_thread")]
@@ -233,14 +233,7 @@ mod tests {
         unstructured: &mut arbitrary::Unstructured<'_>,
     ) {
         // Fetch the first transaction from the mock database
-        let first_transaction = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Transactions)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_transaction()
-            .unwrap();
+        let first_transaction = mongo_fuzzer.transactions.first().unwrap();
 
         // Test retrieving an existing transaction by its hash
         assert_eq!(database.transaction(&first_transaction.tx.hash).await.unwrap(), Some(first_transaction.tx.clone()));
@@ -254,26 +247,14 @@ mod tests {
 
     async fn test_get_transactions_by_block_hash(database: &Database, mongo_fuzzer: &MongoFuzzer) {
         // Fetch the first block hash from the mock database
-        let first_block_hash = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header
-            .hash
-            .unwrap();
+        let first_block_hash = mongo_fuzzer.headers.first().unwrap().header.hash.unwrap();
 
         // Fetch transactions belonging to the first block hash
         let transactions_first_block_hash = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Transactions)
-            .unwrap()
+            .transactions
             .iter()
-            .filter(|tx| tx.extract_stored_transaction().unwrap().tx.block_hash.unwrap() == first_block_hash)
-            .map(|stored_data| stored_data.extract_stored_transaction().unwrap().tx.clone())
+            .filter(|tx| tx.tx.block_hash.unwrap() == first_block_hash)
+            .map(|tx| tx.tx.clone())
             .collect::<Vec<_>>();
 
         // Test retrieving transactions by block hash
@@ -282,26 +263,14 @@ mod tests {
 
     async fn test_get_transactions_by_block_number(database: &Database, mongo_fuzzer: &MongoFuzzer) {
         // Fetch the first block number from the mock database
-        let first_block_number = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header
-            .number
-            .unwrap();
+        let first_block_number = mongo_fuzzer.headers.first().unwrap().header.number.unwrap();
 
         // Fetch transactions belonging to the first block number
         let transactions_first_block_number = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Transactions)
-            .unwrap()
+            .transactions
             .iter()
-            .filter(|tx| tx.extract_stored_transaction().unwrap().tx.block_number.unwrap() == first_block_number)
-            .map(|stored_data| stored_data.extract_stored_transaction().unwrap().tx.clone())
+            .filter(|tx| tx.tx.block_number.unwrap() == first_block_number)
+            .map(|stored_data| stored_data.tx.clone())
             .collect::<Vec<_>>();
 
         // Test retrieving transactions by block number
@@ -387,15 +356,7 @@ mod tests {
     }
 
     async fn test_get_header(database: &Database, mongo_fuzzer: &MongoFuzzer) {
-        let header_block_hash = &mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header;
+        let header_block_hash = &mongo_fuzzer.headers.first().unwrap().header;
 
         // Test retrieving header by block hash
         assert_eq!(database.header(header_block_hash.hash.unwrap().into()).await.unwrap().unwrap(), *header_block_hash);
@@ -415,26 +376,15 @@ mod tests {
     }
 
     async fn test_get_blocks(database: &Database, mongo_fuzzer: &MongoFuzzer, u: &mut arbitrary::Unstructured<'_>) {
-        let header = &mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header;
+        let header = &mongo_fuzzer.headers.first().unwrap().header;
 
         let block_hash = header.hash.unwrap();
 
         let block: RichBlock = {
             let transactions: Vec<Transaction> = mongo_fuzzer
-                .documents()
-                .get(&CollectionDB::Transactions)
-                .unwrap()
+                .transactions
                 .iter()
-                .filter_map(|transaction| {
-                    let stored_transaction = transaction.extract_stored_transaction().unwrap();
+                .filter_map(|stored_transaction| {
                     if stored_transaction.tx.block_hash.unwrap() == block_hash {
                         Some(stored_transaction.tx.clone())
                     } else {
@@ -500,27 +450,15 @@ mod tests {
     }
 
     async fn test_get_transaction_count(database: &Database, mongo_fuzzer: &MongoFuzzer) {
-        let header_block_hash = &mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header;
+        let header_block_hash = &mongo_fuzzer.headers.first().unwrap().header;
 
         let first_block_hash = header_block_hash.hash.unwrap();
 
         let transaction_count: U256 = U256::from(
             mongo_fuzzer
-                .documents()
-                .get(&CollectionDB::Transactions)
-                .unwrap()
+                .transactions
                 .iter()
-                .filter(|transaction| {
-                    transaction.extract_stored_transaction().unwrap().tx.block_hash.unwrap() == first_block_hash
-                })
+                .filter(|transaction| transaction.tx.block_hash.unwrap() == first_block_hash)
                 .count(),
         );
 

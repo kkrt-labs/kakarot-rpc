@@ -1,13 +1,15 @@
 pub mod genesis;
 
+use super::mongo::MongoImage;
 use crate::{
     eth_provider::{
         constant::U64_HEX_STRING_LEN,
         database::{
             ethereum::EthereumTransactionStore,
-            filter,
-            filter::{format_hex, EthDatabaseFilterBuilder},
-            types::{header::StoredHeader, log::StoredLog, transaction::StoredTransaction},
+            filter::{self, format_hex, EthDatabaseFilterBuilder},
+            types::{
+                header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+            },
             CollectionName,
         },
         provider::EthDataProvider,
@@ -27,13 +29,11 @@ use mongodb::{
 use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
-
-use super::mongo::MongoImage;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    super::mongo::{CollectionDB, MongoFuzzer, StoredData},
+    super::mongo::MongoFuzzer,
     dojo_test_utils::sequencer::SequencerConfig,
     reth_primitives::{TxType, B256},
     reth_rpc_types::{Header, Transaction},
@@ -78,10 +78,16 @@ pub struct Katana {
     pub sequencer: TestSequencer,
     /// The Kakarot EOA (Externally Owned Account) instance.
     pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
-    /// Mock data stored in a [`HashMap`], representing the database.
-    pub mock_data: HashMap<CollectionDB, Vec<StoredData>>,
-    /// The port number used for communication.
-    pub port: u16,
+    /// Stored headers to insert into the headers collection.
+    pub headers: Vec<StoredHeader>,
+    /// Stored transactions to insert into the transactions collection.
+    pub transactions: Vec<StoredTransaction>,
+    /// Stored transaction receipts to insert into the receipts collection.
+    pub receipts: Vec<StoredTransactionReceipt>,
+    /// Stored logs to insert into the logs collection.
+    pub logs: Vec<StoredLog>,
+    // /// The port number used for communication.
+    // pub port: u16,
     /// Option to store the Docker container instance.
     /// It holds `Some` when the container is running, and `None` otherwise.
     pub container: Option<ContainerAsync<MongoImage>>,
@@ -110,8 +116,6 @@ impl<'a> Katana {
 
         // Initialize a MongoFuzzer instance with the specified random bytes size.
         let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;
-        // Get the port number for communication.
-        let port = mongo_fuzzer.port();
 
         // Add random transactions to the MongoDB database.
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
@@ -132,21 +136,18 @@ impl<'a> Katana {
         // Add a hardcoded logs to the MongoDB database.
         mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
         // Add a hardcoded header to the MongoDB database.
-        let max_block_number = mongo_fuzzer.documents().get(&CollectionDB::Headers).map_or(0, |headers| {
-            headers
-                .iter()
-                .map(|data| data.extract_stored_header().and_then(|h| h.header.number).unwrap_or_default())
-                .max()
-                .unwrap_or_default()
-        });
+        let max_block_number = mongo_fuzzer
+            .headers
+            .iter()
+            .map(|header| header.header.number.unwrap_or_default())
+            .max()
+            .unwrap_or_default();
         mongo_fuzzer
             .add_hardcoded_block_header_with_base_fee(max_block_number + 1, 0)
             .expect("Failed to add header in the database");
 
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
-        // Clone the mock data stored in the MongoFuzzer instance.
-        let mock_data = (*mongo_fuzzer.documents()).clone();
 
         // Create a new EthDataProvider instance with the initialized database and Starknet provider.
         let eth_provider = Arc::new(
@@ -157,7 +158,15 @@ impl<'a> Katana {
         let eoa = KakarotEOA::new(pk, eth_provider);
 
         // Return a new instance of Katana with initialized fields.
-        Self { sequencer, eoa, mock_data, port, container: Some(mongo_fuzzer.container) }
+        Self {
+            sequencer,
+            eoa,
+            container: Some(mongo_fuzzer.container),
+            transactions: mongo_fuzzer.transactions,
+            receipts: mongo_fuzzer.receipts,
+            logs: mongo_fuzzer.logs,
+            headers: mongo_fuzzer.headers,
+        }
     }
 
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {
@@ -274,118 +283,84 @@ impl<'a> Katana {
 
     /// Retrieves the first stored transaction
     pub fn first_transaction(&self) -> Option<Transaction> {
-        self.mock_data
-            .get(&CollectionDB::Transactions)
-            .and_then(|transactions| transactions.first())
-            .and_then(|data| data.extract_stored_transaction())
-            .map(|stored_tx| stored_tx.tx.clone())
+        self.transactions.first().map(|stored_tx| stored_tx.tx.clone())
     }
 
     /// Retrieves the current block number
     pub fn block_number(&self) -> u64 {
-        self.mock_data
-            .get(&CollectionDB::Headers)
-            .and_then(|headers| {
-                headers
-                    .iter()
-                    .map(|data| {
-                        data.extract_stored_header()
-                            .and_then(|stored_header| stored_header.header.number)
-                            .unwrap_or_default()
-                    })
-                    .max()
-            })
+        self.headers
+            .iter()
+            .map(|stored_header| stored_header.header.number.unwrap_or_default())
+            .max()
             .unwrap_or_default()
     }
 
     /// Retrieves the most recent stored transaction based on block number
     pub fn most_recent_transaction(&self) -> Option<Transaction> {
-        self.mock_data
-            .get(&CollectionDB::Transactions)
-            .and_then(|transactions| {
-                transactions.iter().max_by_key(|data| {
-                    data.extract_stored_transaction().map(|stored_tx| stored_tx.tx.block_number).unwrap_or_default()
-                })
-            })
-            .and_then(|data| data.extract_stored_transaction())
+        self.transactions
+            .iter()
+            .max_by_key(|stored_transactions| stored_transactions.tx.block_number.unwrap_or_default())
             .map(|stored_tx| stored_tx.tx.clone())
     }
 
     /// Retrieves the stored header by hash
     pub fn header_by_hash(&self, hash: B256) -> Option<Header> {
-        self.mock_data.get(&CollectionDB::Headers).and_then(|headers| {
-            headers.iter().find_map(|data| {
-                data.extract_stored_header()
-                    .map(|stored_header| stored_header.header.clone())
-                    .filter(|header| header.hash == Some(hash))
-            })
+        self.headers.iter().find_map(|stored_header| {
+            if stored_header.header.hash == Some(hash) {
+                Some(stored_header.header.clone())
+            } else {
+                None
+            }
         })
     }
 
     pub fn logs_with_min_topics(&self, min_topics: usize) -> Vec<Log> {
-        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
-            logs.iter()
-                .filter_map(|data| data.extract_stored_log())
-                .filter(|stored_log| stored_log.log.topics().len() >= min_topics)
-                .map(|stored_log| stored_log.log.clone())
-                .collect()
-        })
+        self.logs
+            .iter()
+            .filter(|stored_log| stored_log.log.topics().len() >= min_topics)
+            .map(|stored_log| stored_log.log.clone())
+            .collect()
     }
 
     pub fn logs_by_address(&self, addresses: &[Address]) -> Vec<Log> {
-        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
-            logs.iter()
-                .filter_map(|data| data.extract_stored_log())
-                .filter(|stored_log| {
-                    let address = stored_log.log.address();
-                    addresses.iter().any(|addr| *addr == address)
-                })
-                .map(|stored_log| stored_log.log.clone())
-                .collect()
-        })
+        self.logs
+            .iter()
+            .filter(|stored_log| {
+                let address = stored_log.log.address();
+                addresses.iter().any(|addr| *addr == address)
+            })
+            .map(|stored_log| stored_log.log.clone())
+            .collect()
     }
 
     pub fn logs_by_block_number(&self, block_number: u64) -> Vec<Log> {
-        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
-            logs.iter()
-                .filter_map(|data| data.extract_stored_log())
-                .filter(|stored_log| stored_log.log.block_number.unwrap_or_default() == block_number)
-                .map(|stored_log| stored_log.log.clone())
-                .collect()
-        })
+        self.logs
+            .iter()
+            .filter(|stored_log| stored_log.log.block_number.unwrap_or_default() == block_number)
+            .map(|stored_log| stored_log.log.clone())
+            .collect()
     }
 
     pub fn logs_by_block_range(&self, block_range: std::ops::Range<u64>) -> Vec<Log> {
-        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
-            logs.iter()
-                .filter_map(|data| data.extract_stored_log())
-                .filter(|stored_log| {
-                    let block_number = stored_log.log.block_number.unwrap_or_default();
-                    block_range.contains(&block_number)
-                })
-                .map(|stored_log| stored_log.log.clone())
-                .collect()
-        })
+        self.logs
+            .iter()
+            .filter(|stored_log| {
+                let block_number = stored_log.log.block_number.unwrap_or_default();
+                block_range.contains(&block_number)
+            })
+            .map(|stored_log| stored_log.log.clone())
+            .collect()
     }
 
     pub fn logs_by_block_hash(&self, block_hash: B256) -> Vec<Log> {
-        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
-            logs.iter()
-                .filter_map(|data| data.extract_stored_log())
-                .filter(|stored_log| stored_log.log.block_hash.unwrap_or_default() == block_hash)
-                .map(|stored_log| stored_log.log.clone())
-                .collect()
-        })
+        self.logs
+            .iter()
+            .filter(|stored_log| stored_log.log.block_hash.unwrap_or_default() == block_hash)
+            .map(|stored_log| stored_log.log.clone())
+            .collect()
     }
 
     pub fn all_logs(&self) -> Vec<Log> {
-        self.mock_data.get(&CollectionDB::Logs).map_or_else(Vec::new, |logs| {
-            logs.iter().filter_map(|data| data.extract_stored_log()).map(|stored_log| stored_log.log.clone()).collect()
-        })
-    }
-
-    /// Retrieves the number of blocks in the database
-    pub fn count_block(&self) -> usize {
-        self.mock_data.get(&CollectionDB::Headers).map_or(0, std::vec::Vec::len)
+        self.logs.iter().map(|stored_log| stored_log.log.clone()).collect()
     }
 }

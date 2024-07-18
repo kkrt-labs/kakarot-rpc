@@ -528,7 +528,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let block_count = u64::MAX;
 
     // Get the total number of blocks in the database.
-    let nbr_blocks = katana.count_block();
+    let nbr_blocks = katana.headers.len();
 
     // Call the fee_history method of the Ethereum provider.
     let fee_history =
