@@ -7,12 +7,11 @@ use reth_primitives::B256;
 use starknet::{
     core::{
         crypto::compute_hash_on_elements,
-        types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1},
+        types::{BroadcastedInvokeTransaction, BroadcastedInvokeTransactionV1, Felt},
     },
     providers::Provider,
 };
 use std::convert::TryInto;
-use starknet_crypto::FieldElement;
 use jsonrpsee_types::ErrorObject;
 use jsonrpsee_types::error::INVALID_PARAMS_CODE;
 
@@ -93,10 +92,10 @@ where
 
         // Compute the hash on elements
         let transaction_hash = compute_hash_on_elements(&[
-            FieldElement::from_byte_slice_be(b"invoke").unwrap(),
-            FieldElement::ONE,
+            Felt::from_bytes_be_slice(b"invoke"),
+            Felt::ONE,
             starknet_transaction.sender_address,
-            FieldElement::ZERO,
+            Felt::ZERO,
             compute_hash_on_elements(&starknet_transaction.calldata),
             starknet_transaction.max_fee,
             chain_id,
