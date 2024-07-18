@@ -3,8 +3,7 @@ use crate::{
     eth_rpc::api::kakarot_api::KakarotApiServer,
 };
 use jsonrpsee::core::{async_trait, RpcResult};
-use jsonrpsee_types::error::INVALID_PARAMS_CODE;
-use jsonrpsee_types::ErrorObject;
+use jsonrpsee_types::{error::INVALID_PARAMS_CODE, ErrorObject};
 use reth_primitives::B256;
 use starknet::{
     core::{
