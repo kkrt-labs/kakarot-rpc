@@ -1,12 +1,15 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use alloy_rlp::Encodable;
-use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::test_utils::fixtures::{katana, setup};
-use kakarot_rpc::test_utils::katana::Katana;
-use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH};
-use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
+use kakarot_rpc::{
+    eth_provider::provider::EthereumProvider,
+    test_utils::{
+        fixtures::{katana, setup},
+        katana::Katana,
+        mongo::{BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH},
+        rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
+    },
+};
 use reth_primitives::{
     Block, BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered,
 };

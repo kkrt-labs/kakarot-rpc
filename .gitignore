@@ -21,9 +21,6 @@
 /cache/
 /solidity_contracts/build
 
-# ignore katana dump directory
-.katana/
-
 .env
 vscode
 broadcast
@@ -36,6 +33,10 @@ broadcast
 artifacts/
 build/
 .kakarot/
+
+# ignore katana dump directory
+.katana/
+!.katana/messaging_config.json
 
 # ignore proptest-regressions
 /proptest-regressions

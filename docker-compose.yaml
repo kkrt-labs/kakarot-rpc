@@ -1,8 +1,22 @@
 version: "3.2"
 
 services:
+  anvil:
+    platform: linux/amd64
+    image: ghcr.io/foundry-rs/foundry:latest
+    command:
+      ["anvil --host 0.0.0.0 --port 8545 --load-state /app/.anvil/state.json"]
+    # Initial state has the StarknetMessaging and L1KakarotMessaging contracts deployed
+    volumes:
+      - .anvil:/app/.anvil
+    ports:
+      - 8545:8545
+    networks:
+      - internal
+    restart: on-failure
+
   starknet:
-    image: ghcr.io/dojoengine/dojo:v0.7.0-alpha.0
+    image: ghcr.io/dojoengine/dojo:v1.0.0-alpha.0
     command:
       - katana
       - --disable-fee
@@ -16,6 +30,11 @@ services:
       - "0"
       - --chain-id
       - KKRT
+      - --messaging
+      - /app/.katana/messaging_config.json
+      # Config uses StarknetMessaging contract Anvil is instanciated with
+    volumes:
+      - .katana:/app/.katana
     ports:
       - 5050:5050
     networks:
@@ -23,7 +42,7 @@ services:
     restart: on-failure
 
   kakarot-deployer:
-    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.8.4
+    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.8.5-alpha.1
     # Always pull the latest image, until we use release tags
     pull_policy: always
     environment:
@@ -64,7 +83,7 @@ services:
         condition: service_completed_successfully
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.19
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.20
     ports:
       - 3030:3030
     environment:
@@ -154,6 +173,7 @@ services:
 
 networks:
   internal:
+    driver: bridge
 
 volumes:
   deployments:

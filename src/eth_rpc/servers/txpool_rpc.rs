@@ -1,5 +1,4 @@
-use crate::eth_provider::provider::EthereumProvider;
-use crate::eth_rpc::api::txpool_api::TxPoolApiServer;
+use crate::{eth_provider::provider::EthereumProvider, eth_rpc::api::txpool_api::TxPoolApiServer};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::Address;
 use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};

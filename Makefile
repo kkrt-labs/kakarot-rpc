@@ -43,10 +43,9 @@ run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --tag v0.7.0-alpha.0 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --tag v1.0.0-alpha.0 katana
 
 katana-genesis: install-katana
-	rm -fr .katana/ && mkdir .katana
 	cargo run --bin katana_genesis --features testing
 
 run-katana: katana-genesis
@@ -61,7 +60,6 @@ test-target: load-env
 
 benchmark:
 	cd benchmarks && bun i && bun run benchmark
-
 
 docker-build: setup
 	docker build -t kakarot-rpc . -f docker/rpc/Dockerfile

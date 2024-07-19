@@ -1,16 +1,11 @@
-use std::fs;
-use std::path::Path;
-
+use super::eoa::{TX_GAS_LIMIT, TX_GAS_PRICE};
+use crate::{models::felt::Felt252Wrapper, root_project_path};
 use alloy_dyn_abi::{DynSolValue, JsonAbiExt};
 use alloy_json_abi::ContractObject;
 use foundry_config::{find_project_root_path, load_config};
 use reth_primitives::{Transaction, TxEip1559, TxKind, TxLegacy, U256};
-use starknet_crypto::FieldElement;
-
-use crate::models::felt::Felt252Wrapper;
-use crate::root_project_path;
-
-use super::eoa::TX_GAS_LIMIT;
+use starknet::core::types::Felt;
+use std::{fs, path::Path};
 
 #[derive(Clone, Debug)]
 pub enum TransactionInfo {
@@ -94,6 +89,7 @@ pub trait EvmContract {
             chain_id: tx_info.chain_id.expect("chain id required"),
             nonce: tx_info.nonce,
             gas_limit: TX_GAS_LIMIT,
+            max_fee_per_gas: TX_GAS_PRICE,
             input: deploy_data.into(),
             ..Default::default()
         }))
@@ -111,12 +107,12 @@ pub trait EvmContract {
 #[derive(Default, Debug)]
 pub struct KakarotEvmContract {
     pub bytecode: ContractObject,
-    pub starknet_address: FieldElement,
-    pub evm_address: FieldElement,
+    pub starknet_address: Felt,
+    pub evm_address: Felt,
 }
 
 impl KakarotEvmContract {
-    pub const fn new(bytecode: ContractObject, starknet_address: FieldElement, evm_address: FieldElement) -> Self {
+    pub const fn new(bytecode: ContractObject, starknet_address: Felt, evm_address: Felt) -> Self {
         Self { bytecode, starknet_address, evm_address }
     }
 }

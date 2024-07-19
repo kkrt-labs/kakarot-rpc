@@ -18,18 +18,17 @@
 
 //! RPC middleware to collect prometheus metrics on RPC calls.
 
+use crate::prometheus_handler::{
+    register, CounterVec, HistogramOpts, HistogramVec, Opts, PrometheusError, Registry, U64,
+};
+use jsonrpsee::{server::middleware::rpc::RpcServiceT, types::Request, MethodResponse};
+use pin_project_lite::pin_project;
 use std::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
     time::Instant,
 };
-
-use crate::prometheus_handler::{
-    register, CounterVec, HistogramOpts, HistogramVec, Opts, PrometheusError, Registry, U64,
-};
-use jsonrpsee::{server::middleware::rpc::RpcServiceT, types::Request, MethodResponse};
-use pin_project_lite::pin_project;
 
 /// Histogram time buckets in microseconds.
 const HISTOGRAM_BUCKETS: [f64; 13] = [

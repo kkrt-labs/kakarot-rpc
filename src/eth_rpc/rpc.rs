@@ -1,25 +1,18 @@
-use std::collections::HashMap;
-use std::marker::PhantomData;
-use std::sync::Arc;
-
-use jsonrpsee::server::RegisterMethodError;
-use jsonrpsee::{Methods, RpcModule};
-
-use crate::eth_provider::provider::EthereumProvider;
-use crate::eth_rpc::api::alchemy_api::AlchemyApiServer;
-use crate::eth_rpc::api::debug_api::DebugApiServer;
-use crate::eth_rpc::api::eth_api::EthApiServer;
-use crate::eth_rpc::api::net_api::NetApiServer;
-use crate::eth_rpc::api::trace_api::TraceApiServer;
-use crate::eth_rpc::api::txpool_api::TxPoolApiServer;
-use crate::eth_rpc::api::web3_api::Web3ApiServer;
-use crate::eth_rpc::servers::alchemy_rpc::AlchemyRpc;
-use crate::eth_rpc::servers::debug_rpc::DebugRpc;
-use crate::eth_rpc::servers::eth_rpc::KakarotEthRpc;
-use crate::eth_rpc::servers::net_rpc::NetRpc;
-use crate::eth_rpc::servers::trace_rpc::TraceRpc;
-use crate::eth_rpc::servers::txpool_rpc::TxpoolRpc;
-use crate::eth_rpc::servers::web3_rpc::Web3Rpc;
+use crate::{
+    eth_provider::provider::EthereumProvider,
+    eth_rpc::{
+        api::{
+            alchemy_api::AlchemyApiServer, debug_api::DebugApiServer, eth_api::EthApiServer, net_api::NetApiServer,
+            trace_api::TraceApiServer, txpool_api::TxPoolApiServer, web3_api::Web3ApiServer,
+        },
+        servers::{
+            alchemy_rpc::AlchemyRpc, debug_rpc::DebugRpc, eth_rpc::KakarotEthRpc, net_rpc::NetRpc, trace_rpc::TraceRpc,
+            txpool_rpc::TxpoolRpc, web3_rpc::Web3Rpc,
+        },
+    },
+};
+use jsonrpsee::{server::RegisterMethodError, Methods, RpcModule};
+use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
 /// Represents RPC modules that are supported by reth
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]

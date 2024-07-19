@@ -1,10 +1,9 @@
-use jsonrpsee::core::RpcResult as Result;
-use jsonrpsee::proc_macros::rpc;
+use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
-use reth_rpc_types::serde_helpers::JsonStorageKey;
 use reth_rpc_types::{
-    AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock,
-    SyncStatus, Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
+    serde_helpers::JsonStorageKey, AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter,
+    FilterChanges, Index, RichBlock, SyncStatus, Transaction as EthTransaction, TransactionReceipt, TransactionRequest,
+    Work,
 };
 
 /// Ethereum JSON-RPC API Trait

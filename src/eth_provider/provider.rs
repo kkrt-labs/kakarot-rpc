@@ -1,6 +1,39 @@
-use crate::eth_provider::database::filter::format_hex;
-use crate::eth_provider::database::FindOpts;
-use crate::eth_provider::database::{ethereum::EthereumTransactionStore, filter};
+use super::{
+    constant::{BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS},
+    database::{
+        ethereum::EthereumBlockStore,
+        filter::EthDatabaseFilterBuilder,
+        types::{
+            header::StoredHeader,
+            log::StoredLog,
+            receipt::StoredTransactionReceipt,
+            transaction::{StoredPendingTransaction, StoredTransaction},
+        },
+        CollectionName, Database,
+    },
+    error::{
+        EthApiError, EthereumDataFormatError, EvmError, ExecutionError, KakarotError, SignatureError, TransactionError,
+    },
+    starknet::{
+        kakarot_core::{
+            self,
+            account_contract::AccountContractReader,
+            core::{CallInput, KakarotCoreReader, Uint256},
+            starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
+        },
+        ERC20Reader, STARKNET_NATIVE_TOKEN,
+    },
+    utils::{class_hash_not_declared, contract_not_found, entrypoint_not_found, split_u256},
+};
+use crate::{
+    eth_provider::database::{ethereum::EthereumTransactionStore, filter, filter::format_hex, FindOpts},
+    into_via_try_wrapper, into_via_wrapper,
+    models::{
+        block::{EthBlockId, EthBlockNumberOrTag},
+        felt::Felt252Wrapper,
+        transaction::validate_transaction,
+    },
+};
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -8,45 +41,21 @@ use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::{eyre, Result};
 use itertools::Itertools;
 use mongodb::bson::doc;
+use num_traits::cast::ToPrimitive;
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, TxKind, B256, U256, U64,
 };
-use reth_rpc_types::serde_helpers::JsonStorageKey;
-use reth_rpc_types::txpool::TxpoolContent;
 use reth_rpc_types::{
-    BlockHashOrNumber, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock, Transaction, TransactionReceipt,
-    TransactionRequest,
+    serde_helpers::JsonStorageKey, txpool::TxpoolContent, BlockHashOrNumber, FeeHistory, Filter, FilterChanges, Header,
+    Index, RichBlock, SyncInfo, SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
 };
-use reth_rpc_types::{SyncInfo, SyncStatus};
 use reth_rpc_types_compat::transaction::from_recovered;
-use starknet::core::types::SyncStatusType;
-use starknet::core::utils::get_storage_var_address;
-use starknet_crypto::FieldElement;
-
-use super::constant::{BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS};
-use super::database::ethereum::EthereumBlockStore;
-use super::database::filter::EthDatabaseFilterBuilder;
-use super::database::types::{
-    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredPendingTransaction,
-    transaction::StoredTransaction,
+#[cfg(feature = "hive")]
+use starknet::core::types::BroadcastedInvokeTransaction;
+use starknet::core::{
+    types::{Felt, SyncStatusType},
+    utils::get_storage_var_address,
 };
-use super::database::{CollectionName, Database};
-use super::error::{
-    EthApiError, EthereumDataFormatError, EvmError, ExecutionError, KakarotError, SignatureError, TransactionError,
-};
-use super::starknet::kakarot_core::{
-    self,
-    account_contract::AccountContractReader,
-    core::KakarotCoreReader,
-    core::{CallInput, Uint256},
-    starknet_address, to_starknet_transaction, KAKAROT_ADDRESS,
-};
-use super::starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN};
-use super::utils::{contract_not_found, entrypoint_not_found, split_u256};
-use crate::models::block::{EthBlockId, EthBlockNumberOrTag};
-use crate::models::felt::Felt252Wrapper;
-use crate::models::transaction::validate_transaction;
-use crate::{into_via_try_wrapper, into_via_wrapper};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
@@ -167,13 +176,12 @@ where
     }
 
     async fn block_number(&self) -> EthProviderResult<U64> {
-        let sort = doc! { "header.number": -1 };
-        let block_number = match self.database.get_one::<StoredHeader>(None, sort).await? {
+        let block_number = match self.database.latest_header().await? {
             // In case the database is empty, use the starknet provider
             None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
             Some(header) => {
-                let number = header.header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;
-                let is_pending_block = header.header.hash.unwrap_or_default().is_zero();
+                let number = header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;
+                let is_pending_block = header.hash.unwrap_or_default().is_zero();
                 U64::from(if is_pending_block { number - 1 } else { number })
             }
         };
@@ -295,10 +303,11 @@ where
         // Call the `balanceOf` method on the contract for the given address and block ID, awaiting the result
         let res = eth_contract.balanceOf(&starknet_address(address)).block_id(starknet_block_id).call().await;
 
-        // Check if the contract was not found, returning a default balance of 0 if true
+        // Check if the contract was not found or the class hash not declared,
+        // returning a default balance of 0 if true.
         // The native token contract should be deployed on Kakarot, so this should not happen
         // We want to avoid errors in this case and return a default balance of 0
-        if contract_not_found(&res) {
+        if contract_not_found(&res) || class_hash_not_declared(&res) {
             return Ok(Default::default());
         }
         // Otherwise, extract the balance from the result, converting any errors to ExecutionError
@@ -374,7 +383,7 @@ where
 
         let bytecode = bytecode.map_err(ExecutionError::from)?.bytecode.0;
 
-        Ok(Bytes::from(bytecode.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
+        Ok(Bytes::from(bytecode.into_iter().filter_map(|x| x.to_u8()).collect::<Vec<_>>()))
     }
 
     async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
@@ -426,7 +435,7 @@ where
 
     async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
         let output = self.call_helper(request, block_id).await?;
-        Ok(Bytes::from(output.0.into_iter().filter_map(|x| x.try_into().ok()).collect::<Vec<_>>()))
+        Ok(Bytes::from(output.0.into_iter().filter_map(|x| x.to_u8()).collect::<Vec<_>>()))
     }
 
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
@@ -504,7 +513,8 @@ where
             self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
 
         // Validate the transaction
-        validate_transaction(&transaction_signed, chain_id)?;
+        let latest_block_header = self.database.latest_header().await?.ok_or(EthApiError::UnknownBlockNumber(None))?;
+        validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
@@ -606,7 +616,9 @@ where
         // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
-        let chain_id = (FieldElement::from(u32::MAX) & starknet_provider.chain_id().await?).try_into().unwrap(); // safe unwrap
+        let chain_id =
+            (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
+
         Ok(Self { database, starknet_provider, chain_id })
     }
 
@@ -625,9 +637,9 @@ where
         let to: kakarot_core::core::Option = {
             match request.to {
                 Some(TxKind::Call(to)) => {
-                    kakarot_core::core::Option { is_some: FieldElement::ONE, value: into_via_wrapper!(to) }
+                    kakarot_core::core::Option { is_some: Felt::ONE, value: into_via_wrapper!(to) }
                 }
-                _ => kakarot_core::core::Option { is_some: FieldElement::ZERO, value: FieldElement::ZERO },
+                _ => kakarot_core::core::Option { is_some: Felt::ZERO, value: Felt::ZERO },
             }
         };
 
@@ -635,7 +647,7 @@ where
         let from = into_via_wrapper!(request.from.unwrap_or_default());
 
         let data = request.input.into_input().unwrap_or_default();
-        let calldata: Vec<FieldElement> = data.into_iter().map_into().collect();
+        let calldata: Vec<Felt> = data.into_iter().map_into().collect();
 
         let gas_limit = into_via_try_wrapper!(request.gas.unwrap_or(CALL_REQUEST_GAS_LIMIT))?;
 
@@ -649,8 +661,7 @@ where
             into_via_try_wrapper!(gas_price)?
         };
 
-        let value =
-            Uint256 { low: into_via_try_wrapper!(request.value.unwrap_or_default())?, high: FieldElement::ZERO };
+        let value = Uint256 { low: into_via_try_wrapper!(request.value.unwrap_or_default())?, high: Felt::ZERO };
 
         // TODO: replace this by into_via_wrapper!(request.nonce.unwrap_or_default())
         //  when we can simulate the transaction instead of calling `eth_call`
@@ -658,7 +669,7 @@ where
             match request.nonce {
                 Some(nonce) => into_via_wrapper!(nonce),
                 None => match request.from {
-                    None => FieldElement::ZERO,
+                    None => Felt::ZERO,
                     Some(address) => into_via_try_wrapper!(self.transaction_count(address, block_id).await?)?,
                 },
             }
@@ -672,7 +683,7 @@ where
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<CairoArrayLegacy<FieldElement>> {
+    ) -> EthProviderResult<CairoArrayLegacy<Felt>> {
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
@@ -687,7 +698,7 @@ where
                 &call_input.value,
                 &call_input.calldata.len().into(),
                 &CairoArrayLegacy(call_input.calldata),
-                &FieldElement::ZERO,
+                &Felt::ZERO,
                 &CairoArrayLegacy(vec![]),
             )
             .block_id(starknet_block_id)
@@ -696,7 +707,7 @@ where
             .map_err(ExecutionError::from)?;
 
         let return_data = call_output.return_data;
-        if call_output.success == FieldElement::ZERO {
+        if call_output.success == Felt::ZERO {
             return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
         Ok(return_data)
@@ -722,7 +733,7 @@ where
                 &call_input.value,
                 &call_input.calldata.len().into(),
                 &CairoArrayLegacy(call_input.calldata),
-                &FieldElement::ZERO,
+                &Felt::ZERO,
                 &CairoArrayLegacy(vec![]),
             )
             .block_id(starknet_block_id)
@@ -731,10 +742,10 @@ where
             .map_err(ExecutionError::from)?;
 
         let return_data = estimate_gas_output.return_data;
-        if estimate_gas_output.success == FieldElement::ZERO {
+        if estimate_gas_output.success == Felt::ZERO {
             return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
-        let required_gas = estimate_gas_output.required_gas.try_into().map_err(|_| TransactionError::GasOverflow)?;
+        let required_gas = estimate_gas_output.required_gas.to_u128().ok_or(TransactionError::GasOverflow)?;
         Ok(required_gas)
     }
 
@@ -808,9 +819,10 @@ where
     /// Starknet.
     async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
         use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
-        use starknet::accounts::{Call, Execution};
-        use starknet::core::types::BlockTag;
-        use starknet::core::utils::get_selector_from_name;
+        use starknet::{
+            accounts::{Call, ExecutionV1},
+            core::{types::BlockTag, utils::get_selector_from_name},
+        };
 
         let signer_starknet_address = starknet_address(signer);
         let account_contract = AccountContractReader::new(signer_starknet_address, &self.starknet_provider);
@@ -821,7 +833,7 @@ where
             .await;
 
         if contract_not_found(&maybe_is_initialized) {
-            let execution = Execution::new(
+            let execution = ExecutionV1::new(
                 vec![Call {
                     to: *KAKAROT_ADDRESS,
                     selector: get_selector_from_name("deploy_externally_owned_account").unwrap(),
@@ -841,9 +853,12 @@ where
                 .get_invoke_request(false)
                 .await
                 .map_err(|_| SignatureError::SigningFailure)?;
-            self.starknet_provider.add_invoke_transaction(tx).await.map_err(KakarotError::from)?;
+            self.starknet_provider
+                .add_invoke_transaction(BroadcastedInvokeTransaction::V1(tx))
+                .await
+                .map_err(KakarotError::from)?;
 
-            *nonce += 1u8.into();
+            *nonce += Felt::ONE;
             drop(nonce);
         };
 

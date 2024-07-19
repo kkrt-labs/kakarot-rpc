@@ -5,6 +5,17 @@ on:
   workflow_call:
 
 jobs:
+  fmt:
+    name: fmt
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
   test:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 30
@@ -13,8 +24,8 @@ jobs:
       - name: Setup rust env
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
-          toolchain: 1.76.0
+          components: clippy
+          toolchain: 1.79.0
       - name: Retrieve cached dependencies
         uses: Swatinem/rust-cache@v2
       # nextest setup
@@ -56,7 +67,6 @@ jobs:
       - name: Lint
         run: |
           cargo check &&
-          cargo fmt --all -- --check &&
           cargo clippy --workspace --all-features --all-targets -- -D warnings
       - name: Test code
         run: make test

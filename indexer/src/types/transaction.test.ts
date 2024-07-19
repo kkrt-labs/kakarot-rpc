@@ -3,19 +3,72 @@ import {
   AccessListEIP2930Transaction,
   FeeMarketEIP1559Transaction,
   hexToBytes,
+  JsonTx,
   LegacyTransaction,
   RLP,
   Transaction,
+  TransactionReceipt,
   TransactionWithReceipt,
 } from "../deps.ts";
-import { packCallData, toTypedEthTx, unpackCallData } from "./transaction.ts";
+import {
+  chainId,
+  packCallData,
+  setFlagRunOutOfResources,
+  setYParityFlag,
+  toEthTx,
+  toTypedEthTx,
+  transactionEthFormat,
+  typedTransactionToEthTx,
+  unpackCallData,
+} from "./transaction.ts";
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/assert_equals.ts";
 import { Common } from "https://esm.sh/v135/@ethereumjs/common@4.1.0/denonext/common.mjs";
+import { ExtendedJsonRpcTx } from "./interfaces.ts";
 
 const jsonData = await Deno.readTextFile(
   "indexer/src/test-data/transactionsData.json",
 );
 const transactionsData = JSON.parse(jsonData);
+
+// Utility functions
+function createReceipt(
+  overrides: Partial<TransactionReceipt> = {},
+): TransactionReceipt {
+  return {
+    executionStatus: "EXECUTION_STATUS_SUCCEEDED",
+    transactionHash: "0x456",
+    transactionIndex: "0x1",
+    actualFee: "0x1",
+    contractAddress: "0xabc",
+    l2ToL1Messages: [],
+    events: [],
+    ...overrides,
+  };
+}
+
+function createSignedLegacyTransaction(): LegacyTransaction {
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const privateKeyHex =
+    "4c0883a69102937d6234140ed2a7213e592d98b700b97d9a7325c3b3b7fafa90"; // Example private key, replace with your own
+  const privateKey = new Uint8Array(
+    privateKeyHex.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16)),
+  ); // Convert hex string to Uint8Array
+
+  const tx = new LegacyTransaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+    },
+    { common },
+  );
+
+  const signedTx = tx.sign(privateKey);
+  return signedTx;
+}
 
 Deno.test("toTypedEthTx Legacy Transaction", () => {
   // Given
@@ -197,7 +250,6 @@ Deno.test("toTypedEthTx EIP2930 Transaction", () => {
     transaction: starknetTx,
   }) as AccessListEIP2930Transaction;
 
-  // Then
   // Then
   assertExists(ethTx);
   assertEquals(ethTx.nonce, 1n);
@@ -497,7 +549,7 @@ Deno.test("toTypedEthTx EIP2930 Transaction before release with 31 bytes chunks 
   assertEquals(ethTx.accessList, tx.accessList);
 });
 
-Deno.test("toTypedEthTx with real data", async () => {
+Deno.test("toTypedEthTx with real data", () => {
   transactionsData.transactionsList.forEach(
     (transactions: TransactionWithReceipt[]) => {
       const ethTx = toTypedEthTx({
@@ -506,4 +558,251 @@ Deno.test("toTypedEthTx with real data", async () => {
       assertExists(ethTx);
     },
   );
+});
+
+Deno.test("toEthTx returns null for invalid transaction", () => {
+  const result = toEthTx({
+    transaction: {} as Transaction,
+    receipt: {} as TransactionReceipt,
+    blockNumber: "0x1",
+    blockHash: "0x123",
+    isPendingBlock: false,
+  });
+  assertEquals(result, null);
+});
+
+Deno.test("chainId calculates chain ID from v value for legacy transaction", () => {
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new LegacyTransaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+    },
+    { common },
+  );
+  const jsonTx = tx.toJSON();
+  jsonTx.v = "0x25"; // 37 in decimal, which corresponds to chain ID 1 (mainnet)
+
+  const result = chainId(tx, jsonTx);
+  assertEquals(result, "0x1");
+});
+
+Deno.test("chainId returns chainId directly when isLegacyTx is false", () => {
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new FeeMarketEIP1559Transaction(
+    {
+      nonce: 1n,
+      maxFeePerGas: 4n,
+      maxPriorityFeePerGas: 3n,
+      gasLimit: 4n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 5n,
+      data: new Uint8Array([0x12, 0x34]),
+      accessList: [],
+    },
+    { common },
+  );
+  const jsonTx = { chainId: "0x1" } as JsonTx;
+
+  const result = chainId(tx, jsonTx);
+  assertEquals(result, "0x1");
+});
+
+Deno.test("chainId returns undefined when jsonTx.v is undefined", () => {
+  // Given
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new LegacyTransaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+    },
+    { common },
+  );
+  const jsonTx = { v: undefined } as JsonTx;
+
+  // When
+  const id = chainId(tx, jsonTx);
+
+  // Then
+  assertEquals(id, undefined);
+});
+
+Deno.test("setYParityFlag adds yParity field for EIP1559 transaction", () => {
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new FeeMarketEIP1559Transaction(
+    {
+      nonce: 1n,
+      maxFeePerGas: 4n,
+      maxPriorityFeePerGas: 3n,
+      gasLimit: 4n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 5n,
+      data: new Uint8Array([0x12, 0x34]),
+      accessList: [],
+    },
+    { common },
+  );
+  const jsonTx = tx.toJSON();
+  jsonTx.v = "0x1"; // Adding v value for yParity
+
+  const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
+  setYParityFlag(tx, jsonTx, result);
+  assertEquals(result.yParity, "0x1");
+});
+
+Deno.test("setYParityFlag adds yParity field for EIP2930 transaction", () => {
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new AccessListEIP2930Transaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+      accessList: [
+        {
+          address: "0x0000000000000000000000000000000000000002",
+          storageKeys: [
+            "0x0000000000000000000000000000000000000000000000000000000000000001",
+          ],
+        },
+      ],
+    },
+    { common },
+  );
+  const jsonTx = tx.toJSON();
+  jsonTx.v = "0x1"; // Adding v value for yParity
+
+  const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
+  setYParityFlag(tx, jsonTx, result);
+  assertEquals(result.yParity, "0x1");
+});
+
+Deno.test("setYParityFlag does not add yParity field for legacy transaction", () => {
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new LegacyTransaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+    },
+    { common },
+  );
+  const jsonTx = tx.toJSON();
+  jsonTx.v = "0x1";
+
+  const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
+  setYParityFlag(tx, jsonTx, result);
+  assertEquals(result.yParity, undefined);
+});
+
+Deno.test("setFlagRunOutOfResources does not add isRunOutOfResources flag for successful transaction", () => {
+  const receipt = createReceipt({
+    executionStatus: "EXECUTION_STATUS_SUCCEEDED",
+  });
+  const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
+  setFlagRunOutOfResources(receipt, result);
+  assertEquals(result.isRunOutOfResources, undefined);
+});
+
+Deno.test("setFlagRunOutOfResources adds isRunOutOfResources flag for out of resources transaction", () => {
+  const receipt = createReceipt({
+    executionStatus: "EXECUTION_STATUS_REVERTED",
+    revertReason: "RunResources has no remaining steps",
+  }); // Indicating out of resources
+  const result: ExtendedJsonRpcTx = {
+    isRunOutOfResources: false,
+  } as ExtendedJsonRpcTx;
+
+  setFlagRunOutOfResources(receipt, result);
+  assertEquals(result.isRunOutOfResources, true);
+});
+
+Deno.test("typedTransactionToEthTx returns null for unsigned transaction", () => {
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new LegacyTransaction({
+    nonce: 1n,
+    gasPrice: 2n,
+    gasLimit: 3n,
+    to: "0x0000000000000000000000000000000000000001",
+    value: 4n,
+    data: new Uint8Array([0x12, 0x34]),
+  }, { common });
+
+  const ethTx = typedTransactionToEthTx({
+    typedTransaction: tx,
+    receipt: {} as TransactionReceipt,
+    blockNumber: "0x1",
+    blockHash: "0x123",
+    isPendingBlock: false,
+  });
+
+  assertEquals(ethTx, null);
+});
+
+Deno.test("typedTransactionToEthTx handles missing transaction index", () => {
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new LegacyTransaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+    },
+    { common },
+  );
+  const receipt = createReceipt({ transactionIndex: undefined });
+  const result = typedTransactionToEthTx({
+    typedTransaction: tx,
+    receipt,
+    blockNumber: "0x1",
+    blockHash: "0x123",
+    isPendingBlock: false,
+  });
+  assertEquals(result, null);
+});
+
+Deno.test("typedTransactionToEthTx handles legacy transaction", () => {
+  const tx = createSignedLegacyTransaction();
+  const jsonTx = tx.toJSON();
+
+  const result = transactionEthFormat({
+    typedTransaction: tx,
+    jsonTx,
+    receipt: { transactionIndex: "0x1" } as TransactionReceipt,
+    blockNumber: "0x1",
+    blockHash: "0x123",
+    isPendingBlock: false,
+    chainId: "0x1",
+    index: "0x1",
+  });
+
+  assertExists(result);
+  assertEquals(result?.from, tx.getSenderAddress().toString());
+  assertEquals(result?.blockHash, "0x123");
+  assertEquals(result?.blockNumber, "0x1");
+  assertEquals(result?.gas, jsonTx.gasLimit);
+  assertEquals(result?.gasPrice, jsonTx.gasPrice);
+  assertEquals(result?.chainId, "0x1");
+  assertEquals(result?.input, jsonTx.data);
+  assertEquals(result?.nonce, jsonTx.nonce);
+  assertEquals(result?.to, tx.to?.toString());
+  assertEquals(result?.value, jsonTx.value);
+  assertEquals(result?.v, jsonTx.v);
+  assertEquals(result?.r, jsonTx.r);
+  assertEquals(result?.s, jsonTx.s);
 });

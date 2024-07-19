@@ -1,31 +1,38 @@
-use std::sync::Arc;
-
+use crate::{
+    eth_provider::{
+        provider::{EthDataProvider, EthereumProvider},
+        starknet::kakarot_core::starknet_address,
+    },
+    models::felt::Felt252Wrapper,
+    test_utils::{
+        evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo},
+        tx_waiter::watch_tx,
+    },
+};
 use alloy_dyn_abi::DynSolValue;
 use alloy_json_abi::ContractObject;
 use alloy_signer_wallet::LocalWallet;
 use async_trait::async_trait;
-use reth_primitives::{sign_message, Address, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
-use starknet::core::types::{MaybePendingTransactionReceipt, TransactionReceipt};
-use starknet::core::utils::get_selector_from_name;
-use starknet::providers::Provider;
-use starknet_crypto::FieldElement;
-
-use crate::eth_provider::provider::{EthDataProvider, EthereumProvider};
-use crate::eth_provider::starknet::kakarot_core::starknet_address;
-use crate::models::felt::Felt252Wrapper;
-use crate::test_utils::evm_contract::{
-    EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo,
+use reth_primitives::{
+    sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, B256, U256,
 };
-use crate::test_utils::tx_waiter::watch_tx;
-use reth_primitives::TransactionSignedEcRecovered;
 use reth_rpc_types_compat::transaction::from_recovered;
+use starknet::{
+    core::{
+        types::{Felt, TransactionReceipt},
+        utils::get_selector_from_name,
+    },
+    providers::Provider,
+};
+use std::sync::Arc;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
+pub const TX_GAS_PRICE: u128 = 10;
 
 /// EOA is an Ethereum-like Externally Owned Account (EOA) that can sign transactions and send them to the underlying Starknet provider.
 #[async_trait]
 pub trait Eoa<P: Provider + Send + Sync> {
-    fn starknet_address(&self) -> Result<FieldElement, eyre::Error> {
+    fn starknet_address(&self) -> Result<Felt, eyre::Error> {
         Ok(starknet_address(self.evm_address()?))
     }
     fn evm_address(&self) -> Result<Address, eyre::Error> {
@@ -109,8 +116,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
         let expected_address = {
             let expected_eth_address = self.evm_address().expect("Failed to get EVM address").create(nonce);
-            FieldElement::from_byte_slice_be(expected_eth_address.as_slice())
-                .expect("Failed to convert address to field element")
+            Felt::from_bytes_be_slice(expected_eth_address.as_slice())
         };
 
         let tx = if contract_name.is_none() {
@@ -118,6 +124,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
                 chain_id: chain_id.try_into()?,
                 nonce,
                 gas_limit: TX_GAS_LIMIT,
+                max_fee_per_gas: TX_GAS_PRICE,
                 ..Default::default()
             })
         } else {
@@ -129,7 +136,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         };
         let tx_signed = self.sign_transaction(tx)?;
         let tx_hash = self.send_transaction(tx_signed).await?;
-        let tx_hash: Felt252Wrapper = tx_hash.try_into().expect("Tx Hash should fit into Felt252Wrapper");
+        let tx_hash: Felt252Wrapper = tx_hash.into();
 
         watch_tx(
             self.eth_provider.starknet_provider(),
@@ -142,11 +149,11 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
         let maybe_receipt = self
             .starknet_provider()
-            .get_transaction_receipt(FieldElement::from(tx_hash))
+            .get_transaction_receipt(Felt::from(tx_hash))
             .await
             .expect("Failed to get transaction receipt after retries");
 
-        let MaybePendingTransactionReceipt::Receipt(TransactionReceipt::Invoke(receipt)) = maybe_receipt else {
+        let TransactionReceipt::Invoke(receipt) = maybe_receipt.receipt else {
             return Err(eyre::eyre!("Failed to deploy contract"));
         };
 
@@ -186,7 +193,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let tx_hash = self.send_transaction(tx_signed).await?;
 
         let bytes = tx_hash.0;
-        let starknet_tx_hash = FieldElement::from_bytes_be(&bytes).unwrap();
+        let starknet_tx_hash = Felt::from_bytes_be(&bytes);
 
         watch_tx(self.eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
             .await
@@ -202,6 +209,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
             chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().try_into()?,
             nonce: self.nonce().await?.try_into()?,
             gas_limit: TX_GAS_LIMIT,
+            max_fee_per_gas: TX_GAS_PRICE,
             to: TxKind::Call(to),
             value: U256::from(value),
             ..Default::default()
@@ -223,7 +231,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
                 gas_limit: 21000,
                 to: TxKind::Call(Address::random()),
                 value: U256::from(1000),
-                max_fee_per_gas: 875_000_000,
+                max_fee_per_gas: TX_GAS_PRICE,
                 ..Default::default()
             }))?,
             self.evm_address()?,

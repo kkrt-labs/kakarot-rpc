@@ -1,21 +1,15 @@
-use std::time::Duration;
-
 use anyhow::Result;
 use starknet::{
-    core::types::{ExecutionResult, FieldElement, StarknetError},
+    core::types::{ExecutionResult, Felt, StarknetError},
     providers::{Provider, ProviderError},
 };
+use std::time::Duration;
 use tracing::info;
 
 /// Code taken from
 /// <https://github.com/xJonathanLEI/starkli/blob/42c7cfc42102e399f76896ebbbc5291393f40d7e/src/utils.rs#L13>
 /// Credits to Jonathan Lei
-pub async fn watch_tx<P>(
-    provider: P,
-    transaction_hash: FieldElement,
-    poll_interval: Duration,
-    count: usize,
-) -> Result<()>
+pub async fn watch_tx<P>(provider: P, transaction_hash: Felt, poll_interval: Duration, count: usize) -> Result<()>
 where
     P: Provider,
 {
@@ -25,7 +19,7 @@ where
             return Err(anyhow::anyhow!("transaction not confirmed after {} tries", count));
         }
         match provider.get_transaction_receipt(transaction_hash).await {
-            Ok(receipt) => match receipt.execution_result() {
+            Ok(receipt) => match receipt.receipt.execution_result() {
                 ExecutionResult::Succeeded => {
                     info!("Transaction confirmed successfully 🎉");
                     return Ok(());

@@ -67,7 +67,7 @@ impl Database {
     /// Returns a collection from the database.
     pub fn collection<T>(&self) -> Collection<T>
     where
-        T: CollectionName,
+        T: CollectionName + Sync + Send,
     {
         self.0.collection::<T>(T::collection_name())
     }
@@ -79,18 +79,26 @@ impl Database {
         find_options: impl Into<Option<FindOpts>>,
     ) -> DatabaseResult<Vec<T>>
     where
-        T: DeserializeOwned + CollectionName,
+        T: DeserializeOwned + CollectionName + Sync + Send,
     {
         let find_options = find_options.into();
-        Ok(self.collection::<T>().find(filter, find_options.unwrap_or_default().build()).await?.try_collect().await?)
+        Ok(self
+            .collection::<T>()
+            .find(Into::<Option<Document>>::into(filter).unwrap_or_default())
+            .with_options(find_options.unwrap_or_default().build())
+            .await?
+            .try_collect()
+            .await?)
     }
 
     /// Get all documents from a collection
     pub async fn get_all<T>(&self) -> DatabaseResult<Vec<T>>
     where
-        T: DeserializeOwned + CollectionName,
+        T: DeserializeOwned + CollectionName + Sync + Send,
     {
-        Ok(self.collection::<T>().find(None, FindOpts::default().build()).await?.try_collect().await?)
+        let find_options = FindOpts::default().build();
+
+        Ok(self.collection::<T>().find(Default::default()).with_options(find_options).await?.try_collect().await?)
     }
 
     /// Retrieves documents from a collection and converts them into another type.
@@ -102,7 +110,7 @@ impl Database {
         find_options: Option<FindOpts>,
     ) -> DatabaseResult<Vec<D>>
     where
-        T: DeserializeOwned + CollectionName,
+        T: DeserializeOwned + CollectionName + Sync + Send,
         D: From<T>,
     {
         let stored_data: Vec<T> = self.get(filter, find_options).await?;
@@ -114,7 +122,7 @@ impl Database {
     /// Returns a vector of documents of type `D` if successful, or an error.
     pub async fn get_all_and_map_to<D, T>(&self) -> DatabaseResult<Vec<D>>
     where
-        T: DeserializeOwned + CollectionName,
+        T: DeserializeOwned + CollectionName + Sync + Send,
         D: From<T>,
     {
         let stored_data: Vec<T> = self.get_all().await?;
@@ -130,8 +138,12 @@ impl Database {
     where
         T: DeserializeOwned + Unpin + Send + Sync + CollectionName,
     {
-        let find_one_option = FindOneOptions::builder().sort(sort).build();
-        Ok(self.collection::<T>().find_one(filter, find_one_option).await?)
+        let find_one_options = FindOneOptions::builder().sort(sort).build();
+        Ok(self
+            .collection::<T>()
+            .find_one(Into::<Option<Document>>::into(filter).unwrap_or_default())
+            .with_options(find_one_options)
+            .await?)
     }
 
     /// Get the first document from a collection
@@ -139,15 +151,15 @@ impl Database {
     where
         T: DeserializeOwned + Unpin + Send + Sync + CollectionName,
     {
-        Ok(self.collection::<T>().find_one(None, None).await?)
+        Ok(self.collection::<T>().find_one(Default::default()).await?)
     }
 
     /// Get a single document from aggregated collections
     pub async fn get_one_aggregate<T>(&self, pipeline: impl IntoIterator<Item = Document>) -> DatabaseResult<Option<T>>
     where
-        T: DeserializeOwned + CollectionName,
+        T: DeserializeOwned + CollectionName + Sync + Send,
     {
-        let mut cursor = self.collection::<T>().aggregate(pipeline, None).await?;
+        let mut cursor = self.collection::<T>().aggregate(pipeline).await?;
 
         Ok(cursor.try_next().await?.map(|doc| mongodb::bson::de::from_document(doc)).transpose()?)
     }
@@ -155,16 +167,14 @@ impl Database {
     /// Update a single document in a collection
     pub async fn update_one<T>(&self, doc: T, filter: impl Into<Document>, upsert: bool) -> DatabaseResult<()>
     where
-        T: Serialize + CollectionName,
+        T: Serialize + CollectionName + Sync + Send,
     {
         let doc = mongodb::bson::to_document(&doc).map_err(mongodb::error::Error::custom)?;
+        let update_options = UpdateOptions::builder().upsert(upsert).build();
 
         self.collection::<T>()
-            .update_one(
-                filter.into(),
-                UpdateModifications::Document(doc! {"$set": doc}),
-                UpdateOptions::builder().upsert(upsert).build(),
-            )
+            .update_one(filter.into(), UpdateModifications::Document(doc! {"$set": doc}))
+            .with_options(update_options)
             .await?;
 
         Ok(())
@@ -173,18 +183,18 @@ impl Database {
     /// Delete a single document from a collection
     pub async fn delete_one<T>(&self, filter: impl Into<Document>) -> DatabaseResult<()>
     where
-        T: CollectionName,
+        T: CollectionName + Sync + Send,
     {
-        self.collection::<T>().delete_one(filter.into(), None).await?;
+        self.collection::<T>().delete_one(filter.into()).await?;
         Ok(())
     }
 
     /// Count the number of documents in a collection matching the filter
-    pub async fn count<T>(&self, filter: impl Into<Option<Document>>) -> DatabaseResult<u64>
+    pub async fn count<T>(&self, filter: Document) -> DatabaseResult<u64>
     where
-        T: CollectionName,
+        T: CollectionName + Sync + Send,
     {
-        Ok(self.collection::<T>().count_documents(filter, None).await?)
+        Ok(self.collection::<T>().count_documents(filter).await?)
     }
 }
 

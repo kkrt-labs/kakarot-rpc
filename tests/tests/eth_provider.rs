@@ -1,29 +1,32 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use std::str::FromStr;
-use std::sync::Arc;
-
-use kakarot_rpc::eth_provider::constant::{MAX_LOGS, STARKNET_MODULUS};
-use kakarot_rpc::eth_provider::database::ethereum::EthereumTransactionStore;
-use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
-use kakarot_rpc::eth_provider::provider::EthereumProvider;
-use kakarot_rpc::models::felt::Felt252Wrapper;
-use kakarot_rpc::test_utils::eoa::Eoa;
-use kakarot_rpc::test_utils::evm_contract::{EvmContract, TransactionInfo, TxCommonInfo, TxLegacyInfo};
-use kakarot_rpc::test_utils::fixtures::{contract_empty, counter, katana, setup};
-use kakarot_rpc::test_utils::mongo::{BLOCK_HASH, BLOCK_NUMBER};
-use kakarot_rpc::test_utils::tx_waiter::watch_tx;
-use kakarot_rpc::test_utils::{evm_contract::KakarotEvmContract, katana::Katana};
-use reth_primitives::transaction::Signature;
-use reth_primitives::{
-    sign_message, Address, BlockNumberOrTag, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256, U64,
+use kakarot_rpc::{
+    eth_provider::{
+        constant::{MAX_LOGS, STARKNET_MODULUS},
+        database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
+        provider::EthereumProvider,
+    },
+    models::felt::Felt252Wrapper,
+    test_utils::{
+        eoa::Eoa,
+        evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxLegacyInfo},
+        fixtures::{contract_empty, counter, katana, setup},
+        katana::Katana,
+        mongo::{BLOCK_HASH, BLOCK_NUMBER},
+        tx_waiter::watch_tx,
+    },
 };
-use reth_rpc_types::request::TransactionInput;
-use reth_rpc_types::serde_helpers::JsonStorageKey;
-use reth_rpc_types::{Filter, FilterBlockOption, FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest};
+use reth_primitives::{
+    sign_message, transaction::Signature, Address, BlockNumberOrTag, Bytes, Transaction, TransactionSigned, TxEip1559,
+    TxKind, B256, U256, U64,
+};
+use reth_rpc_types::{
+    request::TransactionInput, serde_helpers::JsonStorageKey, Filter, FilterBlockOption, FilterChanges, Log,
+    RpcBlockHash, Topic, TransactionRequest,
+};
 use rstest::*;
-use starknet::core::types::BlockTag;
-use starknet_crypto::FieldElement;
+use starknet::core::types::{BlockTag, Felt};
+use std::{str::FromStr, sync::Arc};
 
 #[rstest]
 #[awt]
@@ -37,7 +40,7 @@ async fn test_block_number(#[future] katana: Katana, _setup: ()) {
 
     // Then
     // Catch the most recent block number of the mocked Mongo Database
-    let expected = U64::from(katana.most_recent_transaction().unwrap().block_number.unwrap());
+    let expected = U64::from(katana.block_number());
     assert_eq!(block_number, expected);
 }
 
@@ -78,7 +81,7 @@ async fn test_block_by_hash(#[future] katana: Katana, _setup: ()) {
 async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
-    let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
+    let block_number = katana.block_number();
 
     // When: Retrieving block by specific block number
     let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), false).await.unwrap().unwrap();
@@ -519,7 +522,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // Retrieve the most recent block number.
-    let newest_block = katana.most_recent_transaction().unwrap().block_number.unwrap();
+    let newest_block = katana.block_number();
 
     // To ensure that the range includes all mocked blocks.
     let block_count = u64::MAX;
@@ -549,8 +552,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
 #[cfg(feature = "hive")]
 async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     use futures::future::join_all;
-    use kakarot_rpc::eth_provider::constant::CHAIN_ID;
-    use kakarot_rpc::test_utils::eoa::KakarotEOA;
+    use kakarot_rpc::{eth_provider::constant::CHAIN_ID, test_utils::eoa::KakarotEOA};
     use reth_primitives::B256;
     use starknet::providers::Provider;
 
@@ -660,14 +662,11 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(transaction.block_number.unwrap()));
     assert_eq!(
         some_starknet_block_hash,
-        starknet::core::types::BlockId::Hash(
-            FieldElement::from_bytes_be(
-                &U256::from_be_slice(transaction.block_hash.unwrap().as_slice())
-                    .wrapping_rem(STARKNET_MODULUS)
-                    .to_be_bytes()
-            )
-            .unwrap()
-        )
+        starknet::core::types::BlockId::Hash(Felt::from_bytes_be(
+            &U256::from_be_slice(transaction.block_hash.unwrap().as_slice())
+                .wrapping_rem(STARKNET_MODULUS)
+                .to_be_bytes()
+        ))
     );
     assert_eq!(pending_block_tag_starknet, starknet::core::types::BlockId::Tag(BlockTag::Pending));
     assert!(unknown_starknet_block_number.is_err());
@@ -760,7 +759,7 @@ async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEv
         .expect("failed to send transaction");
 
     let bytes = tx_hash.0;
-    let starknet_tx_hash = FieldElement::from_bytes_be(&bytes).unwrap();
+    let starknet_tx_hash = Felt::from_bytes_be(&bytes);
 
     watch_tx(eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
         .await

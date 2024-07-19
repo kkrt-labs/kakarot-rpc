@@ -1,39 +1,43 @@
 pub mod genesis;
 
-use std::collections::HashMap;
-use std::path::Path;
-use std::sync::Arc;
-
+use crate::{
+    eth_provider::{
+        constant::U64_HEX_STRING_LEN,
+        database::{
+            ethereum::EthereumTransactionStore,
+            filter,
+            filter::{format_hex, EthDatabaseFilterBuilder},
+            types::{header::StoredHeader, log::StoredLog, transaction::StoredTransaction},
+            CollectionName,
+        },
+        provider::EthDataProvider,
+    },
+    test_utils::eoa::KakarotEOA,
+};
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
-use katana_primitives::chain::ChainId;
-use katana_primitives::genesis::json::GenesisJson;
-use katana_primitives::genesis::Genesis;
-use mongodb::bson;
-use mongodb::bson::doc;
-use mongodb::bson::Document;
-use mongodb::options::{UpdateModifications, UpdateOptions};
+use katana_primitives::{
+    chain::ChainId,
+    genesis::{json::GenesisJson, Genesis},
+};
+use mongodb::{
+    bson,
+    bson::{doc, Document},
+    options::{UpdateModifications, UpdateOptions},
+};
 use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use std::{collections::HashMap, path::Path, sync::Arc};
+use testcontainers::ContainerAsync;
 
-use crate::eth_provider::database::ethereum::EthereumTransactionStore;
-use crate::eth_provider::database::filter;
-use crate::eth_provider::database::filter::format_hex;
-use crate::eth_provider::database::filter::EthDatabaseFilterBuilder;
-use crate::eth_provider::database::types::{header::StoredHeader, log::StoredLog, transaction::StoredTransaction};
-use crate::eth_provider::database::CollectionName;
-use crate::eth_provider::{constant::U64_HEX_STRING_LEN, provider::EthDataProvider};
-use crate::test_utils::eoa::KakarotEOA;
-
+use super::mongo::MongoImage;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    super::mongo::{CollectionDB, MongoFuzzer, StoredData, DOCKER_CLI},
+    super::mongo::{CollectionDB, MongoFuzzer, StoredData},
     dojo_test_utils::sequencer::SequencerConfig,
     reth_primitives::{TxType, B256},
     reth_rpc_types::{Header, Transaction},
     std::str::FromStr as _,
-    testcontainers::{Container, GenericImage},
 };
 
 fn load_genesis() -> Genesis {
@@ -47,7 +51,7 @@ fn load_genesis() -> Genesis {
 /// Returns a `StarknetConfig` instance customized for Kakarot.
 /// If `with_dumped_state` is true, the config will be initialized with the dumped state.
 pub fn katana_config() -> StarknetConfig {
-    let max_steps = std::u32::MAX;
+    let max_steps = u32::MAX;
     StarknetConfig {
         disable_fee: true,
         env: Environment {
@@ -63,7 +67,7 @@ pub fn katana_config() -> StarknetConfig {
 
 /// Returns a `TestSequencer` configured for Kakarot.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-async fn katana_sequencer() -> TestSequencer {
+pub async fn katana_sequencer() -> TestSequencer {
     TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, katana_config()).await
 }
 
@@ -74,13 +78,13 @@ pub struct Katana {
     pub sequencer: TestSequencer,
     /// The Kakarot EOA (Externally Owned Account) instance.
     pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
-    /// Mock data stored in a HashMap, representing the database.
+    /// Mock data stored in a [`HashMap`], representing the database.
     pub mock_data: HashMap<CollectionDB, Vec<StoredData>>,
     /// The port number used for communication.
     pub port: u16,
     /// Option to store the Docker container instance.
     /// It holds `Some` when the container is running, and `None` otherwise.
-    pub container: Option<Container<'static, GenericImage>>,
+    pub container: Option<ContainerAsync<MongoImage>>,
 }
 
 impl<'a> Katana {
@@ -109,9 +113,6 @@ impl<'a> Katana {
         // Get the port number for communication.
         let port = mongo_fuzzer.port();
 
-        // Run a Docker container with the MongoDB image.
-        let container = DOCKER_CLI.run(mongo_fuzzer.mongo_image());
-
         // Add random transactions to the MongoDB database.
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
         // Add a hardcoded block header range to the MongoDB database.
@@ -130,6 +131,17 @@ impl<'a> Katana {
             .expect("Failed to add Legacy transaction in the database");
         // Add a hardcoded logs to the MongoDB database.
         mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
+        // Add a hardcoded header to the MongoDB database.
+        let max_block_number = mongo_fuzzer.documents().get(&CollectionDB::Headers).map_or(0, |headers| {
+            headers
+                .iter()
+                .map(|data| data.extract_stored_header().and_then(|h| h.header.number).unwrap_or_default())
+                .max()
+                .unwrap_or_default()
+        });
+        mongo_fuzzer
+            .add_hardcoded_block_header_with_base_fee(max_block_number + 1, 0)
+            .expect("Failed to add header in the database");
 
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
@@ -145,7 +157,7 @@ impl<'a> Katana {
         let eoa = KakarotEOA::new(pk, eth_provider);
 
         // Return a new instance of Katana with initialized fields.
-        Self { sequencer, eoa, mock_data, port, container: Some(container) }
+        Self { sequencer, eoa, mock_data, port, container: Some(mongo_fuzzer.container) }
     }
 
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {
@@ -200,7 +212,7 @@ impl<'a> Katana {
         database
             .inner()
             .collection(StoredLog::collection_name())
-            .insert_many(log_docs, None)
+            .insert_many(log_docs)
             .await
             .expect("Failed to insert logs into the database");
     }
@@ -240,8 +252,8 @@ impl<'a> Katana {
             .update_many(
                 doc! {"tx.blockNumber": &unpadded_block_number},
                 UpdateModifications::Document(doc! {"$set": {"tx.blockNumber": &padded_block_number}}),
-                UpdateOptions::builder().upsert(true).build(),
             )
+            .with_options(UpdateOptions::builder().upsert(true).build())
             .await
             .expect("Failed to update block number");
 
@@ -254,8 +266,8 @@ impl<'a> Katana {
             .update_one(
                 doc! {"header.number": unpadded_block_number},
                 UpdateModifications::Document(doc! {"$set": {"header.number": padded_block_number}}),
-                UpdateOptions::builder().upsert(true).build(),
             )
+            .with_options(UpdateOptions::builder().upsert(true).build())
             .await
             .expect("Failed to update block number");
     }
@@ -267,6 +279,23 @@ impl<'a> Katana {
             .and_then(|transactions| transactions.first())
             .and_then(|data| data.extract_stored_transaction())
             .map(|stored_tx| stored_tx.tx.clone())
+    }
+
+    /// Retrieves the current block number
+    pub fn block_number(&self) -> u64 {
+        self.mock_data
+            .get(&CollectionDB::Headers)
+            .and_then(|headers| {
+                headers
+                    .iter()
+                    .map(|data| {
+                        data.extract_stored_header()
+                            .and_then(|stored_header| stored_header.header.number)
+                            .unwrap_or_default()
+                    })
+                    .max()
+            })
+            .unwrap_or_default()
     }
 
     /// Retrieves the most recent stored transaction based on block number

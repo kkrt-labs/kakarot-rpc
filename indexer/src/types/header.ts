@@ -15,7 +15,7 @@ import {
 import { KAKAROT } from "../provider.ts";
 
 // A default block gas limit in case the call to get_block_gas_limit fails.
-const DEFAULT_BLOCK_GAS_LIMIT = (() => {
+export const DEFAULT_BLOCK_GAS_LIMIT = (() => {
   const defaultBlockGasLimitStr = Deno.env.get("DEFAULT_BLOCK_GAS_LIMIT");
   if (!defaultBlockGasLimitStr) {
     throw new Error("ENV: DEFAULT_BLOCK_GAS_LIMIT is not set");
@@ -24,6 +24,7 @@ const DEFAULT_BLOCK_GAS_LIMIT = (() => {
 })();
 
 /**
+ * Converts a Starknet block header to an Ethereum block header in JSON RPC format.
  * @param header - A Starknet block header.
  * @param blockNumber - The block number of the transaction in hex.
  * @param blockHash - The block hash of the transaction in hex.
@@ -58,93 +59,107 @@ export async function toEthHeader({
   transactionRoot: Uint8Array;
   isPendingBlock: boolean;
 }): Promise<JsonRpcBlock> {
-  const maybeTs = Date.parse(header.timestamp);
-  const ts = isNaN(maybeTs) ? 0 : Math.floor(maybeTs / 1000);
+  // Convert timestamp to Unix timestamp (seconds since Jan 1, 1970, UTC)
+  const timestampUnix = Date.parse(header.timestamp);
+  const timestamp = isNaN(timestampUnix)
+    ? BigInt(0)
+    : BigInt(timestampUnix / 1000);
 
-  if (header.timestamp === undefined || isNaN(maybeTs)) {
-    console.error(
-      `⚠️ Block timestamp is ${header.timestamp}, Date.parse of this is invalid - Block timestamp will be set to 0.`,
-    );
-  }
-
-  let coinbase;
-  let baseFee;
-  let blockGasLimit;
+  // Determine the block identifier based on whether the block is pending or finalized
+  // ⚠️ StarknetJS: blockIdentifier is a block hash if value is BigInt or String, otherwise it's a block number.
   const blockIdentifier = isPendingBlock ? "pending" : blockHash;
 
-  try {
-    const response = (await KAKAROT.call("get_coinbase", [], {
-      // ⚠️ StarknetJS: blockIdentifier is a block hash if value is BigInt or String, otherwise it's a block number.
-      blockIdentifier,
-    })) as {
-      coinbase: bigint;
-    };
-    coinbase = response.coinbase;
-  } catch (error) {
-    console.warn(
-      `⚠️ Failed to get coinbase for block ${blockNumber} - Error: ${error.message}`,
-    );
-    coinbase = BigInt(0);
-  }
+  // Function to handle KAKAROT calls with error handling and default values
+  const getResponse = async (
+    method: string,
+    defaultValue: bigint,
+  ): Promise<bigint> => {
+    try {
+      // Make the KAKAROT RPC call to retrieve blockchain data
+      const response =
+        (await KAKAROT.call(method, [], { blockIdentifier })) as {
+          coinbase?: bigint;
+          base_fee?: bigint;
+          block_gas_limit?: bigint;
+        };
 
-  try {
-    const response = (await KAKAROT.call("get_base_fee", [], {
-      // ⚠️ StarknetJS: blockIdentifier is a block hash if value is BigInt or String, otherwise it's a block number.
-      blockIdentifier,
-    })) as {
-      base_fee: bigint;
-    };
-    baseFee = response.base_fee;
-  } catch (error) {
-    console.warn(
-      `⚠️ Failed to get base fee for block ${blockNumber} - Error: ${error.message}`,
-    );
-    baseFee = BigInt(0);
-  }
+      // Extract and return the specific field from the response, or fallback to default value
+      switch (method) {
+        case "get_coinbase":
+          return BigInt(response.coinbase ?? defaultValue);
+        case "get_base_fee":
+          return BigInt(response.base_fee ?? defaultValue);
+        case "get_block_gas_limit":
+          return BigInt(response.block_gas_limit ?? defaultValue);
+        default:
+          return defaultValue;
+      }
+    } catch (error) {
+      // Handle errors, log a warning, and return the default value
+      console.warn(
+        `⚠️ Failed to get ${method} for block ${blockNumber} - Error: ${error.message}`,
+      );
+      return defaultValue;
+    }
+  };
 
-  try {
-    const response = (await KAKAROT.call("get_block_gas_limit", [], {
-      // ⚠️ StarknetJS: blockIdentifier is a block hash if value is BigInt or String, otherwise it's a block number.
-      blockIdentifier,
-    })) as {
-      block_gas_limit: bigint;
-    };
-    blockGasLimit = response.block_gas_limit;
-  } catch (error) {
-    console.warn(
-      `⚠️ Failed to get block gas limit for block ${blockNumber} - Error: ${error.message}`,
-    );
-    blockGasLimit = BigInt(DEFAULT_BLOCK_GAS_LIMIT!);
-  }
+  // Retrieve responses for coinbase, baseFee, and blockGasLimit asynchronously
+  const [coinbase, baseFee, blockGasLimit] = await Promise.all([
+    getResponse("get_coinbase", BigInt(0)),
+    getResponse("get_base_fee", BigInt(0)),
+    getResponse("get_block_gas_limit", BigInt(DEFAULT_BLOCK_GAS_LIMIT)),
+  ]);
 
+  // Construct and return the Ethereum block header
   return {
+    // Block number in hexadecimal format
     number: blockNumber,
+    // Block hash or null if pending
     hash: isPendingBlock ? null : blockHash,
+    // Padded parent block hash
     parentHash: padString(header.parentBlockHash, 32),
+    // Padded mix hash (unused in this context)
     mixHash: padString("0x", 32),
+    // Padded nonce (unused in this context)
     nonce: padString("0x", 8),
     // Empty list of uncles -> RLP encoded to 0xC0 -> Keccak(0xc0) == 0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347
     sha3Uncles:
       "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+    // Convert logs bloom filter to hexadecimal string
     logsBloom: bytesToHex(logsBloom.bitvector),
+    // Convert transaction trie root to hexadecimal string
     transactionsRoot: bytesToHex(transactionRoot),
+    // New state root or padded string
     stateRoot: header.newRoot ?? padString("0x", 32),
+    // Convert receipt trie root to hexadecimal string
     receiptsRoot: bytesToHex(receiptRoot),
+    // Convert coinbase address to padded hexadecimal string
     miner: padString(bigIntToHex(coinbase), 20),
+    // Difficulty field (unused in this context)
     difficulty: "0x00",
+    // Total difficulty field (unused in this context)
     totalDifficulty: "0x00",
+    // Extra data field (unused in this context)
     extraData: "0x",
+    // Size field (unused in this context)
     size: "0x00",
+    // Convert block gas limit to padded hexadecimal string
     gasLimit: padString(bigIntToHex(blockGasLimit), 32),
+    // Convert total gas used to hexadecimal string
     gasUsed: bigIntToHex(gasUsed),
-    timestamp: bigIntToHex(BigInt(ts)),
-    transactions: [], // we are using this structure to represent a Kakarot block header, so we don't need to include transactions
+    // Convert timestamp to hexadecimal string
+    timestamp: bigIntToHex(timestamp),
+    // Empty array since transactions are not included in this representation
+    transactions: [],
+    // Empty array for uncles (unused in this context)
     uncles: [],
+    // Empty array for withdrawals (unused in this context)
     withdrawals: [],
     // Root hash of an empty trie.
     // <https://github.com/paradigmxyz/reth/blob/main/crates/primitives/src/constants/mod.rs#L138>
     withdrawalsRoot:
       "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+    // Convert base fee per gas to padded hexadecimal string
     baseFeePerGas: padString(bigIntToHex(baseFee), 32),
   };
 }

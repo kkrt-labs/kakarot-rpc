@@ -1,7 +1,6 @@
+use super::receipt::StoredTransactionReceipt;
 use reth_rpc_types::Log;
 use serde::{Deserialize, Serialize};
-
-use super::receipt::StoredTransactionReceipt;
 
 /// A transaction receipt as stored in the database
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Serialize)]

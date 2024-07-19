@@ -1,24 +1,28 @@
 // //! Kakarot RPC module for Ethereum.
 // //! It is an adapter layer to interact with Kakarot ZK-EVM.
-use std::net::{AddrParseError, Ipv4Addr, SocketAddr};
 
-use config::RPCConfig;
 pub mod api;
 pub mod config;
 pub mod middleware;
 pub mod rpc;
 pub mod servers;
 
-use crate::eth_rpc::middleware::metrics::RpcMetrics;
-use crate::eth_rpc::middleware::MetricsLayer;
-use crate::prometheus_handler::init_prometheus;
+use crate::{
+    eth_rpc::middleware::{metrics::RpcMetrics, MetricsLayer},
+    prometheus_handler::init_prometheus,
+};
+use config::RPCConfig;
 use eyre::Result;
-use jsonrpsee::server::middleware::http::{InvalidPath, ProxyGetRequestLayer};
-use jsonrpsee::server::{RpcServiceBuilder, ServerBuilder, ServerHandle};
-use jsonrpsee::RpcModule;
+use jsonrpsee::{
+    server::{
+        middleware::http::{InvalidPath, ProxyGetRequestLayer},
+        RpcServiceBuilder, ServerBuilder, ServerHandle,
+    },
+    RpcModule,
+};
 use prometheus::Registry;
+use std::net::{AddrParseError, Ipv4Addr, SocketAddr};
 use thiserror::Error;
-
 use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Error, Debug)]

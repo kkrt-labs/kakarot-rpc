@@ -1,16 +1,18 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use jsonrpsee::server::ServerHandle;
-use kakarot_rpc::eth_provider::database::types::transaction::StoredPendingTransaction;
-use kakarot_rpc::test_utils::fixtures::{katana, setup};
-use kakarot_rpc::test_utils::katana::Katana;
-use kakarot_rpc::test_utils::mongo::RANDOM_BYTES_SIZE;
-use kakarot_rpc::test_utils::rpc::start_kakarot_rpc_server;
-use kakarot_rpc::test_utils::rpc::RawRpcParamsBuilder;
+use kakarot_rpc::{
+    eth_provider::database::types::transaction::StoredPendingTransaction,
+    test_utils::{
+        fixtures::{katana, setup},
+        katana::Katana,
+        mongo::RANDOM_BYTES_SIZE,
+        rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
+    },
+};
 use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
 use rstest::*;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
 use std::net::SocketAddr;
 

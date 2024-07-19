@@ -1,20 +1,15 @@
-use std::env::var;
-use std::sync::Arc;
-
 use dotenvy::dotenv;
 use eyre::Result;
+use kakarot_rpc::{
+    config::KakarotRpcConfig,
+    eth_provider::{database::Database, provider::EthDataProvider},
+    eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
+    retry::RetryHandler,
+};
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
-use starknet::providers::jsonrpc::HttpTransport;
-use starknet::providers::JsonRpcClient;
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use std::{env::var, sync::Arc};
 use tracing_subscriber::{filter, util::SubscriberInitExt};
-
-use kakarot_rpc::config::KakarotRpcConfig;
-use kakarot_rpc::eth_provider::database::Database;
-use kakarot_rpc::eth_provider::provider::EthDataProvider;
-use kakarot_rpc::eth_rpc::config::RPCConfig;
-use kakarot_rpc::eth_rpc::rpc::KakarotRpcModuleBuilder;
-use kakarot_rpc::eth_rpc::run_server;
-use kakarot_rpc::retry::RetryHandler;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -35,10 +30,15 @@ async fn main() -> Result<()> {
     let db_client =
         mongodb::Client::with_uri_str(var("MONGO_CONNECTION_STRING").expect("Missing MONGO_CONNECTION_STRING .env"))
             .await?;
-    let db = Database::new(db_client.database_with_options(
-        &var("MONGO_DATABASE_NAME").expect("Missing MONGO_DATABASE_NAME from .env"),
-        DatabaseOptions::builder().read_concern(ReadConcern::MAJORITY).write_concern(WriteConcern::MAJORITY).build(),
-    ));
+    let db = Database::new(
+        db_client.database_with_options(
+            &var("MONGO_DATABASE_NAME").expect("Missing MONGO_DATABASE_NAME from .env"),
+            DatabaseOptions::builder()
+                .read_concern(ReadConcern::majority())
+                .write_concern(WriteConcern::majority())
+                .build(),
+        ),
+    );
 
     // Setup hive
     #[cfg(feature = "hive")]
@@ -70,12 +70,10 @@ async fn main() -> Result<()> {
 #[cfg(feature = "hive")]
 async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<()> {
     use kakarot_rpc::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
-    use starknet::accounts::ConnectedAccount;
-    use starknet::providers::Provider as _;
-    use starknet_crypto::FieldElement;
+    use starknet::{accounts::ConnectedAccount, core::types::Felt, providers::Provider as _};
 
     let chain_id = starknet_provider.chain_id().await?;
-    let chain_id: u64 = (FieldElement::from(u64::MAX) & chain_id).try_into()?;
+    let chain_id: u64 = (Felt::from(u64::MAX).to_bigint() & chain_id.to_bigint()).try_into()?;
 
     CHAIN_ID.set(chain_id.into()).expect("Failed to set chain id");
 
