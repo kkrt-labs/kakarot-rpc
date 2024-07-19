@@ -5,5 +5,5 @@ use reth_primitives::B256;
 #[async_trait]
 pub trait KakarotApi {
     #[method(name = "getStarknetTransactionHash")]
-    async fn get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> Result<B256>;
+    async fn get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> Result<Option<B256>>;
 }
