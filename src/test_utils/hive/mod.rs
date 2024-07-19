@@ -13,7 +13,6 @@ use katana_primitives::{
 use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::{types::Felt, utils::get_storage_var_address};
-use starknet_api::core::ClassHash;
 use std::collections::HashMap;
 
 /// Types from <https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58>
@@ -57,7 +56,7 @@ impl HiveGenesisConfig {
 
         // Get the current state of the builder.
         let kakarot_address = builder.cache_load("kakarot_address")?;
-        let account_contract_class_hash = ClassHash(builder.account_contract_class_hash()?);
+        let account_contract_class_hash = builder.account_contract_class_hash()?;
 
         // Fetch the contracts from the alloc field.
         let mut additional_kakarot_storage = HashMap::with_capacity(self.alloc.len()); // 1 mapping per contract
@@ -87,7 +86,7 @@ impl HiveGenesisConfig {
                 // Add the implementation to the storage.
                 let implementation_key = get_storage_var_address(ACCOUNT_IMPLEMENTATION, &[])?;
                 kakarot_account_storage.append(&mut vec![
-                    (implementation_key, account_contract_class_hash.0),
+                    (implementation_key, account_contract_class_hash),
                     (get_storage_var_address(ACCOUNT_NONCE, &[])?, Felt::ONE),
                     (get_storage_var_address(OWNABLE_OWNER, &[])?, kakarot_address),
                     (
@@ -103,7 +102,7 @@ impl HiveGenesisConfig {
                 Ok((
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
-                        class: Some(ClassNameOrHash::Hash(account_contract_class_hash.0)),
+                        class: Some(ClassNameOrHash::Hash(account_contract_class_hash)),
                         balance: Some(info.balance),
                         nonce: None,
                         storage: Some(kakarot_account_storage.into_iter().collect()),
