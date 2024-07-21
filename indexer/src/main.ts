@@ -95,10 +95,10 @@ export default async function transform({
     // This is typically the case if there are multiple Kakarot contracts on the same chain.
     .filter((event) => isKakarotTransaction(event.transaction))
     // Skip if the transaction_executed event contains "eth validation failed".
-    .filter((event) => !ethValidationFailed(event))
+    .filter((event) => !ethValidationFailed(event.event))
     .map((event) => ({
       event: event,
-      typedEthTx: toTypedEthTx(event.transaction),
+      typedEthTx: toTypedEthTx({ transaction: event.transaction }),
     }))
     // Can be null if:
     // 1. The transaction is missing calldata.
@@ -107,10 +107,10 @@ export default async function transform({
     // 4. The chain id is not encoded in the v param of the signature for a
     //    Legacy transaction.
     // 5. The deserialization of the transaction fails.
-    .filter((eventExtended) => eventExtended.typedEthTx)
+    .filter((eventExtended) => eventExtended.typedEthTx !== null)
     .map((eventExtended) => {
       const ethTx = typedTransactionToEthTx({
-        typedTransaction: eventExtended.typedEthTx,
+        typedTransaction: eventExtended.typedEthTx!,
         receipt: eventExtended.event.receipt,
         blockNumber,
         blockHash,
@@ -121,7 +121,11 @@ export default async function transform({
     })
     // Can be null if:
     // 1. The typed transaction if missing a signature param (v, r, s).
-    .filter((eventExtended) => eventExtended.ethTx)
+    .filter((
+      eventExtended,
+    ): eventExtended is typeof eventExtended & {
+      ethTx: NonNullable<typeof eventExtended.ethTx>;
+    } => eventExtended.ethTx !== null)
     .map((eventExtended) => {
       const ethLogs = eventExtended.event.receipt.events
         .map((e) =>
@@ -152,7 +156,7 @@ export default async function transform({
       const ethReceipt = toEthReceipt({
         transaction: eventExtended.ethTx,
         logs: ethLogsIndexed,
-        event: eventExtended.event,
+        event: eventExtended.event.event,
         cumulativeGasUsed,
         blockNumber,
         blockHash,
@@ -197,7 +201,7 @@ export default async function transform({
     .map((eventExtended) =>
       createTrieData({
         transactionIndex: Number(eventExtended.ethTx.transactionIndex),
-        typedTransaction: eventExtended.typedEthTx,
+        typedTransaction: eventExtended.typedEthTx!,
         receipt: eventExtended.ethReceipt,
       })
     )
@@ -248,13 +252,13 @@ export default async function transform({
       const revertedTransactionCumulativeGasUsed =
         cumulativeGasUsages.find((gas, i) => {
           return (
-            Number(transactionWithReceiptExtended.ethTx.transactionIndex) >=
+            Number(transactionWithReceiptExtended.ethTx!.transactionIndex) >=
               cumulativeGasUsages.length - 1 - i && gas
           );
         }) ?? 0n;
 
       const ethReceipt = toRevertedOutOfResourcesReceipt({
-        transaction: transactionWithReceiptExtended.ethTx,
+        transaction: transactionWithReceiptExtended.ethTx!,
         blockNumber,
         blockHash,
         cumulativeGasUsed: revertedTransactionCumulativeGasUsed,
@@ -270,7 +274,7 @@ export default async function transform({
   filteredTransactions.forEach((transaction) => {
     store.push({
       collection: Collection.Transactions,
-      data: { tx: transaction.ethTx },
+      data: { tx: transaction.ethTx! },
     });
     store.push({
       collection: Collection.Receipts,
