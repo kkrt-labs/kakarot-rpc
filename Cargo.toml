@@ -113,10 +113,10 @@ pin-project-lite = { version = "0.2", default-features = false }
 alloy-dyn-abi = { version = "0.7.6", default-features = false }
 alloy-json-abi = { version = "0.7.6", default-features = false, optional = true }
 alloy-primitives = { version = "0.7.2", default-features = false, optional = true }
-alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
+alloy-signer-local = { version = "0.2.0", default-features = false, optional = true }
 anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
-ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "45b8528", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "2f5b44b", default-features = false, features = [
   "v0",
 ], optional = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master", optional = true }
@@ -124,7 +124,6 @@ rand = { version = "0.8", default-features = false, optional = true }
 rayon = { version = "1", default-features = false, optional = true }
 rstest = { version = "0.21", default-features = false, optional = true }
 serde_with = { version = "2.3.1", default-features = false, optional = true }
-starknet_api = { version = "0.12.0-dev.0", default-features = false, optional = true }
 strum = { version = "0.26", default-features = false, optional = true }
 strum_macros = { version = "0.26", default-features = false, optional = true }
 testcontainers = { version = "0.19", default-features = false, optional = true }
@@ -134,18 +133,13 @@ tokio-util = { version = "0.7", features = [
 tokio-stream = { version = "0.1", default-features = false, optional = true }
 walkdir = { version = "2.5", default-features = false, optional = true }
 
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.0", default-features = false, optional = true }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.0", default-features = false, features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.2", default-features = false, optional = true }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.2", default-features = false, features = [
   "serde",
 ], optional = true }
 
-
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
 starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
-starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }
 
 [dev-dependencies]
 hex = { version = "0.4", default-features = false }
@@ -157,7 +151,7 @@ toml = { version = "0.8", default-features = false }
 testing = [
   "alloy-json-abi",
   "alloy-primitives",
-  "alloy-signer-wallet",
+  "alloy-signer-local",
   "anyhow",
   "dep:arbitrary",
   "dojo-test-utils",
@@ -168,7 +162,6 @@ testing = [
   "rayon",
   "rstest",
   "serde_with",
-  "starknet_api",
   "strum",
   "strum_macros",
   "testcontainers",

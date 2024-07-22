@@ -561,8 +561,8 @@ where
         let gas_used_ratio = blocks
             .iter()
             .map(|header| {
-                let gas_used = header.header.gas_used as f64;
-                let mut gas_limit = header.header.gas_limit as f64;
+                let gas_used = header.gas_used as f64;
+                let mut gas_limit = header.gas_limit as f64;
                 if gas_limit == 0. {
                     gas_limit = 1.;
                 };
@@ -571,7 +571,7 @@ where
             .collect();
 
         let mut base_fee_per_gas =
-            blocks.iter().map(|header| header.header.base_fee_per_gas.unwrap_or_default()).collect::<Vec<_>>();
+            blocks.iter().map(|header| header.base_fee_per_gas.unwrap_or_default()).collect::<Vec<_>>();
         // TODO(EIP1559): Remove this when proper base fee computation: if gas_ratio > 50%, increase base_fee_per_gas
         base_fee_per_gas.extend_from_within((base_fee_per_gas.len() - 1)..);
 

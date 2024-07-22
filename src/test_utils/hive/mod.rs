@@ -13,7 +13,6 @@ use katana_primitives::{
 use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::{types::Felt, utils::get_storage_var_address};
-use starknet_api::{core::ClassHash, hash::StarkFelt};
 use std::collections::HashMap;
 
 /// Types from <https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58>
@@ -57,8 +56,7 @@ impl HiveGenesisConfig {
 
         // Get the current state of the builder.
         let kakarot_address = builder.cache_load("kakarot_address")?;
-        let account_contract_class_hash =
-            ClassHash(StarkFelt::new(builder.account_contract_class_hash()?.to_bytes_be())?);
+        let account_contract_class_hash = builder.account_contract_class_hash()?;
 
         // Fetch the contracts from the alloc field.
         let mut additional_kakarot_storage = HashMap::with_capacity(self.alloc.len()); // 1 mapping per contract
@@ -82,16 +80,13 @@ impl HiveGenesisConfig {
                 let storage: Vec<(U256, U256)> = storage.into_iter().collect();
                 let kakarot_account = KakarotAccount::new(&address, &code, U256::ZERO, &storage)?;
 
-                let mut kakarot_account_storage: Vec<(Felt, Felt)> = kakarot_account
-                    .storage()
-                    .iter()
-                    .map(|(k, v)| (Felt::from_bytes_be((*k.0.key()).bytes()), Felt::from_bytes_be((*v).bytes())))
-                    .collect();
+                let mut kakarot_account_storage: Vec<(Felt, Felt)> =
+                    kakarot_account.storage().iter().map(|(k, v)| (*k.0.key(), *v)).collect();
 
                 // Add the implementation to the storage.
                 let implementation_key = get_storage_var_address(ACCOUNT_IMPLEMENTATION, &[])?;
                 kakarot_account_storage.append(&mut vec![
-                    (implementation_key, Felt::from_bytes_be(account_contract_class_hash.0.bytes())),
+                    (implementation_key, account_contract_class_hash),
                     (get_storage_var_address(ACCOUNT_NONCE, &[])?, Felt::ONE),
                     (get_storage_var_address(OWNABLE_OWNER, &[])?, kakarot_address),
                     (
@@ -107,7 +102,7 @@ impl HiveGenesisConfig {
                 Ok((
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
-                        class: Some(ClassNameOrHash::Hash(Felt::from_bytes_be(account_contract_class_hash.0.bytes()))),
+                        class: Some(ClassNameOrHash::Hash(account_contract_class_hash)),
                         balance: Some(info.balance),
                         nonce: None,
                         storage: Some(kakarot_account_storage.into_iter().collect()),

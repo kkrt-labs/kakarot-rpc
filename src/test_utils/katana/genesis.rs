@@ -7,7 +7,7 @@ use crate::{
         KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
     },
 };
-use alloy_signer_wallet::LocalWallet;
+use alloy_signer_local::PrivateKeySigner;
 use eyre::{eyre, OptionExt, Result};
 use katana_primitives::{
     contract::{ContractAddress, StorageKey, StorageValue},
@@ -332,7 +332,7 @@ impl KatanaGenesisBuilder<Initialized> {
 
     #[allow(clippy::unused_self)]
     fn evm_address(&self, pk: B256) -> Result<Felt> {
-        Ok(Felt::from_bytes_be_slice(&LocalWallet::from_bytes(&pk)?.address().into_array()))
+        Ok(Felt::from_bytes_be_slice(&PrivateKeySigner::from_bytes(&pk)?.address().into_array()))
     }
 
     pub fn cache_load(&self, key: &str) -> Result<Felt> {
