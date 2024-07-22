@@ -99,7 +99,7 @@ where
         let starknet_config = KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config");
         Ok(Constant {
             max_logs: *MAX_LOGS,
-            starknet_network: starknet_config.network_url,
+            starknet_network: String::from(starknet_config.network_url),
             retry_tx_interval: get_retry_tx_interval(),
             transaction_max_retries: get_transaction_max_retries(),
             max_felts_in_calldata: *MAX_FELTS_IN_CALLDATA,

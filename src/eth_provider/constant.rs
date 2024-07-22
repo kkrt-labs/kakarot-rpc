@@ -2,7 +2,6 @@ use lazy_static::lazy_static;
 use reth_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use url::Url;
 #[cfg(feature = "hive")]
 use {
     crate::config::KakarotRpcConfig,
@@ -66,7 +65,7 @@ lazy_static! {
 // Struct used to return the constant values from the kakarot_getConfig endpoint
 pub struct Constant {
     pub max_logs: Option<u64>,
-    pub starknet_network: Url,
+    pub starknet_network: String,
     pub retry_tx_interval: u64,
     pub transaction_max_retries: u8,
     pub max_felts_in_calldata: usize,
