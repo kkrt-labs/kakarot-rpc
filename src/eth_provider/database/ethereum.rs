@@ -111,8 +111,9 @@ impl EthereumBlockStore for Database {
             .get_one::<StoredHeader>(None, doc! { "header.number": -1 })
             .await
             .inspect_err(|err| tracing::error!("internal error: {:?}", err))
-            .map(|maybe_sh| maybe_sh.map(|sh| sh.header))?)
+            .map(|maybe_sh| maybe_sh.map(Into::into))?)
     }
+
     async fn header(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Option<Header>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Header>::default()
             .with_block_hash_or_number(block_hash_or_number)
@@ -122,7 +123,7 @@ impl EthereumBlockStore for Database {
             .await
             .inspect_err(|err| tracing::error!("internal error: {:?}", err))
             .map_err(|_| EthApiError::UnknownBlock(block_hash_or_number))?
-            .map(|sh| sh.header))
+            .map(Into::into))
     }
 
     async fn block(
@@ -196,7 +197,7 @@ impl EthereumBlockStore for Database {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::mongo::{CollectionDB, MongoFuzzer, RANDOM_BYTES_SIZE};
+    use crate::test_utils::mongo::{MongoFuzzer, RANDOM_BYTES_SIZE};
     use rand::{self, Rng};
 
     #[tokio::test(flavor = "multi_thread")]
@@ -233,20 +234,13 @@ mod tests {
         unstructured: &mut arbitrary::Unstructured<'_>,
     ) {
         // Fetch the first transaction from the mock database
-        let first_transaction = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Transactions)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_transaction()
-            .unwrap();
+        let first_transaction = mongo_fuzzer.transactions.first().unwrap();
 
         // Test retrieving an existing transaction by its hash
-        assert_eq!(database.transaction(&first_transaction.tx.hash).await.unwrap(), Some(first_transaction.tx.clone()));
+        assert_eq!(database.transaction(&first_transaction.hash).await.unwrap(), Some(first_transaction.into()));
 
         // Generate a transaction not present in the database
-        let unstored_transaction = StoredTransaction::arbitrary_with_optional_fields(unstructured).unwrap().tx;
+        let unstored_transaction = StoredTransaction::arbitrary_with_optional_fields(unstructured).unwrap();
 
         // Test retrieving a non-existent transaction by its hash
         assert_eq!(database.transaction(&unstored_transaction.hash).await.unwrap(), None);
@@ -254,26 +248,14 @@ mod tests {
 
     async fn test_get_transactions_by_block_hash(database: &Database, mongo_fuzzer: &MongoFuzzer) {
         // Fetch the first block hash from the mock database
-        let first_block_hash = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header
-            .hash
-            .unwrap();
+        let first_block_hash = mongo_fuzzer.headers.first().unwrap().hash.unwrap();
 
         // Fetch transactions belonging to the first block hash
         let transactions_first_block_hash = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Transactions)
-            .unwrap()
+            .transactions
             .iter()
-            .filter(|tx| tx.extract_stored_transaction().unwrap().tx.block_hash.unwrap() == first_block_hash)
-            .map(|stored_data| stored_data.extract_stored_transaction().unwrap().tx.clone())
+            .filter(|tx| tx.block_hash.unwrap() == first_block_hash)
+            .map(Into::into)
             .collect::<Vec<_>>();
 
         // Test retrieving transactions by block hash
@@ -282,26 +264,14 @@ mod tests {
 
     async fn test_get_transactions_by_block_number(database: &Database, mongo_fuzzer: &MongoFuzzer) {
         // Fetch the first block number from the mock database
-        let first_block_number = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header
-            .number
-            .unwrap();
+        let first_block_number = mongo_fuzzer.headers.first().unwrap().number.unwrap();
 
         // Fetch transactions belonging to the first block number
         let transactions_first_block_number = mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Transactions)
-            .unwrap()
+            .transactions
             .iter()
-            .filter(|tx| tx.extract_stored_transaction().unwrap().tx.block_number.unwrap() == first_block_number)
-            .map(|stored_data| stored_data.extract_stored_transaction().unwrap().tx.clone())
+            .filter(|tx| tx.block_number.unwrap() == first_block_number)
+            .map(Into::into)
             .collect::<Vec<_>>();
 
         // Test retrieving transactions by block number
@@ -316,7 +286,7 @@ mod tests {
         // Add pending transactions to the database
         for tx in &pending_transactions {
             database
-                .upsert_pending_transaction(tx.tx.clone(), tx.retries)
+                .upsert_pending_transaction(tx.into(), tx.retries)
                 .await
                 .expect("Failed to update pending transaction in database");
         }
@@ -324,17 +294,17 @@ mod tests {
         // Test retrieving a pending transaction by its hash
         let first_pending_transaction = pending_transactions.first().unwrap();
         assert_eq!(
-            database.pending_transaction(&first_pending_transaction.tx.hash).await.unwrap(),
-            Some(first_pending_transaction.tx.clone())
+            database.pending_transaction(&first_pending_transaction.hash).await.unwrap(),
+            Some(first_pending_transaction.into())
         );
 
         // Test retrieving a non-existent pending transaction by its hash
-        let unstored_transaction = StoredTransaction::arbitrary_with_optional_fields(unstructured).unwrap().tx;
+        let unstored_transaction = StoredTransaction::arbitrary_with_optional_fields(unstructured).unwrap();
         assert_eq!(database.pending_transaction(&unstored_transaction.hash).await.unwrap(), None);
 
         // Test retrieving the number of retries for a pending transaction
         assert_eq!(
-            database.pending_transaction_retries(&first_pending_transaction.tx.hash).await.unwrap(),
+            database.pending_transaction_retries(&first_pending_transaction.hash).await.unwrap(),
             first_pending_transaction.clone().retries.saturating_add(1)
         );
 
@@ -348,7 +318,7 @@ mod tests {
         database.upsert_transaction(mock_transaction.clone().tx).await.unwrap();
 
         // Test retrieving an upserted transaction by its hash
-        assert_eq!(database.transaction(&mock_transaction.tx.hash).await.unwrap(), Some(mock_transaction.tx.clone()));
+        assert_eq!(database.transaction(&mock_transaction.hash).await.unwrap(), Some(mock_transaction.into()));
 
         // Generate and upsert a mock pending transaction into the database
         let mock_pending_transaction = StoredPendingTransaction::arbitrary_with_optional_fields(unstructured).unwrap();
@@ -359,7 +329,7 @@ mod tests {
 
         // Test retrieving an upserted pending transaction by its hash
         assert_eq!(
-            database.pending_transaction(&mock_pending_transaction.tx.hash).await.unwrap(),
+            database.pending_transaction(&mock_pending_transaction.hash).await.unwrap(),
             Some(mock_pending_transaction.tx)
         );
     }
@@ -387,15 +357,7 @@ mod tests {
     }
 
     async fn test_get_header(database: &Database, mongo_fuzzer: &MongoFuzzer) {
-        let header_block_hash = &mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header;
+        let header_block_hash = &mongo_fuzzer.headers.first().unwrap().header;
 
         // Test retrieving header by block hash
         assert_eq!(database.header(header_block_hash.hash.unwrap().into()).await.unwrap().unwrap(), *header_block_hash);
@@ -415,28 +377,17 @@ mod tests {
     }
 
     async fn test_get_blocks(database: &Database, mongo_fuzzer: &MongoFuzzer, u: &mut arbitrary::Unstructured<'_>) {
-        let header = &mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header;
+        let header = &mongo_fuzzer.headers.first().unwrap().header;
 
         let block_hash = header.hash.unwrap();
 
         let block: RichBlock = {
             let transactions: Vec<Transaction> = mongo_fuzzer
-                .documents()
-                .get(&CollectionDB::Transactions)
-                .unwrap()
+                .transactions
                 .iter()
-                .filter_map(|transaction| {
-                    let stored_transaction = transaction.extract_stored_transaction().unwrap();
-                    if stored_transaction.tx.block_hash.unwrap() == block_hash {
-                        Some(stored_transaction.tx.clone())
+                .filter_map(|stored_transaction| {
+                    if stored_transaction.block_hash.unwrap() == block_hash {
+                        Some(stored_transaction.into())
                     } else {
                         None
                     }
@@ -490,37 +441,24 @@ mod tests {
         let mut faulty_header = StoredHeader::arbitrary_with_optional_fields(u).unwrap();
         faulty_header.header.withdrawals_root = Some(rng.gen::<B256>());
 
-        let filter = EthDatabaseFilterBuilder::<filter::Header>::default()
-            .with_block_hash(&faulty_header.header.hash.unwrap())
-            .build();
+        let filter =
+            EthDatabaseFilterBuilder::<filter::Header>::default().with_block_hash(&faulty_header.hash.unwrap()).build();
 
         database.update_one(faulty_header.clone(), filter, true).await.expect("Failed to update header in database");
 
-        assert!(database.block(faulty_header.header.hash.unwrap().into(), true).await.is_err());
+        assert!(database.block(faulty_header.hash.unwrap().into(), true).await.is_err());
     }
 
     async fn test_get_transaction_count(database: &Database, mongo_fuzzer: &MongoFuzzer) {
-        let header_block_hash = &mongo_fuzzer
-            .documents()
-            .get(&CollectionDB::Headers)
-            .unwrap()
-            .first()
-            .unwrap()
-            .extract_stored_header()
-            .unwrap()
-            .header;
+        let header_block_hash = &mongo_fuzzer.headers.first().unwrap().header;
 
         let first_block_hash = header_block_hash.hash.unwrap();
 
         let transaction_count: U256 = U256::from(
             mongo_fuzzer
-                .documents()
-                .get(&CollectionDB::Transactions)
-                .unwrap()
+                .transactions
                 .iter()
-                .filter(|transaction| {
-                    transaction.extract_stored_transaction().unwrap().tx.block_hash.unwrap() == first_block_hash
-                })
+                .filter(|transaction| transaction.tx.block_hash.unwrap() == first_block_hash)
                 .count(),
         );
 

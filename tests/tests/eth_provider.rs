@@ -528,7 +528,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let block_count = u64::MAX;
 
     // Get the total number of blocks in the database.
-    let nbr_blocks = katana.count_block();
+    let nbr_blocks = katana.headers.len();
 
     // Call the fee_history method of the Ethereum provider.
     let fee_history =
@@ -857,7 +857,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     stored_transaction.tx.block_number = Some(1111);
 
     // Insert the transaction into the final transaction collection
-    eth_provider.database().upsert_transaction(stored_transaction.tx).await.expect("Failed to insert documents");
+    eth_provider.database().upsert_transaction(stored_transaction.into()).await.expect("Failed to insert documents");
 
     // Check if the final transaction is returned correctly by the `transaction_by_hash` method
     assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(1111));
