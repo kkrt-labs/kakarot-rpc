@@ -1,9 +1,12 @@
 use crate::{
-    eth_provider::{provider::EthereumProvider, starknet::kakarot_core::to_starknet_transaction},
+    eth_provider::{
+        error::{EthApiError, EthereumDataFormatError, SignatureError},
+        provider::EthereumProvider,
+        starknet::kakarot_core::to_starknet_transaction,
+    },
     eth_rpc::api::kakarot_api::KakarotApiServer,
 };
 use jsonrpsee::core::{async_trait, RpcResult};
-use jsonrpsee_types::{error::INVALID_PARAMS_CODE, ErrorObject};
 use reth_primitives::B256;
 use starknet::{
     core::{
@@ -52,27 +55,18 @@ where
             // Convert the `Transaction` instance to a `TransactionSigned` instance.
             let transaction_signed_ec_recovered: reth_primitives::TransactionSignedEcRecovered = transaction
                 .try_into()
-                .map_err(|_| ErrorObject::owned(INVALID_PARAMS_CODE, "Failed to convert transaction", None::<()>))?;
+                .map_err(|_| EthApiError::from(EthereumDataFormatError::TransactionConversion))?;
 
             let (transaction_signed, _) = transaction_signed_ec_recovered.to_components();
 
             // Retrieve the signer of the transaction.
-            let signer = transaction_signed
-                .recover_signer()
-                .ok_or_else(|| ErrorObject::owned(INVALID_PARAMS_CODE, "Failed to recover signer", None::<()>))?;
+            let signer =
+                transaction_signed.recover_signer().ok_or_else(|| EthApiError::from(SignatureError::Recovery))?;
             // Create the Starknet transaction.
             let starknet_transaction = to_starknet_transaction(&transaction_signed, signer, retries)
-                .map_err(|_| {
-                    ErrorObject::owned(INVALID_PARAMS_CODE, "Failed to convert to StarkNet transaction", None::<()>)
-                })?
+                .map_err(|_| EthApiError::from(EthereumDataFormatError::TransactionConversion))?
                 .try_into_v1()
-                .map_err(|_| {
-                    ErrorObject::owned(
-                        INVALID_PARAMS_CODE,
-                        "Failed to convert StarkNet transaction to version 1",
-                        None::<()>,
-                    )
-                })?;
+                .map_err(|_| EthApiError::from(EthereumDataFormatError::TransactionConversion))?;
 
             let chain_id = self.starknet_provider.chain_id().await.unwrap();
 
