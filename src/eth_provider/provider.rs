@@ -504,7 +504,7 @@ where
             // Execute the transaction using the configured EVM.
             let res = tokio::task::block_in_place(|| {
                 EthEvmConfig::default()
-                    .evm_with_env(db, env)
+                    .evm_with_env(db.0, env)
                     .transact()
                     .map_err(|err| <TransactionError as Into<EthApiError>>::into(TransactionError::Call(err.into())))
             })?;

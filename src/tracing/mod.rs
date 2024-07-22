@@ -93,7 +93,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Traces the transaction with Geth tracing options and returns the resulting traces and state.
     fn trace_geth(
         env: EnvWithHandlerCfg,
-        db: &mut EthCacheDatabase<P>,
+        db: &EthCacheDatabase<P>,
         tx: &reth_rpc_types::Transaction,
         opts: GethDebugTracingOptions,
     ) -> TracingStateResult {
@@ -117,7 +117,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
                     // Build EVM with environment and inspector
                     let eth_evm_config = EthEvmConfig::default();
-                    let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
+                    let evm = eth_evm_config.evm_with_env_and_inspector(db.0.clone(), env, &mut inspector);
 
                     // Execute transaction
                     let res = transact_in_place(evm)?;
@@ -149,7 +149,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         // Use default tracer
         let mut inspector = TracingInspector::new(TracingInspectorConfig::from_geth_config(&config));
         let eth_evm_config = EthEvmConfig::default();
-        let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
+        let evm = eth_evm_config.evm_with_env_and_inspector(db.0.clone(), env, &mut inspector);
         let res = transact_in_place(evm)?;
         let gas_used = res.result.gas_used();
         let return_value = res.result.into_output().unwrap_or_default();
@@ -163,7 +163,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Traces the transaction with Parity tracing options and returns the resulting traces and state.
     fn trace_parity(
         env: EnvWithHandlerCfg,
-        db: &mut EthCacheDatabase<P>,
+        db: &EthCacheDatabase<P>,
         tx: &reth_rpc_types::Transaction,
         tracing_config: TracingInspectorConfig,
     ) -> TracingStateResult {
@@ -180,7 +180,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
         // Build EVM with environment and inspector
         let eth_evm_config = EthEvmConfig::default();
-        let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
+        let evm = eth_evm_config.evm_with_env_and_inspector(db.0.clone(), env, &mut inspector);
 
         // Execute transaction
         let res = transact_in_place(evm)?;
@@ -225,7 +225,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
             let env = env_with_tx(&self.env, tx.clone())?;
             let eth_evm_config = EthEvmConfig::default();
-            transact_commit_in_place(eth_evm_config.evm_with_env(&mut self.db, env))?;
+            transact_commit_in_place(eth_evm_config.evm_with_env(&mut self.db.0, env))?;
         }
 
         Err(EthApiError::TransactionNotFound(transaction_hash))
@@ -275,7 +275,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
                     // Build EVM with environment and inspector.
                     let eth_evm_config = EthEvmConfig::default();
-                    let evm = eth_evm_config.evm_with_env_and_inspector(self.db, env, &mut inspector);
+                    let evm = eth_evm_config.evm_with_env_and_inspector(self.db.0, env, &mut inspector);
 
                     // Execute the transaction.
                     let res = transact_in_place(evm)?;
@@ -320,10 +320,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                     (TracingResult::default_failure(&self.tracing_options, tx), HashMap::default())
                 } else {
                     match &self.tracing_options {
-                        TracingOptions::Geth(opts) => Self::trace_geth(env, &mut db, tx, opts.clone())?,
-                        TracingOptions::Parity(tracing_config) => {
-                            Self::trace_parity(env, &mut db, tx, *tracing_config)?
-                        }
+                        TracingOptions::Geth(opts) => Self::trace_geth(env, &db, tx, opts.clone())?,
+                        TracingOptions::Parity(tracing_config) => Self::trace_parity(env, &db, tx, *tracing_config)?,
                         TracingOptions::GethCall(_) => {
                             return Err(EthApiError::Transaction(TransactionError::Tracing(
                                 eyre!("`TracingOptions::GethCall` is not supported in `trace_transactions` context")
@@ -339,7 +337,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
             // Only commit to the database if there are more transactions to process.
             if transactions.peek().is_some() {
-                db.commit(state_changes);
+                db.0.commit(state_changes);
             }
         }
 

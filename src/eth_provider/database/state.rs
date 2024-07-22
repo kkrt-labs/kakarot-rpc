@@ -1,19 +1,18 @@
 use crate::eth_provider::{error::EthApiError, provider::EthereumProvider};
 use reth_primitives::{Address, B256, U256};
 use reth_revm::{
-    db::{AccountState, CacheDB, DbAccount},
-    primitives::{Account, AccountInfo, Bytecode},
-    Database, DatabaseCommit, DatabaseRef,
+    db::CacheDB,
+    primitives::{AccountInfo, Bytecode},
+    DatabaseRef,
 };
 use reth_rpc_types::{serde_helpers::JsonStorageKey, BlockHashOrNumber, BlockId, BlockNumberOrTag};
-use std::collections::HashMap;
 use tokio::runtime::Handle;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EthCacheDatabase<P: EthereumProvider + Send + Sync>(pub CacheDB<EthDatabase<P>>);
 
 /// Ethereum database type.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
 pub struct EthDatabase<P: EthereumProvider + Send + Sync> {
     /// The Ethereum provider.
@@ -92,77 +91,5 @@ impl<P: EthereumProvider + Send + Sync> DatabaseRef for EthDatabase<P> {
 
             Ok(hash)
         })
-    }
-}
-
-impl<P: EthereumProvider + Send + Sync> Database for EthCacheDatabase<P> {
-    type Error = EthApiError;
-
-    /// Returns the account information for the given address.
-    ///
-    /// # Panics
-    ///
-    /// Panics if called from a non-async runtime.
-    fn basic(&mut self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
-        if let Some(account) = self.0.accounts.get(&address) {
-            return Ok(Some(account.info.clone()));
-        }
-
-        let account_info = DatabaseRef::basic_ref(&self.0, address)?;
-        self.0.insert_account_info(address, account_info.clone().unwrap_or_default());
-
-        Ok(account_info)
-    }
-
-    /// Returns the code for the given code hash.
-    /// TODO: Implement this method in the provider
-    fn code_by_hash(&mut self, _code_hash: B256) -> Result<Bytecode, Self::Error> {
-        Ok(Bytecode::default())
-    }
-
-    /// Returns the storage value for the given address and index.
-    ///
-    /// # Panics
-    ///
-    /// Panics if called from a non-async runtime.
-    fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
-        if let Some(account) = self.0.accounts.get(&address) {
-            return Ok(account.storage.get(&index).copied().unwrap_or_default());
-        }
-
-        let storage = DatabaseRef::storage_ref(&self.0, address, index)?;
-
-        self.0.accounts.entry(address).or_default().storage.insert(index, storage);
-        Ok(storage)
-    }
-
-    /// Returns the block hash for the given block number.
-    ///
-    /// # Panics
-    ///
-    /// Panics if called from a non-async runtime.
-    fn block_hash(&mut self, block_number: u64) -> Result<B256, Self::Error> {
-        let number = U256::from(block_number);
-        if let Some(hash) = self.0.block_hashes.get(&number) {
-            return Ok(*hash);
-        }
-
-        let hash = DatabaseRef::block_hash_ref(&self.0, block_number)?;
-        self.0.block_hashes.insert(number, hash);
-
-        Ok(hash)
-    }
-}
-
-impl<P: EthereumProvider + Send + Sync> DatabaseCommit for EthCacheDatabase<P> {
-    fn commit(&mut self, changes: HashMap<Address, Account>) {
-        for (address, account) in changes {
-            let db_account = DbAccount {
-                info: account.info.clone(),
-                storage: account.storage.into_iter().map(|(k, v)| (k, v.present_value)).collect(),
-                account_state: AccountState::None,
-            };
-            self.0.accounts.insert(address, db_account);
-        }
     }
 }
