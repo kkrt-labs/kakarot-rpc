@@ -22,7 +22,6 @@ use reth_primitives::{
     sign_message, transaction::Signature, Address, BlockNumberOrTag, Bytes, Transaction, TransactionSigned, TxEip1559,
     TxKind, B256, U256, U64,
 };
-use reth_rpc_eth_types::{EthApiError as RethEthApiError, RevertError, RpcInvalidTransactionError};
 use reth_rpc_types::{
     request::TransactionInput, serde_helpers::JsonStorageKey, state::AccountOverride, Filter, FilterBlockOption,
     FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest,
@@ -914,96 +913,6 @@ async fn test_call_with_state_override_balance_failure(#[future] katana: Katana,
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_call_with_state_override_bytecode(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
-    // Extract Katana instance from the plain_opcodes tuple
-    let katana = plain_opcodes.0;
-
-    // Obtain an Ethereum provider instance from the Katana instance
-    let eth_provider = katana.eth_provider();
-
-    // Convert KakarotEvmContract's EVM address to an Address type
-    let contract_address = Address::from_slice(&plain_opcodes.1.evm_address.to_bytes_be()[12..]);
-
-    // Get the EOA (Externally Owned Account) address from Katana
-    let eoa_address = katana.eoa().evm_address().expect("Failed to get eoa address");
-
-    // Define a Solidity contract interface for the counter
-    sol! {
-        #[sol(rpc)]
-        contract CounterContract {
-            function incForLoop(uint256 iterations) external;
-        }
-    }
-
-    // Prepare the calldata for invoking the incForLoop function with 5 iterations
-    let calldata = CounterContract::incForLoopCall { iterations: U256::from(5) }.abi_encode();
-
-    // Define the transaction request for invoking the incForLoop function
-    let request = TransactionRequest {
-        from: Some(eoa_address),
-        to: Some(TxKind::Call(contract_address)),
-        gas: Some(210_000),
-        gas_price: Some(1_000_000_000_000_000_000_000),
-        value: Some(U256::ZERO),
-        nonce: Some(2),
-        input: TransactionInput { input: Some(calldata.clone().into()), data: None },
-        ..Default::default()
-    };
-
-    // Perform the call to invoke the incForLoop function without state override
-    // Attest that the transaction succeeds
-    let _ = eth_provider
-        .call(request.clone(), None, None, None)
-        .await
-        .expect("Failed to call incForLoopCall in Kakarot constract");
-
-    // Define another Solidity contract with a different interface and bytecode
-    sol! {
-        #[sol(rpc, bytecode = "60803461006357601f61014838819003918201601f19168301916001600160401b038311848410176100675780849260209460405283398101031261006357518015158091036100635760ff80195f54169116175f5560405160cc908161007c8239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe60808060405260043610156011575f80fd5b5f3560e01c9081638bf1799f14607a575063b09a261614602f575f80fd5b346076576040366003190112607657602435801515810360765715606f57604060015b81516004356001600160a01b0316815260ff919091166020820152f35b60405f6052565b5f80fd5b346076575f36600319011260765760209060ff5f541615158152f3fea264697066735822122043709781c9bdc30c530978abf5db25a4b4ccfebf989baafd2ba404519a7f7e8264736f6c63430008180033")]
-        contract MyContract {
-            bool public myState;
-
-            constructor(bool myState_) {
-                myState = myState_;
-            }
-
-            function doStuff(uint a, bool b) external pure returns(address c, bytes32 d) {
-                return (address(uint160(a)), bytes32(uint256(b ? 1 : 0)));
-            }
-        }
-    }
-
-    // Extract the bytecode for the MyContract contract
-    let bytecode = &MyContract::BYTECODE[..];
-
-    // State override with the MyContract bytecode
-    // Change the contract bytecode
-    let mut state_override: HashMap<Address, AccountOverride> = HashMap::new();
-    state_override.insert(
-        contract_address,
-        AccountOverride { code: Some(bytecode.into()), balance: Some(U256::MAX), ..Default::default() },
-    );
-
-    // Attempt to call the incForLoop function which doesn't exist in the MyContract contract
-    //
-    // Should fail as the contract bytecode is different now with state override
-    match eth_provider.call(request, None, Some(state_override), None).await {
-        // If call succeeds, panic as an error was expected
-        Ok(_) => panic!("Expected an error but got a success response"),
-        // If call fails, check if the error is due to a transaction revert
-        Err(e) => match e {
-            EthApiError::RethEthApi(RethEthApiError::InvalidTransaction(RpcInvalidTransactionError::Revert(err))) => {
-                assert_eq!(err.to_string(), RevertError::new(Default::default()).to_string());
-            }
-            // If a different error occurs, panic
-            _ => panic!("Expected an invalid transaction revert error but got a different error: {e:?}"),
-        },
-    }
-}
-
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_call_with_state_override_bytecode1(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
     // Extract Katana instance from the plain_opcodes tuple
     let katana = plain_opcodes.0;
 
