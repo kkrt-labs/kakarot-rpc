@@ -1,14 +1,15 @@
 use crate::{
+    config::KakarotRpcConfig,
     eth_provider::{
-        constant::{
-            Constant, ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN,
-            LOGS_TOPICS_HEX_STRING_LEN, MAX_LOGS, MAX_PRIORITY_FEE_PER_GAS, STARKNET_MODULUS, U64_HEX_STRING_LEN,
-        },
+        constant::{Constant, MAX_LOGS},
         error::{EthApiError, EthereumDataFormatError, SignatureError},
         provider::EthereumProvider,
-        starknet::kakarot_core::to_starknet_transaction,
+        starknet::kakarot_core::{
+            get_white_listed_eip_155_transaction_hashes, to_starknet_transaction, MAX_FELTS_IN_CALLDATA,
+        },
     },
     eth_rpc::api::kakarot_api::KakarotApiServer,
+    retry::{get_retry_tx_interval, get_transaction_max_retries},
 };
 use jsonrpsee::core::{async_trait, RpcResult};
 use reth_primitives::B256;
@@ -95,16 +96,14 @@ where
     }
 
     async fn get_config(&self) -> RpcResult<Constant> {
+        let starknet_config = KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config");
         Ok(Constant {
             max_logs: *MAX_LOGS,
-            max_priority_fee_per_gas: *MAX_PRIORITY_FEE_PER_GAS,
-            call_request_gas_limit: CALL_REQUEST_GAS_LIMIT,
-            hash_hex_string_len: HASH_HEX_STRING_LEN,
-            logs_topics_hex_string_len: LOGS_TOPICS_HEX_STRING_LEN,
-            u64_hex_string_len: U64_HEX_STRING_LEN,
-            block_number_hex_string_len: BLOCK_NUMBER_HEX_STRING_LEN,
-            address_hex_string_len: ADDRESS_HEX_STRING_LEN,
-            starknet_modulus: STARKNET_MODULUS,
+            starknet_network: starknet_config.network_url,
+            retry_tx_interval: get_retry_tx_interval(),
+            transaction_max_retries: get_transaction_max_retries(),
+            max_felts_in_calldata: *MAX_FELTS_IN_CALLDATA,
+            white_listed_eip_155_transaction_hashes: get_white_listed_eip_155_transaction_hashes(),
         })
     }
 }

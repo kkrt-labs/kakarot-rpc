@@ -1,14 +1,14 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use kakarot_rpc::{
+    config::KakarotRpcConfig,
     eth_provider::{
-        constant::{
-            Constant, ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN,
-            LOGS_TOPICS_HEX_STRING_LEN, MAX_LOGS, MAX_PRIORITY_FEE_PER_GAS, STARKNET_MODULUS, U64_HEX_STRING_LEN,
-        },
+        constant::{Constant, MAX_LOGS},
         database::types::transaction::StoredPendingTransaction,
         provider::EthereumProvider,
+        starknet::kakarot_core::{get_white_listed_eip_155_transaction_hashes, MAX_FELTS_IN_CALLDATA},
     },
+    retry::{get_retry_tx_interval, get_transaction_max_retries},
     test_utils::{
         eoa::Eoa,
         fixtures::{katana, setup},
@@ -138,16 +138,14 @@ async fn test_kakarot_get_starknet_transaction_hash_with_none_tx_hash(#[future] 
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_kakarot_get_config(#[future] katana: Katana, _setup: ()) {
+    let starknet_config = KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config");
     let expected_constant = Constant {
         max_logs: *MAX_LOGS,
-        max_priority_fee_per_gas: *MAX_PRIORITY_FEE_PER_GAS,
-        call_request_gas_limit: CALL_REQUEST_GAS_LIMIT,
-        hash_hex_string_len: HASH_HEX_STRING_LEN,
-        logs_topics_hex_string_len: LOGS_TOPICS_HEX_STRING_LEN,
-        u64_hex_string_len: U64_HEX_STRING_LEN,
-        block_number_hex_string_len: BLOCK_NUMBER_HEX_STRING_LEN,
-        address_hex_string_len: ADDRESS_HEX_STRING_LEN,
-        starknet_modulus: STARKNET_MODULUS,
+        starknet_network: starknet_config.network_url,
+        retry_tx_interval: get_retry_tx_interval(),
+        transaction_max_retries: get_transaction_max_retries(),
+        max_felts_in_calldata: *MAX_FELTS_IN_CALLDATA,
+        white_listed_eip_155_transaction_hashes: get_white_listed_eip_155_transaction_hashes(),
     };
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");

@@ -1,7 +1,8 @@
 use lazy_static::lazy_static;
-use reth_primitives::U256;
+use reth_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+use url::Url;
 #[cfg(feature = "hive")]
 use {
     crate::config::KakarotRpcConfig,
@@ -61,16 +62,13 @@ lazy_static! {
     pub static ref DEPLOY_WALLET_NONCE: Arc<Mutex<Felt>> = Arc::new(Mutex::new(Felt::ZERO));
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 // Struct used to return the constant values from the kakarot_getConfig endpoint
 pub struct Constant {
-    pub max_priority_fee_per_gas: u64,
     pub max_logs: Option<u64>,
-    pub call_request_gas_limit: u128,
-    pub hash_hex_string_len: usize,
-    pub logs_topics_hex_string_len: usize,
-    pub u64_hex_string_len: usize,
-    pub block_number_hex_string_len: usize,
-    pub address_hex_string_len: usize,
-    pub starknet_modulus: U256,
+    pub starknet_network: Url,
+    pub retry_tx_interval: u64,
+    pub transaction_max_retries: u8,
+    pub max_felts_in_calldata: usize,
+    pub white_listed_eip_155_transaction_hashes: Vec<B256>,
 }
