@@ -622,8 +622,7 @@ where
         validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
 
         // Remove the signer's balance from the cache, as it will be updated after the transaction is executed
-        let mut balance_map = self.balance_map.lock().await;
-        balance_map.remove(&signer);
+        self.balance_map.lock().await.remove(&signer);
 
         // Get the number of retries for the transaction
         let retries = self.database.pending_transaction_retries(&transaction_signed.hash).await?;
