@@ -9,6 +9,7 @@ use crate::eth_provider::{
     provider::EthereumProvider,
 };
 use eyre::Result;
+use opentelemetry::metrics::{Gauge, Unit};
 use reth_primitives::{TransactionSignedEcRecovered, B256};
 use std::{
     fmt,
@@ -16,6 +17,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tokio::runtime::Handle;
+use tracing::{instrument, Instrument};
 #[cfg(test)]
 use {futures::lock::Mutex, std::sync::Arc};
 
@@ -37,6 +39,8 @@ pub struct RetryHandler<P: EthereumProvider> {
     eth_provider: P,
     /// The database.
     database: Database,
+    /// The time to retry transactions recorded in an Observable.
+    retry_time: Gauge<u64>,
     /// The retried transactions hashes.
     #[cfg(test)]
     retried: Arc<Mutex<Vec<B256>>>,
@@ -58,31 +62,33 @@ where
     /// Creates a new [`RetryHandler`] with the given Ethereum provider, database.
     #[allow(clippy::missing_const_for_fn)]
     pub fn new(eth_provider: P, database: Database) -> Self {
+        let retry_time = opentelemetry::global::meter("retry_service")
+            .u64_gauge("retry_time")
+            .with_description("The time taken to process pending transactions")
+            .with_unit(Unit::new("microseconds"))
+            .init();
         Self {
             eth_provider,
             database,
+            retry_time,
             #[cfg(test)]
             retried: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
     /// Spawns a new task on the provided tokio runtime that will retry transactions.
+    #[instrument(skip_all, name = "retry_service")]
     pub fn start(self, rt_handle: &Handle) {
-        tracing::info!("Starting retry service");
+        tracing::info!("starting retry service");
         rt_handle.spawn(async move {
-            let mut last_print_time = Instant::now();
-
             loop {
-                let start_time_fn = Instant::now();
+                let start = Instant::now();
                 if let Err(err) = self.process_pending_transactions().await {
-                    tracing::error!("Error while retrying transactions: {:?}", err);
+                    tracing::error!(?err);
                 }
-                let elapsed_time_ms = start_time_fn.elapsed().as_millis();
-
-                if last_print_time.elapsed() >= Duration::from_secs(300) {
-                    tracing::info!("Elapsed time to retry transactions (milliseconds): {}", elapsed_time_ms);
-                    last_print_time = Instant::now();
-                }
+                let end = Instant::now();
+                let elapsed = end - start;
+                self.retry_time.record(elapsed.as_micros() as u64, &[]);
 
                 tokio::time::sleep(Duration::from_secs(get_retry_tx_interval())).await;
             }
@@ -91,8 +97,10 @@ where
 
     /// Processes all current pending transactions by retrying them
     /// and pruning them if necessary.
+    #[instrument(skip_all)]
     async fn process_pending_transactions(&self) -> Result<()> {
         let pending_transactions = self.pending_transactions().await?;
+        tracing::info!(count = pending_transactions.len());
         for transaction in pending_transactions {
             if self.should_retry(&transaction).await? {
                 self.retry_transaction(transaction).await?;
@@ -106,7 +114,7 @@ where
     /// Retries a transaction and prunes it if the conversion to a primitive transaction fails.
     async fn retry_transaction(&self, transaction: StoredPendingTransaction) -> Result<()> {
         let hash = transaction.hash;
-        tracing::info!("Retrying transaction {hash} with {} retries", transaction.retries + 1);
+        tracing::info!(%hash, retries = transaction.retries + 1, "retrying");
 
         // Generate primitive transaction, handle error if any
         let transaction = match TransactionSignedEcRecovered::try_from(transaction.tx.clone()) {
@@ -125,7 +133,7 @@ where
 
     /// Prunes a transaction from the database given its hash.
     async fn prune_transaction(&self, hash: B256) -> Result<()> {
-        tracing::info!("Pruning pending transaction: {hash}");
+        tracing::info!(%hash, "pruning");
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&hash).build();
         self.database.delete_one::<StoredPendingTransaction>(filter).await?;
         Ok(())
@@ -133,14 +141,16 @@ where
 
     /// Returns all pending transactions.
     async fn pending_transactions(&self) -> Result<Vec<StoredPendingTransaction>> {
-        Ok(self.database.get_all().await?)
+        let span = tracing::span!(tracing::Level::INFO, "db::pending_transactions");
+        Ok(self.database.get_all().instrument(span).await?)
     }
 
     /// Returns true if the transaction should be retried. A transaction should be retried if it has
     /// not been executed and the number of retries is less than the maximum number of retries.
     async fn should_retry(&self, transaction: &StoredPendingTransaction) -> Result<bool> {
         let max_retries_reached = transaction.retries + 1 >= get_transaction_max_retries();
-        let transaction_executed = self.database.transaction(&transaction.hash).await?.is_some();
+        let span = tracing::span!(tracing::Level::INFO, "db::transaction");
+        let transaction_executed = self.database.transaction(&transaction.hash).instrument(span).await?.is_some();
         Ok(!max_retries_reached && !transaction_executed)
     }
 }
