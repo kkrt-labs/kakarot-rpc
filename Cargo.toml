@@ -3,13 +3,13 @@ name = "kakarot-rpc"
 version = "0.6.20"
 edition = "2021"
 authors = [
-    "Abdelhamid Bakhta <@abdelhamidbakhta>",
-    "Elias Tazartes <@eikix>",
-    "Clement Walter <@clementwalter>",
-    "Gregory Edison <@greged93>",
-    "Johann Bestowrous <@jobez>",
-    "Harsh Bajpai <@bajpai244>",
-    "Danilo Kim <@danilowhk>",
+  "Abdelhamid Bakhta <@abdelhamidbakhta>",
+  "Elias Tazartes <@eikix>",
+  "Clement Walter <@clementwalter>",
+  "Gregory Edison <@greged93>",
+  "Johann Bestowrous <@jobez>",
+  "Harsh Bajpai <@bajpai244>",
+  "Danilo Kim <@danilowhk>",
 ]
 description = "RPC node for the Kakarot zk EVM"
 homepage = "https://github.com/kkrt-labs"
@@ -50,7 +50,7 @@ no_effect_underscore_binding = "allow"
 [dependencies]
 # Starknet dependencies
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.0", default-features = false, features = [
-    "abigen-rs",
+  "abigen-rs",
 ] }
 starknet = { version = "0.11", default-features = false }
 num-traits = { version = "0.2", default-features = false }
@@ -61,10 +61,10 @@ alloy-sol-types = { version = "0.7.2", default-features = false }
 alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
 jsonrpsee = { version = "0.23", features = ["macros", "server"] }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, features = [
-    "alloy-compat",
+  "alloy-compat",
 ] }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, features = [
-    "arbitrary",
+  "arbitrary",
 ] }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
@@ -107,15 +107,15 @@ dotenvy = { version = "0.15", default-features = false }
 itertools = { version = "0.13", default-features = false }
 lazy_static = { version = "1", default-features = false }
 mongodb = { version = "3.0", default-features = false, features = [
-    "rustls-tls",
-    "compat-3-0-0",
+  "rustls-tls",
+  "compat-3-0-0",
 ] }
 
 # Prometheus
 prometheus = { version = "0.13", default-features = false }
 hyper = { version = "1", default-features = false }
 hyper-util = { version = "0.1", default-features = false, features = [
-    "server",
+  "server",
 ] }
 http-body-util = { version = "0.1", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
@@ -128,7 +128,7 @@ alloy-signer-local = { version = "0.2.0", default-features = false, optional = t
 anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
 ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "2f5b44b", default-features = false, features = [
-    "v0",
+  "v0",
 ], optional = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master", optional = true }
 rand = { version = "0.8", default-features = false, optional = true }
@@ -139,14 +139,14 @@ strum = { version = "0.26", default-features = false, optional = true }
 strum_macros = { version = "0.26", default-features = false, optional = true }
 testcontainers = { version = "0.19", default-features = false, optional = true }
 tokio-util = { version = "0.7", features = [
-    "codec",
+  "codec",
 ], default-features = false, optional = true }
 tokio-stream = { version = "0.1", default-features = false, optional = true }
 walkdir = { version = "2.5", default-features = false, optional = true }
 
 dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.2", default-features = false, optional = true }
 katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.2", default-features = false, features = [
-    "serde",
+  "serde",
 ], optional = true }
 
 [patch.crates-io]
@@ -160,25 +160,25 @@ toml = { version = "0.8", default-features = false }
 
 [features]
 testing = [
-    "alloy-json-abi",
-    "alloy-primitives",
-    "alloy-signer-local",
-    "anyhow",
-    "dep:arbitrary",
-    "dojo-test-utils",
-    "ef-testing",
-    "foundry-config",
-    "katana-primitives",
-    "rand",
-    "rayon",
-    "rstest",
-    "serde_with",
-    "strum",
-    "strum_macros",
-    "testcontainers",
-    "tokio-stream",
-    "tokio-util",
-    "walkdir",
+  "alloy-json-abi",
+  "alloy-primitives",
+  "alloy-signer-local",
+  "anyhow",
+  "dep:arbitrary",
+  "dojo-test-utils",
+  "ef-testing",
+  "foundry-config",
+  "katana-primitives",
+  "rand",
+  "rayon",
+  "rstest",
+  "serde_with",
+  "strum",
+  "strum_macros",
+  "testcontainers",
+  "tokio-stream",
+  "tokio-util",
+  "walkdir",
 ]
 hive = []
 arbitrary = ["rand", "dep:arbitrary"]
