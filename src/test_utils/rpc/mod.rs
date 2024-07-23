@@ -77,7 +77,7 @@ async fn get_next_port() -> u16 {
 #[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
     Ok(run_server(
-        KakarotRpcModuleBuilder::new(katana.eth_provider()).rpc_module()?,
+        KakarotRpcModuleBuilder::new(katana.eth_provider(), katana.starknet_provider()).rpc_module()?,
         #[cfg(feature = "testing")]
         RPCConfig::new_test_config_from_port(get_next_port().await),
         #[cfg(not(feature = "testing"))]
