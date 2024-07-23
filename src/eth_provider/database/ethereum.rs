@@ -124,7 +124,7 @@ impl EthereumBlockStore for Database {
             .get_one::<StoredHeader>(filter, None)
             .await
             .map_err(|_| EthApiError::UnknownBlock(block_hash_or_number))?
-            .map(|sh| sh.header))
+            .map(Into::into))
     }
 
     #[instrument(skip_all, name = "db::block", err)]
