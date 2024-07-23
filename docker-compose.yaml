@@ -5,7 +5,7 @@ services:
     platform: linux/amd64
     image: ghcr.io/foundry-rs/foundry:latest
     command:
-      ["anvil --host 0.0.0.0 --port 8545 --load-state /app/.anvil/state.json"]
+      [ "anvil --host 0.0.0.0 --port 8545 --load-state /app/.anvil/state.json" ]
     # Initial state has the StarknetMessaging and L1KakarotMessaging contracts deployed
     volumes:
       - .anvil:/app/.anvil
@@ -16,7 +16,7 @@ services:
     restart: on-failure
 
   starknet:
-    image: ghcr.io/dojoengine/dojo:v1.0.0-alpha.2
+    image: ghcr.io/dojoengine/dojo:v0.7.3
     command:
       - katana
       - --disable-fee
@@ -97,6 +97,7 @@ services:
       - MAX_LOGS=10000
       - RETRY_TX_INTERVAL=1
       - WHITE_LISTED_EIP_155_TRANSACTION_HASHES=0xeddf9e61fb9d8f5111840daef55e5fde0041f5702856532cdbb5a02998033d26,0xb6274b80bc7cda162df89894c7748a5cb7ba2eaa6004183c41a1837c3b072f1e,0x07471adfe8f4ec553c1199f495be97fc8be8e0626ae307281c22534460184ed1,0xb95343413e459a0f97461812111254163ae53467855c0d73e0f1e7c5b8442fa3
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel:4317
     volumes:
       # Mount the volume on workdir and use .env stored in root of the volume
       - deployments:/usr/src/app
@@ -170,6 +171,21 @@ services:
         condition: service_started
       deployments-parser:
         condition: service_completed_successfully
+
+  otel:
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - 1888:1888 # pprof extension
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 8889:8889 # Prometheus exporter metrics
+      - 13133:13133 # health_check extension
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+      - 55679:55679 # zpages extension
+    networks:
+      - internal
 
 networks:
   internal:

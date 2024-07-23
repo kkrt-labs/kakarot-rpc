@@ -7,18 +7,19 @@ use kakarot_rpc::{
     retry::RetryHandler,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
+use opentelemetry_sdk::runtime::Tokio;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{env::var, sync::Arc};
-use tracing_subscriber::{filter, util::SubscriberInitExt};
+use tracing_opentelemetry::MetricsLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::{util::SubscriberInitExt, EnvFilter, Layer};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Environment variables are safe to use after this
     dotenv().ok();
 
-    let filter = format!("kakarot_rpc={}", std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()));
-    let filter = filter::EnvFilter::new(filter);
-    tracing_subscriber::FmtSubscriber::builder().with_env_filter(filter).finish().try_init()?;
+    setup_tracing().expect("failed to start tracing and metrics");
 
     // Load the configuration
     let starknet_config = KakarotRpcConfig::from_env()?;
@@ -63,6 +64,28 @@ async fn main() -> Result<()> {
     tracing::info!("RPC Server running on {url}...");
 
     server_handle.stopped().await;
+
+    Ok(())
+}
+
+fn setup_tracing() -> Result<()> {
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .install_batch(Tokio)?;
+    let tracing_layer = tracing_opentelemetry::layer().with_tracer(tracer).boxed();
+
+    let metrics = opentelemetry_otlp::new_pipeline()
+        .metrics(Tokio)
+        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .build()?;
+    let metrics_layer = MetricsLayer::new(metrics).boxed();
+
+    let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
+    let env_filter = EnvFilter::builder().parse(filter)?;
+
+    let stacked_layer = tracing_layer.and_then(metrics_layer).and_then(env_filter);
+    tracing_subscriber::registry().with(stacked_layer).init();
 
     Ok(())
 }
