@@ -27,6 +27,18 @@ impl<P: EthereumProvider + Send + Sync> EthDatabase<P> {
     }
 }
 
+/// The [`DatabaseRef`] trait implementation for [`EthDatabase`].
+///
+/// This implementation is designed to handle database interactions in a manner that is compatible
+/// with both synchronous and asynchronous Rust contexts. Given the constraints of the underlying
+/// database operations, it's necessary to perform blocking calls in a controlled manner to avoid
+/// blocking the asynchronous runtime.
+///
+/// ### Why Use `tokio::task::block_in_place`?
+///
+/// The `tokio::task::block_in_place` function is employed here to enter a blocking context safely
+/// within an asynchronous environment. This allows the blocking database operations to be executed
+/// without hindering the performance of other asynchronous tasks or blocking the runtime.
 impl<P: EthereumProvider + Send + Sync> DatabaseRef for EthDatabase<P> {
     type Error = EthApiError;
 
