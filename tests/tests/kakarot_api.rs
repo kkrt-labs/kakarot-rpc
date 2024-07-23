@@ -138,6 +138,11 @@ async fn test_kakarot_get_starknet_transaction_hash_with_none_tx_hash(#[future] 
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_kakarot_get_config(#[future] katana: Katana, _setup: ()) {
+    std::env::set_var("STARKNET_NETWORK", "http://0.0.0.0:1010");
+    std::env::set_var(
+        "WHITE_LISTED_EIP_155_TRANSACTION_HASHES",
+        "0xe65425dacfc1423823cb4766aa0192ffde61eaa9bf81af9fe15149a89ef36c28",
+    );
     let starknet_config = KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config");
     let expected_constant = Constant {
         max_logs: *MAX_LOGS,
