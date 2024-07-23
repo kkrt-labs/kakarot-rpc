@@ -5,7 +5,6 @@ use kakarot_rpc::{
     eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
-        error::{EthApiError, TransactionError},
         provider::EthereumProvider,
     },
     models::felt::Felt252Wrapper,
@@ -891,22 +890,14 @@ async fn test_call_with_state_override_balance_failure(#[future] katana: Katana,
         .insert(eoa_address, AccountOverride { balance: Some(U256::from(1_000_000_000)), ..Default::default() });
 
     // Attempt to call and handle the result
-    // Should fail as the EOA balance is lower than the required value
-    match eth_provider.call(request, None, Some(state_override.clone()), None).await {
-        // If call succeeds, panic as an error was expected
-        Ok(_) => panic!("Expected an error but got a success response"),
-        // If call fails, check if the error is due to insufficient funds
-        Err(e) => match e {
-            EthApiError::Transaction(TransactionError::Call(err)) => {
-                assert_eq!(
-                    err.to_string(),
-                    "transaction validation error: lack of funds (1000000000) for max fee (1000210001)",
-                );
-            }
-            // If a different error occurs, panic
-            _ => panic!("Expected a transaction error but got a different error: {e:?}"),
-        },
-    }
+    let res = eth_provider.call(request, None, Some(state_override.clone()), None).await;
+
+    // If the call succeeds, panic as an error was expected
+    // If the call fails, get the error and convert it to a string
+    let err = res.unwrap_err().to_string();
+
+    // Check if the error is due to insufficient funds
+    assert_eq!(err, "tracing error: transaction validation error: lack of funds (1000000000) for max fee (1000210001)");
 }
 
 #[rstest]
