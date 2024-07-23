@@ -71,6 +71,8 @@ use starknet::core::{
     types::{Felt, SyncStatusType},
     utils::get_storage_var_address,
 };
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 use tracing::{instrument, Instrument};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
@@ -152,6 +154,8 @@ pub trait EthereumProvider {
     ) -> EthProviderResult<FeeHistory>;
     /// Send a raw transaction to the network and returns the transactions hash.
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256>;
+    /// Check the cached balance of the signer and return an error if the balance is not enough.
+    async fn check_cached_balance(&self, signer: Address, transaction_value: U256) -> Result<(), EthApiError>;
     /// Returns the current gas price.
     async fn gas_price(&self) -> EthProviderResult<U256>;
     /// Returns the block receipts for a block.
@@ -175,6 +179,7 @@ pub struct EthDataProvider<SP: starknet::providers::Provider> {
     database: Database,
     starknet_provider: SP,
     chain_id: u64,
+    balance_map: Arc<Mutex<HashMap<Address, U256>>>,
 }
 
 impl<SP> EthDataProvider<SP>
@@ -605,12 +610,20 @@ where
         let chain_id: u64 =
             self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
 
-        // Validate the transaction
         let latest_block_header = self.database.latest_header().await?.ok_or(EthApiError::UnknownBlockNumber(None))?;
-        validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
+
+        // Check the cached balance of the signer
+        self.check_cached_balance(signer, transaction_signed.value()).await?;
+
+        // Validate the transaction
+        validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
+
+        // Remove the signer's balance from the cache, as it will be updated after the transaction is executed
+        let mut balance_map = self.balance_map.lock().await;
+        balance_map.remove(&signer);
 
         // Get the number of retries for the transaction
         let retries = self.database.pending_transaction_retries(&transaction_signed.hash).await?;
@@ -648,6 +661,31 @@ where
         );
 
         Ok(hash)
+    }
+
+    async fn check_cached_balance(&self, signer: Address, transaction_value: U256) -> Result<(), EthApiError> {
+        let balance_map = self.balance_map.lock().await;
+        let balance_option = balance_map.get(&signer).copied();
+        drop(balance_map);
+
+        // Check the cached balance of the signer
+        if let Some(balance) = balance_option {
+            // If the balance is not enough, return an error
+            if balance < transaction_value {
+                return Err(ExecutionError::from(EvmError::Balance).into());
+            }
+        } else {
+            // If the balance is not cached, fetch it
+            let user_balance = self.balance(signer, None).await?;
+            // If the balance is not enough, return an error
+            if user_balance < transaction_value {
+                return Err(ExecutionError::from(EvmError::Balance).into());
+            }
+            // Cache the balance for future use
+            let mut balance_map = self.balance_map.lock().await;
+            balance_map.insert(signer, user_balance);
+        }
+        Ok(())
     }
 
     async fn gas_price(&self) -> EthProviderResult<U256> {
@@ -719,8 +757,9 @@ where
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
         let chain_id =
             (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
+        let balance_map = Arc::new(Mutex::new(HashMap::new()));
 
-        Ok(Self { database, starknet_provider, chain_id })
+        Ok(Self { database, starknet_provider, chain_id, balance_map })
     }
 
     #[cfg(feature = "testing")]
