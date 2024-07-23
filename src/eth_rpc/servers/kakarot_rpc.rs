@@ -1,10 +1,15 @@
 use crate::{
+    config::KakarotRpcConfig,
     eth_provider::{
+        constant::{Constant, MAX_LOGS},
         error::{EthApiError, EthereumDataFormatError, SignatureError},
         provider::EthereumProvider,
-        starknet::kakarot_core::to_starknet_transaction,
+        starknet::kakarot_core::{
+            get_white_listed_eip_155_transaction_hashes, to_starknet_transaction, MAX_FELTS_IN_CALLDATA,
+        },
     },
     eth_rpc::api::kakarot_api::KakarotApiServer,
+    retry::{get_retry_tx_interval, get_transaction_max_retries},
 };
 use jsonrpsee::core::{async_trait, RpcResult};
 use reth_primitives::B256;
@@ -88,5 +93,17 @@ where
         } else {
             Ok(None)
         }
+    }
+
+    async fn get_config(&self) -> RpcResult<Constant> {
+        let starknet_config = KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config");
+        Ok(Constant {
+            max_logs: *MAX_LOGS,
+            starknet_network: String::from(starknet_config.network_url),
+            retry_tx_interval: get_retry_tx_interval(),
+            transaction_max_retries: get_transaction_max_retries(),
+            max_felts_in_calldata: *MAX_FELTS_IN_CALLDATA,
+            white_listed_eip_155_transaction_hashes: get_white_listed_eip_155_transaction_hashes(),
+        })
     }
 }
