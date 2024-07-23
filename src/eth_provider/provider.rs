@@ -56,6 +56,7 @@ use starknet::core::{
     types::{Felt, SyncStatusType},
     utils::get_storage_var_address,
 };
+use tracing::{instrument, Instrument};
 
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
@@ -146,7 +147,7 @@ pub trait EthereumProvider {
 }
 
 /// Structure that implements the `EthereumProvider` trait.
-/// Uses an access to a database to certain data, while
+/// Uses access to a database for certain data, while
 /// the rest is fetched from the Starknet Provider.
 #[derive(Debug, Clone)]
 pub struct EthDataProvider<SP: starknet::providers::Provider> {
@@ -178,7 +179,10 @@ where
     async fn block_number(&self) -> EthProviderResult<U64> {
         let block_number = match self.database.latest_header().await? {
             // In case the database is empty, use the starknet provider
-            None => U64::from(self.starknet_provider.block_number().await.map_err(KakarotError::from)?),
+            None => {
+                let span = tracing::span!(tracing::Level::INFO, "sn::block_number");
+                U64::from(self.starknet_provider.block_number().instrument(span).await.map_err(KakarotError::from)?)
+            }
             Some(header) => {
                 let number = header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;
                 let is_pending_block = header.hash.unwrap_or_default().is_zero();
@@ -189,7 +193,8 @@ where
     }
 
     async fn syncing(&self) -> EthProviderResult<SyncStatus> {
-        Ok(match self.starknet_provider.syncing().await.map_err(KakarotError::from)? {
+        let span = tracing::span!(tracing::Level::INFO, "sn::syncing");
+        Ok(match self.starknet_provider.syncing().instrument(span).await.map_err(KakarotError::from)? {
             SyncStatusType::NotSyncing => SyncStatus::None,
             SyncStatusType::Syncing(data) => SyncStatus::Info(SyncInfo {
                 starting_block: U256::from(data.starting_block_num),
@@ -301,7 +306,13 @@ where
         let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, &self.starknet_provider);
 
         // Call the `balanceOf` method on the contract for the given address and block ID, awaiting the result
-        let res = eth_contract.balanceOf(&starknet_address(address)).block_id(starknet_block_id).call().await;
+        let span = tracing::span!(tracing::Level::INFO, "sn::balance");
+        let res = eth_contract
+            .balanceOf(&starknet_address(address))
+            .block_id(starknet_block_id)
+            .call()
+            .instrument(span)
+            .await;
 
         // Check if the contract was not found or the class hash not declared,
         // returning a default balance of 0 if true.
@@ -335,7 +346,9 @@ where
         let keys = split_u256(index.0);
         let storage_address = get_storage_var_address("Account_storage", &keys).expect("Storage var name is not ASCII");
 
-        let maybe_storage = contract.storage(&storage_address).block_id(starknet_block_id).call().await;
+        let span = tracing::span!(tracing::Level::INFO, "sn::storage");
+        let maybe_storage =
+            contract.storage(&storage_address).block_id(starknet_block_id).call().instrument(span).await;
 
         if contract_not_found(&maybe_storage) || entrypoint_not_found(&maybe_storage) {
             return Ok(U256::ZERO.into());
@@ -354,7 +367,8 @@ where
 
         let address = starknet_address(address);
         let account_contract = AccountContractReader::new(address, &self.starknet_provider);
-        let maybe_nonce = account_contract.get_nonce().block_id(starknet_block_id).call().await;
+        let span = tracing::span!(tracing::Level::INFO, "sn::kkrt_nonce");
+        let maybe_nonce = account_contract.get_nonce().block_id(starknet_block_id).call().instrument(span).await;
 
         if contract_not_found(&maybe_nonce) || entrypoint_not_found(&maybe_nonce) {
             return Ok(U256::ZERO);
@@ -364,7 +378,9 @@ where
         // Get the protocol nonce as well, in edge cases where the protocol nonce is higher than the account nonce.
         // This can happen when an underlying Starknet transaction reverts => Account storage changes are reverted,
         // but the protocol nonce is still incremented.
-        let protocol_nonce = self.starknet_provider.get_nonce(starknet_block_id, address).await.unwrap_or_default();
+        let span = tracing::span!(tracing::Level::INFO, "sn::protocol_nonce");
+        let protocol_nonce =
+            self.starknet_provider.get_nonce(starknet_block_id, address).instrument(span).await.unwrap_or_default();
         let nonce = nonce.max(protocol_nonce);
 
         Ok(into_via_wrapper!(nonce))
@@ -375,7 +391,8 @@ where
 
         let address = starknet_address(address);
         let account_contract = AccountContractReader::new(address, &self.starknet_provider);
-        let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().await;
+        let span = tracing::span!(tracing::Level::INFO, "sn::code");
+        let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().instrument(span).await;
 
         if contract_not_found(&bytecode) || entrypoint_not_found(&bytecode) {
             return Ok(Bytes::default());
@@ -467,8 +484,6 @@ where
         // 0 <= start_block <= end_block
         let start_block = end_block_plus_one.saturating_sub(block_count.to());
 
-        // TODO: check if we should use a projection since we only need the gasLimit and gasUsed.
-        // This means we need to introduce a new type for the StoredHeader.
         let header_filter = doc! {"$and": [ { "header.number": { "$gte": format_hex(start_block, BLOCK_NUMBER_HEX_STRING_LEN) } }, { "header.number": { "$lte": format_hex(end_block, BLOCK_NUMBER_HEX_STRING_LEN) } } ] };
         let blocks: Vec<StoredHeader> = self.database.get(header_filter, None).await?;
 
@@ -535,8 +550,13 @@ where
         self.deploy_evm_transaction_signer(signer).await?;
 
         // Add the transaction to the Starknet provider
-        let res =
-            self.starknet_provider.add_invoke_transaction(starknet_transaction).await.map_err(KakarotError::from)?;
+        let span = tracing::span!(tracing::Level::INFO, "sn::add_invoke_transaction");
+        let res = self
+            .starknet_provider
+            .add_invoke_transaction(starknet_transaction)
+            .instrument(span)
+            .await
+            .map_err(KakarotError::from)?;
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
@@ -554,7 +574,9 @@ where
 
     async fn gas_price(&self) -> EthProviderResult<U256> {
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
-        let gas_price = kakarot_contract.get_base_fee().call().await.map_err(ExecutionError::from)?.base_fee;
+        let span = tracing::span!(tracing::Level::INFO, "sn::base_fee");
+        let gas_price =
+            kakarot_contract.get_base_fee().call().instrument(span).await.map_err(ExecutionError::from)?.base_fee;
         Ok(into_via_wrapper!(gas_price))
     }
 
@@ -597,7 +619,8 @@ where
     }
 
     async fn txpool_transactions(&self) -> EthProviderResult<Vec<Transaction>> {
-        Ok(self.database.get_all_and_map_to::<Transaction, StoredPendingTransaction>().await?)
+        let span = tracing::span!(tracing::Level::INFO, "sn::txpool");
+        Ok(self.database.get_all_and_map_to::<Transaction, StoredPendingTransaction>().instrument(span).await?)
     }
 
     async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {
@@ -628,6 +651,7 @@ where
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.
+    #[instrument(skip(self, request), name = "prepare_call")]
     async fn prepare_call_input(
         &self,
         request: TransactionRequest,
@@ -688,6 +712,7 @@ where
         let call_input = self.prepare_call_input(request, block_id).await?;
 
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let span = tracing::span!(tracing::Level::INFO, "sn::call");
         let call_output = kakarot_contract
             .eth_call(
                 &call_input.nonce,
@@ -703,6 +728,7 @@ where
             )
             .block_id(starknet_block_id)
             .call()
+            .instrument(span)
             .await
             .map_err(ExecutionError::from)?;
 
@@ -723,6 +749,7 @@ where
         let call_input = self.prepare_call_input(request, block_id).await?;
 
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let span = tracing::span!(tracing::Level::INFO, "sn::estimate_gas");
         let estimate_gas_output = kakarot_contract
             .eth_estimate_gas(
                 &call_input.nonce,
@@ -738,6 +765,7 @@ where
             )
             .block_id(starknet_block_id)
             .call()
+            .instrument(span)
             .await
             .map_err(ExecutionError::from)?;
 
@@ -750,6 +778,7 @@ where
     }
 
     /// Convert the given block id into a Starknet block id
+    #[instrument(skip_all, ret)]
     pub async fn to_starknet_block_id(
         &self,
         block_id: impl Into<Option<BlockId>>,
@@ -786,6 +815,7 @@ where
     }
 
     /// Converts the given [`BlockNumberOrTag`] into a block number.
+    #[instrument(skip(self))]
     async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<u64> {
         match tag {
             // Converts the tag representing the earliest block into block number 0.
@@ -802,6 +832,7 @@ where
     }
 
     /// Converts the given [`BlockId`] into a [`BlockHashOrNumber`].
+    #[instrument(skip_all, ret)]
     async fn block_id_into_block_number_or_hash(&self, block_id: BlockId) -> EthProviderResult<BlockHashOrNumber> {
         match block_id {
             BlockId::Hash(hash) => Ok(BlockHashOrNumber::Hash(hash.into())),

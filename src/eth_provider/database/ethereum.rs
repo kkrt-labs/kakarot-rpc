@@ -1,3 +1,4 @@
+#![allow(clippy::blocks_in_conditions)]
 use super::{
     filter,
     filter::EthDatabaseFilterBuilder,
@@ -13,6 +14,7 @@ use async_trait::async_trait;
 use mongodb::bson::doc;
 use reth_primitives::{constants::EMPTY_ROOT_HASH, TransactionSigned, B256, U256};
 use reth_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, RichBlock, Transaction};
+use tracing::instrument;
 
 /// Trait for interacting with a database that stores Ethereum typed
 /// transaction data.
@@ -37,11 +39,13 @@ pub trait EthereumTransactionStore {
 
 #[async_trait]
 impl EthereumTransactionStore for Database {
+    #[instrument(skip_all, name = "db::transaction", err)]
     async fn transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(hash).build();
         Ok(self.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
+    #[instrument(skip_all, name = "db::transactions", err)]
     async fn transactions(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Vec<Transaction>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
             .with_block_hash_or_number(block_hash_or_number)
@@ -50,29 +54,25 @@ impl EthereumTransactionStore for Database {
         Ok(self.get::<StoredTransaction>(filter, None).await?.into_iter().map(Into::into).collect())
     }
 
+    #[instrument(skip_all, name = "db::pending_transaction", err)]
     async fn pending_transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(hash).build();
         Ok(self.get_one::<StoredPendingTransaction>(filter, None).await?.map(Into::into))
     }
 
+    #[instrument(skip_all, name = "db::pending_transaction_retries", err)]
     async fn pending_transaction_retries(&self, hash: &B256) -> Result<u8, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(hash).build();
-        Ok(self
-            .get_one::<StoredPendingTransaction>(filter, None)
-            .await?
-            .map(|tx| tx.retries + 1)
-            .or_else(|| {
-                tracing::info!("New transaction {} in pending pool", hash);
-                None
-            })
-            .unwrap_or_default())
+        Ok(self.get_one::<StoredPendingTransaction>(filter, None).await?.map(|tx| tx.retries + 1).unwrap_or_default())
     }
 
+    #[instrument(skip_all, name = "db::upsert_transaction", err)]
     async fn upsert_transaction(&self, transaction: Transaction) -> Result<(), EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&transaction.hash).build();
         Ok(self.update_one(StoredTransaction::from(transaction), filter, true).await?)
     }
 
+    #[instrument(skip_all, name = "db::upsert_pending_transaction", err)]
     async fn upsert_pending_transaction(&self, transaction: Transaction, retries: u8) -> Result<(), EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&transaction.hash).build();
         Ok(self.update_one(StoredPendingTransaction::new(transaction, retries), filter, true).await?)
@@ -96,6 +96,7 @@ pub trait EthereumBlockStore {
         full: bool,
     ) -> Result<Option<RichBlock>, EthApiError>;
     /// Returns true if the block with the given hash or number exists.
+    #[instrument(skip(self), name = "db::block_exists", err)]
     async fn block_exists(&self, block_hash_or_number: BlockHashOrNumber) -> Result<bool, EthApiError> {
         self.header(block_hash_or_number).await.map(|header| header.is_some())
     }
@@ -106,14 +107,15 @@ pub trait EthereumBlockStore {
 
 #[async_trait]
 impl EthereumBlockStore for Database {
+    #[instrument(skip_all, name = "db::latest_header", err)]
     async fn latest_header(&self) -> Result<Option<Header>, EthApiError> {
         Ok(self
             .get_one::<StoredHeader>(None, doc! { "header.number": -1 })
             .await
-            .inspect_err(|err| tracing::error!("internal error: {:?}", err))
             .map(|maybe_sh| maybe_sh.map(Into::into))?)
     }
 
+    #[instrument(skip_all, name = "db::header", err)]
     async fn header(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Option<Header>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Header>::default()
             .with_block_hash_or_number(block_hash_or_number)
@@ -121,11 +123,11 @@ impl EthereumBlockStore for Database {
         Ok(self
             .get_one::<StoredHeader>(filter, None)
             .await
-            .inspect_err(|err| tracing::error!("internal error: {:?}", err))
             .map_err(|_| EthApiError::UnknownBlock(block_hash_or_number))?
-            .map(Into::into))
+            .map(|sh| sh.header))
     }
 
+    #[instrument(skip_all, name = "db::block", err)]
     async fn block(
         &self,
         block_hash_or_number: BlockHashOrNumber,
@@ -181,6 +183,7 @@ impl EthereumBlockStore for Database {
         ))
     }
 
+    #[instrument(skip_all, name = "db::transaction_count", err)]
     async fn transaction_count(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Option<U256>, EthApiError> {
         if !self.block_exists(block_hash_or_number).await? {
             return Ok(None);
