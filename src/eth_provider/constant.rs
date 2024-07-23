@@ -66,7 +66,7 @@ lazy_static! {
 pub struct Constant {
     /// Maximum number of logs to output for `eth_getLogs` RPC Method
     pub max_logs: Option<u64>,
-    /// Name of the StarkNet network.
+    /// Name of the `StarkNet` network.
     pub starknet_network: String,
     /// Interval in seconds to retry transactions.
     pub retry_tx_interval: u64,
