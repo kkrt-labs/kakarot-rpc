@@ -16,6 +16,7 @@ use starknet::{
     providers::Provider,
 };
 use std::convert::TryInto;
+use tracing::instrument;
 
 #[derive(Debug)]
 pub struct KakarotRpc<EP, SP> {
@@ -47,6 +48,7 @@ where
     EP: EthereumProvider + Send + Sync + 'static,
     SP: Provider + Send + Sync + 'static,
 {
+    #[instrument(skip(self))]
     async fn get_starknet_transaction_hash(&self, hash: B256, retries: u8) -> RpcResult<Option<B256>> {
         // Retrieve the stored transaction from the database.
         let transaction = self.eth_provider.transaction_by_hash(hash).await?;

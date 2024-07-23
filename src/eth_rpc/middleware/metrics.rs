@@ -142,7 +142,7 @@ where
     fn call(&self, req: Request<'a>) -> Self::Future {
         let now = Instant::now();
 
-        log::trace!(
+        tracing::trace!(
             target: "rpc_metrics",
             "[{}] on_call name={} params={:?}",
             self.transport_label,
@@ -192,11 +192,11 @@ impl<'a, F: Future<Output = MethodResponse>> Future for ResponseFuture<'a, F> {
             let now = this.now;
             let metrics = &this.metrics;
 
-            log::trace!(target: "rpc_metrics", "[{transport_label}] on_response started_at={:?}", now);
-            log::trace!(target: "rpc_metrics::extra", "[{transport_label}] result={:?}", rp);
+            tracing::trace!(target: "rpc_metrics", "[{transport_label}] on_response started_at={:?}", now);
+            tracing::trace!(target: "rpc_metrics::extra", "[{transport_label}] result={:?}", rp);
 
             let micros = now.elapsed().as_micros();
-            log::debug!(
+            tracing::debug!(
                 target: "rpc_metrics",
                 "[{transport_label}] {method_name} call took {} μs",
                 micros,

@@ -1,0 +1,31 @@
+# https://github.com/open-telemetry/opentelemetry-collector/tree/main
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+
+# View options here https://github.com/open-telemetry/opentelemetry-collector/blob/main/exporter/debugexporter/README.md
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - debug
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - batch
+      exporters:
+        - debug

@@ -92,7 +92,7 @@ pub async fn init_prometheus(prometheus_addr: SocketAddr, registry: Registry) ->
 
 /// Init prometheus using the given listener.
 async fn init_prometheus_with_listener(listener: tokio::net::TcpListener, registry: Registry) -> Result<(), Error> {
-    log::info!("〽️ Prometheus exporter started at {}", listener.local_addr().unwrap());
+    tracing::info!("〽️ Prometheus exporter started at {}", listener.local_addr().unwrap());
 
     loop {
         // getting the tcp stream and ignoring the remote address

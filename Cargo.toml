@@ -21,9 +21,9 @@ rust-version = "1.79"
 [lints]
 rust.missing_debug_implementations = "warn"
 rust.unreachable_pub = "warn"
-rustdoc.all = "warn"
 rust.unused_must_use = "deny"
 rust.rust_2018_idioms = { level = "deny", priority = -1 }
+rustdoc.all = "warn"
 
 [lints.clippy]
 # all lints that are on by default (correctness, suspicious, style, complexity, perf)
@@ -73,32 +73,43 @@ reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1
 reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 revm-inspectors = "0.4"
 
+# Error
+eyre = { version = "0.6", default-features = false }
+thiserror = { version = "1", default-features = false }
+
+# Futures
+async-trait = { version = "0.1", default-features = false }
+futures = { version = "0.3", default-features = false }
+tokio = { version = "1", features = ["macros"] }
+
+# Network
+tower = { version = "0.4", default-features = false }
+tower-http = { version = "0.5", features = ["cors"] }
+url = { version = "2.5", default-features = false }
+
 # Serde
 serde = { version = "1", default-features = false, features = ["derive"] }
 serde_json = { version = "1", default-features = false }
 
+# Tracing
+tracing = { version = "0.1", default-features = false }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+opentelemetry = { version = "0.23.0", features = ["metrics"] }
+opentelemetry-otlp = { version = "0.16.0", features = ["trace", "tonic", "metrics"] }
+opentelemetry_sdk = { version = "0.23.0", features = ["trace", "metrics", "rt-tokio"] }
+tracing-opentelemetry = "0.24.0"
+
+
 # Others
-async-trait = { version = "0.1", default-features = false }
 auto_impl = { version = "1", default-features = false }
 bytes = { version = "1.6", default-features = false }
 dotenvy = { version = "0.15", default-features = false }
-eyre = { version = "0.6", default-features = false }
-
-futures = { version = "0.3", default-features = false }
 itertools = { version = "0.13", default-features = false }
 lazy_static = { version = "1", default-features = false }
-log = { version = "0.4", default-features = false }
 mongodb = { version = "3.0", default-features = false, features = [
   "rustls-tls",
   "compat-3-0-0",
 ] }
-thiserror = { version = "1", default-features = false }
-tokio = { version = "1", features = ["macros"] }
-tower = { version = "0.4", default-features = false }
-tower-http = { version = "0.5", features = ["cors"] }
-tracing = { version = "0.1", default-features = false }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-url = { version = "2.5", default-features = false }
 
 # Prometheus
 prometheus = { version = "0.13", default-features = false }
