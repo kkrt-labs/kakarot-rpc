@@ -67,22 +67,33 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+/// Set up the subscriber for tracing and metrics
 fn setup_tracing() -> Result<()> {
+    // Prepare a tracer pipeline that exports to the OpenTelemetry collector,
+    // using tonic as the gRPC client. Using a batch exporter for better performance:
+    // https://docs.rs/opentelemetry-otlp/0.17.0/opentelemetry_otlp/#performance
     let tracer = opentelemetry_otlp::new_pipeline()
         .tracing()
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
         .install_batch(Tokio)?;
+    // Set up the tracing layer with the OpenTelemetry tracer. A layer is a basic building block,
+    // in tracing, that allows to define behavior for collecting or recording trace data. Layers
+    // can be stacked on top of each other to create a pipeline.
+    // https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html
     let tracing_layer = tracing_opentelemetry::layer().with_tracer(tracer).boxed();
 
+    // Prepare a metrics pipeline that exports to the OpenTelemetry collector.
     let metrics = opentelemetry_otlp::new_pipeline()
         .metrics(Tokio)
         .with_exporter(opentelemetry_otlp::new_exporter().tonic())
         .build()?;
     let metrics_layer = MetricsLayer::new(metrics).boxed();
 
+    // Add a filter to the subscriber to control the verbosity of the logs
     let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
     let env_filter = EnvFilter::builder().parse(filter)?;
 
+    // Stack the layers and initialize the subscriber
     let stacked_layer = tracing_layer.and_then(metrics_layer).and_then(env_filter);
     tracing_subscriber::registry().with(stacked_layer).init();
 
