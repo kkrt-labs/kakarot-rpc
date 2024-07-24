@@ -89,6 +89,8 @@ pub trait EthereumProvider {
     async fn syncing(&self) -> EthProviderResult<SyncStatus>;
     /// Returns the chain id.
     async fn chain_id(&self) -> EthProviderResult<Option<U64>>;
+    /// Returns the balance map
+    async fn get_balance_map(&self) -> HashMap<Address, U256>;
     /// Returns a block by hash. Block can be full or just the hashes of the transactions.
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>>;
     /// Returns a block by number. Block can be full or just the hashes of the transactions.
@@ -233,6 +235,11 @@ where
 
     async fn chain_id(&self) -> EthProviderResult<Option<U64>> {
         Ok(Some(U64::from(self.chain_id)))
+    }
+
+    async fn get_balance_map(&self) -> HashMap<Address, U256> {
+        let balance_map = self.balance_map.lock().await;
+        balance_map.clone()
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
@@ -664,11 +671,11 @@ where
 
     async fn check_cached_balance(&self, signer: Address, transaction_value: U256) -> Result<(), EthApiError> {
         let balance_map = self.balance_map.lock().await;
-        let balance_option = balance_map.get(&signer).copied();
+        let signer_balance = balance_map.get(&signer).copied();
         drop(balance_map);
 
         // Check the cached balance of the signer
-        if let Some(balance) = balance_option {
+        if let Some(balance) = signer_balance {
             // If the balance is not enough, return an error
             if balance < transaction_value {
                 return Err(ExecutionError::from(EvmError::Balance).into());
@@ -676,13 +683,13 @@ where
         } else {
             // If the balance is not cached, fetch it
             let user_balance = self.balance(signer, None).await?;
+            // Cache the balance for future use
+            let mut balance_map = self.balance_map.lock().await;
+            balance_map.insert(signer, user_balance);
             // If the balance is not enough, return an error
             if user_balance < transaction_value {
                 return Err(ExecutionError::from(EvmError::Balance).into());
             }
-            // Cache the balance for future use
-            let mut balance_map = self.balance_map.lock().await;
-            balance_map.insert(signer, user_balance);
         }
         Ok(())
     }
