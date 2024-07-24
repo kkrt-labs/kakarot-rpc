@@ -90,7 +90,7 @@ pub trait EthereumProvider {
     /// Returns the chain id.
     async fn chain_id(&self) -> EthProviderResult<Option<U64>>;
     /// Returns the balance map
-    async fn get_balance_map(&self) -> HashMap<Address, U256>;
+    async fn get_account_balances(&self) -> HashMap<Address, U256>;
     /// Returns a block by hash. Block can be full or just the hashes of the transactions.
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>>;
     /// Returns a block by number. Block can be full or just the hashes of the transactions.
@@ -181,7 +181,7 @@ pub struct EthDataProvider<SP: starknet::providers::Provider> {
     database: Database,
     starknet_provider: SP,
     chain_id: u64,
-    balance_map: Arc<Mutex<HashMap<Address, U256>>>,
+    account_balances: Arc<Mutex<HashMap<Address, U256>>>,
 }
 
 impl<SP> EthDataProvider<SP>
@@ -237,9 +237,9 @@ where
         Ok(Some(U64::from(self.chain_id)))
     }
 
-    async fn get_balance_map(&self) -> HashMap<Address, U256> {
-        let balance_map = self.balance_map.lock().await;
-        balance_map.clone()
+    async fn get_account_balances(&self) -> HashMap<Address, U256> {
+        let account_balances = self.account_balances.lock().await;
+        account_balances.clone()
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
@@ -629,7 +629,7 @@ where
         validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
 
         // Remove the signer's balance from the cache, as it will be updated after the transaction is executed
-        self.balance_map.lock().await.remove(&signer);
+        self.account_balances.lock().await.remove(&signer);
 
         // Get the number of retries for the transaction
         let retries = self.database.pending_transaction_retries(&transaction_signed.hash).await?;
@@ -670,9 +670,9 @@ where
     }
 
     async fn check_cached_balance(&self, signer: Address, transaction_value: U256) -> Result<(), EthApiError> {
-        let balance_map = self.balance_map.lock().await;
-        let signer_balance = balance_map.get(&signer).copied();
-        drop(balance_map);
+        let account_balances = self.account_balances.lock().await;
+        let signer_balance = account_balances.get(&signer).copied();
+        drop(account_balances);
 
         // Check the cached balance of the signer
         if let Some(balance) = signer_balance {
@@ -684,8 +684,8 @@ where
             // If the balance is not cached, fetch it
             let user_balance = self.balance(signer, None).await?;
             // Cache the balance for future use
-            let mut balance_map = self.balance_map.lock().await;
-            balance_map.insert(signer, user_balance);
+            let mut account_balances = self.account_balances.lock().await;
+            account_balances.insert(signer, user_balance);
             // If the balance is not enough, return an error
             if user_balance < transaction_value {
                 return Err(ExecutionError::from(EvmError::Balance).into());
@@ -763,9 +763,9 @@ where
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
         let chain_id =
             (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
-        let balance_map = Arc::new(Mutex::new(HashMap::new()));
+        let account_balances = Arc::new(Mutex::new(HashMap::new()));
 
-        Ok(Self { database, starknet_provider, chain_id, balance_map })
+        Ok(Self { database, starknet_provider, chain_id, account_balances })
     }
 
     #[cfg(feature = "testing")]

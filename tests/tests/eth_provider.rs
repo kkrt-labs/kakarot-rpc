@@ -683,7 +683,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
 
     // Assert that the number of transactions in the cache is 0
-    assert_eq!(eth_provider.get_balance_map().await.len(), 0);
+    assert_eq!(eth_provider.get_account_balances().await.len(), 0);
 
     // Create a sample transaction
     let transaction = Transaction::Eip1559(TxEip1559 {
@@ -722,7 +722,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     assert!(tx.block_number.is_none());
 
     // Assert that the number of transactions in the cache is 0, because the transaction has been sent and removed from the cache
-    assert_eq!(eth_provider.get_balance_map().await.len(), 0);
+    assert_eq!(eth_provider.get_account_balances().await.len(), 0);
 }
 
 #[rstest]
@@ -969,7 +969,7 @@ async fn test_send_raw_transaction_check_cached_balance(#[future] katana: Katana
     let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
 
     // Assert that the number of transactions in the cache is 0
-    assert_eq!(eth_provider.get_balance_map().await.len(), 0);
+    assert_eq!(eth_provider.get_account_balances().await.len(), 0);
 
     // Create a sample transaction with a value greater than the EOA balance
     let transaction = Transaction::Eip1559(TxEip1559 {
@@ -1000,7 +1000,7 @@ async fn test_send_raw_transaction_check_cached_balance(#[future] katana: Katana
     }
 
     // Assert that the number of transactions in the cache is 1 because the transaction failed, so the balance is still in the cache
-    assert_eq!(eth_provider.get_balance_map().await.len(), 1);
+    assert_eq!(eth_provider.get_account_balances().await.len(), 1);
 
     // Check cached balance with a balance in the map and an error
 
@@ -1017,7 +1017,7 @@ async fn test_send_raw_transaction_check_cached_balance(#[future] katana: Katana
     }
 
     // Assert that the number of transactions in the cache is 1 because the transaction failed, so the balance is still in the cache
-    assert_eq!(eth_provider.get_balance_map().await.len(), 1);
+    assert_eq!(eth_provider.get_account_balances().await.len(), 1);
 
     // Check cached balance with a balance in the map and no error
 
@@ -1045,7 +1045,7 @@ async fn test_send_raw_transaction_check_cached_balance(#[future] katana: Katana
         .expect("failed to send transaction");
 
     // Assert that the number of transactions in the cache is 0, because the transaction has been sent and removed from the cache
-    assert_eq!(eth_provider.get_balance_map().await.len(), 0);
+    assert_eq!(eth_provider.get_account_balances().await.len(), 0);
 }
 
 #[rstest]
