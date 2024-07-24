@@ -1,10 +1,11 @@
 use crate::{
     eth_provider::utils::split_u256,
     test_utils::constants::{
-        ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION,
-        KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT,
-        KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
-        KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+        ACCOUNT_AUTHORIZED_MESSAGE_HASHES, ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS,
+        ACCOUNT_IMPLEMENTATION, EIP_155_AUTHORIZED_MESSAGE_HASHES, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH,
+        KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_COINBASE,
+        KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO,
+        KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
     },
 };
 use alloy_signer_local::PrivateKeySigner;
@@ -34,7 +35,7 @@ use starknet::core::{
     },
     utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness},
 };
-use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf};
+use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf, str::FromStr};
 use walkdir::WalkDir;
 
 lazy_static! {
@@ -238,7 +239,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
 
         // Set the eoa storage
-        let eoa_storage = [
+        let mut eoa_storage: HashMap<StorageKey, Felt> = [
             (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
             (storage_addr(OWNABLE_OWNER)?, kakarot_address),
             (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
@@ -246,6 +247,12 @@ impl KatanaGenesisBuilder<Initialized> {
         ]
         .into_iter()
         .collect();
+
+        for hash in EIP_155_AUTHORIZED_MESSAGE_HASHES {
+            let h = U256::from_str(hash).expect("Failed to parse EIP 155 authorized message hash");
+            let [low, high] = split_u256::<Felt>(h);
+            eoa_storage.insert(get_storage_var_address(ACCOUNT_AUTHORIZED_MESSAGE_HASHES, &[low, high])?, Felt::ONE);
+        }
 
         let eoa = GenesisContractJson {
             class: Some(ClassNameOrHash::Hash(account_contract_class_hash)),
