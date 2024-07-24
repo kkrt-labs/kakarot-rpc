@@ -960,6 +960,7 @@ async fn test_call_with_state_override_bytecode(#[future] plain_opcodes: (Katana
         .expect("Failed to set number in Counter contract");
     
 async fn test_send_raw_transaction_not_enough_balance(#[future] katana: Katana, _setup: ()) {
+async fn test_send_raw_transaction_not_check_cached_balance(#[future] katana: Katana, _setup: ()) {
     // Check cached balance with a balance not in the map and an error
 
     // Given
