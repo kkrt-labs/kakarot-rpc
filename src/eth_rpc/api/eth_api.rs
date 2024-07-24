@@ -1,9 +1,9 @@
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
 use reth_rpc_types::{
-    serde_helpers::JsonStorageKey, AccessListWithGasUsed, EIP1186AccountProofResponse, FeeHistory, Filter,
-    FilterChanges, Index, RichBlock, SyncStatus, Transaction as EthTransaction, TransactionReceipt, TransactionRequest,
-    Work,
+    serde_helpers::JsonStorageKey, state::StateOverride, AccessListWithGasUsed, BlockOverrides,
+    EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
+    Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
 };
 
 /// Ethereum JSON-RPC API Trait
@@ -109,7 +109,13 @@ pub trait EthApi {
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "call")]
-    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<Bytes>;
+    async fn call(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+        state_overrides: Option<StateOverride>,
+        block_overrides: Option<Box<BlockOverrides>>,
+    ) -> Result<Bytes>;
 
     /// Generates an access list for a transaction.
     ///

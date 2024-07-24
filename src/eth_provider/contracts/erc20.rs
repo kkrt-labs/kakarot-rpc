@@ -111,6 +111,8 @@ impl<P: EthereumProvider> EthereumErc20<P> {
                     ..Default::default()
                 },
                 Some(block_id),
+                None,
+                None,
             )
             .await
     }

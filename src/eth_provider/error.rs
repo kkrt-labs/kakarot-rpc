@@ -2,7 +2,8 @@ use alloy_sol_types::decode_revert_reason;
 use jsonrpsee::types::ErrorObject;
 use num_traits::cast::ToPrimitive;
 use reth_primitives::{Bytes, B256};
-use reth_rpc_types::BlockHashOrNumber;
+use reth_rpc_eth_types::EthApiError as RethEthApiError;
+use reth_rpc_types::{BlockHashOrNumber, ToRpcError};
 use starknet::core::types::Felt;
 use thiserror::Error;
 
@@ -44,6 +45,12 @@ impl From<&EthApiError> for EthRpcErrorCode {
     }
 }
 
+impl From<EthApiError> for RethEthApiError {
+    fn from(value: EthApiError) -> Self {
+        Self::other(value)
+    }
+}
+
 /// Error that can occur when interacting with the ETH Api.
 #[derive(Debug, Error)]
 pub enum EthApiError {
@@ -68,7 +75,7 @@ pub enum EthApiError {
     /// Error related to transaction calldata being too large.
     CalldataExceededLimit(usize, usize),
     /// Reth Eth API error
-    RethEthApi(#[from] reth_rpc_eth_types::EthApiError),
+    RethEthApi(#[from] RethEthApiError),
 }
 
 impl std::fmt::Display for EthApiError {
@@ -98,13 +105,26 @@ impl std::fmt::Display for EthApiError {
 /// Constructs a JSON-RPC error object, consisting of `code` and `message`.
 impl From<EthApiError> for ErrorObject<'static> {
     fn from(value: EthApiError) -> Self {
+        (&value).into()
+    }
+}
+
+/// Constructs a JSON-RPC error object, consisting of `code` and `message`.
+impl From<&EthApiError> for ErrorObject<'static> {
+    fn from(value: &EthApiError) -> Self {
         let msg = format!("{value}");
-        let code = EthRpcErrorCode::from(&value);
+        let code = EthRpcErrorCode::from(value);
         let data = match value {
-            EthApiError::Execution(ExecutionError::Evm(EvmError::Other(ref b))) => Some(b),
+            EthApiError::Execution(ExecutionError::Evm(EvmError::Other(ref b))) => Some(b.clone()),
             _ => None,
         };
         ErrorObject::owned(code as i32, msg, data)
+    }
+}
+
+impl ToRpcError for EthApiError {
+    fn to_rpc_error(&self) -> ErrorObject<'static> {
+        self.into()
     }
 }
 
@@ -286,6 +306,9 @@ pub enum TransactionError {
     /// Thrown if the tracing fails
     #[error("tracing error: {0}")]
     Tracing(Box<dyn std::error::Error + Send + Sync>),
+    /// Thrown if the call with state or block overrides fails
+    #[error("tracing error: {0}")]
+    Call(Box<dyn std::error::Error + Send + Sync>),
 }
 
 impl From<&TransactionError> for EthRpcErrorCode {
@@ -297,6 +320,7 @@ impl From<&TransactionError> for EthRpcErrorCode {
             | TransactionError::TipAboveFeeCap(_, _) => Self::TransactionRejected,
             TransactionError::ExpectedFullTransactions
             | TransactionError::Tracing(_)
+            | TransactionError::Call(_)
             | TransactionError::ExceedsBlockGasLimit(_, _) => Self::InternalError,
         }
     }
