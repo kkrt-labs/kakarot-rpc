@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
-use reth_primitives::U256;
+use reth_primitives::{B256, U256};
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 #[cfg(feature = "hive")]
 use {
@@ -58,4 +59,21 @@ lazy_static! {
             ExecutionEncoding::New
         );
     pub static ref DEPLOY_WALLET_NONCE: Arc<Mutex<Felt>> = Arc::new(Mutex::new(Felt::ZERO));
+}
+
+/// Struct used to return the constant values from the `kakarot_getConfig` endpoint
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Constant {
+    /// Maximum number of logs to output for `eth_getLogs` RPC Method
+    pub max_logs: Option<u64>,
+    /// Name of the `StarkNet` network.
+    pub starknet_network: String,
+    /// Interval in seconds to retry transactions.
+    pub retry_tx_interval: u64,
+    /// Maximum number of retries for a transaction.
+    pub transaction_max_retries: u8,
+    /// Maximum number of Felts in calldata.
+    pub max_felts_in_calldata: usize,
+    /// List of whitelisted hashes allow to submit pre EIP-155 transactions.
+    pub white_listed_eip_155_transaction_hashes: Vec<B256>,
 }
