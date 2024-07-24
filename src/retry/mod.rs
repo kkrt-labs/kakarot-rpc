@@ -97,10 +97,8 @@ where
 
     /// Processes all current pending transactions by retrying them
     /// and pruning them if necessary.
-    #[instrument(skip_all)]
     async fn process_pending_transactions(&self) -> Result<()> {
         let pending_transactions = self.pending_transactions().await?;
-        tracing::info!(count = pending_transactions.len());
         for transaction in pending_transactions {
             if self.should_retry(&transaction).await? {
                 self.retry_transaction(transaction).await?;
@@ -149,8 +147,7 @@ where
     /// not been executed and the number of retries is less than the maximum number of retries.
     async fn should_retry(&self, transaction: &StoredPendingTransaction) -> Result<bool> {
         let max_retries_reached = transaction.retries + 1 >= get_transaction_max_retries();
-        let span = tracing::span!(tracing::Level::INFO, "db::transaction");
-        let transaction_executed = self.database.transaction(&transaction.hash).instrument(span).await?.is_some();
+        let transaction_executed = self.database.transaction(&transaction.hash).await?.is_some();
         Ok(!max_retries_reached && !transaction_executed)
     }
 }
