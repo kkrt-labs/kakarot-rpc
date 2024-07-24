@@ -10,8 +10,8 @@ use kakarot_rpc::{
     models::felt::Felt252Wrapper,
     test_utils::{
         eoa::Eoa,
-        evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxLegacyInfo},
-        fixtures::{contract_empty, counter, katana, setup},
+        evm_contract::{EvmContract, KakarotEvmContract},
+        fixtures::{contract_empty, counter, katana, plain_opcodes, setup},
         katana::Katana,
         mongo::{BLOCK_HASH, BLOCK_NUMBER},
         tx_waiter::watch_tx,

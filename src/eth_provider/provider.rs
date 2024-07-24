@@ -518,13 +518,11 @@ where
                 evm_overrides,
             )?;
 
-            // Execute the transaction using the configured EVM.
-            let res = tokio::task::block_in_place(|| {
-                EthEvmConfig::default()
-                    .evm_with_env(db.0, env)
-                    .transact()
-                    .map_err(|err| <TransactionError as Into<EthApiError>>::into(TransactionError::Call(err.into())))
-            })?;
+            // Execute the transaction using the configured EVM asynchronously.
+            let res = EthEvmConfig::default()
+                .evm_with_env(db.0, env)
+                .transact()
+                .map_err(|err| <TransactionError as Into<EthApiError>>::into(TransactionError::Call(err.into())))?;
 
             // Ensure the transaction was successful and return the result.
             return Ok(ensure_success(res.result)?);
