@@ -5,10 +5,8 @@ use kakarot_rpc::{
     eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
+        error::{EvmError, ExecutionError},
         provider::EthereumProvider,
-        error::{
-            EvmError, ExecutionError,
-        }
     },
     models::felt::Felt252Wrapper,
     test_utils::{
@@ -989,16 +987,14 @@ async fn test_send_raw_transaction_not_enough_balance(#[future] katana: Katana, 
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     // Send the transaction
-    let result = eth_provider
-        .send_raw_transaction(transaction_signed.envelope_encoded())
-        .await;
+    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
 
     // Assert that the transaction failed with EvmError::Balance error
     match result {
         Ok(_) => panic!("Expected an error, but the transaction was successful"),
         Err(e) => {
             assert_eq!(e.to_string(), ExecutionError::from(EvmError::Balance).to_string());
-        },
+        }
     }
 
     // Assert that the number of transactions in the cache is 1 because the transaction failed, so the balance is still in the cache
@@ -1008,16 +1004,14 @@ async fn test_send_raw_transaction_not_enough_balance(#[future] katana: Katana, 
 
     // send again the transaction with a value greater than the EOA balance, to check that the balance in the cache remains 1
     // Send the transaction
-    let result = eth_provider
-        .send_raw_transaction(transaction_signed.envelope_encoded())
-        .await;
+    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
 
     // Assert that the transaction failed with EvmError::Balance error
     match result {
         Ok(_) => panic!("Expected an error, but the transaction was successful"),
         Err(e) => {
             assert_eq!(e.to_string(), ExecutionError::from(EvmError::Balance).to_string());
-        },
+        }
     }
 
     // Assert that the number of transactions in the cache is 1 because the transaction failed, so the balance is still in the cache
