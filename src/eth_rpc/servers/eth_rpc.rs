@@ -155,8 +155,13 @@ where
     }
 
     #[tracing::instrument(skip(self, request), err)]
-    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>, state_overrides: Option<StateOverride>,
-        block_overrides: Option<Box<BlockOverrides>>,) -> Result<Bytes> {
+    async fn call(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+        state_overrides: Option<StateOverride>,
+        block_overrides: Option<Box<BlockOverrides>>,
+    ) -> Result<Bytes> {
         Ok(self.eth_provider.call(request, block_id, state_overrides, block_overrides).await?)
     }
 
