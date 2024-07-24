@@ -11,7 +11,7 @@ use kakarot_rpc::{
     test_utils::{
         eoa::Eoa,
         evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxLegacyInfo},
-        fixtures::{contract_empty, counter, katana, plain_opcodes, setup},
+        fixtures::{contract_empty, counter, katana, setup},
         katana::Katana,
         mongo::{BLOCK_HASH, BLOCK_NUMBER},
         tx_waiter::watch_tx,
@@ -19,7 +19,7 @@ use kakarot_rpc::{
 };
 use reth_primitives::{
     sign_message, transaction::Signature, Address, BlockNumberOrTag, Bytes, Transaction, TransactionSigned, TxEip1559,
-    TxKind, B256, U256, U64,
+    TxKind, TxLegacy, B256, U256, U64,
 };
 use reth_rpc_types::{
     request::TransactionInput, serde_helpers::JsonStorageKey, state::AccountOverride, Filter, FilterBlockOption,
@@ -721,27 +721,14 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
+async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup: ()) {
     // Given
-    let katana = counter.0;
-    let counter = counter.1;
-    let counter_address: Felt252Wrapper = counter.evm_address.into();
-    let counter_address = counter_address.try_into().expect("Failed to convert EVM address");
-
     let eth_provider = katana.eth_provider();
     let nonce: u64 = katana.eoa().nonce().await.unwrap().try_into().expect("Failed to convert nonce");
 
-    // Create a sample transaction
-    let transaction = counter
-        .prepare_call_transaction(
-            "inc",
-            &[],
-            &TransactionInfo::LegacyInfo(TxLegacyInfo {
-                common: TxCommonInfo { nonce, ..Default::default() },
-                gas_price: 1,
-            }),
-        )
-        .unwrap();
+    // Use the transaction for the Arachnid deployer
+    // https://github.com/Arachnid/deterministic-deployment-proxy
+    let transaction = Transaction::Legacy(TxLegacy{value:U256::ZERO, chain_id: None, nonce, gas_price: 100_000_000_000, gas_limit: 100_000, to: TxKind::Create, input: Bytes::from_str("604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3").unwrap()});
 
     // Sign the transaction
     let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
@@ -767,8 +754,12 @@ async fn test_send_raw_transaction_eip_155(#[future] counter: (Katana, KakarotEv
         .expect("Tx polling failed");
 
     // Then
-    let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
-    assert_eq!(count, B256::left_padding_from(&[0x1]));
+    // Check that the Arachnid deployer contract was deployed
+    let code = eth_provider
+        .get_code(Address::from_str("0x5fbdb2315678afecb367f032d93f642f64180aa3").unwrap(), None)
+        .await
+        .unwrap();
+    assert!(!code.is_empty());
 }
 
 #[rstest]
