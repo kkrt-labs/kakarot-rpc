@@ -1048,6 +1048,7 @@ async fn test_call_with_state_override_bytecode(#[future] plain_opcodes: (Katana
         .call(request, None, Some(state_override), None)
         .await
         .expect("Failed to set number in Counter contract");
+}
 
 #[rstest]
 #[awt]
