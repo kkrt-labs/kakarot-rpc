@@ -169,6 +169,7 @@ pub trait EthereumProvider {
     async fn txpool_transactions(&self) -> EthProviderResult<Vec<Transaction>>;
     /// Returns the content of the pending pool.
     async fn txpool_content(&self) -> EthProviderResult<TxpoolContent>;
+    /// Remove the signer cached balance if the transaction has been removed from the pending pool
     async fn remove_from_account_balances(&self, signer: Address);
 }
 

@@ -807,6 +807,96 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
+async fn test_send_raw_transaction_check_cached_balance(#[future] katana: Katana, _setup: ()) {
+    // Check cached balance with a balance not in the map and an error
+
+    // Given
+    let eth_provider = katana.eth_provider();
+    let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
+
+    // Assert that the number of transactions in the cache is 0
+    assert_eq!(eth_provider.get_account_balances().await.len(), 0);
+
+    // Create a sample transaction with a value greater than the EOA balance
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id,
+        nonce: 0,
+        gas_limit: 21000,
+        to: TxKind::Call(Address::random()),
+        value: U256::MAX / U256::from(2u64),
+        input: Bytes::default(),
+        max_fee_per_gas: 875_000_000,
+        max_priority_fee_per_gas: 0,
+        access_list: Default::default(),
+    });
+
+    // Sign the transaction
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
+    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Send the transaction
+    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+
+    // Assert that the transaction failed with EvmError::Balance error
+    match result {
+        Ok(_) => panic!("Expected an error, but the transaction was successful"),
+        Err(e) => {
+            assert_eq!(e.to_string(), ExecutionError::from(EvmError::Balance).to_string());
+        }
+    }
+
+    // Assert that the number of transactions in the cache is 1 because the transaction failed, so the balance is still in the cache
+    assert_eq!(eth_provider.get_account_balances().await.len(), 1);
+
+    // Check cached balance with a balance in the map and an error
+
+    // send again the transaction with a value greater than the EOA balance, to check that the balance in the cache remains 1
+    // Send the transaction
+    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+
+    // Assert that the transaction failed with EvmError::Balance error
+    match result {
+        Ok(_) => panic!("Expected an error, but the transaction was successful"),
+        Err(e) => {
+            assert_eq!(e.to_string(), ExecutionError::from(EvmError::Balance).to_string());
+        }
+    }
+
+    // Assert that the number of transactions in the cache is 1 because the transaction failed, so the balance is still in the cache
+    assert_eq!(eth_provider.get_account_balances().await.len(), 1);
+
+    // Check cached balance with a balance in the map and no error
+
+    // Create a sample transaction with a value less than the EOA balance
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id,
+        nonce: 0,
+        gas_limit: 21000,
+        to: TxKind::Call(Address::random()),
+        value: U256::from(1000),
+        input: Bytes::default(),
+        max_fee_per_gas: 875_000_000,
+        max_priority_fee_per_gas: 0,
+        access_list: Default::default(),
+    });
+
+    // Sign the transaction
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
+    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Send the transaction
+    let _ = eth_provider
+        .send_raw_transaction(transaction_signed.envelope_encoded())
+        .await
+        .expect("failed to send transaction");
+
+    // Assert that the number of transactions in the cache is 0, because the transaction has been sent and removed from the cache
+    assert_eq!(eth_provider.get_account_balances().await.len(), 0);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_call_without_overrides(#[future] katana: Katana, _setup: ()) {
     // Obtain an Ethereum provider instance from the Katana instance
     let eth_provider = katana.eth_provider();
@@ -958,95 +1048,6 @@ async fn test_call_with_state_override_bytecode(#[future] plain_opcodes: (Katana
         .call(request, None, Some(state_override), None)
         .await
         .expect("Failed to set number in Counter contract");
-    
-async fn test_send_raw_transaction_not_enough_balance(#[future] katana: Katana, _setup: ()) {
-async fn test_send_raw_transaction_not_check_cached_balance(#[future] katana: Katana, _setup: ()) {
-async fn test_send_raw_transaction_check_cached_balance(#[future] katana: Katana, _setup: ()) {
-    // Check cached balance with a balance not in the map and an error
-
-    // Given
-    let eth_provider = katana.eth_provider();
-    let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
-
-    // Assert that the number of transactions in the cache is 0
-    assert_eq!(eth_provider.get_account_balances().await.len(), 0);
-
-    // Create a sample transaction with a value greater than the EOA balance
-    let transaction = Transaction::Eip1559(TxEip1559 {
-        chain_id,
-        nonce: 0,
-        gas_limit: 21000,
-        to: TxKind::Call(Address::random()),
-        value: U256::MAX / U256::from(2u64),
-        input: Bytes::default(),
-        max_fee_per_gas: 875_000_000,
-        max_priority_fee_per_gas: 0,
-        access_list: Default::default(),
-    });
-
-    // Sign the transaction
-    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
-    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
-
-    // Send the transaction
-    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
-
-    // Assert that the transaction failed with EvmError::Balance error
-    match result {
-        Ok(_) => panic!("Expected an error, but the transaction was successful"),
-        Err(e) => {
-            assert_eq!(e.to_string(), ExecutionError::from(EvmError::Balance).to_string());
-        }
-    }
-
-    // Assert that the number of transactions in the cache is 1 because the transaction failed, so the balance is still in the cache
-    assert_eq!(eth_provider.get_account_balances().await.len(), 1);
-
-    // Check cached balance with a balance in the map and an error
-
-    // send again the transaction with a value greater than the EOA balance, to check that the balance in the cache remains 1
-    // Send the transaction
-    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
-
-    // Assert that the transaction failed with EvmError::Balance error
-    match result {
-        Ok(_) => panic!("Expected an error, but the transaction was successful"),
-        Err(e) => {
-            assert_eq!(e.to_string(), ExecutionError::from(EvmError::Balance).to_string());
-        }
-    }
-
-    // Assert that the number of transactions in the cache is 1 because the transaction failed, so the balance is still in the cache
-    assert_eq!(eth_provider.get_account_balances().await.len(), 1);
-
-    // Check cached balance with a balance in the map and no error
-
-    // Create a sample transaction with a value less than the EOA balance
-    let transaction = Transaction::Eip1559(TxEip1559 {
-        chain_id,
-        nonce: 0,
-        gas_limit: 21000,
-        to: TxKind::Call(Address::random()),
-        value: U256::from(1000),
-        input: Bytes::default(),
-        max_fee_per_gas: 875_000_000,
-        max_priority_fee_per_gas: 0,
-        access_list: Default::default(),
-    });
-
-    // Sign the transaction
-    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
-    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
-
-    // Send the transaction
-    let _ = eth_provider
-        .send_raw_transaction(transaction_signed.envelope_encoded())
-        .await
-        .expect("failed to send transaction");
-
-    // Assert that the number of transactions in the cache is 0, because the transaction has been sent and removed from the cache
-    assert_eq!(eth_provider.get_account_balances().await.len(), 0);
-}
 
 #[rstest]
 #[awt]
