@@ -23,6 +23,8 @@ lazy_static! {
     pub static ref MAX_LOGS: Option<u64> = std::env::var("MAX_LOGS")
         .ok()
         .and_then(|val| u64::from_str(&val).ok());
+
+    pub static ref ACCOUNT_BALANCES_DIMENSION: usize = 1000;
 }
 
 /// Gas limit for estimate gas and call

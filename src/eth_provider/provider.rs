@@ -1,5 +1,5 @@
 use super::{
-    constant::{BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS},
+    constant::{BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS, ACCOUNT_BALANCES_DIMENSION},
     database::{
         ethereum::EthereumBlockStore,
         filter::EthDatabaseFilterBuilder,
@@ -178,7 +178,7 @@ pub struct EthDataProvider<SP: starknet::providers::Provider> {
     database: Database,
     starknet_provider: SP,
     chain_id: u64,
-    account_balances: Arc<Mutex<HashMap<Address, U256>>>,
+    account_balances: Arc<Mutex<HashMap<Address, (U256, u64)>>>,
 }
 
 impl<SP> EthDataProvider<SP>
@@ -735,7 +735,7 @@ where
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
         let chain_id =
             (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
-        let account_balances = Arc::new(Mutex::new(HashMap::new()));
+        let account_balances = Arc::new(Mutex::new(HashMap::with_capacity(*ACCOUNT_BALANCES_DIMENSION)));
 
         Ok(Self { database, starknet_provider, chain_id, account_balances })
     }
@@ -746,7 +746,7 @@ where
     }
 
     #[cfg(feature = "testing")]
-    pub async fn get_account_balances(&self) -> HashMap<Address, U256> {
+    pub async fn get_account_balances(&self) -> HashMap<Address, (U256, u64)> {
         let account_balances = self.account_balances.lock().await;
         account_balances.clone()
     }
@@ -947,7 +947,7 @@ where
         drop(account_balances);
 
         // Check the cached balance of the signer
-        if let Some(balance) = signer_balance {
+        if let Some((balance, _)) = signer_balance {
             // If the balance is not enough, return an error
             if balance < transaction_value {
                 return Err(ExecutionError::from(EvmError::Balance).into());
@@ -955,15 +955,37 @@ where
         } else {
             // If the balance is not cached, fetch it
             let user_balance = self.balance(signer, None).await?;
-            // Cache the balance for future use
+
+            // If cache is full, remove the oldest entry
+            self.remove_account_balance_with_timestamp().await;
+
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs();
+
+            // Insert the balance into the cache
             let mut account_balances = self.account_balances.lock().await;
-            account_balances.insert(signer, user_balance);
+            account_balances.insert(signer, (user_balance, now));
+
             // If the balance is not enough, return an error
             if user_balance < transaction_value {
                 return Err(ExecutionError::from(EvmError::Balance).into());
             }
         }
         Ok(())
+    }
+
+    async fn remove_account_balance_with_timestamp(
+        &self,
+    ) {
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs();
+        let account_balances = self.account_balances.lock().await;
+        if account_balances.len() > *ACCOUNT_BALANCES_DIMENSION {
+            let (oldest_key, _) = account_balances
+                .iter()
+                .min_by_key(|&(_, &(_, timestamp))| timestamp)
+                .expect("Attempted to find the oldest key in an empty map");
+
+            self.remove_from_account_balances(*oldest_key).await;
+        }
     }
 }
 
