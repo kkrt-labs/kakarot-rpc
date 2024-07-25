@@ -1,5 +1,7 @@
 use super::{
-    constant::{BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS, ACCOUNT_BALANCES_DIMENSION},
+    constant::{
+        ACCOUNT_BALANCES_DIMENSION, BLOCK_NUMBER_HEX_STRING_LEN, CALL_REQUEST_GAS_LIMIT, HASH_HEX_STRING_LEN, MAX_LOGS,
+    },
     database::{
         ethereum::EthereumBlockStore,
         filter::EthDatabaseFilterBuilder,
@@ -614,8 +616,12 @@ where
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
 
+        // Calculate the total cost of the transaction
+        let total_cost = transaction_signed.value()
+            + (U256::from(transaction_signed.max_fee_per_gas()) * U256::from(transaction_signed.gas_limit()));
+
         // Check the cached balance of the signer
-        self.check_cached_balance(signer, transaction_signed.value()).await?;
+        self.check_cached_balance(signer, total_cost).await?;
 
         // Validate the transaction
         validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
@@ -959,7 +965,10 @@ where
             // If cache is full, remove the oldest entry
             self.remove_account_balance_with_timestamp().await;
 
-            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_secs();
 
             // Insert the balance into the cache
             let mut account_balances = self.account_balances.lock().await;
@@ -973,10 +982,7 @@ where
         Ok(())
     }
 
-    async fn remove_account_balance_with_timestamp(
-        &self,
-    ) {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).expect("Time went backwards").as_secs();
+    async fn remove_account_balance_with_timestamp(&self) {
         let account_balances = self.account_balances.lock().await;
         if account_balances.len() > *ACCOUNT_BALANCES_DIMENSION {
             let (oldest_key, _) = account_balances

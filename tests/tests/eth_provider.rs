@@ -977,7 +977,7 @@ async fn test_send_raw_transaction_check_cached_balance(#[future] katana: Katana
         nonce: 0,
         gas_limit: 21000,
         to: TxKind::Call(Address::random()),
-        value: U256::MAX,
+        value: U256::MAX/U256::from(2u64),
         input: Bytes::default(),
         max_fee_per_gas: 875_000_000,
         max_priority_fee_per_gas: 0,
