@@ -972,8 +972,9 @@ where
                 .as_secs();
 
             // Insert the balance into the cache
-            let mut account_balances = self.account_balances.lock().await;
-            account_balances.insert(signer, (user_balance, now));
+            // let mut account_balances =
+            self.account_balances.lock().await.insert(signer, (user_balance, now));
+            // account_balances.insert(signer, (user_balance, now));
 
             // If the balance is not enough, return an error
             if user_balance < transaction_value {
@@ -990,8 +991,9 @@ where
                 .iter()
                 .min_by_key(|&(_, &(_, timestamp))| timestamp)
                 .expect("Attempted to find the oldest key in an empty map");
-
-            self.remove_from_account_balances(*oldest_key).await;
+            let oldest_key = *oldest_key;
+            drop(account_balances);
+            self.remove_from_account_balances(oldest_key).await;
         }
     }
 }
