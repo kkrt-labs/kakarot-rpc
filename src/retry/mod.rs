@@ -6,11 +6,12 @@ use crate::eth_provider::{
         types::transaction::StoredPendingTransaction,
         Database,
     },
+    error::{EthApiError, EthereumDataFormatError, SignatureError},
     provider::EthereumProvider,
 };
 use eyre::Result;
 use opentelemetry::metrics::{Gauge, Unit};
-use reth_primitives::{TransactionSignedEcRecovered, B256};
+use reth_primitives::{Address, TransactionSignedEcRecovered, B256};
 use std::{
     fmt,
     str::FromStr,
@@ -134,7 +135,30 @@ where
         tracing::info!(%hash, "pruning");
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&hash).build();
         self.database.delete_one::<StoredPendingTransaction>(filter).await?;
+        let signer = self.get_signer_from_transaction_hash(hash).await?;
+        // Remove the cached balance of the signer
+        self.eth_provider.remove_from_account_balances(signer).await;
         Ok(())
+    }
+
+    /// Retrieves the signer of a transaction given its hash.
+    async fn get_signer_from_transaction_hash(&self, hash: B256) -> Result<Address> {
+        let transaction = self.eth_provider.transaction_by_hash(hash).await?;
+        if let Some(transaction) = transaction {
+            // Convert the `Transaction` instance to a `TransactionSigned` instance.
+            let transaction_signed_ec_recovered: reth_primitives::TransactionSignedEcRecovered = transaction
+                .try_into()
+                .map_err(|_| EthApiError::from(EthereumDataFormatError::TransactionConversion))?;
+
+            let (transaction_signed, _) = transaction_signed_ec_recovered.to_components();
+
+            // Retrieve the signer of the transaction.
+            let signer =
+                transaction_signed.recover_signer().ok_or_else(|| EthApiError::from(SignatureError::Recovery))?;
+            Ok(signer)
+        } else {
+            Err(EthApiError::from(EthereumDataFormatError::TransactionConversion).into())
+        }
     }
 
     /// Returns all pending transactions.

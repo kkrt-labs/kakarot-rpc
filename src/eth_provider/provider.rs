@@ -89,8 +89,6 @@ pub trait EthereumProvider {
     async fn syncing(&self) -> EthProviderResult<SyncStatus>;
     /// Returns the chain id.
     async fn chain_id(&self) -> EthProviderResult<Option<U64>>;
-    /// Returns the balance map
-    async fn get_account_balances(&self) -> HashMap<Address, U256>;
     /// Returns a block by hash. Block can be full or just the hashes of the transactions.
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>>;
     /// Returns a block by number. Block can be full or just the hashes of the transactions.
@@ -156,8 +154,6 @@ pub trait EthereumProvider {
     ) -> EthProviderResult<FeeHistory>;
     /// Send a raw transaction to the network and returns the transactions hash.
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256>;
-    /// Check the cached balance of the signer and return an error if the balance is not enough.
-    async fn check_cached_balance(&self, signer: Address, transaction_value: U256) -> Result<(), EthApiError>;
     /// Returns the current gas price.
     async fn gas_price(&self) -> EthProviderResult<U256>;
     /// Returns the block receipts for a block.
@@ -171,6 +167,7 @@ pub trait EthereumProvider {
     async fn txpool_transactions(&self) -> EthProviderResult<Vec<Transaction>>;
     /// Returns the content of the pending pool.
     async fn txpool_content(&self) -> EthProviderResult<TxpoolContent>;
+    async fn remove_from_account_balances(&self, signer: Address);
 }
 
 /// Structure that implements the `EthereumProvider` trait.
@@ -235,11 +232,6 @@ where
 
     async fn chain_id(&self) -> EthProviderResult<Option<U64>> {
         Ok(Some(U64::from(self.chain_id)))
-    }
-
-    async fn get_account_balances(&self) -> HashMap<Address, U256> {
-        let account_balances = self.account_balances.lock().await;
-        account_balances.clone()
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthProviderResult<Option<RichBlock>> {
@@ -629,7 +621,7 @@ where
         validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
 
         // Remove the signer's balance from the cache, as it will be updated after the transaction is executed
-        self.account_balances.lock().await.remove(&signer);
+        self.remove_from_account_balances(signer).await;
 
         // Get the number of retries for the transaction
         let retries = self.database.pending_transaction_retries(&transaction_signed.hash).await?;
@@ -667,31 +659,6 @@ where
         );
 
         Ok(hash)
-    }
-
-    async fn check_cached_balance(&self, signer: Address, transaction_value: U256) -> Result<(), EthApiError> {
-        let account_balances = self.account_balances.lock().await;
-        let signer_balance = account_balances.get(&signer).copied();
-        drop(account_balances);
-
-        // Check the cached balance of the signer
-        if let Some(balance) = signer_balance {
-            // If the balance is not enough, return an error
-            if balance < transaction_value {
-                return Err(ExecutionError::from(EvmError::Balance).into());
-            }
-        } else {
-            // If the balance is not cached, fetch it
-            let user_balance = self.balance(signer, None).await?;
-            // Cache the balance for future use
-            let mut account_balances = self.account_balances.lock().await;
-            account_balances.insert(signer, user_balance);
-            // If the balance is not enough, return an error
-            if user_balance < transaction_value {
-                return Err(ExecutionError::from(EvmError::Balance).into());
-            }
-        }
-        Ok(())
     }
 
     async fn gas_price(&self) -> EthProviderResult<U256> {
@@ -751,6 +718,11 @@ where
             content
         }))
     }
+
+    async fn remove_from_account_balances(&self, signer: Address) {
+        // Remove the signer's balance from the cache
+        self.account_balances.lock().await.remove(&signer);
+    }
 }
 
 impl<SP> EthDataProvider<SP>
@@ -771,6 +743,12 @@ where
     #[cfg(feature = "testing")]
     pub const fn starknet_provider(&self) -> &SP {
         &self.starknet_provider
+    }
+
+    #[cfg(feature = "testing")]
+    pub async fn get_account_balances(&self) -> HashMap<Address, U256> {
+        let account_balances = self.account_balances.lock().await;
+        account_balances.clone()
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.
@@ -961,6 +939,31 @@ where
             BlockId::Hash(hash) => Ok(BlockHashOrNumber::Hash(hash.into())),
             BlockId::Number(number_or_tag) => Ok(self.tag_into_block_number(number_or_tag).await?.into()),
         }
+    }
+
+    async fn check_cached_balance(&self, signer: Address, transaction_value: U256) -> Result<(), EthApiError> {
+        let account_balances = self.account_balances.lock().await;
+        let signer_balance = account_balances.get(&signer).copied();
+        drop(account_balances);
+
+        // Check the cached balance of the signer
+        if let Some(balance) = signer_balance {
+            // If the balance is not enough, return an error
+            if balance < transaction_value {
+                return Err(ExecutionError::from(EvmError::Balance).into());
+            }
+        } else {
+            // If the balance is not cached, fetch it
+            let user_balance = self.balance(signer, None).await?;
+            // Cache the balance for future use
+            let mut account_balances = self.account_balances.lock().await;
+            account_balances.insert(signer, user_balance);
+            // If the balance is not enough, return an error
+            if user_balance < transaction_value {
+                return Err(ExecutionError::from(EvmError::Balance).into());
+            }
+        }
+        Ok(())
     }
 }
 
