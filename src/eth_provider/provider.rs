@@ -786,6 +786,8 @@ where
         request: TransactionRequest,
         block_id: Option<BlockId>,
     ) -> EthProviderResult<CairoArrayLegacy<Felt>> {
+        tracing::trace!(?request);
+
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
