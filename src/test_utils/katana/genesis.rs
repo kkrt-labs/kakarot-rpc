@@ -21,7 +21,6 @@ use katana_primitives::{
         },
     },
 };
-use lazy_static::lazy_static;
 use rayon::prelude::*;
 use reth_primitives::{B256, U256};
 use serde::Serialize;
@@ -35,12 +34,10 @@ use starknet::core::{
     },
     utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness},
 };
-use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf, str::FromStr};
+use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf, str::FromStr, sync::LazyLock};
 use walkdir::WalkDir;
 
-lazy_static! {
-    static ref SALT: Felt = Felt::from_bytes_be(&[0u8; 32]);
-}
+pub static SALT: LazyLock<Felt> = LazyLock::new(|| Felt::from_bytes_be(&[0u8; 32]));
 
 #[serde_as]
 #[derive(Serialize, Debug)]

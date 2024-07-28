@@ -8,7 +8,6 @@ use crate::eth_provider::{
     },
 };
 use arbitrary::Arbitrary;
-use lazy_static::lazy_static;
 use mongodb::{
     bson::{self, doc, Document},
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
@@ -17,7 +16,7 @@ use mongodb::{
 use reth_primitives::{Address, TxType, B256, U256};
 use reth_rpc_types::Transaction;
 use serde::Serialize;
-use std::{ops::Range, str::FromStr};
+use std::{ops::Range, str::FromStr, sync::LazyLock};
 use strum::{EnumIter, IntoEnumIterator};
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
@@ -25,26 +24,34 @@ use testcontainers::{
     ContainerAsync, Image,
 };
 
-lazy_static! {
-    pub static ref CHAIN_ID: U256 = U256::from(1);
+pub static CHAIN_ID: LazyLock<U256> = LazyLock::new(|| U256::from(1));
+pub static BLOCK_HASH: LazyLock<B256> = LazyLock::new(|| B256::from(U256::from(0x1234)));
+pub static EIP1599_TX_HASH: LazyLock<B256> = LazyLock::new(|| {
+    B256::from(U256::from_str("0xc92a4e464caa049999cb2073cc4d8586bebb42b518115f631710b2597155c962").unwrap())
+});
+pub static EIP2930_TX_HASH: LazyLock<B256> = LazyLock::new(|| {
+    B256::from(U256::from_str("0x972ba18c780c31bade31873d6f076a3be4e6d314776e2ad50a30eda861acab79").unwrap())
+});
+pub static LEGACY_TX_HASH: LazyLock<B256> = LazyLock::new(|| {
+    B256::from(U256::from_str("0x38c7e066854c56932100b896320a37adbab32713cca46d1e06307fe5d6062b7d").unwrap())
+});
+pub static TEST_SIG_R: LazyLock<U256> =
+    LazyLock::new(|| U256::from_str("0x1ae9d63d9152a0f628cc5c843c9d0edc6cb705b027d12d30b871365d7d9c8ed5").unwrap());
+pub static TEST_SIG_S: LazyLock<U256> =
+    LazyLock::new(|| U256::from_str("0x0d9fa834b490259ad6aa62a49d926053ca1b52acbb59a5e1cf8ecabd65304606").unwrap());
+pub static TEST_SIG_V: LazyLock<U256> = LazyLock::new(|| U256::from(1));
 
-    pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
-    pub static ref EIP1599_TX_HASH: B256 = B256::from(U256::from_str("0xc92a4e464caa049999cb2073cc4d8586bebb42b518115f631710b2597155c962").unwrap());
-    pub static ref EIP2930_TX_HASH: B256 = B256::from(U256::from_str("0x972ba18c780c31bade31873d6f076a3be4e6d314776e2ad50a30eda861acab79").unwrap());
-    pub static ref LEGACY_TX_HASH: B256 = B256::from(U256::from_str("0x38c7e066854c56932100b896320a37adbab32713cca46d1e06307fe5d6062b7d").unwrap());
-
-    pub static ref TEST_SIG_R: U256 = U256::from_str("0x1ae9d63d9152a0f628cc5c843c9d0edc6cb705b027d12d30b871365d7d9c8ed5").unwrap();
-    pub static ref TEST_SIG_S: U256 = U256::from_str("0x0d9fa834b490259ad6aa62a49d926053ca1b52acbb59a5e1cf8ecabd65304606").unwrap();
-    pub static ref TEST_SIG_V: U256 = U256::from(1);
-    // Given constant r, s, v and transaction fields, we can derive the `Transaction.from` field "a posteriori"
-    // ⚠️ If the transaction fields change, the below addresses should be updated accordingly ⚠️
-    // Recovered address from the above R, S, V, with EIP1559 transaction
-    pub static ref RECOVERED_EIP1599_TX_ADDRESS: Address = Address::from_str("0x520666a744f86a09c2a794b8d56501c109afba2d").unwrap();
-    // Recovered address from the above R, S, V, with EIP2930 transaction
-    pub static ref RECOVERED_EIP2930_TX_ADDRESS: Address = Address::from_str("0x753925d9bbd7682e4b77f102c47d24ee0580aa8d").unwrap();
-    // Recovered address from the above R, S, V, with Legacy transaction
-    pub static ref RECOVERED_LEGACY_TX_ADDRESS: Address = Address::from_str("0x05ac0c7c5930a6f9003a709042dbb136e98220f2").unwrap();
-}
+// Given constant r, s, v and transaction fields, we can derive the `Transaction.from` field "a posteriori"
+// ⚠️ If the transaction fields change, the below addresses should be updated accordingly ⚠️
+// Recovered address from the above R, S, V, with EIP1559 transaction
+pub static RECOVERED_EIP1599_TX_ADDRESS: LazyLock<Address> =
+    LazyLock::new(|| Address::from_str("0x520666a744f86a09c2a794b8d56501c109afba2d").unwrap());
+// Recovered address from the above R, S, V, with EIP2930 transaction
+pub static RECOVERED_EIP2930_TX_ADDRESS: LazyLock<Address> =
+    LazyLock::new(|| Address::from_str("0x753925d9bbd7682e4b77f102c47d24ee0580aa8d").unwrap());
+// Recovered address from the above R, S, V, with Legacy transaction
+pub static RECOVERED_LEGACY_TX_ADDRESS: LazyLock<Address> =
+    LazyLock::new(|| Address::from_str("0x05ac0c7c5930a6f9003a709042dbb136e98220f2").unwrap());
 
 pub const BLOCK_NUMBER: u64 = 0x1234;
 pub const RANDOM_BYTES_SIZE: usize = 100_024;

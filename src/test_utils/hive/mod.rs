@@ -136,33 +136,30 @@ mod tests {
         eth_provider::utils::split_u256,
         test_utils::{constants::ACCOUNT_STORAGE, katana::genesis::Initialized},
     };
-    use lazy_static::lazy_static;
-    use std::path::{Path, PathBuf};
+    use std::{
+        path::{Path, PathBuf},
+        sync::LazyLock,
+    };
 
-    lazy_static! {
-        static ref ROOT: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf();
-        static ref HIVE_GENESIS: HiveGenesisConfig = {
-            let hive_content =
-                std::fs::read_to_string(ROOT.join("src/test_utils/hive/test_data/genesis.json")).unwrap();
-            serde_json::from_str(&hive_content).unwrap()
-        };
-        static ref GENESIS_BUILDER_LOADED: KatanaGenesisBuilder<Loaded> =
-            KatanaGenesisBuilder::default().load_classes(ROOT.join("lib/kakarot/build"));
-        static ref GENESIS_BUILDER: KatanaGenesisBuilder<Initialized> =
-            GENESIS_BUILDER_LOADED.clone().with_kakarot(Felt::ZERO).unwrap();
-        static ref GENESIS: GenesisJson =
-            HIVE_GENESIS.clone().try_into_genesis_json(GENESIS_BUILDER_LOADED.clone()).unwrap();
-    }
+    static ROOT: LazyLock<PathBuf> = LazyLock::new(|| Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf());
+    static HIVE_GENESIS: LazyLock<HiveGenesisConfig> = LazyLock::new(|| {
+        let hive_content = std::fs::read_to_string(ROOT.join("src/test_utils/hive/test_data/genesis.json")).unwrap();
+        serde_json::from_str(&hive_content).unwrap()
+    });
+    static GENESIS_BUILDER_LOADED: LazyLock<KatanaGenesisBuilder<Loaded>> =
+        LazyLock::new(|| KatanaGenesisBuilder::default().load_classes(ROOT.join("lib/kakarot/build")));
+    static GENESIS_BUILDER: LazyLock<KatanaGenesisBuilder<Initialized>> =
+        LazyLock::new(|| GENESIS_BUILDER_LOADED.clone().with_kakarot(Felt::ZERO).unwrap());
+    static GENESIS: LazyLock<GenesisJson> =
+        LazyLock::new(|| HIVE_GENESIS.clone().try_into_genesis_json(GENESIS_BUILDER_LOADED.clone()).unwrap());
 
     #[test]
     fn test_correct_genesis_len() {
-        // Then
         assert_eq!(GENESIS.contracts.len(), 8);
     }
 
     #[test]
     fn test_genesis_accounts() {
-        // Then
         for (address, account) in HIVE_GENESIS.alloc.clone() {
             let starknet_address =
                 GENESIS_BUILDER.compute_starknet_address(Felt::from_bytes_be_slice(address.as_slice())).unwrap().0;
