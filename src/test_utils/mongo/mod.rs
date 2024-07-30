@@ -150,8 +150,24 @@ impl MongoFuzzer {
 
     /// Adds a transaction to the collection of transactions with custom values.
     pub fn add_custom_transaction(&mut self, builder: TransactionBuilder) -> Result<(), Box<dyn std::error::Error>> {
+        // Build a transaction using the provided builder and random byte size.
         let transaction = builder.build(self.rnd_bytes_size)?;
-        self.add_transaction_to_collections(transaction);
+
+        // Generate a receipt for the transaction.
+        let receipt = self.generate_transaction_receipt(&transaction.tx);
+
+        // Convert the receipt into a vector of logs and append them to the existing logs collection.
+        self.logs.append(&mut Vec::from(receipt.clone()));
+
+        // Generate a header for the transaction and add it to the headers collection.
+        self.headers.push(self.generate_transaction_header(&transaction.tx));
+
+        // Add the transaction to the transactions collection.
+        self.transactions.push(transaction);
+
+        // Add the receipt to the receipts collection.
+        self.receipts.push(receipt);
+
         Ok(())
     }
 
@@ -210,43 +226,22 @@ impl MongoFuzzer {
             // Ensure the block number in log <= max block number in the transactions collection.
             log.block_number = Some(log.block_number.unwrap_or_default().min(self.max_block_number()));
 
-            let stored_log = StoredLog { log };
-
-            self.logs.push(stored_log);
+            self.logs.push(StoredLog { log });
         }
         Ok(())
     }
 
     /// Gets the highest block number in the transactions collection.
     pub fn max_block_number(&self) -> u64 {
-        self.headers.iter().map(|header| header.number.unwrap_or_default()).max().unwrap_or_default()
-    }
-
-    /// Adds a hardcoded transaction to the collection of transactions.
-    pub fn add_random_transaction(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let builder = TransactionBuilder::default();
-        self.add_custom_transaction(builder)
+        self.headers.iter().filter_map(|header| header.number).max().unwrap_or_default()
     }
 
     /// Adds random transactions to the collection of transactions.
     pub fn add_random_transactions(&mut self, n_transactions: usize) -> Result<(), Box<dyn std::error::Error>> {
         for _ in 0..n_transactions {
-            self.add_random_transaction()?;
+            self.add_custom_transaction(TransactionBuilder::default())?;
         }
         Ok(())
-    }
-
-    /// Adds a transaction to the collections of transactions, receipts, logs, and headers.
-    fn add_transaction_to_collections(&mut self, transaction: StoredTransaction) {
-        let receipt = self.generate_transaction_receipt(&transaction.tx);
-        let mut logs = Vec::<StoredLog>::from(receipt.clone());
-
-        let header = self.generate_transaction_header(&transaction.tx);
-
-        self.transactions.push(transaction);
-        self.receipts.push(receipt);
-        self.logs.append(&mut logs);
-        self.headers.push(header);
     }
 
     /// Generates a transaction receipt based on the given transaction.
