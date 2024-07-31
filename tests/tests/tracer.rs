@@ -11,9 +11,12 @@ use kakarot_rpc::{
     },
     tracing::builder::TracerBuilder,
 };
-use reth_primitives::{B256, U256};
+use reth_primitives::{Address, Bytes, B256, U256};
 use reth_rpc_types::{
-    trace::geth::{GethDebugTracingOptions, GethTrace, TraceResult},
+    trace::{
+        geth::{GethDebugTracingOptions, GethTrace, TraceResult},
+        parity::{Action, CallAction, CallOutput, CallType, TraceOutput, TransactionTrace},
+    },
     OtherFields,
 };
 use revm_inspectors::tracing::TracingInspectorConfig;
@@ -21,8 +24,6 @@ use rstest::*;
 use serde_json::json;
 use starknet::{core::types::MaybePendingBlockWithTxHashes, providers::Provider};
 use std::sync::Arc;
-use reth_primitives::{Address, Bytes};
-use reth_rpc_types::trace::parity::{Action, CallAction, CallOutput, CallType, TraceOutput, TransactionTrace};
 
 /// The block number on which tracing will be performed.
 const TRACING_BLOCK_NUMBER: u64 = 0x3;
@@ -226,7 +227,6 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
-
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
     tracing(&katana, &plain_opcodes, "createCounterAndInvoke", Box::new(|_| vec![])).await;
