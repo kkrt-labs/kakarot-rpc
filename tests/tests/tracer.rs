@@ -253,12 +253,12 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
 
     // Get the Ethereum provider from the Katana instance.
     let eth_provider = katana.eth_provider();
-    // Create a TracerBuilder instance for the tx.
-    let tracer_builder_tx =
-        TracerBuilder::new(Arc::new(&eth_provider)).await.expect("Failed to create tracer_builder_tx");
+    // Create a TracerBuilder instance
+    let tracer_builder = TracerBuilder::new(Arc::new(&eth_provider)).await.expect("Failed to create tracer_builder");
 
     // Get the traces for the tx.
-    let trace_with_tx_hash = tracer_builder_tx
+    let trace_with_tx_hash = tracer_builder
+        .clone()
         .with_transaction_hash(*tx_hash)
         .await
         .expect("Failed to set transaction hash")
@@ -267,12 +267,9 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
         .expect("Failed to build trace_with_tx_hash");
     let trace = trace_with_tx_hash.debug_transaction(*tx_hash).expect("Failed to trace transaction");
 
-    // Create a TracerBuilder instance for the block.
-    let tracer_builder_block =
-        TracerBuilder::new(Arc::new(&eth_provider)).await.expect("Failed to create tracer_builder_block");
-
     // Get the traces for the block
-    let block_trace = tracer_builder_block
+    let block_trace = tracer_builder
+        .clone()
         .with_block_id(TRACING_BLOCK_NUMBER.into())
         .await
         .expect("Failed to set block number")
@@ -295,7 +292,7 @@ async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotE
     // Asser that the trace matches the expected default GethTrace for a transaction that runs out of resources.
     match run_out_of_resource_trace {
         TraceResult::Success { result, .. } => assert_eq!(
-            *result,
+            result.clone(),
             GethTrace::Default(reth_rpc_types::trace::geth::DefaultFrame { failed: true, ..Default::default() })
         ),
         TraceResult::Error { .. } => panic!("Expected a success trace result"),

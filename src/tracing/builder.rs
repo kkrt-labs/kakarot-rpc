@@ -15,7 +15,7 @@ use reth_rpc_types::{
 };
 use revm_inspectors::tracing::TracingInspectorConfig;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Floating;
 #[derive(Debug)]
 pub struct Pinned;
@@ -87,8 +87,8 @@ impl From<GethDebugTracingCallOptions> for TracingOptions {
     }
 }
 
-#[derive(Debug)]
-pub struct TracerBuilder<P: EthereumProvider + Send + Sync, Status = Floating> {
+#[derive(Debug, Clone)]
+pub struct TracerBuilder<P: EthereumProvider + Send + Sync + Clone, Status = Floating> {
     eth_provider: P,
     env: Env,
     block: Block,
