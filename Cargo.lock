@@ -7332,7 +7332,6 @@ dependencies = [
  "itertools 0.13.0",
  "jsonrpsee 0.23.2",
  "katana-primitives",
- "lazy_static",
  "mongodb",
  "num-traits 0.2.19",
  "opentelemetry",
