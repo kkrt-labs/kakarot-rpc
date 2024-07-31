@@ -343,7 +343,7 @@ impl KatanaGenesisBuilder<Initialized> {
     }
 
     pub fn cache_load(&self, key: &str) -> Result<Felt> {
-        self.cache.get(key).copied().ok_or(eyre!("Cache miss for {key} address"))
+        self.cache.get(key).copied().ok_or_else(|| eyre!("Cache miss for {key} address"))
     }
 
     pub const fn cache(&self) -> &HashMap<String, Felt> {
