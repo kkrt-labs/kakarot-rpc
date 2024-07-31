@@ -220,3 +220,83 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
         env
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::mock_provider::MockEthereumProviderStruct;
+    use reth_primitives::U64;
+    use reth_rpc_types::Transaction;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_tracer_builder_with_block_id_failure_block_id() {
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        mock_provider.expect_block_by_number().returning(|_, _| {
+            Err(EthApiError::UnknownBlock(BlockHashOrNumber::Number(u64::try_from(U64::from(1)).unwrap())))
+        });
+
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        let result = builder.with_block_id(BlockId::Number(1.into())).await;
+        assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_with_block_id_failure_transaction_hash() {
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        mock_provider
+            .expect_block_by_hash()
+            .returning(|_, _| Err(EthApiError::UnknownBlock(B256::repeat_byte(0).into())));
+
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        let result = builder.with_block_id(BlockId::Hash(B256::repeat_byte(1).into())).await;
+        assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_with_transaction_hash_failure() {
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        mock_provider
+            .expect_transaction_by_hash()
+            .returning(|_| Err(EthApiError::TransactionNotFound(B256::repeat_byte(0))));
+
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        let result = builder.with_transaction_hash(B256::repeat_byte(0)).await;
+        assert!(matches!(result, Err(EthApiError::TransactionNotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_with_transaction_not_found() {
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        mock_provider.expect_transaction_by_hash().returning(|_| Ok(None));
+
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        let result = builder.with_transaction_hash(B256::repeat_byte(0)).await;
+        assert!(matches!(result, Err(EthApiError::TransactionNotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_with_unknown_block() {
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        mock_provider
+            .expect_transaction_by_hash()
+            .returning(|_| Ok(Some(Transaction { block_number: None, ..Default::default() })));
+
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        let result = builder.with_transaction_hash(B256::repeat_byte(0)).await;
+        assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_failure() {
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        mock_provider.expect_chain_id().returning(|| Err(TransactionError::InvalidChainId.into()));
+        let result = TracerBuilder::new(Arc::new(&mock_provider)).await;
+        assert!(result.is_err());
+    }
+}
