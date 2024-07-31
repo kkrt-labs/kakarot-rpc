@@ -17,12 +17,12 @@ use reth_rpc_types::{
     request::TransactionInput,
     trace::geth::{
         CallFrame, GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions,
-        GethDebugTracingOptions, GethTrace, TraceResult,
+        GethDebugTracingOptions, GethTrace,
     },
     OtherFields, TransactionRequest,
 };
 use rstest::*;
-use serde_json::{json, Value};
+use serde_json::Value;
 use starknet::{core::types::MaybePendingBlockWithTxHashes, providers::Provider};
 
 /// The block number on which tracing will be performed.
