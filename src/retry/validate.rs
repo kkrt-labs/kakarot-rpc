@@ -291,11 +291,6 @@ where
             return TransactionValidationOutcome::Invalid(transaction, err);
         }
 
-        // let account = match self.client.latest().and_then(|state| state.basic_account(transaction.sender())) {
-        //     Ok(account) => account.unwrap_or_default(),
-        //     Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),
-        // };
-
         let account = match self.client.basic_ref(transaction.sender()) {
             Ok(account) => account.unwrap_or_default(),
             Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),
