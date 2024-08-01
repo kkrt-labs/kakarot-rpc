@@ -1,22 +1,14 @@
-use crate::{
-    eth_provider::{
-        provider::EthereumProvider,
-    },
-};
+use crate::eth_provider::provider::{EthProviderResult, EthereumProvider};
+use async_trait::async_trait;
 use auto_impl::auto_impl;
-use reth_primitives::{
-    Address, BlockId, BlockNumberOrTag, Bytes, B256, U256, U64,
-};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, U256, U64};
 use reth_rpc_types::{
     serde_helpers::JsonStorageKey,
     state::StateOverride,
     txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus},
-    BlockOverrides, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
-    SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
+    BlockOverrides, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock, SyncStatus, Transaction,
+    TransactionReceipt, TransactionRequest,
 };
-use async_trait::async_trait;
-use crate::eth_provider::provider::EthProviderResult;
-
 
 #[async_trait]
 #[auto_impl(Arc, &)]
@@ -60,7 +52,11 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruc
         self.eth_provider.block_by_hash(hash, full).await
     }
 
-    async fn block_by_number(&self, number_or_tag: BlockNumberOrTag, full: bool) -> EthProviderResult<Option<RichBlock>> {
+    async fn block_by_number(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+        full: bool,
+    ) -> EthProviderResult<Option<RichBlock>> {
         self.eth_provider.block_by_number(number_or_tag, full).await
     }
 
@@ -68,7 +64,10 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruc
         self.eth_provider.block_transaction_count_by_hash(hash).await
     }
 
-    async fn block_transaction_count_by_number(&self, number_or_tag: BlockNumberOrTag) -> EthProviderResult<Option<U256>> {
+    async fn block_transaction_count_by_number(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+    ) -> EthProviderResult<Option<U256>> {
         self.eth_provider.block_transaction_count_by_number(number_or_tag).await
     }
 
@@ -76,11 +75,19 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruc
         self.eth_provider.transaction_by_hash(hash).await
     }
 
-    async fn transaction_by_block_hash_and_index(&self, hash: B256, index: Index) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
+    async fn transaction_by_block_hash_and_index(
+        &self,
+        hash: B256,
+        index: Index,
+    ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         self.eth_provider.transaction_by_block_hash_and_index(hash, index).await
     }
 
-    async fn transaction_by_block_number_and_index(&self, number_or_tag: BlockNumberOrTag, index: Index) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
+    async fn transaction_by_block_number_and_index(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+        index: Index,
+    ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
         self.eth_provider.transaction_by_block_number_and_index(number_or_tag, index).await
     }
 
@@ -92,7 +99,12 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruc
         self.eth_provider.balance(address, block_id).await
     }
 
-    async fn storage_at(&self, address: Address, index: JsonStorageKey, block_id: Option<BlockId>) -> EthProviderResult<B256> {
+    async fn storage_at(
+        &self,
+        address: Address,
+        index: JsonStorageKey,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<B256> {
         self.eth_provider.storage_at(address, index, block_id).await
     }
 
@@ -108,7 +120,13 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruc
         self.eth_provider.get_logs(filter).await
     }
 
-    async fn call(&self, request: TransactionRequest, block_id: Option<BlockId>, state_overrides: Option<StateOverride>, block_overrides: Option<Box<BlockOverrides>>) -> EthProviderResult<Bytes> {
+    async fn call(
+        &self,
+        request: TransactionRequest,
+        block_id: Option<BlockId>,
+        state_overrides: Option<StateOverride>,
+        block_overrides: Option<Box<BlockOverrides>>,
+    ) -> EthProviderResult<Bytes> {
         self.eth_provider.call(request, block_id, state_overrides, block_overrides).await
     }
 
@@ -116,7 +134,12 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruc
         self.eth_provider.estimate_gas(call, block_id).await
     }
 
-    async fn fee_history(&self, block_count: U64, newest_block: BlockNumberOrTag, reward_percentiles: Option<Vec<f64>>) -> EthProviderResult<FeeHistory> {
+    async fn fee_history(
+        &self,
+        block_count: U64,
+        newest_block: BlockNumberOrTag,
+        reward_percentiles: Option<Vec<f64>>,
+    ) -> EthProviderResult<FeeHistory> {
         self.eth_provider.fee_history(block_count, newest_block, reward_percentiles).await
     }
 
@@ -132,7 +155,10 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruc
         self.eth_provider.block_receipts(block_id).await
     }
 
-    async fn block_transactions(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
+    async fn block_transactions(
+        &self,
+        block_id: Option<BlockId>,
+    ) -> EthProviderResult<Option<Vec<reth_rpc_types::Transaction>>> {
         self.eth_provider.block_transactions(block_id).await
     }
 

@@ -1,9 +1,8 @@
-use crate::eth_rpc::api::txpool_api::TxPoolApiServer;
+use crate::{eth_rpc::api::txpool_api::TxPoolApiServer, pool_provider::provider::PoolProvider};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::Address;
 use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus};
 use tracing::instrument;
-use crate::pool_provider::provider::PoolProvider;
 
 /// The RPC module for implementing the Txpool api
 #[derive(Debug)]

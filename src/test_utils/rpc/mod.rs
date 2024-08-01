@@ -1,7 +1,10 @@
 use super::katana::Katana;
-use crate::eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server};
-use crate::alchemy_provider::provider::AlchemyStruct;
-use crate::pool_provider::provider::PoolStruct;
+use crate::{
+    alchemy_provider::provider::AlchemyStruct,
+    debug_provider::provider::DebugStruct,
+    eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
+    pool_provider::provider::PoolStruct,
+};
 use jsonrpsee::server::ServerHandle;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -77,8 +80,16 @@ async fn get_next_port() -> u16 {
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
     let alchemy_provider = AlchemyStruct::new(katana.eth_provider().clone());
     let pool_provider = PoolStruct::new(katana.eth_provider().clone());
+    let debug_provider = DebugStruct::new(katana.eth_provider().clone());
     Ok(run_server(
-        KakarotRpcModuleBuilder::new(katana.eth_provider(), katana.starknet_provider(), alchemy_provider, pool_provider).rpc_module()?,
+        KakarotRpcModuleBuilder::new(
+            katana.eth_provider(),
+            katana.starknet_provider(),
+            alchemy_provider,
+            pool_provider,
+            debug_provider,
+        )
+        .rpc_module()?,
         #[cfg(feature = "testing")]
         RPCConfig::new_test_config_from_port(get_next_port().await),
         #[cfg(not(feature = "testing"))]
