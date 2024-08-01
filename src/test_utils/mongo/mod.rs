@@ -1,4 +1,4 @@
-use crate::eth_provider::{
+use crate::providers::eth_provider::{
     constant::U64_HEX_STRING_LEN,
     database::{
         types::{
@@ -386,7 +386,7 @@ impl TransactionBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::eth_provider::database::types::{
+    use crate::providers::eth_provider::database::types::{
         header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     };
 

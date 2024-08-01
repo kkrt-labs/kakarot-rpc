@@ -1,5 +1,5 @@
 #![allow(clippy::blocks_in_conditions)]
-use crate::{debug_provider::provider::DebugProvider, eth_rpc::api::debug_api::DebugApiServer};
+use crate::{eth_rpc::api::debug_api::DebugApiServer, providers::debug_provider::provider::DebugProvider};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Bytes, B256};
 use reth_rpc_types::{

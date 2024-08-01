@@ -1,7 +1,4 @@
 use crate::{
-    alchemy_provider::provider::AlchemyProvider,
-    debug_provider::provider::DebugProvider,
-    eth_provider::provider::EthereumProvider,
     eth_rpc::{
         api::{
             alchemy_api::AlchemyApiServer, debug_api::DebugApiServer, eth_api::EthApiServer,
@@ -13,7 +10,10 @@ use crate::{
             net_rpc::NetRpc, trace_rpc::TraceRpc, txpool_rpc::TxpoolRpc, web3_rpc::Web3Rpc,
         },
     },
-    pool_provider::provider::PoolProvider,
+    providers::{
+        alchemy_provider::provider::AlchemyProvider, debug_provider::provider::DebugProvider,
+        eth_provider::provider::EthereumProvider, pool_provider::provider::PoolProvider,
+    },
 };
 use jsonrpsee::{server::RegisterMethodError, Methods, RpcModule};
 use starknet::providers::Provider;

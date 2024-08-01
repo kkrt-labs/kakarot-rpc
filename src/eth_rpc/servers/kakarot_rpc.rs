@@ -1,6 +1,7 @@
 use crate::{
     config::KakarotRpcConfig,
-    eth_provider::{
+    eth_rpc::api::kakarot_api::KakarotApiServer,
+    providers::eth_provider::{
         constant::{Constant, MAX_LOGS},
         error::{EthApiError, EthereumDataFormatError, SignatureError},
         provider::EthereumProvider,
@@ -8,7 +9,6 @@ use crate::{
             get_white_listed_eip_155_transaction_hashes, to_starknet_transaction, MAX_FELTS_IN_CALLDATA,
         },
     },
-    eth_rpc::api::kakarot_api::KakarotApiServer,
     retry::{get_retry_tx_interval, get_transaction_max_retries},
 };
 use jsonrpsee::core::{async_trait, RpcResult};

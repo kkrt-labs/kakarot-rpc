@@ -1,5 +1,5 @@
 use crate::{
-    eth_provider::{
+    providers::eth_provider::{
         error::{EthApiError, EthereumDataFormatError, SignatureError},
         provider::{EthProviderResult, EthereumProvider},
     },

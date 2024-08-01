@@ -1,4 +1,4 @@
-use crate::eth_provider::provider::{EthProviderResult, EthereumProvider};
+use crate::providers::eth_provider::provider::{EthProviderResult, EthereumProvider};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, U256, U64};

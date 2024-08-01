@@ -1,4 +1,4 @@
-use crate::{eth_rpc::api::txpool_api::TxPoolApiServer, pool_provider::provider::PoolProvider};
+use crate::{eth_rpc::api::txpool_api::TxPoolApiServer, providers::pool_provider::provider::PoolProvider};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::Address;
 use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus};

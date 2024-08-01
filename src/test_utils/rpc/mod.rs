@@ -1,9 +1,10 @@
 use super::katana::Katana;
 use crate::{
-    alchemy_provider::provider::AlchemyStruct,
-    debug_provider::provider::DebugStruct,
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
-    pool_provider::provider::PoolStruct,
+    providers::{
+        alchemy_provider::provider::AlchemyStruct, debug_provider::provider::DebugStruct,
+        pool_provider::provider::PoolStruct,
+    },
 };
 use jsonrpsee::server::ServerHandle;
 use serde::{Deserialize, Serialize};

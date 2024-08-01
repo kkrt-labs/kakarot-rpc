@@ -6,7 +6,7 @@ use std::ops::Deref;
 /// A transaction receipt as stored in the database
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Serialize)]
 pub struct StoredLog {
-    #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
+    #[serde(deserialize_with = "crate::providers::eth_provider::database::types::serde::deserialize_intermediate")]
     pub log: Log,
 }
 

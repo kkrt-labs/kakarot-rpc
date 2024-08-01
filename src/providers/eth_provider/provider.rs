@@ -27,16 +27,16 @@ use super::{
     utils::{class_hash_not_declared, contract_not_found, entrypoint_not_found, split_u256},
 };
 use crate::{
-    eth_provider::database::{
-        ethereum::EthereumTransactionStore,
-        filter::{self, format_hex},
-        FindOpts,
-    },
     into_via_try_wrapper, into_via_wrapper,
     models::{
         block::{EthBlockId, EthBlockNumberOrTag},
         felt::Felt252Wrapper,
         transaction::validate_transaction,
+    },
+    providers::eth_provider::database::{
+        ethereum::EthereumTransactionStore,
+        filter::{self, format_hex},
+        FindOpts,
     },
 };
 use alloy_rlp::Decodable;
@@ -929,7 +929,7 @@ where
     /// Deploy the EVM transaction signer if a corresponding contract is not found on
     /// Starknet.
     async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
-        use crate::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+        use crate::providers::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::{
             accounts::{Call, ExecutionV1},
             core::{types::BlockTag, utils::get_selector_from_name},

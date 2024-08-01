@@ -1,5 +1,5 @@
 use super::{Tracer, TracerResult};
-use crate::eth_provider::{
+use crate::providers::eth_provider::{
     database::state::{EthCacheDatabase, EthDatabase},
     error::{EthApiError, TransactionError},
     provider::EthereumProvider,

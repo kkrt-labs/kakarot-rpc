@@ -1,4 +1,4 @@
-use crate::eth_provider::constant::{
+use crate::providers::eth_provider::constant::{
     ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, HASH_HEX_STRING_LEN, LOGS_TOPICS_HEX_STRING_LEN,
     U64_HEX_STRING_LEN,
 };

@@ -1,12 +1,14 @@
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
-    alchemy_provider::provider::AlchemyStruct,
     config::KakarotRpcConfig,
-    debug_provider::provider::DebugStruct,
-    eth_provider::{database::Database, provider::EthDataProvider},
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
-    pool_provider::provider::PoolStruct,
+    providers::{
+        alchemy_provider::provider::AlchemyStruct,
+        debug_provider::provider::DebugStruct,
+        eth_provider::{database::Database, provider::EthDataProvider},
+        pool_provider::provider::PoolStruct,
+    },
     retry::RetryHandler,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
@@ -111,7 +113,7 @@ fn setup_tracing() -> Result<()> {
 #[allow(clippy::significant_drop_tightening)]
 #[cfg(feature = "hive")]
 async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<()> {
-    use kakarot_rpc::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+    use kakarot_rpc::providers::eth_provider::constant::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
     use starknet::{accounts::ConnectedAccount, core::types::Felt, providers::Provider as _};
 
     let chain_id = starknet_provider.chain_id().await?;

@@ -8,7 +8,7 @@ use super::{
     },
     Database,
 };
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
+use crate::providers::eth_provider::error::{EthApiError, EthereumDataFormatError};
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 use mongodb::bson::doc;

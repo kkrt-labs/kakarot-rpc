@@ -1,4 +1,4 @@
-use crate::eth_provider::{error::EthApiError, provider::EthereumProvider};
+use crate::providers::eth_provider::{error::EthApiError, provider::EthereumProvider};
 use reth_primitives::{Address, B256, U256};
 use reth_revm::{
     db::CacheDB,

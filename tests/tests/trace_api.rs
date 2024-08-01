@@ -3,7 +3,7 @@
 use alloy_dyn_abi::DynSolValue;
 use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
-    eth_provider::provider::EthereumProvider,
+    providers::eth_provider::provider::EthereumProvider,
     test_utils::{
         eoa::Eoa,
         evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo},

@@ -2,12 +2,12 @@
 #![cfg(feature = "testing")]
 use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
-    eth_provider::{
+    models::felt::Felt252Wrapper,
+    providers::eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
         provider::EthereumProvider,
     },
-    models::felt::Felt252Wrapper,
     test_utils::{
         eoa::Eoa,
         evm_contract::{EvmContract, KakarotEvmContract},
@@ -553,7 +553,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
 #[cfg(feature = "hive")]
 async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     use futures::future::join_all;
-    use kakarot_rpc::{eth_provider::constant::CHAIN_ID, test_utils::eoa::KakarotEOA};
+    use kakarot_rpc::{providers::eth_provider::constant::CHAIN_ID, test_utils::eoa::KakarotEOA};
     use reth_primitives::B256;
     use starknet::providers::Provider;
 
