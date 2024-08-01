@@ -66,7 +66,6 @@ reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, features = [
   "alloy-compat",
 ] }
-reth-provider = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, features = [
   "arbitrary",

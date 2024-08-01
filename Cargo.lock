@@ -7385,7 +7385,6 @@ dependencies = [
  "reth-evm-ethereum",
  "reth-node-api",
  "reth-primitives",
- "reth-provider",
  "reth-revm",
  "reth-rpc-eth-types",
  "reth-rpc-types",

@@ -1,10 +1,13 @@
 #![allow(unused_variables)]
 
-use crate::eth_provider::{database::state::EthDatabase, provider::EthereumProvider};
+use crate::{
+    eth_provider::{database::state::EthDatabase, provider::EthereumProvider},
+    tracing::builder::TRACING_BLOCK_GAS_LIMIT,
+};
 use reth_chainspec::ChainSpec;
 use reth_primitives::{
-    constants::ETHEREUM_BLOCK_GAS_LIMIT, GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID,
-    EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID, LEGACY_TX_TYPE_ID,
+    GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID,
+    LEGACY_TX_TYPE_ID,
 };
 use reth_revm::DatabaseRef;
 use reth_transaction_pool::{
@@ -46,7 +49,7 @@ impl KakarotTransactionValidatorBuilder {
     pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
         Self {
             chain_spec,
-            block_gas_limit: ETHEREUM_BLOCK_GAS_LIMIT,
+            block_gas_limit: TRACING_BLOCK_GAS_LIMIT,
             minimum_priority_fee: None,
             max_tx_input_bytes: DEFAULT_MAX_TX_INPUT_BYTES,
 
