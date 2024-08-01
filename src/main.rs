@@ -3,6 +3,7 @@ use eyre::Result;
 use kakarot_rpc::{
     config::KakarotRpcConfig,
     eth_provider::{database::Database, provider::EthDataProvider},
+    alchemy_provider::{provider::AlchemyStruct},
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
     retry::RetryHandler,
 };
@@ -47,13 +48,14 @@ async fn main() -> Result<()> {
     // Setup the eth provider
     let starknet_provider = Arc::new(starknet_provider);
     let eth_provider = EthDataProvider::new(db.clone(), starknet_provider.clone()).await?;
+    let alchemy_provider = AlchemyStruct::new(eth_provider.clone());
 
     // Setup the retry handler
     let retry_handler = RetryHandler::new(eth_provider.clone(), db);
     retry_handler.start(&tokio::runtime::Handle::current());
 
     // Setup the RPC module
-    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_provider, starknet_provider).rpc_module()?;
+    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_provider, starknet_provider, alchemy_provider).rpc_module()?;
 
     // Start the RPC server
     let (socket_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;

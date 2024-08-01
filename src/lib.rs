@@ -13,3 +13,4 @@ pub mod retry;
 #[cfg(feature = "testing")]
 pub mod test_utils;
 pub mod tracing;
+pub mod alchemy_provider;
