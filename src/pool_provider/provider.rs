@@ -1,54 +1,45 @@
-use super::{
-    contracts::erc20::EthereumErc20,
-};
 use crate::{
     eth_provider::{
         provider::EthereumProvider,
-        error::EthApiError,
     },
-    models::token::{TokenBalance, TokenBalances, TokenMetadata},
 };
-use async_trait::async_trait;
 use auto_impl::auto_impl;
-use eyre::Result;
-use futures::future::join_all;
-use mongodb::bson::doc;
 use reth_primitives::{
     Address, BlockId, BlockNumberOrTag, Bytes, B256, U256, U64,
 };
 use reth_rpc_types::{
     serde_helpers::JsonStorageKey,
     state::StateOverride,
-    txpool::TxpoolContent,
+    txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus},
     BlockOverrides, FeeHistory, Filter, FilterChanges, Header, Index, RichBlock,
     SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
 };
+use async_trait::async_trait;
 use crate::eth_provider::provider::EthProviderResult;
+
 
 #[async_trait]
 #[auto_impl(Arc, &)]
-pub trait AlchemyProvider {
-    /// Retrieves the token balances for a given address.
-    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> EthProviderResult<TokenBalances>;
-    /// Retrieves the metadata for a given token.
-    async fn token_metadata(&self, contract_address: Address) -> EthProviderResult<TokenMetadata>;
-    /// Retrieves the allowance for a given token.
-    async fn token_allowance(&self, contract_address: Address, owner: Address, spender: Address) -> EthProviderResult<U256>;
+pub trait PoolProvider {
+    async fn txpool_status(&self) -> EthProviderResult<TxpoolStatus>;
+    async fn txpool_inspect(&self) -> EthProviderResult<TxpoolInspect>;
+    async fn txpool_content_from(&self, from: Address) -> EthProviderResult<TxpoolContentFrom>;
+    async fn txpool_content(&self) -> EthProviderResult<TxpoolContent>;
 }
 
 #[derive(Debug, Clone)]
-pub struct AlchemyStruct<P: EthereumProvider> {
+pub struct PoolStruct<P: EthereumProvider> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider> AlchemyStruct<P> {
+impl<P: EthereumProvider> PoolStruct<P> {
     pub fn new(eth_provider: P) -> Self {
-        AlchemyStruct { eth_provider }
+        PoolStruct { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for AlchemyStruct<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruct<P> {
     async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>> {
         self.eth_provider.header(block_id).await
     }
@@ -155,54 +146,37 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for AlchemySt
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyStruct<P> {
-    #[tracing::instrument(skip(self, contract_addresses), ret, err)]
-    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> EthProviderResult<TokenBalances> {
-        // Set the block ID to the latest block
-        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
-
-        Ok(TokenBalances {
-            address,
-            token_balances: join_all(contract_addresses.into_iter().map(|token_address| async move {
-                // Create a new instance of `EthereumErc20` for each token address
-                let token = EthereumErc20::new(token_address, &self.eth_provider);
-                // Retrieve the balance for the given address
-                let token_balance = token.balance_of(address, block_id).await?;
-                Ok(TokenBalance { token_address, token_balance })
-            }))
-                .await
-                .into_iter()
-                .collect::<Result<Vec<_>, EthApiError>>()?,
-        })
+impl<P: EthereumProvider + Send + Sync + 'static> PoolProvider for PoolStruct<P> {
+    async fn txpool_status(&self) -> EthProviderResult<TxpoolStatus> {
+        let all = self.eth_provider.txpool_content().await?;
+        Ok(TxpoolStatus { pending: all.pending.len() as u64, queued: all.queued.len() as u64 })
     }
 
-    /// Retrieves the metadata for a given token.
-    #[tracing::instrument(skip(self), ret, err)]
-    async fn token_metadata(&self, contract_address: Address) -> EthProviderResult<TokenMetadata> {
-        // Set the block ID to the latest block
-        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
-        // Create a new instance of `EthereumErc20`
-        let token = EthereumErc20::new(contract_address, &self.eth_provider);
+    async fn txpool_inspect(&self) -> EthProviderResult<TxpoolInspect> {
+        let mut inspect = TxpoolInspect::default();
 
-        // Await all futures concurrently to retrieve decimals, name, and symbol
-        let (decimals, name, symbol) =
-            futures::try_join!(token.decimals(block_id), token.name(block_id), token.symbol(block_id))?;
+        let transactions = self.eth_provider.txpool_transactions().await?;
 
-        // Return the metadata
-        Ok(TokenMetadata { decimals, name, symbol })
+        for transaction in transactions {
+            inspect.pending.entry(transaction.from).or_default().insert(
+                transaction.nonce.to_string(),
+                TxpoolInspectSummary {
+                    to: transaction.to,
+                    value: transaction.value,
+                    gas: transaction.gas,
+                    gas_price: transaction.gas_price.unwrap_or_default(),
+                },
+            );
+        }
+
+        Ok(inspect)
     }
 
-    /// Retrieves the allowance of a given owner for a spender.
-    #[tracing::instrument(skip(self), ret, err)]
-    async fn token_allowance(&self, contract_address: Address, owner: Address, spender: Address) -> EthProviderResult<U256> {
-        // Set the block ID to the latest block
-        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
-        // Create a new instance of `EthereumErc20`
-        let token = EthereumErc20::new(contract_address, &self.eth_provider);
-        // Retrieve the allowance for the given owner and spender
-        let allowance = token.allowance(owner, spender, block_id).await?;
+    async fn txpool_content_from(&self, from: Address) -> EthProviderResult<TxpoolContentFrom> {
+        Ok(self.eth_provider.txpool_content().await?.remove_from(&from))
+    }
 
-        // Return the allowance
-        Ok(allowance)
+    async fn txpool_content(&self) -> EthProviderResult<TxpoolContent> {
+        Ok(self.eth_provider.txpool_content().await?)
     }
 }

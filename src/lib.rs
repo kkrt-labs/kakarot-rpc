@@ -14,3 +14,4 @@ pub mod retry;
 pub mod test_utils;
 pub mod tracing;
 pub mod alchemy_provider;
+pub mod pool_provider;

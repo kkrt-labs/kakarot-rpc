@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use jsonrpsee::core::RpcResult as Result;
 use reth_primitives::{Address, U256};
 
+#[derive(Debug)]
 pub struct AlchemyRpc<P: AlchemyProvider> {
     provider: P,
 }
