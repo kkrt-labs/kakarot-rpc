@@ -147,7 +147,7 @@ dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-al
 katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.2", default-features = false, features = [
   "serde",
 ], optional = true }
-mockall = { version = "0.13.0", default-features = false }
+mockall = { version = "0.13.0", default-features = false, optional = true }
 
 [patch.crates-io]
 starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
