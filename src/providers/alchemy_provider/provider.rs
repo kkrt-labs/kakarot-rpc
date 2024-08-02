@@ -43,8 +43,8 @@ pub struct AlchemyStruct<P: EthereumProvider> {
 }
 
 impl<P: EthereumProvider> AlchemyStruct<P> {
-    pub fn new(eth_provider: P) -> Self {
-        AlchemyStruct { eth_provider }
+    pub const fn new(eth_provider: P) -> Self {
+        Self { eth_provider }
     }
 }
 

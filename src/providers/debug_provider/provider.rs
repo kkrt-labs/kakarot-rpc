@@ -59,8 +59,8 @@ pub struct DebugStruct<P: EthereumProvider> {
 }
 
 impl<P: EthereumProvider> DebugStruct<P> {
-    pub fn new(eth_provider: P) -> Self {
-        DebugStruct { eth_provider }
+    pub const fn new(eth_provider: P) -> Self {
+        Self { eth_provider }
     }
 }
 

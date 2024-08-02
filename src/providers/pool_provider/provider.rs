@@ -25,8 +25,8 @@ pub struct PoolStruct<P: EthereumProvider> {
 }
 
 impl<P: EthereumProvider> PoolStruct<P> {
-    pub fn new(eth_provider: P) -> Self {
-        PoolStruct { eth_provider }
+    pub const fn new(eth_provider: P) -> Self {
+        Self { eth_provider }
     }
 }
 

@@ -79,9 +79,9 @@ async fn get_next_port() -> u16 {
 /// and each test is compiled separately, so the compiler thinks this function is unused
 #[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    let alchemy_provider = AlchemyStruct::new(katana.eth_provider().clone());
-    let pool_provider = PoolStruct::new(katana.eth_provider().clone());
-    let debug_provider = DebugStruct::new(katana.eth_provider().clone());
+    let alchemy_provider = AlchemyStruct::new(katana.eth_provider());
+    let pool_provider = PoolStruct::new(katana.eth_provider());
+    let debug_provider = DebugStruct::new(katana.eth_provider());
     Ok(run_server(
         KakarotRpcModuleBuilder::new(
             katana.eth_provider(),

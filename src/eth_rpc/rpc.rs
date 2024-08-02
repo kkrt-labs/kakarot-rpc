@@ -65,13 +65,13 @@ where
         let pool_provider = Arc::new(pool_provider);
         let debug_provider = Arc::new(debug_provider);
         let eth_rpc_module = KakarotEthRpc::new(eth_provider.clone()).into_rpc();
-        let alchemy_rpc_module = AlchemyRpc::new(alchemy_provider.clone()).into_rpc();
+        let alchemy_rpc_module = AlchemyRpc::new(alchemy_provider).into_rpc();
         let web3_rpc_module = Web3Rpc::default().into_rpc();
         let net_rpc_module = NetRpc::new(eth_provider.clone()).into_rpc();
-        let debug_rpc_module = DebugRpc::new(debug_provider.clone()).into_rpc();
+        let debug_rpc_module = DebugRpc::new(debug_provider).into_rpc();
         let trace_rpc_module = TraceRpc::new(eth_provider.clone()).into_rpc();
-        let kakarot_rpc_module = KakarotRpc::new(eth_provider.clone(), starknet_provider).into_rpc();
-        let txpool_rpc_module = TxpoolRpc::new(pool_provider.clone()).into_rpc();
+        let kakarot_rpc_module = KakarotRpc::new(eth_provider, starknet_provider).into_rpc();
+        let txpool_rpc_module = TxpoolRpc::new(pool_provider).into_rpc();
 
         let mut modules = HashMap::new();
 
