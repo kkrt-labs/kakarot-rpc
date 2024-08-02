@@ -179,6 +179,7 @@ testing = [
   "tokio-stream",
   "tokio-util",
   "walkdir",
+  "mockall",
 ]
 hive = []
 arbitrary = ["rand", "dep:arbitrary"]
