@@ -1,16 +1,102 @@
-//! Transaction validation logic.
-
 use super::validate::KakarotTransactionValidator;
-use reth_transaction_pool::{CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionValidationTaskExecutor};
+use crate::providers::eth_provider::provider::EthDataProvider;
+use reth_transaction_pool::{
+    blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionPool,
+};
+use serde_json::Value;
+use starknet::core::types::Felt;
+use std::{collections::HashSet, fs::File, io::Read, time::Duration};
+use tokio::runtime::Handle;
 
 /// A type alias for the Kakarot Transaction Validator.
 /// Uses the Reth implementation [`TransactionValidationTaskExecutor`].
-pub type Validator<Client> =
-    TransactionValidationTaskExecutor<KakarotTransactionValidator<Client, EthPooledTransaction>>;
+pub type Validator<Client> = KakarotTransactionValidator<Client, EthPooledTransaction>;
 
 /// A type alias for the Kakarot Transaction Ordering.
 /// Uses the Reth implementation [`CoinbaseTipOrdering`].
 pub type TransactionOrdering = CoinbaseTipOrdering<EthPooledTransaction>;
 
 /// A type alias for the Kakarot Sequencer Mempool.
-pub type KakarotPool<Client, S> = Pool<Validator<Client>, TransactionOrdering, S>;
+pub type KakarotPool<Client> = Pool<Validator<Client>, TransactionOrdering, NoopBlobStore>;
+
+#[derive(Debug, Default)]
+pub struct AccountManager {
+    accounts: HashSet<Felt>,
+}
+
+impl AccountManager {
+    pub fn new() -> Self {
+        let mut accounts = HashSet::new();
+
+        let mut file = File::open("src/retry/accounts.json").unwrap();
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).unwrap();
+
+        let json: Value = serde_json::from_str(&contents).unwrap();
+        if let Some(array) = json.as_array() {
+            for item in array {
+                if let Some(address) = item.as_str() {
+                    accounts.insert(Felt::from_hex_unchecked(address));
+                }
+            }
+        }
+
+        Self { accounts }
+    }
+
+    pub fn start<SP>(&self, rt_handle: &Handle, eth_provider: &'static EthDataProvider<SP>)
+    where
+        SP: starknet::providers::Provider + Send + Sync + 'static,
+    {
+        let accounts = self.accounts.clone();
+
+        rt_handle.spawn(async move {
+            loop {
+                for address in &accounts {
+                    Self::process_account(address, eth_provider);
+                }
+
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+        });
+    }
+
+    fn process_account<SP>(address: &Felt, eth_provider: &EthDataProvider<SP>)
+    where
+        SP: starknet::providers::Provider + Send + Sync + 'static,
+    {
+        let balance = Self::check_balance(address);
+
+        if balance > Felt::ONE {
+            let best_hashes =
+                eth_provider.mempool.as_ref().unwrap().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
+
+            if let Some(best_hash) = best_hashes.first() {
+                eth_provider.mempool.as_ref().unwrap().remove_transactions(vec![*best_hash]);
+            }
+        }
+    }
+
+    const fn check_balance(_address: &Felt) -> Felt {
+        Felt::ONE
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_account_manager_new() {
+        let account_manager = AccountManager::new();
+
+        let accounts = account_manager.accounts;
+
+        assert!(accounts
+            .contains(&Felt::from_hex_unchecked("0x00686735619287df0f11ec4cda22675f780886b52bf59cf899dd57fd5d5f4cad")));
+        assert!(accounts
+            .contains(&Felt::from_hex_unchecked("0x0332825a42ccbec3e2ceb6c242f4dff4682e7d16b8559104b5df8fd925ddda09")));
+        assert!(accounts
+            .contains(&Felt::from_hex_unchecked("0x003f5628053c2d6bdfc9e45ea8aeb14405b8917226d455a94b3225a9a7520559")));
+    }
+}

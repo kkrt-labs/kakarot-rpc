@@ -14,6 +14,7 @@ use crate::{
         },
         provider::EthDataProvider,
     },
+    retry::mempool::KakarotPool,
     test_utils::eoa::KakarotEOA,
 };
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
@@ -26,14 +27,23 @@ use mongodb::{
     bson::{doc, Document},
     options::{UpdateModifications, UpdateOptions},
 };
+use reth_chainspec::ChainSpec;
 use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use reth_transaction_pool::{blobstore::NoopBlobStore, EthPooledTransaction, PoolConfig};
+use starknet::{
+    core::types::Felt,
+    providers::{jsonrpc::HttpTransport, JsonRpcClient},
+};
 use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     super::mongo::MongoFuzzer,
+    crate::retry::mempool::TransactionOrdering,
+    crate::{
+        providers::eth_provider::database::state::EthDatabase, retry::validate::KakarotTransactionValidatorBuilder,
+    },
     dojo_test_utils::sequencer::SequencerConfig,
     reth_primitives::B256,
     reth_rpc_types::{Header, Transaction},
@@ -124,10 +134,27 @@ impl<'a> Katana {
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
 
+        let chain_id = katana_config().env.chain_id.id();
+        let chain_id: u64 = (Felt::from(u32::MAX).to_bigint() & chain_id.to_bigint()).try_into().unwrap();
+
         // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let eth_provider = Arc::new(
-            EthDataProvider::new(database, starknet_provider).await.expect("Failed to create EthDataProvider"),
+        let eth_provider =
+            EthDataProvider::new(database, starknet_provider).await.expect("Failed to create EthDataProvider");
+
+        let validator = KakarotTransactionValidatorBuilder::new(Arc::new(ChainSpec {
+            chain: chain_id.into(),
+            ..Default::default()
+        }))
+        .build::<_, EthPooledTransaction>(EthDatabase::new(eth_provider.clone(), 0.into()));
+
+        let mempool = KakarotPool::new(
+            validator,
+            TransactionOrdering::default(),
+            NoopBlobStore::default(),
+            PoolConfig::default(),
         );
+
+        let eth_provider = Arc::new(eth_provider.with_mempool(mempool));
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, eth_provider);

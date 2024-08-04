@@ -1,7 +1,7 @@
-#![allow(unused_variables)]
+#![allow(unused_variables, clippy::struct_excessive_bools)]
 
 use crate::{
-    eth_provider::{database::state::EthDatabase, provider::EthereumProvider},
+    providers::eth_provider::{database::state::EthDatabase, provider::EthereumProvider},
     tracing::builder::TRACING_BLOCK_GAS_LIMIT,
 };
 use reth_chainspec::ChainSpec;
@@ -32,8 +32,6 @@ pub struct KakarotTransactionValidatorBuilder {
     pub eip4844: bool,
     /// The current max gas limit
     pub block_gas_limit: u64,
-    /// Minimum priority fee to enforce for acceptance into the pool.
-    pub minimum_priority_fee: Option<u128>,
     /// Max size in bytes of a single transaction allowed
     pub max_tx_input_bytes: usize,
 }
@@ -46,11 +44,10 @@ impl KakarotTransactionValidatorBuilder {
     ///  - Legacy
     ///  - EIP-2718
     ///  - EIP-1559
-    pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
+    pub const fn new(chain_spec: Arc<ChainSpec>) -> Self {
         Self {
             chain_spec,
             block_gas_limit: TRACING_BLOCK_GAS_LIMIT,
-            minimum_priority_fee: None,
             max_tx_input_bytes: DEFAULT_MAX_TX_INPUT_BYTES,
 
             // by default all transaction types are allowed except EIP-4844
@@ -72,16 +69,7 @@ impl KakarotTransactionValidatorBuilder {
         P: EthereumProvider + Send + Sync,
     {
         let Self {
-            chain_spec,
-            shanghai,
-            cancun,
-            eip2718,
-            eip1559,
-            eip4844,
-            block_gas_limit,
-            minimum_priority_fee,
-            max_tx_input_bytes,
-            ..
+            chain_spec, shanghai, cancun, eip2718, eip1559, eip4844, block_gas_limit, max_tx_input_bytes, ..
         } = self;
 
         let inner = KakarotTransactionValidatorInner {
@@ -91,7 +79,6 @@ impl KakarotTransactionValidatorBuilder {
             eip1559,
             eip4844,
             block_gas_limit,
-            minimum_priority_fee,
             max_tx_input_bytes,
             _marker: Default::default(),
         };
@@ -190,8 +177,6 @@ where
     eip4844: bool,
     /// The current max gas limit
     block_gas_limit: u64,
-    /// Minimum priority fee to enforce for acceptance into the pool.
-    minimum_priority_fee: Option<u128>,
     /// Maximum size in bytes a single transaction can have in order to be accepted into the pool.
     max_tx_input_bytes: usize,
     /// Marker for the transaction type

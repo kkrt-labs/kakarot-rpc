@@ -26,6 +26,7 @@ use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
 use reth_primitives::{BlockId, BlockNumberOrTag, TxKind, U256};
 
+use crate::retry::mempool::KakarotPool;
 use reth_rpc_types::{BlockHashOrNumber, TransactionRequest};
 use starknet::core::types::Felt;
 use tracing::{instrument, Instrument};
@@ -58,15 +59,16 @@ impl<T> EthereumProvider for T where
 /// Uses access to a database for certain data, while
 /// the rest is fetched from the Starknet Provider.
 #[derive(Debug, Clone)]
-pub struct EthDataProvider<SP: starknet::providers::Provider> {
+pub struct EthDataProvider<SP: starknet::providers::Provider + Send + Sync> {
     database: Database,
     starknet_provider: SP,
     pub(crate) chain_id: u64,
+    pub mempool: Option<KakarotPool<Self>>,
 }
 
 impl<SP> EthDataProvider<SP>
 where
-    SP: starknet::providers::Provider,
+    SP: starknet::providers::Provider + Send + Sync,
 {
     /// Returns a reference to the database.
     pub const fn database(&self) -> &Database {
@@ -76,6 +78,11 @@ where
     /// Returns a reference to the Starknet provider.
     pub const fn starknet_provider(&self) -> &SP {
         &self.starknet_provider
+    }
+
+    /// Returns a reference to the pool.
+    pub const fn mempool(&self) -> Option<&KakarotPool<Self>> {
+        self.mempool.as_ref()
     }
 }
 
@@ -90,7 +97,12 @@ where
         let chain_id =
             (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
 
-        Ok(Self { database, starknet_provider, chain_id })
+        Ok(Self { database, starknet_provider, chain_id, mempool: None })
+    }
+
+    #[must_use]
+    pub fn with_mempool(self, mempool: KakarotPool<Self>) -> Self {
+        Self { mempool: Some(mempool), ..self }
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.

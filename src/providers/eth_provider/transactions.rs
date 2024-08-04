@@ -31,6 +31,7 @@ use reth_primitives::{
 };
 use reth_rpc_types::Index;
 use reth_rpc_types_compat::transaction::from_recovered;
+use reth_transaction_pool::{EthPooledTransaction, TransactionOrigin, TransactionPool};
 use tracing::Instrument;
 
 #[async_trait]
@@ -167,9 +168,13 @@ where
         // Get the number of retries for the transaction
         let retries = self.database().pending_transaction_retries(&transaction_signed.hash).await?;
 
+        let transaction_signed_ec_recovered =
+            TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer);
+
+        let encoded_length = transaction_signed_ec_recovered.clone().length_without_header();
+
         // Upsert the transaction as pending in the database
-        let transaction =
-            from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
+        let transaction = from_recovered(transaction_signed_ec_recovered.clone());
         self.database().upsert_pending_transaction(transaction, retries).await?;
 
         // Convert the Ethereum transaction to a Starknet transaction
@@ -187,6 +192,10 @@ where
             .instrument(span)
             .await
             .map_err(KakarotError::from)?;
+
+        let pool_transaction = EthPooledTransaction::new(transaction_signed_ec_recovered, encoded_length);
+
+        self.mempool.as_ref().unwrap().add_transaction(TransactionOrigin::Local, pool_transaction).await.unwrap();
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
