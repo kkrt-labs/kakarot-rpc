@@ -2,12 +2,21 @@ use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
     config::KakarotRpcConfig,
-    eth_provider::{database::Database, provider::EthDataProvider},
+    eth_provider::{
+        database::{state::EthDatabase, Database},
+        provider::EthDataProvider,
+    },
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
-    retry::RetryHandler,
+    retry::{
+        mempool::{KakarotPool, TransactionOrdering},
+        validate::KakarotTransactionValidatorBuilder,
+        RetryHandler,
+    },
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
+use reth_chainspec::ChainSpec;
+use reth_transaction_pool::{blobstore::NoopBlobStore, EthPooledTransaction, PoolConfig};
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{env::var, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
@@ -47,6 +56,17 @@ async fn main() -> Result<()> {
     // Setup the eth provider
     let starknet_provider = Arc::new(starknet_provider);
     let eth_provider = EthDataProvider::new(db.clone(), starknet_provider.clone()).await?;
+
+    let validator = KakarotTransactionValidatorBuilder::new(Arc::new(ChainSpec {
+        chain: 0x6b6b_7274.into(),
+        ..Default::default()
+    }))
+    .build::<_, EthPooledTransaction>(EthDatabase::new(eth_provider.clone(), 0.into()));
+
+    let mempool =
+        KakarotPool::new(validator, TransactionOrdering::default(), NoopBlobStore::default(), PoolConfig::default());
+
+    let eth_provider = eth_provider.with_mempool(mempool);
 
     // Setup the retry handler
     let retry_handler = RetryHandler::new(eth_provider.clone(), db);
