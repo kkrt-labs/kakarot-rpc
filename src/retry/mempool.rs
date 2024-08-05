@@ -25,14 +25,31 @@ pub struct AccountManager {
 }
 
 impl AccountManager {
-    pub fn new() -> Self {
+    pub fn new(path: &str) -> Self {
         let mut accounts = HashSet::new();
 
-        let mut file = File::open("src/retry/accounts.json").unwrap();
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap();
+        // Open the file specified by `path`
+        let mut file = match File::open(path) {
+            Ok(file) => file,
+            Err(_) => {
+                return Self::default();
+            }
+        };
 
-        let json: Value = serde_json::from_str(&contents).unwrap();
+        let mut contents = String::new();
+        if let Err(_) = file.read_to_string(&mut contents) {
+            return Self::default();
+        }
+
+        // Parse the file contents as JSON
+        let json: Value = match serde_json::from_str(&contents) {
+            Ok(json) => json,
+            Err(_) => {
+                return Self::default();
+            }
+        };
+
+        // Extract the account addresses from the JSON array
         if let Some(array) = json.as_array() {
             for item in array {
                 if let Some(address) = item.as_str() {
@@ -53,7 +70,7 @@ impl AccountManager {
         rt_handle.spawn(async move {
             loop {
                 for address in &accounts {
-                    Self::process_account(address, eth_provider);
+                    Self::process_transaction(address, eth_provider);
                 }
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
@@ -61,7 +78,7 @@ impl AccountManager {
         });
     }
 
-    fn process_account<SP>(address: &Felt, eth_provider: &EthDataProvider<SP>)
+    fn process_transaction<SP>(address: &Felt, eth_provider: &EthDataProvider<SP>)
     where
         SP: starknet::providers::Provider + Send + Sync + 'static,
     {
@@ -88,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_account_manager_new() {
-        let account_manager = AccountManager::new();
+        let account_manager = AccountManager::new("src/retry/accounts.json");
 
         let accounts = account_manager.accounts;
 
