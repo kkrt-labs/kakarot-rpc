@@ -270,25 +270,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_tracer_builder_with_transaction_hash_failure() {
-        // Create a mock Ethereum provider
-        let mut mock_provider = MockEthereumProviderStruct::new();
-        // Expect the chain_id call to return 1
-        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
-        // Expect the transaction_by_hash call to return an error for a not found transaction
-        mock_provider
-            .expect_transaction_by_hash()
-            .returning(|_| Err(EthApiError::TransactionNotFound(B256::repeat_byte(0))));
-
-        // Create a TracerBuilder with the mock provider
-        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
-        // Attempt to use the builder with a specific transaction hash, expecting an error
-        let result = builder.with_transaction_hash(B256::repeat_byte(0)).await;
-        // Check that the result is a TransactionNotFound error
-        assert!(matches!(result, Err(EthApiError::TransactionNotFound(_))));
-    }
-
-    #[tokio::test]
     async fn test_tracer_builder_with_transaction_not_found() {
         // Create a mock Ethereum provider
         let mut mock_provider = MockEthereumProviderStruct::new();
