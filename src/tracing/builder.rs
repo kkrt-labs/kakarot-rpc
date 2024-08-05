@@ -139,7 +139,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 
         // we can't trace a pending transaction
         if transaction.block_number.is_none() {
-            return Err(EthApiError::UnknownBlock(transaction_hash.into()));
+            return Err(EthApiError::TransactionNotFound(transaction_hash.into()));
         }
 
         self.with_block_id(BlockId::Number(transaction.block_number.unwrap().into())).await
@@ -321,7 +321,7 @@ mod tests {
         // Attempt to use the builder with a specific transaction hash, expecting an error
         let result = builder.with_transaction_hash(B256::repeat_byte(0)).await;
         // Check that the result is an UnknownBlock error
-        assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
+        assert!(matches!(result, Err(EthApiError::TransactionNotFound(_))));
     }
 
     #[tokio::test]
