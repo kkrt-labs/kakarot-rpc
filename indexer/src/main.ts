@@ -37,12 +37,18 @@ import {
   Config,
   EventWithTransaction,
   hexToBytes,
+  JsonRpcTx,
   NetworkOptions,
   SinkOptions,
   TransactionWithReceipt,
 } from "./deps.ts";
 // Eth
 import { Bloom, Trie } from "./deps.ts";
+import {
+  BlockInfo,
+  ProcessedEvent,
+  ProcessedTransaction,
+} from "./types/interfaces.ts";
 
 export const config: Config<NetworkOptions, SinkOptions> = {
   streamUrl: STREAM_URL,
@@ -73,33 +79,70 @@ export default async function transform({
   events: EventWithTransaction[];
   transactions: TransactionWithReceipt[];
 }) {
-  // Accumulate the gas used in the block in order to calculate the cumulative gas used.
-  // We increment it by the gas used in each transaction in the flatMap iteration.
-  let cumulativeGasUsed = 0n;
-  // An array containing the cumulative gas used up to that transaction, indexed by
-  // transaction index. This is used to later get the cumulative gas used for an out of
-  // resources transaction.
-  const cumulativeGasUsages: Array<bigint> = [];
-
-  const blockNumber = padString(toHexString(header.blockNumber), 8);
-  const blockHash = padString(header.blockHash, 32);
-  const isPendingBlock = blockHash === NULL_BLOCK_HASH;
-  const blockLogsBloom = new Bloom();
-  const transactionTrie = new Trie();
-  const receiptTrie = new Trie();
-
+  const blockInfo = createBlockInfo(header);
   const store: Array<StoreItem> = [];
+  const blockLogsBloom = new Bloom();
 
-  const filteredEvents = (events ?? [])
+  const processedEvents = events
     // Can be false if the transaction is not related to a specific instance of the Kakarot contract.
     // This is typically the case if there are multiple Kakarot contracts on the same chain.
     .filter((event) => isKakarotTransaction(event.transaction))
     // Skip if the transaction_executed event contains "eth validation failed".
     .filter((event) => !ethValidationFailed(event.event))
-    .map((event) => ({
-      event: event,
-      typedEthTx: toTypedEthTx({ transaction: event.transaction }),
-    }))
+    .map(processEvent(blockInfo))
+    .filter((event) => event !== null);
+
+  const { cumulativeGasUsed, cumulativeGasUsages } =
+    accumulateGasAndUpdateStore(processedEvents, store, blockLogsBloom);
+
+  const trieData: Array<TrieData> = processedEvents
+    .map((event) =>
+      createTrieData({
+        transactionIndex: Number(event.ethTx.transactionIndex),
+        typedTransaction: event.typedEthTx,
+        receipt: event.ethReceipt,
+      })
+    )
+    .filter((x) => x !== null);
+
+  const { transactionTrie, receiptTrie } = await computeBlooms(trieData);
+
+  // Sort the cumulative gas uses by descending transaction index.
+  cumulativeGasUsages.reverse();
+
+  const processedTransactions = processTransactions(
+    transactions,
+    blockInfo,
+    cumulativeGasUsages
+  );
+  updateStoreWithTransactions(store, processedTransactions);
+
+  const ethHeader = await toEthHeader({
+    header: header,
+    gasUsed: cumulativeGasUsed,
+    logsBloom: blockLogsBloom,
+    receiptRoot: receiptTrie.root(),
+    transactionRoot: transactionTrie.root(),
+    ...blockInfo,
+  });
+  store.push({
+    collection: Collection.Headers,
+    data: { header: ethHeader },
+  });
+
+  return store;
+}
+
+function createBlockInfo(header: BlockHeader): BlockInfo {
+  const blockNumber = padString(toHexString(header.blockNumber), 8);
+  const blockHash = padString(header.blockHash, 32);
+  const isPendingBlock = blockHash === NULL_BLOCK_HASH;
+  return { blockNumber, blockHash, isPendingBlock };
+}
+
+function processEvent(blockInfo: BlockInfo) {
+  return (event: EventWithTransaction): ProcessedEvent | null => {
+    const typedEthTx = toTypedEthTx({ transaction: event.transaction });
     // Can be null if:
     // 1. The transaction is missing calldata.
     // 2. The transaction is a multi-call.
@@ -107,105 +150,94 @@ export default async function transform({
     // 4. The chain id is not encoded in the v param of the signature for a
     //    Legacy transaction.
     // 5. The deserialization of the transaction fails.
-    .filter((eventExtended) => eventExtended.typedEthTx !== null)
-    .map((eventExtended) => {
-      const ethTx = typedTransactionToEthTx({
-        typedTransaction: eventExtended.typedEthTx!,
-        receipt: eventExtended.event.receipt,
-        blockNumber,
-        blockHash,
-        isPendingBlock,
-      });
+    if (!typedEthTx) return null;
 
-      return { ...eventExtended, ethTx };
-    })
+    const ethTx = typedTransactionToEthTx({
+      typedTransaction: typedEthTx!,
+      receipt: event.receipt,
+      ...blockInfo,
+    });
     // Can be null if:
-    // 1. The typed transaction if missing a signature param (v, r, s).
-    .filter((
-      eventExtended,
-    ): eventExtended is typeof eventExtended & {
-      ethTx: NonNullable<typeof eventExtended.ethTx>;
-    } => eventExtended.ethTx !== null)
-    .map((eventExtended) => {
-      const ethLogs = eventExtended.event.receipt.events
-        .map((e) =>
-          toEthLog({
-            transaction: eventExtended.ethTx,
-            event: e,
-            blockNumber,
-            blockHash,
-            isPendingBlock,
-          })
-        )
-        // Can be null if:
-        // 1. The event is part of the defined ignored events (see IGNORED_KEYS).
-        // 2. The event has an invalid number of keys.
-        .filter((e) => e !== null) as JsonRpcLog[];
+    // The typed transaction is missing a signature param (v, r, s).
+    if (!ethTx) return null;
 
-      return {
-        ...eventExtended,
-        ethLogs,
-      };
-    })
-    .map((eventExtended) => {
-      const ethLogsIndexed = eventExtended.ethLogs.map((log, index) => {
-        log.logIndex = index.toString();
-        return log;
-      });
+    const ethLogs = event.receipt.events
+      .map((e) => toEthLog({ transaction: ethTx, event: e, ...blockInfo }))
+      // Can be null if:
+      // 1. The event is part of the defined ignored events (see IGNORED_KEYS).
+      // 2. The event has an invalid number of keys.
+      .filter((e) => e !== null);
 
-      const ethReceipt = toEthReceipt({
-        transaction: eventExtended.ethTx,
-        logs: ethLogsIndexed,
-        event: eventExtended.event.event,
-        cumulativeGasUsed,
-        blockNumber,
-        blockHash,
-        isPendingBlock,
-      });
-
-      return {
-        ...eventExtended,
-        ethReceipt,
-        event: eventExtended.event,
-      };
+    const ethLogsIndexed = ethLogs.map((log, index) => {
+      // ...log,
+      // logIndex: index.toString(),
+      log.logIndex = index.toString();
+      return log;
     });
 
-  filteredEvents.forEach((eventExtended) => {
-    cumulativeGasUsed += BigInt(eventExtended.ethReceipt.gasUsed);
+    const ethReceipt = toEthReceipt({
+      transaction: ethTx as JsonRpcTx,
+      logs: ethLogsIndexed,
+      event: event.event,
+      cumulativeGasUsed: 0n, // This will be updated later
+      ...blockInfo,
+    });
+
+    return { event, typedEthTx, ethTx, ethLogs, ethReceipt };
+  };
+}
+
+function accumulateGasAndUpdateStore(
+  processedEvents: ProcessedEvent[],
+  store: Array<StoreItem>,
+  blockLogsBloom: Bloom
+): { cumulativeGasUsed: bigint; cumulativeGasUsages: bigint[] } {
+  let cumulativeGasUsed = 0n;
+  const cumulativeGasUsages: bigint[] = [];
+
+  processedEvents.forEach((event) => {
+    // Accumulate the gas used in the block in order to calculate the cumulative gas used.
+    // We increment it by the gas used in each transaction.
+    cumulativeGasUsed += BigInt(event.ethReceipt.gasUsed);
     // ethTx.transactionIndex can be null (if the block is pending) but
     // Number(null) is 0 so this won't panic.
-    cumulativeGasUsages[Number(eventExtended.ethTx.transactionIndex)] =
-      cumulativeGasUsed;
+    const transactionIndex = Number(event.ethTx.transactionIndex);
+    // An array containing the cumulative gas used up to that transaction, indexed by
+    // transaction index. This is used to later get the cumulative gas used for an out of
+    // resources transaction.
+    cumulativeGasUsages[transactionIndex] = cumulativeGasUsed;
 
-    // Add all the eth data to the store.
-    store.push({
-      collection: Collection.Transactions,
-      data: { tx: eventExtended.ethTx },
-    });
-    store.push({
-      collection: Collection.Receipts,
-      data: { receipt: eventExtended.ethReceipt },
-    });
-    eventExtended.ethLogs.forEach((ethLog) =>
-      store.push({ collection: Collection.Logs, data: { log: ethLog } })
-    );
-
-    // Add the logs bloom of the receipt to the block logs bloom.
-    const receiptLogsBloom = new Bloom(
-      hexToBytes(eventExtended.ethReceipt.logsBloom),
-    );
-    blockLogsBloom.or(receiptLogsBloom);
+    updateStore(store, event);
+    updateBlockLogsBloom(blockLogsBloom, event);
   });
 
-  const trieData: Array<TrieData> = filteredEvents
-    .map((eventExtended) =>
-      createTrieData({
-        transactionIndex: Number(eventExtended.ethTx.transactionIndex),
-        typedTransaction: eventExtended.typedEthTx!,
-        receipt: eventExtended.ethReceipt,
-      })
-    )
-    .filter((x) => x !== null) as Array<TrieData>;
+  return { cumulativeGasUsed, cumulativeGasUsages };
+}
+
+function updateStore(store: Array<StoreItem>, event: ProcessedEvent) {
+  store.push({
+    collection: Collection.Transactions,
+    data: { tx: event.ethTx },
+  });
+  store.push({
+    collection: Collection.Receipts,
+    data: { receipt: event.ethReceipt },
+  });
+  event.ethLogs.forEach((log) =>
+    store.push({ collection: Collection.Logs, data: { log } })
+  );
+}
+
+function updateBlockLogsBloom(blockLogsBloom: Bloom, event: ProcessedEvent) {
+  const receiptLogsBloom = new Bloom(hexToBytes(event.ethReceipt.logsBloom));
+  blockLogsBloom.or(receiptLogsBloom);
+}
+
+async function computeBlooms(
+  trieData: Array<TrieData>
+): Promise<{ transactionTrie: Trie; receiptTrie: Trie }> {
+  const transactionTrie = new Trie();
+  const receiptTrie = new Trie();
 
   // Compute the blooms in an async manner.
   await Promise.all(
@@ -219,85 +251,69 @@ export default async function transform({
         await transactionTrie.put(encodedTransactionIndex, encodedTransaction);
         // Add the receipt to the receipt trie.
         await receiptTrie.put(encodedTransactionIndex, encodedReceipt);
-      },
-    ),
+      }
+    )
   );
 
-  // Sort the cumulative gas uses by descending transaction index.
-  cumulativeGasUsages.reverse();
+  return { transactionTrie, receiptTrie };
+}
 
-  const filteredTransactions = (transactions ?? [])
-    .filter((transactionWithReceipt) =>
-      isRevertedWithOutOfResources(transactionWithReceipt.receipt)
+function processTransactions(
+  transactions: TransactionWithReceipt[],
+  blockInfo: BlockInfo,
+  cumulativeGasUsages: bigint[]
+): ProcessedTransaction[] {
+  return transactions
+    .filter(
+      (tx) =>
+        isRevertedWithOutOfResources(tx.receipt) &&
+        isKakarotTransaction(tx.transaction)
     )
-    .filter((transactionWithReceipt) =>
-      isKakarotTransaction(transactionWithReceipt.transaction)
-    )
-    .map((transactionWithReceipt) => ({
-      transactionWithReceipt: transactionWithReceipt,
-      ethTx: toEthTx({
-        transaction: transactionWithReceipt.transaction,
-        receipt: transactionWithReceipt.receipt,
-        blockNumber,
-        blockHash,
-        isPendingBlock,
-      }),
-    }))
-    .map((transactionWithReceiptExtended) => {
-      // Get the cumulative gas used for the reverted transaction.
-      // Example:
-      // const cumulativeGasUsages = [300n, undefined, undefined, 200n, undefined, 100n, undefined, undefined, 10n, undefined];
-      // const ethTx = { transactionIndex: 5 };
-      // const revertedTransactionCumulativeGasUsed = 100n;
-      const revertedTransactionCumulativeGasUsed =
-        cumulativeGasUsages.find((gas, i) => {
-          return (
-            Number(transactionWithReceiptExtended.ethTx!.transactionIndex) >=
-              cumulativeGasUsages.length - 1 - i && gas
-          );
-        }) ?? 0n;
+    .map((tx) => createProcessedTransaction(tx, blockInfo, cumulativeGasUsages))
+    .filter((tx) => tx !== null);
+}
 
-      const ethReceipt = toRevertedOutOfResourcesReceipt({
-        transaction: transactionWithReceiptExtended.ethTx!,
-        blockNumber,
-        blockHash,
-        cumulativeGasUsed: revertedTransactionCumulativeGasUsed,
-        isPendingBlock,
-      });
+function createProcessedTransaction(
+  tx: TransactionWithReceipt,
+  blockInfo: BlockInfo,
+  cumulativeGasUsages: bigint[]
+): ProcessedTransaction | null {
+  const ethTx = toEthTx({
+    transaction: tx.transaction,
+    receipt: tx.receipt,
+    ...blockInfo,
+  });
+  if (!ethTx) return null;
+  // Get the cumulative gas used for the reverted transaction.
+  // Example:
+  // const cumulativeGasUsages = [300n, undefined, undefined, 200n, undefined, 100n, undefined, undefined, 10n, undefined];
+  // const ethTx = { transactionIndex: 5 };
+  // const revertedTransactionCumulativeGasUsed = 100n;
+  const revertedTransactionCumulativeGasUsed =
+    cumulativeGasUsages.find(
+      (gas, i) =>
+        Number(ethTx.transactionIndex) >= cumulativeGasUsages.length - 1 - i &&
+        gas
+    ) ?? 0n;
 
-      return {
-        ...transactionWithReceiptExtended,
-        ethReceipt,
-      };
-    });
+  const ethReceipt = toRevertedOutOfResourcesReceipt({
+    transaction: ethTx as JsonRpcTx,
+    cumulativeGasUsed: revertedTransactionCumulativeGasUsed,
+    ...blockInfo,
+  });
 
-  filteredTransactions.forEach((transaction) => {
-    store.push({
-      collection: Collection.Transactions,
-      data: { tx: transaction.ethTx! },
-    });
+  return { ethTx, ethReceipt };
+}
+
+function updateStoreWithTransactions(
+  store: Array<StoreItem>,
+  processedTransactions: ProcessedTransaction[]
+) {
+  processedTransactions.forEach(({ ethTx, ethReceipt }) => {
+    store.push({ collection: Collection.Transactions, data: { tx: ethTx as JsonRpcTx } });
     store.push({
       collection: Collection.Receipts,
-      data: {
-        receipt: transaction.ethReceipt,
-      },
+      data: { receipt: ethReceipt },
     });
   });
-
-  const ethHeader = await toEthHeader({
-    header: header,
-    gasUsed: cumulativeGasUsed,
-    logsBloom: blockLogsBloom,
-    receiptRoot: receiptTrie.root(),
-    transactionRoot: transactionTrie.root(),
-    blockNumber,
-    blockHash,
-    isPendingBlock,
-  });
-  store.push({
-    collection: Collection.Headers,
-    data: { header: ethHeader },
-  });
-
-  return store;
 }
