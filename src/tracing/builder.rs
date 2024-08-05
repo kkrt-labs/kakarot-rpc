@@ -335,4 +335,32 @@ mod tests {
         // Check that the result is an error
         assert!(result.is_err());
     }
+
+    #[tokio::test]
+    async fn test_tracer_builder_build_error() {
+        // Create a mock Ethereum provider
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        // Expect the chain_id call to return 1
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        // Expect the block_by_number call to return a block with non-full transactions
+        mock_provider.expect_block_by_number().returning(|_, _| {
+            Ok(Some(
+                Block {
+                    transactions: BlockTransactions::Hashes(vec![]),
+                    header: Header { hash: Some(B256::repeat_byte(1)), ..Default::default() },
+                    ..Default::default()
+                }
+                .into(),
+            ))
+        });
+
+        // Create a TracerBuilder with the mock provider
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        // Attempt to use the builder with a specific block ID
+        let builder = builder.with_block_id(BlockId::Number(1.into())).await.unwrap();
+        // Attempt to build the tracer, expecting an error
+        let result = builder.build();
+        // Check that the result is an ExpectedFullTransactions error
+        assert!(matches!(result, Err(EthApiError::Transaction(TransactionError::ExpectedFullTransactions))));
+    }
 }
