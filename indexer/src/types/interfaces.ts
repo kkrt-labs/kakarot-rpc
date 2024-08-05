@@ -1,5 +1,9 @@
 // Starknet
-import { Transaction, TransactionReceipt } from "../deps.ts";
+import {
+  EventWithTransaction,
+  Transaction,
+  TransactionReceipt,
+} from "../deps.ts";
 
 // Eth
 import {
@@ -8,6 +12,8 @@ import {
   PrefixedHexString,
   TypedTransaction,
 } from "../deps.ts";
+import { JsonRpcLog } from "./log.ts";
+import { JsonRpcReceipt } from "./receipt.ts";
 
 /**
  * Represents a hexadecimal string with a `0x` prefix.
@@ -80,4 +86,23 @@ export interface TransactionConversionInput {
   chainId: string | undefined;
   /** The index of the transaction in the block. */
   index: string;
+}
+
+export interface BlockInfo {
+  blockNumber: string;
+  blockHash: string;
+  isPendingBlock: boolean;
+}
+
+export interface ProcessedEvent {
+  event: EventWithTransaction;
+  typedEthTx: TypedTransaction;
+  ethTx: JsonRpcTx;
+  ethLogs: JsonRpcLog[];
+  ethReceipt: JsonRpcReceipt;
+}
+
+export interface ProcessedTransaction {
+  ethTx: JsonRpcTx;
+  ethReceipt: JsonRpcReceipt;
 }
