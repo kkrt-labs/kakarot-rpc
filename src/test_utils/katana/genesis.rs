@@ -1,13 +1,14 @@
 use crate::{
     eth_provider::utils::split_u256,
     test_utils::constants::{
-        ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS, ACCOUNT_IMPLEMENTATION,
-        KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH, KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT,
-        KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
-        KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO, KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
+        ACCOUNT_AUTHORIZED_MESSAGE_HASHES, ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS,
+        ACCOUNT_IMPLEMENTATION, EIP_155_AUTHORIZED_MESSAGE_HASHES, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH,
+        KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_COINBASE,
+        KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO,
+        KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
     },
 };
-use alloy_signer_wallet::LocalWallet;
+use alloy_signer_local::PrivateKeySigner;
 use eyre::{eyre, OptionExt, Result};
 use katana_primitives::{
     contract::{ContractAddress, StorageKey, StorageValue},
@@ -20,7 +21,6 @@ use katana_primitives::{
         },
     },
 };
-use lazy_static::lazy_static;
 use rayon::prelude::*;
 use reth_primitives::{B256, U256};
 use serde::Serialize;
@@ -34,12 +34,10 @@ use starknet::core::{
     },
     utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness},
 };
-use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf};
+use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf, str::FromStr, sync::LazyLock};
 use walkdir::WalkDir;
 
-lazy_static! {
-    static ref SALT: Felt = Felt::from_bytes_be(&[0u8; 32]);
-}
+pub static SALT: LazyLock<Felt> = LazyLock::new(|| Felt::from_bytes_be(&[0u8; 32]));
 
 #[serde_as]
 #[derive(Serialize, Debug)]
@@ -238,7 +236,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
 
         // Set the eoa storage
-        let eoa_storage = [
+        let mut eoa_storage: HashMap<StorageKey, Felt> = [
             (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
             (storage_addr(OWNABLE_OWNER)?, kakarot_address),
             (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
@@ -246,6 +244,12 @@ impl KatanaGenesisBuilder<Initialized> {
         ]
         .into_iter()
         .collect();
+
+        for hash in EIP_155_AUTHORIZED_MESSAGE_HASHES {
+            let h = U256::from_str(hash).expect("Failed to parse EIP 155 authorized message hash");
+            let [low, high] = split_u256::<Felt>(h);
+            eoa_storage.insert(get_storage_var_address(ACCOUNT_AUTHORIZED_MESSAGE_HASHES, &[low, high])?, Felt::ONE);
+        }
 
         let eoa = GenesisContractJson {
             class: Some(ClassNameOrHash::Hash(account_contract_class_hash)),
@@ -332,11 +336,11 @@ impl KatanaGenesisBuilder<Initialized> {
 
     #[allow(clippy::unused_self)]
     fn evm_address(&self, pk: B256) -> Result<Felt> {
-        Ok(Felt::from_bytes_be_slice(&LocalWallet::from_bytes(&pk)?.address().into_array()))
+        Ok(Felt::from_bytes_be_slice(&PrivateKeySigner::from_bytes(&pk)?.address().into_array()))
     }
 
     pub fn cache_load(&self, key: &str) -> Result<Felt> {
-        self.cache.get(key).copied().ok_or(eyre!("Cache miss for {key} address"))
+        self.cache.get(key).copied().ok_or_else(|| eyre!("Cache miss for {key} address"))
     }
 
     pub const fn cache(&self) -> &HashMap<String, Felt> {

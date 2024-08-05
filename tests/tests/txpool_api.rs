@@ -87,17 +87,12 @@ async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
         .unwrap();
 
     // Assert that the pool content contains the sender of the first pending transaction
-    assert!(tx_pool_content.pending.contains_key(&first_pending_tx.tx.from));
+    assert!(tx_pool_content.pending.contains_key(&first_pending_tx.from));
 
     // Check that the first transaction in the pool matches the first pending transaction
     assert_eq!(
-        *tx_pool_content
-            .pending
-            .get(&first_pending_tx.tx.from)
-            .unwrap()
-            .get(&first_pending_tx.tx.nonce.to_string())
-            .unwrap(),
-        first_pending_tx.tx
+        *tx_pool_content.pending.get(&first_pending_tx.from).unwrap().get(&first_pending_tx.nonce.to_string()).unwrap(),
+        first_pending_tx.into()
     );
 
     // Drop the server handle to shut down the server after the test
@@ -129,7 +124,7 @@ async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
     assert!(tx_pool_content.queued.is_empty());
 
     // Assert the validity of the recovered pending transaction
-    assert_eq!(*tx_pool_content.pending.get(&first_pending_tx.tx.nonce.to_string()).unwrap(), first_pending_tx.tx);
+    assert_eq!(*tx_pool_content.pending.get(&first_pending_tx.nonce.to_string()).unwrap(), first_pending_tx.tx);
 
     // Drop the server handle to shut down the server after the test
     drop(server_handle);
@@ -178,21 +173,16 @@ async fn test_txpool_inspect(#[future] katana: Katana, _setup: ()) {
         .unwrap();
 
     // Assert that the pool content contains the sender of the first pending transaction
-    assert!(tx_pool_inspect.pending.contains_key(&first_pending_tx.tx.from));
+    assert!(tx_pool_inspect.pending.contains_key(&first_pending_tx.from));
 
     // Check that the first transaction in the pool matches the first pending transaction
     assert_eq!(
-        *tx_pool_inspect
-            .pending
-            .get(&first_pending_tx.tx.from)
-            .unwrap()
-            .get(&first_pending_tx.tx.nonce.to_string())
-            .unwrap(),
+        *tx_pool_inspect.pending.get(&first_pending_tx.from).unwrap().get(&first_pending_tx.nonce.to_string()).unwrap(),
         TxpoolInspectSummary {
-            to: first_pending_tx.tx.to,
-            value: first_pending_tx.tx.value,
-            gas: first_pending_tx.tx.gas,
-            gas_price: first_pending_tx.tx.gas_price.unwrap()
+            to: first_pending_tx.to,
+            value: first_pending_tx.value,
+            gas: first_pending_tx.gas,
+            gas_price: first_pending_tx.gas_price.unwrap()
         }
     );
 

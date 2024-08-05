@@ -1,5 +1,6 @@
 use reth_rpc_types::Header;
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     arbitrary::Arbitrary,
@@ -12,6 +13,26 @@ use {
 pub struct StoredHeader {
     #[serde(deserialize_with = "crate::eth_provider::database::types::serde::deserialize_intermediate")]
     pub header: Header,
+}
+
+impl From<StoredHeader> for Header {
+    fn from(header: StoredHeader) -> Self {
+        header.header
+    }
+}
+
+impl From<&StoredHeader> for Header {
+    fn from(header: &StoredHeader) -> Self {
+        header.header.clone()
+    }
+}
+
+impl Deref for StoredHeader {
+    type Target = Header;
+
+    fn deref(&self) -> &Self::Target {
+        &self.header
+    }
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]

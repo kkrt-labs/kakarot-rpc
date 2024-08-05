@@ -1,3 +1,4 @@
+#![allow(clippy::cognitive_complexity)]
 // This file is part of Substrate.
 
 // Copyright (C) Parity Technologies (UK) Ltd.
@@ -89,17 +90,17 @@ impl<T: SourcedType, S: MetricSource> Collector for SourcedMetric<T, S> {
                     m.set_gauge(g);
                 }
                 t => {
-                    log::error!("Unsupported sourced metric type: {:?}", t);
+                    tracing::error!("Unsupported sourced metric type: {:?}", t);
                 }
             }
 
             debug_assert_eq!(self.desc.variable_labels.len(), label_values.len());
             match self.desc.variable_labels.len().cmp(&label_values.len()) {
                 Ordering::Greater => {
-                    log::warn!("Missing label values for sourced metric {}", self.desc.fq_name);
+                    tracing::warn!("Missing label values for sourced metric {}", self.desc.fq_name);
                 }
                 Ordering::Less => {
-                    log::warn!("Too many label values for sourced metric {}", self.desc.fq_name);
+                    tracing::warn!("Too many label values for sourced metric {}", self.desc.fq_name);
                 }
                 Ordering::Equal => {}
             }

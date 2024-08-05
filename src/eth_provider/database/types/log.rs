@@ -1,6 +1,7 @@
 use super::receipt::StoredTransactionReceipt;
 use reth_rpc_types::Log;
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 /// A transaction receipt as stored in the database
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Serialize)]
@@ -15,6 +16,12 @@ impl From<StoredLog> for Log {
     }
 }
 
+impl From<&StoredLog> for Log {
+    fn from(log: &StoredLog) -> Self {
+        log.log.clone()
+    }
+}
+
 impl From<Log> for StoredLog {
     fn from(log: Log) -> Self {
         Self { log }
@@ -24,6 +31,14 @@ impl From<Log> for StoredLog {
 impl From<StoredTransactionReceipt> for Vec<StoredLog> {
     fn from(value: StoredTransactionReceipt) -> Self {
         value.receipt.inner.logs().iter().cloned().map(Into::into).collect()
+    }
+}
+
+impl Deref for StoredLog {
+    type Target = Log;
+
+    fn deref(&self) -> &Self::Target {
+        &self.log
     }
 }
 

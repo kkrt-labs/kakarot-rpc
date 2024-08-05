@@ -1,9 +1,8 @@
 pub mod builder;
-mod database;
 
-use self::database::EthDatabaseSnapshot;
 use crate::{
     eth_provider::{
+        database::state::EthCacheDatabase,
         error::{EthApiError, EthereumDataFormatError, TransactionError},
         provider::EthereumProvider,
     },
@@ -14,8 +13,8 @@ use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::{ConfigureEvm, ConfigureEvmEnv};
 use reth_primitives::{ruint::FromUintError, B256};
 use reth_revm::{
-    primitives::{CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg, ExecutionResult, ResultAndState},
-    Database, DatabaseCommit,
+    primitives::{CfgEnvWithHandlerCfg, Env, EnvWithHandlerCfg},
+    DatabaseCommit,
 };
 use reth_rpc_eth_types::revm_utils::build_call_evm_env;
 use reth_rpc_types::{
@@ -86,7 +85,7 @@ impl TracingResult {
 pub struct Tracer<P: EthereumProvider + Send + Sync> {
     transactions: Vec<reth_rpc_types::Transaction>,
     env: EnvWithHandlerCfg,
-    db: EthDatabaseSnapshot<P>,
+    db: EthCacheDatabase<P>,
     tracing_options: TracingOptions,
 }
 
@@ -94,7 +93,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Traces the transaction with Geth tracing options and returns the resulting traces and state.
     fn trace_geth(
         env: EnvWithHandlerCfg,
-        db: &mut EthDatabaseSnapshot<P>,
+        db: &EthCacheDatabase<P>,
         tx: &reth_rpc_types::Transaction,
         opts: GethDebugTracingOptions,
     ) -> TracingStateResult {
@@ -118,10 +117,13 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
                     // Build EVM with environment and inspector
                     let eth_evm_config = EthEvmConfig::default();
-                    let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
 
-                    // Execute transaction
-                    let res = transact_in_place(evm)?;
+                    let res = {
+                        let mut evm = eth_evm_config.evm_with_env_and_inspector(db.0.clone(), env, &mut inspector);
+
+                        // Execute transaction
+                        evm.transact().map_err(|err| TransactionError::Tracing(err.into()))?
+                    };
 
                     // Get call traces
                     let call_frame = inspector.into_geth_builder().geth_call_traces(
@@ -150,8 +152,13 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         // Use default tracer
         let mut inspector = TracingInspector::new(TracingInspectorConfig::from_geth_config(&config));
         let eth_evm_config = EthEvmConfig::default();
-        let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
-        let res = transact_in_place(evm)?;
+
+        let res = {
+            let mut evm = eth_evm_config.evm_with_env_and_inspector(db.0.clone(), env, &mut inspector);
+            // Execute transaction
+            evm.transact().map_err(|err| TransactionError::Tracing(err.into()))?
+        };
+
         let gas_used = res.result.gas_used();
         let return_value = res.result.into_output().unwrap_or_default();
         let frame = inspector.into_geth_builder().geth_traces(gas_used, return_value, config);
@@ -164,7 +171,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     /// Traces the transaction with Parity tracing options and returns the resulting traces and state.
     fn trace_parity(
         env: EnvWithHandlerCfg,
-        db: &mut EthDatabaseSnapshot<P>,
+        db: &EthCacheDatabase<P>,
         tx: &reth_rpc_types::Transaction,
         tracing_config: TracingInspectorConfig,
     ) -> TracingStateResult {
@@ -181,10 +188,14 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
         // Build EVM with environment and inspector
         let eth_evm_config = EthEvmConfig::default();
-        let evm = eth_evm_config.evm_with_env_and_inspector(db, env, &mut inspector);
 
         // Execute transaction
-        let res = transact_in_place(evm)?;
+        let res = {
+            let mut evm = eth_evm_config.evm_with_env_and_inspector(db.0.clone(), env, &mut inspector);
+
+            // Execute transaction
+            evm.transact().map_err(|err| TransactionError::Tracing(err.into()))?
+        };
 
         // Create transaction info
         let transaction_info = TransactionInfo::from(tx).with_base_fee(block_base_fee);
@@ -226,7 +237,9 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
             let env = env_with_tx(&self.env, tx.clone())?;
             let eth_evm_config = EthEvmConfig::default();
-            transact_commit_in_place(eth_evm_config.evm_with_env(&mut self.db, env))?;
+
+            let mut evm = eth_evm_config.evm_with_env(&mut self.db.0, env);
+            evm.transact_commit().map_err(|err| TransactionError::Tracing(err.into()))?;
         }
 
         Err(EthApiError::TransactionNotFound(transaction_hash))
@@ -276,13 +289,18 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
                     // Build EVM with environment and inspector.
                     let eth_evm_config = EthEvmConfig::default();
-                    let evm = eth_evm_config.evm_with_env_and_inspector(self.db, env, &mut inspector);
+                    let gas_used = {
+                        let mut evm = eth_evm_config.evm_with_env_and_inspector(self.db.0, env, &mut inspector);
 
-                    // Execute the transaction.
-                    let res = transact_in_place(evm)?;
+                        // Execute the transaction.
+                        let res = evm.transact().map_err(|err| TransactionError::Tracing(err.into()))?;
+
+                        // Capture the gas used before `evm` goes out of scope.
+                        res.result.gas_used()
+                    };
 
                     // Get the call traces from the inspector.
-                    let frame = inspector.into_geth_builder().geth_call_traces(call_config, res.result.gas_used());
+                    let frame = inspector.into_geth_builder().geth_call_traces(call_config, gas_used);
 
                     // Return the obtained call traces.
                     return Ok(frame.into());
@@ -321,10 +339,8 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                     (TracingResult::default_failure(&self.tracing_options, tx), HashMap::default())
                 } else {
                     match &self.tracing_options {
-                        TracingOptions::Geth(opts) => Self::trace_geth(env, &mut db, tx, opts.clone())?,
-                        TracingOptions::Parity(tracing_config) => {
-                            Self::trace_parity(env, &mut db, tx, *tracing_config)?
-                        }
+                        TracingOptions::Geth(opts) => Self::trace_geth(env, &db, tx, opts.clone())?,
+                        TracingOptions::Parity(tracing_config) => Self::trace_parity(env, &db, tx, *tracing_config)?,
                         TracingOptions::GethCall(_) => {
                             return Err(EthApiError::Transaction(TransactionError::Tracing(
                                 eyre!("`TracingOptions::GethCall` is not supported in `trace_transactions` context")
@@ -340,7 +356,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 
             // Only commit to the database if there are more transactions to process.
             if transactions.peek().is_some() {
-                db.commit(state_changes);
+                db.0.commit(state_changes);
             }
         }
 
@@ -359,30 +375,6 @@ fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> Trac
         env: Env::boxed(env.env.cfg.clone(), env.env.block.clone(), tx_env),
         handler_cfg: env.handler_cfg,
     })
-}
-
-/// Runs the `evm.transact_commit()` in a blocking context using `tokio::task::block_in_place`.
-/// This is needed in order to enter a blocking context which is then converted to a async
-/// context in the implementation of [Database] using `Handle::current().block_on(async { ... })`
-/// ⚠️ `evm.transact()` should NOT be used as is and we should always make use of the `transact_in_place` function
-fn transact_in_place<I, DB: Database>(mut evm: reth_revm::Evm<'_, I, DB>) -> TracerResult<ResultAndState>
-where
-    <DB as Database>::Error: std::error::Error + Sync + Send + 'static,
-{
-    tokio::task::block_in_place(|| evm.transact().map_err(|err| TransactionError::Tracing(err.into()).into()))
-}
-
-/// Runs the `evm.transact_commit()` in a blocking context using `tokio::task::block_in_place`.
-/// This is needed in order to enter a blocking context which is then converted to a async
-/// context in the implementation of [Database] using `Handle::current().block_on(async { ... })`
-/// ⚠️ `evm.transact_commit()` should NOT be used as is and we should always make use of the `transaction_commit_in_place` function
-fn transact_commit_in_place<I, DB: Database + DatabaseCommit>(
-    mut evm: reth_revm::Evm<'_, I, DB>,
-) -> TracerResult<ExecutionResult>
-where
-    <DB as Database>::Error: std::error::Error + Sync + Send + 'static,
-{
-    tokio::task::block_in_place(|| evm.transact_commit().map_err(|err| TransactionError::Tracing(err.into()).into()))
 }
 
 #[cfg(test)]

@@ -16,14 +16,14 @@ homepage = "https://github.com/kkrt-labs"
 repository = "https://github.com/kkrt-labs/kakarot-rpc"
 readme = "./README.md"
 license = "MIT"
-rust-version = "1.79"
+rust-version = "1.80"
 
 [lints]
 rust.missing_debug_implementations = "warn"
 rust.unreachable_pub = "warn"
-rustdoc.all = "warn"
 rust.unused_must_use = "deny"
 rust.rust_2018_idioms = { level = "deny", priority = -1 }
+rustdoc.all = "warn"
 
 [lints.clippy]
 # all lints that are on by default (correctness, suspicious, style, complexity, perf)
@@ -73,32 +73,42 @@ reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1
 reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 revm-inspectors = "0.4"
 
+# Error
+eyre = { version = "0.6", default-features = false }
+thiserror = { version = "1", default-features = false }
+
+# Futures
+async-trait = { version = "0.1", default-features = false }
+futures = { version = "0.3", default-features = false }
+tokio = { version = "1", features = ["macros"] }
+
+# Network
+tower = { version = "0.4", default-features = false }
+tower-http = { version = "0.5", features = ["cors"] }
+url = { version = "2.5", default-features = false }
+
 # Serde
 serde = { version = "1", default-features = false, features = ["derive"] }
 serde_json = { version = "1", default-features = false }
 
+# Tracing
+tracing = { version = "0.1", default-features = false }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+opentelemetry = { version = "0.23.0", features = ["metrics"] }
+opentelemetry-otlp = { version = "0.16.0", features = ["trace", "tonic", "metrics"] }
+opentelemetry_sdk = { version = "0.23.0", features = ["trace", "metrics", "rt-tokio"] }
+tracing-opentelemetry = "0.24.0"
+
+
 # Others
-async-trait = { version = "0.1", default-features = false }
 auto_impl = { version = "1", default-features = false }
 bytes = { version = "1.6", default-features = false }
 dotenvy = { version = "0.15", default-features = false }
-eyre = { version = "0.6", default-features = false }
-
-futures = { version = "0.3", default-features = false }
 itertools = { version = "0.13", default-features = false }
-lazy_static = { version = "1", default-features = false }
-log = { version = "0.4", default-features = false }
 mongodb = { version = "3.0", default-features = false, features = [
   "rustls-tls",
   "compat-3-0-0",
 ] }
-thiserror = { version = "1", default-features = false }
-tokio = { version = "1", features = ["macros"] }
-tower = { version = "0.4", default-features = false }
-tower-http = { version = "0.5", features = ["cors"] }
-tracing = { version = "0.1", default-features = false }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-url = { version = "2.5", default-features = false }
 
 # Prometheus
 prometheus = { version = "0.13", default-features = false }
@@ -113,10 +123,10 @@ pin-project-lite = { version = "0.2", default-features = false }
 alloy-dyn-abi = { version = "0.7.6", default-features = false }
 alloy-json-abi = { version = "0.7.6", default-features = false, optional = true }
 alloy-primitives = { version = "0.7.2", default-features = false, optional = true }
-alloy-signer-wallet = { version = "0.1.0", default-features = false, optional = true }
+alloy-signer-local = { version = "0.2.0", default-features = false, optional = true }
 anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
-ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "45b8528", default-features = false, features = [
+ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "2f5b44b", default-features = false, features = [
   "v0",
 ], optional = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master", optional = true }
@@ -124,7 +134,6 @@ rand = { version = "0.8", default-features = false, optional = true }
 rayon = { version = "1", default-features = false, optional = true }
 rstest = { version = "0.21", default-features = false, optional = true }
 serde_with = { version = "2.3.1", default-features = false, optional = true }
-starknet_api = { version = "0.12.0-dev.0", default-features = false, optional = true }
 strum = { version = "0.26", default-features = false, optional = true }
 strum_macros = { version = "0.26", default-features = false, optional = true }
 testcontainers = { version = "0.19", default-features = false, optional = true }
@@ -134,18 +143,13 @@ tokio-util = { version = "0.7", features = [
 tokio-stream = { version = "0.1", default-features = false, optional = true }
 walkdir = { version = "2.5", default-features = false, optional = true }
 
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.0", default-features = false, optional = true }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.0", default-features = false, features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.2", default-features = false, optional = true }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.2", default-features = false, features = [
   "serde",
 ], optional = true }
 
-
 [patch.crates-io]
-cairo-felt = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-cairo-vm = { git = "https://github.com/dojoengine/cairo-rs.git", rev = "1031381" }
-alloy-signer-wallet = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
 starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
-starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }
 
 [dev-dependencies]
 hex = { version = "0.4", default-features = false }
@@ -157,7 +161,7 @@ toml = { version = "0.8", default-features = false }
 testing = [
   "alloy-json-abi",
   "alloy-primitives",
-  "alloy-signer-wallet",
+  "alloy-signer-local",
   "anyhow",
   "dep:arbitrary",
   "dojo-test-utils",
@@ -168,7 +172,6 @@ testing = [
   "rayon",
   "rstest",
   "serde_with",
-  "starknet_api",
   "strum",
   "strum_macros",
   "testcontainers",

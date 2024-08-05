@@ -13,7 +13,6 @@ use katana_primitives::{
 use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::{types::Felt, utils::get_storage_var_address};
-use starknet_api::{core::ClassHash, hash::StarkFelt};
 use std::collections::HashMap;
 
 /// Types from <https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58>
@@ -57,8 +56,7 @@ impl HiveGenesisConfig {
 
         // Get the current state of the builder.
         let kakarot_address = builder.cache_load("kakarot_address")?;
-        let account_contract_class_hash =
-            ClassHash(StarkFelt::new(builder.account_contract_class_hash()?.to_bytes_be())?);
+        let account_contract_class_hash = builder.account_contract_class_hash()?;
 
         // Fetch the contracts from the alloc field.
         let mut additional_kakarot_storage = HashMap::with_capacity(self.alloc.len()); // 1 mapping per contract
@@ -82,16 +80,13 @@ impl HiveGenesisConfig {
                 let storage: Vec<(U256, U256)> = storage.into_iter().collect();
                 let kakarot_account = KakarotAccount::new(&address, &code, U256::ZERO, &storage)?;
 
-                let mut kakarot_account_storage: Vec<(Felt, Felt)> = kakarot_account
-                    .storage()
-                    .iter()
-                    .map(|(k, v)| (Felt::from_bytes_be((*k.0.key()).bytes()), Felt::from_bytes_be((*v).bytes())))
-                    .collect();
+                let mut kakarot_account_storage: Vec<(Felt, Felt)> =
+                    kakarot_account.storage().iter().map(|(k, v)| (*k.0.key(), *v)).collect();
 
                 // Add the implementation to the storage.
                 let implementation_key = get_storage_var_address(ACCOUNT_IMPLEMENTATION, &[])?;
                 kakarot_account_storage.append(&mut vec![
-                    (implementation_key, Felt::from_bytes_be(account_contract_class_hash.0.bytes())),
+                    (implementation_key, account_contract_class_hash),
                     (get_storage_var_address(ACCOUNT_NONCE, &[])?, Felt::ONE),
                     (get_storage_var_address(OWNABLE_OWNER, &[])?, kakarot_address),
                     (
@@ -107,7 +102,7 @@ impl HiveGenesisConfig {
                 Ok((
                     ContractAddress::new(starknet_address),
                     GenesisContractJson {
-                        class: Some(ClassNameOrHash::Hash(Felt::from_bytes_be(account_contract_class_hash.0.bytes()))),
+                        class: Some(ClassNameOrHash::Hash(account_contract_class_hash)),
                         balance: Some(info.balance),
                         nonce: None,
                         storage: Some(kakarot_account_storage.into_iter().collect()),
@@ -141,33 +136,30 @@ mod tests {
         eth_provider::utils::split_u256,
         test_utils::{constants::ACCOUNT_STORAGE, katana::genesis::Initialized},
     };
-    use lazy_static::lazy_static;
-    use std::path::{Path, PathBuf};
+    use std::{
+        path::{Path, PathBuf},
+        sync::LazyLock,
+    };
 
-    lazy_static! {
-        static ref ROOT: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf();
-        static ref HIVE_GENESIS: HiveGenesisConfig = {
-            let hive_content =
-                std::fs::read_to_string(ROOT.join("src/test_utils/hive/test_data/genesis.json")).unwrap();
-            serde_json::from_str(&hive_content).unwrap()
-        };
-        static ref GENESIS_BUILDER_LOADED: KatanaGenesisBuilder<Loaded> =
-            KatanaGenesisBuilder::default().load_classes(ROOT.join("lib/kakarot/build"));
-        static ref GENESIS_BUILDER: KatanaGenesisBuilder<Initialized> =
-            GENESIS_BUILDER_LOADED.clone().with_kakarot(Felt::ZERO).unwrap();
-        static ref GENESIS: GenesisJson =
-            HIVE_GENESIS.clone().try_into_genesis_json(GENESIS_BUILDER_LOADED.clone()).unwrap();
-    }
+    static ROOT: LazyLock<PathBuf> = LazyLock::new(|| Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf());
+    static HIVE_GENESIS: LazyLock<HiveGenesisConfig> = LazyLock::new(|| {
+        let hive_content = std::fs::read_to_string(ROOT.join("src/test_utils/hive/test_data/genesis.json")).unwrap();
+        serde_json::from_str(&hive_content).unwrap()
+    });
+    static GENESIS_BUILDER_LOADED: LazyLock<KatanaGenesisBuilder<Loaded>> =
+        LazyLock::new(|| KatanaGenesisBuilder::default().load_classes(ROOT.join("lib/kakarot/build")));
+    static GENESIS_BUILDER: LazyLock<KatanaGenesisBuilder<Initialized>> =
+        LazyLock::new(|| GENESIS_BUILDER_LOADED.clone().with_kakarot(Felt::ZERO).unwrap());
+    static GENESIS: LazyLock<GenesisJson> =
+        LazyLock::new(|| HIVE_GENESIS.clone().try_into_genesis_json(GENESIS_BUILDER_LOADED.clone()).unwrap());
 
     #[test]
     fn test_correct_genesis_len() {
-        // Then
         assert_eq!(GENESIS.contracts.len(), 8);
     }
 
     #[test]
     fn test_genesis_accounts() {
-        // Then
         for (address, account) in HIVE_GENESIS.alloc.clone() {
             let starknet_address =
                 GENESIS_BUILDER.compute_starknet_address(Felt::from_bytes_be_slice(address.as_slice())).unwrap().0;

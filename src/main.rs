@@ -7,18 +7,18 @@ use kakarot_rpc::{
     retry::RetryHandler,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
+use opentelemetry_sdk::runtime::Tokio;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{env::var, sync::Arc};
-use tracing_subscriber::{filter, util::SubscriberInitExt};
+use tracing_opentelemetry::MetricsLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Environment variables are safe to use after this
     dotenv().ok();
 
-    let filter = format!("kakarot_rpc={}", std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string()));
-    let filter = filter::EnvFilter::new(filter);
-    tracing_subscriber::FmtSubscriber::builder().with_env_filter(filter).finish().try_init()?;
+    setup_tracing().expect("failed to start tracing and metrics");
 
     // Load the configuration
     let starknet_config = KakarotRpcConfig::from_env()?;
@@ -45,14 +45,15 @@ async fn main() -> Result<()> {
     setup_hive(&starknet_provider).await?;
 
     // Setup the eth provider
-    let eth_provider = EthDataProvider::new(db.clone(), Arc::new(starknet_provider)).await?;
+    let starknet_provider = Arc::new(starknet_provider);
+    let eth_provider = EthDataProvider::new(db.clone(), starknet_provider.clone()).await?;
 
     // Setup the retry handler
     let retry_handler = RetryHandler::new(eth_provider.clone(), db);
     retry_handler.start(&tokio::runtime::Handle::current());
 
     // Setup the RPC module
-    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_provider).rpc_module()?;
+    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_provider, starknet_provider).rpc_module()?;
 
     // Start the RPC server
     let (socket_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
@@ -62,6 +63,39 @@ async fn main() -> Result<()> {
     tracing::info!("RPC Server running on {url}...");
 
     server_handle.stopped().await;
+
+    Ok(())
+}
+
+/// Set up the subscriber for tracing and metrics
+fn setup_tracing() -> Result<()> {
+    // Prepare a tracer pipeline that exports to the OpenTelemetry collector,
+    // using tonic as the gRPC client. Using a batch exporter for better performance:
+    // https://docs.rs/opentelemetry-otlp/0.17.0/opentelemetry_otlp/#performance
+    let tracer = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .install_batch(Tokio)?;
+    // Set up the tracing layer with the OpenTelemetry tracer. A layer is a basic building block,
+    // in tracing, that allows to define behavior for collecting or recording trace data. Layers
+    // can be stacked on top of each other to create a pipeline.
+    // https://docs.rs/tracing-subscriber/latest/tracing_subscriber/layer/trait.Layer.html
+    let tracing_layer = tracing_opentelemetry::layer().with_tracer(tracer).boxed();
+
+    // Prepare a metrics pipeline that exports to the OpenTelemetry collector.
+    let metrics = opentelemetry_otlp::new_pipeline()
+        .metrics(Tokio)
+        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .build()?;
+    let metrics_layer = MetricsLayer::new(metrics).boxed();
+
+    // Add a filter to the subscriber to control the verbosity of the logs
+    let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
+    let env_filter = EnvFilter::builder().parse(filter)?;
+
+    // Stack the layers and initialize the subscriber
+    let stacked_layer = tracing_layer.and_then(metrics_layer).and_then(env_filter);
+    tracing_subscriber::registry().with(stacked_layer).init();
 
     Ok(())
 }

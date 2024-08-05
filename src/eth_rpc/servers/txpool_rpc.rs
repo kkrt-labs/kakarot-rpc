@@ -2,7 +2,7 @@ use crate::{eth_provider::provider::EthereumProvider, eth_rpc::api::txpool_api::
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::Address;
 use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
-use tracing::trace;
+use tracing::instrument;
 
 /// The RPC module for implementing the Txpool api
 #[derive(Debug)]
@@ -18,15 +18,25 @@ impl<P: EthereumProvider> TxpoolRpc<P> {
 
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> TxPoolApiServer for TxpoolRpc<P> {
+    /// Returns the number of transactions currently pending for inclusion in the next block(s), as
+    /// well as the ones that are being scheduled for future execution only.
+    /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_status)
+    ///
+    /// Handler for `txpool_status`
+    #[instrument(skip(self))]
+    async fn txpool_status(&self) -> Result<TxpoolStatus> {
+        let all = self.eth_provider.txpool_content().await?;
+        Ok(TxpoolStatus { pending: all.pending.len() as u64, queued: all.queued.len() as u64 })
+    }
+
     /// Returns a summary of all the transactions currently pending for inclusion in the next
     /// block(s), as well as the ones that are being scheduled for future execution only.
     ///
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_inspect) for more details
     ///
     /// Handler for `txpool_inspect`
+    #[instrument(skip(self))]
     async fn txpool_inspect(&self) -> Result<TxpoolInspect> {
-        trace!(target: "rpc::eth", "Serving txpool_inspect");
-
         let mut inspect = TxpoolInspect::default();
 
         let transactions = self.eth_provider.txpool_transactions().await?;
@@ -46,24 +56,13 @@ impl<P: EthereumProvider + Send + Sync + 'static> TxPoolApiServer for TxpoolRpc<
         Ok(inspect)
     }
 
-    /// Returns the number of transactions currently pending for inclusion in the next block(s), as
-    /// well as the ones that are being scheduled for future execution only.
-    /// Ref: [Here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_status)
-    ///
-    /// Handler for `txpool_status`
-    async fn txpool_status(&self) -> Result<TxpoolStatus> {
-        trace!(target: "rpc::eth", "Serving txpool_status");
-        let all = self.eth_provider.txpool_content().await?;
-        Ok(TxpoolStatus { pending: all.pending.len() as u64, queued: all.queued.len() as u64 })
-    }
-
     /// Retrieves the transactions contained within the txpool, returning pending
     /// transactions of this address, grouped by nonce.
     ///
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_contentFrom) for more details
     /// Handler for `txpool_contentFrom`
+    #[instrument(skip(self))]
     async fn txpool_content_from(&self, from: Address) -> Result<TxpoolContentFrom> {
-        trace!(target: "rpc::eth", ?from, "Serving txpool_contentFrom");
         Ok(self.eth_provider.txpool_content().await?.remove_from(&from))
     }
 
@@ -72,8 +71,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> TxPoolApiServer for TxpoolRpc<
     ///
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_content) for more details
     /// Handler for `txpool_content`
+    #[instrument(skip(self))]
     async fn txpool_content(&self) -> Result<TxpoolContent> {
-        trace!(target: "rpc::eth", "Serving txpool_content");
         Ok(self.eth_provider.txpool_content().await?)
     }
 }
