@@ -2,13 +2,13 @@ use alloy::{
     network::{EthereumWallet, TransactionBuilder},
     // rpc::types::{AccessList, TransactionInput, TransactionRequest},
 };
-use alloy_signer_local::PrivateKeySigner;
 use reth_primitives::{Address, Bytes, B256, U256};
 use reth_rpc_types::{AccessList, Transaction, TransactionInput, TransactionRequest};
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
+    alloy_signer_local::PrivateKeySigner,
     crate::test_utils::mongo::{
         BLOCK_HASH, BLOCK_NUMBER, CHAIN_ID, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH,
         RECOVERED_EIP1599_TX_ADDRESS, RECOVERED_EIP2930_TX_ADDRESS, RECOVERED_LEGACY_TX_ADDRESS, TEST_SIG_R,
