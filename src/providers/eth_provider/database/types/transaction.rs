@@ -12,7 +12,7 @@ use {
     alloy_signer::SignerSync,
     alloy_signer_local::PrivateKeySigner,
     arbitrary::Arbitrary,
-    reth_primitives::{Address, TxType, U256},
+    reth_primitives::{Address, TransactionSignedNoHash, TxType, U256},
 };
 
 /// A full transaction as stored in the database
@@ -133,12 +133,23 @@ impl<'a> StoredTransaction {
         // Force the chain ID to be set
         primitive_transaction.set_chain_id(u64::arbitrary(u)?);
 
-        // Compute the hash
-        let hash = primitive_transaction.signature_hash();
+        // Compute the signing hash
+        let signing_hash = primitive_transaction.signature_hash();
 
         // Sign the transaction with a local wallet
         let signer = PrivateKeySigner::random();
-        let signature = signer.sign_hash_sync(&hash).map_err(|_| arbitrary::Error::IncorrectFormat)?;
+        let signature = signer.sign_hash_sync(&signing_hash).map_err(|_| arbitrary::Error::IncorrectFormat)?;
+
+        // Use [`TransactionSignedNoHash`] to compute the hash
+        let hash = TransactionSignedNoHash {
+            transaction: primitive_transaction.clone(),
+            signature: reth_primitives::Signature {
+                r: signature.r(),
+                s: signature.s(),
+                odd_y_parity: signature.v().y_parity(),
+            },
+        }
+        .hash();
 
         // Convert the signature to the RPC format
         let is_legacy = primitive_transaction.is_legacy();
