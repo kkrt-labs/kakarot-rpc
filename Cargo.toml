@@ -71,6 +71,15 @@ reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v
 reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-storage-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-db-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-rpc-server-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-tasks = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-trie-common = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-trie = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-evm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 revm-inspectors = "0.4"
 
 # Error
