@@ -139,7 +139,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 
         // we can't trace a pending transaction
         if transaction.block_number.is_none() {
-            return Err(EthApiError::TransactionNotFound(transaction_hash.into()));
+            return Err(EthApiError::TransactionNotFound(transaction_hash));
         }
 
         self.with_block_id(BlockId::Number(transaction.block_number.unwrap().into())).await
