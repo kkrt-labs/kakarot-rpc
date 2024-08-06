@@ -166,7 +166,7 @@ impl<'a> StoredTransaction {
             block_number: Some(u64::arbitrary(u)?),
             transaction_index: Some(u64::arbitrary(u)?),
             gas_price: Some(primitive_transaction.effective_gas_price(None)),
-            gas: primitive_transaction.gas_limit() as u128,
+            gas: u128::from(primitive_transaction.gas_limit()),
             max_fee_per_gas: if is_legacy { None } else { Some(primitive_transaction.max_fee_per_gas()) },
             max_priority_fee_per_gas: primitive_transaction.max_priority_fee_per_gas(),
             signature: Some(signature),
