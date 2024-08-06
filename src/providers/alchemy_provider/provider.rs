@@ -1,7 +1,7 @@
-use super::contracts::erc20::EthereumErc20;
 use crate::{
     models::token::{TokenBalance, TokenBalances, TokenMetadata},
     providers::eth_provider::{
+        contracts::erc20::EthereumErc20,
         error::EthApiError,
         provider::{EthProviderResult, EthereumProvider},
     },
