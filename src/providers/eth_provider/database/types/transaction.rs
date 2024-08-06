@@ -1,21 +1,18 @@
-use alloy::{
-    network::{EthereumWallet, TransactionBuilder},
-    // rpc::types::{AccessList, TransactionInput, TransactionRequest},
-};
-use reth_primitives::{Address, Bytes, B256, U256};
-use reth_rpc_types::{AccessList, Transaction, TransactionInput, TransactionRequest};
+use reth_primitives::B256;
+use reth_rpc_types::Transaction;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    alloy_signer_local::PrivateKeySigner,
     crate::test_utils::mongo::{
         BLOCK_HASH, BLOCK_NUMBER, CHAIN_ID, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH,
         RECOVERED_EIP1599_TX_ADDRESS, RECOVERED_EIP2930_TX_ADDRESS, RECOVERED_LEGACY_TX_ADDRESS, TEST_SIG_R,
         TEST_SIG_S, TEST_SIG_V,
     },
+    alloy_signer::SignerSync,
+    alloy_signer_local::PrivateKeySigner,
     arbitrary::Arbitrary,
-    reth_primitives::TxType,
+    reth_primitives::{Address, TxType, U256},
 };
 
 /// A full transaction as stored in the database
@@ -131,35 +128,45 @@ impl Deref for StoredTransaction {
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> StoredTransaction {
-    pub async fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let tx_request = TransactionRequest {
-            from: Some(Address::arbitrary(u)?),
-            to: Some(reth_primitives::TxKind::Call(Address::arbitrary(u)?)),
-            gas_price: Some(u128::arbitrary(u)?),
-            max_fee_per_gas: Some(u128::arbitrary(u)?),
-            max_priority_fee_per_gas: Some(u128::arbitrary(u)?),
-            gas: Some(u128::arbitrary(u)?),
-            value: Some(U256::arbitrary(u)?),
-            input: TransactionInput::new(Bytes::arbitrary(u)?),
-            nonce: Some(u64::arbitrary(u)?),
-            chain_id: Some(u64::arbitrary(u)?),
-            access_list: Some(AccessList::arbitrary(u)?),
-            max_fee_per_blob_gas: Some(u128::arbitrary(u)?),
-            blob_versioned_hashes: None,
-            transaction_type: Some(u8::arbitrary(u)? % 3),
-            sidecar: None,
-        };
+    pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let mut primitive_transaction = reth_primitives::Transaction::arbitrary(u)?;
+        // Force the chain ID to be set
+        primitive_transaction.set_chain_id(u64::arbitrary(u)?);
+
+        // Compute the hash
+        let hash = primitive_transaction.signature_hash();
 
         // Sign the transaction with a local wallet
         let signer = PrivateKeySigner::random();
-        let wallet = EthereumWallet::from(signer);
+        let signature = signer.sign_hash_sync(&hash).map_err(|_| arbitrary::Error::IncorrectFormat)?;
 
-        let tx_envelope = tx_request.build(&wallet).await.expect("Failed to build transaction");
+        // Convert the signature to the RPC format
+        let is_legacy = primitive_transaction.is_legacy();
+        let signature = alloy::rpc::types::Signature {
+            r: signature.r(),
+            s: signature.s(),
+            v: U256::from(signature.v().to_u64()),
+            y_parity: if is_legacy { None } else { Some(signature.v().y_parity().into()) },
+        };
 
-        // Convert the signed transaction into a Transaction object
-        let signed_tx = Transaction::from(tx_envelope);
+        let transaction = Transaction {
+            hash,
+            block_hash: Some(B256::arbitrary(u)?),
+            block_number: Some(u64::arbitrary(u)?),
+            transaction_index: Some(u64::arbitrary(u)?),
+            gas_price: Some(primitive_transaction.effective_gas_price(None)),
+            gas: primitive_transaction.gas_limit() as u128,
+            max_fee_per_gas: if is_legacy { None } else { Some(primitive_transaction.max_fee_per_gas()) },
+            max_priority_fee_per_gas: primitive_transaction.max_priority_fee_per_gas(),
+            signature: Some(signature),
+            transaction_type: Some(primitive_transaction.tx_type() as u8),
+            chain_id: primitive_transaction.chain_id(),
+            other: Default::default(),
+            access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
+            ..Default::default()
+        };
 
-        Ok(Self { tx: signed_tx })
+        Ok(Self { tx: transaction })
     }
 }
 
