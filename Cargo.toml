@@ -59,6 +59,7 @@ num-traits = { version = "0.2", default-features = false }
 alloy-rlp = { version = "0.3.4", default-features = false }
 alloy-sol-types = { version = "0.7.2", default-features = false }
 alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
+alloy = { version = "0.1.1", features = ["full"] }
 jsonrpsee = { version = "0.23", features = ["macros", "server"] }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, features = [
   "alloy-compat",
@@ -147,6 +148,8 @@ dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-al
 katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.2", default-features = false, features = [
   "serde",
 ], optional = true }
+ethers-signers = "2.0.14"
+ethers-core = "2.0.11"
 
 [patch.crates-io]
 starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }

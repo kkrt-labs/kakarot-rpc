@@ -1,5 +1,10 @@
-use reth_primitives::B256;
-use reth_rpc_types::Transaction;
+use alloy::{
+    network::{EthereumWallet, TransactionBuilder},
+    // rpc::types::{AccessList, TransactionInput, TransactionRequest},
+};
+use alloy_signer_local::PrivateKeySigner;
+use reth_primitives::{Address, Bytes, B256, U256};
+use reth_rpc_types::{AccessList, Transaction, TransactionInput, TransactionRequest};
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
@@ -11,7 +16,6 @@ use {
     },
     arbitrary::Arbitrary,
     reth_primitives::TxType,
-    reth_primitives::{Address, U256},
 };
 
 /// A full transaction as stored in the database
@@ -127,39 +131,35 @@ impl Deref for StoredTransaction {
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> StoredTransaction {
-    pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let transaction = Transaction::arbitrary(u)?;
+    pub async fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        let tx_request = TransactionRequest {
+            from: Some(Address::arbitrary(u)?),
+            to: Some(reth_primitives::TxKind::Call(Address::arbitrary(u)?)),
+            gas_price: Some(u128::arbitrary(u)?),
+            max_fee_per_gas: Some(u128::arbitrary(u)?),
+            max_priority_fee_per_gas: Some(u128::arbitrary(u)?),
+            gas: Some(u128::arbitrary(u)?),
+            value: Some(U256::arbitrary(u)?),
+            input: TransactionInput::new(Bytes::arbitrary(u)?),
+            nonce: Some(u64::arbitrary(u)?),
+            chain_id: Some(u64::arbitrary(u)?),
+            access_list: Some(AccessList::arbitrary(u)?),
+            max_fee_per_blob_gas: Some(u128::arbitrary(u)?),
+            blob_versioned_hashes: None,
+            transaction_type: Some(u8::arbitrary(u)? % 3),
+            sidecar: None,
+        };
 
-        let transaction_type = Into::<u8>::into(transaction.transaction_type.unwrap_or_default()) % 3;
+        // Sign the transaction with a local wallet
+        let signer = PrivateKeySigner::random();
+        let wallet = EthereumWallet::from(signer);
 
-        Ok(Self {
-            tx: Transaction {
-                block_hash: Some(B256::arbitrary(u)?),
-                block_number: Some(u64::arbitrary(u)?),
-                transaction_index: Some(u64::arbitrary(u)?),
-                gas_price: Some(u128::arbitrary(u)?),
-                gas: u128::from(u64::arbitrary(u)?),
-                max_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
-                    None
-                } else {
-                    Some(u128::arbitrary(u)?)
-                },
-                max_priority_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
-                    None
-                } else {
-                    Some(u128::arbitrary(u)?)
-                },
-                signature: Some(reth_rpc_types::Signature {
-                    y_parity: Some(reth_rpc_types::Parity(bool::arbitrary(u)?)),
-                    ..reth_rpc_types::Signature::arbitrary(u)?
-                }),
-                transaction_type: Some(transaction_type),
-                chain_id: Some(u64::from(u32::arbitrary(u)?)),
-                other: Default::default(),
-                access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
-                ..transaction
-            },
-        })
+        let tx_envelope = tx_request.build(&wallet).await.expect("Failed to build transaction");
+
+        // Convert the signed transaction into a Transaction object
+        let signed_tx = Transaction::from(tx_envelope);
+
+        Ok(Self { tx: signed_tx })
     }
 }
 
