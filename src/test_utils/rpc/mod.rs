@@ -2,8 +2,8 @@ use super::katana::Katana;
 use crate::{
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
     providers::{
-        alchemy_provider::provider::AlchemyStruct, debug_provider::provider::DebugStruct,
-        pool_provider::provider::PoolStruct,
+        alchemy_provider::provider::AlchemyDataProvider, debug_provider::provider::DebugDataProvider,
+        pool_provider::provider::PoolDataProvider,
     },
 };
 use jsonrpsee::server::ServerHandle;
@@ -79,9 +79,9 @@ async fn get_next_port() -> u16 {
 /// and each test is compiled separately, so the compiler thinks this function is unused
 #[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    let alchemy_provider = AlchemyStruct::new(katana.eth_provider());
-    let pool_provider = PoolStruct::new(katana.eth_provider());
-    let debug_provider = DebugStruct::new(katana.eth_provider());
+    let alchemy_provider = AlchemyDataProvider::new(katana.eth_provider());
+    let pool_provider = PoolDataProvider::new(katana.eth_provider());
+    let debug_provider = DebugDataProvider::new(katana.eth_provider());
     Ok(run_server(
         KakarotRpcModuleBuilder::new(
             katana.eth_provider(),

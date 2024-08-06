@@ -54,18 +54,18 @@ pub trait DebugProvider {
 }
 
 #[derive(Debug, Clone)]
-pub struct DebugStruct<P: EthereumProvider> {
+pub struct DebugDataProvider<P: EthereumProvider> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider> DebugStruct<P> {
+impl<P: EthereumProvider> DebugDataProvider<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for DebugStruct<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for DebugDataProvider<P> {
     async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<hr>> {
         self.eth_provider.header(block_id).await
     }
@@ -206,7 +206,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for DebugStru
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugStruct<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataProvider<P> {
     async fn raw_header(&self, block_id: BlockId) -> EthProviderResult<Bytes> {
         let mut res = Vec::new();
         if let Some(header) = self

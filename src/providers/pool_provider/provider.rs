@@ -20,18 +20,18 @@ pub trait PoolProvider {
 }
 
 #[derive(Debug, Clone)]
-pub struct PoolStruct<P: EthereumProvider> {
+pub struct PoolDataProvider<P: EthereumProvider> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider> PoolStruct<P> {
+impl<P: EthereumProvider> PoolDataProvider<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruct<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolDataProvider<P> {
     async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>> {
         self.eth_provider.header(block_id).await
     }
@@ -172,7 +172,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for PoolStruc
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> PoolProvider for PoolStruct<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> PoolProvider for PoolDataProvider<P> {
     async fn txpool_status(&self) -> EthProviderResult<TxpoolStatus> {
         let all = self.eth_provider.txpool_content().await?;
         Ok(TxpoolStatus { pending: all.pending.len() as u64, queued: all.queued.len() as u64 })

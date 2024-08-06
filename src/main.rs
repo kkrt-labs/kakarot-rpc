@@ -4,10 +4,10 @@ use kakarot_rpc::{
     config::KakarotRpcConfig,
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
     providers::{
-        alchemy_provider::provider::AlchemyStruct,
-        debug_provider::provider::DebugStruct,
+        alchemy_provider::provider::AlchemyDataProvider,
+        debug_provider::provider::DebugDataProvider,
         eth_provider::{database::Database, provider::EthDataProvider},
-        pool_provider::provider::PoolStruct,
+        pool_provider::provider::PoolDataProvider,
     },
     retry::RetryHandler,
 };
@@ -52,9 +52,9 @@ async fn main() -> Result<()> {
     // Setup the eth provider
     let starknet_provider = Arc::new(starknet_provider);
     let eth_provider = EthDataProvider::new(db.clone(), starknet_provider.clone()).await?;
-    let alchemy_provider = AlchemyStruct::new(eth_provider.clone());
-    let pool_provider = PoolStruct::new(eth_provider.clone());
-    let debug_provider = DebugStruct::new(eth_provider.clone());
+    let alchemy_provider = AlchemyDataProvider::new(eth_provider.clone());
+    let pool_provider = PoolDataProvider::new(eth_provider.clone());
+    let debug_provider = DebugDataProvider::new(eth_provider.clone());
 
     // Setup the retry handler
     let retry_handler = RetryHandler::new(eth_provider.clone(), db);

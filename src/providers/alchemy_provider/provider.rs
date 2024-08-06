@@ -38,18 +38,18 @@ pub trait AlchemyProvider {
 }
 
 #[derive(Debug, Clone)]
-pub struct AlchemyStruct<P: EthereumProvider> {
+pub struct AlchemyDataProvider<P: EthereumProvider> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider> AlchemyStruct<P> {
+impl<P: EthereumProvider> AlchemyDataProvider<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for AlchemyStruct<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for AlchemyDataProvider<P> {
     async fn header(&self, block_id: &BlockId) -> EthProviderResult<Option<Header>> {
         self.eth_provider.header(block_id).await
     }
@@ -190,7 +190,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for AlchemySt
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyStruct<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDataProvider<P> {
     #[tracing::instrument(skip(self, contract_addresses), ret, err)]
     async fn token_balances(
         &self,
