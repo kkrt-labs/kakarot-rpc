@@ -131,7 +131,7 @@ impl<'a> StoredTransaction {
     pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let mut primitive_transaction = reth_primitives::Transaction::arbitrary(u)?;
         // Force the chain ID to be set
-        primitive_transaction.set_chain_id(1 as u64);
+        primitive_transaction.set_chain_id(1_u64);
 
         // Compute the signing hash
         let signing_hash = primitive_transaction.signature_hash();
