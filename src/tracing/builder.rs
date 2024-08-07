@@ -232,39 +232,35 @@ mod tests {
     use reth_rpc_types::Transaction;
     use std::sync::Arc;
     #[tokio::test]
-    async fn test_tracer_builder_with_block_id_failure_block_id() {
+    async fn test_tracer_builder_block_failure_with_none_block_number() {
         // Create a mock Ethereum provider
         let mut mock_provider = MockEthereumProviderStruct::new();
         // Expect the chain_id call to return 1
         mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
         // Expect the block_by_number call to return an error for an unknown block
-        mock_provider.expect_block_by_number().returning(|_, _| {
-            Err(EthApiError::UnknownBlock(BlockHashOrNumber::Number(u64::try_from(U64::from(1)).unwrap())))
-        });
+        mock_provider.expect_block_by_number().returning(|_, _| Ok(None));
 
         // Create a TracerBuilder with the mock provider
         let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
         // Attempt to use the builder with a specific block ID, expecting an error
-        let result = builder.with_block_id(BlockId::Number(1.into())).await;
+        let result = builder.block(BlockId::Number(1.into())).await;
         // Check that the result is an UnknownBlock error
         assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
     }
 
     #[tokio::test]
-    async fn test_tracer_builder_with_block_id_failure_transaction_hash() {
+    async fn test_tracer_builder_block_failure_with_none_block_hash() {
         // Create a mock Ethereum provider
         let mut mock_provider = MockEthereumProviderStruct::new();
         // Expect the chain_id call to return 1
         mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
         // Expect the block_by_hash call to return an error for an unknown block
-        mock_provider
-            .expect_block_by_hash()
-            .returning(|_, _| Err(EthApiError::UnknownBlock(B256::repeat_byte(0).into())));
+        mock_provider.expect_block_by_hash().returning(|_, _| Ok(None));
 
         // Create a TracerBuilder with the mock provider
         let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
         // Attempt to use the builder with a specific block hash, expecting an error
-        let result = builder.with_block_id(BlockId::Hash(B256::repeat_byte(1).into())).await;
+        let result = builder.block(BlockId::Hash(B256::repeat_byte(1).into())).await;
         // Check that the result is an UnknownBlock error
         assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
     }
