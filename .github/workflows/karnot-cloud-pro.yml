@@ -1,0 +1,31 @@
+name: Karnot Cloud Pro Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - sepolia
+          - staging
+jobs:
+  my_job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Debug Information
+        run: |
+          echo "Selected environment: ${{ github.event.inputs.environment }}"
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -R
+
+      - name: Run Karnot Cloud Pro
+        uses: karnotxyz/kcloud-pro-github-action@node-js-script
+        with:
+          input_file: './workflow/karnot-ci.yml'
+          environment: ${{ github.event.inputs.environment }}
+          KARNOT_CLOUD_URL: ${{ secrets.KARNOT_CLOUD_URL }}
+          KARNOT_CLOUD_TOKEN: ${{ secrets.KARNOT_CLOUD_TOKEN }}
