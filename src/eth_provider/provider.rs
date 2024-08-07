@@ -38,6 +38,7 @@ use crate::{
         felt::Felt252Wrapper,
         transaction::validate_transaction,
     },
+    retry::mempool::KakarotPool,
 };
 use alloy_rlp::Decodable;
 use async_trait::async_trait;
@@ -65,6 +66,7 @@ use reth_rpc_types::{
     SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
 };
 use reth_rpc_types_compat::transaction::from_recovered;
+use reth_transaction_pool::{EthPooledTransaction, TransactionOrigin, TransactionPool};
 #[cfg(feature = "hive")]
 use starknet::core::types::BroadcastedInvokeTransaction;
 use starknet::core::{
@@ -171,19 +173,24 @@ pub trait EthereumProvider {
 /// Uses access to a database for certain data, while
 /// the rest is fetched from the Starknet Provider.
 #[derive(Debug, Clone)]
-pub struct EthDataProvider<SP: starknet::providers::Provider> {
+pub struct EthDataProvider<SP: starknet::providers::Provider + Send + Sync> {
     database: Database,
     starknet_provider: SP,
     chain_id: u64,
+    pub mempool: Option<KakarotPool<Self>>,
 }
 
 impl<SP> EthDataProvider<SP>
 where
-    SP: starknet::providers::Provider,
+    SP: starknet::providers::Provider + Send + Sync,
 {
     /// Returns a reference to the database.
     pub const fn database(&self) -> &Database {
         &self.database
+    }
+
+    pub const fn mempool(&self) -> Option<&KakarotPool<Self>> {
+        self.mempool.as_ref()
     }
 }
 
@@ -615,9 +622,13 @@ where
         // Get the number of retries for the transaction
         let retries = self.database.pending_transaction_retries(&transaction_signed.hash).await?;
 
+        let transaction_signed_ec_recovered =
+            TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer);
+
+        let encoded_length = transaction_signed_ec_recovered.clone().length_without_header();
+
         // Upsert the transaction as pending in the database
-        let transaction =
-            from_recovered(TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer));
+        let transaction = from_recovered(transaction_signed_ec_recovered.clone());
         self.database.upsert_pending_transaction(transaction, retries).await?;
 
         // Convert the Ethereum transaction to a Starknet transaction
@@ -635,6 +646,10 @@ where
             .instrument(span)
             .await
             .map_err(KakarotError::from)?;
+
+        let pool_transaction = EthPooledTransaction::new(transaction_signed_ec_recovered, encoded_length);
+
+        self.mempool.as_ref().unwrap().add_transaction(TransactionOrigin::Local, pool_transaction).await.unwrap();
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
@@ -720,7 +735,12 @@ where
         let chain_id =
             (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
 
-        Ok(Self { database, starknet_provider, chain_id })
+        Ok(Self { database, starknet_provider, chain_id, mempool: None })
+    }
+
+    #[must_use]
+    pub fn with_mempool(self, mempool: KakarotPool<Self>) -> Self {
+        Self { mempool: Some(mempool), ..self }
     }
 
     #[cfg(feature = "testing")]

@@ -21,6 +21,9 @@ use tracing::{instrument, Instrument};
 #[cfg(test)]
 use {futures::lock::Mutex, std::sync::Arc};
 
+pub mod mempool;
+pub mod validate;
+
 pub fn get_retry_tx_interval() -> u64 {
     u64::from_str(&std::env::var("RETRY_TX_INTERVAL").expect("Missing environment variable RETRY_TX_INTERVAL"))
         .expect("failing to parse RETRY_TX_INTERVAL")
