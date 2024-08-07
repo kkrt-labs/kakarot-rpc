@@ -51,7 +51,7 @@ export function toEthLog({
   const { transactionIndex, hash } = transaction;
 
   // Log events originated from kakarot address only
-  if (fromAddress !== KAKAROT_ADDRESS) {
+  if (BigInt(fromAddress) !== BigInt(KAKAROT_ADDRESS)) {
     return null;
   }
 
