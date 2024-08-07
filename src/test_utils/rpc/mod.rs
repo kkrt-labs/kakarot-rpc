@@ -2,8 +2,7 @@ use super::katana::Katana;
 use crate::{
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
     providers::{
-        alchemy_provider::provider::AlchemyDataProvider, debug_provider::provider::DebugDataProvider,
-        pool_provider::provider::PoolDataProvider,
+        alchemy_provider::AlchemyDataProvider, debug_provider::DebugDataProvider, pool_provider::PoolDataProvider,
     },
 };
 use jsonrpsee::server::ServerHandle;

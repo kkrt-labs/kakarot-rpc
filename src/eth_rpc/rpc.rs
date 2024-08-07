@@ -11,8 +11,8 @@ use crate::{
         },
     },
     providers::{
-        alchemy_provider::provider::AlchemyProvider, debug_provider::provider::DebugProvider,
-        eth_provider::provider::EthereumProvider, pool_provider::provider::PoolProvider,
+        alchemy_provider::AlchemyProvider, debug_provider::DebugProvider, eth_provider::provider::EthereumProvider,
+        pool_provider::PoolProvider,
     },
 };
 use jsonrpsee::{server::RegisterMethodError, Methods, RpcModule};

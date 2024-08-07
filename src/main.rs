@@ -4,10 +4,10 @@ use kakarot_rpc::{
     config::KakarotRpcConfig,
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
     providers::{
-        alchemy_provider::provider::AlchemyDataProvider,
-        debug_provider::provider::DebugDataProvider,
+        alchemy_provider::AlchemyDataProvider,
+        debug_provider::DebugDataProvider,
         eth_provider::{database::Database, provider::EthDataProvider},
-        pool_provider::provider::PoolDataProvider,
+        pool_provider::PoolDataProvider,
     },
     retry::RetryHandler,
 };

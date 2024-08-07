@@ -3,7 +3,7 @@
 use crate::{
     eth_rpc::api::alchemy_api::AlchemyApiServer,
     models::token::{TokenBalances, TokenMetadata},
-    providers::alchemy_provider::provider::AlchemyProvider,
+    providers::alchemy_provider::AlchemyProvider,
 };
 use async_trait::async_trait;
 use jsonrpsee::core::RpcResult as Result;
