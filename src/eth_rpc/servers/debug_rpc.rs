@@ -9,34 +9,34 @@ use reth_rpc_types::{
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]
-pub struct DebugRpc<P: DebugProvider> {
-    provider: P,
+pub struct DebugRpc<DP: DebugProvider> {
+    debug_provider: DP,
 }
 
-impl<P> DebugRpc<P>
+impl<DP> DebugRpc<DP>
 where
-    P: DebugProvider,
+    DP: DebugProvider,
 {
-    pub const fn new(provider: P) -> Self {
-        Self { provider }
+    pub const fn new(debug_provider: DP) -> Self {
+        Self { debug_provider }
     }
 }
 
 #[async_trait]
-impl<P> DebugApiServer for DebugRpc<P>
+impl<DP> DebugApiServer for DebugRpc<DP>
 where
-    P: DebugProvider + Send + Sync + 'static,
+    DP: DebugProvider + Send + Sync + 'static,
 {
     /// Returns a RLP-encoded header.
     #[tracing::instrument(skip(self), err)]
     async fn raw_header(&self, block_id: BlockId) -> Result<Bytes> {
-        self.provider.raw_header(block_id).await.map_err(Into::into)
+        self.debug_provider.raw_header(block_id).await.map_err(Into::into)
     }
 
     /// Returns a RLP-encoded block.
     #[tracing::instrument(skip(self), err)]
     async fn raw_block(&self, block_id: BlockId) -> Result<Bytes> {
-        self.provider.raw_block(block_id).await.map_err(Into::into)
+        self.debug_provider.raw_block(block_id).await.map_err(Into::into)
     }
 
     /// Returns an EIP-2718 binary-encoded transaction.
@@ -44,19 +44,19 @@ where
     /// If this is a pooled EIP-4844 transaction, the blob sidecar is included.
     #[tracing::instrument(skip(self), err)]
     async fn raw_transaction(&self, hash: B256) -> Result<Option<Bytes>> {
-        self.provider.raw_transaction(hash).await.map_err(Into::into)
+        self.debug_provider.raw_transaction(hash).await.map_err(Into::into)
     }
 
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
     #[tracing::instrument(skip(self), err)]
     async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
-        self.provider.raw_transactions(block_id).await.map_err(Into::into)
+        self.debug_provider.raw_transactions(block_id).await.map_err(Into::into)
     }
 
     /// Returns an array of EIP-2718 binary-encoded receipts.
     #[tracing::instrument(skip(self), err)]
     async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
-        self.provider.raw_receipts(block_id).await.map_err(Into::into)
+        self.debug_provider.raw_receipts(block_id).await.map_err(Into::into)
     }
 
     /// Returns the Geth debug trace for the given block number.
@@ -66,7 +66,7 @@ where
         block_number: BlockNumberOrTag,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<Vec<TraceResult>> {
-        self.provider.trace_block_by_number(block_number, opts).await.map_err(Into::into)
+        self.debug_provider.trace_block_by_number(block_number, opts).await.map_err(Into::into)
     }
 
     /// Returns the Geth debug trace for the given block hash.
@@ -76,7 +76,7 @@ where
         block_hash: B256,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<Vec<TraceResult>> {
-        self.provider.trace_block_by_hash(block_hash, opts).await.map_err(Into::into)
+        self.debug_provider.trace_block_by_hash(block_hash, opts).await.map_err(Into::into)
     }
 
     /// Returns the Geth debug trace for the given transaction hash.
@@ -86,7 +86,7 @@ where
         transaction_hash: B256,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<GethTrace> {
-        self.provider.trace_transaction(transaction_hash, opts).await.map_err(Into::into)
+        self.debug_provider.trace_transaction(transaction_hash, opts).await.map_err(Into::into)
     }
 
     /// Runs an `eth_call` within the context of a given block execution and returns the Geth debug trace.
@@ -97,6 +97,6 @@ where
         block_number: Option<BlockId>,
         opts: Option<GethDebugTracingCallOptions>,
     ) -> Result<GethTrace> {
-        self.provider.trace_call(request, block_number, opts).await.map_err(Into::into)
+        self.debug_provider.trace_call(request, block_number, opts).await.map_err(Into::into)
     }
 }

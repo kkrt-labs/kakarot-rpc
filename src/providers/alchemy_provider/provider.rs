@@ -191,7 +191,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> EthereumProvider for AlchemyDa
 
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDataProvider<P> {
-    #[tracing::instrument(skip(self, contract_addresses), ret, err)]
     async fn token_balances(
         &self,
         address: Address,
@@ -216,7 +215,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDat
     }
 
     /// Retrieves the metadata for a given token.
-    #[tracing::instrument(skip(self), ret, err)]
     async fn token_metadata(&self, contract_address: Address) -> EthProviderResult<TokenMetadata> {
         // Set the block ID to the latest block
         let block_id = BlockId::Number(BlockNumberOrTag::Latest);
@@ -232,7 +230,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDat
     }
 
     /// Retrieves the allowance of a given owner for a spender.
-    #[tracing::instrument(skip(self), ret, err)]
     async fn token_allowance(
         &self,
         contract_address: Address,

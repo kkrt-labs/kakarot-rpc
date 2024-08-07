@@ -9,34 +9,38 @@ use async_trait::async_trait;
 use jsonrpsee::core::RpcResult as Result;
 use reth_primitives::{Address, U256};
 
+/// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
-pub struct AlchemyRpc<P: AlchemyProvider> {
-    provider: P,
+pub struct AlchemyRpc<AP: AlchemyProvider> {
+    alchemy_provider: AP,
 }
 
-impl<P> AlchemyRpc<P>
+impl<AP> AlchemyRpc<AP>
 where
-    P: AlchemyProvider,
+    AP: AlchemyProvider,
 {
-    pub const fn new(provider: P) -> Self {
-        Self { provider }
+    pub const fn new(alchemy_provider: AP) -> Self {
+        Self { alchemy_provider }
     }
 }
 
 #[async_trait]
-impl<P> AlchemyApiServer for AlchemyRpc<P>
+impl<AP> AlchemyApiServer for AlchemyRpc<AP>
 where
-    P: AlchemyProvider + Send + Sync + 'static,
+    AP: AlchemyProvider + Send + Sync + 'static,
 {
+    #[tracing::instrument(skip(self, contract_addresses), ret, err)]
     async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> Result<TokenBalances> {
-        self.provider.token_balances(address, contract_addresses).await.map_err(Into::into)
+        self.alchemy_provider.token_balances(address, contract_addresses).await.map_err(Into::into)
     }
 
+    #[tracing::instrument(skip(self), ret, err)]
     async fn token_metadata(&self, contract_address: Address) -> Result<TokenMetadata> {
-        self.provider.token_metadata(contract_address).await.map_err(Into::into)
+        self.alchemy_provider.token_metadata(contract_address).await.map_err(Into::into)
     }
 
+    #[tracing::instrument(skip(self), ret, err)]
     async fn token_allowance(&self, contract_address: Address, owner: Address, spender: Address) -> Result<U256> {
-        self.provider.token_allowance(contract_address, owner, spender).await.map_err(Into::into)
+        self.alchemy_provider.token_allowance(contract_address, owner, spender).await.map_err(Into::into)
     }
 }
