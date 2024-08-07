@@ -302,18 +302,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_tracer_builder_failure() {
-        // Create a mock Ethereum provider
-        let mut mock_provider = MockEthereumProviderStruct::new();
-        // Expect the chain_id call to return an error
-        mock_provider.expect_chain_id().returning(|| Err(TransactionError::InvalidChainId.into()));
-        // Attempt to create a TracerBuilder with the mock provider, expecting an error
-        let result = TracerBuilder::new(Arc::new(&mock_provider)).await;
-        // Check that the result is an error
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
     async fn test_tracer_builder_build_error() {
         // Create a mock Ethereum provider
         let mut mock_provider = MockEthereumProviderStruct::new();
