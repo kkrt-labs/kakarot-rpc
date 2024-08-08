@@ -561,7 +561,13 @@ Deno.test("toTypedEthTx with real data", () => {
         const ethTx = toTypedEthTx({
           transaction: transaction.transaction,
         });
-        assertEquals(JSON.stringify(ethTx), JSON.stringify(expectedTransformData.expectedToTypedEthTxTransactions[outerIndex][innerIndex]));
+        assertEquals(
+          JSON.stringify(ethTx),
+          JSON.stringify(
+            expectedTransformData
+              .expectedToTypedEthTxTransactions[outerIndex][innerIndex],
+          ),
+        );
       });
     },
   );
