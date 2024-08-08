@@ -25,10 +25,15 @@ import {
 } from "./deps.ts";
 import { JsonRpcReceipt } from "./types/receipt.ts";
 
-const jsonData = await Deno.readTextFile(
+const jsonTransactionsData = await Deno.readTextFile(
   "indexer/src/test-data/transactionsData.json",
 );
-const transactionsData = JSON.parse(jsonData);
+const transactionsData = JSON.parse(jsonTransactionsData);
+
+const jsonExpectedTransformData = await Deno.readTextFile(
+  "indexer/src/test-data/expectedTransformData.json",
+);
+const expectedTransformData = JSON.parse(jsonExpectedTransformData);
 
 function assertHasHeader(data: any): asserts data is { header: JsonRpcBlock } {
   if (!data || typeof data.header === "undefined") {
@@ -616,6 +621,7 @@ Deno.test("transform with real data", async () => {
     const header = headersList[i];
     const events = eventsList[i];
     const transactions = transactionsList[i];
+    const expectedTransformedData = expectedTransformData.expectedTransform[i];
 
     const result = await transform({
       header: header,
@@ -623,6 +629,6 @@ Deno.test("transform with real data", async () => {
       transactions: transactions,
     });
 
-    assertExists(result);
+    assertEquals(JSON.stringify(result), JSON.stringify(expectedTransformedData));
   }
 });
