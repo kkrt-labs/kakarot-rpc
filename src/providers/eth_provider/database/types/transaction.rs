@@ -130,8 +130,15 @@ impl Deref for StoredTransaction {
 impl<'a> StoredTransaction {
     pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         let mut primitive_transaction = reth_primitives::Transaction::arbitrary(u)?;
+
+        // Ensure the transaction is not a blob transaction
+        while primitive_transaction.tx_type() == 3 {
+            primitive_transaction = reth_primitives::Transaction::arbitrary(u)?;
+        }
+
         // Force the chain ID to be set
-        primitive_transaction.set_chain_id(u64::from(u32::arbitrary(u)?));
+        let chain_id = u32::arbitrary(u)?.into();
+        primitive_transaction.set_chain_id(chain_id);
 
         // Compute the signing hash
         let signing_hash = primitive_transaction.signature_hash();
@@ -140,23 +147,22 @@ impl<'a> StoredTransaction {
         let signer = PrivateKeySigner::random();
         let signature = signer.sign_hash_sync(&signing_hash).map_err(|_| arbitrary::Error::IncorrectFormat)?;
 
-        // Use [`TransactionSignedNoHash`] to compute the hash
+        // Use TransactionSignedNoHash to compute the hash
+        let y_parity = signature.v().y_parity();
         let hash = TransactionSignedNoHash {
             transaction: primitive_transaction.clone(),
-            signature: reth_primitives::Signature {
-                r: signature.r(),
-                s: signature.s(),
-                odd_y_parity: signature.v().y_parity(),
-            },
+            signature: reth_primitives::Signature { r: signature.r(), s: signature.s(), odd_y_parity: y_parity },
         }
         .hash();
 
         // Convert the signature to the RPC format
         let is_legacy = primitive_transaction.is_legacy();
+        // See docs on `alloy::rpc::types::Signature` for `v` field.
+        let v: u64 = if is_legacy { 35 + 2 * chain_id + u64::from(y_parity) } else { u64::from(y_parity) };
         let signature = alloy::rpc::types::Signature {
             r: signature.r(),
             s: signature.s(),
-            v: U256::from(signature.v().to_u64()),
+            v: U256::from(v),
             y_parity: if is_legacy { None } else { Some(signature.v().y_parity().into()) },
         };
 

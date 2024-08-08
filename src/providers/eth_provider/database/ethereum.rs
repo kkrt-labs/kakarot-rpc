@@ -401,15 +401,13 @@ mod tests {
 
             let signed_transactions = transactions
                 .into_iter()
-                .map(|tx| TransactionSigned::try_from(tx).map_err(|_| EthereumDataFormatError::TransactionConversion))
+                .map(|tx| TransactionSigned::try_from(tx))
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap();
 
             let block = reth_primitives::Block {
                 body: signed_transactions,
-                header: reth_primitives::Header::try_from(header.clone())
-                    .map_err(|_| EthereumDataFormatError::Primitive)
-                    .unwrap(),
+                header: reth_primitives::Header::try_from(header.clone()).unwrap(),
                 withdrawals: Some(Default::default()),
                 ..Default::default()
             };
