@@ -629,6 +629,9 @@ Deno.test("transform with real data", async () => {
       transactions: transactions,
     });
 
-    assertEquals(JSON.stringify(result), JSON.stringify(expectedTransformedData));
+    assertEquals(
+      JSON.stringify(result),
+      JSON.stringify(expectedTransformedData),
+    );
   }
 });
