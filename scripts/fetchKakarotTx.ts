@@ -14,14 +14,18 @@ import {
   toTypedEthTx,
 } from "../indexer/src/types/transaction.ts";
 
+// Initialize the provider with the specified node URL
 const provider = new RpcProvider({
   nodeUrl: "https://juno-kakarot-dev.karnot.xyz/",
 });
 
+// Function to fetch a block by its number
 async function fetchBlock(blockNumber: number) {
   const block = await provider.getBlock(blockNumber);
   return block;
 }
+
+// Function to collect transactions until a target count is reached
 async function collectTransactions(targetCount: number) {
   const transactionsList: any[] = [];
   const eventsList: any[] = [];
@@ -32,9 +36,11 @@ async function collectTransactions(targetCount: number) {
   let events: EventWithTransaction[] = [];
   let expectedToTypedEthTxTransactions: Transaction[] = [];
 
+  // Fetch the latest block to start the process
   let blockObj = await provider.getBlock("latest");
   let blockNumber = blockObj.block_number;
 
+  // Loop to collect transactions until the target count is met
   while (transactionsList.length < targetCount) {
     const block = await fetchBlock(blockNumber);
     console.log(
@@ -46,6 +52,8 @@ async function collectTransactions(targetCount: number) {
     let getTransaction = await Promise.all(
       block.transactions.map((tx) => provider.getTransaction(tx)),
     );
+
+    // Combine transaction data with receipts
     let transactionReceipts = getTransaction.map((tx) => {
       let receipt = getTransactionReceipts.find((r) =>
         "transaction_hash" in tx && r.transaction_hash === tx.transaction_hash
@@ -55,6 +63,7 @@ async function collectTransactions(targetCount: number) {
 
     blockNumber -= 1;
 
+    // Transform block header and transactions
     header = transformBlockHeader(block);
     const { transformedTransactions, eventsWithTransaction, toTypedEthTxTransaction } = transformTransactionsAndEvents(
       transactionReceipts,
@@ -62,14 +71,17 @@ async function collectTransactions(targetCount: number) {
     transactions = transformedTransactions;
     events = eventsWithTransaction;
 
+    // Transform the data for storage or further processing
     const transforResult = await transform({ header, events, transactions });
 
+    // Add the collected data to the respective lists
     transactionsList.push(transactions);
     headersList.push(header);
     eventsList.push(events);
     expectedTransform.push(transforResult);
     expectedToTypedEthTxTransactions.push(toTypedEthTxTransaction);
 
+    // Check if the genesis block is reached
     if (blockNumber < 0) {
       throw new Error(
         "Reached genesis block without collecting enough transactions.",
@@ -80,6 +92,7 @@ async function collectTransactions(targetCount: number) {
   return { headersList, eventsList, transactionsList, expectedTransform, expectedToTypedEthTxTransactions };
 }
 
+// Function to transform block header data into the desired format
 function transformBlockHeader(block: any): BlockHeader {
   return {
     blockNumber: block.block_number,
@@ -91,6 +104,7 @@ function transformBlockHeader(block: any): BlockHeader {
   };
 }
 
+// Function to transform transactions and events
 function transformTransactionsAndEvents(
   transactions: any[],
 ): {
@@ -102,6 +116,7 @@ function transformTransactionsAndEvents(
   const eventsWithTransaction: EventWithTransaction[] = [];
   const toTypedEthTxTransaction: Transaction[] = [];
 
+  // Iterate through each transaction to transform it and extract events
   transactions.forEach((tx: any, txIndex: number) => {
     const transaction = {
       meta: {
@@ -117,6 +132,7 @@ function transformTransactionsAndEvents(
       },
     };
 
+    // Convert to typed Ethereum transaction
     const typedEthTx = toTypedEthTx({ transaction });
 
     const receipt = {
@@ -135,6 +151,7 @@ function transformTransactionsAndEvents(
         })),
     };
 
+    // Add the transformed transaction and receipt to the list
     transformedTransactions.push({
       transaction,
       receipt,
@@ -142,6 +159,7 @@ function transformTransactionsAndEvents(
 
     toTypedEthTxTransaction.push(typedEthTx);
 
+    // Extract events related to the transaction
     tx.events.forEach((ev: any, eventIndex: number) => {
       if (ev.keys[0] === TRANSACTION_EXECUTED) {
         const event: Event = {
@@ -158,17 +176,20 @@ function transformTransactionsAndEvents(
 
   return { transformedTransactions, eventsWithTransaction, toTypedEthTxTransaction };
 }
+
 async function main() {
   try {
     const targetCount = 100;
     const { headersList, eventsList, transactionsList, expectedTransform, expectedToTypedEthTxTransactions } = await collectTransactions(targetCount);
 
+    // Save the collected transactions to a file
     await Deno.writeTextFile(
       "indexer/src/test-data/transactionsData.json",
       JSON.stringify({ headersList, eventsList, transactionsList }, null, 2),
     );
     console.log("Transactions saved to transactions.json");
 
+    // Save the expected transformed data to a file
     await Deno.writeTextFile(
       "indexer/src/test-data/expectedTransformData.json",
       JSON.stringify({ expectedTransform, expectedToTypedEthTxTransactions }, null, 2),
@@ -178,4 +199,5 @@ async function main() {
     console.error("Error collecting transactions:", error);
   }
 }
+
 await main();
