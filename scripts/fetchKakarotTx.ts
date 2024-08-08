@@ -5,9 +5,14 @@ import {
   EventWithTransaction,
   PrefixedHexString,
   TransactionWithReceipt,
+  Transaction,
 } from "../indexer/src/deps.ts";
 import { TRANSACTION_EXECUTED } from "../indexer/src/constants.ts";
 import { padString } from "../indexer/src/utils/hex.ts";
+import transform from "../indexer/src/main.ts";
+import {
+  toTypedEthTx,
+} from "../indexer/src/types/transaction.ts";
 
 const provider = new RpcProvider({
   nodeUrl: "https://juno-kakarot-dev.karnot.xyz/",
@@ -21,9 +26,11 @@ async function collectTransactions(targetCount: number) {
   const transactionsList: any[] = [];
   const eventsList: any[] = [];
   const headersList: any[] = [];
+  const expectedTransform: any[] = [];
   let header: BlockHeader = {} as BlockHeader;
   let transactions: TransactionWithReceipt[] = [];
   let events: EventWithTransaction[] = [];
+  let expectedToTypedEthTxTransactions: Transaction[] = [];
 
   let blockObj = await provider.getBlock("latest");
   let blockNumber = blockObj.block_number;
@@ -49,15 +56,19 @@ async function collectTransactions(targetCount: number) {
     blockNumber -= 1;
 
     header = transformBlockHeader(block);
-    const transformationResult = transformTransactionsAndEvents(
+    const { transformedTransactions, eventsWithTransaction, toTypedEthTxTransaction } = transformTransactionsAndEvents(
       transactionReceipts,
     );
-    transactions = transformationResult.transformedTransactions;
-    events = transformationResult.eventsWithTransaction;
+    transactions = transformedTransactions;
+    events = eventsWithTransaction;
+
+    const transforResult = await transform({ header, events, transactions });
 
     transactionsList.push(transactions);
     headersList.push(header);
     eventsList.push(events);
+    expectedTransform.push(transforResult);
+    expectedToTypedEthTxTransactions.push(toTypedEthTxTransaction);
 
     if (blockNumber < 0) {
       throw new Error(
@@ -66,7 +77,7 @@ async function collectTransactions(targetCount: number) {
     }
   }
 
-  return { headersList, eventsList, transactionsList };
+  return { headersList, eventsList, transactionsList, expectedTransform, expectedToTypedEthTxTransactions };
 }
 
 function transformBlockHeader(block: any): BlockHeader {
@@ -85,9 +96,11 @@ function transformTransactionsAndEvents(
 ): {
   transformedTransactions: TransactionWithReceipt[];
   eventsWithTransaction: EventWithTransaction[];
+  toTypedEthTxTransaction: Transaction[];
 } {
   const transformedTransactions: TransactionWithReceipt[] = [];
   const eventsWithTransaction: EventWithTransaction[] = [];
+  const toTypedEthTxTransaction: Transaction[] = [];
 
   transactions.forEach((tx: any, txIndex: number) => {
     const transaction = {
@@ -103,6 +116,8 @@ function transformTransactionsAndEvents(
         calldata: tx.calldata.map((x: PrefixedHexString) => padString(x, 32)),
       },
     };
+
+    const typedEthTx = toTypedEthTx({ transaction });
 
     const receipt = {
       executionStatus: tx.execution_status,
@@ -125,6 +140,8 @@ function transformTransactionsAndEvents(
       receipt,
     });
 
+    toTypedEthTxTransaction.push(typedEthTx);
+
     tx.events.forEach((ev: any, eventIndex: number) => {
       if (ev.keys[0] === TRANSACTION_EXECUTED) {
         const event: Event = {
@@ -139,18 +156,24 @@ function transformTransactionsAndEvents(
     });
   });
 
-  return { transformedTransactions, eventsWithTransaction };
+  return { transformedTransactions, eventsWithTransaction, toTypedEthTxTransaction };
 }
 async function main() {
   try {
     const targetCount = 100;
-    const transactions = await collectTransactions(targetCount);
+    const { headersList, eventsList, transactionsList, expectedTransform, expectedToTypedEthTxTransactions } = await collectTransactions(targetCount);
 
     await Deno.writeTextFile(
       "indexer/src/test-data/transactionsData.json",
-      JSON.stringify(transactions, null, 2),
+      JSON.stringify({ headersList, eventsList, transactionsList }, null, 2),
     );
     console.log("Transactions saved to transactions.json");
+
+    await Deno.writeTextFile(
+      "indexer/src/test-data/expectedTransformData.json",
+      JSON.stringify({ expectedTransform, expectedToTypedEthTxTransactions }, null, 2),
+    );
+    console.log("Expected data saved to expectedTransformData.json");
   } catch (error) {
     console.error("Error collecting transactions:", error);
   }

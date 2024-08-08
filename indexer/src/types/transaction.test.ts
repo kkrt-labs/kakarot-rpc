@@ -30,6 +30,11 @@ const jsonData = await Deno.readTextFile(
 );
 const transactionsData = JSON.parse(jsonData);
 
+const jsonExpectedTransformData = await Deno.readTextFile(
+  "indexer/src/test-data/expectedTransformData.json",
+);
+const expectedTransformData = JSON.parse(jsonExpectedTransformData);
+
 // Utility functions
 function createReceipt(
   overrides: Partial<TransactionReceipt> = {},
@@ -551,11 +556,13 @@ Deno.test("toTypedEthTx EIP2930 Transaction before release with 31 bytes chunks 
 
 Deno.test("toTypedEthTx with real data", () => {
   transactionsData.transactionsList.forEach(
-    (transactions: TransactionWithReceipt[]) => {
-      const ethTx = toTypedEthTx({
-        transaction: transactions[0].transaction,
-      }) as LegacyTransaction;
-      assertExists(ethTx);
+    (transactions: TransactionWithReceipt[], outerIndex: number) => {
+      transactions.map((transaction, innerIndex) => {
+        const ethTx = toTypedEthTx({
+          transaction: transaction.transaction,
+        });
+        assertEquals(JSON.stringify(ethTx), JSON.stringify(expectedTransformData.expectedToTypedEthTxTransactions[outerIndex][innerIndex]));
+      });
     },
   );
 });
