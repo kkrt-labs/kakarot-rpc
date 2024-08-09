@@ -1,0 +1,54 @@
+environments:
+  - project: sepolia
+    id: aeae6c43-dc4c-42d5-951b-489c49b48502
+    repos:
+      - kakarot-rpc:
+          image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.20
+          config:
+            ACCOUNT_CONTRACT_CLASS_HASH: "0x075cf60ff9ba89b630f64830245f04439c8749210e58d2192349b7f05d2407c0"
+            COMPILED_KAKAROT_PATH: "lib/kakarot/build"
+            EVM_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+            KAKAROT_ADDRESS: "0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda"
+            KAKAROT_RPC_URL: "0.0.0.0:3030"
+            MAX_FELTS_IN_CALLDATA: "30000"
+            MAX_LOGS: "10000"
+            RETRY_TX_INTERVAL: "5"
+            STARKNET_NETWORK: "sharingan"
+            TRANSACTION_MAX_RETRIES: "10"
+            UNINITIALIZED_ACCOUNT_CLASS_HASH: "0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e"
+            WHITE_LISTED_EIP_155_TRANSACTION_HASHES: "0xeddf9e61fb9d8f5111840daef55e5fde0041f5702856532cdbb5a02998033d26,0x07471adfe8f4ec553c1199f495be97fc8be8e0626ae307281c22534460184ed1,0xb6274b80bc7cda162df89894c7748a5cb7ba2eaa6004183c41a1837c3b072f1e"
+      - kakarot-indexer:
+          image: ghcr.io/kkrt-labs/kakarot-rpc/indexer:v0.6.20
+          config:
+            ACCOUNT_CONTRACT_CLASS_HASH: "0x075cf60ff9ba89b630f64830245f04439c8749210e58d2192349b7f05d2407c0"
+            DEFAULT_BLOCK_GAS_LIMIT: "7000000"
+            KAKAROT_ADDRESS: "0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda"
+            MAX_FELTS_IN_CALLDATA: "22500"
+            MONGO_REPLACE_DATA_INSIDE_TRANSACTION: "true"
+            STARTING_BLOCK: "0"
+            UNINITIALIZED_ACCOUNT_CLASS_HASH: "0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e"
+  - project: staging
+    id: e9e11c39-2e8a-4062-a607-31d2ba93b800
+    repos:
+      - kakarot-rpc:
+          image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.21-alpha2
+          config:
+            ACCOUNT_CONTRACT_CLASS_HASH: "0x075cf60ff9ba89b630f64830245f04439c8749210e58d2192349b7f05d2407c0"
+            COMPILED_KAKAROT_PATH: "lib/kakarot/build"
+            EVM_PRIVATE_KEY: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+            KAKAROT_ADDRESS: "0x2824d6ed6759ac4c4a54a39b78d04c0e48be8937237026bf8c3bf46a8bea722"
+            KAKAROT_RPC_URL: "0.0.0.0:3030"
+            MAX_FELTS_IN_CALLDATA: "30000"
+            MAX_LOGS: "10000"
+            RETRY_TX_INTERVAL: "5"
+      - kakarot-indexer:
+          image: ghcr.io/kkrt-labs/kakarot-rpc/indexer:v0.6.21-alpha2
+          config:
+            ACCOUNT_CONTRACT_CLASS_HASH: "0x075cf60ff9ba89b630f64830245f04439c8749210e58d2192349b7f05d2407c0"
+            DEFAULT_BLOCK_GAS_LIMIT: "7000000"
+            KAKAROT_ADDRESS: "0x2824d6ed6759ac4c4a54a39b78d04c0e48be8937237026bf8c3bf46a8bea722"
+            MAX_FELTS_IN_CALLDATA: "22500"
+            MONGO_DATABASE_NAME: "kakarot-testnet-stage"
+            MONGO_REPLACE_DATA_INSIDE_TRANSACTION: "true"
+            STARTING_BLOCK: "0"
+            UNINITIALIZED_ACCOUNT_CLASS_HASH: "0x0600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e"
