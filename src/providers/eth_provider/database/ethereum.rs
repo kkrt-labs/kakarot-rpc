@@ -399,11 +399,8 @@ mod tests {
 
             let block_transactions = BlockTransactions::Full(transactions.clone());
 
-            let signed_transactions = transactions
-                .into_iter()
-                .map(|tx| TransactionSigned::try_from(tx))
-                .collect::<Result<Vec<_>, _>>()
-                .unwrap();
+            let signed_transactions =
+                transactions.into_iter().map(TransactionSigned::try_from).collect::<Result<Vec<_>, _>>().unwrap();
 
             let block = reth_primitives::Block {
                 body: signed_transactions,
