@@ -172,7 +172,7 @@ impl<'a> StoredTransaction {
 
         let transaction = Transaction {
             hash,
-            from: Address::arbitrary(u)?,
+            from: signer.address(),
             block_hash: Some(B256::arbitrary(u)?),
             block_number: Some(u64::arbitrary(u)?),
             transaction_index: Some(u64::arbitrary(u)?),
