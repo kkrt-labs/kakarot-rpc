@@ -49,9 +49,9 @@ impl<EP, SP, AP, PP, DP> KakarotRpcModuleBuilder<EP, SP, AP, PP, DP>
 where
     EP: EthereumProvider + Send + Sync + 'static,
     SP: Provider + Send + Sync + 'static,
-    AP: EthereumProvider + AlchemyProvider + Send + Sync + 'static,
-    PP: EthereumProvider + PoolProvider + Send + Sync + 'static,
-    DP: EthereumProvider + DebugProvider + Send + Sync + 'static,
+    AP: AlchemyProvider + Send + Sync + 'static,
+    PP: PoolProvider + Send + Sync + 'static,
+    DP: DebugProvider + Send + Sync + 'static,
 {
     pub fn new(
         eth_provider: EP,
