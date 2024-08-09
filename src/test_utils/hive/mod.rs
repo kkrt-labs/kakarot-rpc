@@ -133,7 +133,7 @@ impl HiveGenesisConfig {
 mod tests {
     use super::*;
     use crate::{
-        eth_provider::utils::split_u256,
+        providers::eth_provider::utils::split_u256,
         test_utils::{constants::ACCOUNT_STORAGE, katana::genesis::Initialized},
     };
     use std::{

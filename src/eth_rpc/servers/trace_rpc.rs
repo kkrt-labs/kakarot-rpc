@@ -1,5 +1,6 @@
 use crate::{
-    eth_provider::provider::EthereumProvider, eth_rpc::api::trace_api::TraceApiServer, tracing::builder::TracerBuilder,
+    eth_rpc::api::trace_api::TraceApiServer, providers::eth_provider::provider::EthereumProvider,
+    tracing::builder::TracerBuilder,
 };
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_rpc_types::{trace::parity::LocalizedTransactionTrace, BlockId};

@@ -1,10 +1,10 @@
 use crate::{
-    eth_provider::provider::EthProviderResult,
     into_via_wrapper,
     models::{
         felt::Felt252Wrapper,
         transaction::{transaction_data_to_starknet_calldata, transaction_signature_to_field_elements},
     },
+    providers::eth_provider::provider::EthProviderResult,
 };
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;

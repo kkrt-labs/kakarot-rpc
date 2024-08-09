@@ -1,4 +1,4 @@
-use crate::{eth_provider::provider::EthereumProvider, eth_rpc::api::net_api::NetApiServer};
+use crate::{eth_rpc::api::net_api::NetApiServer, providers::eth_provider::provider::EthereumProvider};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;

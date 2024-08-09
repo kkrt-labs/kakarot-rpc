@@ -4,7 +4,7 @@ pub mod state;
 pub mod types;
 
 use super::error::KakarotError;
-use crate::eth_provider::database::types::{
+use crate::providers::eth_provider::database::types::{
     header::StoredHeader,
     log::StoredLog,
     receipt::StoredTransactionReceipt,

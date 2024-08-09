@@ -1,4 +1,4 @@
-use crate::eth_provider::constant::Constant;
+use crate::providers::eth_provider::constant::Constant;
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
 use reth_primitives::B256;
 

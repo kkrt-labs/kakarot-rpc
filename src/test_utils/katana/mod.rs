@@ -2,7 +2,7 @@ pub mod genesis;
 
 use super::mongo::MongoImage;
 use crate::{
-    eth_provider::{
+    providers::eth_provider::{
         constant::U64_HEX_STRING_LEN,
         database::{
             ethereum::EthereumTransactionStore,

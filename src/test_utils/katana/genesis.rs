@@ -1,5 +1,5 @@
 use crate::{
-    eth_provider::utils::split_u256,
+    providers::eth_provider::utils::split_u256,
     test_utils::constants::{
         ACCOUNT_AUTHORIZED_MESSAGE_HASHES, ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS,
         ACCOUNT_IMPLEMENTATION, EIP_155_AUTHORIZED_MESSAGE_HASHES, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH,

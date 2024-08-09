@@ -1,5 +1,5 @@
 #![allow(clippy::used_underscore_binding)]
-use crate::eth_provider::{
+use crate::providers::eth_provider::{
     database::{
         ethereum::EthereumTransactionStore,
         filter::{self, EthDatabaseFilterBuilder},
