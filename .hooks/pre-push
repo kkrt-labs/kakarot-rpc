@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cargo check
+cargo check --all-features
 if [ $? -ne 0 ]; then
     echo "Pre-push hook failed: cargo check detected errors."
     exit 1
