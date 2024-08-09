@@ -5,6 +5,7 @@ pub mod fixtures;
 pub mod hive;
 pub mod katana;
 pub mod macros;
+pub mod mock_provider;
 pub mod mongo;
 pub mod rpc;
 pub mod tx_waiter;
