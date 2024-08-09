@@ -9,9 +9,10 @@ use {
         RECOVERED_EIP1599_TX_ADDRESS, RECOVERED_EIP2930_TX_ADDRESS, RECOVERED_LEGACY_TX_ADDRESS, TEST_SIG_R,
         TEST_SIG_S, TEST_SIG_V,
     },
+    alloy_signer::SignerSync,
+    alloy_signer_local::PrivateKeySigner,
     arbitrary::Arbitrary,
-    reth_primitives::TxType,
-    reth_primitives::{Address, U256},
+    reth_primitives::{Address, TransactionSignedNoHash, TxType, U256},
 };
 
 /// A full transaction as stored in the database
@@ -128,38 +129,67 @@ impl Deref for StoredTransaction {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> StoredTransaction {
     pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        let transaction = Transaction::arbitrary(u)?;
+        let mut primitive_transaction = reth_primitives::Transaction::arbitrary(u)?;
 
-        let transaction_type = Into::<u8>::into(transaction.transaction_type.unwrap_or_default()) % 3;
+        // Ensure the transaction is not a blob transaction
+        while primitive_transaction.tx_type() == 3 {
+            primitive_transaction = reth_primitives::Transaction::arbitrary(u)?;
+        }
 
-        Ok(Self {
-            tx: Transaction {
-                block_hash: Some(B256::arbitrary(u)?),
-                block_number: Some(u64::arbitrary(u)?),
-                transaction_index: Some(u64::arbitrary(u)?),
-                gas_price: Some(u128::arbitrary(u)?),
-                gas: u128::from(u64::arbitrary(u)?),
-                max_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
-                    None
-                } else {
-                    Some(u128::arbitrary(u)?)
-                },
-                max_priority_fee_per_gas: if TryInto::<TxType>::try_into(transaction_type).unwrap() == TxType::Legacy {
-                    None
-                } else {
-                    Some(u128::arbitrary(u)?)
-                },
-                signature: Some(reth_rpc_types::Signature {
-                    y_parity: Some(reth_rpc_types::Parity(bool::arbitrary(u)?)),
-                    ..reth_rpc_types::Signature::arbitrary(u)?
-                }),
-                transaction_type: Some(transaction_type),
-                chain_id: Some(u64::from(u32::arbitrary(u)?)),
-                other: Default::default(),
-                access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
-                ..transaction
-            },
-        })
+        // Force the chain ID to be set
+        let chain_id = u32::arbitrary(u)?.into();
+        primitive_transaction.set_chain_id(chain_id);
+
+        // Force nonce to be set
+        let nonce = u64::arbitrary(u)?;
+        primitive_transaction.set_nonce(nonce);
+
+        // Compute the signing hash
+        let signing_hash = primitive_transaction.signature_hash();
+
+        // Sign the transaction with a local wallet
+        let signer = PrivateKeySigner::random();
+        let signature = signer.sign_hash_sync(&signing_hash).map_err(|_| arbitrary::Error::IncorrectFormat)?;
+
+        // Use TransactionSignedNoHash to compute the hash
+        let y_parity = signature.v().y_parity();
+        let hash = TransactionSignedNoHash {
+            transaction: primitive_transaction.clone(),
+            signature: reth_primitives::Signature { r: signature.r(), s: signature.s(), odd_y_parity: y_parity },
+        }
+        .hash();
+
+        // Convert the signature to the RPC format
+        let is_legacy = primitive_transaction.is_legacy();
+        // See docs on `alloy::rpc::types::Signature` for `v` field.
+        let v: u64 = if is_legacy { 35 + 2 * chain_id + u64::from(y_parity) } else { u64::from(y_parity) };
+        let signature = alloy::rpc::types::Signature {
+            r: signature.r(),
+            s: signature.s(),
+            v: U256::from(v),
+            y_parity: if is_legacy { None } else { Some(signature.v().y_parity().into()) },
+        };
+
+        let transaction = Transaction {
+            hash,
+            from: signer.address(),
+            block_hash: Some(B256::arbitrary(u)?),
+            block_number: Some(u64::arbitrary(u)?),
+            transaction_index: Some(u64::arbitrary(u)?),
+            gas_price: Some(primitive_transaction.effective_gas_price(None)),
+            gas: u128::from(primitive_transaction.gas_limit()),
+            max_fee_per_gas: if is_legacy { None } else { Some(primitive_transaction.max_fee_per_gas()) },
+            max_priority_fee_per_gas: primitive_transaction.max_priority_fee_per_gas(),
+            signature: Some(signature),
+            transaction_type: Some(primitive_transaction.tx_type() as u8),
+            chain_id: primitive_transaction.chain_id(),
+            nonce: primitive_transaction.nonce(),
+            other: Default::default(),
+            access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
+            ..Default::default()
+        };
+
+        Ok(Self { tx: transaction })
     }
 }
 

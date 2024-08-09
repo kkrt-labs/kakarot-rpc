@@ -120,10 +120,12 @@ http-body-util = { version = "0.1", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
 
 # Testing crates
+alloy = { version = "0.1.1", features = ["rpc-types"], optional = true }
 alloy-dyn-abi = { version = "0.7.6", default-features = false }
 alloy-json-abi = { version = "0.7.6", default-features = false, optional = true }
 alloy-primitives = { version = "0.7.2", default-features = false, optional = true }
 alloy-signer-local = { version = "0.2.0", default-features = false, optional = true }
+alloy-signer = { version = "0.2.0", default-features = false, optional = true }
 anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
 ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "2f5b44b", default-features = false, features = [
@@ -160,9 +162,11 @@ toml = { version = "0.8", default-features = false }
 
 [features]
 testing = [
+  "alloy",
   "alloy-json-abi",
   "alloy-primitives",
   "alloy-signer-local",
+  "alloy-signer",
   "anyhow",
   "dep:arbitrary",
   "dojo-test-utils",
