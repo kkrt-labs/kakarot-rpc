@@ -140,6 +140,10 @@ impl<'a> StoredTransaction {
         let chain_id = u32::arbitrary(u)?.into();
         primitive_transaction.set_chain_id(chain_id);
 
+        // Force nonce to be set
+        let nonce = u64::arbitrary(u)?;
+        primitive_transaction.set_nonce(nonce);
+
         // Compute the signing hash
         let signing_hash = primitive_transaction.signature_hash();
 
@@ -168,6 +172,7 @@ impl<'a> StoredTransaction {
 
         let transaction = Transaction {
             hash,
+            from: Address::arbitrary(u)?,
             block_hash: Some(B256::arbitrary(u)?),
             block_number: Some(u64::arbitrary(u)?),
             transaction_index: Some(u64::arbitrary(u)?),
@@ -178,6 +183,7 @@ impl<'a> StoredTransaction {
             signature: Some(signature),
             transaction_type: Some(primitive_transaction.tx_type() as u8),
             chain_id: primitive_transaction.chain_id(),
+            nonce: primitive_transaction.nonce(),
             other: Default::default(),
             access_list: Some(reth_rpc_types::AccessList::arbitrary(u)?),
             ..Default::default()
