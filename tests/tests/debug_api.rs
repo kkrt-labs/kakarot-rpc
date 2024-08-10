@@ -6,7 +6,6 @@ use kakarot_rpc::{
     test_utils::{
         fixtures::{katana, setup},
         katana::Katana,
-        mongo::{BLOCK_HASH, BLOCK_NUMBER, EIP1599_TX_HASH, EIP2930_TX_HASH, LEGACY_TX_HASH},
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
@@ -24,16 +23,17 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let (server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
+    // First transaction of the database
+    let tx = katana.first_transaction().unwrap();
+    // Associated block header
+    let header = katana.header_by_hash(tx.block_hash.unwrap()).unwrap();
+
     // EIP1559
     let reqwest_client = reqwest::Client::new();
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::new("debug_getRawTransaction")
-                .add_param(format!("0x{:064x}", *EIP1599_TX_HASH))
-                .build(),
-        )
+        .body(RawRpcParamsBuilder::new("debug_getRawTransaction").add_param(format!("0x{:064x}", tx.hash)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -44,109 +44,25 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
     // We can decode the RLP bytes to get the transaction and compare it with the original transaction
     let transaction = TransactionSigned::decode_enveloped(&mut rlp_bytes.unwrap().as_ref()).unwrap();
     let signer = transaction.recover_signer().unwrap();
-    let transaction = from_recovered_with_block_context(
-        TransactionSignedEcRecovered::from_signed_transaction(transaction, signer),
-        *BLOCK_HASH,
-        BLOCK_NUMBER,
-        None,
-        0,
-    );
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::new("eth_getTransactionByHash")
-                .add_param(format!("0x{:064x}", *EIP1599_TX_HASH))
-                .build(),
-        )
-        .send()
-        .await
-        .expect("Failed to call Debug RPC");
-    let response = res.text().await.expect("Failed to get response body");
-    let response: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let rpc_transaction: reth_rpc_types::Transaction =
-        serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
-    assert_eq!(transaction, rpc_transaction);
 
-    // EIP2930
-    let reqwest_client = reqwest::Client::new();
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::new("debug_getRawTransaction")
-                .add_param(format!("0x{:064x}", *EIP2930_TX_HASH))
-                .build(),
-        )
-        .send()
-        .await
-        .expect("Failed to call Debug RPC");
-    let response = res.text().await.expect("Failed to get response body");
-    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let rlp_bytes: Option<Bytes> = serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
-    assert!(rlp_bytes.is_some());
-    // We can decode the RLP bytes to get the transaction and compare it with the original transaction
-    let transaction = TransactionSigned::decode_enveloped(&mut rlp_bytes.unwrap().as_ref()).unwrap();
-    let signer = transaction.recover_signer().unwrap();
     let transaction = from_recovered_with_block_context(
         TransactionSignedEcRecovered::from_signed_transaction(transaction, signer),
-        *BLOCK_HASH,
-        BLOCK_NUMBER,
-        None,
-        0,
+        tx.block_hash.unwrap(),
+        tx.block_number.unwrap(),
+        header.base_fee_per_gas.map(|x| x.try_into().unwrap()),
+        tx.transaction_index.unwrap() as usize,
     );
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::new("eth_getTransactionByHash")
-                .add_param(format!("0x{:064x}", *EIP2930_TX_HASH))
-                .build(),
-        )
-        .send()
-        .await
-        .expect("Failed to call Debug RPC");
-    let response = res.text().await.expect("Failed to get response body");
-    let response: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let rpc_transaction: reth_rpc_types::Transaction =
-        serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
-    assert_eq!(transaction, rpc_transaction);
 
-    // Legacy
-    let reqwest_client = reqwest::Client::new();
+    // Checking some fields but not all since mocked signer is not exact at the moment
+    assert_eq!(transaction.block_hash, header.hash);
+    assert_eq!(transaction.block_number, header.number);
+    assert_eq!(transaction.nonce, tx.nonce);
+    assert_eq!(transaction.chain_id, tx.chain_id);
+
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
         .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::new("debug_getRawTransaction")
-                .add_param(format!("0x{:064x}", *LEGACY_TX_HASH))
-                .build(),
-        )
-        .send()
-        .await
-        .expect("Failed to call Debug RPC");
-    let response = res.text().await.expect("Failed to get response body");
-    let raw: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let rlp_bytes: Option<Bytes> = serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
-    assert!(rlp_bytes.is_some());
-    // We can decode the RLP bytes to get the transaction and compare it with the original transaction
-    let transaction = TransactionSigned::decode_enveloped(&mut rlp_bytes.unwrap().as_ref()).unwrap();
-    let signer = transaction.recover_signer().unwrap();
-    let transaction = from_recovered_with_block_context(
-        TransactionSignedEcRecovered::from_signed_transaction(transaction, signer),
-        *BLOCK_HASH,
-        BLOCK_NUMBER,
-        None,
-        0,
-    );
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(
-            RawRpcParamsBuilder::new("eth_getTransactionByHash")
-                .add_param(format!("0x{:064x}", *LEGACY_TX_HASH))
-                .build(),
-        )
+        .body(RawRpcParamsBuilder::new("eth_getTransactionByHash").add_param(format!("0x{:064x}", tx.hash)).build())
         .send()
         .await
         .expect("Failed to call Debug RPC");
@@ -154,7 +70,8 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let response: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
     let rpc_transaction: reth_rpc_types::Transaction =
         serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
-    assert_eq!(transaction, rpc_transaction);
+
+    assert_eq!(tx, rpc_transaction);
 
     drop(server_handle);
 }

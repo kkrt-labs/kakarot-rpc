@@ -13,7 +13,6 @@ use kakarot_rpc::{
         evm_contract::{EvmContract, KakarotEvmContract},
         fixtures::{contract_empty, counter, katana, plain_opcodes, setup},
         katana::Katana,
-        mongo::{BLOCK_HASH, BLOCK_NUMBER},
         tx_waiter::watch_tx,
     },
 };
@@ -122,11 +121,15 @@ async fn test_block_transaction_count_by_hash(#[future] katana: Katana, _setup: 
     // Given
     let eth_provider = katana.eth_provider();
 
+    // Get the header of the first transaction
+    let first_tx = katana.first_transaction().unwrap();
+    let header = katana.header_by_hash(first_tx.block_hash.unwrap()).unwrap();
+
     // When
-    let count = eth_provider.block_transaction_count_by_hash(*BLOCK_HASH).await.unwrap().unwrap();
+    let count = eth_provider.block_transaction_count_by_hash(header.hash.unwrap()).await.unwrap().unwrap();
 
     // Then
-    assert_eq!(count, U256::from(3));
+    assert_eq!(count, U256::from(1));
 
     // When
     let count = eth_provider
@@ -146,12 +149,19 @@ async fn test_block_transaction_count_by_number(#[future] katana: Katana, _setup
     // Given: Ethereum provider instance
     let eth_provider = katana.eth_provider();
 
+    // Get the header of the first transaction
+    let first_tx = katana.first_transaction().unwrap();
+    let header = katana.header_by_hash(first_tx.block_hash.unwrap()).unwrap();
+
     // When: Retrieving transaction count for a specific block number
-    let count =
-        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(BLOCK_NUMBER)).await.unwrap().unwrap();
+    let count = eth_provider
+        .block_transaction_count_by_number(BlockNumberOrTag::Number(header.number.unwrap()))
+        .await
+        .unwrap()
+        .unwrap();
 
     // Then: Ensure the retrieved transaction count matches the expected value
-    assert_eq!(count, U256::from(3));
+    assert_eq!(count, U256::from(1));
 
     // When: Retrieving transaction count for the block of the most recent transaction
     let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
