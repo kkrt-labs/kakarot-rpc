@@ -80,7 +80,13 @@ reth-tasks = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", 
 reth-trie-common = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-trie = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-evm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-rpc-eth-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-errors = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-provider = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 revm-inspectors = "0.4"
+
+parking_lot = "0.12"
 
 # Error
 eyre = { version = "0.6", default-features = false }

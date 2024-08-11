@@ -1,15 +1,20 @@
-use super::KakarotProvider;
+use super::{KakarotEthApi, KakarotProvider};
 use reth_chainspec::ChainInfo;
 use reth_db_api::models::StoredBlockBodyIndices;
+use reth_evm::ConfigureEvm;
 use reth_primitives::{
     Block, BlockHash, BlockHashOrNumber, BlockNumHash, BlockNumber, BlockWithSenders, Header, Receipt, SealedBlock,
     SealedBlockWithSenders, SealedHeader, B256, U256,
 };
+use reth_provider::{ChainSpecProvider, EvmEnvProvider, StateProviderFactory};
+use reth_rpc_eth_api::helpers::{EthBlocks, LoadBlock, LoadPendingBlock, SpawnBlocking};
+use reth_rpc_eth_types::{EthStateCache, PendingBlock};
 use reth_rpc_types::BlockId;
 use reth_storage_api::{
     errors::provider::ProviderResult, BlockHashReader, BlockIdReader, BlockNumReader, BlockReader, BlockReaderIdExt,
     BlockSource, HeaderProvider, TransactionVariant,
 };
+use reth_transaction_pool::TransactionPool;
 use std::ops::{RangeBounds, RangeInclusive};
 
 impl BlockReaderIdExt for KakarotProvider {
@@ -172,5 +177,60 @@ impl BlockReader for KakarotProvider {
         _range: RangeInclusive<BlockNumber>,
     ) -> ProviderResult<Vec<SealedBlockWithSenders>> {
         Ok(vec![])
+    }
+}
+
+impl<Provider, Pool, Network, EvmConfig> EthBlocks for KakarotEthApi<Provider, Pool, Network, EvmConfig>
+where
+    Self: LoadBlock,
+    Provider: HeaderProvider,
+{
+    #[inline]
+    fn provider(&self) -> impl reth_provider::HeaderProvider {
+        self.0.provider()
+    }
+}
+
+impl<Provider, Pool, Network, EvmConfig> LoadBlock for KakarotEthApi<Provider, Pool, Network, EvmConfig>
+where
+    Self: LoadPendingBlock + SpawnBlocking,
+    Provider: BlockReaderIdExt,
+{
+    #[inline]
+    fn provider(&self) -> impl BlockReaderIdExt {
+        self.0.provider()
+    }
+
+    #[inline]
+    fn cache(&self) -> &EthStateCache {
+        self.0.cache()
+    }
+}
+
+impl<Provider, Pool, Network, EvmConfig> LoadPendingBlock for KakarotEthApi<Provider, Pool, Network, EvmConfig>
+where
+    Self: SpawnBlocking,
+    Provider: BlockReaderIdExt + EvmEnvProvider + ChainSpecProvider + StateProviderFactory,
+    Pool: TransactionPool,
+    EvmConfig: reth_evm::ConfigureEvm,
+{
+    #[inline]
+    fn provider(&self) -> impl BlockReaderIdExt + EvmEnvProvider + ChainSpecProvider + StateProviderFactory {
+        self.0.provider()
+    }
+
+    #[inline]
+    fn pool(&self) -> impl TransactionPool {
+        self.0.pool()
+    }
+
+    #[inline]
+    fn pending_block(&self) -> &tokio::sync::Mutex<Option<PendingBlock>> {
+        self.0.pending_block()
+    }
+
+    #[inline]
+    fn evm_config(&self) -> &impl ConfigureEvm {
+        self.0.evm_config()
     }
 }

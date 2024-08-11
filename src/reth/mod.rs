@@ -1,14 +1,20 @@
 use reth_evm::ConfigureEvm;
 use reth_rpc::EthApi;
+use reth_rpc_eth_api::helpers::FullEthApi;
 use reth_rpc_eth_types::{EthStateCache, FeeHistoryCache, FeeHistoryCacheConfig, GasPriceOracle};
 use reth_rpc_server_types::constants::{DEFAULT_ETH_PROOF_WINDOW, DEFAULT_PROOF_PERMITS};
 use reth_tasks::pool::BlockingTaskPool;
 
 pub mod block;
+pub mod call;
 pub mod evm;
+pub mod fees;
 pub mod receipt;
 pub mod requests;
+pub mod spawn;
+pub mod spec;
 pub mod state;
+pub mod trace;
 pub mod transaction;
 pub mod withdrawals;
 
@@ -41,6 +47,12 @@ where
             None,
             DEFAULT_PROOF_PERMITS,
         ))
+    }
+}
+
+impl<Provider, Pool, Network, EvmConfig> Clone for KakarotEthApi<Provider, Pool, Network, EvmConfig> {
+    fn clone(&self) -> Self {
+        Self(self.0.clone())
     }
 }
 

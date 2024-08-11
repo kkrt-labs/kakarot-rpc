@@ -1,10 +1,13 @@
-use super::KakarotProvider;
+use super::{KakarotEthApi, KakarotProvider};
 use reth_primitives::{Account, Address, BlockHash, BlockNumber, Bytecode, StorageKey, StorageValue, B256};
 use reth_revm::db::BundleState;
+use reth_rpc_eth_api::helpers::{EthState, LoadState, SpawnBlocking};
+use reth_rpc_eth_types::EthStateCache;
 use reth_storage_api::{
     errors::provider::ProviderResult, AccountReader, StateProofProvider, StateProvider, StateProviderBox,
     StateProviderFactory, StateRootProvider,
 };
+use reth_transaction_pool::TransactionPool;
 use reth_trie::updates::TrieUpdates;
 use reth_trie_common::AccountProof;
 
@@ -70,5 +73,35 @@ impl StateProviderFactory for KakarotProvider {
         _bundle_state_data: Box<dyn reth_storage_api::FullExecutionDataProvider>,
     ) -> ProviderResult<StateProviderBox> {
         Ok(Box::new(self.clone()))
+    }
+}
+
+impl<Provider, Pool, Network, EvmConfig> EthState for KakarotEthApi<Provider, Pool, Network, EvmConfig>
+where
+    Self: LoadState + SpawnBlocking,
+{
+    fn max_proof_window(&self) -> u64 {
+        self.0.eth_proof_window()
+    }
+}
+
+impl<Provider, Pool, Network, EvmConfig> LoadState for KakarotEthApi<Provider, Pool, Network, EvmConfig>
+where
+    Provider: StateProviderFactory,
+    Pool: TransactionPool,
+{
+    #[inline]
+    fn provider(&self) -> impl StateProviderFactory {
+        self.0.provider()
+    }
+
+    #[inline]
+    fn cache(&self) -> &EthStateCache {
+        self.0.cache()
+    }
+
+    #[inline]
+    fn pool(&self) -> impl TransactionPool {
+        self.0.pool()
     }
 }

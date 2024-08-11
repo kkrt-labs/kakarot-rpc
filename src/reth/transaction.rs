@@ -1,9 +1,15 @@
-use super::KakarotProvider;
+use super::{KakarotEthApi, KakarotProvider};
 use reth_primitives::{
     Address, BlockHashOrNumber, BlockNumber, TransactionMeta, TransactionSigned, TransactionSignedNoHash, TxHash,
     TxNumber,
 };
-use reth_storage_api::{errors::provider::ProviderResult, TransactionsProvider};
+use reth_rpc_eth_api::{
+    helpers::{EthSigner, EthTransactions, LoadTransaction, SpawnBlocking},
+    RawTransactionForwarder,
+};
+use reth_rpc_eth_types::EthStateCache;
+use reth_storage_api::{errors::provider::ProviderResult, BlockReaderIdExt, TransactionsProvider};
+use reth_transaction_pool::TransactionPool;
 use std::ops::RangeBounds;
 
 impl TransactionsProvider for KakarotProvider {
@@ -58,5 +64,51 @@ impl TransactionsProvider for KakarotProvider {
 
     fn transaction_sender(&self, _id: TxNumber) -> ProviderResult<Option<Address>> {
         Ok(None)
+    }
+}
+
+impl<Provider, Pool, Network, EvmConfig> LoadTransaction for KakarotEthApi<Provider, Pool, Network, EvmConfig>
+where
+    Self: SpawnBlocking,
+    Provider: TransactionsProvider,
+    Pool: TransactionPool,
+{
+    type Pool = Pool;
+
+    #[inline]
+    fn provider(&self) -> impl TransactionsProvider {
+        self.0.provider()
+    }
+
+    #[inline]
+    fn cache(&self) -> &EthStateCache {
+        self.0.cache()
+    }
+
+    #[inline]
+    fn pool(&self) -> &Self::Pool {
+        self.0.pool()
+    }
+}
+
+impl<Provider, Pool, Network, EvmConfig> EthTransactions for KakarotEthApi<Provider, Pool, Network, EvmConfig>
+where
+    Self: LoadTransaction,
+    Pool: Send + Sync + 'static,
+    Provider: BlockReaderIdExt,
+{
+    #[inline]
+    fn provider(&self) -> impl BlockReaderIdExt {
+        self.0.provider()
+    }
+
+    #[inline]
+    fn raw_tx_forwarder(&self) -> Option<std::sync::Arc<dyn RawTransactionForwarder>> {
+        self.0.raw_tx_forwarder()
+    }
+
+    #[inline]
+    fn signers(&self) -> &parking_lot::RwLock<Vec<Box<dyn EthSigner>>> {
+        self.0.signers()
     }
 }
