@@ -127,31 +127,6 @@ impl MongoFuzzer {
         self.finalize().await
     }
 
-    /// Adds a transaction to the collection of transactions with custom values.
-    pub fn add_custom_transaction(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        // Build a transaction using the random byte size.
-        let transaction = StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
-            &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
-        ))?;
-
-        // Generate a receipt for the transaction.
-        let receipt = self.generate_transaction_receipt(&transaction.tx);
-
-        // Convert the receipt into a vector of logs and append them to the existing logs collection.
-        self.logs.append(&mut Vec::from(receipt.clone()));
-
-        // Generate a header for the transaction and add it to the headers collection.
-        self.headers.push(self.generate_transaction_header(&transaction.tx));
-
-        // Add the transaction to the transactions collection.
-        self.transactions.push(transaction);
-
-        // Add the receipt to the receipts collection.
-        self.receipts.push(receipt);
-
-        Ok(())
-    }
-
     /// Adds a hardcoded block header with a base fee to the collection of headers.
     pub fn add_hardcoded_block_header_with_base_fee(
         &mut self,
@@ -215,7 +190,25 @@ impl MongoFuzzer {
     /// Adds random transactions to the collection of transactions.
     pub fn add_random_transactions(&mut self, n_transactions: usize) -> Result<(), Box<dyn std::error::Error>> {
         for _ in 0..n_transactions {
-            self.add_custom_transaction()?;
+            // Build a transaction using the random byte size.
+            let transaction = StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
+                &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
+            ))?;
+
+            // Generate a receipt for the transaction.
+            let receipt = self.generate_transaction_receipt(&transaction.tx);
+
+            // Convert the receipt into a vector of logs and append them to the existing logs collection.
+            self.logs.append(&mut Vec::from(receipt.clone()));
+
+            // Generate a header for the transaction and add it to the headers collection.
+            self.headers.push(self.generate_transaction_header(&transaction.tx));
+
+            // Add the transaction to the transactions collection.
+            self.transactions.push(transaction);
+
+            // Add the receipt to the receipts collection.
+            self.receipts.push(receipt);
         }
         Ok(())
     }
