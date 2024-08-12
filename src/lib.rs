@@ -14,6 +14,7 @@ pub mod config;
 pub mod eth_rpc;
 pub mod models;
 pub mod prometheus_handler;
+pub mod reth;
 pub mod retry;
 #[cfg(feature = "testing")]
 pub mod test_utils;
