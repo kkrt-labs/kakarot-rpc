@@ -71,6 +71,7 @@ reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v
 reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, optional = true }
 revm-inspectors = "0.4"
 
 # Error
@@ -120,7 +121,6 @@ http-body-util = { version = "0.1", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
 
 # Testing crates
-alloy = { version = "0.1.1", features = ["rpc-types"], optional = true }
 alloy-dyn-abi = { version = "0.7.6", default-features = false }
 alloy-json-abi = { version = "0.7.6", default-features = false, optional = true }
 alloy-primitives = { version = "0.7.2", default-features = false, optional = true }
@@ -162,7 +162,7 @@ toml = { version = "0.8", default-features = false }
 
 [features]
 testing = [
-  "alloy",
+  "reth-testing-utils",
   "alloy-json-abi",
   "alloy-primitives",
   "alloy-signer-local",

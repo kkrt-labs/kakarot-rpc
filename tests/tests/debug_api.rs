@@ -45,19 +45,13 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let transaction = TransactionSigned::decode_enveloped(&mut rlp_bytes.unwrap().as_ref()).unwrap();
     let signer = transaction.recover_signer().unwrap();
 
-    let transaction = from_recovered_with_block_context(
+    let mut transaction = from_recovered_with_block_context(
         TransactionSignedEcRecovered::from_signed_transaction(transaction, signer),
         tx.block_hash.unwrap(),
         tx.block_number.unwrap(),
         header.base_fee_per_gas.map(|x| x.try_into().unwrap()),
         tx.transaction_index.unwrap() as usize,
     );
-
-    // Checking some fields but not all since mocked signer is not exact at the moment
-    assert_eq!(transaction.block_hash, header.hash);
-    assert_eq!(transaction.block_number, header.number);
-    assert_eq!(transaction.nonce, tx.nonce);
-    assert_eq!(transaction.chain_id, tx.chain_id);
 
     let res = reqwest_client
         .post(format!("http://localhost:{}", server_addr.port()))
@@ -71,7 +65,20 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let rpc_transaction: reth_rpc_types::Transaction =
         serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
 
-    assert_eq!(tx, rpc_transaction);
+    // As per https://github.com/paradigmxyz/reth/blob/603e39ab74509e0863fc023461a4c760fb2126d1/crates/rpc/rpc-types-compat/src/transaction/signature.rs#L17
+    if rpc_transaction.transaction_type.unwrap() == 0 {
+        transaction.signature = Some(reth_rpc_types::Signature {
+            y_parity: rpc_transaction.signature.unwrap().y_parity,
+            ..transaction.signature.unwrap()
+        });
+    }
+
+    // For EIP1559, `gas_price` is recomputed as per https://github.com/paradigmxyz/reth/blob/603e39ab74509e0863fc023461a4c760fb2126d1/crates/rpc/rpc-types-compat/src/transaction/mod.rs#L54
+    if rpc_transaction.transaction_type.unwrap() == 2 {
+        transaction.gas_price = rpc_transaction.gas_price;
+    }
+
+    assert_eq!(transaction, rpc_transaction);
 
     drop(server_handle);
 }
