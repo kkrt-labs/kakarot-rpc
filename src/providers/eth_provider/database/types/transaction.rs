@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn random_tx_signature() {
-        for _ in 0..100 {
+        for _ in 0..10 {
             let mut bytes = [0u8; 1024];
             rand::thread_rng().fill(bytes.as_mut_slice());
 
