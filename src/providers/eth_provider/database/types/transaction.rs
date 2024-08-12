@@ -88,6 +88,7 @@ impl<'a> StoredTransaction {
             chain_id: transaction_signed.chain_id(),
             transaction_type: Some(transaction_signed.tx_type().into()),
             to: transaction_signed.to(),
+            gas: transaction_signed.gas_limit().into(),
             ..Default::default()
         };
 
@@ -95,15 +96,12 @@ impl<'a> StoredTransaction {
         match transaction_signed.transaction {
             reth_primitives::Transaction::Legacy(transaction) => {
                 tx.gas_price = Some(transaction.gas_price);
-                tx.gas = transaction.gas_limit.into();
             }
             reth_primitives::Transaction::Eip2930(transaction) => {
-                tx.gas = transaction.gas_limit.into();
                 tx.access_list = Some(transaction.access_list);
                 tx.gas_price = Some(transaction.gas_price);
             }
             reth_primitives::Transaction::Eip1559(transaction) => {
-                tx.gas = transaction.gas_limit.into();
                 tx.max_fee_per_gas = Some(transaction.max_fee_per_gas);
                 tx.max_priority_fee_per_gas = Some(transaction.max_priority_fee_per_gas);
                 tx.access_list = Some(transaction.access_list);
