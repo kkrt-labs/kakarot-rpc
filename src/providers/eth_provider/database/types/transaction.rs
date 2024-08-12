@@ -6,8 +6,7 @@ use std::ops::Deref;
 use {
     arbitrary::Arbitrary,
     rand::Rng,
-    reth_primitives::{Address, Bytes, TxKind, U256},
-    reth_rpc_types::AccessList,
+    reth_primitives::U256,
     reth_testing_utils::generators::{self},
 };
 
@@ -57,34 +56,10 @@ impl<'a> StoredTransaction {
         let primitive_tx = match random_choice {
             0 => reth_primitives::Transaction::Legacy(reth_primitives::transaction::TxLegacy {
                 chain_id: Some(u8::arbitrary(u)?.into()),
-                nonce: u64::arbitrary(u)?,
-                gas_price: u128::arbitrary(u)?,
-                gas_limit: u64::arbitrary(u)?,
-                to: TxKind::Call(Address::arbitrary(u)?),
-                value: U256::arbitrary(u)?,
-                input: Bytes::arbitrary(u)?,
+                ..Arbitrary::arbitrary(u)?
             }),
-            1 => reth_primitives::Transaction::Eip2930(reth_primitives::TxEip2930 {
-                chain_id: u64::arbitrary(u)?,
-                nonce: u64::arbitrary(u)?,
-                gas_limit: u64::arbitrary(u)?,
-                to: TxKind::Call(Address::arbitrary(u)?),
-                access_list: AccessList(Vec::arbitrary(u)?),
-                value: U256::arbitrary(u)?,
-                input: Bytes::arbitrary(u)?,
-                gas_price: u128::arbitrary(u)?,
-            }),
-            _ => reth_primitives::Transaction::Eip1559(reth_primitives::TxEip1559 {
-                chain_id: u64::arbitrary(u)?,
-                nonce: u64::arbitrary(u)?,
-                gas_limit: u64::arbitrary(u)?,
-                max_fee_per_gas: u128::arbitrary(u)?,
-                max_priority_fee_per_gas: u128::arbitrary(u)?,
-                to: TxKind::Call(Address::arbitrary(u)?),
-                access_list: AccessList(Vec::arbitrary(u)?),
-                value: U256::arbitrary(u)?,
-                input: Bytes::arbitrary(u)?,
-            }),
+            1 => reth_primitives::Transaction::Eip2930(reth_primitives::TxEip2930::arbitrary(u)?),
+            _ => reth_primitives::Transaction::Eip1559(reth_primitives::TxEip1559::arbitrary(u)?),
         };
 
         // Sign the generated transaction with a randomly generated key pair.
@@ -97,64 +72,43 @@ impl<'a> StoredTransaction {
             block_hash: Some(B256::arbitrary(u)?),
             block_number: Some(u64::arbitrary(u)?),
             transaction_index: Some(u64::arbitrary(u)?),
+            signature: Some(reth_rpc_types::Signature {
+                r: transaction_signed.signature.r,
+                s: transaction_signed.signature.s,
+                v: if transaction_signed.is_legacy() {
+                    U256::from(transaction_signed.signature.v(transaction_signed.chain_id()))
+                } else {
+                    U256::from(transaction_signed.signature.odd_y_parity)
+                },
+                y_parity: Some(transaction_signed.signature.odd_y_parity.into()),
+            }),
+            nonce: transaction_signed.nonce(),
+            value: transaction_signed.value(),
+            input: transaction_signed.input().clone(),
+            chain_id: transaction_signed.chain_id(),
+            transaction_type: Some(transaction_signed.tx_type().into()),
+            to: transaction_signed.to(),
             ..Default::default()
         };
 
         // Populate the `tx` structure based on the specific type of transaction.
         match transaction_signed.transaction {
             reth_primitives::Transaction::Legacy(transaction) => {
-                tx.nonce = transaction.nonce;
-                tx.to = transaction.to.to().copied();
-                tx.value = transaction.value;
                 tx.gas_price = Some(transaction.gas_price);
                 tx.gas = transaction.gas_limit.into();
-                tx.input = transaction.input;
-                tx.signature = Some(reth_rpc_types::Signature {
-                    r: transaction_signed.signature.r,
-                    s: transaction_signed.signature.s,
-                    v: U256::from(transaction_signed.signature.v(transaction.chain_id)),
-                    y_parity: Some(transaction_signed.signature.odd_y_parity.into()),
-                });
-                tx.chain_id = transaction.chain_id;
-                tx.transaction_type = Some(0);
             }
             reth_primitives::Transaction::Eip2930(transaction) => {
-                tx.nonce = transaction.nonce;
-                tx.to = transaction.to.to().copied();
-                tx.value = transaction.value;
                 tx.gas = transaction.gas_limit.into();
-                tx.input = transaction.input;
-                tx.signature = Some(reth_rpc_types::Signature {
-                    r: transaction_signed.signature.r,
-                    s: transaction_signed.signature.s,
-                    v: U256::from(transaction_signed.signature.odd_y_parity),
-                    y_parity: Some(transaction_signed.signature.odd_y_parity.into()),
-                });
-                tx.chain_id = Some(transaction.chain_id);
-                tx.transaction_type = Some(1);
                 tx.access_list = Some(transaction.access_list);
                 tx.gas_price = Some(transaction.gas_price);
             }
             reth_primitives::Transaction::Eip1559(transaction) => {
-                tx.nonce = transaction.nonce;
-                tx.to = transaction.to.to().copied();
-                tx.value = transaction.value;
                 tx.gas = transaction.gas_limit.into();
                 tx.max_fee_per_gas = Some(transaction.max_fee_per_gas);
                 tx.max_priority_fee_per_gas = Some(transaction.max_priority_fee_per_gas);
-                tx.input = transaction.input;
-                tx.signature = Some(reth_rpc_types::Signature {
-                    r: transaction_signed.signature.r,
-                    s: transaction_signed.signature.s,
-                    v: U256::from(transaction_signed.signature.odd_y_parity),
-                    y_parity: Some(transaction_signed.signature.odd_y_parity.into()),
-                });
-                tx.chain_id = Some(transaction.chain_id);
-                tx.transaction_type = Some(2);
                 tx.access_list = Some(transaction.access_list);
             }
-            // Panic if an unsupported transaction type is encountered.
-            _ => panic!("Non supported transaction type"),
+            reth_primitives::Transaction::Eip4844(_) => unreachable!("Non supported transaction type"),
         };
 
         // Return the constructed `StoredTransaction` instance.
