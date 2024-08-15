@@ -1,8 +1,8 @@
 #![allow(clippy::blocks_in_conditions)]
 
 use crate::{
-    eth_provider::{constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, provider::EthereumProvider},
     eth_rpc::api::eth_api::EthApiServer,
+    providers::eth_provider::{constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, provider::EthereumProvider},
 };
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};

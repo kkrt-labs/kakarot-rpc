@@ -1,7 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use kakarot_rpc::{
-    eth_provider::{
+    providers::eth_provider::{
         constant::Constant, database::types::transaction::StoredPendingTransaction, provider::EthereumProvider,
     },
     test_utils::{

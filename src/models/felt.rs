@@ -1,4 +1,4 @@
-use crate::eth_provider::error::EthereumDataFormatError;
+use crate::providers::eth_provider::error::EthereumDataFormatError;
 use reth_primitives::{Address, B256, U256, U64};
 use starknet::core::types::{EthAddress, Felt};
 use std::ops::{Deref, DerefMut};
@@ -103,9 +103,9 @@ macro_rules! into_via_wrapper {
 #[macro_export]
 macro_rules! into_via_try_wrapper {
     ($val: expr) => {{
-        let intermediate: Result<_, $crate::eth_provider::error::EthereumDataFormatError> =
+        let intermediate: Result<_, $crate::providers::eth_provider::error::EthereumDataFormatError> =
             TryInto::<$crate::models::felt::Felt252Wrapper>::try_into($val)
-                .map_err(|_| $crate::eth_provider::error::EthereumDataFormatError::Primitive)
+                .map_err(|_| $crate::providers::eth_provider::error::EthereumDataFormatError::Primitive)
                 .map(Into::into);
         intermediate
     }};

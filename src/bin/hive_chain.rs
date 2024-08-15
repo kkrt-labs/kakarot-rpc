@@ -1,6 +1,6 @@
 use alloy_rlp::Decodable;
 use eyre::OptionExt;
-use kakarot_rpc::eth_provider::starknet::kakarot_core::to_starknet_transaction;
+use kakarot_rpc::providers::eth_provider::starknet::kakarot_core::to_starknet_transaction;
 use reth_primitives::{bytes::Buf, Block, BlockBody, BytesMut};
 use starknet::{
     core::types::{BroadcastedInvokeTransaction, Felt},

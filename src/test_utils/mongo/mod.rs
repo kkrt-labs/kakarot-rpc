@@ -1,4 +1,4 @@
-use crate::eth_provider::{
+use crate::providers::eth_provider::{
     constant::U64_HEX_STRING_LEN,
     database::{
         types::{
@@ -8,7 +8,6 @@ use crate::eth_provider::{
     },
 };
 use arbitrary::Arbitrary;
-use lazy_static::lazy_static;
 use mongodb::{
     bson::{self, doc, Document},
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
@@ -17,7 +16,7 @@ use mongodb::{
 use reth_primitives::{Address, TxType, B256, U256};
 use reth_rpc_types::Transaction;
 use serde::Serialize;
-use std::{ops::Range, str::FromStr};
+use std::{ops::Range, str::FromStr, sync::LazyLock};
 use strum::{EnumIter, IntoEnumIterator};
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
@@ -25,26 +24,34 @@ use testcontainers::{
     ContainerAsync, Image,
 };
 
-lazy_static! {
-    pub static ref CHAIN_ID: U256 = U256::from(1);
+pub static CHAIN_ID: LazyLock<U256> = LazyLock::new(|| U256::from(1));
+pub static BLOCK_HASH: LazyLock<B256> = LazyLock::new(|| B256::from(U256::from(0x1234)));
+pub static EIP1599_TX_HASH: LazyLock<B256> = LazyLock::new(|| {
+    B256::from(U256::from_str("0xc92a4e464caa049999cb2073cc4d8586bebb42b518115f631710b2597155c962").unwrap())
+});
+pub static EIP2930_TX_HASH: LazyLock<B256> = LazyLock::new(|| {
+    B256::from(U256::from_str("0x972ba18c780c31bade31873d6f076a3be4e6d314776e2ad50a30eda861acab79").unwrap())
+});
+pub static LEGACY_TX_HASH: LazyLock<B256> = LazyLock::new(|| {
+    B256::from(U256::from_str("0x38c7e066854c56932100b896320a37adbab32713cca46d1e06307fe5d6062b7d").unwrap())
+});
+pub static TEST_SIG_R: LazyLock<U256> =
+    LazyLock::new(|| U256::from_str("0x1ae9d63d9152a0f628cc5c843c9d0edc6cb705b027d12d30b871365d7d9c8ed5").unwrap());
+pub static TEST_SIG_S: LazyLock<U256> =
+    LazyLock::new(|| U256::from_str("0x0d9fa834b490259ad6aa62a49d926053ca1b52acbb59a5e1cf8ecabd65304606").unwrap());
+pub static TEST_SIG_V: LazyLock<U256> = LazyLock::new(|| U256::from(1));
 
-    pub static ref BLOCK_HASH: B256 = B256::from(U256::from(0x1234));
-    pub static ref EIP1599_TX_HASH: B256 = B256::from(U256::from_str("0xc92a4e464caa049999cb2073cc4d8586bebb42b518115f631710b2597155c962").unwrap());
-    pub static ref EIP2930_TX_HASH: B256 = B256::from(U256::from_str("0x972ba18c780c31bade31873d6f076a3be4e6d314776e2ad50a30eda861acab79").unwrap());
-    pub static ref LEGACY_TX_HASH: B256 = B256::from(U256::from_str("0x38c7e066854c56932100b896320a37adbab32713cca46d1e06307fe5d6062b7d").unwrap());
-
-    pub static ref TEST_SIG_R: U256 = U256::from_str("0x1ae9d63d9152a0f628cc5c843c9d0edc6cb705b027d12d30b871365d7d9c8ed5").unwrap();
-    pub static ref TEST_SIG_S: U256 = U256::from_str("0x0d9fa834b490259ad6aa62a49d926053ca1b52acbb59a5e1cf8ecabd65304606").unwrap();
-    pub static ref TEST_SIG_V: U256 = U256::from(1);
-    // Given constant r, s, v and transaction fields, we can derive the `Transaction.from` field "a posteriori"
-    // ⚠️ If the transaction fields change, the below addresses should be updated accordingly ⚠️
-    // Recovered address from the above R, S, V, with EIP1559 transaction
-    pub static ref RECOVERED_EIP1599_TX_ADDRESS: Address = Address::from_str("0x520666a744f86a09c2a794b8d56501c109afba2d").unwrap();
-    // Recovered address from the above R, S, V, with EIP2930 transaction
-    pub static ref RECOVERED_EIP2930_TX_ADDRESS: Address = Address::from_str("0x753925d9bbd7682e4b77f102c47d24ee0580aa8d").unwrap();
-    // Recovered address from the above R, S, V, with Legacy transaction
-    pub static ref RECOVERED_LEGACY_TX_ADDRESS: Address = Address::from_str("0x05ac0c7c5930a6f9003a709042dbb136e98220f2").unwrap();
-}
+// Given constant r, s, v and transaction fields, we can derive the `Transaction.from` field "a posteriori"
+// ⚠️ If the transaction fields change, the below addresses should be updated accordingly ⚠️
+// Recovered address from the above R, S, V, with EIP1559 transaction
+pub static RECOVERED_EIP1599_TX_ADDRESS: LazyLock<Address> =
+    LazyLock::new(|| Address::from_str("0x520666a744f86a09c2a794b8d56501c109afba2d").unwrap());
+// Recovered address from the above R, S, V, with EIP2930 transaction
+pub static RECOVERED_EIP2930_TX_ADDRESS: LazyLock<Address> =
+    LazyLock::new(|| Address::from_str("0x753925d9bbd7682e4b77f102c47d24ee0580aa8d").unwrap());
+// Recovered address from the above R, S, V, with Legacy transaction
+pub static RECOVERED_LEGACY_TX_ADDRESS: LazyLock<Address> =
+    LazyLock::new(|| Address::from_str("0x05ac0c7c5930a6f9003a709042dbb136e98220f2").unwrap());
 
 pub const BLOCK_NUMBER: u64 = 0x1234;
 pub const RANDOM_BYTES_SIZE: usize = 100_024;
@@ -150,8 +157,24 @@ impl MongoFuzzer {
 
     /// Adds a transaction to the collection of transactions with custom values.
     pub fn add_custom_transaction(&mut self, builder: TransactionBuilder) -> Result<(), Box<dyn std::error::Error>> {
+        // Build a transaction using the provided builder and random byte size.
         let transaction = builder.build(self.rnd_bytes_size)?;
-        self.add_transaction_to_collections(transaction);
+
+        // Generate a receipt for the transaction.
+        let receipt = self.generate_transaction_receipt(&transaction.tx);
+
+        // Convert the receipt into a vector of logs and append them to the existing logs collection.
+        self.logs.append(&mut Vec::from(receipt.clone()));
+
+        // Generate a header for the transaction and add it to the headers collection.
+        self.headers.push(self.generate_transaction_header(&transaction.tx));
+
+        // Add the transaction to the transactions collection.
+        self.transactions.push(transaction);
+
+        // Add the receipt to the receipts collection.
+        self.receipts.push(receipt);
+
         Ok(())
     }
 
@@ -210,43 +233,22 @@ impl MongoFuzzer {
             // Ensure the block number in log <= max block number in the transactions collection.
             log.block_number = Some(log.block_number.unwrap_or_default().min(self.max_block_number()));
 
-            let stored_log = StoredLog { log };
-
-            self.logs.push(stored_log);
+            self.logs.push(StoredLog { log });
         }
         Ok(())
     }
 
     /// Gets the highest block number in the transactions collection.
     pub fn max_block_number(&self) -> u64 {
-        self.headers.iter().map(|header| header.number.unwrap_or_default()).max().unwrap_or_default()
-    }
-
-    /// Adds a hardcoded transaction to the collection of transactions.
-    pub fn add_random_transaction(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let builder = TransactionBuilder::default();
-        self.add_custom_transaction(builder)
+        self.headers.iter().filter_map(|header| header.number).max().unwrap_or_default()
     }
 
     /// Adds random transactions to the collection of transactions.
     pub fn add_random_transactions(&mut self, n_transactions: usize) -> Result<(), Box<dyn std::error::Error>> {
         for _ in 0..n_transactions {
-            self.add_random_transaction()?;
+            self.add_custom_transaction(TransactionBuilder::default())?;
         }
         Ok(())
-    }
-
-    /// Adds a transaction to the collections of transactions, receipts, logs, and headers.
-    fn add_transaction_to_collections(&mut self, transaction: StoredTransaction) {
-        let receipt = self.generate_transaction_receipt(&transaction.tx);
-        let mut logs = Vec::<StoredLog>::from(receipt.clone());
-
-        let header = self.generate_transaction_header(&transaction.tx);
-
-        self.transactions.push(transaction);
-        self.receipts.push(receipt);
-        self.logs.append(&mut logs);
-        self.headers.push(header);
     }
 
     /// Generates a transaction receipt based on the given transaction.
@@ -384,7 +386,7 @@ impl TransactionBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::eth_provider::database::types::{
+    use crate::providers::eth_provider::database::types::{
         header::StoredHeader, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
     };
 

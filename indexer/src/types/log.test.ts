@@ -1,6 +1,7 @@
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/mod.ts";
 import { fromJsonRpcLog, IGNORED_KEYS, JsonRpcLog, toEthLog } from "./log.ts";
 import { bigIntToHex, Event, JsonRpcTx } from "../deps.ts";
+import { KAKAROT_ADDRESS } from "../constants.ts";
 
 // Mock for hexToBytes
 const mockHexToBytes = (hex: string): Uint8Array => {
@@ -101,7 +102,7 @@ Deno.test("toEthLog with valid input", () => {
 
   const event: Event = {
     index: 1,
-    fromAddress: "0x123456",
+    fromAddress: KAKAROT_ADDRESS as `0x${string}`,
     keys: ["0x1234", "0x5678", "0x9abc", "0xdef0", "0x1111"],
     data: ["0x01", "0x02", "0x03"],
   };
@@ -233,7 +234,7 @@ Deno.test("toEthLog with empty event data", () => {
   // No data in the event.
   const event: Event = {
     index: 1,
-    fromAddress: "0x123456",
+    fromAddress: KAKAROT_ADDRESS as `0x${string}`,
     keys: ["0x1234", "0x5678", "0x9abc", "0xdef0", "0x1111"],
     data: [],
   };
@@ -286,7 +287,7 @@ Deno.test("toEthLog with pending block", () => {
 
   const event: Event = {
     index: 1,
-    fromAddress: "0x123456",
+    fromAddress: KAKAROT_ADDRESS as `0x${string}`,
     keys: ["0x1234", "0x5678", "0x9abc", "0xdef0", "0x1111"],
     data: ["0x01", "0x02", "0x03"],
   };

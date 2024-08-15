@@ -1,21 +1,24 @@
 use dotenvy::dotenv;
 use kakarot_rpc::test_utils::katana::genesis::KatanaGenesisBuilder;
-use lazy_static::lazy_static;
 use reth_primitives::{B256, U256};
 use starknet::core::types::Felt;
 use std::{
     env::var,
     path::{Path, PathBuf},
     str::FromStr,
+    sync::LazyLock,
 };
 
-lazy_static! {
-    static ref GENESIS_FOLDER_PATH: PathBuf = Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join(".katana");
-    static ref KAKAROT_CONTRACTS_PATH: PathBuf =
-        Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join("lib/kakarot/build");
-    static ref COINBASE_ADDRESS: Felt = 0x12345u32.into();
-    static ref SALT: Felt = Felt::ZERO;
-}
+/// Katana genesis folder path.
+static GENESIS_FOLDER_PATH: LazyLock<PathBuf> =
+    LazyLock::new(|| Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join(".katana"));
+
+/// Kakarot contracts path.
+static KAKAROT_CONTRACTS_PATH: LazyLock<PathBuf> =
+    LazyLock::new(|| Path::new(env!("CARGO_MANIFEST_DIR")).to_path_buf().join("lib/kakarot/build"));
+
+/// Mock coinbase address.
+static COINBASE_ADDRESS: LazyLock<Felt> = LazyLock::new(|| 0x12345u32.into());
 
 fn main() {
     // Load the env vars.

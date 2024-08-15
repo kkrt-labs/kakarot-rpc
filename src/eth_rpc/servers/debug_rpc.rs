@@ -1,68 +1,42 @@
 #![allow(clippy::blocks_in_conditions)]
-
-use crate::{
-    eth_provider::{
-        error::{EthApiError, EthereumDataFormatError, SignatureError},
-        provider::EthereumProvider,
-    },
-    eth_rpc::api::debug_api::DebugApiServer,
-    tracing::builder::TracerBuilder,
-};
-use alloy_rlp::Encodable;
+use crate::{eth_rpc::api::debug_api::DebugApiServer, providers::debug_provider::DebugProvider};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{Block, Bytes, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256};
+use reth_primitives::{Bytes, B256};
 use reth_rpc_types::{
     trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult},
     BlockId, BlockNumberOrTag, TransactionRequest,
 };
-use std::sync::Arc;
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]
-pub struct DebugRpc<P: EthereumProvider> {
-    eth_provider: P,
+pub struct DebugRpc<DP: DebugProvider> {
+    debug_provider: DP,
 }
 
-impl<P: EthereumProvider> DebugRpc<P> {
-    pub const fn new(eth_provider: P) -> Self {
-        Self { eth_provider }
+impl<DP> DebugRpc<DP>
+where
+    DP: DebugProvider,
+{
+    pub const fn new(debug_provider: DP) -> Self {
+        Self { debug_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P> {
+impl<DP> DebugApiServer for DebugRpc<DP>
+where
+    DP: DebugProvider + Send + Sync + 'static,
+{
     /// Returns a RLP-encoded header.
     #[tracing::instrument(skip(self), err)]
     async fn raw_header(&self, block_id: BlockId) -> Result<Bytes> {
-        let mut res = Vec::new();
-        if let Some(header) = self
-            .eth_provider
-            .header(&block_id)
-            .await?
-            .map(Header::try_from)
-            .transpose()
-            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::HeaderConversion))?
-        {
-            header.encode(&mut res);
-        }
-
-        Ok(res.into())
+        self.debug_provider.raw_header(block_id).await.map_err(Into::into)
     }
 
     /// Returns a RLP-encoded block.
     #[tracing::instrument(skip(self), err)]
     async fn raw_block(&self, block_id: BlockId) -> Result<Bytes> {
-        let block = match block_id {
-            BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.into(), true).await?,
-            BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
-        };
-        let mut raw_block = Vec::new();
-        if let Some(block) = block {
-            let block =
-                Block::try_from(block.inner).map_err(|_| EthApiError::from(EthereumDataFormatError::Primitive))?;
-            block.encode(&mut raw_block);
-        }
-        Ok(raw_block.into())
+        self.debug_provider.raw_block(block_id).await.map_err(Into::into)
     }
 
     /// Returns an EIP-2718 binary-encoded transaction.
@@ -70,91 +44,19 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
     /// If this is a pooled EIP-4844 transaction, the blob sidecar is included.
     #[tracing::instrument(skip(self), err)]
     async fn raw_transaction(&self, hash: B256) -> Result<Option<Bytes>> {
-        let transaction = self.eth_provider.transaction_by_hash(hash).await?;
-
-        if let Some(tx) = transaction {
-            let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx = tx.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::Primitive))?;
-            let bytes = TransactionSigned::from_transaction_and_signature(
-                tx,
-                reth_primitives::Signature {
-                    r: signature.r,
-                    s: signature.s,
-                    odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-                },
-            )
-            .envelope_encoded();
-            Ok(Some(bytes))
-        } else {
-            Ok(None)
-        }
+        self.debug_provider.raw_transaction(hash).await.map_err(Into::into)
     }
 
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
     #[tracing::instrument(skip(self), err)]
     async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
-        let transactions = self.eth_provider.block_transactions(Some(block_id)).await?.unwrap_or_default();
-        let mut raw_transactions = Vec::with_capacity(transactions.len());
-
-        for t in transactions {
-            let signature = t.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx = t.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::Primitive))?;
-            let bytes = TransactionSigned::from_transaction_and_signature(
-                tx,
-                reth_primitives::Signature {
-                    r: signature.r,
-                    s: signature.s,
-                    odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-                },
-            )
-            .envelope_encoded();
-            raw_transactions.push(bytes);
-        }
-
-        Ok(raw_transactions)
+        self.debug_provider.raw_transactions(block_id).await.map_err(Into::into)
     }
 
     /// Returns an array of EIP-2718 binary-encoded receipts.
     #[tracing::instrument(skip(self), err)]
     async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
-        let receipts = self.eth_provider.block_receipts(Some(block_id)).await?.unwrap_or_default();
-
-        // Initializes an empty vector to store the raw receipts
-        let mut raw_receipts = Vec::with_capacity(receipts.len());
-
-        // Iterates through the receipts of the block using the `block_receipts` method of the Ethereum API
-        for receipt in receipts {
-            // Converts the transaction type to a u8 and then tries to convert it into TxType
-            let tx_type = Into::<u8>::into(receipt.transaction_type())
-                .try_into()
-                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversion))?;
-
-            // Tries to convert the cumulative gas used to u64
-            let cumulative_gas_used = TryInto::<u64>::try_into(receipt.inner.cumulative_gas_used())
-                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversion))?;
-
-            // Creates a ReceiptWithBloom from the receipt data
-            raw_receipts.push(
-                ReceiptWithBloom {
-                    receipt: Receipt {
-                        tx_type,
-                        success: receipt.inner.status(),
-                        cumulative_gas_used,
-                        logs: receipt
-                            .inner
-                            .logs()
-                            .iter()
-                            .filter_map(|log| Log::new(log.address(), log.topics().to_vec(), log.data().data.clone()))
-                            .collect(),
-                    },
-                    bloom: *receipt.inner.logs_bloom(),
-                }
-                .envelope_encoded(),
-            );
-        }
-
-        // Returns the vector containing the raw receipts
-        Ok(raw_receipts)
+        self.debug_provider.raw_receipts(block_id).await.map_err(Into::into)
     }
 
     /// Returns the Geth debug trace for the given block number.
@@ -164,15 +66,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         block_number: BlockNumberOrTag,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<Vec<TraceResult>> {
-        let provider = Arc::new(&self.eth_provider);
-        let tracer = TracerBuilder::new(provider)
-            .await?
-            .with_block_id(BlockId::Number(block_number))
-            .await?
-            .with_tracing_options(opts.unwrap_or_default().into())
-            .build()?;
-
-        Ok(tracer.debug_block()?)
+        self.debug_provider.trace_block_by_number(block_number, opts).await.map_err(Into::into)
     }
 
     /// Returns the Geth debug trace for the given block hash.
@@ -182,14 +76,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         block_hash: B256,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<Vec<TraceResult>> {
-        let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
-            .await?
-            .with_block_id(BlockId::Hash(block_hash.into()))
-            .await?
-            .with_tracing_options(opts.unwrap_or_default().into())
-            .build()?;
-
-        Ok(tracer.debug_block()?)
+        self.debug_provider.trace_block_by_hash(block_hash, opts).await.map_err(Into::into)
     }
 
     /// Returns the Geth debug trace for the given transaction hash.
@@ -199,14 +86,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         transaction_hash: B256,
         opts: Option<GethDebugTracingOptions>,
     ) -> Result<GethTrace> {
-        let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
-            .await?
-            .with_transaction_hash(transaction_hash)
-            .await?
-            .with_tracing_options(opts.unwrap_or_default().into())
-            .build()?;
-
-        Ok(tracer.debug_transaction(transaction_hash)?)
+        self.debug_provider.trace_transaction(transaction_hash, opts).await.map_err(Into::into)
     }
 
     /// Runs an `eth_call` within the context of a given block execution and returns the Geth debug trace.
@@ -217,13 +97,6 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugApiServer for DebugRpc<P>
         block_number: Option<BlockId>,
         opts: Option<GethDebugTracingCallOptions>,
     ) -> Result<GethTrace> {
-        let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
-            .await?
-            .with_block_id(block_number.unwrap_or_default())
-            .await?
-            .with_tracing_options(opts.unwrap_or_default().into())
-            .build()?;
-
-        Ok(tracer.debug_transaction_request(&request)?)
+        self.debug_provider.trace_call(request, block_number, opts).await.map_err(Into::into)
     }
 }

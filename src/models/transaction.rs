@@ -1,7 +1,7 @@
 #[cfg(not(feature = "hive"))]
-use crate::eth_provider::starknet::kakarot_core::MAX_FELTS_IN_CALLDATA;
+use crate::providers::eth_provider::starknet::kakarot_core::MAX_FELTS_IN_CALLDATA;
 use crate::{
-    eth_provider::{
+    providers::eth_provider::{
         error::{EthApiError, SignatureError, TransactionError},
         starknet::kakarot_core::{get_white_listed_eip_155_transaction_hashes, ETH_SEND_TRANSACTION, KAKAROT_ADDRESS},
         utils::split_u256,

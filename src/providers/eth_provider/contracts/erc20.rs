@@ -1,6 +1,6 @@
 #![allow(clippy::pub_underscore_fields)]
 
-use crate::eth_provider::{
+use crate::providers::eth_provider::{
     error::ExecutionError,
     provider::{EthProviderResult, EthereumProvider},
 };

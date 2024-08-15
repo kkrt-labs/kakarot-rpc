@@ -1,6 +1,6 @@
 use crate::{
-    eth_provider::{constant::STARKNET_MODULUS, error::EthereumDataFormatError},
     into_via_try_wrapper,
+    providers::eth_provider::{constant::STARKNET_MODULUS, error::EthereumDataFormatError},
 };
 use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag, U256};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};

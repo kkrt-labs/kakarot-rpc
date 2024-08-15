@@ -8,7 +8,7 @@ use super::{
     },
     Database,
 };
-use crate::eth_provider::error::{EthApiError, EthereumDataFormatError};
+use crate::providers::eth_provider::error::{EthApiError, EthereumDataFormatError};
 use alloy_rlp::Encodable;
 use async_trait::async_trait;
 use mongodb::bson::doc;
@@ -399,17 +399,12 @@ mod tests {
 
             let block_transactions = BlockTransactions::Full(transactions.clone());
 
-            let signed_transactions = transactions
-                .into_iter()
-                .map(|tx| TransactionSigned::try_from(tx).map_err(|_| EthereumDataFormatError::TransactionConversion))
-                .collect::<Result<Vec<_>, _>>()
-                .unwrap();
+            let signed_transactions =
+                transactions.into_iter().map(TransactionSigned::try_from).collect::<Result<Vec<_>, _>>().unwrap();
 
             let block = reth_primitives::Block {
                 body: signed_transactions,
-                header: reth_primitives::Header::try_from(header.clone())
-                    .map_err(|_| EthereumDataFormatError::Primitive)
-                    .unwrap(),
+                header: reth_primitives::Header::try_from(header.clone()).unwrap(),
                 withdrawals: Some(Default::default()),
                 ..Default::default()
             };
