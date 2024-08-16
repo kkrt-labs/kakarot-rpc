@@ -94,7 +94,9 @@ fn setup_tracing() -> Result<()> {
     let env_filter = EnvFilter::builder().parse(filter)?;
 
     // Stack the layers and initialize the subscriber
-    let stacked_layer = tracing_layer.and_then(metrics_layer).and_then(env_filter);
+    let stacked_layer = tracing_layer.
+        and_then(metrics_layer).and_then(env_filter)
+        .and_then(tracing_subscriber::fmt::layer());
     tracing_subscriber::registry().with(stacked_layer).init();
 
     Ok(())
