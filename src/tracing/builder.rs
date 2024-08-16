@@ -1,5 +1,5 @@
 use super::{Tracer, TracerResult};
-use crate::eth_provider::{
+use crate::providers::eth_provider::{
     database::state::{EthCacheDatabase, EthDatabase},
     error::{EthApiError, TransactionError},
     provider::EthereumProvider,
@@ -15,7 +15,7 @@ use reth_rpc_types::{
 };
 use revm_inspectors::tracing::TracingInspectorConfig;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Floating;
 #[derive(Debug)]
 pub struct Pinned;
@@ -87,8 +87,8 @@ impl From<GethDebugTracingCallOptions> for TracingOptions {
     }
 }
 
-#[derive(Debug)]
-pub struct TracerBuilder<P: EthereumProvider + Send + Sync, Status = Floating> {
+#[derive(Debug, Clone)]
+pub struct TracerBuilder<P: EthereumProvider + Send + Sync + Clone, Status = Floating> {
     eth_provider: P,
     env: Env,
     block: Block,
@@ -139,7 +139,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
 
         // we can't trace a pending transaction
         if transaction.block_number.is_none() {
-            return Err(EthApiError::UnknownBlock(transaction_hash.into()));
+            return Err(EthApiError::TransactionNotFound(transaction_hash));
         }
 
         self.with_block_id(BlockId::Number(transaction.block_number.unwrap().into())).await
@@ -218,5 +218,114 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
         };
         env.block = block_env;
         env
+    }
+}
+
+// The following tests validates the behavior of the TracerBuilder when interacting with a mock Ethereum provider.
+// Each test focuses on different scenarios where the TracerBuilder is expected to handle various errors correctly,
+// such as unknown blocks, not found transactions, and invalid chain IDs.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::mock_provider::MockEthereumProviderStruct;
+    use reth_primitives::U64;
+    use reth_rpc_types::Transaction;
+    use std::sync::Arc;
+    #[tokio::test]
+    async fn test_tracer_builder_block_failure_with_none_block_number() {
+        // Create a mock Ethereum provider
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        // Expect the chain_id call to return 1
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        // Expect the block_by_number call to return an error for an unknown block
+        mock_provider.expect_block_by_number().returning(|_, _| Ok(None));
+
+        // Create a TracerBuilder with the mock provider
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        // Attempt to use the builder with a specific block ID, expecting an error
+        let result = builder.block(BlockId::Number(1.into())).await;
+        // Check that the result is an UnknownBlock error
+        assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_block_failure_with_none_block_hash() {
+        // Create a mock Ethereum provider
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        // Expect the chain_id call to return 1
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        // Expect the block_by_hash call to return an error for an unknown block
+        mock_provider.expect_block_by_hash().returning(|_, _| Ok(None));
+
+        // Create a TracerBuilder with the mock provider
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        // Attempt to use the builder with a specific block hash, expecting an error
+        let result = builder.block(BlockId::Hash(B256::repeat_byte(1).into())).await;
+        // Check that the result is an UnknownBlock error
+        assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_with_transaction_not_found() {
+        // Create a mock Ethereum provider
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        // Expect the chain_id call to return 1
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        // Expect the transaction_by_hash call to return Ok(None) for not found transaction
+        mock_provider.expect_transaction_by_hash().returning(|_| Ok(None));
+
+        // Create a TracerBuilder with the mock provider
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        // Attempt to use the builder with a specific transaction hash, expecting an error
+        let result = builder.with_transaction_hash(B256::repeat_byte(0)).await;
+        // Check that the result is a TransactionNotFound error
+        assert!(matches!(result, Err(EthApiError::TransactionNotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_with_unknown_block() {
+        // Create a mock Ethereum provider
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        // Expect the chain_id call to return 1
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        // Expect the transaction_by_hash call to return a transaction with no block number
+        mock_provider
+            .expect_transaction_by_hash()
+            .returning(|_| Ok(Some(Transaction { block_number: None, ..Default::default() })));
+
+        // Create a TracerBuilder with the mock provider
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        // Attempt to use the builder with a specific transaction hash, expecting an error
+        let result = builder.with_transaction_hash(B256::repeat_byte(0)).await;
+        // Check that the result is an UnknownBlock error
+        assert!(matches!(result, Err(EthApiError::TransactionNotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn test_tracer_builder_build_error() {
+        // Create a mock Ethereum provider
+        let mut mock_provider = MockEthereumProviderStruct::new();
+        // Expect the chain_id call to return 1
+        mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
+        // Expect the block_by_number call to return a block with non-full transactions
+        mock_provider.expect_block_by_number().returning(|_, _| {
+            Ok(Some(
+                Block {
+                    transactions: BlockTransactions::Hashes(vec![]),
+                    header: Header { hash: Some(B256::repeat_byte(1)), ..Default::default() },
+                    ..Default::default()
+                }
+                .into(),
+            ))
+        });
+
+        // Create a TracerBuilder with the mock provider
+        let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
+        // Attempt to use the builder with a specific block ID
+        let builder = builder.with_block_id(BlockId::Number(1.into())).await.unwrap();
+        // Attempt to build the tracer, expecting an error
+        let result = builder.build();
+        // Check that the result is an ExpectedFullTransactions error
+        assert!(matches!(result, Err(EthApiError::Transaction(TransactionError::ExpectedFullTransactions))));
     }
 }

@@ -1,7 +1,7 @@
 pub mod builder;
 
 use crate::{
-    eth_provider::{
+    providers::eth_provider::{
         database::state::EthCacheDatabase,
         error::{EthApiError, EthereumDataFormatError, TransactionError},
         provider::EthereumProvider,
@@ -380,7 +380,7 @@ fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> Trac
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::eth_provider::{database::Database, provider::EthDataProvider};
+    use crate::providers::eth_provider::{database::Database, provider::EthDataProvider};
     use builder::TracerBuilder;
     use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
     use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};

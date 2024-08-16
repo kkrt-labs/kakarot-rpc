@@ -1,14 +1,13 @@
 use crate::{
-    eth_provider::provider::EthProviderResult,
     into_via_wrapper,
     models::{
         felt::Felt252Wrapper,
         transaction::{transaction_data_to_starknet_calldata, transaction_signature_to_field_elements},
     },
+    providers::eth_provider::provider::EthProviderResult,
 };
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
-use lazy_static::lazy_static;
 use reth_primitives::{Address, TransactionSigned, B256};
 use starknet::{
     core::{
@@ -17,7 +16,7 @@ use starknet::{
     },
     macros::selector,
 };
-use std::str::FromStr;
+use std::{str::FromStr, sync::LazyLock};
 
 // Contract ABIs
 
@@ -50,22 +49,24 @@ fn env_var_to_field_element(var_name: &str) -> Felt {
     Felt::from_str(&env_var).unwrap_or_else(|_| panic!("Invalid hex string for {var_name}"))
 }
 
-lazy_static! {
-    // Contract addresses
-    pub static ref KAKAROT_ADDRESS: Felt = env_var_to_field_element("KAKAROT_ADDRESS");
+/// Kakarot address
+pub static KAKAROT_ADDRESS: LazyLock<Felt> = LazyLock::new(|| env_var_to_field_element("KAKAROT_ADDRESS"));
 
-    // Contract class hashes
-    pub static ref UNINITIALIZED_ACCOUNT_CLASS_HASH: Felt = env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH");
+/// Uninitialized account class hash
+pub static UNINITIALIZED_ACCOUNT_CLASS_HASH: LazyLock<Felt> =
+    LazyLock::new(|| env_var_to_field_element("UNINITIALIZED_ACCOUNT_CLASS_HASH"));
 
-    // Contract selectors
-    pub static ref ETH_SEND_TRANSACTION: Felt = selector!("eth_send_transaction");
+/// Ethereum send transaction selector
+pub static ETH_SEND_TRANSACTION: LazyLock<Felt> = LazyLock::new(|| selector!("eth_send_transaction"));
 
-    // Maximum number of felts (bytes) in calldata
-    pub static ref MAX_FELTS_IN_CALLDATA: usize = usize::from_str(
+/// Maximum number of felts in calldata
+pub static MAX_FELTS_IN_CALLDATA: LazyLock<usize> = LazyLock::new(|| {
+    usize::from_str(
         &std::env::var("MAX_FELTS_IN_CALLDATA")
-            .unwrap_or_else(|_| panic!("Missing environment variable MAX_FELTS_IN_CALLDATA"))
-    ).expect("failing to parse MAX_FELTS_IN_CALLDATA");
-}
+            .unwrap_or_else(|_| panic!("Missing environment variable MAX_FELTS_IN_CALLDATA")),
+    )
+    .expect("Failed to parse MAX_FELTS_IN_CALLDATA")
+});
 
 pub fn get_white_listed_eip_155_transaction_hashes() -> Vec<B256> {
     std::env::var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES")

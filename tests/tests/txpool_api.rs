@@ -2,7 +2,7 @@
 #![cfg(feature = "testing")]
 use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::{
-    eth_provider::database::types::transaction::StoredPendingTransaction,
+    providers::eth_provider::database::types::transaction::StoredPendingTransaction,
     test_utils::{
         fixtures::{katana, setup},
         katana::Katana,

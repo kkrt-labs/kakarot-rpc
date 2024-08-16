@@ -1,7 +1,6 @@
-use lazy_static::lazy_static;
 use reth_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{str::FromStr, sync::LazyLock};
 #[cfg(feature = "hive")]
 use {
     crate::config::KakarotRpcConfig,
@@ -16,14 +15,12 @@ use {
     tokio::sync::Mutex,
 };
 
-lazy_static! {
-    pub static ref MAX_PRIORITY_FEE_PER_GAS: u64 = 0;
+/// Maximum priority fee per gas
+pub static MAX_PRIORITY_FEE_PER_GAS: LazyLock<u64> = LazyLock::new(|| 0);
 
-    /// Maximum number of logs that can be fetched in a single request
-    pub static ref MAX_LOGS: Option<u64> = std::env::var("MAX_LOGS")
-        .ok()
-        .and_then(|val| u64::from_str(&val).ok());
-}
+/// Maximum number of logs that can be fetched in a single request
+pub static MAX_LOGS: LazyLock<Option<u64>> =
+    LazyLock::new(|| std::env::var("MAX_LOGS").ok().and_then(|val| u64::from_str(&val).ok()));
 
 /// Gas limit for estimate gas and call
 pub const CALL_REQUEST_GAS_LIMIT: u128 = 50_000_000;
@@ -44,22 +41,27 @@ pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x0800_0000_0000
 pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
 
 #[cfg(feature = "hive")]
-lazy_static! {
-    static ref RPC_CONFIG: KakarotRpcConfig = KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config");
-    pub static ref DEPLOY_WALLET: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet> =
+pub static RPC_CONFIG: LazyLock<KakarotRpcConfig> =
+    LazyLock::new(|| KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config"));
+
+#[cfg(feature = "hive")]
+pub static DEPLOY_WALLET: LazyLock<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> =
+    LazyLock::new(|| {
         SingleOwnerAccount::new(
             JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
             LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                 Felt::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
-                    .expect("Failed to parse deployer private key")
+                    .expect("Failed to parse deployer private key"),
             )),
             Felt::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
                 .expect("Failed to parse deployer address"),
             *CHAIN_ID.get().expect("Failed to get chain id"),
-            ExecutionEncoding::New
-        );
-    pub static ref DEPLOY_WALLET_NONCE: Arc<Mutex<Felt>> = Arc::new(Mutex::new(Felt::ZERO));
-}
+            ExecutionEncoding::New,
+        )
+    });
+
+#[cfg(feature = "hive")]
+pub static DEPLOY_WALLET_NONCE: LazyLock<Arc<Mutex<Felt>>> = LazyLock::new(|| Arc::new(Mutex::new(Felt::ZERO)));
 
 /// Struct used to return the constant values from the `kakarot_getConfig` endpoint
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
