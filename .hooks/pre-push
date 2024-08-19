@@ -12,7 +12,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-cargo fmt --all --check
+cargo +nightly fmt --all --check
 if [ $? -ne 0 ]; then
     echo "Pre-push hook failed: cargo fmt detected formatting issues."
     exit 1
