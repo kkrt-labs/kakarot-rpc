@@ -24,14 +24,20 @@ import {
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/assert_equals.ts";
 import { Common } from "https://esm.sh/v135/@ethereumjs/common@4.1.0/denonext/common.mjs";
 import { ExtendedJsonRpcTx } from "./interfaces.ts";
+import {
+  EXPECTED_TRANSFORM_DATA_FILE,
+  TRANSACTIONS_DATA_FILE,
+} from "../constants.ts";
 
-const jsonData = await Deno.readTextFile(
-  "indexer/src/test-data/transactionsData.json",
+// Transaction data including headers, events, and transactions
+const jsonTransactionsData = await Deno.readTextFile(
+  TRANSACTIONS_DATA_FILE,
 );
-const transactionsData = JSON.parse(jsonData);
+const transactionsData = JSON.parse(jsonTransactionsData);
 
+// Expected output after transform and toTypedEthTx transformation for comparison in tests
 const jsonExpectedTransformData = await Deno.readTextFile(
-  "indexer/src/test-data/expectedTransformData.json",
+  EXPECTED_TRANSFORM_DATA_FILE,
 );
 const expectedTransformData = JSON.parse(jsonExpectedTransformData);
 

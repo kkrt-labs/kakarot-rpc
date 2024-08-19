@@ -24,14 +24,20 @@ import {
   TypedTransaction,
 } from "./deps.ts";
 import { JsonRpcReceipt } from "./types/receipt.ts";
+import {
+  EXPECTED_TRANSFORM_DATA_FILE,
+  TRANSACTIONS_DATA_FILE,
+} from "./constants.ts";
 
+// Transaction data including headers, events, and transactions
 const jsonTransactionsData = await Deno.readTextFile(
-  "indexer/src/test-data/transactionsData.json",
+  TRANSACTIONS_DATA_FILE,
 );
 const transactionsData = JSON.parse(jsonTransactionsData);
 
+// Expected output after transform and toTypedEthTx transformation for comparison in tests
 const jsonExpectedTransformData = await Deno.readTextFile(
-  "indexer/src/test-data/expectedTransformData.json",
+  EXPECTED_TRANSFORM_DATA_FILE,
 );
 const expectedTransformData = JSON.parse(jsonExpectedTransformData);
 
