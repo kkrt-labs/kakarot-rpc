@@ -1,8 +1,8 @@
 use crate::{
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
-        provider::{EthDataProvider, EthereumProvider},
-        starknet::kakarot_core::starknet_address,
+        chain::ChainProvider, provider::EthDataProvider, starknet::kakarot_core::starknet_address,
+        transactions::TransactionProvider,
     },
     test_utils::{
         evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo},

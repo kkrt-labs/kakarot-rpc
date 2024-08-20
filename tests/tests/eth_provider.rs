@@ -4,9 +4,16 @@ use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
+        blocks::BlockProvider,
+        chain::ChainProvider,
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
+        gas::GasProvider,
+        logs::LogProvider,
         provider::EthereumProvider,
+        receipts::ReceiptProvider,
+        state::StateProvider,
+        transactions::TransactionProvider,
     },
     test_utils::{
         eoa::Eoa,
