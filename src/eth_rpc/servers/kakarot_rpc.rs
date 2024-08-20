@@ -4,7 +4,7 @@ use crate::{
     providers::eth_provider::{
         constant::{Constant, MAX_LOGS},
         error::{EthApiError, EthereumDataFormatError, SignatureError},
-        provider::EthereumProvider1,
+        provider::EthereumProvider,
         starknet::kakarot_core::{
             get_white_listed_eip_155_transaction_hashes, to_starknet_transaction, MAX_FELTS_IN_CALLDATA,
         },
@@ -50,7 +50,7 @@ impl ToElements for BroadcastedInvokeTransaction {
 #[async_trait]
 impl<EP, SP> KakarotApiServer for KakarotRpc<EP, SP>
 where
-    EP: EthereumProvider1 + Send + Sync + 'static,
+    EP: EthereumProvider + Send + Sync + 'static,
     SP: Provider + Send + Sync + 'static,
 {
     #[instrument(skip(self))]

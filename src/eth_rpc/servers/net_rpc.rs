@@ -1,22 +1,22 @@
-use crate::{eth_rpc::api::net_api::NetApiServer, providers::eth_provider::provider::EthereumProvider1};
+use crate::{eth_rpc::api::net_api::NetApiServer, providers::eth_provider::provider::EthereumProvider};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::U64;
 use reth_rpc_types::PeerCount;
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]
-pub struct NetRpc<P: EthereumProvider1> {
+pub struct NetRpc<P: EthereumProvider> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider1> NetRpc<P> {
+impl<P: EthereumProvider> NetRpc<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider1 + Send + Sync + 'static> NetApiServer for NetRpc<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> NetApiServer for NetRpc<P> {
     async fn version(&self) -> Result<U64> {
         Ok(self.eth_provider.chain_id().await?.unwrap_or_default())
     }

@@ -2,7 +2,7 @@ use super::{Tracer, TracerResult};
 use crate::providers::eth_provider::{
     database::state::{EthCacheDatabase, EthDatabase},
     error::{EthApiError, TransactionError},
-    provider::EthereumProvider1,
+    provider::EthereumProvider,
 };
 use reth_primitives::{B256, U256};
 use reth_revm::{
@@ -88,7 +88,7 @@ impl From<GethDebugTracingCallOptions> for TracingOptions {
 }
 
 #[derive(Debug, Clone)]
-pub struct TracerBuilder<P: EthereumProvider1 + Send + Sync + Clone, Status = Floating> {
+pub struct TracerBuilder<P: EthereumProvider + Send + Sync + Clone, Status = Floating> {
     eth_provider: P,
     env: Env,
     block: Block,
@@ -101,7 +101,7 @@ pub struct TracerBuilder<P: EthereumProvider1 + Send + Sync + Clone, Status = Fl
 /// Remove when block gas limit is enforced consistently (i.e. when we check that a transaction's gas limit is lower than the block gas limit as well as the current block's cumulative gas)
 pub const TRACING_BLOCK_GAS_LIMIT: u64 = 1_000_000_000;
 
-impl<P: EthereumProvider1 + Send + Sync + Clone> TracerBuilder<P, Floating> {
+impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
     pub async fn new(eth_provider: P) -> TracerResult<Self> {
         let cfg = CfgEnv::default().with_chain_id(eth_provider.chain_id().await?.unwrap_or_default().to());
 
@@ -171,7 +171,7 @@ impl<P: EthereumProvider1 + Send + Sync + Clone> TracerBuilder<P, Floating> {
     }
 }
 
-impl<P: EthereumProvider1 + Send + Sync + Clone> TracerBuilder<P, Pinned> {
+impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
     /// Sets the tracing options
     #[must_use]
     pub fn with_tracing_options(mut self, tracing_options: TracingOptions) -> Self {

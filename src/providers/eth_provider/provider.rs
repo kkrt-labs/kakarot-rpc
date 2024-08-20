@@ -44,18 +44,18 @@ use {
 pub type EthProviderResult<T> = Result<T, EthApiError>;
 
 #[async_trait]
-pub trait EthereumProvider1:
+pub trait EthereumProvider:
     GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
 {
 }
 
 #[async_trait]
-impl<T> EthereumProvider1 for T where
+impl<T> EthereumProvider for T where
     T: GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
 {
 }
 
-/// Structure that implements the `EthereumProvider1` trait.
+/// Structure that implements the `EthereumProvider` trait.
 /// Uses access to a database for certain data, while
 /// the rest is fetched from the Starknet Provider.
 #[derive(Debug, Clone)]

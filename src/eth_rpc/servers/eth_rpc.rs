@@ -2,7 +2,7 @@
 
 use crate::{
     eth_rpc::api::eth_api::EthApiServer,
-    providers::eth_provider::{constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, provider::EthereumProvider1},
+    providers::eth_provider::{constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, provider::EthereumProvider},
 };
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
@@ -17,14 +17,14 @@ use serde_json::Value;
 #[derive(Debug)]
 pub struct KakarotEthRpc<P>
 where
-    P: EthereumProvider1,
+    P: EthereumProvider,
 {
     eth_provider: P,
 }
 
 impl<P> KakarotEthRpc<P>
 where
-    P: EthereumProvider1,
+    P: EthereumProvider,
 {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
@@ -34,7 +34,7 @@ where
 #[async_trait]
 impl<P> EthApiServer for KakarotEthRpc<P>
 where
-    P: EthereumProvider1 + Send + Sync + 'static,
+    P: EthereumProvider + Send + Sync + 'static,
 {
     #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {

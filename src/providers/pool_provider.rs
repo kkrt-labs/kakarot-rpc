@@ -1,4 +1,4 @@
-use crate::providers::eth_provider::provider::{EthProviderResult, EthereumProvider1};
+use crate::providers::eth_provider::provider::{EthProviderResult, EthereumProvider};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use reth_primitives::Address;
@@ -14,18 +14,18 @@ pub trait PoolProvider {
 }
 
 #[derive(Debug, Clone)]
-pub struct PoolDataProvider<P: EthereumProvider1> {
+pub struct PoolDataProvider<P: EthereumProvider> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider1> PoolDataProvider<P> {
+impl<P: EthereumProvider> PoolDataProvider<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider1 + Send + Sync + 'static> PoolProvider for PoolDataProvider<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> PoolProvider for PoolDataProvider<P> {
     async fn txpool_status(&self) -> EthProviderResult<TxpoolStatus> {
         let all = self.eth_provider.txpool_content().await?;
         Ok(TxpoolStatus { pending: all.pending.len() as u64, queued: all.queued.len() as u64 })

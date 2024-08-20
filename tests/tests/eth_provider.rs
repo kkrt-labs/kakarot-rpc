@@ -10,7 +10,7 @@ use kakarot_rpc::{
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
         gas::GasProvider,
         logs::LogProvider,
-        provider::EthereumProvider1,
+        provider::EthereumProvider,
         receipts::ReceiptProvider,
         state::StateProvider,
         transactions::TransactionProvider,
@@ -295,7 +295,7 @@ async fn test_get_logs_block_range(#[future] katana: Katana, _setup: ()) {
 
 /// Utility function to filter logs using the Ethereum provider.
 /// Takes a filter and a provider, and returns the corresponding logs.
-async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider1>) -> Vec<Log> {
+async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider>) -> Vec<Log> {
     // Call the provider to get logs using the filter.
     let logs = provider.get_logs(filter).await.expect("Failed to get logs");
     // If the result contains logs, return them, otherwise panic with an error.

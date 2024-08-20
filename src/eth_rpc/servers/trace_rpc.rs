@@ -1,5 +1,5 @@
 use crate::{
-    eth_rpc::api::trace_api::TraceApiServer, providers::eth_provider::provider::EthereumProvider1,
+    eth_rpc::api::trace_api::TraceApiServer, providers::eth_provider::provider::EthereumProvider,
     tracing::builder::TracerBuilder,
 };
 use jsonrpsee::core::{async_trait, RpcResult as Result};
@@ -9,18 +9,18 @@ use std::sync::Arc;
 
 /// The RPC module for implementing the Trace api
 #[derive(Debug)]
-pub struct TraceRpc<P: EthereumProvider1> {
+pub struct TraceRpc<P: EthereumProvider> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider1> TraceRpc<P> {
+impl<P: EthereumProvider> TraceRpc<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider1 + Send + Sync + 'static> TraceApiServer for TraceRpc<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> TraceApiServer for TraceRpc<P> {
     /// Returns the parity traces for the given block.
     #[allow(clippy::blocks_in_conditions)]
     #[tracing::instrument(skip(self), err)]

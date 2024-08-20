@@ -3,7 +3,7 @@ use crate::{
     providers::eth_provider::{
         contracts::erc20::EthereumErc20,
         error::EthApiError,
-        provider::{EthProviderResult, EthereumProvider1},
+        provider::{EthProviderResult, EthereumProvider},
     },
 };
 use async_trait::async_trait;
@@ -34,18 +34,18 @@ pub trait AlchemyProvider {
 }
 
 #[derive(Debug, Clone)]
-pub struct AlchemyDataProvider<P: EthereumProvider1> {
+pub struct AlchemyDataProvider<P: EthereumProvider> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider1> AlchemyDataProvider<P> {
+impl<P: EthereumProvider> AlchemyDataProvider<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider1 + Send + Sync + 'static> AlchemyProvider for AlchemyDataProvider<P> {
+impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDataProvider<P> {
     async fn token_balances(
         &self,
         address: Address,
