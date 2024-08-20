@@ -1,4 +1,4 @@
-use crate::providers::eth_provider::{error::EthApiError, provider::EthereumProvider};
+use crate::providers::eth_provider::{error::EthApiError, provider::EthereumProvider1};
 use reth_primitives::{Address, B256, U256};
 use reth_revm::{
     db::CacheDB,
@@ -9,19 +9,19 @@ use reth_rpc_types::{serde_helpers::JsonStorageKey, BlockHashOrNumber, BlockId, 
 use tokio::runtime::Handle;
 
 #[derive(Debug, Clone)]
-pub struct EthCacheDatabase<P: EthereumProvider + Send + Sync>(pub CacheDB<EthDatabase<P>>);
+pub struct EthCacheDatabase<P: EthereumProvider1 + Send + Sync>(pub CacheDB<EthDatabase<P>>);
 
 /// Ethereum database type.
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
-pub struct EthDatabase<P: EthereumProvider + Send + Sync> {
+pub struct EthDatabase<P: EthereumProvider1 + Send + Sync> {
     /// The Ethereum provider.
     provider: P,
     /// The block ID.
     block_id: BlockId,
 }
 
-impl<P: EthereumProvider + Send + Sync> EthDatabase<P> {
+impl<P: EthereumProvider1 + Send + Sync> EthDatabase<P> {
     pub(crate) const fn new(provider: P, block_id: BlockId) -> Self {
         Self { provider, block_id }
     }
@@ -39,7 +39,7 @@ impl<P: EthereumProvider + Send + Sync> EthDatabase<P> {
 /// The `tokio::task::block_in_place` function is employed here to enter a blocking context safely
 /// within an asynchronous environment. This allows the blocking database operations to be executed
 /// without hindering the performance of other asynchronous tasks or blocking the runtime.
-impl<P: EthereumProvider + Send + Sync> DatabaseRef for EthDatabase<P> {
+impl<P: EthereumProvider1 + Send + Sync> DatabaseRef for EthDatabase<P> {
     type Error = EthApiError;
 
     /// Returns the account information for the given address without caching.

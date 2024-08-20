@@ -1,7 +1,7 @@
 use crate::{
     providers::eth_provider::{
         error::{EthApiError, EthereumDataFormatError, SignatureError},
-        provider::{EthProviderResult, EthereumProvider},
+        provider::{EthProviderResult, EthereumProvider1},
     },
     tracing::builder::TracerBuilder,
 };
@@ -49,18 +49,18 @@ pub trait DebugProvider {
 }
 
 #[derive(Debug, Clone)]
-pub struct DebugDataProvider<P: EthereumProvider> {
+pub struct DebugDataProvider<P: EthereumProvider1> {
     eth_provider: P,
 }
 
-impl<P: EthereumProvider> DebugDataProvider<P> {
+impl<P: EthereumProvider1> DebugDataProvider<P> {
     pub const fn new(eth_provider: P) -> Self {
         Self { eth_provider }
     }
 }
 
 #[async_trait]
-impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataProvider<P> {
+impl<P: EthereumProvider1 + Send + Sync + 'static> DebugProvider for DebugDataProvider<P> {
     async fn raw_header(&self, block_id: BlockId) -> EthProviderResult<Bytes> {
         let mut res = Vec::new();
         if let Some(header) = self

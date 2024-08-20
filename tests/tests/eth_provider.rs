@@ -4,9 +4,16 @@ use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
+        blocks::BlockProvider,
+        chain::ChainProvider,
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
-        provider::EthereumProvider,
+        gas::GasProvider,
+        logs::LogProvider,
+        provider::EthereumProvider1,
+        receipts::ReceiptProvider,
+        state::StateProvider,
+        transactions::TransactionProvider,
     },
     test_utils::{
         eoa::Eoa,
@@ -288,7 +295,7 @@ async fn test_get_logs_block_range(#[future] katana: Katana, _setup: ()) {
 
 /// Utility function to filter logs using the Ethereum provider.
 /// Takes a filter and a provider, and returns the corresponding logs.
-async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider>) -> Vec<Log> {
+async fn filter_logs(filter: Filter, provider: Arc<dyn EthereumProvider1>) -> Vec<Log> {
     // Call the provider to get logs using the filter.
     let logs = provider.get_logs(filter).await.expect("Failed to get logs");
     // If the result contains logs, return them, otherwise panic with an error.

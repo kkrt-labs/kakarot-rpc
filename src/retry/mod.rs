@@ -6,7 +6,7 @@ use crate::providers::eth_provider::{
         types::transaction::StoredPendingTransaction,
         Database,
     },
-    provider::EthereumProvider,
+    provider::EthereumProvider1,
 };
 use eyre::Result;
 use opentelemetry::metrics::{Gauge, Unit};
@@ -34,7 +34,7 @@ pub fn get_transaction_max_retries() -> u8 {
 }
 
 /// The [`RetryHandler`] is responsible for retrying transactions that have failed.
-pub struct RetryHandler<P: EthereumProvider> {
+pub struct RetryHandler<P: EthereumProvider1> {
     /// The Ethereum provider.
     eth_provider: P,
     /// The database.
@@ -46,7 +46,7 @@ pub struct RetryHandler<P: EthereumProvider> {
     retried: Arc<Mutex<Vec<B256>>>,
 }
 
-impl<P: EthereumProvider> fmt::Debug for RetryHandler<P> {
+impl<P: EthereumProvider1> fmt::Debug for RetryHandler<P> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RetryHandler")
             .field("eth_provider", &"...")
@@ -57,7 +57,7 @@ impl<P: EthereumProvider> fmt::Debug for RetryHandler<P> {
 
 impl<P> RetryHandler<P>
 where
-    P: EthereumProvider + Send + Sync + 'static,
+    P: EthereumProvider1 + Send + Sync + 'static,
 {
     /// Creates a new [`RetryHandler`] with the given Ethereum provider, database.
     #[allow(clippy::missing_const_for_fn)]

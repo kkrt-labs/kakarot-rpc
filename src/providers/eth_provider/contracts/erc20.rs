@@ -2,7 +2,7 @@
 
 use crate::providers::eth_provider::{
     error::ExecutionError,
-    provider::{EthProviderResult, EthereumProvider},
+    provider::{EthProviderResult, EthereumProvider1},
 };
 use alloy_dyn_abi::DynSolType;
 use alloy_sol_types::{sol, SolCall};
@@ -22,14 +22,14 @@ sol! {
 
 /// Abstraction for a Kakarot ERC20 contract.
 #[derive(Debug)]
-pub struct EthereumErc20<P: EthereumProvider> {
+pub struct EthereumErc20<P: EthereumProvider1> {
     /// The address of the ERC20 contract.
     pub address: Address,
     /// The provider for interacting with the Ethereum network.
     pub provider: P,
 }
 
-impl<P: EthereumProvider> EthereumErc20<P> {
+impl<P: EthereumProvider1> EthereumErc20<P> {
     /// Creates a new instance of [`EthereumErc20`].
     pub const fn new(address: Address, provider: P) -> Self {
         Self { address, provider }

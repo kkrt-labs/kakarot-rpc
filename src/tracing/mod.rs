@@ -4,7 +4,7 @@ use crate::{
     providers::eth_provider::{
         database::state::EthCacheDatabase,
         error::{EthApiError, EthereumDataFormatError, TransactionError},
-        provider::EthereumProvider,
+        provider::EthereumProvider1,
     },
     tracing::builder::TracingOptions,
 };
@@ -82,14 +82,14 @@ impl TracingResult {
 }
 
 #[derive(Debug)]
-pub struct Tracer<P: EthereumProvider + Send + Sync> {
+pub struct Tracer<P: EthereumProvider1 + Send + Sync> {
     transactions: Vec<reth_rpc_types::Transaction>,
     env: EnvWithHandlerCfg,
     db: EthCacheDatabase<P>,
     tracing_options: TracingOptions,
 }
 
-impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
+impl<P: EthereumProvider1 + Send + Sync + Clone> Tracer<P> {
     /// Traces the transaction with Geth tracing options and returns the resulting traces and state.
     fn trace_geth(
         env: EnvWithHandlerCfg,

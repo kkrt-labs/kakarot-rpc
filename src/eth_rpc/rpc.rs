@@ -11,7 +11,7 @@ use crate::{
         },
     },
     providers::{
-        alchemy_provider::AlchemyProvider, debug_provider::DebugProvider, eth_provider::provider::EthereumProvider,
+        alchemy_provider::AlchemyProvider, debug_provider::DebugProvider, eth_provider::provider::EthereumProvider1,
         pool_provider::PoolProvider,
     },
 };
@@ -35,7 +35,7 @@ pub enum KakarotRpcModule {
 #[derive(Debug)]
 pub struct KakarotRpcModuleBuilder<EP, SP, AP, PP, DP>
 where
-    EP: EthereumProvider + Send + Sync,
+    EP: EthereumProvider1 + Send + Sync,
     SP: Provider + Send + Sync,
     AP: AlchemyProvider + Send + Sync,
     PP: PoolProvider + Send + Sync,
@@ -47,7 +47,7 @@ where
 
 impl<EP, SP, AP, PP, DP> KakarotRpcModuleBuilder<EP, SP, AP, PP, DP>
 where
-    EP: EthereumProvider + Send + Sync + 'static,
+    EP: EthereumProvider1 + Send + Sync + 'static,
     SP: Provider + Send + Sync + 'static,
     AP: AlchemyProvider + Send + Sync + 'static,
     PP: PoolProvider + Send + Sync + 'static,
