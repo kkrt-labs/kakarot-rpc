@@ -35,7 +35,7 @@ use testcontainers::ContainerAsync;
 use {
     super::mongo::MongoFuzzer,
     dojo_test_utils::sequencer::SequencerConfig,
-    reth_primitives::{TxType, B256},
+    reth_primitives::B256,
     reth_rpc_types::{Header, Transaction},
     std::str::FromStr as _,
 };
@@ -121,18 +121,6 @@ impl<'a> Katana {
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
         // Add a hardcoded block header range to the MongoDB database.
         mongo_fuzzer.add_hardcoded_block_header_range(0..4).expect("Failed to add block range in the database");
-        // Add a hardcoded Eip1559 transaction to the MongoDB database.
-        mongo_fuzzer
-            .add_hardcoded_transaction(Some(TxType::Eip1559))
-            .expect("Failed to add Eip1559 transaction in the database");
-        // Add a hardcoded Eip2930 transaction to the MongoDB database.
-        mongo_fuzzer
-            .add_hardcoded_transaction(Some(TxType::Eip2930))
-            .expect("Failed to add Eip2930 transaction in the database");
-        // Add a hardcoded Legacy transaction to the MongoDB database.
-        mongo_fuzzer
-            .add_hardcoded_transaction(Some(TxType::Legacy))
-            .expect("Failed to add Legacy transaction in the database");
         // Add a hardcoded logs to the MongoDB database.
         mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
         // Add a hardcoded header to the MongoDB database.

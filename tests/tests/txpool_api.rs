@@ -182,7 +182,7 @@ async fn test_txpool_inspect(#[future] katana: Katana, _setup: ()) {
             to: first_pending_tx.to,
             value: first_pending_tx.value,
             gas: first_pending_tx.gas,
-            gas_price: first_pending_tx.gas_price.unwrap()
+            gas_price: first_pending_tx.gas_price.unwrap_or_default(),
         }
     );
 
