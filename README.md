@@ -147,6 +147,7 @@ Caveats:
 2. the [kakarot](https://github.com/kkrt-labs/kakarot) submodule uses Python to build
    and deploy Kakarot contracts. If you don't have the right version available, we
    recommend to use [pyenv](https://github.com/pyenv/pyenv) to install it.
+3. We use a pre-commit hook to ensure code quality and consistency. The hook will be installed automatically by running `make setup`, otherwise you can install it manually by running the script `scripts/install_hooks.sh`.
 
 ### Build from source
 
