@@ -90,7 +90,7 @@ export default async function transform({
     // Skip if the transaction_executed event contains "eth validation failed".
     .filter((event) => !ethValidationFailed(event.event))
     .map(processEvent(blockInfo))
-    .filter((event) => event !== null);
+    .filter((event): event is ProcessedEvent => event !== null);
 
   const { cumulativeGasUsed, cumulativeGasUsages } =
     accumulateGasAndUpdateStore(processedEvents, store, blockLogsBloom);
@@ -98,9 +98,9 @@ export default async function transform({
   const trieData: Array<TrieData> = processedEvents
     .map((event) =>
       createTrieData({
-        transactionIndex: Number(event.ethTx.transactionIndex),
-        typedTransaction: event.typedEthTx,
-        receipt: event.ethReceipt,
+        transactionIndex: Number(event!.ethTx.transactionIndex),
+        typedTransaction: event!.typedEthTx,
+        receipt: event!.ethReceipt,
       })
     )
     .filter((x) => x !== null);
@@ -113,7 +113,7 @@ export default async function transform({
   const processedTransactions = processTransactions(
     transactions,
     blockInfo,
-    cumulativeGasUsages
+    cumulativeGasUsages,
   );
   updateStoreWithTransactions(store, processedTransactions);
 
@@ -166,14 +166,12 @@ function processEvent(blockInfo: BlockInfo) {
       // Can be null if:
       // 1. The event is part of the defined ignored events (see IGNORED_KEYS).
       // 2. The event has an invalid number of keys.
-      .filter((e) => e !== null);
+      .filter((e): e is JsonRpcLog => e !== null);
 
-    const ethLogsIndexed = ethLogs.map((log, index) => {
-      // ...log,
-      // logIndex: index.toString(),
-      log.logIndex = index.toString();
-      return log;
-    });
+    const ethLogsIndexed = ethLogs.map((log, index) => ({
+      ...log,
+      logIndex: index.toString(),
+    }));
 
     const ethReceipt = toEthReceipt({
       transaction: ethTx as JsonRpcTx,
@@ -183,14 +181,14 @@ function processEvent(blockInfo: BlockInfo) {
       ...blockInfo,
     });
 
-    return { event, typedEthTx, ethTx, ethLogs, ethReceipt };
+    return { event, typedEthTx, ethTx, ethLogs: ethLogsIndexed, ethReceipt };
   };
 }
 
 function accumulateGasAndUpdateStore(
   processedEvents: ProcessedEvent[],
   store: Array<StoreItem>,
-  blockLogsBloom: Bloom
+  blockLogsBloom: Bloom,
 ): { cumulativeGasUsed: bigint; cumulativeGasUsages: bigint[] } {
   let cumulativeGasUsed = 0n;
   const cumulativeGasUsages: bigint[] = [];
@@ -234,7 +232,7 @@ function updateBlockLogsBloom(blockLogsBloom: Bloom, event: ProcessedEvent) {
 }
 
 async function computeBlooms(
-  trieData: Array<TrieData>
+  trieData: Array<TrieData>,
 ): Promise<{ transactionTrie: Trie; receiptTrie: Trie }> {
   const transactionTrie = new Trie();
   const receiptTrie = new Trie();
@@ -251,8 +249,8 @@ async function computeBlooms(
         await transactionTrie.put(encodedTransactionIndex, encodedTransaction);
         // Add the receipt to the receipt trie.
         await receiptTrie.put(encodedTransactionIndex, encodedReceipt);
-      }
-    )
+      },
+    ),
   );
 
   return { transactionTrie, receiptTrie };
@@ -261,22 +259,22 @@ async function computeBlooms(
 function processTransactions(
   transactions: TransactionWithReceipt[],
   blockInfo: BlockInfo,
-  cumulativeGasUsages: bigint[]
+  cumulativeGasUsages: bigint[],
 ): ProcessedTransaction[] {
   return transactions
     .filter(
       (tx) =>
         isRevertedWithOutOfResources(tx.receipt) &&
-        isKakarotTransaction(tx.transaction)
+        isKakarotTransaction(tx.transaction),
     )
     .map((tx) => createProcessedTransaction(tx, blockInfo, cumulativeGasUsages))
-    .filter((tx) => tx !== null);
+    .filter((tx): tx is ProcessedTransaction => tx !== null);
 }
 
 function createProcessedTransaction(
   tx: TransactionWithReceipt,
   blockInfo: BlockInfo,
-  cumulativeGasUsages: bigint[]
+  cumulativeGasUsages: bigint[],
 ): ProcessedTransaction | null {
   const ethTx = toEthTx({
     transaction: tx.transaction,
@@ -289,12 +287,11 @@ function createProcessedTransaction(
   // const cumulativeGasUsages = [300n, undefined, undefined, 200n, undefined, 100n, undefined, undefined, 10n, undefined];
   // const ethTx = { transactionIndex: 5 };
   // const revertedTransactionCumulativeGasUsed = 100n;
-  const revertedTransactionCumulativeGasUsed =
-    cumulativeGasUsages.find(
-      (gas, i) =>
-        Number(ethTx.transactionIndex) >= cumulativeGasUsages.length - 1 - i &&
-        gas
-    ) ?? 0n;
+  const revertedTransactionCumulativeGasUsed = cumulativeGasUsages.find(
+    (gas, i) =>
+      Number(ethTx.transactionIndex) >= cumulativeGasUsages.length - 1 - i &&
+      gas,
+  ) ?? 0n;
 
   const ethReceipt = toRevertedOutOfResourcesReceipt({
     transaction: ethTx as JsonRpcTx,
@@ -307,10 +304,13 @@ function createProcessedTransaction(
 
 function updateStoreWithTransactions(
   store: Array<StoreItem>,
-  processedTransactions: ProcessedTransaction[]
+  processedTransactions: ProcessedTransaction[],
 ) {
   processedTransactions.forEach(({ ethTx, ethReceipt }) => {
-    store.push({ collection: Collection.Transactions, data: { tx: ethTx as JsonRpcTx } });
+    store.push({
+      collection: Collection.Transactions,
+      data: { tx: ethTx as JsonRpcTx },
+    });
     store.push({
       collection: Collection.Receipts,
       data: { receipt: ethReceipt },
