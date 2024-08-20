@@ -1,6 +1,6 @@
 <div align="center">
   <h1>Kakarot RPC</h1>
-  <img src="docs/images/logo.png" height="200">
+  <img src="docs/images/kakarot_github_banner.png" height="200">
   <br />
   <a href="https://github.com/sayajin-labs/kakarot-rpc/issues/new?assignees=&labels=bug&template=01_BUG_REPORT.md&title=bug%3A+">
   Report a Bug
