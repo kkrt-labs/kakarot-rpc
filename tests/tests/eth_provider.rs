@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use alloy_primitives::{address, b256, bytes};
 use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
     models::felt::Felt252Wrapper,
@@ -513,7 +514,7 @@ async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _set
     let request = TransactionRequest {
         from: Some(eoa.evm_address().unwrap()),
         to: Some(TxKind::Call(counter_address.try_into().unwrap())),
-        input: TransactionInput { input: None, data: Some(Bytes::from_str("0x371303c0").unwrap()) }, // selector of "function inc()"
+        input: TransactionInput { input: None, data: Some(bytes!("0x371303c0")) }, // selector of "function inc()"
         chain_id: Some(chain_id.to::<u64>()),
         ..Default::default()
     };
@@ -571,8 +572,8 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     let eoa = katana.eoa();
     let eth_provider = katana.eth_provider();
     let starknet_provider = eth_provider.starknet_provider();
-    let other_eoa_1 = KakarotEOA::new(B256::from_str(&format!("0x{:0>64}", "0abde1")).unwrap(), eth_provider.clone());
-    let other_eoa_2 = KakarotEOA::new(B256::from_str(&format!("0x{:0>64}", "0abde2")).unwrap(), eth_provider.clone());
+    let other_eoa_1 = KakarotEOA::new(b256!("0x0abde1"), eth_provider.clone());
+    let other_eoa_2 = KakarotEOA::new(b256!("0x0abde2"), eth_provider.clone());
     let chain_id = starknet_provider.chain_id().await.unwrap();
     CHAIN_ID.set(chain_id).expect("Failed to set chain id");
 
@@ -738,7 +739,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup:
 
     // Use the transaction for the Arachnid deployer
     // https://github.com/Arachnid/deterministic-deployment-proxy
-    let transaction = Transaction::Legacy(TxLegacy{value:U256::ZERO, chain_id: None, nonce, gas_price: 100_000_000_000, gas_limit: 100_000, to: TxKind::Create, input: Bytes::from_str("604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3").unwrap()});
+    let transaction = Transaction::Legacy(TxLegacy{value:U256::ZERO, chain_id: None, nonce, gas_price: 100_000_000_000, gas_limit: 100_000, to: TxKind::Create, input: bytes!("604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf3") });
 
     // Sign the transaction
     let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
@@ -765,10 +766,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup:
 
     // Then
     // Check that the Arachnid deployer contract was deployed
-    let code = eth_provider
-        .get_code(Address::from_str("0x5fbdb2315678afecb367f032d93f642f64180aa3").unwrap(), None)
-        .await
-        .unwrap();
+    let code = eth_provider.get_code(address!("0x5fbdb2315678afecb367f032d93f642f64180aa3"), None).await.unwrap();
     assert!(!code.is_empty());
 }
 
@@ -840,7 +838,7 @@ async fn test_call_with_state_override_balance_success(#[future] katana: Katana,
     let eth_provider = katana.eth_provider();
 
     // Generate an EOA address
-    let eoa_address = Address::from_str("0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5").unwrap();
+    let eoa_address = address!("0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5");
 
     // Create the second transaction request with a higher value
     let request = TransactionRequest {
