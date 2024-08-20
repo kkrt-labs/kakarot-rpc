@@ -149,7 +149,7 @@ async fn test_token_allowance(#[future] erc20: (Katana, KakarotEvmContract), _se
         Felt252Wrapper::from(erc20.evm_address).try_into().expect("Failed to convert EVM address");
 
     // Set the spender address for testing allowance
-    let spender_address = address!("0x1234567890123456789012345678901234567890");
+    let spender_address = address!("1234567890123456789012345678901234567890");
 
     // Start the Kakarot RPC server
     let (server_addr, server_handle) =
