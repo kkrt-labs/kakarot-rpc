@@ -27,7 +27,7 @@ import { ExtendedJsonRpcTx } from "./interfaces.ts";
 import {
   EXPECTED_TRANSFORM_DATA_FILE,
   TRANSACTIONS_DATA_FILE,
-} from "../constants.ts";
+} from "../testConstants.ts";
 
 // Transaction data including headers, events, and transactions
 const jsonTransactionsData = await Deno.readTextFile(

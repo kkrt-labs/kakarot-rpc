@@ -7,11 +7,11 @@ import {
   Transaction,
   TransactionWithReceipt,
 } from "../indexer/src/deps.ts";
+import { TRANSACTION_EXECUTED } from "../indexer/src/constants.ts";
 import {
   EXPECTED_TRANSFORM_DATA_FILE,
-  TRANSACTION_EXECUTED,
   TRANSACTIONS_DATA_FILE,
-} from "../indexer/src/constants.ts";
+} from "../indexer/src/testConstants.ts";
 import { padString } from "../indexer/src/utils/hex.ts";
 import transform from "../indexer/src/main.ts";
 import { toTypedEthTx } from "../indexer/src/types/transaction.ts";
