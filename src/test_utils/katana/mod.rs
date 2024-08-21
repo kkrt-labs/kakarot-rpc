@@ -119,8 +119,6 @@ impl<'a> Katana {
 
         // Add random transactions to the MongoDB database.
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
-        // // Add a hardcoded block header range to the MongoDB database.
-        // mongo_fuzzer.add_hardcoded_block_header_range(0..4).expect("Failed to add block range in the database");
         // Add a hardcoded logs to the MongoDB database.
         mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
         // Add a hardcoded header to the MongoDB database.
