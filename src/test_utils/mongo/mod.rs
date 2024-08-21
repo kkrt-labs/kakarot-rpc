@@ -189,11 +189,19 @@ impl MongoFuzzer {
 
     /// Adds random transactions to the collection of transactions.
     pub fn add_random_transactions(&mut self, n_transactions: usize) -> Result<(), Box<dyn std::error::Error>> {
-        for _ in 0..n_transactions {
+        for i in 0..n_transactions {
             // Build a transaction using the random byte size.
-            let transaction = StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
-                &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
-            ))?;
+            let mut transaction =
+                StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
+                    &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
+                ))?;
+
+            // For the first transaction, set the block number to 0 to mimic a genesis block.
+            //
+            // We need to have a block number of 0 for our tests (when testing the `EARLIEST` block number).
+            if i == 0 {
+                transaction.tx.block_number = Some(0);
+            }
 
             // Generate a receipt for the transaction.
             let receipt = self.generate_transaction_receipt(&transaction.tx);
