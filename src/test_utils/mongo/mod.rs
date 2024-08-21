@@ -16,7 +16,7 @@ use mongodb::{
 use reth_primitives::{TxType, B256, U256};
 use reth_rpc_types::Transaction;
 use serde::Serialize;
-use std::{ops::Range, sync::LazyLock};
+use std::sync::LazyLock;
 use strum::{EnumIter, IntoEnumIterator};
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
