@@ -15,8 +15,7 @@ use crate::{
         felt::Felt252Wrapper,
     },
     providers::eth_provider::{
-        blocks::BlockProvider, gas::GasProvider, logs::LogProvider, receipts::ReceiptProvider, state::StateProvider,
-        transactions::TransactionProvider, tx_pool::TxPoolProvider,
+        BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider, TxPoolProvider,
     },
 };
 use async_trait::async_trait;

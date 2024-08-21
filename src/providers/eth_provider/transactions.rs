@@ -14,12 +14,12 @@ use crate::{
     into_via_wrapper,
     models::{felt::Felt252Wrapper, transaction::validate_transaction},
     providers::eth_provider::{
-        chain::ChainProvider,
         database::{
             ethereum::EthereumTransactionStore,
             filter::{self, format_hex},
         },
         provider::{EthDataProvider, EthProviderResult},
+        ChainProvider,
     },
 };
 use alloy_rlp::Decodable;
@@ -194,9 +194,8 @@ where
         }
         let hash = transaction_signed.hash();
         tracing::info!(
-            "Fired a transaction: Starknet Hash: {} --- Ethereum Hash: {}",
-            B256::from_slice(&res.transaction_hash.to_bytes_be()[..]),
-            hash
+            ethereum_hash = ?hash,
+            starknet_hash = ?B256::from_slice(&res.transaction_hash.to_bytes_be()[..]),
         );
 
         Ok(hash)

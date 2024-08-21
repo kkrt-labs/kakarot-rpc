@@ -2,7 +2,7 @@
 #![cfg(feature = "testing")]
 use alloy_dyn_abi::DynSolValue;
 use kakarot_rpc::{
-    providers::eth_provider::{blocks::BlockProvider, chain::ChainProvider},
+    providers::eth_provider::{BlockProvider, ChainProvider},
     test_utils::{
         eoa::Eoa,
         evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo},

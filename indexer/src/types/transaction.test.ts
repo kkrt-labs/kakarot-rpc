@@ -24,11 +24,22 @@ import {
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/assert_equals.ts";
 import { Common } from "https://esm.sh/v135/@ethereumjs/common@4.1.0/denonext/common.mjs";
 import { ExtendedJsonRpcTx } from "./interfaces.ts";
+import {
+  EXPECTED_TRANSFORM_DATA_FILE,
+  TRANSACTIONS_DATA_FILE,
+} from "../testConstants.ts";
 
-const jsonData = await Deno.readTextFile(
-  "indexer/src/test-data/transactionsData.json",
+// Transaction data including headers, events, and transactions
+const jsonTransactionsData = await Deno.readTextFile(
+  TRANSACTIONS_DATA_FILE,
 );
-const transactionsData = JSON.parse(jsonData);
+const transactionsData = JSON.parse(jsonTransactionsData);
+
+// Expected output after transform and toTypedEthTx transformation for comparison in tests
+const jsonExpectedTransformData = await Deno.readTextFile(
+  EXPECTED_TRANSFORM_DATA_FILE,
+);
+const expectedTransformData = JSON.parse(jsonExpectedTransformData);
 
 // Utility functions
 function createReceipt(
@@ -551,11 +562,19 @@ Deno.test("toTypedEthTx EIP2930 Transaction before release with 31 bytes chunks 
 
 Deno.test("toTypedEthTx with real data", () => {
   transactionsData.transactionsList.forEach(
-    (transactions: TransactionWithReceipt[]) => {
-      const ethTx = toTypedEthTx({
-        transaction: transactions[0].transaction,
-      }) as LegacyTransaction;
-      assertExists(ethTx);
+    (transactions: TransactionWithReceipt[], outerIndex: number) => {
+      transactions.map((transaction, innerIndex) => {
+        const ethTx = toTypedEthTx({
+          transaction: transaction.transaction,
+        });
+        assertEquals(
+          JSON.stringify(ethTx),
+          JSON.stringify(
+            expectedTransformData
+              .expectedToTypedEthTxTransactions[outerIndex][innerIndex],
+          ),
+        );
+      });
     },
   );
 });

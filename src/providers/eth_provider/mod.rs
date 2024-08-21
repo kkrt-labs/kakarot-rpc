@@ -13,3 +13,12 @@ pub mod state;
 pub mod transactions;
 pub mod tx_pool;
 pub mod utils;
+
+pub use blocks::*;
+pub use chain::*;
+pub use gas::*;
+pub use logs::*;
+pub use receipts::*;
+pub use state::*;
+pub use transactions::*;
+pub use tx_pool::*;

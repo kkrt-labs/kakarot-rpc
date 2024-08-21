@@ -4,12 +4,12 @@ use super::{
     error::EthApiError,
 };
 use crate::providers::eth_provider::{
-    blocks::BlockProvider,
     database::{
         filter::{self},
         FindOpts,
     },
     provider::{EthDataProvider, EthProviderResult},
+    BlockProvider,
 };
 use async_trait::async_trait;
 use auto_impl::auto_impl;
