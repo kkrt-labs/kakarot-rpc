@@ -2,8 +2,8 @@
 #![cfg(feature = "testing")]
 use kakarot_rpc::{
     providers::eth_provider::{
-        chain::ChainProvider, constant::Constant, database::types::transaction::StoredPendingTransaction,
-        transactions::TransactionProvider,
+        ChainProvider, constant::Constant, database::types::transaction::StoredPendingTransaction,
+        TransactionProvider,
     },
     test_utils::{
         eoa::Eoa,

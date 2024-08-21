@@ -1,6 +1,6 @@
 use crate::providers::eth_provider::{
-    blocks::BlockProvider, chain::ChainProvider, gas::GasProvider, logs::LogProvider, provider::EthProviderResult,
-    receipts::ReceiptProvider, state::StateProvider, transactions::TransactionProvider, tx_pool::TxPoolProvider,
+    provider::EthProviderResult, BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider,
+    StateProvider, TransactionProvider, TxPoolProvider,
 };
 use async_trait::async_trait;
 use mockall::mock;
