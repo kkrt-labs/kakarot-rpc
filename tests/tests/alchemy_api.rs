@@ -1,8 +1,8 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use std::str::FromStr;
 
 use alloy_dyn_abi::DynSolValue;
+use alloy_primitives::address;
 use kakarot_rpc::{
     models::{
         felt::Felt252Wrapper,
@@ -149,7 +149,7 @@ async fn test_token_allowance(#[future] erc20: (Katana, KakarotEvmContract), _se
         Felt252Wrapper::from(erc20.evm_address).try_into().expect("Failed to convert EVM address");
 
     // Set the spender address for testing allowance
-    let spender_address = Address::from_str("0x1234567890123456789012345678901234567890").expect("Invalid address");
+    let spender_address = address!("1234567890123456789012345678901234567890");
 
     // Start the Kakarot RPC server
     let (server_addr, server_handle) =

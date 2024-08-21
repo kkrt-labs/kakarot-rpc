@@ -278,8 +278,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::b256;
     use reth_rpc_types::FilterSet;
-    use std::str::FromStr;
 
     #[test]
     fn test_into_filter_with_padding() {
@@ -287,7 +287,7 @@ mod tests {
         assert_eq!(
             into_filter::<B256>(
                 "test_key",
-                &B256::from_str("0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3").unwrap(),
+                &b256!("d4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3"),
                 64
             ),
             doc! {"test_key": "0xd4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3"}

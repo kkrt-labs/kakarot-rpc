@@ -58,7 +58,7 @@ test: katana-genesis load-env
 
 # Example: `make test-target TARGET=test_raw_transaction`
 test-target: load-env
-	cargo test --tests --features testing $(TARGET) -- --nocapture
+	cargo test --tests --all-features $(TARGET) -- --nocapture
 
 benchmark:
 	cd benchmarks && bun i && bun run benchmark
