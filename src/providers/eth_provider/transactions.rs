@@ -14,12 +14,12 @@ use crate::{
     into_via_wrapper,
     models::{felt::Felt252Wrapper, transaction::validate_transaction},
     providers::eth_provider::{
-        chain::ChainProvider,
         database::{
             ethereum::EthereumTransactionStore,
             filter::{self, format_hex},
         },
         provider::{EthDataProvider, EthProviderResult},
+        ChainProvider,
     },
 };
 use alloy_rlp::Decodable;

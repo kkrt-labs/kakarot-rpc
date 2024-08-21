@@ -11,9 +11,8 @@ use crate::{
     into_via_wrapper,
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
-        blocks::BlockProvider,
-        chain::ChainProvider,
         provider::{EthDataProvider, EthProviderResult},
+        BlockProvider, ChainProvider,
     },
 };
 use async_trait::async_trait;

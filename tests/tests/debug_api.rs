@@ -2,7 +2,7 @@
 #![cfg(feature = "testing")]
 use alloy_rlp::Encodable;
 use kakarot_rpc::{
-    providers::eth_provider::{blocks::BlockProvider, receipts::ReceiptProvider, transactions::TransactionProvider},
+    providers::eth_provider::{BlockProvider, ReceiptProvider, TransactionProvider},
     test_utils::{
         fixtures::{katana, setup},
         katana::Katana,
