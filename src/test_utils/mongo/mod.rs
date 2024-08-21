@@ -144,19 +144,19 @@ impl MongoFuzzer {
         Ok(())
     }
 
-    /// Adds a hardcoded block header range to the collection of headers.
-    pub fn add_hardcoded_block_header_range(&mut self, range: Range<usize>) -> Result<(), Box<dyn std::error::Error>> {
-        for i in range {
-            let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
-            let mut unstructured = arbitrary::Unstructured::new(&bytes);
-            let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
+    // /// Adds a hardcoded block header range to the collection of headers.
+    // pub fn add_hardcoded_block_header_range(&mut self, range: Range<usize>) -> Result<(), Box<dyn std::error::Error>> {
+    //     for i in range {
+    //         let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+    //         let mut unstructured = arbitrary::Unstructured::new(&bytes);
+    //         let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
 
-            header.header.number = Some(i as u64);
+    //         header.header.number = Some(i as u64);
 
-            self.headers.push(header);
-        }
-        Ok(())
-    }
+    //         self.headers.push(header);
+    //     }
+    //     Ok(())
+    // }
 
     /// Adds random logs to the collection of logs.
     pub fn add_random_logs(&mut self, n_logs: usize) -> Result<(), Box<dyn std::error::Error>> {
