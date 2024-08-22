@@ -16,7 +16,7 @@ use mongodb::{
 use reth_primitives::{TxType, B256, U256};
 use reth_rpc_types::Transaction;
 use serde::Serialize;
-use std::{ops::Range, sync::LazyLock};
+use std::sync::LazyLock;
 use strum::{EnumIter, IntoEnumIterator};
 use testcontainers::{
     core::{IntoContainerPort, WaitFor},
@@ -144,20 +144,6 @@ impl MongoFuzzer {
         Ok(())
     }
 
-    /// Adds a hardcoded block header range to the collection of headers.
-    pub fn add_hardcoded_block_header_range(&mut self, range: Range<usize>) -> Result<(), Box<dyn std::error::Error>> {
-        for i in range {
-            let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
-            let mut unstructured = arbitrary::Unstructured::new(&bytes);
-            let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
-
-            header.header.number = Some(i as u64);
-
-            self.headers.push(header);
-        }
-        Ok(())
-    }
-
     /// Adds random logs to the collection of logs.
     pub fn add_random_logs(&mut self, n_logs: usize) -> Result<(), Box<dyn std::error::Error>> {
         for _ in 0..n_logs {
@@ -189,11 +175,19 @@ impl MongoFuzzer {
 
     /// Adds random transactions to the collection of transactions.
     pub fn add_random_transactions(&mut self, n_transactions: usize) -> Result<(), Box<dyn std::error::Error>> {
-        for _ in 0..n_transactions {
+        for i in 0..n_transactions {
             // Build a transaction using the random byte size.
-            let transaction = StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
-                &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
-            ))?;
+            let mut transaction =
+                StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
+                    &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
+                ))?;
+
+            // For the first transaction, set the block number to 0 to mimic a genesis block.
+            //
+            // We need to have a block number of 0 for our tests (when testing the `EARLIEST` block number).
+            if i == 0 {
+                transaction.tx.block_number = Some(0);
+            }
 
             // Generate a receipt for the transaction.
             let receipt = self.generate_transaction_receipt(&transaction.tx);

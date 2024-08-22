@@ -359,7 +359,9 @@ async fn test_get_logs_block_filter(#[future] katana: Katana, _setup: ()) {
     // Verify logs filtered by a range of blocks.
     assert_eq!(filter_logs(Filter::default().select(0..u64::MAX / 2), provider.clone()).await, logs_katana_block_range);
     // Verify that filtering by an empty range returns an empty result.
-    assert!(filter_logs(Filter::default().select(0..0), provider.clone()).await.is_empty());
+    //
+    // We skip the 0 block because we hardcoded it via our Mongo Fuzzer and so it can contain logs.
+    assert!(filter_logs(Filter::default().select(1..1), provider.clone()).await.is_empty());
 }
 
 #[rstest]
