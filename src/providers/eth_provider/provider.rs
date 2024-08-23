@@ -185,7 +185,7 @@ where
     }
 
     /// Estimate the gas used in Kakarot for the given request.
-    pub(crate) async fn estimate_gas_helper(
+    pub(crate) async fn estimate_gas(
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
@@ -297,7 +297,7 @@ where
     /// Deploy the EVM transaction signer if a corresponding contract is not found on
     /// Starknet.
     pub(crate) async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
-        use crate::providers::eth_provider::constant::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+        use crate::providers::eth_provider::constant::hive::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::{
             accounts::{Call, ExecutionV1},
             core::{types::BlockTag, utils::get_selector_from_name},

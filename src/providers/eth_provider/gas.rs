@@ -46,7 +46,7 @@ where
         // Set a high gas limit to make sure the transaction will not fail due to gas.
         let request = TransactionRequest { gas: Some(u128::from(u64::MAX)), ..request };
 
-        let gas_used = self.estimate_gas_helper(request, block_id).await?;
+        let gas_used = self.estimate_gas(request, block_id).await?;
 
         // Increase the gas used by 20% to make sure the transaction will not fail due to gas.
         // This is a temporary solution until we have a proper gas estimation.
