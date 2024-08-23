@@ -3,6 +3,11 @@ use eyre::Result;
 use kakarot_rpc::{
     config::KakarotRpcConfig,
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
+    pool::{
+        mempool::{KakarotPool, TransactionOrdering},
+        validate::KakarotTransactionValidatorBuilder,
+        RetryHandler,
+    },
     providers::{
         alchemy_provider::AlchemyDataProvider,
         debug_provider::DebugDataProvider,
@@ -11,11 +16,6 @@ use kakarot_rpc::{
             provider::EthDataProvider,
         },
         pool_provider::PoolDataProvider,
-    },
-    retry::{
-        mempool::{KakarotPool, TransactionOrdering},
-        validate::KakarotTransactionValidatorBuilder,
-        RetryHandler,
     },
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};

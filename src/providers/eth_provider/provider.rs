@@ -26,7 +26,7 @@ use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
 use reth_primitives::{BlockId, BlockNumberOrTag, TxKind, U256};
 
-use crate::retry::mempool::KakarotPool;
+use crate::pool::mempool::KakarotPool;
 use reth_rpc_types::{BlockHashOrNumber, TransactionRequest};
 use starknet::core::types::Felt;
 use tracing::{instrument, Instrument};

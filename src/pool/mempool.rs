@@ -105,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_account_manager_new() {
-        let account_manager = AccountManager::new("src/retry/accounts.json");
+        let account_manager = AccountManager::new("src/pool/accounts.json");
 
         let accounts = account_manager.accounts;
 

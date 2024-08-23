@@ -2,6 +2,7 @@ pub mod genesis;
 
 use super::mongo::MongoImage;
 use crate::{
+    pool::mempool::KakarotPool,
     providers::eth_provider::{
         constant::U64_HEX_STRING_LEN,
         database::{
@@ -14,7 +15,6 @@ use crate::{
         },
         provider::EthDataProvider,
     },
-    retry::mempool::KakarotPool,
     test_utils::eoa::KakarotEOA,
 };
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
@@ -40,9 +40,9 @@ use testcontainers::ContainerAsync;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     super::mongo::MongoFuzzer,
-    crate::retry::mempool::TransactionOrdering,
+    crate::pool::mempool::TransactionOrdering,
     crate::{
-        providers::eth_provider::database::state::EthDatabase, retry::validate::KakarotTransactionValidatorBuilder,
+        pool::validate::KakarotTransactionValidatorBuilder, providers::eth_provider::database::state::EthDatabase,
     },
     dojo_test_utils::sequencer::SequencerConfig,
     reth_primitives::B256,
