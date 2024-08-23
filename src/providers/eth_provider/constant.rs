@@ -1,19 +1,6 @@
 use reth_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr, sync::LazyLock};
-#[cfg(feature = "hive")]
-use {
-    crate::config::KakarotRpcConfig,
-    starknet::core::types::Felt,
-    starknet::{
-        accounts::{ExecutionEncoding, SingleOwnerAccount},
-        providers::{jsonrpc::HttpTransport, JsonRpcClient},
-        signers::{LocalWallet, SigningKey},
-    },
-    std::sync::Arc,
-    std::{env::var, sync::OnceLock},
-    tokio::sync::Mutex,
-};
 
 /// Maximum priority fee per gas
 pub static MAX_PRIORITY_FEE_PER_GAS: LazyLock<u64> = LazyLock::new(|| 0);
@@ -56,7 +43,20 @@ pub struct Constant {
 
 #[cfg(feature = "hive")]
 pub mod hive {
-    use super::*;
+    use crate::config::KakarotRpcConfig;
+    use starknet::{
+        accounts::{ExecutionEncoding, SingleOwnerAccount},
+        core::types::Felt,
+        providers::{jsonrpc::HttpTransport, JsonRpcClient},
+        signers::{LocalWallet, SigningKey},
+    };
+    use std::{
+        env::var,
+        str::FromStr,
+        sync::{Arc, LazyLock, OnceLock},
+    };
+    use tokio::sync::Mutex;
+
     pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
     pub static RPC_CONFIG: LazyLock<KakarotRpcConfig> =
         LazyLock::new(|| KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config"));
