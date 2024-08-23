@@ -121,13 +121,6 @@ impl<'a> Katana {
         mongo_fuzzer.add_random_transactions(10).expect("Failed to add documents in the database");
         // Add a hardcoded logs to the MongoDB database.
         mongo_fuzzer.add_random_logs(2).expect("Failed to logs in the database");
-        // Add a hardcoded header to the MongoDB database.
-        let max_block_number =
-            mongo_fuzzer.headers.iter().map(|header| header.number.unwrap_or_default()).max().unwrap_or_default();
-        mongo_fuzzer
-            .add_hardcoded_block_header_with_base_fee(max_block_number + 1, 0)
-            .expect("Failed to add header in the database");
-
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
 

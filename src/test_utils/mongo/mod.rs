@@ -127,22 +127,22 @@ impl MongoFuzzer {
         self.finalize().await
     }
 
-    /// Adds a hardcoded block header with a base fee to the collection of headers.
-    pub fn add_hardcoded_block_header_with_base_fee(
-        &mut self,
-        block_number: u64,
-        base_fee: u128,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
-        let mut unstructured = arbitrary::Unstructured::new(&bytes);
-        let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
+    // /// Adds a hardcoded block header with a base fee to the collection of headers.
+    // pub fn add_hardcoded_block_header_with_base_fee(
+    //     &mut self,
+    //     block_number: u64,
+    //     base_fee: u128,
+    // ) -> Result<(), Box<dyn std::error::Error>> {
+    //     let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
+    //     let mut unstructured = arbitrary::Unstructured::new(&bytes);
+    //     let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
 
-        header.header.number = Some(block_number);
-        header.header.base_fee_per_gas = Some(base_fee);
+    //     header.header.number = Some(block_number);
+    //     header.header.base_fee_per_gas = Some(base_fee);
 
-        self.headers.push(header);
-        Ok(())
-    }
+    //     self.headers.push(header);
+    //     Ok(())
+    // }
 
     /// Adds random logs to the collection of logs.
     pub fn add_random_logs(&mut self, n_logs: usize) -> Result<(), Box<dyn std::error::Error>> {
@@ -204,6 +204,18 @@ impl MongoFuzzer {
             // Add the receipt to the receipts collection.
             self.receipts.push(receipt);
         }
+
+        // At the end of our transaction list, for our tests, we need to add a block header with a base fee.
+        let mut header_with_base_fee = StoredHeader::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
+            &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
+        ))
+        .unwrap();
+
+        header_with_base_fee.header.number = Some(self.max_block_number() + 1);
+        header_with_base_fee.header.base_fee_per_gas = Some(0);
+
+        self.headers.push(header_with_base_fee);
+
         Ok(())
     }
 
