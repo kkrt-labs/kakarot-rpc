@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use arbitrary::Arbitrary;
 use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::{
     providers::eth_provider::database::types::transaction::StoredPendingTransaction,
@@ -28,8 +29,7 @@ async fn initial_setup(katana: Katana) -> (SocketAddr, ServerHandle, Katana) {
     // Generate 10 pending transactions and add them to the database
     let mut pending_transactions = Vec::new();
     for _ in 0..10 {
-        pending_transactions
-            .push(StoredPendingTransaction::arbitrary_with_optional_fields(&mut unstructured).unwrap().tx);
+        pending_transactions.push(StoredPendingTransaction::arbitrary(&mut unstructured).unwrap().tx);
     }
     katana.add_pending_transactions_to_database(pending_transactions).await;
     (server_addr, server_handle, katana)

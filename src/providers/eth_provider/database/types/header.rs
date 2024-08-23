@@ -9,7 +9,6 @@ use {
 
 /// A header as stored in the database
 #[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]
-#[cfg_attr(any(test, feature = "arbitrary", feature = "testing"), derive(arbitrary::Arbitrary))]
 pub struct StoredHeader {
     #[serde(deserialize_with = "crate::providers::eth_provider::database::types::serde::deserialize_intermediate")]
     pub header: Header,
@@ -36,8 +35,8 @@ impl Deref for StoredHeader {
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-impl<'a> StoredHeader {
-    pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+impl Arbitrary<'_> for StoredHeader {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
         Ok(Self {
             header: Header {
                 hash: Some(B256::arbitrary(u)?),

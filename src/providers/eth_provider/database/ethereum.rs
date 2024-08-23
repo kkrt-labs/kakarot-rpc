@@ -201,6 +201,7 @@ impl EthereumBlockStore for Database {
 mod tests {
     use super::*;
     use crate::test_utils::mongo::{MongoFuzzer, RANDOM_BYTES_SIZE};
+    use arbitrary::Arbitrary;
     use rand::{self, Rng};
 
     #[tokio::test(flavor = "multi_thread")]
@@ -243,7 +244,7 @@ mod tests {
         assert_eq!(database.transaction(&first_transaction.hash).await.unwrap(), Some(first_transaction.into()));
 
         // Generate a transaction not present in the database
-        let unstored_transaction = StoredTransaction::arbitrary_with_optional_fields(unstructured).unwrap();
+        let unstored_transaction = StoredTransaction::arbitrary(unstructured).unwrap();
 
         // Test retrieving a non-existent transaction by its hash
         assert_eq!(database.transaction(&unstored_transaction.hash).await.unwrap(), None);
@@ -284,7 +285,7 @@ mod tests {
     async fn test_upsert_pending_transactions(unstructured: &mut arbitrary::Unstructured<'_>, database: &Database) {
         // Generate 10 pending transactions and add them to the database
         let pending_transactions: Vec<StoredPendingTransaction> =
-            (0..10).map(|_| StoredPendingTransaction::arbitrary_with_optional_fields(unstructured).unwrap()).collect();
+            (0..10).map(|_| StoredPendingTransaction::arbitrary(unstructured).unwrap()).collect();
 
         // Add pending transactions to the database
         for tx in &pending_transactions {
@@ -302,7 +303,7 @@ mod tests {
         );
 
         // Test retrieving a non-existent pending transaction by its hash
-        let unstored_transaction = StoredTransaction::arbitrary_with_optional_fields(unstructured).unwrap();
+        let unstored_transaction = StoredTransaction::arbitrary(unstructured).unwrap();
         assert_eq!(database.pending_transaction(&unstored_transaction.hash).await.unwrap(), None);
 
         // Test retrieving the number of retries for a pending transaction
@@ -317,14 +318,14 @@ mod tests {
 
     async fn test_upsert_transactions(unstructured: &mut arbitrary::Unstructured<'_>, database: &Database) {
         // Generate and upsert a mock transaction into the database
-        let mock_transaction = StoredTransaction::arbitrary_with_optional_fields(unstructured).unwrap();
+        let mock_transaction = StoredTransaction::arbitrary(unstructured).unwrap();
         database.upsert_transaction(mock_transaction.clone().tx).await.unwrap();
 
         // Test retrieving an upserted transaction by its hash
         assert_eq!(database.transaction(&mock_transaction.hash).await.unwrap(), Some(mock_transaction.into()));
 
         // Generate and upsert a mock pending transaction into the database
-        let mock_pending_transaction = StoredPendingTransaction::arbitrary_with_optional_fields(unstructured).unwrap();
+        let mock_pending_transaction = StoredPendingTransaction::arbitrary(unstructured).unwrap();
         database
             .upsert_pending_transaction(mock_pending_transaction.clone().tx, mock_pending_transaction.clone().retries)
             .await
@@ -436,7 +437,7 @@ mod tests {
         assert_eq!(database.block(rng.gen::<u64>().into(), false).await.unwrap(), None);
 
         // test withdrawals_root raises an error
-        let mut faulty_header = StoredHeader::arbitrary_with_optional_fields(u).unwrap();
+        let mut faulty_header = StoredHeader::arbitrary(u).unwrap();
         faulty_header.header.withdrawals_root = Some(rng.gen::<B256>());
 
         let filter =
