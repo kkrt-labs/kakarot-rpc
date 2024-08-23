@@ -127,23 +127,6 @@ impl MongoFuzzer {
         self.finalize().await
     }
 
-    // /// Adds a hardcoded block header with a base fee to the collection of headers.
-    // pub fn add_hardcoded_block_header_with_base_fee(
-    //     &mut self,
-    //     block_number: u64,
-    //     base_fee: u128,
-    // ) -> Result<(), Box<dyn std::error::Error>> {
-    //     let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
-    //     let mut unstructured = arbitrary::Unstructured::new(&bytes);
-    //     let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
-
-    //     header.header.number = Some(block_number);
-    //     header.header.base_fee_per_gas = Some(base_fee);
-
-    //     self.headers.push(header);
-    //     Ok(())
-    // }
-
     /// Adds random logs to the collection of logs.
     pub fn add_random_logs(&mut self, n_logs: usize) -> Result<(), Box<dyn std::error::Error>> {
         for _ in 0..n_logs {
