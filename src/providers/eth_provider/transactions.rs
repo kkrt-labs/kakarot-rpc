@@ -18,7 +18,7 @@ use crate::{
             ethereum::EthereumTransactionStore,
             filter::{self, format_hex},
         },
-        provider::{EthDataProvider, EthProviderResult},
+        provider::{EthApiResult, EthDataProvider},
         ChainProvider,
     },
 };
@@ -38,27 +38,27 @@ use tracing::Instrument;
 #[auto_impl(Arc, &)]
 pub trait TransactionProvider: ChainProvider {
     /// Returns the transaction by hash.
-    async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>>;
+    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
 
     /// Returns the transaction by block hash and index.
     async fn transaction_by_block_hash_and_index(
         &self,
         hash: B256,
         index: Index,
-    ) -> EthProviderResult<Option<reth_rpc_types::Transaction>>;
+    ) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
 
     /// Returns the transaction by block number and index.
     async fn transaction_by_block_number_and_index(
         &self,
         number_or_tag: BlockNumberOrTag,
         index: Index,
-    ) -> EthProviderResult<Option<reth_rpc_types::Transaction>>;
+    ) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
 
     /// Returns the nonce for the address at the given block.
-    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
 
     /// Send a raw transaction to the network and returns the transactions hash.
-    async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256>;
+    async fn send_raw_transaction(&self, transaction: Bytes) -> EthApiResult<B256>;
 }
 
 #[async_trait]
@@ -66,7 +66,7 @@ impl<SP> TransactionProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    async fn transaction_by_hash(&self, hash: B256) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
+    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<reth_rpc_types::Transaction>> {
         let pipeline = vec![
             doc! {
                 // Union with pending transactions with only specified hash
@@ -104,7 +104,7 @@ where
         &self,
         hash: B256,
         index: Index,
-    ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
+    ) -> EthApiResult<Option<reth_rpc_types::Transaction>> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
             .with_block_hash(&hash)
             .with_tx_index(&index)
@@ -116,7 +116,7 @@ where
         &self,
         number_or_tag: BlockNumberOrTag,
         index: Index,
-    ) -> EthProviderResult<Option<reth_rpc_types::Transaction>> {
+    ) -> EthApiResult<Option<reth_rpc_types::Transaction>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
             .with_block_number(block_number)
@@ -125,7 +125,7 @@ where
         Ok(self.database().get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
-    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256> {
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
@@ -149,7 +149,7 @@ where
         Ok(into_via_wrapper!(nonce))
     }
 
-    async fn send_raw_transaction(&self, transaction: Bytes) -> EthProviderResult<B256> {
+    async fn send_raw_transaction(&self, transaction: Bytes) -> EthApiResult<B256> {
         // Decode the transaction data
         let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
             .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?;

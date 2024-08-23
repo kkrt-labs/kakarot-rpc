@@ -18,7 +18,6 @@ use crate::{
         BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider, TxPoolProvider,
     },
 };
-use async_trait::async_trait;
 use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
@@ -41,15 +40,13 @@ use {
     starknet::core::types::BroadcastedInvokeTransaction,
 };
 
-pub type EthProviderResult<T> = Result<T, EthApiError>;
+pub type EthApiResult<T> = Result<T, EthApiError>;
 
-#[async_trait]
 pub trait EthereumProvider:
     GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
 {
 }
 
-#[async_trait]
 impl<T> EthereumProvider for T where
     T: GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
 {
@@ -111,7 +108,7 @@ where
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<CallInput> {
+    ) -> EthApiResult<CallInput> {
         // unwrap option
         let to: kakarot_core::core::Option = {
             match request.to {
@@ -162,7 +159,7 @@ where
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<CairoArrayLegacy<Felt>> {
+    ) -> EthApiResult<CairoArrayLegacy<Felt>> {
         tracing::trace!(?request);
 
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
@@ -201,7 +198,7 @@ where
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<u128> {
+    ) -> EthApiResult<u128> {
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
@@ -239,7 +236,7 @@ where
     pub async fn to_starknet_block_id(
         &self,
         block_id: impl Into<Option<BlockId>>,
-    ) -> EthProviderResult<starknet::core::types::BlockId> {
+    ) -> EthApiResult<starknet::core::types::BlockId> {
         match block_id.into() {
             Some(BlockId::Hash(hash)) => {
                 Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(EthereumDataFormatError::from)?)
@@ -273,7 +270,7 @@ where
 
     /// Converts the given [`BlockNumberOrTag`] into a block number.
     #[instrument(skip(self))]
-    pub(crate) async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<u64> {
+    pub(crate) async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthApiResult<u64> {
         match tag {
             // Converts the tag representing the earliest block into block number 0.
             BlockNumberOrTag::Earliest => Ok(0),
@@ -293,7 +290,7 @@ where
     pub(crate) async fn block_id_into_block_number_or_hash(
         &self,
         block_id: BlockId,
-    ) -> EthProviderResult<BlockHashOrNumber> {
+    ) -> EthApiResult<BlockHashOrNumber> {
         match block_id {
             BlockId::Hash(hash) => Ok(BlockHashOrNumber::Hash(hash.into())),
             BlockId::Number(number_or_tag) => Ok(self.tag_into_block_number(number_or_tag).await?.into()),
@@ -308,7 +305,7 @@ where
 {
     /// Deploy the EVM transaction signer if a corresponding contract is not found on
     /// Starknet.
-    pub(crate) async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
+    pub(crate) async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthApiResult<()> {
         use crate::providers::eth_provider::constant::hive::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::{
             accounts::{Call, ExecutionV1},

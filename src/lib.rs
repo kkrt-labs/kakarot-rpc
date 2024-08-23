@@ -10,6 +10,7 @@ pub mod providers {
     pub mod eth_provider;
     pub mod pool_provider;
 }
+pub mod client;
 pub mod config;
 pub mod eth_rpc;
 pub mod models;

@@ -2,7 +2,7 @@
 
 use crate::providers::eth_provider::{
     error::ExecutionError,
-    provider::{EthProviderResult, EthereumProvider},
+    provider::{EthApiResult, EthereumProvider},
 };
 use alloy_dyn_abi::DynSolType;
 use alloy_sol_types::{sol, SolCall};
@@ -36,7 +36,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
     }
 
     /// Gets the balance of the specified address.
-    pub async fn balance_of(&self, evm_address: Address, block_id: BlockId) -> EthProviderResult<U256> {
+    pub async fn balance_of(&self, evm_address: Address, block_id: BlockId) -> EthApiResult<U256> {
         // Encode the calldata for the balanceOf function call
         let calldata = ERC20Contract::balanceOfCall { account: evm_address }.abi_encode();
         // Call the contract with the encoded calldata
@@ -48,7 +48,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
     }
 
     /// Gets the number of decimals the token uses.
-    pub async fn decimals(&self, block_id: BlockId) -> EthProviderResult<U256> {
+    pub async fn decimals(&self, block_id: BlockId) -> EthApiResult<U256> {
         // Encode the calldata for the decimals function call
         let calldata = ERC20Contract::decimalsCall {}.abi_encode();
         // Call the contract with the encoded calldata
@@ -60,7 +60,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
     }
 
     /// Gets the name of the token.
-    pub async fn name(&self, block_id: BlockId) -> EthProviderResult<String> {
+    pub async fn name(&self, block_id: BlockId) -> EthApiResult<String> {
         // Encode the calldata for the name function call
         let calldata = ERC20Contract::nameCall {}.abi_encode();
         // Call the contract with the encoded calldata
@@ -73,7 +73,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
     }
 
     /// Gets the symbol of the token.
-    pub async fn symbol(&self, block_id: BlockId) -> EthProviderResult<String> {
+    pub async fn symbol(&self, block_id: BlockId) -> EthApiResult<String> {
         // Encode the calldata for the symbol function call
         let calldata = ERC20Contract::symbolCall {}.abi_encode();
         // Call the contract with the encoded calldata
@@ -86,7 +86,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
     }
 
     /// Gets the allowance the owner has granted to the spender.
-    pub async fn allowance(&self, owner: Address, spender: Address, block_id: BlockId) -> EthProviderResult<U256> {
+    pub async fn allowance(&self, owner: Address, spender: Address, block_id: BlockId) -> EthApiResult<U256> {
         // Encode the calldata for the allowance function call
         let calldata = ERC20Contract::allowanceCall { owner, spender }.abi_encode();
         // Call the contract with the encoded calldata
@@ -98,7 +98,7 @@ impl<P: EthereumProvider> EthereumErc20<P> {
     }
 
     /// Calls the contract with the given calldata.
-    async fn call_contract(&self, calldata: Vec<u8>, block_id: BlockId) -> EthProviderResult<Bytes> {
+    async fn call_contract(&self, calldata: Vec<u8>, block_id: BlockId) -> EthApiResult<Bytes> {
         self.provider
             .call(
                 TransactionRequest {

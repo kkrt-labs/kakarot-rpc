@@ -3,7 +3,7 @@ use crate::{
     providers::eth_provider::{
         contracts::erc20::EthereumErc20,
         error::EthApiError,
-        provider::{EthProviderResult, EthereumProvider},
+        provider::{EthApiResult, EthereumProvider},
     },
 };
 use async_trait::async_trait;
@@ -17,20 +17,11 @@ use reth_primitives::{Address, BlockId, BlockNumberOrTag, U256};
 #[auto_impl(Arc, &)]
 pub trait AlchemyProvider {
     /// Retrieves the token balances for a given address.
-    async fn token_balances(
-        &self,
-        address: Address,
-        contract_addresses: Vec<Address>,
-    ) -> EthProviderResult<TokenBalances>;
+    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> EthApiResult<TokenBalances>;
     /// Retrieves the metadata for a given token.
-    async fn token_metadata(&self, contract_address: Address) -> EthProviderResult<TokenMetadata>;
+    async fn token_metadata(&self, contract_address: Address) -> EthApiResult<TokenMetadata>;
     /// Retrieves the allowance for a given token.
-    async fn token_allowance(
-        &self,
-        contract_address: Address,
-        owner: Address,
-        spender: Address,
-    ) -> EthProviderResult<U256>;
+    async fn token_allowance(&self, contract_address: Address, owner: Address, spender: Address) -> EthApiResult<U256>;
 }
 
 #[derive(Debug, Clone)]
@@ -46,11 +37,7 @@ impl<P: EthereumProvider> AlchemyDataProvider<P> {
 
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDataProvider<P> {
-    async fn token_balances(
-        &self,
-        address: Address,
-        contract_addresses: Vec<Address>,
-    ) -> EthProviderResult<TokenBalances> {
+    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> EthApiResult<TokenBalances> {
         // Set the block ID to the latest block
         let block_id = BlockId::Number(BlockNumberOrTag::Latest);
 
@@ -70,7 +57,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDat
     }
 
     /// Retrieves the metadata for a given token.
-    async fn token_metadata(&self, contract_address: Address) -> EthProviderResult<TokenMetadata> {
+    async fn token_metadata(&self, contract_address: Address) -> EthApiResult<TokenMetadata> {
         // Set the block ID to the latest block
         let block_id = BlockId::Number(BlockNumberOrTag::Latest);
         // Create a new instance of `EthereumErc20`
@@ -85,12 +72,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDat
     }
 
     /// Retrieves the allowance of a given owner for a spender.
-    async fn token_allowance(
-        &self,
-        contract_address: Address,
-        owner: Address,
-        spender: Address,
-    ) -> EthProviderResult<U256> {
+    async fn token_allowance(&self, contract_address: Address, owner: Address, spender: Address) -> EthApiResult<U256> {
         // Set the block ID to the latest block
         let block_id = BlockId::Number(BlockNumberOrTag::Latest);
         // Create a new instance of `EthereumErc20`
