@@ -188,7 +188,7 @@ impl MongoFuzzer {
         }
 
         // At the end of our transaction list, for our tests, we need to add a block header with a base fee.
-        let mut header_with_base_fee = StoredHeader::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
+        let mut header_with_base_fee = StoredHeader::arbitrary(&mut arbitrary::Unstructured::new(
             &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
         ))
         .unwrap();
