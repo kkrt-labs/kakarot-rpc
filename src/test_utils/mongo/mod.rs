@@ -160,10 +160,9 @@ impl MongoFuzzer {
     pub fn add_random_transactions(&mut self, n_transactions: usize) -> Result<(), Box<dyn std::error::Error>> {
         for i in 0..n_transactions {
             // Build a transaction using the random byte size.
-            let mut transaction =
-                StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(
-                    &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
-                ))?;
+            let mut transaction = StoredTransaction::arbitrary(&mut arbitrary::Unstructured::new(
+                &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
+            ))?;
 
             // For the first transaction, set the block number to 0 to mimic a genesis block.
             //
@@ -235,7 +234,7 @@ impl MongoFuzzer {
     fn generate_transaction_header(&self, transaction: &Transaction) -> StoredHeader {
         let bytes: Vec<u8> = (0..self.rnd_bytes_size).map(|_| rand::random()).collect();
         let mut unstructured = arbitrary::Unstructured::new(&bytes);
-        let mut header = StoredHeader::arbitrary_with_optional_fields(&mut unstructured).unwrap();
+        let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
 
         header.header.hash = transaction.block_hash;
         header.header.number = transaction.block_number;

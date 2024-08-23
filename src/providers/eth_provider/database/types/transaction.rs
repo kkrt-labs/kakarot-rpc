@@ -12,7 +12,6 @@ use {
 
 /// A full transaction as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
-#[cfg_attr(any(test, feature = "arbitrary", feature = "testing"), derive(arbitrary::Arbitrary))]
 pub struct StoredTransaction {
     #[serde(deserialize_with = "crate::providers::eth_provider::database::types::serde::deserialize_intermediate")]
     pub tx: Transaction,
@@ -45,8 +44,8 @@ impl Deref for StoredTransaction {
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-impl<'a> StoredTransaction {
-    pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+impl Arbitrary<'_> for StoredTransaction {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
         // Initialize a random number generator.
         let mut rng = generators::rng();
         // Generate a random integer between 0 and 2 to decide which transaction type to create.
@@ -130,9 +129,9 @@ impl StoredPendingTransaction {
 }
 
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-impl<'a> StoredPendingTransaction {
-    pub fn arbitrary_with_optional_fields(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
-        Ok(Self { tx: StoredTransaction::arbitrary_with_optional_fields(u)?.into(), retries: u8::arbitrary(u)? })
+impl Arbitrary<'_> for StoredPendingTransaction {
+    fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
+        Ok(Self { tx: StoredTransaction::arbitrary(u)?.into(), retries: u8::arbitrary(u)? })
     }
 }
 
@@ -183,8 +182,7 @@ mod tests {
             rand::thread_rng().fill(bytes.as_mut_slice());
 
             // Generate a random transaction
-            let transaction =
-                StoredTransaction::arbitrary_with_optional_fields(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
+            let transaction = StoredTransaction::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
 
             // Extract the signature from the generated transaction.
             let signature = transaction.signature.unwrap();
