@@ -1,10 +1,5 @@
 use super::katana::Katana;
-use crate::{
-    eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
-    providers::{
-        alchemy_provider::AlchemyDataProvider, debug_provider::DebugDataProvider, pool_provider::PoolDataProvider,
-    },
-};
+use crate::eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server};
 use jsonrpsee::server::ServerHandle;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -78,18 +73,9 @@ async fn get_next_port() -> u16 {
 /// and each test is compiled separately, so the compiler thinks this function is unused
 #[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
-    let alchemy_provider = AlchemyDataProvider::new(katana.eth_provider());
-    let pool_provider = PoolDataProvider::new(katana.eth_provider());
-    let debug_provider = DebugDataProvider::new(katana.eth_provider());
+    let eth_client = katana.eth_client();
     Ok(run_server(
-        KakarotRpcModuleBuilder::new(
-            katana.eth_provider(),
-            katana.starknet_provider(),
-            alchemy_provider,
-            pool_provider,
-            debug_provider,
-        )
-        .rpc_module()?,
+        KakarotRpcModuleBuilder::new(eth_client).rpc_module()?,
         #[cfg(feature = "testing")]
         RPCConfig::new_test_config_from_port(get_next_port().await),
         #[cfg(not(feature = "testing"))]

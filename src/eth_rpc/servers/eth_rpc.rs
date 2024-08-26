@@ -1,8 +1,12 @@
 #![allow(clippy::blocks_in_conditions)]
 
 use crate::{
+    client::EthClient,
     eth_rpc::api::eth_api::EthApiServer,
-    providers::eth_provider::{constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, provider::EthereumProvider},
+    providers::eth_provider::{
+        constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, BlockProvider, ChainProvider, GasProvider, LogProvider,
+        ReceiptProvider, StateProvider, TransactionProvider,
+    },
 };
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
@@ -12,38 +16,39 @@ use reth_rpc_types::{
     TransactionReceipt, TransactionRequest, Work,
 };
 use serde_json::Value;
+use starknet::providers::Provider;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
-pub struct KakarotEthRpc<P>
+pub struct EthRpc<SP>
 where
-    P: EthereumProvider,
+    SP: Provider + Send + Sync,
 {
-    eth_provider: P,
+    eth_client: EthClient<SP>,
 }
 
-impl<P> KakarotEthRpc<P>
+impl<SP> EthRpc<SP>
 where
-    P: EthereumProvider,
+    SP: Provider + Send + Sync,
 {
-    pub const fn new(eth_provider: P) -> Self {
-        Self { eth_provider }
+    pub const fn new(eth_client: EthClient<SP>) -> Self {
+        Self { eth_client }
     }
 }
 
 #[async_trait]
-impl<P> EthApiServer for KakarotEthRpc<P>
+impl<SP> EthApiServer for EthRpc<SP>
 where
-    P: EthereumProvider + Send + Sync + 'static,
+    SP: Provider + Clone + Send + Sync + 'static,
 {
     #[tracing::instrument(skip_all, ret, err)]
     async fn block_number(&self) -> Result<U64> {
-        Ok(self.eth_provider.block_number().await?)
+        Ok(self.eth_client.eth_provider().block_number().await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn syncing(&self) -> Result<SyncStatus> {
-        Ok(self.eth_provider.syncing().await?)
+        Ok(self.eth_client.eth_provider().syncing().await?)
     }
 
     async fn coinbase(&self) -> Result<Address> {
@@ -57,27 +62,27 @@ where
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn chain_id(&self) -> Result<Option<U64>> {
-        Ok(self.eth_provider.chain_id().await?)
+        Ok(self.eth_client.eth_provider().chain_id().await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn block_by_hash(&self, hash: B256, full: bool) -> Result<Option<RichBlock>> {
-        Ok(self.eth_provider.block_by_hash(hash, full).await?)
+        Ok(self.eth_client.eth_provider().block_by_hash(hash, full).await?)
     }
 
     #[tracing::instrument(skip(self), err)]
     async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
-        Ok(self.eth_provider.block_by_number(number, full).await?)
+        Ok(self.eth_client.eth_provider().block_by_number(number, full).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn block_transaction_count_by_hash(&self, hash: B256) -> Result<Option<U256>> {
-        Ok(self.eth_provider.block_transaction_count_by_hash(hash).await?)
+        Ok(self.eth_client.eth_provider().block_transaction_count_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<Option<U256>> {
-        Ok(self.eth_provider.block_transaction_count_by_number(number).await?)
+        Ok(self.eth_client.eth_provider().block_transaction_count_by_number(number).await?)
     }
 
     async fn block_uncles_count_by_block_hash(&self, _hash: B256) -> Result<U256> {
@@ -106,12 +111,12 @@ where
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn transaction_by_hash(&self, hash: B256) -> Result<Option<Transaction>> {
-        Ok(self.eth_provider.transaction_by_hash(hash).await?)
+        Ok(self.eth_client.eth_provider().transaction_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn transaction_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<Transaction>> {
-        Ok(self.eth_provider.transaction_by_block_hash_and_index(hash, index).await?)
+        Ok(self.eth_client.eth_provider().transaction_by_block_hash_and_index(hash, index).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
@@ -120,38 +125,38 @@ where
         number: BlockNumberOrTag,
         index: Index,
     ) -> Result<Option<Transaction>> {
-        Ok(self.eth_provider.transaction_by_block_number_and_index(number, index).await?)
+        Ok(self.eth_client.eth_provider().transaction_by_block_number_and_index(number, index).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn transaction_receipt(&self, hash: B256) -> Result<Option<TransactionReceipt>> {
-        Ok(self.eth_provider.transaction_receipt(hash).await?)
+        Ok(self.eth_client.eth_provider().transaction_receipt(hash).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
-        Ok(self.eth_provider.balance(address, block_id).await?)
+        Ok(self.eth_client.eth_provider().balance(address, block_id).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn storage_at(&self, address: Address, index: JsonStorageKey, block_id: Option<BlockId>) -> Result<B256> {
-        Ok(self.eth_provider.storage_at(address, index, block_id).await?)
+        Ok(self.eth_client.eth_provider().storage_at(address, index, block_id).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> Result<U256> {
-        Ok(self.eth_provider.transaction_count(address, block_id).await?)
+        Ok(self.eth_client.eth_provider().transaction_count(address, block_id).await?)
     }
 
     #[tracing::instrument(skip(self), err)]
     async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes> {
-        Ok(self.eth_provider.get_code(address, block_id).await?)
+        Ok(self.eth_client.eth_provider().get_code(address, block_id).await?)
     }
 
     #[tracing::instrument(skip_all, err)]
     async fn get_logs(&self, filter: Filter) -> Result<FilterChanges> {
         tracing::info!(?filter);
-        Ok(self.eth_provider.get_logs(filter).await?)
+        Ok(self.eth_client.eth_provider().get_logs(filter).await?)
     }
 
     #[tracing::instrument(skip(self, request), err)]
@@ -162,7 +167,7 @@ where
         state_overrides: Option<StateOverride>,
         block_overrides: Option<Box<BlockOverrides>>,
     ) -> Result<Bytes> {
-        Ok(self.eth_provider.call(request, block_id, state_overrides, block_overrides).await?)
+        Ok(self.eth_client.eth_provider().call(request, block_id, state_overrides, block_overrides).await?)
     }
 
     async fn create_access_list(
@@ -175,12 +180,12 @@ where
 
     #[tracing::instrument(skip(self, request), err)]
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<U256> {
-        Ok(self.eth_provider.estimate_gas(request, block_id).await?)
+        Ok(self.eth_client.eth_provider().estimate_gas(request, block_id).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
     async fn gas_price(&self) -> Result<U256> {
-        Ok(self.eth_provider.gas_price().await?)
+        Ok(self.eth_client.eth_provider().gas_price().await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
@@ -191,7 +196,7 @@ where
         reward_percentiles: Option<Vec<f64>>,
     ) -> Result<FeeHistory> {
         tracing::info!("Serving eth_feeHistory");
-        Ok(self.eth_provider.fee_history(block_count, newest_block, reward_percentiles).await?)
+        Ok(self.eth_client.eth_provider().fee_history(block_count, newest_block, reward_percentiles).await?)
     }
 
     #[tracing::instrument(skip_all, ret, err)]
@@ -233,7 +238,7 @@ where
     #[tracing::instrument(skip_all, ret, err)]
     async fn send_raw_transaction(&self, bytes: Bytes) -> Result<B256> {
         tracing::info!("Serving eth_sendRawTransaction");
-        Ok(self.eth_provider.send_raw_transaction(bytes).await?)
+        Ok(self.eth_client.eth_provider().send_raw_transaction(bytes).await?)
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
@@ -282,6 +287,6 @@ where
     }
 
     async fn block_receipts(&self, block_id: Option<BlockId>) -> Result<Option<Vec<TransactionReceipt>>> {
-        Ok(self.eth_provider.block_receipts(block_id).await?)
+        Ok(self.eth_client.eth_provider().block_receipts(block_id).await?)
     }
 }

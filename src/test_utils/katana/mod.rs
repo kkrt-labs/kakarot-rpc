@@ -2,7 +2,7 @@ pub mod genesis;
 
 use super::mongo::MongoImage;
 use crate::{
-    pool::mempool::KakarotPool,
+    client::EthClient,
     providers::eth_provider::{
         constant::U64_HEX_STRING_LEN,
         database::{
@@ -27,23 +27,14 @@ use mongodb::{
     bson::{doc, Document},
     options::{UpdateModifications, UpdateOptions},
 };
-use reth_chainspec::ChainSpec;
 use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
-use reth_transaction_pool::{blobstore::NoopBlobStore, EthPooledTransaction, PoolConfig};
-use starknet::{
-    core::types::Felt,
-    providers::{jsonrpc::HttpTransport, JsonRpcClient},
-};
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     super::mongo::MongoFuzzer,
-    crate::pool::mempool::TransactionOrdering,
-    crate::{
-        pool::validate::KakarotTransactionValidatorBuilder, providers::eth_provider::database::state::EthDatabase,
-    },
     dojo_test_utils::sequencer::SequencerConfig,
     reth_primitives::B256,
     reth_rpc_types::{Header, Transaction},
@@ -88,6 +79,8 @@ pub struct Katana {
     pub sequencer: TestSequencer,
     /// The Kakarot EOA (Externally Owned Account) instance.
     pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
+    /// The Ethereum client which contains the mempool and the eth provider
+    pub eth_client: EthClient<Arc<JsonRpcClient<HttpTransport>>>,
     /// Stored headers to insert into the headers collection.
     pub headers: Vec<StoredHeader>,
     /// Stored transactions to insert into the transactions collection.
@@ -134,41 +127,28 @@ impl<'a> Katana {
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
 
-        let chain_id = katana_config().env.chain_id.id();
-        let chain_id: u64 = (Felt::from(u32::MAX).to_bigint() & chain_id.to_bigint()).try_into().unwrap();
-
-        // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let eth_provider =
-            EthDataProvider::new(database, starknet_provider).await.expect("Failed to create EthDataProvider");
-
-        let validator = KakarotTransactionValidatorBuilder::new(Arc::new(ChainSpec {
-            chain: chain_id.into(),
-            ..Default::default()
-        }))
-        .build::<_, EthPooledTransaction>(EthDatabase::new(eth_provider.clone(), 0.into()));
-
-        let mempool = KakarotPool::new(
-            validator,
-            TransactionOrdering::default(),
-            NoopBlobStore::default(),
-            PoolConfig::default(),
-        );
-
-        let eth_provider = Arc::new(eth_provider.with_mempool(mempool));
+        // Initialize the EthClient
+        let eth_client = EthClient::try_new(starknet_provider, database).await.expect("failed to start eth client");
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
+        let eth_provider = Arc::new(eth_client.eth_provider());
         let eoa = KakarotEOA::new(pk, eth_provider);
 
         // Return a new instance of Katana with initialized fields.
         Self {
             sequencer,
             eoa,
+            eth_client,
             container: Some(mongo_fuzzer.container),
             transactions: mongo_fuzzer.transactions,
             receipts: mongo_fuzzer.receipts,
             logs: mongo_fuzzer.logs,
             headers: mongo_fuzzer.headers,
         }
+    }
+
+    pub fn eth_client(&self) -> EthClient<Arc<JsonRpcClient<HttpTransport>>> {
+        self.eth_client.clone()
     }
 
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {

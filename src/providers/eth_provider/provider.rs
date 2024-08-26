@@ -24,6 +24,7 @@ use itertools::Itertools;
 use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
 use reth_primitives::{BlockId, BlockNumberOrTag, TxKind, U256};
+use std::sync::Arc;
 
 use crate::pool::mempool::KakarotPool;
 use reth_rpc_types::{BlockHashOrNumber, TransactionRequest};
@@ -60,7 +61,7 @@ pub struct EthDataProvider<SP: starknet::providers::Provider + Send + Sync> {
     database: Database,
     starknet_provider: SP,
     pub(crate) chain_id: u64,
-    pub mempool: Option<KakarotPool<Self>>,
+    pub mempool: Option<Arc<KakarotPool<Self>>>,
 }
 
 impl<SP> EthDataProvider<SP>
@@ -78,8 +79,8 @@ where
     }
 
     /// Returns a reference to the pool.
-    pub const fn mempool(&self) -> Option<&KakarotPool<Self>> {
-        self.mempool.as_ref()
+    pub fn mempool(&self) -> Option<Arc<KakarotPool<Self>>> {
+        self.mempool.clone()
     }
 }
 
@@ -87,7 +88,7 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
+    pub async fn try_new(database: Database, starknet_provider: SP) -> Result<Self> {
         // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
@@ -97,9 +98,8 @@ where
         Ok(Self { database, starknet_provider, chain_id, mempool: None })
     }
 
-    #[must_use]
-    pub fn with_mempool(self, mempool: KakarotPool<Self>) -> Self {
-        Self { mempool: Some(mempool), ..self }
+    pub fn set_mempool(&mut self, mempool: Arc<KakarotPool<Self>>) {
+        self.mempool = Some(mempool)
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.

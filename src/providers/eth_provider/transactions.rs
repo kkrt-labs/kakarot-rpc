@@ -195,7 +195,8 @@ where
 
         let pool_transaction = EthPooledTransaction::new(transaction_signed_ec_recovered, encoded_length);
 
-        self.mempool.as_ref().unwrap().add_transaction(TransactionOrigin::Local, pool_transaction).await.unwrap();
+        // Don't handle the result in case we are adding multiple times the same transaction due to the retry.
+        let _ = self.mempool.as_ref().unwrap().add_transaction(TransactionOrigin::Local, pool_transaction).await;
 
         // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
         if cfg!(feature = "testing") {
