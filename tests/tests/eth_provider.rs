@@ -568,7 +568,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
 async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     use alloy_primitives::b256;
     use futures::future::join_all;
-    use kakarot_rpc::{providers::eth_provider::constant::CHAIN_ID, test_utils::eoa::KakarotEOA};
+    use kakarot_rpc::{providers::eth_provider::constant::hive::CHAIN_ID, test_utils::eoa::KakarotEOA};
     use starknet::providers::Provider;
 
     // Given
