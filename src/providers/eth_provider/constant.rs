@@ -1,19 +1,6 @@
 use reth_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr, sync::LazyLock};
-#[cfg(feature = "hive")]
-use {
-    crate::config::KakarotRpcConfig,
-    starknet::core::types::Felt,
-    starknet::{
-        accounts::{ExecutionEncoding, SingleOwnerAccount},
-        providers::{jsonrpc::HttpTransport, JsonRpcClient},
-        signers::{LocalWallet, SigningKey},
-    },
-    std::sync::Arc,
-    std::{env::var, sync::OnceLock},
-    tokio::sync::Mutex,
-};
 
 /// Maximum priority fee per gas
 pub static MAX_PRIORITY_FEE_PER_GAS: LazyLock<u64> = LazyLock::new(|| 0);
@@ -37,32 +24,6 @@ pub const ADDRESS_HEX_STRING_LEN: usize = 40;
 /// Starknet Modulus: 0x800000000000011000000000000000000000000000000000000000000000001
 pub const STARKNET_MODULUS: U256 = U256::from_limbs([0x1, 0, 0, 0x0800_0000_0000_0011]);
 
-#[cfg(feature = "hive")]
-pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
-
-#[cfg(feature = "hive")]
-pub static RPC_CONFIG: LazyLock<KakarotRpcConfig> =
-    LazyLock::new(|| KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config"));
-
-#[cfg(feature = "hive")]
-pub static DEPLOY_WALLET: LazyLock<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> =
-    LazyLock::new(|| {
-        SingleOwnerAccount::new(
-            JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
-            LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
-                Felt::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
-                    .expect("Failed to parse deployer private key"),
-            )),
-            Felt::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
-                .expect("Failed to parse deployer address"),
-            *CHAIN_ID.get().expect("Failed to get chain id"),
-            ExecutionEncoding::New,
-        )
-    });
-
-#[cfg(feature = "hive")]
-pub static DEPLOY_WALLET_NONCE: LazyLock<Arc<Mutex<Felt>>> = LazyLock::new(|| Arc::new(Mutex::new(Felt::ZERO)));
-
 /// Struct used to return the constant values from the `kakarot_getConfig` endpoint
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Constant {
@@ -78,4 +39,40 @@ pub struct Constant {
     pub max_felts_in_calldata: usize,
     /// List of whitelisted hashes allow to submit pre EIP-155 transactions.
     pub white_listed_eip_155_transaction_hashes: Vec<B256>,
+}
+
+#[cfg(feature = "hive")]
+pub mod hive {
+    use crate::config::KakarotRpcConfig;
+    use starknet::{
+        accounts::{ExecutionEncoding, SingleOwnerAccount},
+        core::types::Felt,
+        providers::{jsonrpc::HttpTransport, JsonRpcClient},
+        signers::{LocalWallet, SigningKey},
+    };
+    use std::{
+        env::var,
+        str::FromStr,
+        sync::{Arc, LazyLock, OnceLock},
+    };
+    use tokio::sync::Mutex;
+
+    pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
+    pub static RPC_CONFIG: LazyLock<KakarotRpcConfig> =
+        LazyLock::new(|| KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config"));
+    pub static DEPLOY_WALLET: LazyLock<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> =
+        LazyLock::new(|| {
+            SingleOwnerAccount::new(
+                JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+                LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
+                    Felt::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
+                        .expect("Failed to parse deployer private key"),
+                )),
+                Felt::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
+                    .expect("Failed to parse deployer address"),
+                *CHAIN_ID.get().expect("Failed to get chain id"),
+                ExecutionEncoding::New,
+            )
+        });
+    pub static DEPLOY_WALLET_NONCE: LazyLock<Arc<Mutex<Felt>>> = LazyLock::new(|| Arc::new(Mutex::new(Felt::ZERO)));
 }
