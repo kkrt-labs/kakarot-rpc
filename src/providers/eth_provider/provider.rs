@@ -41,8 +41,13 @@ use {
     starknet::core::types::BroadcastedInvokeTransaction,
 };
 
+/// A type alias representing a result type for Ethereum API operations.
+///
+/// This alias is used to simplify function signatures that return a `Result`
+/// with an [`EthApiError`] as the error type.
 pub type EthApiResult<T> = Result<T, EthApiError>;
 
+/// A trait that defines the interface for an Ethereum Provider.
 pub trait EthereumProvider:
     GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
 {
@@ -99,7 +104,7 @@ where
     }
 
     pub fn set_mempool(&mut self, mempool: Arc<KakarotPool<Self>>) {
-        self.mempool = Some(mempool)
+        self.mempool = Some(mempool);
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.

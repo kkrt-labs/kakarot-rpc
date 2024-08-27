@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     let starknet_provider = Arc::new(starknet_provider);
 
     let eth_client = EthClient::try_new(starknet_provider, db.clone()).await.expect("failed to start ethereum client");
-    let eth_provider = eth_client.eth_provider();
+    let eth_provider = eth_client.eth_provider().clone();
 
     // Setup the retry handler
     let retry_handler = RetryHandler::new(eth_provider, db);

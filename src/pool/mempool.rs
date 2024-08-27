@@ -29,15 +29,12 @@ impl AccountManager {
         let mut accounts = HashSet::new();
 
         // Open the file specified by `path`
-        let mut file = match File::open(path) {
-            Ok(file) => file,
-            Err(_) => {
-                return Self::default();
-            }
+        let Ok(mut file) = File::open(path) else {
+            return Self::default();
         };
 
         let mut contents = String::new();
-        if let Err(_) = file.read_to_string(&mut contents) {
+        if file.read_to_string(&mut contents).is_err() {
             return Self::default();
         }
 

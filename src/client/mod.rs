@@ -28,7 +28,7 @@ where
     SP: Provider + Clone + Sync + Send,
 {
     /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and
-    /// a [`Pool`].
+    /// a `Pool`.
     pub async fn try_new(sn_provider: SP, database: Database) -> eyre::Result<Self> {
         let chain = (sn_provider.chain_id().await.map_err(KakarotError::from)?.to_bigint()
             & Felt::from(u32::MAX).to_bigint())
@@ -55,11 +55,11 @@ where
     }
 
     /// Returns a clone of the [`EthDataProvider`]
-    pub fn eth_provider(&self) -> EthDataProvider<SP> {
-        self.eth_provider.clone()
+    pub const fn eth_provider(&self) -> &EthDataProvider<SP> {
+        &self.eth_provider
     }
 
-    /// Returns a clone of the [`Pool`]
+    /// Returns a clone of the `Pool`
     pub fn mempool(&self) -> Arc<KakarotPool<EthDataProvider<SP>>> {
         self.pool.clone()
     }

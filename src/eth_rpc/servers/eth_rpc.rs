@@ -180,7 +180,7 @@ where
 
     #[tracing::instrument(skip(self, request), err)]
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<U256> {
-        Ok(self.eth_client.eth_provider().estimate_gas(request, block_id).await?)
+        Ok(U256::from(self.eth_client.eth_provider().estimate_gas(request, block_id).await?))
     }
 
     #[tracing::instrument(skip_all, ret, err)]
