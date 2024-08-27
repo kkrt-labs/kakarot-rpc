@@ -80,7 +80,7 @@ where
     }
 
     /// Spawns a new task on the provided tokio runtime that will pool transactions.
-    #[instrument(skip_all, name = "retry_service")]
+    #[instrument(skip_all, name = "pool_service")]
     pub fn start(self, rt_handle: &Handle) {
         tracing::info!("starting pool service");
         rt_handle.spawn(async move {
