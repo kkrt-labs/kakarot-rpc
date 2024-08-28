@@ -33,7 +33,7 @@ export const SINK_OPTIONS = SINK_TYPE === "mongo"
   }
   : {};
 
-// Get the starting block number from environment variable
+// Get the starting block or returns 0 if the value is null or undefined
 export const STARTING_BLOCK = getEnvVariable(
   "STARTING_BLOCK",
   0,
