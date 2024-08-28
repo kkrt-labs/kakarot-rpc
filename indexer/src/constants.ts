@@ -43,7 +43,7 @@ export const STARTING_BLOCK = getEnvVariable(
 // Get the authentication token for Apibara from environment variable
 export const AUTH_TOKEN = getEnvVariable("APIBARA_AUTH_TOKEN", "");
 
-// Get the stream URL from environment variable
+// Get stream URL or returns "http://localhost:7171" if the value is null or undefined
 export const STREAM_URL = getEnvVariable("STREAM_URL", "http://localhost:7171");
 
 // Creates string that starts with "0x" and is padded to a total length of 64 chars
