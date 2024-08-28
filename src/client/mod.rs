@@ -29,14 +29,14 @@ where
 {
     /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and
     /// a `Pool`.
-    pub async fn try_new(sn_provider: SP, database: Database) -> eyre::Result<Self> {
-        let chain = (sn_provider.chain_id().await.map_err(KakarotError::from)?.to_bigint()
+    pub async fn try_new(starknet_provider: SP, database: Database) -> eyre::Result<Self> {
+        let chain = (starknet_provider.chain_id().await.map_err(KakarotError::from)?.to_bigint()
             & Felt::from(u32::MAX).to_bigint())
         .to_u64()
         .unwrap();
 
         // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let mut eth_provider = EthDataProvider::try_new(database, sn_provider).await?;
+        let mut eth_provider = EthDataProvider::try_new(database, starknet_provider).await?;
 
         let validator =
             KakarotTransactionValidatorBuilder::new(Arc::new(ChainSpec { chain: chain.into(), ..Default::default() }))
