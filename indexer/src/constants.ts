@@ -54,7 +54,7 @@ export const TRANSACTION_EXECUTED = hash.getSelectorFromName(
   "transaction_executed",
 );
 
-// Get the Kakarot address from environment variable
+// Get the Kakarot address from environment variable (0x1)
 export const KAKAROT_ADDRESS = getEnvVariable(
   "KAKAROT_ADDRESS",
   "",
