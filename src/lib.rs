@@ -10,11 +10,12 @@ pub mod providers {
     pub mod eth_provider;
     pub mod pool_provider;
 }
+pub mod client;
 pub mod config;
 pub mod eth_rpc;
 pub mod models;
+pub mod pool;
 pub mod prometheus_handler;
-pub mod retry;
 #[cfg(feature = "testing")]
 pub mod test_utils;
 pub mod tracing;

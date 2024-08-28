@@ -1,7 +1,7 @@
 use crate::{
     providers::eth_provider::{
         error::{EthApiError, EthereumDataFormatError, SignatureError},
-        provider::{EthProviderResult, EthereumProvider},
+        provider::{EthApiResult, EthereumProvider},
     },
     tracing::builder::TracerBuilder,
 };
@@ -20,32 +20,32 @@ use std::sync::Arc;
 #[async_trait]
 #[auto_impl(Arc, &)]
 pub trait DebugProvider {
-    async fn raw_header(&self, block_id: BlockId) -> EthProviderResult<Bytes>;
-    async fn raw_block(&self, block_id: BlockId) -> EthProviderResult<Bytes>;
-    async fn raw_transaction(&self, hash: B256) -> EthProviderResult<Option<Bytes>>;
-    async fn raw_transactions(&self, block_id: BlockId) -> EthProviderResult<Vec<Bytes>>;
-    async fn raw_receipts(&self, block_id: BlockId) -> EthProviderResult<Vec<Bytes>>;
+    async fn raw_header(&self, block_id: BlockId) -> EthApiResult<Bytes>;
+    async fn raw_block(&self, block_id: BlockId) -> EthApiResult<Bytes>;
+    async fn raw_transaction(&self, hash: B256) -> EthApiResult<Option<Bytes>>;
+    async fn raw_transactions(&self, block_id: BlockId) -> EthApiResult<Vec<Bytes>>;
+    async fn raw_receipts(&self, block_id: BlockId) -> EthApiResult<Vec<Bytes>>;
     async fn trace_block_by_number(
         &self,
         block_number: BlockNumberOrTag,
         opts: Option<GethDebugTracingOptions>,
-    ) -> EthProviderResult<Vec<TraceResult>>;
+    ) -> EthApiResult<Vec<TraceResult>>;
     async fn trace_block_by_hash(
         &self,
         block_hash: B256,
         opts: Option<GethDebugTracingOptions>,
-    ) -> EthProviderResult<Vec<TraceResult>>;
+    ) -> EthApiResult<Vec<TraceResult>>;
     async fn trace_transaction(
         &self,
         transaction_hash: B256,
         opts: Option<GethDebugTracingOptions>,
-    ) -> EthProviderResult<GethTrace>;
+    ) -> EthApiResult<GethTrace>;
     async fn trace_call(
         &self,
         request: TransactionRequest,
         block_number: Option<BlockId>,
         opts: Option<GethDebugTracingCallOptions>,
-    ) -> EthProviderResult<GethTrace>;
+    ) -> EthApiResult<GethTrace>;
 }
 
 #[derive(Debug, Clone)]
@@ -61,7 +61,7 @@ impl<P: EthereumProvider> DebugDataProvider<P> {
 
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataProvider<P> {
-    async fn raw_header(&self, block_id: BlockId) -> EthProviderResult<Bytes> {
+    async fn raw_header(&self, block_id: BlockId) -> EthApiResult<Bytes> {
         let mut res = Vec::new();
         if let Some(header) = self
             .eth_provider
@@ -77,7 +77,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         Ok(res.into())
     }
 
-    async fn raw_block(&self, block_id: BlockId) -> EthProviderResult<Bytes> {
+    async fn raw_block(&self, block_id: BlockId) -> EthApiResult<Bytes> {
         let block = match block_id {
             BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.into(), true).await?,
             BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
@@ -91,7 +91,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         Ok(raw_block.into())
     }
 
-    async fn raw_transaction(&self, hash: B256) -> EthProviderResult<Option<Bytes>> {
+    async fn raw_transaction(&self, hash: B256) -> EthApiResult<Option<Bytes>> {
         let transaction = self.eth_provider.transaction_by_hash(hash).await?;
 
         if let Some(tx) = transaction {
@@ -112,7 +112,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         }
     }
 
-    async fn raw_transactions(&self, block_id: BlockId) -> EthProviderResult<Vec<Bytes>> {
+    async fn raw_transactions(&self, block_id: BlockId) -> EthApiResult<Vec<Bytes>> {
         let transactions = self.eth_provider.block_transactions(Some(block_id)).await?.unwrap_or_default();
         let mut raw_transactions = Vec::with_capacity(transactions.len());
 
@@ -134,7 +134,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         Ok(raw_transactions)
     }
 
-    async fn raw_receipts(&self, block_id: BlockId) -> EthProviderResult<Vec<Bytes>> {
+    async fn raw_receipts(&self, block_id: BlockId) -> EthApiResult<Vec<Bytes>> {
         let receipts = self.eth_provider.block_receipts(Some(block_id)).await?.unwrap_or_default();
 
         // Initializes an empty vector to store the raw receipts
@@ -179,7 +179,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         &self,
         block_number: BlockNumberOrTag,
         opts: Option<GethDebugTracingOptions>,
-    ) -> EthProviderResult<Vec<TraceResult>> {
+    ) -> EthApiResult<Vec<TraceResult>> {
         let provider = Arc::new(&self.eth_provider);
         let tracer = TracerBuilder::new(provider)
             .await?
@@ -195,7 +195,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         &self,
         block_hash: B256,
         opts: Option<GethDebugTracingOptions>,
-    ) -> EthProviderResult<Vec<TraceResult>> {
+    ) -> EthApiResult<Vec<TraceResult>> {
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?
             .with_block_id(BlockId::Hash(block_hash.into()))
@@ -210,7 +210,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         &self,
         transaction_hash: B256,
         opts: Option<GethDebugTracingOptions>,
-    ) -> EthProviderResult<GethTrace> {
+    ) -> EthApiResult<GethTrace> {
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?
             .with_transaction_hash(transaction_hash)
@@ -226,7 +226,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         request: TransactionRequest,
         block_number: Option<BlockId>,
         opts: Option<GethDebugTracingCallOptions>,
-    ) -> EthProviderResult<GethTrace> {
+    ) -> EthApiResult<GethTrace> {
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?
             .with_block_id(block_number.unwrap_or_default())

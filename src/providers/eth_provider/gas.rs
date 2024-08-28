@@ -8,7 +8,7 @@ use crate::{
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
         database::{filter::format_hex, types::header::StoredHeader},
-        provider::{EthDataProvider, EthProviderResult},
+        provider::{EthApiResult, EthDataProvider},
     },
 };
 use async_trait::async_trait;
@@ -23,7 +23,7 @@ use tracing::Instrument;
 #[auto_impl(Arc, &)]
 pub trait GasProvider {
     /// Returns the result of a estimate gas.
-    async fn estimate_gas(&self, call: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    async fn estimate_gas(&self, call: TransactionRequest, block_id: Option<BlockId>) -> EthApiResult<U256>;
 
     /// Returns the fee history given a block count and a newest block number.
     async fn fee_history(
@@ -31,10 +31,10 @@ pub trait GasProvider {
         block_count: U64,
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
-    ) -> EthProviderResult<FeeHistory>;
+    ) -> EthApiResult<FeeHistory>;
 
     /// Returns the current gas price.
-    async fn gas_price(&self) -> EthProviderResult<U256>;
+    async fn gas_price(&self) -> EthApiResult<U256>;
 }
 
 #[async_trait]
@@ -42,7 +42,7 @@ impl<SP> GasProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+    async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthApiResult<U256> {
         // Set a high gas limit to make sure the transaction will not fail due to gas.
         let request = TransactionRequest { gas: Some(u128::from(u64::MAX)), ..request };
 
@@ -60,7 +60,7 @@ where
         block_count: U64,
         newest_block: BlockNumberOrTag,
         _reward_percentiles: Option<Vec<f64>>,
-    ) -> EthProviderResult<FeeHistory> {
+    ) -> EthApiResult<FeeHistory> {
         if block_count == U64::ZERO {
             return Ok(FeeHistory::default());
         }
@@ -106,7 +106,7 @@ where
         })
     }
 
-    async fn gas_price(&self) -> EthProviderResult<U256> {
+    async fn gas_price(&self) -> EthApiResult<U256> {
         let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, self.starknet_provider());
         let span = tracing::span!(tracing::Level::INFO, "sn::base_fee");
         let gas_price =

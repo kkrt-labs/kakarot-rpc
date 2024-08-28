@@ -18,14 +18,15 @@ use crate::{
         BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider, TxPoolProvider,
     },
 };
-use async_trait::async_trait;
 use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
 use reth_primitives::{BlockId, BlockNumberOrTag, TxKind, U256};
+use std::sync::Arc;
 
+use crate::pool::mempool::KakarotPool;
 use reth_rpc_types::{BlockHashOrNumber, TransactionRequest};
 use starknet::core::types::Felt;
 use tracing::{instrument, Instrument};
@@ -40,15 +41,18 @@ use {
     starknet::core::types::BroadcastedInvokeTransaction,
 };
 
-pub type EthProviderResult<T> = Result<T, EthApiError>;
+/// A type alias representing a result type for Ethereum API operations.
+///
+/// This alias is used to simplify function signatures that return a `Result`
+/// with an [`EthApiError`] as the error type.
+pub type EthApiResult<T> = Result<T, EthApiError>;
 
-#[async_trait]
+/// A trait that defines the interface for an Ethereum Provider.
 pub trait EthereumProvider:
     GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
 {
 }
 
-#[async_trait]
 impl<T> EthereumProvider for T where
     T: GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
 {
@@ -58,15 +62,16 @@ impl<T> EthereumProvider for T where
 /// Uses access to a database for certain data, while
 /// the rest is fetched from the Starknet Provider.
 #[derive(Debug, Clone)]
-pub struct EthDataProvider<SP: starknet::providers::Provider> {
+pub struct EthDataProvider<SP: starknet::providers::Provider + Send + Sync> {
     database: Database,
     starknet_provider: SP,
     pub(crate) chain_id: u64,
+    pub mempool: Option<Arc<KakarotPool<Self>>>,
 }
 
 impl<SP> EthDataProvider<SP>
 where
-    SP: starknet::providers::Provider,
+    SP: starknet::providers::Provider + Send + Sync,
 {
     /// Returns a reference to the database.
     pub const fn database(&self) -> &Database {
@@ -77,20 +82,29 @@ where
     pub const fn starknet_provider(&self) -> &SP {
         &self.starknet_provider
     }
+
+    /// Returns a reference to the pool.
+    pub fn mempool(&self) -> Option<Arc<KakarotPool<Self>>> {
+        self.mempool.clone()
+    }
 }
 
 impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    pub async fn new(database: Database, starknet_provider: SP) -> Result<Self> {
+    pub async fn try_new(database: Database, starknet_provider: SP) -> Result<Self> {
         // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
         let chain_id =
             (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
 
-        Ok(Self { database, starknet_provider, chain_id })
+        Ok(Self { database, starknet_provider, chain_id, mempool: None })
+    }
+
+    pub fn set_mempool(&mut self, mempool: Arc<KakarotPool<Self>>) {
+        self.mempool = Some(mempool);
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.
@@ -99,7 +113,7 @@ where
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<CallInput> {
+    ) -> EthApiResult<CallInput> {
         // unwrap option
         let to: kakarot_core::core::Option = {
             match request.to {
@@ -150,7 +164,7 @@ where
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<CairoArrayLegacy<Felt>> {
+    ) -> EthApiResult<CairoArrayLegacy<Felt>> {
         tracing::trace!(?request);
 
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
@@ -189,7 +203,7 @@ where
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<u128> {
+    ) -> EthApiResult<u128> {
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
@@ -227,7 +241,7 @@ where
     pub async fn to_starknet_block_id(
         &self,
         block_id: impl Into<Option<BlockId>>,
-    ) -> EthProviderResult<starknet::core::types::BlockId> {
+    ) -> EthApiResult<starknet::core::types::BlockId> {
         match block_id.into() {
             Some(BlockId::Hash(hash)) => {
                 Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(EthereumDataFormatError::from)?)
@@ -261,7 +275,7 @@ where
 
     /// Converts the given [`BlockNumberOrTag`] into a block number.
     #[instrument(skip(self))]
-    pub(crate) async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthProviderResult<u64> {
+    pub(crate) async fn tag_into_block_number(&self, tag: BlockNumberOrTag) -> EthApiResult<u64> {
         match tag {
             // Converts the tag representing the earliest block into block number 0.
             BlockNumberOrTag::Earliest => Ok(0),
@@ -281,7 +295,7 @@ where
     pub(crate) async fn block_id_into_block_number_or_hash(
         &self,
         block_id: BlockId,
-    ) -> EthProviderResult<BlockHashOrNumber> {
+    ) -> EthApiResult<BlockHashOrNumber> {
         match block_id {
             BlockId::Hash(hash) => Ok(BlockHashOrNumber::Hash(hash.into())),
             BlockId::Number(number_or_tag) => Ok(self.tag_into_block_number(number_or_tag).await?.into()),
@@ -296,7 +310,7 @@ where
 {
     /// Deploy the EVM transaction signer if a corresponding contract is not found on
     /// Starknet.
-    pub(crate) async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthProviderResult<()> {
+    pub(crate) async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthApiResult<()> {
         use crate::providers::eth_provider::constant::hive::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::{
             accounts::{Call, ExecutionV1},

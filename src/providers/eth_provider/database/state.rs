@@ -22,7 +22,7 @@ pub struct EthDatabase<P: EthereumProvider + Send + Sync> {
 }
 
 impl<P: EthereumProvider + Send + Sync> EthDatabase<P> {
-    pub(crate) const fn new(provider: P, block_id: BlockId) -> Self {
+    pub const fn new(provider: P, block_id: BlockId) -> Self {
         Self { provider, block_id }
     }
 }

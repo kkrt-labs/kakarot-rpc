@@ -3,8 +3,9 @@ use serde_json::Value;
 use std::collections::HashMap;
 
 /// Used in order to perform a custom deserialization of the stored
-/// Ethereum data from the database. All the primitive types are stored
-/// as strings in the database. This caused problems when deserializing.
+/// Ethereum data from the database.
+///
+/// All the primitive types are stored as strings in the database. This caused problems when deserializing.
 ///
 /// # Example
 ///

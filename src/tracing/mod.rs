@@ -422,7 +422,7 @@ mod tests {
             ),
         );
 
-        let eth_provider = Arc::new(EthDataProvider::new(db, starknet_provider).await.unwrap());
+        let eth_provider = Arc::new(EthDataProvider::try_new(db, starknet_provider).await.unwrap());
         let tracer = TracerBuilder::new(eth_provider)
             .await
             .unwrap()

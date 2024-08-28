@@ -1,15 +1,11 @@
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
+    client::EthClient,
     config::KakarotRpcConfig,
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
-    providers::{
-        alchemy_provider::AlchemyDataProvider,
-        debug_provider::DebugDataProvider,
-        eth_provider::{database::Database, provider::EthDataProvider},
-        pool_provider::PoolDataProvider,
-    },
-    retry::RetryHandler,
+    pool::RetryHandler,
+    providers::eth_provider::database::Database,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
@@ -51,19 +47,16 @@ async fn main() -> Result<()> {
 
     // Setup the eth provider
     let starknet_provider = Arc::new(starknet_provider);
-    let eth_provider = EthDataProvider::new(db.clone(), starknet_provider.clone()).await?;
-    let alchemy_provider = AlchemyDataProvider::new(eth_provider.clone());
-    let pool_provider = PoolDataProvider::new(eth_provider.clone());
-    let debug_provider = DebugDataProvider::new(eth_provider.clone());
+
+    let eth_client = EthClient::try_new(starknet_provider, db.clone()).await.expect("failed to start ethereum client");
+    let eth_provider = eth_client.eth_provider().clone();
 
     // Setup the retry handler
-    let retry_handler = RetryHandler::new(eth_provider.clone(), db);
+    let retry_handler = RetryHandler::new(eth_provider, db);
     retry_handler.start(&tokio::runtime::Handle::current());
 
     // Setup the RPC module
-    let kakarot_rpc_module =
-        KakarotRpcModuleBuilder::new(eth_provider, starknet_provider, alchemy_provider, pool_provider, debug_provider)
-            .rpc_module()?;
+    let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;
 
     // Start the RPC server
     let (socket_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
