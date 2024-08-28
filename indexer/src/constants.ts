@@ -46,7 +46,7 @@ export const AUTH_TOKEN = getEnvVariable("APIBARA_AUTH_TOKEN", "");
 // Get the stream URL from environment variable
 export const STREAM_URL = getEnvVariable("STREAM_URL", "http://localhost:7171");
 
-// Define a constant for null block hash
+// Creates string that starts with "0x" and is padded to a total length of 64 chars
 export const NULL_BLOCK_HASH = padString("0x", 32);
 
 // Get the selector for "transaction_executed" event
