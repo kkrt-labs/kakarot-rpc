@@ -28,7 +28,7 @@ use reth_rpc_types::{
 };
 use rstest::*;
 use starknet::core::types::{BlockTag, Felt};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc};use kakarot_rpc::client::KakarotTransactions;
 
 #[rstest]
 #[awt]
@@ -577,14 +577,15 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
 
     let eoa = katana.eoa();
     let eth_provider = katana.eth_provider();
+    let eth_client = katana.eth_client();
     let starknet_provider = eth_provider.starknet_provider();
     let other_eoa_1 = KakarotEOA::new(
         b256!("00000000000000012330000000000000000000000000000000000000000abde1"),
-        eth_provider.clone(),
+        Arc::new(eth_client.clone()),
     );
     let other_eoa_2 = KakarotEOA::new(
         b256!("00000000000000123123456000000000000000000000000000000000000abde2"),
-        eth_provider.clone(),
+        Arc::new(eth_client),
     );
     let chain_id = starknet_provider.chain_id().await.unwrap();
     CHAIN_ID.set(chain_id).expect("Failed to set chain id");
@@ -706,6 +707,7 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
 async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
+    let eth_client = katana.eth_client();
     let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
 
     // Create a sample transaction
@@ -726,7 +728,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     // Send the transaction
-    let _ = eth_provider
+    let _ = eth_client
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
@@ -751,6 +753,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
 async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
+    let eth_client = katana.eth_client();
     let nonce: u64 = katana.eoa().nonce().await.unwrap().try_into().expect("Failed to convert nonce");
 
     // Use the transaction for the Arachnid deployer
@@ -768,7 +771,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup:
     std::env::set_var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES", format!("{hash}, {random_hash}"));
 
     // Send the transaction
-    let tx_hash = eth_provider
+    let tx_hash = eth_client
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
@@ -792,6 +795,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup:
 async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
+    let eth_client = katana.eth_client();
 
     // Create a sample transaction
     let transaction = Transaction::Eip1559(TxEip1559 {
@@ -811,7 +815,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
     transaction_signed.signature = Signature::default();
 
     // Send the transaction
-    let _ = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+    let _ = eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await;
 
     // Retrieve the transaction from the database
     let tx: Option<StoredPendingTransaction> =
@@ -984,6 +988,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     // Given
     // Retrieve an instance of the Ethereum provider from the test environment
     let eth_provider = katana.eth_provider();
+    let eth_client = katana.eth_client();
     let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default().to();
 
     // Retrieve the first transaction from the test environment
@@ -1011,7 +1016,7 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     // Send the transaction
-    let _ = eth_provider
+    let _ = eth_client
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
