@@ -40,7 +40,7 @@ export const STARTING_BLOCK = getEnvVariable(
   (value) => Number.isSafeInteger(Number(value)) && Number(value) >= 0,
 );
 
-// Get the authentication token for Apibara from environment variable
+// Get authentication token from Apibara or returns an empty string if the value is null or undefined
 export const AUTH_TOKEN = getEnvVariable("APIBARA_AUTH_TOKEN", "");
 
 // Get stream URL or returns "http://localhost:7171" if the value is null or undefined
