@@ -3,6 +3,7 @@
 use alloy_primitives::{address, bytes};
 use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
+    client::KakarotTransactions,
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
@@ -28,7 +29,7 @@ use reth_rpc_types::{
 };
 use rstest::*;
 use starknet::core::types::{BlockTag, Felt};
-use std::{collections::HashMap, sync::Arc};use kakarot_rpc::client::KakarotTransactions;
+use std::{collections::HashMap, sync::Arc};
 
 #[rstest]
 #[awt]

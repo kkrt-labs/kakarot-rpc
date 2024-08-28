@@ -1,7 +1,8 @@
 use super::validate::KakarotTransactionValidator;
+use crate::pool::EthClient;
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionPool,
-};use crate::pool::EthClient;
+};
 use serde_json::Value;
 use starknet::core::types::Felt;
 use std::{collections::HashSet, fs::File, io::Read, time::Duration};
@@ -59,7 +60,7 @@ impl AccountManager {
 
     pub fn start<SP>(&self, rt_handle: &Handle, eth_client: &'static EthClient<SP>)
     where
-        SP: starknet::providers::Provider + Send + Sync+Clone + 'static,
+        SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
         let accounts = self.accounts.clone();
 
@@ -76,13 +77,12 @@ impl AccountManager {
 
     fn process_transaction<SP>(address: &Felt, eth_client: &EthClient<SP>)
     where
-        SP: starknet::providers::Provider + Send + Sync+Clone + 'static,
+        SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
         let balance = Self::check_balance(address);
 
         if balance > Felt::ONE {
-            let best_hashes =
-                eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
+            let best_hashes = eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
 
             if let Some(best_hash) = best_hashes.first() {
                 eth_client.mempool().as_ref().remove_transactions(vec![*best_hash]);

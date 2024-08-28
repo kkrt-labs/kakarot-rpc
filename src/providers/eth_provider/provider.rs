@@ -78,8 +78,6 @@ where
     pub const fn starknet_provider(&self) -> &SP {
         &self.starknet_provider
     }
-
-
 }
 
 impl<SP> EthDataProvider<SP>
@@ -93,7 +91,7 @@ where
         let chain_id =
             (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
 
-        Ok(Self { database, starknet_provider, chain_id,})
+        Ok(Self { database, starknet_provider, chain_id })
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.

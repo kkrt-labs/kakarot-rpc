@@ -68,7 +68,6 @@ where
             PoolConfig::default(),
         ));
 
-
         Ok(Self { eth_provider, pool })
     }
 

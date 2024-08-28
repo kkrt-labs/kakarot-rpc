@@ -1,6 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use kakarot_rpc::{
+    client::KakarotTransactions,
     providers::eth_provider::{
         constant::Constant, database::types::transaction::StoredPendingTransaction, ChainProvider,
     },
@@ -10,7 +11,7 @@ use kakarot_rpc::{
         katana::Katana,
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
-};use kakarot_rpc::client::KakarotTransactions;
+};
 use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
 use rstest::*;
 use serde_json::Value;
