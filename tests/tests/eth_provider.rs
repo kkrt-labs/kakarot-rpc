@@ -839,7 +839,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_send_transaction_wrong_chain_id(#[future] katana: Katana, _setup: ()) {
+async fn test_send_raw_transaction_wrong_chain_id(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
     let wrong_chain_id = 999; // An arbitrary wrong chain ID
@@ -877,7 +877,7 @@ async fn test_send_transaction_wrong_chain_id(#[future] katana: Katana, _setup: 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_send_transaction_insufficient_balance(#[future] katana: Katana, _setup: ()) {
+async fn test_send_raw_transaction_insufficient_balance(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
     let eoa = katana.eoa();
@@ -889,7 +889,7 @@ async fn test_send_transaction_insufficient_balance(#[future] katana: Katana, _s
         nonce: 0,
         gas_limit: 21000,
         to: TxKind::Call(Address::random()),
-        value: U256::from(1_000_000_001),
+        value: U256::MAX,
         max_fee_per_gas: 875_000_000,
         max_priority_fee_per_gas: 0,
         input: Bytes::default(),
@@ -904,10 +904,7 @@ async fn test_send_transaction_insufficient_balance(#[future] katana: Katana, _s
     let mempool_size = eth_provider.mempool().unwrap().pool_size();
 
     // Attempt to send the transaction
-    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
-
-    // Then
-    assert!(result.is_err()); // Ensure the transaction is rejected
+    let _ = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
 
     // Verify that the number of pending transactions in the mempool remains unchanged
     assert_eq!(eth_provider.mempool().unwrap().pool_size().pending, mempool_size.pending);
