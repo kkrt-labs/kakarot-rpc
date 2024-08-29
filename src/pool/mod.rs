@@ -21,6 +21,9 @@ use tracing::{instrument, Instrument};
 #[cfg(test)]
 use {futures::lock::Mutex, std::sync::Arc};
 
+pub mod mempool;
+pub mod validate;
+
 pub fn get_retry_tx_interval() -> u64 {
     u64::from_str(&std::env::var("RETRY_TX_INTERVAL").expect("Missing environment variable RETRY_TX_INTERVAL"))
         .expect("failing to parse RETRY_TX_INTERVAL")
@@ -76,10 +79,10 @@ where
         }
     }
 
-    /// Spawns a new task on the provided tokio runtime that will retry transactions.
-    #[instrument(skip_all, name = "retry_service")]
+    /// Spawns a new task on the provided tokio runtime that will pool transactions.
+    #[instrument(skip_all, name = "pool_service")]
     pub fn start(self, rt_handle: &Handle) {
-        tracing::info!("starting retry service");
+        tracing::info!("starting pool service");
         rt_handle.spawn(async move {
             loop {
                 let start = Instant::now();
@@ -170,13 +173,13 @@ mod tests {
         let db = eth_provider.database().clone();
         let retry_handler = RetryHandler::new(eth_provider.clone(), db.clone());
 
-        // Insert the first transaction into the pending transactions collection with 0 retry
+        // Insert the first transaction into the pending transactions collection with 0 pool
         let transaction1 = katana.eoa().mock_transaction_with_nonce(0).await.expect("Failed to get mock transaction");
         db.upsert_pending_transaction(transaction1.clone(), 0)
             .await
             .expect("Failed to insert pending transaction in database");
 
-        // Insert the transaction into the pending transactions collection with TRANSACTION_MAX_RETRIES + 1 retry
+        // Insert the transaction into the pending transactions collection with TRANSACTION_MAX_RETRIES + 1 pool
         // Shouldn't be retried as it has reached the maximum number of retries
         let transaction2 = katana.eoa().mock_transaction_with_nonce(1).await.expect("Failed to get mock transaction");
         db.upsert_pending_transaction(transaction2.clone(), get_transaction_max_retries() + 1)
@@ -196,7 +199,7 @@ mod tests {
 
         for i in 0..get_transaction_max_retries() + 2 {
             // Retry transactions.
-            retry_handler.process_pending_transactions().await.expect("Failed to retry transactions");
+            retry_handler.process_pending_transactions().await.expect("Failed to pool transactions");
 
             // Retrieve the retried transactions.
             let retried = retry_handler.retried.lock().await.clone();
@@ -205,7 +208,7 @@ mod tests {
             // Update the last retried transactions length.
             last_retried_transactions_hashes_len = retried.len();
 
-            // Assert that there is only one retried transaction before reaching retry limit.
+            // Assert that there is only one retried transaction before reaching pool limit.
             assert_eq!(retried_transaction_hashes.len(), usize::from(i + 1 < get_transaction_max_retries()));
 
             // Retrieve the pending transactions.
@@ -216,7 +219,7 @@ mod tests {
                 // Ensure that the spurious transactions are dropped from the pending transactions collection
                 assert_eq!(pending_transactions.len(), 1);
 
-                // Ensure that the retry is incremented for the first transaction
+                // Ensure that the pool is incremented for the first transaction
                 assert_eq!(pending_transactions.first().unwrap().retries, i + 1);
 
                 // Ensure that the transaction1 is still in the pending transactions collection

@@ -4,7 +4,7 @@ use crate::providers::eth_provider::{
         ethereum::EthereumBlockStore,
         filter::{self},
     },
-    provider::{EthDataProvider, EthProviderResult},
+    provider::{EthApiResult, EthDataProvider},
 };
 use async_trait::async_trait;
 use auto_impl::auto_impl;
@@ -16,10 +16,10 @@ use reth_rpc_types::TransactionReceipt;
 #[auto_impl(Arc, &)]
 pub trait ReceiptProvider {
     /// Returns the transaction receipt by hash of the transaction.
-    async fn transaction_receipt(&self, hash: B256) -> EthProviderResult<Option<TransactionReceipt>>;
+    async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<TransactionReceipt>>;
 
     /// Returns the block receipts for a block.
-    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>>;
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<TransactionReceipt>>>;
 }
 
 #[async_trait]
@@ -27,12 +27,12 @@ impl<SP> ReceiptProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    async fn transaction_receipt(&self, hash: B256) -> EthProviderResult<Option<TransactionReceipt>> {
+    async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<TransactionReceipt>> {
         let filter = EthDatabaseFilterBuilder::<filter::Receipt>::default().with_tx_hash(&hash).build();
         Ok(self.database().get_one::<StoredTransactionReceipt>(filter, None).await?.map(Into::into))
     }
 
-    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthProviderResult<Option<Vec<TransactionReceipt>>> {
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<TransactionReceipt>>> {
         match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
             BlockId::Number(number_or_tag) => {
                 let block_number = self.tag_into_block_number(number_or_tag).await?;

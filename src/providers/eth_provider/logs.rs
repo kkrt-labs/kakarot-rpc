@@ -8,7 +8,7 @@ use crate::providers::eth_provider::{
         filter::{self},
         FindOpts,
     },
-    provider::{EthDataProvider, EthProviderResult},
+    provider::{EthApiResult, EthDataProvider},
     BlockProvider,
 };
 use async_trait::async_trait;
@@ -18,7 +18,7 @@ use reth_rpc_types::{Filter, FilterChanges};
 #[async_trait]
 #[auto_impl(Arc, &)]
 pub trait LogProvider: BlockProvider {
-    async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges>;
+    async fn get_logs(&self, filter: Filter) -> EthApiResult<FilterChanges>;
 }
 
 #[async_trait]
@@ -26,7 +26,7 @@ impl<SP> LogProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    async fn get_logs(&self, filter: Filter) -> EthProviderResult<FilterChanges> {
+    async fn get_logs(&self, filter: Filter) -> EthApiResult<FilterChanges> {
         let block_hash = filter.get_block_hash();
 
         // Create the database filter.

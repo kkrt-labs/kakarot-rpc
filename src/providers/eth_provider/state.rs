@@ -11,7 +11,7 @@ use crate::{
     into_via_wrapper,
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
-        provider::{EthDataProvider, EthProviderResult},
+        provider::{EthApiResult, EthDataProvider},
         BlockProvider, ChainProvider,
     },
 };
@@ -39,7 +39,7 @@ use tracing::Instrument;
 #[auto_impl(Arc, &)]
 pub trait StateProvider: ChainProvider + BlockProvider {
     /// Returns the balance of an address in native eth.
-    async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256>;
+    async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
 
     /// Returns the storage of an address at a certain index.
     async fn storage_at(
@@ -47,10 +47,10 @@ pub trait StateProvider: ChainProvider + BlockProvider {
         address: Address,
         index: JsonStorageKey,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<B256>;
+    ) -> EthApiResult<B256>;
 
     /// Returns the code for the address at the given block.
-    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes>;
+    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<Bytes>;
 
     /// Returns the result of a call.
     async fn call(
@@ -59,7 +59,7 @@ pub trait StateProvider: ChainProvider + BlockProvider {
         block_id: Option<BlockId>,
         state_overrides: Option<StateOverride>,
         block_overrides: Option<Box<BlockOverrides>>,
-    ) -> EthProviderResult<Bytes>;
+    ) -> EthApiResult<Bytes>;
 }
 
 #[async_trait]
@@ -67,7 +67,7 @@ impl<SP> StateProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<U256> {
+    async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256> {
         // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
@@ -106,7 +106,7 @@ where
         address: Address,
         index: JsonStorageKey,
         block_id: Option<BlockId>,
-    ) -> EthProviderResult<B256> {
+    ) -> EthApiResult<B256> {
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
@@ -131,7 +131,7 @@ where
         Ok(storage.into())
     }
 
-    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthProviderResult<Bytes> {
+    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<Bytes> {
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
@@ -154,7 +154,7 @@ where
         block_id: Option<BlockId>,
         state_overrides: Option<StateOverride>,
         block_overrides: Option<Box<BlockOverrides>>,
-    ) -> EthProviderResult<Bytes> {
+    ) -> EthApiResult<Bytes> {
         // Create the EVM overrides from the state and block overrides.
         let evm_overrides = EvmOverrides::new(state_overrides, block_overrides);
 

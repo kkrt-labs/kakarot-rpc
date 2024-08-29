@@ -2,6 +2,7 @@ pub mod genesis;
 
 use super::mongo::MongoImage;
 use crate::{
+    client::EthClient,
     providers::eth_provider::{
         constant::U64_HEX_STRING_LEN,
         database::{
@@ -78,6 +79,8 @@ pub struct Katana {
     pub sequencer: TestSequencer,
     /// The Kakarot EOA (Externally Owned Account) instance.
     pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
+    /// The Ethereum client which contains the mempool and the eth provider
+    pub eth_client: EthClient<Arc<JsonRpcClient<HttpTransport>>>,
     /// Stored headers to insert into the headers collection.
     pub headers: Vec<StoredHeader>,
     /// Stored transactions to insert into the transactions collection.
@@ -124,24 +127,28 @@ impl<'a> Katana {
         // Finalize the MongoDB database initialization and get the database instance.
         let database = mongo_fuzzer.finalize().await;
 
-        // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let eth_provider = Arc::new(
-            EthDataProvider::new(database, starknet_provider).await.expect("Failed to create EthDataProvider"),
-        );
+        // Initialize the EthClient
+        let eth_client = EthClient::try_new(starknet_provider, database).await.expect("failed to start eth client");
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
+        let eth_provider = Arc::new(eth_client.eth_provider().clone());
         let eoa = KakarotEOA::new(pk, eth_provider);
 
         // Return a new instance of Katana with initialized fields.
         Self {
             sequencer,
             eoa,
+            eth_client,
             container: Some(mongo_fuzzer.container),
             transactions: mongo_fuzzer.transactions,
             receipts: mongo_fuzzer.receipts,
             logs: mongo_fuzzer.logs,
             headers: mongo_fuzzer.headers,
         }
+    }
+
+    pub fn eth_client(&self) -> EthClient<Arc<JsonRpcClient<HttpTransport>>> {
+        self.eth_client.clone()
     }
 
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {

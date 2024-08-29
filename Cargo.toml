@@ -60,18 +60,20 @@ alloy-rlp = { version = "0.3.4", default-features = false }
 alloy-sol-types = { version = "0.7.2", default-features = false }
 alloy-contract = { git = "https://github.com/alloy-rs/alloy", rev = "00d81d7" }
 jsonrpsee = { version = "0.23", features = ["macros", "server"] }
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, features = [
   "alloy-compat",
 ] }
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, features = [
   "arbitrary",
 ] }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
-reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
-reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false, optional = true }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.1", default-features = false }
 revm-inspectors = "0.4"
 
 # Error
@@ -173,6 +175,7 @@ testing = [
   "ef-testing",
   "foundry-config",
   "katana-primitives",
+  "mockall",
   "rand",
   "rayon",
   "rstest",
@@ -183,7 +186,6 @@ testing = [
   "tokio-stream",
   "tokio-util",
   "walkdir",
-  "mockall",
 ]
 hive = []
 arbitrary = ["rand", "dep:arbitrary"]

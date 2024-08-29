@@ -1,4 +1,5 @@
 use crate::{
+    client::EthClient,
     eth_rpc::{
         api::{
             alchemy_api::AlchemyApiServer, debug_api::DebugApiServer, eth_api::EthApiServer,
@@ -6,13 +7,12 @@ use crate::{
             txpool_api::TxPoolApiServer, web3_api::Web3ApiServer,
         },
         servers::{
-            alchemy_rpc::AlchemyRpc, debug_rpc::DebugRpc, eth_rpc::KakarotEthRpc, kakarot_rpc::KakarotRpc,
-            net_rpc::NetRpc, trace_rpc::TraceRpc, txpool_rpc::TxpoolRpc, web3_rpc::Web3Rpc,
+            alchemy_rpc::AlchemyRpc, debug_rpc::DebugRpc, eth_rpc::EthRpc, kakarot_rpc::KakarotRpc, net_rpc::NetRpc,
+            trace_rpc::TraceRpc, txpool_rpc::TxpoolRpc, web3_rpc::Web3Rpc,
         },
     },
     providers::{
-        alchemy_provider::AlchemyProvider, debug_provider::DebugProvider, eth_provider::provider::EthereumProvider,
-        pool_provider::PoolProvider,
+        alchemy_provider::AlchemyDataProvider, debug_provider::DebugDataProvider, pool_provider::PoolDataProvider,
     },
 };
 use jsonrpsee::{server::RegisterMethodError, Methods, RpcModule};
@@ -33,38 +33,24 @@ pub enum KakarotRpcModule {
 }
 
 #[derive(Debug)]
-pub struct KakarotRpcModuleBuilder<EP, SP, AP, PP, DP>
-where
-    EP: EthereumProvider + Send + Sync,
-    SP: Provider + Send + Sync,
-    AP: AlchemyProvider + Send + Sync,
-    PP: PoolProvider + Send + Sync,
-    DP: DebugProvider + Send + Sync,
-{
+pub struct KakarotRpcModuleBuilder<SP> {
     modules: HashMap<KakarotRpcModule, Methods>,
-    _phantom: PhantomData<(EP, SP, AP, PP, DP)>,
+    _phantom: PhantomData<SP>,
 }
 
-impl<EP, SP, AP, PP, DP> KakarotRpcModuleBuilder<EP, SP, AP, PP, DP>
+impl<SP> KakarotRpcModuleBuilder<SP>
 where
-    EP: EthereumProvider + Send + Sync + 'static,
-    SP: Provider + Send + Sync + 'static,
-    AP: AlchemyProvider + Send + Sync + 'static,
-    PP: PoolProvider + Send + Sync + 'static,
-    DP: DebugProvider + Send + Sync + 'static,
+    SP: Provider + Clone + Send + Sync + 'static,
 {
-    pub fn new(
-        eth_provider: EP,
-        starknet_provider: SP,
-        alchemy_provider: AP,
-        pool_provider: PP,
-        debug_provider: DP,
-    ) -> Self {
-        let eth_provider = Arc::new(eth_provider);
-        let alchemy_provider = Arc::new(alchemy_provider);
-        let pool_provider = Arc::new(pool_provider);
-        let debug_provider = Arc::new(debug_provider);
-        let eth_rpc_module = KakarotEthRpc::new(eth_provider.clone()).into_rpc();
+    pub fn new(eth_client: EthClient<SP>) -> Self {
+        let eth_provider = eth_client.eth_provider().clone();
+        let starknet_provider = eth_provider.starknet_provider().clone();
+
+        let alchemy_provider = Arc::new(AlchemyDataProvider::new(eth_provider.clone()));
+        let pool_provider = Arc::new(PoolDataProvider::new(eth_provider.clone()));
+        let debug_provider = Arc::new(DebugDataProvider::new(eth_provider.clone()));
+
+        let eth_rpc_module = EthRpc::new(eth_client).into_rpc();
         let alchemy_rpc_module = AlchemyRpc::new(alchemy_provider).into_rpc();
         let web3_rpc_module = Web3Rpc::default().into_rpc();
         let net_rpc_module = NetRpc::new(eth_provider.clone()).into_rpc();
