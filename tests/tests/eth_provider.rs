@@ -26,6 +26,7 @@ use reth_rpc_types::{
     request::TransactionInput, serde_helpers::JsonStorageKey, state::AccountOverride, Filter, FilterBlockOption,
     FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest,
 };
+use reth_transaction_pool::TransactionPool;
 use rstest::*;
 use starknet::core::types::{BlockTag, Felt};
 use std::{collections::HashMap, sync::Arc};
@@ -725,6 +726,9 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
+    // Retrieve the current size of the mempool
+    let mempool_size = eth_provider.mempool().unwrap().pool_size();
+
     // Send the transaction
     let _ = eth_provider
         .send_raw_transaction(transaction_signed.envelope_encoded())
@@ -743,6 +747,11 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     // Assert the transaction hash and block number
     assert_eq!(tx.hash, transaction_signed.hash());
     assert!(tx.block_number.is_none());
+
+    // Assert that the number of pending transactions in the mempool has increased by 1
+    assert_eq!(eth_provider.mempool().unwrap().pool_size().pending, mempool_size.pending + 1);
+    // Assert that the transaction in the mempool exists
+    assert!(eth_provider.mempool().unwrap().get(&tx.hash).is_some());
 }
 
 #[rstest]
@@ -810,6 +819,9 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
     // Set an incorrect signature
     transaction_signed.signature = Signature::default();
 
+    // Retrieve the current size of the mempool
+    let mempool_size = eth_provider.mempool().unwrap().pool_size();
+
     // Send the transaction
     let _ = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
 
@@ -819,6 +831,86 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 
     // Assert that no transaction is found
     assert!(tx.is_none());
+
+    // Verify that the number of pending transactions in the mempool remains unchanged
+    assert_eq!(eth_provider.mempool().unwrap().pool_size().pending, mempool_size.pending);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_send_transaction_wrong_chain_id(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+    let wrong_chain_id = 999; // An arbitrary wrong chain ID
+
+    // Create a transaction with the wrong chain ID
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id: wrong_chain_id,
+        nonce: 0,
+        gas_limit: 21000,
+        to: TxKind::Call(Address::random()),
+        value: U256::from(1000),
+        max_fee_per_gas: 875_000_000,
+        max_priority_fee_per_gas: 0,
+        input: Bytes::default(),
+        access_list: Default::default(),
+    });
+
+    // Sign the transaction
+    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
+    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Retrieve the current size of the mempool
+    let mempool_size = eth_provider.mempool().unwrap().pool_size();
+
+    // Attempt to send the transaction
+    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+
+    // Then
+    assert!(result.is_err()); // Ensure the transaction is rejected
+
+    // Verify that the number of pending transactions in the mempool remains unchanged
+    assert_eq!(eth_provider.mempool().unwrap().pool_size().pending, mempool_size.pending);
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_send_transaction_insufficient_balance(#[future] katana: Katana, _setup: ()) {
+    // Given
+    let eth_provider = katana.eth_provider();
+    let eoa = katana.eoa();
+    let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default().to();
+
+    // Create a transaction with a value greater than the balance
+    let transaction = Transaction::Eip1559(TxEip1559 {
+        chain_id,
+        nonce: 0,
+        gas_limit: 21000,
+        to: TxKind::Call(Address::random()),
+        value: U256::MAX, // Exceeding balance
+        max_fee_per_gas: 875_000_000,
+        max_priority_fee_per_gas: 0,
+        input: Bytes::default(),
+        access_list: Default::default(),
+    });
+
+    // Sign the transaction
+    let signature = sign_message(eoa.private_key(), transaction.signature_hash()).unwrap();
+    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+
+    // Retrieve the current size of the mempool
+    let mempool_size = eth_provider.mempool().unwrap().pool_size();
+
+    // Attempt to send the transaction
+    let result = eth_provider.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+
+    // Then
+    assert!(result.is_err()); // Ensure the transaction is rejected
+
+    // Verify that the number of pending transactions in the mempool remains unchanged
+    assert_eq!(eth_provider.mempool().unwrap().pool_size().pending, mempool_size.pending);
 }
 
 #[rstest]
