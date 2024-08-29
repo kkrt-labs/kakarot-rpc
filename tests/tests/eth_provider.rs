@@ -889,7 +889,7 @@ async fn test_send_transaction_insufficient_balance(#[future] katana: Katana, _s
         nonce: 0,
         gas_limit: 21000,
         to: TxKind::Call(Address::random()),
-        value: U256::MAX, // Exceeding balance
+        value: U256::from(1_000_000_001),
         max_fee_per_gas: 875_000_000,
         max_priority_fee_per_gas: 0,
         input: Bytes::default(),
