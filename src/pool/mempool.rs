@@ -113,7 +113,7 @@ impl AccountManager {
                     // Combine the low and high parts to form the final balance and return it
                     let balance = low + (high << 128);
 
-                    if oz_account.current_tx_hash.is_none() && balance > U256::from(1) {
+                    if oz_account.current_tx_hash.is_none() && balance > U256::from(1 * u128::pow(10, 18)) {
                         Self::process_transaction(address, eth_provider);
                     }
                 }
