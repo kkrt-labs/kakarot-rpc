@@ -7,6 +7,7 @@ use super::error::KakarotError;
 use crate::providers::eth_provider::database::types::{
     header::StoredHeader,
     log::StoredLog,
+    oz_account::StoredOzAccount,
     receipt::StoredTransactionReceipt,
     transaction::{StoredPendingTransaction, StoredTransaction},
 };
@@ -243,5 +244,12 @@ impl CollectionName for StoredTransactionReceipt {
 impl CollectionName for StoredLog {
     fn collection_name() -> &'static str {
         "logs"
+    }
+}
+
+/// Implement [`CollectionName`] for [`StoredOzAccount`]
+impl CollectionName for StoredOzAccount {
+    fn collection_name() -> &'static str {
+        "oz_accounts"
     }
 }

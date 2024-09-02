@@ -1,7 +1,7 @@
 use crate::{
     config::KakarotRpcConfig,
     eth_rpc::api::kakarot_api::KakarotApiServer,
-    pool::{get_retry_tx_interval, get_transaction_max_retries},
+    pool::transaction_poll_interval,
     providers::eth_provider::{
         constant::{Constant, MAX_LOGS},
         error::{EthApiError, EthereumDataFormatError, SignatureError},
@@ -100,8 +100,7 @@ where
         Ok(Constant {
             max_logs: *MAX_LOGS,
             starknet_network: String::from(starknet_config.network_url),
-            retry_tx_interval: get_retry_tx_interval(),
-            transaction_max_retries: get_transaction_max_retries(),
+            poll_tx_interval: transaction_poll_interval(),
             max_felts_in_calldata: *MAX_FELTS_IN_CALLDATA,
             white_listed_eip_155_transaction_hashes: get_white_listed_eip_155_transaction_hashes(),
         })

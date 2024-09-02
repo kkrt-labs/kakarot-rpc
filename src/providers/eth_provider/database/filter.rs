@@ -5,6 +5,7 @@ use crate::providers::eth_provider::constant::{
 use mongodb::bson::{doc, Document};
 use reth_primitives::{Address, B256};
 use reth_rpc_types::{BlockHashOrNumber, Index, Topic};
+use starknet::core::types::Felt;
 use std::fmt::{Display, LowerHex};
 
 /// A trait that defines possible key filters for blocks in the
@@ -92,6 +93,37 @@ impl TransactionFiltering for Receipt {
     }
 }
 
+pub trait OzAddressFiltering {
+    /// Returns the key for the oppenzeppelin address.
+    fn oz_address(&self) -> &'static str;
+}
+
+/// An openzeppelin account type used as a target for the filter.
+#[derive(Debug, Default)]
+pub struct OzAccount;
+
+impl Display for OzAccount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "openzeppelin account")
+    }
+}
+
+impl OzAddressFiltering for OzAccount {
+    fn oz_address(&self) -> &'static str {
+        "address"
+    }
+}
+
+impl TransactionFiltering for OzAccount {
+    fn transaction_hash(&self) -> &'static str {
+        "currentTxHash"
+    }
+
+    fn transaction_index(&self) -> &'static str {
+        ""
+    }
+}
+
 /// A header type used as a target for the filter.
 #[derive(Debug, Default)]
 pub struct Header;
@@ -171,6 +203,16 @@ impl<T: BlockFiltering + Display + Default> EthDatabaseFilterBuilder<T> {
             BlockHashOrNumber::Hash(hash) => self.with_block_hash(&hash),
             BlockHashOrNumber::Number(number) => self.with_block_number(number),
         }
+    }
+}
+
+impl<T: OzAddressFiltering + Display + Default> EthDatabaseFilterBuilder<T> {
+    /// Adds a filter on the transaction hash.
+    #[must_use]
+    pub fn with_oz_address(mut self, address: &Felt) -> Self {
+        let key = format!("{}.{}", self.target, self.target.oz_address());
+        self.filter.insert(key, format_hex(address, BLOCK_NUMBER_HEX_STRING_LEN));
+        self
     }
 }
 
