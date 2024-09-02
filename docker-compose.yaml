@@ -1,5 +1,3 @@
-version: "3.2"
-
 services:
   anvil:
     platform: linux/amd64
@@ -88,12 +86,16 @@ services:
       POSTGRES_USER: blockscout
       POSTGRES_PASSWORD: password
       POSTGRES_DB: blockscout
+    networks:
+      - internal
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:6
     command: redis-server --save 60 1 --loglevel warning
+    networks:
+      - internal
     volumes:
       - redis_data:/data
 
@@ -112,6 +114,8 @@ services:
       ETHEREUM_JSONRPC_HTTP_URL: "http://kakarot-rpc:3030"
     ports:
       - 4000:4000
+    networks:
+      - internal
     command:
       [
         "/bin/sh",
