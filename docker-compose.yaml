@@ -84,7 +84,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_USER: blockscout
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: blockscout
     networks:
       - internal
@@ -102,7 +102,7 @@ services:
   blockscout:
     image: blockscout/blockscout:latest
     environment:
-      DATABASE_URL: postgres://blockscout:password@postgres:5432/blockscout
+      DATABASE_URL: postgres://blockscout:postgres@postgres:5432/blockscout
       DATABASE_SSL: "false"
       DATABASE_POOL_SIZE: 10
       DATABASE_TIMEOUT: 5000
@@ -112,6 +112,7 @@ services:
       APP_NAME: "Blockscout"
       ETHEREUM_JSONRPC_VARIANT: "geth"
       ETHEREUM_JSONRPC_HTTP_URL: "http://kakarot-rpc:3030"
+      ETHEREUM_JSONRPC_TRACE_URL: "http://kakarot-rpc:3030"
     ports:
       - 4000:4000
     networks:
