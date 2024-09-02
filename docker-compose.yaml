@@ -82,6 +82,46 @@ services:
       kakarot-deployer:
         condition: service_completed_successfully
 
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: blockscout
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: blockscout
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+
+  blockscout:
+    image: blockscout/blockscout:latest
+    environment:
+      DATABASE_URL: postgres://blockscout:password@postgres:5432/blockscout
+      DATABASE_SSL: "false"
+      DATABASE_POOL_SIZE: 10
+      DATABASE_TIMEOUT: 5000
+      ECTO_USE_SSL: "false"
+      BLOCKSCOUT_HOST: "0.0.0.0"
+      PORT: 4000
+      APP_NAME: "Blockscout"
+      ETHEREUM_JSONRPC_VARIANT: "geth"
+      ETHEREUM_JSONRPC_HTTP_URL: "http://kakarot-rpc:3030"
+    ports:
+      - 4000:4000
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
+      ]
+    depends_on:
+      - postgres
+      - redis
+
   kakarot-rpc:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.20
     ports:
@@ -196,3 +236,5 @@ volumes:
   apibara:
   mongo_data:
   indexer_code:
+  postgres_data:
+  redis_data:
