@@ -1,6 +1,4 @@
 # trunk-ignore-all(yamllint/empty-values)
-version: "3.8"
-
 services:
   starknet:
     image: nethermind/juno:v0.11.1
@@ -21,7 +19,7 @@ services:
       --cn-l1-chain-id 11155111
       --cn-l2-chain-id kkrt
       --cn-core-contract-address 0xc7c9ea7fD0921Cb6EDd9a3184F88cF1b821aA82B
-      --cn-unverifiable-range 0,0
+      --cn-unverifiable-range 0,1000000
     networks:
       - internal_staging
   starknet-explorer:
@@ -62,6 +60,53 @@ services:
     volumes:
       - starknet_explorer_staging:/var/lib/postgresql/data/
 
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: blockscout
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: blockscout
+    networks:
+      - internal_staging
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6
+    command: redis-server --save 60 1 --loglevel warning
+    networks:
+      - internal_staging
+    volumes:
+      - redis_data_staging:/data
+
+  blockscout:
+    image: blockscout/blockscout:latest
+    environment:
+      DATABASE_URL: postgres://blockscout:postgres@postgres:5432/blockscout
+      DATABASE_SSL: "false"
+      DATABASE_POOL_SIZE: 10
+      DATABASE_TIMEOUT: 5000
+      ECTO_USE_SSL: "false"
+      BLOCKSCOUT_HOST: "0.0.0.0"
+      PORT: 4000
+      APP_NAME: "Blockscout"
+      ETHEREUM_JSONRPC_VARIANT: "geth"
+      ETHEREUM_JSONRPC_HTTP_URL: "http://kakarot-rpc:3030"
+      ETHEREUM_JSONRPC_TRACE_URL: "http://kakarot-rpc:3030"
+    ports:
+      - 4001:4000
+    networks:
+      - internal_staging
+    command:
+      [
+        "/bin/sh",
+        "-c",
+        "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
+      ]
+    depends_on:
+      - postgres
+      - redis
+
   kakarot-rpc:
     image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.19-alpha2
     pull_policy: always
@@ -87,7 +132,7 @@ services:
     restart: on-failure
     volumes:
       # Mount the indexer code
-      - indexer_code:/usr/src/indexer
+      - indexer_code_staging:/usr/src/indexer
     depends_on:
       starknet:
         condition: service_started
@@ -95,15 +140,20 @@ services:
       - internal_staging
 
   apibara-dna:
-    extends:
-      file: docker-compose.yaml
-      service: apibara-dna
+    image: quay.io/apibara/starknet:1.5.0
     command:
       - start
       - --rpc=http://starknet:6060
       - --wait-for-rpc
       - --data=/data
       - --head-refresh-interval-ms=1000
+    ports:
+      - 7171:7171
+    volumes:
+      - apibara_staging:/data
+    networks:
+      - internal_staging
+    restart: on-failure
 
   ### MongoDB with Mongo Express
   mongo:
@@ -141,7 +191,7 @@ services:
       - DEFAULT_BLOCK_GAS_LIMIT=7000000
     restart: on-failure
     volumes:
-      - indexer_code:/indexer
+      - indexer_code_staging:/indexer
     networks:
       - internal_staging
     depends_on:
@@ -150,6 +200,8 @@ services:
 
 networks:
   internal_staging:
+    driver: bridge
+  internal:
     driver: bridge
   default:
     driver: bridge
@@ -163,3 +215,5 @@ volumes:
   pgadmin_data_staging:
   starknet_explorer_staging:
   juno_files_staging:
+  postgres_data_staging:
+  redis_data_staging:
