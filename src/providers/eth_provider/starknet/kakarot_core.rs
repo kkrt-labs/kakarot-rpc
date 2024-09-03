@@ -4,7 +4,7 @@ use crate::{
         felt::Felt252Wrapper,
         transaction::{transaction_data_to_starknet_calldata, transaction_signature_to_field_elements},
     },
-    providers::eth_provider::provider::EthProviderResult,
+    providers::eth_provider::provider::EthApiResult,
 };
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
@@ -90,7 +90,7 @@ pub fn to_starknet_transaction(
     transaction: &TransactionSigned,
     signer: Address,
     retries: u8,
-) -> EthProviderResult<BroadcastedInvokeTransaction> {
+) -> EthApiResult<BroadcastedInvokeTransaction> {
     let sender_address = starknet_address(signer);
 
     // Transform the signature to a vector of field elements

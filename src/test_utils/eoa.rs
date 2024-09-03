@@ -68,12 +68,12 @@ pub trait Eoa<P: Provider + Send + Sync> {
 }
 
 #[derive(Clone, Debug)]
-pub struct KakarotEOA<P: Provider> {
+pub struct KakarotEOA<P: Provider + Send + Sync> {
     pub private_key: B256,
     pub eth_provider: Arc<EthDataProvider<P>>,
 }
 
-impl<P: Provider> KakarotEOA<P> {
+impl<P: Provider + Send + Sync> KakarotEOA<P> {
     pub const fn new(private_key: B256, eth_provider: Arc<EthDataProvider<P>>) -> Self {
         Self { private_key, eth_provider }
     }

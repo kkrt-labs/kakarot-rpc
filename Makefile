@@ -60,6 +60,9 @@ test: katana-genesis load-env
 test-target: load-env
 	cargo test --tests --all-features $(TARGET) -- --nocapture
 
+test-target1: load-env
+	cargo test --package kakarot-rpc --test entry --all-features -- tests::eth_provider::test_send_raw_transaction --exact --show-output
+
 benchmark:
 	cd benchmarks && bun i && bun run benchmark
 

@@ -11,7 +11,7 @@ use arbitrary::Arbitrary;
 use mongodb::{
     bson::{self, doc, Document},
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
-    Client, Collection,
+    Client,
 };
 use reth_primitives::{TxType, B256, U256};
 use reth_rpc_types::Transaction;
@@ -24,8 +24,10 @@ use testcontainers::{
     ContainerAsync, Image,
 };
 
+/// Hardcoded chain ID for testing purposes.
 pub static CHAIN_ID: LazyLock<U256> = LazyLock::new(|| U256::from(1));
 
+/// The size of the random bytes used for the arbitrary randomized implementation.
 pub const RANDOM_BYTES_SIZE: usize = 100_024;
 
 #[derive(Default, Debug)]
@@ -114,10 +116,7 @@ impl MongoFuzzer {
 
     /// Finalizes the data generation and returns the `MongoDB` database.
     pub async fn finalize(&self) -> Database {
-        for collection in CollectionDB::iter() {
-            self.update_collection(collection).await;
-        }
-
+        futures::future::join_all(CollectionDB::iter().map(|collection| self.update_collection(collection))).await;
         self.mongodb.clone()
     }
 
@@ -245,35 +244,59 @@ impl MongoFuzzer {
     async fn update_collection(&self, collection: CollectionDB) {
         match collection {
             CollectionDB::Headers => {
-                let collection = self.mongodb.inner().collection(StoredHeader::collection_name());
-                self.update_documents(&collection, &self.headers, "header", "number", "number").await;
+                self.update_documents::<StoredHeader>(
+                    StoredHeader::collection_name(),
+                    &self.headers,
+                    "header",
+                    "number",
+                    "number",
+                )
+                .await;
             }
             CollectionDB::Transactions => {
-                let collection = self.mongodb.inner().collection(StoredTransaction::collection_name());
-                self.update_documents(&collection, &self.transactions, "tx", "hash", "blockNumber").await;
+                self.update_documents::<StoredTransaction>(
+                    StoredTransaction::collection_name(),
+                    &self.transactions,
+                    "tx",
+                    "hash",
+                    "blockNumber",
+                )
+                .await;
             }
             CollectionDB::Receipts => {
-                let collection = self.mongodb.inner().collection(StoredTransactionReceipt::collection_name());
-                self.update_documents(&collection, &self.receipts, "receipt", "transactionHash", "blockNumber").await;
+                self.update_documents::<StoredTransactionReceipt>(
+                    StoredTransactionReceipt::collection_name(),
+                    &self.receipts,
+                    "receipt",
+                    "transactionHash",
+                    "blockNumber",
+                )
+                .await;
             }
             CollectionDB::Logs => {
-                let collection = self.mongodb.inner().collection(StoredLog::collection_name());
-                self.update_documents(&collection, &self.logs, "log", "transactionHash", "blockNumber").await;
+                self.update_documents::<StoredLog>(
+                    StoredLog::collection_name(),
+                    &self.logs,
+                    "log",
+                    "transactionHash",
+                    "blockNumber",
+                )
+                .await;
             }
         }
     }
 
     /// Updates the documents in the collection with the given documents.
-    async fn update_documents<T>(
+    async fn update_documents<T: Serialize>(
         &self,
-        collection: &Collection<Document>,
+        collection_name: &str,
         documents: &[T],
         doc: &str,
         value: &str,
         block_number: &str,
-    ) where
-        T: Serialize,
-    {
+    ) {
+        let collection = self.mongodb.inner().collection::<Document>(collection_name);
+
         let key = [doc, value].join(".");
         let block_key = [doc, block_number].join(".");
 
