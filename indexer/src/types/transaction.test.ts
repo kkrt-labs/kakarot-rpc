@@ -137,6 +137,56 @@ Deno.test("toTypedEthTx Legacy Transaction", () => {
   assertEquals(ethTx.data, tx.data);
 });
 
+Deno.test("toTypedEthTx Legacy Transaction with v = 28 but not in whitelist (failure case)", () => {
+  // Given
+  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+  const tx = new LegacyTransaction(
+    {
+      nonce: 1n,
+      gasPrice: 2n,
+      gasLimit: 3n,
+      to: "0x0000000000000000000000000000000000000001",
+      value: 4n,
+      data: new Uint8Array([0x12, 0x34]),
+    },
+    { common },
+  );
+  const raw = RLP.encode(tx.getMessageToSign());
+
+  const bytesLength = raw.byteLength;
+
+  const starknetTxCalldata: `0x${string}`[] = [
+    "0x1",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    `0x${bytesLength.toString(16)}`,
+    ...packCallData(raw),
+  ];
+
+  const starknetTx: Transaction = {
+    invokeV1: {
+      senderAddress: "0x01",
+      calldata: starknetTxCalldata,
+    },
+    meta: {
+      hash: "0x01",
+      maxFee: "0x01",
+      nonce: "0x01",
+      signature: ["0x1", "0x2", "0x3", "0x4", "0x1c"], // 0x1c -> 28
+      version: "1",
+    },
+  };
+
+  // When
+  const ethTx = toTypedEthTx({ transaction: starknetTx }) as LegacyTransaction;
+
+  // Then
+  assertEquals(ethTx, null);
+});
+
 Deno.test("toTypedEthTx Legacy Transaction with v = 28", () => {
   Deno.env.set(
     "WHITE_LISTED_EIP_155_TRANSACTION_HASHES",
@@ -242,9 +292,7 @@ Deno.test("toTypedEthTx Legacy Transaction with v = 26 (failure case)", () => {
   };
 
   // When
-  const ethTx = toTypedEthTx({ transaction: starknetTx }) as
-    | LegacyTransaction
-    | null;
+  const ethTx = toTypedEthTx({ transaction: starknetTx }) as LegacyTransaction;
 
   // Then
   assertEquals(ethTx, null);
