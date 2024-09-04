@@ -386,10 +386,7 @@ function addSignature(
 ): TypedTransaction {
   const TypedTxData = ((): TypedTxData => {
     if (isLegacyTx(tx)) {
-      if (v < 35) {
-        throw new Error(`Invalid v value: ${v}`);
-      }
-      return LegacyTransaction.fromTxData({
+      const legacyTx = LegacyTransaction.fromTxData({
         nonce: tx.nonce,
         gasPrice: tx.gasPrice,
         gasLimit: tx.gasLimit,
@@ -400,6 +397,22 @@ function addSignature(
         r,
         s,
       });
+      const txHash = "0x" + Array.from(legacyTx.hash())
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+
+      if (
+        v < 35 &&
+        !Deno?.env.get("WHITE_LISTED_EIP_155_TRANSACTION_HASHES")?.includes(
+          txHash,
+        )
+      ) {
+        throw new Error(
+          `Transaction is not whitelisted and Invalid v value: ${v}`,
+        );
+      }
+
+      return legacyTx;
     } else if (isAccessListEIP2930Tx(tx)) {
       return AccessListEIP2930Transaction.fromTxData({
         chainId: tx.chainId,
