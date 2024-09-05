@@ -407,6 +407,11 @@ function addSignature(
           txHash,
         )
       ) {
+        if(Number(v) !== 27 && Number(v) !== 28) {
+          throw new Error(
+            `Legacy txs need either v = 27/28 or v >= 37 (EIP-155 replay protection), got v = ${v}`,
+          );
+        }
         throw new Error(
           `Transaction is not whitelisted and Invalid v value: ${v}`,
         );
