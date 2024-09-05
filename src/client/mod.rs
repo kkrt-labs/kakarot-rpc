@@ -47,7 +47,7 @@ impl<SP> EthClient<SP>
 where
     SP: Provider + Clone + Sync + Send,
 {
-    /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and a `Pool`.
+    /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and a [`Pool`].
     pub async fn try_new(starknet_provider: SP, database: Database) -> eyre::Result<Self> {
         let chain = (starknet_provider.chain_id().await.map_err(KakarotError::from)?.to_bigint()
             & Felt::from(u32::MAX).to_bigint())
