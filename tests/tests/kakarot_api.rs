@@ -1,8 +1,9 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use kakarot_rpc::{
+    client::KakarotTransactions,
     providers::eth_provider::{
-        constant::Constant, database::types::transaction::StoredPendingTransaction, ChainProvider, TransactionProvider,
+        constant::Constant, database::types::transaction::StoredPendingTransaction, ChainProvider,
     },
     test_utils::{
         eoa::Eoa,
@@ -15,6 +16,7 @@ use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSign
 use rstest::*;
 use serde_json::Value;
 use std::str::FromStr;
+
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
@@ -23,6 +25,7 @@ async fn test_kakarot_get_starknet_transaction_hash(#[future] katana: Katana, _s
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     let eth_provider = katana.eth_provider();
+    let eth_client = katana.eth_client();
     let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
 
     // Create a sample transaction
@@ -43,7 +46,7 @@ async fn test_kakarot_get_starknet_transaction_hash(#[future] katana: Katana, _s
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     // Send the transaction
-    let tx_return = eth_provider
+    let tx_return = eth_client
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");

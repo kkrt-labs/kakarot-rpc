@@ -24,9 +24,6 @@ use itertools::Itertools;
 use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
 use reth_primitives::{BlockId, BlockNumberOrTag, TxKind, U256};
-use std::sync::Arc;
-
-use crate::pool::mempool::KakarotPool;
 use reth_rpc_types::{BlockHashOrNumber, TransactionRequest};
 use starknet::core::types::Felt;
 use tracing::{instrument, Instrument};
@@ -66,7 +63,6 @@ pub struct EthDataProvider<SP: starknet::providers::Provider + Send + Sync> {
     database: Database,
     starknet_provider: SP,
     pub(crate) chain_id: u64,
-    pub mempool: Option<Arc<KakarotPool<Self>>>,
 }
 
 impl<SP> EthDataProvider<SP>
@@ -82,11 +78,6 @@ where
     pub const fn starknet_provider(&self) -> &SP {
         &self.starknet_provider
     }
-
-    /// Returns a reference to the pool.
-    pub fn mempool(&self) -> Option<Arc<KakarotPool<Self>>> {
-        self.mempool.clone()
-    }
 }
 
 impl<SP> EthDataProvider<SP>
@@ -100,11 +91,7 @@ where
         let chain_id =
             (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
 
-        Ok(Self { database, starknet_provider, chain_id, mempool: None })
-    }
-
-    pub fn set_mempool(&mut self, mempool: Arc<KakarotPool<Self>>) {
-        self.mempool = Some(mempool);
+        Ok(Self { database, starknet_provider, chain_id })
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.

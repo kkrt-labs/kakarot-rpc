@@ -1,8 +1,7 @@
 use crate::{
+    client::{EthClient, KakarotTransactions},
     models::felt::Felt252Wrapper,
-    providers::eth_provider::{
-        provider::EthDataProvider, starknet::kakarot_core::starknet_address, ChainProvider, TransactionProvider,
-    },
+    providers::eth_provider::{starknet::kakarot_core::starknet_address, ChainProvider, TransactionProvider},
     test_utils::{
         evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo},
         tx_waiter::watch_tx,
@@ -30,19 +29,22 @@ pub const TX_GAS_PRICE: u128 = 10;
 
 /// EOA is an Ethereum-like Externally Owned Account (EOA) that can sign transactions and send them to the underlying Starknet provider.
 #[async_trait]
-pub trait Eoa<P: Provider + Send + Sync> {
+pub trait Eoa<P: Provider + Send + Sync + Clone> {
     fn starknet_address(&self) -> Result<Felt, eyre::Error> {
         Ok(starknet_address(self.evm_address()?))
     }
+
     fn evm_address(&self) -> Result<Address, eyre::Error> {
         let wallet = PrivateKeySigner::from_bytes(&self.private_key())?;
         Ok(wallet.address())
     }
+
     fn private_key(&self) -> B256;
-    fn eth_provider(&self) -> &EthDataProvider<P>;
+
+    fn eth_client(&self) -> &EthClient<P>;
 
     async fn nonce(&self) -> Result<U256, eyre::Error> {
-        let eth_provider = self.eth_provider();
+        let eth_provider = self.eth_client().eth_provider();
         let evm_address = self.evm_address()?;
 
         Ok(eth_provider.transaction_count(evm_address, None).await?)
@@ -60,39 +62,39 @@ pub trait Eoa<P: Provider + Send + Sync> {
     }
 
     async fn send_transaction(&self, tx: TransactionSigned) -> Result<B256, eyre::Error> {
-        let eth_provider = self.eth_provider();
+        let eth_client = self.eth_client();
         let mut v = Vec::new();
         tx.encode_enveloped(&mut v);
-        Ok(eth_provider.send_raw_transaction(v.into()).await?)
+        Ok(eth_client.send_raw_transaction(v.into()).await?)
     }
 }
 
 #[derive(Clone, Debug)]
-pub struct KakarotEOA<P: Provider + Send + Sync> {
+pub struct KakarotEOA<P: Provider + Send + Sync + Clone> {
     pub private_key: B256,
-    pub eth_provider: Arc<EthDataProvider<P>>,
+    pub eth_client: Arc<EthClient<P>>,
 }
 
-impl<P: Provider + Send + Sync> KakarotEOA<P> {
-    pub const fn new(private_key: B256, eth_provider: Arc<EthDataProvider<P>>) -> Self {
-        Self { private_key, eth_provider }
+impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
+    pub const fn new(private_key: B256, eth_client: Arc<EthClient<P>>) -> Self {
+        Self { private_key, eth_client }
     }
 }
 
 #[async_trait]
-impl<P: Provider + Send + Sync> Eoa<P> for KakarotEOA<P> {
+impl<P: Provider + Send + Sync + Clone> Eoa<P> for KakarotEOA<P> {
     fn private_key(&self) -> B256 {
         self.private_key
     }
 
-    fn eth_provider(&self) -> &EthDataProvider<P> {
-        &self.eth_provider
+    fn eth_client(&self) -> &EthClient<P> {
+        &self.eth_client
     }
 }
 
-impl<P: Provider + Send + Sync> KakarotEOA<P> {
+impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
     fn starknet_provider(&self) -> &P {
-        self.eth_provider.starknet_provider()
+        self.eth_client.eth_provider().starknet_provider()
     }
 
     /// Deploys an EVM contract given a contract name and constructor arguments
@@ -104,7 +106,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     ) -> Result<KakarotEvmContract, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
-        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default();
+        let chain_id = self.eth_client.eth_provider().chain_id().await?.unwrap_or_default();
 
         // Empty bytecode if contract_name is None
         let bytecode = if let Some(name) = contract_name {
@@ -138,7 +140,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let tx_hash: Felt252Wrapper = tx_hash.into();
 
         watch_tx(
-            self.eth_provider.starknet_provider(),
+            self.eth_client.eth_provider().starknet_provider(),
             tx_hash.clone().into(),
             std::time::Duration::from_millis(300),
             60,
@@ -178,7 +180,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         value: u128,
     ) -> Result<Transaction, eyre::Error> {
         let nonce = self.nonce().await?.try_into()?;
-        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default().to();
+        let chain_id = self.eth_client.eth_provider().chain_id().await?.unwrap_or_default().to();
 
         let tx = contract.prepare_call_transaction(
             function,
@@ -194,9 +196,14 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
         let bytes = tx_hash.0;
         let starknet_tx_hash = Felt::from_bytes_be(&bytes);
 
-        watch_tx(self.eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
-            .await
-            .expect("Tx polling failed");
+        watch_tx(
+            self.eth_client.eth_provider().starknet_provider(),
+            starknet_tx_hash,
+            std::time::Duration::from_millis(300),
+            60,
+        )
+        .await
+        .expect("Tx polling failed");
 
         Ok(tx)
     }
@@ -205,7 +212,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
     /// The transaction is signed and sent by the EOA
     pub async fn transfer(&self, to: Address, value: u128) -> Result<Transaction, eyre::Error> {
         let tx = Transaction::Eip1559(TxEip1559 {
-            chain_id: self.eth_provider.chain_id().await?.unwrap_or_default().try_into()?,
+            chain_id: self.eth_client.eth_provider().chain_id().await?.unwrap_or_default().try_into()?,
             nonce: self.nonce().await?.try_into()?,
             gas_limit: TX_GAS_LIMIT,
             max_fee_per_gas: TX_GAS_PRICE,
@@ -222,7 +229,7 @@ impl<P: Provider + Send + Sync> KakarotEOA<P> {
 
     /// Mocks a transaction with the given nonce without executing it
     pub async fn mock_transaction_with_nonce(&self, nonce: u64) -> Result<reth_rpc_types::Transaction, eyre::Error> {
-        let chain_id = self.eth_provider.chain_id().await?.unwrap_or_default().to();
+        let chain_id = self.eth_client.eth_provider().chain_id().await?.unwrap_or_default().to();
         Ok(from_recovered(TransactionSignedEcRecovered::from_signed_transaction(
             self.sign_transaction(Transaction::Eip1559(TxEip1559 {
                 chain_id,
