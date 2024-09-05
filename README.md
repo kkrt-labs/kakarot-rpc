@@ -293,6 +293,7 @@ This command will use the `docker-compose.yaml` file to set up the whole infrast
   - Configured with MongoDB and Kakarot addresses.
 
 - **MongoDB** with Mongo Express on port 27017 for data management.
+- **Blockscout** on port 4000, provides a web interface for exploring and analyzing blockchain data.
 
 ### Staging Environment
 
@@ -343,6 +344,7 @@ This command will use the `docker-compose.staging.yaml` file to set up the whole
   - Configured with MongoDB and Kakarot addresses.
 
 - **MongoDB** with Mongo Express on port 27017 for data management.
+- **Blockscout** on port 4001, provides a web interface for exploring and analyzing blockchain data.
 
 ### Production Environment
 
@@ -394,6 +396,7 @@ This command will use the `docker-compose.prod.yaml` file to set up the whole in
   - Configured with MongoDB and Kakarot addresses.
 
 - **MongoDB** with Mongo Express on port 27017 for data management.
+- **Blockscout** on port 4001, provides a web interface for exploring and analyzing blockchain data.
 
 ### Potential Pitfalls, Caveats, and Requirements
 

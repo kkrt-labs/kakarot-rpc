@@ -10,6 +10,7 @@ use crate::{
     },
 };
 use reth_primitives::{BlockId, U256};
+use crate::pool::EthClient;
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionPool,
 };
@@ -91,7 +92,7 @@ impl AccountManager {
     #[allow(clippy::significant_drop_tightening)]
     pub fn start<SP>(&self, rt_handle: &Handle, eth_provider: Arc<EthDataProvider<SP>>)
     where
-        SP: starknet::providers::Provider + Send + Sync + 'static,
+        SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
         let accounts = self.accounts.clone();
 
@@ -132,7 +133,7 @@ impl AccountManager {
 
     async fn get_balance<SP>(account_address: &Felt, eth_provider: &EthDataProvider<SP>) -> eyre::Result<U256>
     where
-        SP: starknet::providers::Provider + Send + Sync + 'static,
+        SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
         // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = eth_provider.to_starknet_block_id(Some(BlockId::default())).await?;

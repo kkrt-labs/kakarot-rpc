@@ -1,7 +1,7 @@
 #![allow(clippy::blocks_in_conditions)]
 
 use crate::{
-    client::EthClient,
+    client::{EthClient, KakarotTransactions},
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
         constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, BlockProvider, ChainProvider, GasProvider, LogProvider,
@@ -238,7 +238,7 @@ where
     #[tracing::instrument(skip_all, ret, err)]
     async fn send_raw_transaction(&self, bytes: Bytes) -> Result<B256> {
         tracing::info!("Serving eth_sendRawTransaction");
-        Ok(self.eth_client.eth_provider().send_raw_transaction(bytes).await?)
+        Ok(self.eth_client.send_raw_transaction(bytes).await?)
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> Result<Bytes> {
