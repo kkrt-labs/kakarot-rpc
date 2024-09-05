@@ -1,5 +1,6 @@
 use super::validate::KakarotTransactionValidator;
 use crate::{
+    client::EthClient,
     into_via_wrapper,
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
@@ -10,7 +11,6 @@ use crate::{
     },
 };
 use reth_primitives::{BlockId, U256};
-use crate::pool::EthClient;
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionPool,
 };
@@ -90,7 +90,7 @@ impl AccountManager {
 
     /// Start the account manager task.
     #[allow(clippy::significant_drop_tightening)]
-    pub fn start<SP>(&self, rt_handle: &Handle, eth_provider: Arc<EthDataProvider<SP>>)
+    pub fn start<SP>(&self, rt_handle: &Handle, eth_client: Arc<EthClient<SP>>)
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
@@ -103,10 +103,10 @@ impl AccountManager {
 
                     // Iterate over the accounts
                     for (account_address, account_nonce) in accounts.iter_mut() {
-                        match Self::get_balance(account_address, &eth_provider).await {
+                        match Self::get_balance(account_address, &eth_client).await {
                             Ok(balance) => {
                                 if balance > U256::from(u128::pow(10, 18)) {
-                                    Self::process_transaction(account_address, account_nonce, &eth_provider);
+                                    Self::process_transaction(account_address, account_nonce, &eth_client);
                                 }
                             }
                             Err(e) => {
@@ -131,15 +131,15 @@ impl AccountManager {
         });
     }
 
-    async fn get_balance<SP>(account_address: &Felt, eth_provider: &EthDataProvider<SP>) -> eyre::Result<U256>
+    async fn get_balance<SP>(account_address: &Felt, eth_client: &EthClient<SP>) -> eyre::Result<U256>
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
         // Convert the optional Ethereum block ID to a Starknet block ID.
-        let starknet_block_id = eth_provider.to_starknet_block_id(Some(BlockId::default())).await?;
+        let starknet_block_id = eth_client.eth_provider().to_starknet_block_id(Some(BlockId::default())).await?;
 
         // Create a new `ERC20Reader` instance for the Starknet native token
-        let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, eth_provider.starknet_provider());
+        let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, eth_client.eth_provider().starknet_provider());
 
         // Call the `balanceOf` method on the contract for the given account_address and block ID, awaiting the result
         let span = tracing::span!(tracing::Level::INFO, "sn::balance");
@@ -162,15 +162,14 @@ impl AccountManager {
         Ok(balance)
     }
 
-    fn process_transaction<SP>(_account_address: &Felt, account_nonce: &mut Felt, eth_provider: &EthDataProvider<SP>)
+    fn process_transaction<SP>(_account_address: &Felt, account_nonce: &mut Felt, eth_client: &EthClient<SP>)
     where
-        SP: starknet::providers::Provider + Send + Sync + 'static,
+        SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
-        let best_hashes =
-            eth_provider.mempool.as_ref().unwrap().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
+        let best_hashes = eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
 
         if let Some(best_hash) = best_hashes.first() {
-            eth_provider.mempool.as_ref().unwrap().remove_transactions(vec![*best_hash]);
+            eth_client.mempool().as_ref().remove_transactions(vec![*best_hash]);
 
             // Increment account_nonce after sending a transaction
             *account_nonce = *account_nonce + 1;
