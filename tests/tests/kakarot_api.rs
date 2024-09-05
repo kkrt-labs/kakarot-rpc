@@ -137,21 +137,18 @@ async fn test_kakarot_get_config(#[future] katana: Katana, _setup: ()) {
     let starknet_network = "http://0.0.0.0:1010/";
     let white_listed_eip_155_transaction_hashes = "0xe65425dacfc1423823cb4766aa0192ffde61eaa9bf81af9fe15149a89ef36c28";
     let max_logs = 10000;
-    let poll_tx_interval = 10;
     let max_felts_in_calldata = 22500;
 
     // Set environment variables for the test
     std::env::set_var("STARKNET_NETWORK", starknet_network);
     std::env::set_var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES", white_listed_eip_155_transaction_hashes);
     std::env::set_var("MAX_LOGS", max_logs.to_string());
-    std::env::set_var("PROCESS_PENDING_TX_INTERVAL", poll_tx_interval.to_string());
     std::env::set_var("MAX_FELTS_IN_CALLDATA", max_felts_in_calldata.to_string());
 
     // Hardcoded expected values
     let expected_constant = Constant {
         max_logs: Some(max_logs),
         starknet_network: (starknet_network).to_string(),
-        poll_tx_interval,
         max_felts_in_calldata,
         white_listed_eip_155_transaction_hashes: vec![B256::from_str(white_listed_eip_155_transaction_hashes).unwrap()],
     };
