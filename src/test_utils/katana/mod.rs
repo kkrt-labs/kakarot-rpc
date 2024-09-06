@@ -131,8 +131,7 @@ impl<'a> Katana {
         let eth_client = EthClient::try_new(starknet_provider, database).await.expect("failed to start eth client");
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
-        let eth_provider = Arc::new(eth_client.eth_provider().clone());
-        let eoa = KakarotEOA::new(pk, eth_provider);
+        let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()));
 
         // Return a new instance of Katana with initialized fields.
         Self {
@@ -152,11 +151,11 @@ impl<'a> Katana {
     }
 
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {
-        self.eoa.eth_provider.clone()
+        Arc::new(self.eoa.eth_client.eth_provider().clone())
     }
 
     pub fn starknet_provider(&self) -> Arc<JsonRpcClient<HttpTransport>> {
-        self.eoa.eth_provider.starknet_provider().clone()
+        self.eoa.eth_client.eth_provider().starknet_provider().clone()
     }
 
     pub fn eoa(&self) -> KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
