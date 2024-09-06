@@ -92,35 +92,34 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
 
         rt_handle.spawn(async move {
             loop {
-                let result = {
-                    let mut accounts = accounts.lock().await;
-
-                    // Iterate over the accounts and store any errors
-                    let mut iter_err = None;
-
-                    for (account_address, account_nonce) in accounts.iter_mut() {
-                        match self.get_balance(account_address).await {
-                            Ok(balance) => {
-                                if balance > U256::from(u128::pow(10, 18)) {
-                                    self.process_transaction(account_address, account_nonce);
-                                }
-                            }
-                            Err(e) => {
-                                tracing::error!(
-                                    "Error getting balance for account_address {:?}: {:?}",
-                                    account_address,
-                                    e
-                                );
-                                iter_err = Some(e);
-                            }
-                        }
-                    }
-
-                    iter_err.map_or(Ok(()), Err)
+                // Get account addresses first without acquiring the lock
+                let account_addresses: Vec<Felt> = {
+                    let accounts = accounts.lock().await;
+                    accounts.keys().cloned().collect()
                 };
 
-                if let Err(e) = result {
-                    tracing::error!("Error checking balances: {:?}", e);
+                // Iterate over account addresses and check balances
+                let mut errors = vec![];
+                for account_address in account_addresses {
+                    match self.get_balance(&account_address).await {
+                        Ok(balance) => {
+                            if balance > U256::from(u128::pow(10, 18)) {
+                                // Acquire lock only when necessary to modify account state
+                                let mut accounts = accounts.lock().await;
+                                if let Some(account_nonce) = accounts.get_mut(&account_address) {
+                                    self.process_transaction(&account_address, account_nonce);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Error getting balance for account_address {:?}: {:?}", account_address, e);
+                            errors.push(e);
+                        }
+                    }
+                }
+
+                if !errors.is_empty() {
+                    tracing::error!("Error checking balances: {:?}", errors);
                 }
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
