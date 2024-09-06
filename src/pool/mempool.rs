@@ -103,27 +103,27 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 };
 
                 // Iterate over account addresses and check balances
-                let mut errors = vec![];
                 for account_address in account_addresses {
-                    match self.get_balance(&account_address).await {
-                        Ok(balance) => {
-                            if balance > U256::from(u128::pow(10, 18)) {
-                                // Acquire lock only when necessary to modify account state
-                                let mut accounts = accounts.lock().await;
-                                if let Some(account_nonce) = accounts.get_mut(&account_address) {
-                                    self.process_transaction(&account_address, account_nonce);
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            tracing::error!("Error getting balance for account_address {:?}: {:?}", account_address, e);
-                            errors.push(e);
+                    // Fetch the balance and handle errors functionally
+                    let balance = self
+                        .get_balance(&account_address)
+                        .await
+                        .inspect_err(|err| {
+                            tracing::error!(
+                                "Error getting balance for account_address {:?}: {:?}",
+                                account_address,
+                                err
+                            )
+                        })
+                        .unwrap_or_default();
+
+                    if balance > U256::from(u128::pow(10, 18)) {
+                        // Acquire lock only when necessary to modify account state
+                        let mut accounts = accounts.lock().await;
+                        if let Some(account_nonce) = accounts.get_mut(&account_address) {
+                            self.process_transaction(&account_address, account_nonce);
                         }
                     }
-                }
-
-                if !errors.is_empty() {
-                    tracing::error!("Error checking balances: {:?}", errors);
                 }
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
