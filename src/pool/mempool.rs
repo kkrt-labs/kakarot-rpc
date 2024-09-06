@@ -113,7 +113,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                                 "Error getting balance for account_address {:?}: {:?}",
                                 account_address,
                                 err
-                            )
+                            );
                         })
                         .unwrap_or_default();
 
