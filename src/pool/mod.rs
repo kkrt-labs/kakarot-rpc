@@ -1,16 +1,17 @@
 #![allow(clippy::used_underscore_binding)]
-use crate::providers::eth_provider::{
-    database::{
+use crate::{
+    client::{EthClient, KakarotTransactions},
+    providers::eth_provider::database::{
         ethereum::EthereumTransactionStore,
         filter::{self, EthDatabaseFilterBuilder},
         types::transaction::StoredPendingTransaction,
         Database,
     },
-    provider::EthereumProvider,
 };
 use eyre::Result;
 use opentelemetry::metrics::{Gauge, Unit};
 use reth_primitives::{TransactionSignedEcRecovered, B256};
+use starknet::providers::Provider;
 use std::{
     fmt,
     str::FromStr,
@@ -37,9 +38,9 @@ pub fn get_transaction_max_retries() -> u8 {
 }
 
 /// The [`RetryHandler`] is responsible for retrying transactions that have failed.
-pub struct RetryHandler<P: EthereumProvider> {
-    /// The Ethereum provider.
-    eth_provider: P,
+pub struct RetryHandler<SP: Provider + Clone + Send + Sync> {
+    /// The Ethereum client.
+    eth_client: EthClient<SP>,
     /// The database.
     database: Database,
     /// The time to retry transactions recorded in an Observable.
@@ -49,29 +50,29 @@ pub struct RetryHandler<P: EthereumProvider> {
     retried: Arc<Mutex<Vec<B256>>>,
 }
 
-impl<P: EthereumProvider> fmt::Debug for RetryHandler<P> {
+impl<SP: Provider + Clone + Send + Sync> fmt::Debug for RetryHandler<SP> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("RetryHandler")
-            .field("eth_provider", &"...")
+            .field("eth_client", &"...")
             .field("database", &self.database)
             .finish_non_exhaustive()
     }
 }
 
-impl<P> RetryHandler<P>
+impl<SP> RetryHandler<SP>
 where
-    P: EthereumProvider + Send + Sync + 'static,
+    SP: Provider + Clone + Send + Sync + 'static,
 {
     /// Creates a new [`RetryHandler`] with the given Ethereum provider, database.
     #[allow(clippy::missing_const_for_fn)]
-    pub fn new(eth_provider: P, database: Database) -> Self {
+    pub fn new(eth_client: EthClient<SP>, database: Database) -> Self {
         let retry_time = opentelemetry::global::meter("retry_service")
             .u64_gauge("retry_time")
             .with_description("The time taken to process pending transactions")
             .with_unit(Unit::new("microseconds"))
             .init();
         Self {
-            eth_provider,
+            eth_client,
             database,
             retry_time,
             #[cfg(test)]
@@ -126,7 +127,7 @@ where
             }
         };
 
-        let _hash = self.eth_provider.send_raw_transaction(transaction.into_signed().envelope_encoded()).await?;
+        let _hash = self.eth_client.send_raw_transaction(transaction.into_signed().envelope_encoded()).await?;
         #[cfg(test)]
         self.retried.lock().await.push(_hash);
         Ok(())
@@ -170,8 +171,9 @@ mod tests {
     async fn test_retry_handler(#[future] katana: Katana, _setup: ()) {
         // Given
         let eth_provider = katana.eth_provider();
+        let eth_client = katana.eth_client();
         let db = eth_provider.database().clone();
-        let retry_handler = RetryHandler::new(eth_provider.clone(), db.clone());
+        let retry_handler = RetryHandler::new(eth_client, db.clone());
 
         // Insert the first transaction into the pending transactions collection with 0 pool
         let transaction1 = katana.eoa().mock_transaction_with_nonce(0).await.expect("Failed to get mock transaction");

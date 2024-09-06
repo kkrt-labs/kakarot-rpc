@@ -52,7 +52,8 @@ pub async fn tracing(
     let eoa = katana.eoa();
     let eoa_address = eoa.evm_address().expect("Failed to get eoa address");
     let nonce: u64 = eoa.nonce().await.expect("Failed to get nonce").to();
-    let chain_id = eoa.eth_provider().chain_id().await.expect("Failed to get chain id").unwrap_or_default().to();
+    let chain_id =
+        eoa.eth_client().eth_provider().chain_id().await.expect("Failed to get chain id").unwrap_or_default().to();
 
     // Push 10 RPC transactions into the database.
     let mut txs = Vec::with_capacity(TRACING_TRANSACTIONS_COUNT);

@@ -1,37 +1,28 @@
 use super::{
     constant::HASH_HEX_STRING_LEN,
     database::{
-        ethereum::EthereumBlockStore,
         filter::EthDatabaseFilterBuilder,
         types::transaction::{StoredPendingTransaction, StoredTransaction},
         CollectionName,
     },
-    error::{EthApiError, EthereumDataFormatError, ExecutionError, KakarotError, SignatureError, TransactionError},
-    starknet::kakarot_core::{account_contract::AccountContractReader, starknet_address, to_starknet_transaction},
+    error::ExecutionError,
+    starknet::kakarot_core::{account_contract::AccountContractReader, starknet_address},
     utils::{contract_not_found, entrypoint_not_found},
 };
 use crate::{
     into_via_wrapper,
-    models::{felt::Felt252Wrapper, transaction::validate_transaction},
+    models::felt::Felt252Wrapper,
     providers::eth_provider::{
-        database::{
-            ethereum::EthereumTransactionStore,
-            filter::{self, format_hex},
-        },
+        database::filter::{self, format_hex},
         provider::{EthApiResult, EthDataProvider},
         ChainProvider,
     },
 };
-use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_primitives::{
-    Address, BlockId, BlockNumberOrTag, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256, U256,
-};
+use reth_primitives::{Address, BlockId, BlockNumberOrTag, B256, U256};
 use reth_rpc_types::Index;
-use reth_rpc_types_compat::transaction::from_recovered;
-use reth_transaction_pool::{EthPooledTransaction, TransactionOrigin, TransactionPool};
 use tracing::Instrument;
 
 #[async_trait]
@@ -56,9 +47,6 @@ pub trait TransactionProvider: ChainProvider {
 
     /// Returns the nonce for the address at the given block.
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
-
-    /// Send a raw transaction to the network and returns the transactions hash.
-    async fn send_raw_transaction(&self, transaction: Bytes) -> EthApiResult<B256>;
 }
 
 #[async_trait]
@@ -147,67 +135,5 @@ where
         let nonce = nonce.max(protocol_nonce);
 
         Ok(into_via_wrapper!(nonce))
-    }
-
-    async fn send_raw_transaction(&self, transaction: Bytes) -> EthApiResult<B256> {
-        // Decode the transaction data
-        let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
-            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?;
-
-        let chain_id: u64 =
-            self.chain_id().await?.unwrap_or_default().try_into().map_err(|_| TransactionError::InvalidChainId)?;
-
-        // Validate the transaction
-        let latest_block_header =
-            self.database().latest_header().await?.ok_or(EthApiError::UnknownBlockNumber(None))?;
-        validate_transaction(&transaction_signed, chain_id, &latest_block_header)?;
-
-        // Recover the signer from the transaction
-        let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
-
-        // Get the number of retries for the transaction
-        let retries = self.database().pending_transaction_retries(&transaction_signed.hash).await?;
-
-        let transaction_signed_ec_recovered =
-            TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer);
-
-        let encoded_length = transaction_signed_ec_recovered.clone().length_without_header();
-
-        // Upsert the transaction as pending in the database
-        let transaction = from_recovered(transaction_signed_ec_recovered.clone());
-        self.database().upsert_pending_transaction(transaction, retries).await?;
-
-        // Convert the Ethereum transaction to a Starknet transaction
-        let starknet_transaction = to_starknet_transaction(&transaction_signed, signer, retries)?;
-
-        // Deploy EVM transaction signer if Hive feature is enabled
-        #[cfg(feature = "hive")]
-        self.deploy_evm_transaction_signer(signer).await?;
-
-        // Add the transaction to the Starknet provider
-        let span = tracing::span!(tracing::Level::INFO, "sn::add_invoke_transaction");
-        let res = self
-            .starknet_provider()
-            .add_invoke_transaction(starknet_transaction)
-            .instrument(span)
-            .await
-            .map_err(KakarotError::from)?;
-
-        let pool_transaction = EthPooledTransaction::new(transaction_signed_ec_recovered, encoded_length);
-
-        // Don't handle the result in case we are adding multiple times the same transaction due to the retry.
-        let _ = self.mempool.as_ref().unwrap().add_transaction(TransactionOrigin::Local, pool_transaction).await;
-
-        // Return transaction hash if testing feature is enabled, otherwise log and return Ethereum hash
-        if cfg!(feature = "testing") {
-            return Ok(B256::from_slice(&res.transaction_hash.to_bytes_be()[..]));
-        }
-        let hash = transaction_signed.hash();
-        tracing::info!(
-            ethereum_hash = ?hash,
-            starknet_hash = ?B256::from_slice(&res.transaction_hash.to_bytes_be()[..]),
-        );
-
-        Ok(hash)
     }
 }

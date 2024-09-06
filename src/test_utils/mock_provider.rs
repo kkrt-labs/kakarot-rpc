@@ -79,8 +79,6 @@ mock! {
         async fn transaction_by_block_number_and_index(&self, number_or_tag: BlockNumberOrTag, index: reth_rpc_types::Index) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
 
         async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
-
-        async fn send_raw_transaction(&self, transaction: Bytes) -> EthApiResult<B256>;
     }
 
     #[async_trait]
