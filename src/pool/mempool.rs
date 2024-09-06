@@ -44,22 +44,13 @@ impl AccountManager {
         let mut accounts = HashMap::new();
 
         // Open the file specified by `path`
-        let Ok(mut file) = File::open(path) else {
-            return Ok(Self::default());
-        };
+        let mut file = File::open(path)?;
 
         let mut contents = String::new();
-        if file.read_to_string(&mut contents).is_err() {
-            return Ok(Self::default());
-        }
+        file.read_to_string(&mut contents)?;
 
         // Parse the file contents as JSON
-        let json: Value = match serde_json::from_str(&contents) {
-            Ok(json) => json,
-            Err(_) => {
-                return Ok(Self::default());
-            }
-        };
+        let json: Value = serde_json::from_str(&contents)?;
 
         // Extract the account addresses from the JSON array
         if let Some(array) = json.as_array() {
