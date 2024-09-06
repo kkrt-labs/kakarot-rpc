@@ -82,6 +82,10 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
             }
         }
 
+        if accounts.is_empty() {
+            return Err(eyre::eyre!("No accounts found in file"));
+        }
+
         Ok(Self { accounts: Arc::new(Mutex::new(accounts)), eth_client })
     }
 
