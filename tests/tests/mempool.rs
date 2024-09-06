@@ -38,58 +38,52 @@ async fn test_mempool_add_transaction(#[future] katana: Katana, _setup: ()) {
 
     // Get updated mempool size
     let mempool_size = eth_provider.mempool().unwrap().pool_size();
-
-    // Get the EOA address
-    let address = katana.eoa().evm_address().expect("Failed to get eoa address");
-
-    // Get transactions by sender address and nonce
-    let sender_transactions = eth_provider.mempool().unwrap().get_transactions_by_sender_and_nonce(address, 0);
-
-    // Get transactions by origin
-    let origin_transaction = eth_provider.mempool().unwrap().get_transactions_by_origin(TransactionOrigin::Local);
-
-    // Get local transactions
-    let local_transaction = eth_provider.mempool().unwrap().get_local_transactions();
-
-    // Get all transactions in the mempool
-    let all_transactions = eth_provider.mempool().unwrap().all_transactions();
-
     // Check pending, queued and total transactions
     assert_eq!(mempool_size.pending, 1);
     assert_eq!(mempool_size.queued, 0);
     assert_eq!(mempool_size.total, 1);
 
+    // Get the EOA address
+    let address = katana.eoa().evm_address().expect("Failed to get eoa address");
+
     // get_transactions_by_sender_and_nonce test
+    // Get transactions by sender address and nonce
+    let sender_transactions = eth_provider.mempool().unwrap().get_transactions_by_sender_and_nonce(address, 0);
     // Check if the returned transaction hash matches
     assert_eq!(*sender_transactions.unwrap().hash(), transaction_signed.hash());
 
     // get_transactions_by_origin function test
+    // Get transactions by origin
+    let origin_transaction = eth_provider.mempool().unwrap().get_transactions_by_origin(TransactionOrigin::Local);
     // Check if the returned transaction hash matches
     assert_eq!(*origin_transaction[0].hash(), transaction_signed.hash());
 
     // get_local_transactions function test
+    // Get local transactions
+    let local_transaction = eth_provider.mempool().unwrap().get_local_transactions();
     // Check if the returned transaction hash matches
     assert_eq!(*local_transaction[0].hash(), transaction_signed.hash());
     assert_eq!(*local_transaction[0].hash(), *origin_transaction[0].hash());
 
-    // Remove transaction by hash
-    let _ = eth_provider.mempool().unwrap().remove_transactions(vec![transaction_signed.hash()]);
-
-    // remove_transactions function tests
-    // Get updated mempool size
-    let mempool_size = eth_provider.mempool().unwrap().pool_size();
-    // Check pending, queued and total transactions after remove_transactions
-    assert_eq!(mempool_size.pending, 0);
-    assert_eq!(mempool_size.queued, 0);
-    assert_eq!(mempool_size.total, 0);
-
     // all_transactions function tests
+    // Get all transactions in the mempool
+    let all_transactions = eth_provider.mempool().unwrap().all_transactions();
     // Check if the first pending transaction hash matches
     assert_eq!(*all_transactions.pending[0].hash(), transaction_signed.hash());
     // Ensure only one pending transaction is present
     assert_eq!(all_transactions.pending.len(), 1);
     // Ensure no queued transactions are present
     assert_eq!(all_transactions.queued.len(), 0);
+
+    // remove_transactions function tests
+    // Remove transaction by hash
+    let _ = eth_provider.mempool().unwrap().remove_transactions(vec![transaction_signed.hash()]);
+    // Get updated mempool size
+    let mempool_size = eth_provider.mempool().unwrap().pool_size();
+    // Check pending, queued and total transactions after remove_transactions
+    assert_eq!(mempool_size.pending, 0);
+    assert_eq!(mempool_size.queued, 0);
+    assert_eq!(mempool_size.total, 0);
 }
 
 #[rstest]
@@ -107,24 +101,21 @@ async fn test_mempool_add_external_transaction(#[future] katana: Katana, _setup:
 
     // Add external transaction
     let result = eth_provider.mempool().unwrap().add_external_transaction(transaction).await;
-
-    // Get pooled transaction by hash
-    let hashes = eth_provider.mempool().unwrap().get_pooled_transaction_element(transaction_signed.hash());
-
     // Ensure the transaction was added successfully
     assert!(result.is_ok());
 
+    // get_pooled_transaction_element function test
+    // Get pooled transaction by hash
+    let hashes = eth_provider.mempool().unwrap().get_pooled_transaction_element(transaction_signed.hash());
+    // Check if the retrieved hash matches the expected hash
+    assert_eq!(hashes.unwrap().hash(), &transaction_signed.hash());
+
     // Get updated mempool size
     let mempool_size = eth_provider.mempool().unwrap().pool_size();
-
     // Check pending, queued and total transactions
     assert_eq!(mempool_size.pending, 1);
     assert_eq!(mempool_size.queued, 0);
     assert_eq!(mempool_size.total, 1);
-
-    // get_pooled_transaction_element function test
-    // Check if the retrieved hash matches the expected hash
-    assert_eq!(hashes.unwrap().hash(), &transaction_signed.hash());
 }
 
 #[rstest]
@@ -153,49 +144,39 @@ async fn test_mempool_add_transactions(#[future] katana: Katana, _setup: ()) {
     // Add transactions to mempool
     let _ = eth_provider.mempool().unwrap().add_transactions(TransactionOrigin::Local, pooled_transactions).await;
 
+    // pending_transactions function tests
     // Get pending transactions
     let hashes = eth_provider.mempool().unwrap().pending_transactions();
+    let expected_hashes = signed_transactions.iter().map(TransactionSigned::hash).collect::<Vec<_>>();
+    let received_hashes = hashes.iter().map(|tx| *tx.hash()).collect::<Vec<_>>();
+    assert_eq!(received_hashes, expected_hashes);
 
+    // get_transactions_by_sender function tests
     // Get transactions by sender address
     let sender_transactions = eth_provider.mempool().unwrap().get_transactions_by_sender(address);
+    let received_sender_transactions = sender_transactions.iter().map(|tx| *tx.hash()).collect::<Vec<_>>();
+    assert_eq!(received_sender_transactions, expected_hashes);
 
+    // unique_senders function test
     // Get unique senders from the mempool
     let unique_senders = eth_provider.mempool().unwrap().unique_senders();
+    // Ensure the EOA address is in the unique senders
+    assert!(unique_senders.contains(&address));
 
+    // contains function test
     // Check if the first signed transaction is contained
     let contains = eth_provider.mempool().unwrap().contains(&signed_transactions[0].hash());
+    assert!(contains);
 
+    // mempool_size function tests
     // Get updated mempool size
     let mempool_size = eth_provider.mempool().unwrap().pool_size();
-    // mempool_size function tests
     // Check pending transactions
     assert_eq!(mempool_size.pending, transaction_number);
     // Check queued transactions
     assert_eq!(mempool_size.queued, 0);
     // Check total transactions
     assert_eq!(mempool_size.total, transaction_number);
-
-    // pending_transactions function tests
-    // Check if the first pending transaction hash matches
-    assert_eq!(hashes[0].hash(), &signed_transactions[0].hash());
-    // Check if the second pending transaction hash matches
-    assert_eq!(hashes[1].hash(), &signed_transactions[1].hash());
-    // Ensure the number of pending transactions matches the expected count
-    assert_eq!(hashes.len(), transaction_number);
-
-    // get_transactions_by_sender function tests
-    // Ensure only one transaction is returned
-    assert_eq!(sender_transactions.len(), transaction_number);
-    // Check if the returned transaction hash matches
-    assert_eq!(*sender_transactions[0].hash(), signed_transactions[0].hash());
-    assert_eq!(*sender_transactions[1].hash(), signed_transactions[1].hash());
-
-    // unique_senders function test
-    // Ensure the EOA address is in the unique senders
-    assert!(unique_senders.contains(&address));
-
-    // contains function test
-    assert!(contains);
 }
 
 #[rstest]
@@ -218,17 +199,33 @@ async fn test_mempool_add_external_transactions(#[future] katana: Katana, _setup
     // Add external transactions to mempool
     let _ = eth_provider.mempool().unwrap().add_external_transactions(pooled_transactions).await;
 
+    // pooled_transaction_hashes function tests
     // Get pooled transaction hashes
     let hashes = eth_provider.mempool().unwrap().pooled_transaction_hashes();
+    // Check if the first signed transaction hash is present
+    assert!(hashes.contains(&signed_transactions[0].hash()));
+    // Check if the second signed transaction hash is present
+    assert!(hashes.contains(&signed_transactions[1].hash()));
+    // Ensure the hashes are not empty
 
+    // pooled_transaction_hashes_max function test
     // Set maximum number of hashes to retrieve
     let hashes_max_number = 1;
-
     // Get pooled transaction hashes with a limit
     let hashes_max = eth_provider.mempool().unwrap().pooled_transaction_hashes_max(hashes_max_number);
+    // Check if at least one signed transaction hash is present
+    assert!(hashes_max.contains(&signed_transactions[0].hash()) || hashes_max.contains(&signed_transactions[1].hash()));
+    // Ensure the number of hashes matches the limit
+    assert_eq!(hashes_max.len(), hashes_max_number);
+    // Ensure the hashes are not empty
+    assert!(!hashes_max.is_empty());
 
+    // get_external_transactions function test
     // Get external transactions
     let external_transactions = eth_provider.mempool().unwrap().get_external_transactions();
+    // Check if the returned transaction hash matches
+    assert_eq!(*external_transactions[0].hash(), signed_transactions[0].hash());
+    assert_eq!(*external_transactions[1].hash(), signed_transactions[1].hash());
 
     // Get updated mempool size
     let mempool_size = eth_provider.mempool().unwrap().pool_size();
@@ -238,27 +235,7 @@ async fn test_mempool_add_external_transactions(#[future] katana: Katana, _setup
     assert_eq!(mempool_size.queued, 0);
     // Check total transactions
     assert_eq!(mempool_size.total, 2);
-
-    // pooled_transaction_hashes function tests
-    // Check if the first signed transaction hash is present
-    assert!(hashes.contains(&signed_transactions[0].hash()));
-    // Check if the second signed transaction hash is present
-    assert!(hashes.contains(&signed_transactions[1].hash()));
-    // Ensure the hashes are not empty
     assert!(!hashes.is_empty());
-
-    // pooled_transaction_hashes_max function test
-    // Check if at least one signed transaction hash is present
-    assert!(hashes_max.contains(&signed_transactions[0].hash()) || hashes_max.contains(&signed_transactions[1].hash()));
-    // Ensure the number of hashes matches the limit
-    assert_eq!(hashes_max.len(), hashes_max_number);
-    // Ensure the hashes are not empty
-    assert!(!hashes_max.is_empty());
-
-    // get_external_transactions function test
-    // Check if the returned transaction hash matches
-    assert_eq!(*external_transactions[0].hash(), signed_transactions[0].hash());
-    assert_eq!(*external_transactions[1].hash(), signed_transactions[1].hash());
 }
 
 #[rstest]
@@ -280,7 +257,6 @@ async fn test_mempool_add_transaction_and_subscribe(#[future] katana: Katana, _s
         .unwrap()
         .add_transaction_and_subscribe(TransactionOrigin::Local, transaction.clone())
         .await;
-
     // Ensure the transaction was added successfully
     assert!(result.is_ok());
 
@@ -312,10 +288,8 @@ async fn test_mempool_transaction_event_listener(#[future] katana: Katana, _setu
 
     // Get the transaction event listener
     let listener = eth_provider.mempool().unwrap().transaction_event_listener(transaction_signed.hash());
-
     // Ensure the listener exists
     assert!(listener.is_some());
-
     // Check if the listener's hash matches the transaction's hash
     assert_eq!(listener.unwrap().hash(), transaction_signed.hash());
 }
@@ -338,7 +312,6 @@ async fn test_mempool_get_private_transactions(#[future] katana: Katana, _setup:
 
     // Get private transactions
     let private_transaction = eth_provider.mempool().unwrap().get_private_transactions();
-
     // Check if the returned transaction hash matches
     assert_eq!(*private_transaction[0].hash(), transaction_signed.hash());
 }
@@ -350,14 +323,15 @@ async fn create_sample_transactions(
 ) -> Result<Vec<(EthPooledTransaction, TransactionSigned)>, SignatureError> {
     // Initialize a vector to hold transactions
     let mut transactions = Vec::new();
+    // Get the Ethereum provider
+    let eth_provider = katana.eth_provider();
+
+    let signer = katana.eoa().evm_address().expect("Failed to get eoa address");
+
+    // Get the chain ID
+    let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
 
     for counter in 0..num_transactions {
-        // Get the Ethereum provider
-        let eth_provider = katana.eth_provider();
-
-        // Get the chain ID
-        let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
-
         // Create a new EIP-1559 transaction
         let transaction = Transaction::Eip1559(TxEip1559 {
             chain_id,
@@ -365,10 +339,9 @@ async fn create_sample_transactions(
             gas_limit: 21000,
             to: TxKind::Call(Address::random()),
             value: U256::from(1000),
-            input: Bytes::default(),
             max_fee_per_gas: 875_000_000,
             max_priority_fee_per_gas: 0,
-            access_list: Default::default(),
+            ..Default::default()
         });
 
         // Sign the transaction
@@ -376,8 +349,6 @@ async fn create_sample_transactions(
 
         // Create a signed transaction
         let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
-        // Recover the signer from the transaction
-        let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
 
         // Create an EC recovered signed transaction
         let transaction_signed_ec_recovered =
