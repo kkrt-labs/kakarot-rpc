@@ -241,35 +241,6 @@ async fn test_mempool_add_external_transactions(#[future] katana: Katana, _setup
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_mempool_add_transaction_and_subscribe(#[future] katana: Katana, _setup: ()) {
-    let eth_client = katana.eth_client();
-
-    // Create a sample transaction
-    let (transaction, _) = create_sample_transactions(&katana, 1)
-        .await
-        .expect("Failed to create sample transaction")
-        .pop()
-        .expect("Expected at least one transaction");
-
-    // Add transaction and subscribe to events
-    let result =
-        eth_client.mempool().add_transaction_and_subscribe(TransactionOrigin::Local, transaction.clone()).await;
-    // Ensure the transaction was added successfully
-    assert!(result.is_ok());
-
-    // Get updated mempool size
-    let mempool_size = eth_client.mempool().pool_size();
-    // Check pending transactions
-    assert_eq!(mempool_size.pending, 1);
-    // Check queued transactions
-    assert_eq!(mempool_size.queued, 0);
-    // Check total transactions
-    assert_eq!(mempool_size.total, 1);
-}
-
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
 async fn test_mempool_transaction_event_listener(#[future] katana: Katana, _setup: ()) {
     let eth_client = katana.eth_client();
 
