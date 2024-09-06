@@ -89,10 +89,12 @@ impl AccountManager {
 
         rt_handle.spawn(async move {
             loop {
-                let result: eyre::Result<()> = {
+                let result = {
                     let mut accounts = accounts.lock().await;
 
-                    // Iterate over the accounts
+                    // Iterate over the accounts and store any errors
+                    let mut iter_err = None;
+
                     for (account_address, account_nonce) in accounts.iter_mut() {
                         match Self::get_balance(account_address, &eth_client).await {
                             Ok(balance) => {
@@ -106,11 +108,12 @@ impl AccountManager {
                                     account_address,
                                     e
                                 );
+                                iter_err = Some(e);
                             }
                         }
                     }
 
-                    Ok(())
+                    iter_err.map_or(Ok(()), Err)
                 };
 
                 if let Err(e) = result {
