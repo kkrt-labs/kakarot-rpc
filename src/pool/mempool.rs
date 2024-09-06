@@ -95,7 +95,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 // Get account addresses first without acquiring the lock
                 let account_addresses: Vec<Felt> = {
                     let accounts = accounts.lock().await;
-                    accounts.keys().cloned().collect()
+                    accounts.keys().copied().collect()
                 };
 
                 // Iterate over account addresses and check balances
