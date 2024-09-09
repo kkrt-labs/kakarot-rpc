@@ -86,9 +86,11 @@ export default async function transform({
   const processedEvents = events
     // Can be false if the transaction is not related to a specific instance of the Kakarot contract.
     // This is typically the case if there are multiple Kakarot contracts on the same chain.
-    .filter((event) => isKakarotTransaction(event.transaction))
+    .filter((event) =>
+      event.transaction && isKakarotTransaction(event.transaction)
+    )
     // Skip if the transaction_executed event contains "eth validation failed".
-    .filter((event) => !ethValidationFailed(event.event))
+    .filter((event) => event.event && !ethValidationFailed(event.event))
     .map(processEvent(blockInfo))
     .filter((event): event is ProcessedEvent => event !== null);
 
