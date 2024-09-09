@@ -26,7 +26,7 @@ ARG APIBARA_SINK_BIN_DIR
 # Run `docker image inspect apibara/starknet:1.5.0-aarch64` to get the exact path
 # ⚠️ This path is subject to change, so it's important to check it before building the image ⚠️
 COPY --from=apibara /nix/store/${APIBARA_STARKNET_BIN_DIR}-apibara-starknet-1.5.0/bin/apibara-starknet /usr/local/bin/starknet
-COPY --from=indexer /nix/store/${APIBARA_SINK_BIN_DIR}-apibara-sink-mongo-0.7.0/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
+COPY --from=indexer /nix/store/${APIBARA_SINK_BIN_DIR}-apibara-sink-mongo-0.7.1/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
 # Change the interpreter path.
 ARG BUILDPLATFORM
 RUN case $BUILDPLATFORM in \
