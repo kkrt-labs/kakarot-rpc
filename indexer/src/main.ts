@@ -256,9 +256,11 @@ function processTransactions(
 ): ProcessedTransaction[] {
   return transactions
     .filter(
-      (tx) =>
-        isRevertedWithOutOfResources(tx.receipt) &&
-        isKakarotTransaction(tx.transaction),
+      (tx) => {
+        // Check if tx.receipt exists before accessing its properties
+        return tx.receipt && isRevertedWithOutOfResources(tx.receipt) &&
+          tx.transaction && isKakarotTransaction(tx.transaction);
+      },
     )
     .map((tx) => createProcessedTransaction(tx, blockInfo, cumulativeGasUsages))
     .filter((tx): tx is ProcessedTransaction => tx !== null);
@@ -269,6 +271,8 @@ function createProcessedTransaction(
   blockInfo: BlockInfo,
   cumulativeGasUsages: bigint[],
 ): ProcessedTransaction | null {
+  if (!tx.transaction || !tx.receipt) return null;
+
   const ethTx = toEthTx({
     transaction: tx.transaction,
     receipt: tx.receipt,
