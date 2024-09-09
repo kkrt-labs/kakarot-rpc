@@ -397,9 +397,6 @@ function addSignature(
         r,
         s,
       });
-      const txHash = "0x" + Array.from(legacyTx.hash())
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
 
       if (
         v < 35 && Number(v) !== 27 && Number(v) !== 28
