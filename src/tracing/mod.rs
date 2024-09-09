@@ -380,7 +380,10 @@ fn env_with_tx(env: &EnvWithHandlerCfg, tx: reth_rpc_types::Transaction) -> Trac
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::providers::eth_provider::{database::Database, provider::EthDataProvider};
+    use crate::providers::{
+        eth_provider::{database::Database, provider::EthDataProvider},
+        sn_provider::StarknetProvider,
+    };
     use builder::TracerBuilder;
     use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
     use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
@@ -422,7 +425,8 @@ mod tests {
             ),
         );
 
-        let eth_provider = Arc::new(EthDataProvider::try_new(db, starknet_provider).await.unwrap());
+        let eth_provider =
+            Arc::new(EthDataProvider::try_new(db, StarknetProvider::new(Arc::new(starknet_provider))).await.unwrap());
         let tracer = TracerBuilder::new(eth_provider)
             .await
             .unwrap()

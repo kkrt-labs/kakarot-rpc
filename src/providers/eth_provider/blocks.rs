@@ -57,7 +57,9 @@ where
             // In case the database is empty, use the starknet provider
             None => {
                 let span = tracing::span!(tracing::Level::INFO, "sn::block_number");
-                U64::from(self.starknet_provider().block_number().instrument(span).await.map_err(KakarotError::from)?)
+                U64::from(
+                    self.starknet_provider_inner().block_number().instrument(span).await.map_err(KakarotError::from)?,
+                )
             }
             Some(header) => {
                 let number = header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::{
     database::state::{EthCacheDatabase, EthDatabase},
     error::{EthApiError, ExecutionError, TransactionError},
@@ -9,12 +7,9 @@ use super::{
 use crate::{
     into_via_wrapper,
     models::felt::Felt252Wrapper,
-    providers::{
-        eth_provider::{
-            provider::{EthApiResult, EthDataProvider},
-            BlockProvider, ChainProvider,
-        },
-        sn_provider::StarknetProvider,
+    providers::eth_provider::{
+        provider::{EthApiResult, EthDataProvider},
+        BlockProvider, ChainProvider,
     },
 };
 use async_trait::async_trait;
@@ -72,10 +67,8 @@ where
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256> {
         // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
-        // Create a new Starknet provider wrapper.
-        let starknet_provider = StarknetProvider::new(Arc::new(self.starknet_provider()));
         // Get the balance of the address at the given block ID.
-        starknet_provider.balance_at(starknet_address(address), starknet_block_id).await.map_err(Into::into)
+        self.starknet_provider().balance_at(starknet_address(address), starknet_block_id).await.map_err(Into::into)
     }
 
     async fn storage_at(
@@ -87,7 +80,7 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
-        let contract = AccountContractReader::new(address, self.starknet_provider());
+        let contract = AccountContractReader::new(address, self.starknet_provider_inner());
 
         let keys = split_u256(index.0);
         let storage_address = get_storage_var_address("Account_storage", &keys).expect("Storage var name is not ASCII");
@@ -112,7 +105,7 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
 
         let address = starknet_address(address);
-        let account_contract = AccountContractReader::new(address, self.starknet_provider());
+        let account_contract = AccountContractReader::new(address, self.starknet_provider_inner());
         let span = tracing::span!(tracing::Level::INFO, "sn::code");
         let bytecode = account_contract.bytecode().block_id(starknet_block_id).call().instrument(span).await;
 

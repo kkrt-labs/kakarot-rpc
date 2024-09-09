@@ -26,7 +26,7 @@ where
 {
     async fn syncing(&self) -> EthApiResult<SyncStatus> {
         let span = tracing::span!(tracing::Level::INFO, "sn::syncing");
-        Ok(match self.starknet_provider().syncing().instrument(span).await.map_err(KakarotError::from)? {
+        Ok(match self.starknet_provider_inner().syncing().instrument(span).await.map_err(KakarotError::from)? {
             SyncStatusType::NotSyncing => SyncStatus::None,
             SyncStatusType::Syncing(data) => SyncStatus::Info(SyncInfo {
                 starting_block: U256::from(data.starting_block_num),

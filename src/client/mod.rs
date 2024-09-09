@@ -4,16 +4,19 @@ use crate::{
         mempool::{KakarotPool, TransactionOrdering},
         validate::KakarotTransactionValidatorBuilder,
     },
-    providers::eth_provider::{
-        chain::ChainProvider,
-        database::{
-            ethereum::{EthereumBlockStore, EthereumTransactionStore},
-            state::EthDatabase,
-            Database,
+    providers::{
+        eth_provider::{
+            chain::ChainProvider,
+            database::{
+                ethereum::{EthereumBlockStore, EthereumTransactionStore},
+                state::EthDatabase,
+                Database,
+            },
+            error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError, TransactionError},
+            provider::{EthApiResult, EthDataProvider},
+            starknet::kakarot_core::to_starknet_transaction,
         },
-        error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError, TransactionError},
-        provider::{EthApiResult, EthDataProvider},
-        starknet::kakarot_core::to_starknet_transaction,
+        sn_provider::StarknetProvider,
     },
 };
 use alloy_rlp::Decodable;
@@ -55,7 +58,8 @@ where
         .unwrap();
 
         // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let eth_provider = EthDataProvider::try_new(database, starknet_provider).await?;
+        let eth_provider =
+            EthDataProvider::try_new(database, StarknetProvider::new(Arc::new(starknet_provider))).await?;
 
         let validator =
             KakarotTransactionValidatorBuilder::new(Arc::new(ChainSpec { chain: chain.into(), ..Default::default() }))

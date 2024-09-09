@@ -1009,7 +1009,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup:
     assert_eq!(mempool_size_after_send.pending, 1);
     assert_eq!(mempool_size_after_send.total, 1);
 
-    watch_tx(eth_provider.starknet_provider(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
+    watch_tx(eth_provider.starknet_provider_inner(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
         .await
         .expect("Tx polling failed");
 

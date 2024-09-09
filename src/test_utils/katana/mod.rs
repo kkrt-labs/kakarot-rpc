@@ -155,7 +155,7 @@ impl<'a> Katana {
     }
 
     pub fn starknet_provider(&self) -> Arc<JsonRpcClient<HttpTransport>> {
-        self.eoa.eth_client.eth_provider().starknet_provider().clone()
+        self.eoa.eth_client.eth_provider().starknet_provider_inner().clone()
     }
 
     pub fn eoa(&self) -> KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
