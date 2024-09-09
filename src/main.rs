@@ -4,7 +4,6 @@ use kakarot_rpc::{
     client::EthClient,
     config::KakarotRpcConfig,
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
-    pool::RetryHandler,
     providers::eth_provider::database::Database,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
@@ -49,10 +48,6 @@ async fn main() -> Result<()> {
     let starknet_provider = Arc::new(starknet_provider);
 
     let eth_client = EthClient::try_new(starknet_provider, db.clone()).await.expect("failed to start ethereum client");
-
-    // Setup the retry handler
-    let retry_handler = RetryHandler::new(eth_client.clone(), db);
-    retry_handler.start(&tokio::runtime::Handle::current());
 
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;

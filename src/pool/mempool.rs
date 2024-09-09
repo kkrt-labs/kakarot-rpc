@@ -1,12 +1,23 @@
 use super::validate::KakarotTransactionValidator;
-use crate::pool::EthClient;
+use crate::{
+    client::EthClient,
+    into_via_wrapper,
+    models::felt::Felt252Wrapper,
+    providers::eth_provider::{
+        error::ExecutionError,
+        starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN},
+        utils::{class_hash_not_declared, contract_not_found},
+    },
+};
+use reth_primitives::{BlockId, U256};
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionPool,
 };
 use serde_json::Value;
 use starknet::core::types::Felt;
-use std::{collections::HashSet, fs::File, io::Read, time::Duration};
-use tokio::runtime::Handle;
+use std::{collections::HashMap, fs::File, io::Read, sync::Arc, time::Duration};
+use tokio::{runtime::Handle, sync::Mutex};
+use tracing::Instrument;
 
 /// A type alias for the Kakarot Transaction Validator.
 /// Uses the Reth implementation [`TransactionValidationTaskExecutor`].
@@ -19,55 +30,100 @@ pub type TransactionOrdering = CoinbaseTipOrdering<EthPooledTransaction>;
 /// A type alias for the Kakarot Sequencer Mempool.
 pub type KakarotPool<Client> = Pool<Validator<Client>, TransactionOrdering, NoopBlobStore>;
 
-#[derive(Debug, Default)]
-pub struct AccountManager {
-    accounts: HashSet<Felt>,
+/// Manages a collection of accounts and their associated nonces, interfacing with an Ethereum client.
+///
+/// This struct provides functionality to initialize account data from a file, monitor account balances,
+/// and process transactions for accounts with sufficient balance.
+#[derive(Debug)]
+pub struct AccountManager<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> {
+    /// A shared, mutable collection of accounts and their nonces.
+    accounts: Arc<Mutex<HashMap<Felt, Felt>>>,
+    /// The Ethereum client used to interact with the blockchain.
+    eth_client: Arc<EthClient<SP>>,
 }
 
-impl AccountManager {
-    pub fn new(path: &str) -> Self {
-        let mut accounts = HashSet::new();
+impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountManager<SP> {
+    /// Creates a new [`AccountManager`] instance by initializing account data from a JSON file.
+    pub async fn new(path: &str, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Self> {
+        let mut accounts = HashMap::new();
 
         // Open the file specified by `path`
-        let Ok(mut file) = File::open(path) else {
-            return Self::default();
-        };
+        let mut file = File::open(path)?;
 
         let mut contents = String::new();
-        if file.read_to_string(&mut contents).is_err() {
-            return Self::default();
-        }
+        file.read_to_string(&mut contents)?;
 
         // Parse the file contents as JSON
-        let json: Value = match serde_json::from_str(&contents) {
-            Ok(json) => json,
-            Err(_) => {
-                return Self::default();
-            }
-        };
+        let json: Value = serde_json::from_str(&contents)?;
 
         // Extract the account addresses from the JSON array
         if let Some(array) = json.as_array() {
             for item in array {
-                if let Some(address) = item.as_str() {
-                    accounts.insert(Felt::from_hex_unchecked(address));
+                if let Some(account_address) = item.as_str() {
+                    let felt_address = Felt::from_hex_unchecked(account_address);
+
+                    let starknet_block_id = eth_client
+                        .eth_provider()
+                        .to_starknet_block_id(Some(BlockId::default()))
+                        .await
+                        .map_err(|e| eyre::eyre!("Error converting block ID: {:?}", e))?;
+
+                    // Query the initial account_nonce for the account from the provider
+                    accounts.insert(
+                        felt_address,
+                        eth_client
+                            .eth_provider()
+                            .starknet_provider()
+                            .get_nonce(starknet_block_id, felt_address)
+                            .await
+                            .unwrap_or_default(),
+                    );
                 }
             }
         }
 
-        Self { accounts }
+        if accounts.is_empty() {
+            return Err(eyre::eyre!("No accounts found in file"));
+        }
+
+        Ok(Self { accounts: Arc::new(Mutex::new(accounts)), eth_client })
     }
 
-    pub fn start<SP>(&self, rt_handle: &Handle, eth_client: &'static EthClient<SP>)
-    where
-        SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
-    {
+    /// Starts the account manager task that periodically checks account balances and processes transactions.
+    #[allow(clippy::significant_drop_tightening)]
+    pub fn start(&'static self, rt_handle: &Handle) {
         let accounts = self.accounts.clone();
 
         rt_handle.spawn(async move {
             loop {
-                for address in &accounts {
-                    Self::process_transaction(address, eth_client);
+                // Get account addresses first without acquiring the lock
+                let account_addresses: Vec<Felt> = {
+                    let accounts = accounts.lock().await;
+                    accounts.keys().copied().collect()
+                };
+
+                // Iterate over account addresses and check balances
+                for account_address in account_addresses {
+                    // Fetch the balance and handle errors functionally
+                    let balance = self
+                        .get_balance(&account_address)
+                        .await
+                        .inspect_err(|err| {
+                            tracing::error!(
+                                "Error getting balance for account_address {:?}: {:?}",
+                                account_address,
+                                err
+                            );
+                        })
+                        .unwrap_or_default();
+
+                    if balance > U256::from(u128::pow(10, 18)) {
+                        // Acquire lock only when necessary to modify account state
+                        let mut accounts = accounts.lock().await;
+                        if let Some(account_nonce) = accounts.get_mut(&account_address) {
+                            self.process_transaction(&account_address, account_nonce);
+                        }
+                    }
                 }
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
@@ -75,41 +131,47 @@ impl AccountManager {
         });
     }
 
-    fn process_transaction<SP>(address: &Felt, eth_client: &EthClient<SP>)
+    /// Retrieves the balance of the specified account address.
+    async fn get_balance(&self, account_address: &Felt) -> eyre::Result<U256> {
+        // Convert the optional Ethereum block ID to a Starknet block ID.
+        let starknet_block_id = self.eth_client.eth_provider().to_starknet_block_id(Some(BlockId::default())).await?;
+
+        // Create a new `ERC20Reader` instance for the Starknet native token
+        let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, self.eth_client.eth_provider().starknet_provider());
+
+        // Call the `balanceOf` method on the contract for the given account_address and block ID, awaiting the result
+        let span = tracing::span!(tracing::Level::INFO, "sn::balance");
+        let res = eth_contract.balanceOf(account_address).block_id(starknet_block_id).call().instrument(span).await;
+
+        if contract_not_found(&res) || class_hash_not_declared(&res) {
+            return Err(eyre::eyre!("Contract not found or class hash not declared"));
+        }
+
+        // Otherwise, extract the balance from the result, converting any errors to ExecutionError
+        let balance = res.map_err(ExecutionError::from)?.balance;
+
+        // Convert the low and high parts of the balance to U256
+        let low: U256 = into_via_wrapper!(balance.low);
+        let high: U256 = into_via_wrapper!(balance.high);
+
+        // Combine the low and high parts to form the final balance and return it
+        let balance = low + (high << 128);
+
+        Ok(balance)
+    }
+
+    /// Processes a transaction for the given account if the balance is sufficient.
+    fn process_transaction(&self, _account_address: &Felt, account_nonce: &mut Felt)
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
-        let balance = Self::check_balance(address);
+        let best_hashes = self.eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
 
-        if balance > Felt::ONE {
-            let best_hashes = eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
+        if let Some(best_hash) = best_hashes.first() {
+            self.eth_client.mempool().as_ref().remove_transactions(vec![*best_hash]);
 
-            if let Some(best_hash) = best_hashes.first() {
-                eth_client.mempool().as_ref().remove_transactions(vec![*best_hash]);
-            }
+            // Increment account_nonce after sending a transaction
+            *account_nonce = *account_nonce + 1;
         }
-    }
-
-    const fn check_balance(_address: &Felt) -> Felt {
-        Felt::ONE
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_account_manager_new() {
-        let account_manager = AccountManager::new("src/pool/accounts.json");
-
-        let accounts = account_manager.accounts;
-
-        assert!(accounts
-            .contains(&Felt::from_hex_unchecked("0x00686735619287df0f11ec4cda22675f780886b52bf59cf899dd57fd5d5f4cad")));
-        assert!(accounts
-            .contains(&Felt::from_hex_unchecked("0x0332825a42ccbec3e2ceb6c242f4dff4682e7d16b8559104b5df8fd925ddda09")));
-        assert!(accounts
-            .contains(&Felt::from_hex_unchecked("0x003f5628053c2d6bdfc9e45ea8aeb14405b8917226d455a94b3225a9a7520559")));
     }
 }
