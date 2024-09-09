@@ -1,18 +1,20 @@
+use std::sync::Arc;
+
 use super::{
     database::state::{EthCacheDatabase, EthDatabase},
     error::{EthApiError, ExecutionError, TransactionError},
-    starknet::{
-        kakarot_core::{account_contract::AccountContractReader, starknet_address},
-        ERC20Reader, STARKNET_NATIVE_TOKEN,
-    },
-    utils::{class_hash_not_declared, contract_not_found, entrypoint_not_found, split_u256},
+    starknet::kakarot_core::{account_contract::AccountContractReader, starknet_address},
+    utils::{contract_not_found, entrypoint_not_found, split_u256},
 };
 use crate::{
     into_via_wrapper,
     models::felt::Felt252Wrapper,
-    providers::eth_provider::{
-        provider::{EthApiResult, EthDataProvider},
-        BlockProvider, ChainProvider,
+    providers::{
+        eth_provider::{
+            provider::{EthApiResult, EthDataProvider},
+            BlockProvider, ChainProvider,
+        },
+        sn_provider::StarknetProvider,
     },
 };
 use async_trait::async_trait;
@@ -70,35 +72,10 @@ where
     async fn balance(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256> {
         // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
-
-        // Create a new `ERC20Reader` instance for the Starknet native token
-        let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, self.starknet_provider());
-
-        // Call the `balanceOf` method on the contract for the given address and block ID, awaiting the result
-        let span = tracing::span!(tracing::Level::INFO, "sn::balance");
-        let res = eth_contract
-            .balanceOf(&starknet_address(address))
-            .block_id(starknet_block_id)
-            .call()
-            .instrument(span)
-            .await;
-
-        // Check if the contract was not found or the class hash not declared,
-        // returning a default balance of 0 if true.
-        // The native token contract should be deployed on Kakarot, so this should not happen
-        // We want to avoid errors in this case and return a default balance of 0
-        if contract_not_found(&res) || class_hash_not_declared(&res) {
-            return Ok(Default::default());
-        }
-        // Otherwise, extract the balance from the result, converting any errors to ExecutionError
-        let balance = res.map_err(ExecutionError::from)?.balance;
-
-        // Convert the low and high parts of the balance to U256
-        let low: U256 = into_via_wrapper!(balance.low);
-        let high: U256 = into_via_wrapper!(balance.high);
-
-        // Combine the low and high parts to form the final balance and return it
-        Ok(low + (high << 128))
+        // Create a new Starknet provider wrapper.
+        let starknet_provider = StarknetProvider::new(Arc::new(self.starknet_provider()));
+        // Get the balance of the address at the given block ID.
+        starknet_provider.balance_at(starknet_address(address), starknet_block_id).await.map_err(Into::into)
     }
 
     async fn storage_at(

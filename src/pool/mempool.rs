@@ -1,14 +1,5 @@
 use super::validate::KakarotTransactionValidator;
-use crate::{
-    client::EthClient,
-    into_via_wrapper,
-    models::felt::Felt252Wrapper,
-    providers::eth_provider::{
-        error::ExecutionError,
-        starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN},
-        utils::{class_hash_not_declared, contract_not_found},
-    },
-};
+use crate::{client::EthClient, providers::sn_provider::StarknetProvider};
 use reth_primitives::{BlockId, U256};
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionPool,
@@ -17,7 +8,6 @@ use serde_json::Value;
 use starknet::core::types::Felt;
 use std::{collections::HashMap, fs::File, io::Read, sync::Arc, time::Duration};
 use tokio::{runtime::Handle, sync::Mutex};
-use tracing::Instrument;
 
 /// A type alias for the Kakarot Transaction Validator.
 /// Uses the Reth implementation [`TransactionValidationTaskExecutor`].
@@ -106,7 +96,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 for account_address in account_addresses {
                     // Fetch the balance and handle errors functionally
                     let balance = self
-                        .get_balance(&account_address)
+                        .get_balance(account_address)
                         .await
                         .inspect_err(|err| {
                             tracing::error!(
@@ -132,32 +122,13 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     }
 
     /// Retrieves the balance of the specified account address.
-    async fn get_balance(&self, account_address: &Felt) -> eyre::Result<U256> {
+    async fn get_balance(&self, account_address: Felt) -> eyre::Result<U256> {
         // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = self.eth_client.eth_provider().to_starknet_block_id(Some(BlockId::default())).await?;
-
-        // Create a new `ERC20Reader` instance for the Starknet native token
-        let eth_contract = ERC20Reader::new(*STARKNET_NATIVE_TOKEN, self.eth_client.eth_provider().starknet_provider());
-
-        // Call the `balanceOf` method on the contract for the given account_address and block ID, awaiting the result
-        let span = tracing::span!(tracing::Level::INFO, "sn::balance");
-        let res = eth_contract.balanceOf(account_address).block_id(starknet_block_id).call().instrument(span).await;
-
-        if contract_not_found(&res) || class_hash_not_declared(&res) {
-            return Err(eyre::eyre!("Contract not found or class hash not declared"));
-        }
-
-        // Otherwise, extract the balance from the result, converting any errors to ExecutionError
-        let balance = res.map_err(ExecutionError::from)?.balance;
-
-        // Convert the low and high parts of the balance to U256
-        let low: U256 = into_via_wrapper!(balance.low);
-        let high: U256 = into_via_wrapper!(balance.high);
-
-        // Combine the low and high parts to form the final balance and return it
-        let balance = low + (high << 128);
-
-        Ok(balance)
+        // Create a new Starknet provider wrapper.
+        let starknet_provider = StarknetProvider::new(Arc::new(self.eth_client.eth_provider().starknet_provider()));
+        // Get the balance of the address at the given block ID.
+        starknet_provider.balance_at(account_address, starknet_block_id).await.map_err(Into::into)
     }
 
     /// Processes a transaction for the given account if the balance is sufficient.

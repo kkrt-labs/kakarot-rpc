@@ -10,6 +10,7 @@ pub mod providers {
     pub mod debug_provider;
     pub mod eth_provider;
     pub mod pool_provider;
+    pub mod sn_provider;
 }
 pub mod client;
 pub mod config;
