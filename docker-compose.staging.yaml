@@ -187,7 +187,6 @@ services:
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
       - KAKAROT_ADDRESS=0x2824d6ed6759ac4c4a54a39b78d04c0e48be8937237026bf8c3bf46a8bea722
       - DEFAULT_BLOCK_GAS_LIMIT=7000000
-      - WHITE_LISTED_EIP_155_TRANSACTION_HASHES=
     restart: on-failure
     volumes:
       - indexer_code_staging:/indexer

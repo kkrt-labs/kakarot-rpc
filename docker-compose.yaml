@@ -203,7 +203,6 @@ services:
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
       - ALLOW_ENV=/deployments/.env
       - DEFAULT_BLOCK_GAS_LIMIT=7000000
-      - WHITE_LISTED_EIP_155_TRANSACTION_HASHES=
     restart: on-failure
     volumes:
       - indexer_code:/indexer
