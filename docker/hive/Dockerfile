@@ -6,7 +6,7 @@ FROM ghcr.io/dojoengine/dojo:v1.0.0-alpha.0 as katana
 # Indexer service
 ### Apibara DNA indexer and indexer
 FROM quay.io/apibara/starknet:1.5.0 as apibara
-FROM quay.io/apibara/sink-mongo:0.7.0 as indexer
+FROM quay.io/apibara/sink-mongo:0.7.1 as indexer
 FROM debian:bookworm as apibara-build
 RUN apt-get update && apt-get install --no-install-recommends -y patchelf && rm -rf /var/lib/apt/lists/*
 
@@ -16,10 +16,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y patchelf && rm 
 # These values need to be updated if the version of ApiBara Starknet or Sink change.
 # platform: linux/amd64:
 #   - APIBARA_STARKNET_BIN_DIR: ns4qwsl6fgbv7mxhxpnaqhd66wnic8i6
-#   - APIBARA_SINK_BIN_DIR: sci7y4a8r7yz05094pl88h3d7vv1s98f
+#   - APIBARA_SINK_BIN_DIR: 81f00xxzyxs6ih6376cw0qbznf6cl6bn
 # platform: linux/arm64
 #   - APIBARA_STARKNET_BIN_DIR: 3fz40zh8pscx7wp54nb78wm6p5y2v3g0
-#   - APIBARA_SINK_BIN_DIR: 5p0wgpyfsk19v8rrprnykiv5inzx8zag
+#   - APIBARA_SINK_BIN_DIR: ww2ghdaw1xpx42cf93zk5n3h222438ia
 ARG APIBARA_STARKNET_BIN_DIR
 ARG APIBARA_SINK_BIN_DIR
 # Run `docker image inspect apibara/starknet:1.5.0-x86_64` to get the exact path

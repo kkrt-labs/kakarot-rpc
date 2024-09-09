@@ -168,7 +168,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: mongo
 
   indexer:
-    image: quay.io/apibara/sink-mongo:0.7.0
+    image: quay.io/apibara/sink-mongo:0.7.1
     command:
       - run
       - /indexer/src/main.ts
