@@ -386,10 +386,7 @@ function addSignature(
 ): TypedTransaction {
   const TypedTxData = ((): TypedTxData => {
     if (isLegacyTx(tx)) {
-      if (v < 35) {
-        throw new Error(`Invalid v value: ${v}`);
-      }
-      return LegacyTransaction.fromTxData({
+      const legacyTx = LegacyTransaction.fromTxData({
         nonce: tx.nonce,
         gasPrice: tx.gasPrice,
         gasLimit: tx.gasLimit,
@@ -400,6 +397,16 @@ function addSignature(
         r,
         s,
       });
+
+      if (
+        v < 35 && Number(v) !== 27 && Number(v) !== 28
+      ) {
+        throw new Error(
+          `Legacy txs need either v = 27/28 or v >= 35 (EIP-155 replay protection), got v = ${v}`,
+        );
+      }
+
+      return legacyTx;
     } else if (isAccessListEIP2930Tx(tx)) {
       return AccessListEIP2930Transaction.fromTxData({
         chainId: tx.chainId,
