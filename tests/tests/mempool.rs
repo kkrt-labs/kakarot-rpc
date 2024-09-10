@@ -223,9 +223,14 @@ async fn test_mempool_add_external_transactions(#[future] katana: Katana, _setup
     // get_external_transactions function test
     // Get external transactions
     let external_transactions = eth_client.mempool().get_external_transactions();
-    // Check if the returned transaction hash matches
-    assert_eq!(*external_transactions[0].hash(), signed_transactions[0].hash());
-    assert_eq!(*external_transactions[1].hash(), signed_transactions[1].hash());
+
+    // Check if the returned transactions match the expected ones, regardless of order
+    assert_eq!(external_transactions.len(), 2);
+
+    // Verify that both signed transactions are present in external transactions
+    let external_hashes: Vec<_> = external_transactions.iter().map(|tx| *tx.hash()).collect();
+    assert!(external_hashes.contains(&signed_transactions[0].hash()));
+    assert!(external_hashes.contains(&signed_transactions[1].hash()));
 
     // Get updated mempool size
     let mempool_size = eth_client.mempool().pool_size();

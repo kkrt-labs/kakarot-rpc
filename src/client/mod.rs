@@ -4,16 +4,19 @@ use crate::{
         mempool::{KakarotPool, TransactionOrdering},
         validate::KakarotTransactionValidatorBuilder,
     },
-    providers::eth_provider::{
-        chain::ChainProvider,
-        database::{
-            ethereum::{EthereumBlockStore, EthereumTransactionStore},
-            state::EthDatabase,
-            Database,
+    providers::{
+        eth_provider::{
+            chain::ChainProvider,
+            database::{
+                ethereum::{EthereumBlockStore, EthereumTransactionStore},
+                state::EthDatabase,
+                Database,
+            },
+            error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError, TransactionError},
+            provider::{EthApiResult, EthDataProvider},
+            starknet::kakarot_core::to_starknet_transaction,
         },
-        error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError, TransactionError},
-        provider::{EthApiResult, EthDataProvider},
-        starknet::kakarot_core::to_starknet_transaction,
+        sn_provider::StarknetProvider,
     },
 };
 use alloy_rlp::Decodable;
@@ -47,6 +50,11 @@ impl<SP> EthClient<SP>
 where
     SP: Provider + Clone + Sync + Send,
 {
+    /// Get the Starknet provider from the Ethereum provider.
+    pub const fn starknet_provider(&self) -> &StarknetProvider<SP> {
+        self.eth_provider.starknet_provider()
+    }
+
     /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and a [`Pool`].
     pub async fn try_new(starknet_provider: SP, database: Database) -> eyre::Result<Self> {
         let chain = (starknet_provider.chain_id().await.map_err(KakarotError::from)?.to_bigint()
@@ -55,7 +63,8 @@ where
         .unwrap();
 
         // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let eth_provider = EthDataProvider::try_new(database, starknet_provider).await?;
+        let eth_provider =
+            EthDataProvider::try_new(database, StarknetProvider::new(Arc::new(starknet_provider))).await?;
 
         let validator =
             KakarotTransactionValidatorBuilder::new(Arc::new(ChainSpec { chain: chain.into(), ..Default::default() }))
@@ -130,7 +139,6 @@ where
         // Add the transaction to the Starknet provider
         let span = tracing::span!(tracing::Level::INFO, "sn::add_invoke_transaction");
         let res = self
-            .eth_provider
             .starknet_provider()
             .add_invoke_transaction(starknet_transaction)
             .instrument(span)

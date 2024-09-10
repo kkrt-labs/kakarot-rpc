@@ -8,20 +8,31 @@ use crate::{
     },
 };
 use reth_primitives::U256;
-use starknet::core::types::{BlockId, Felt};
-use std::sync::Arc;
+use starknet::{
+    core::types::{BlockId, Felt},
+    providers::Provider,
+};
+use std::{ops::Deref, sync::Arc};
 use tracing::Instrument;
 
 /// A provider wrapper around the Starknet provider to expose utility methods.
 #[derive(Debug, Clone)]
-pub struct StarknetProvider<SP: starknet::providers::Provider + Send + Sync> {
+pub struct StarknetProvider<SP: Provider + Send + Sync> {
     /// The underlying Starknet provider wrapped in an [`Arc`] for shared ownership across threads.
     provider: Arc<SP>,
 }
 
+impl<SP: Provider + Send + Sync> Deref for StarknetProvider<SP> {
+    type Target = SP;
+
+    fn deref(&self) -> &Self::Target {
+        &self.provider
+    }
+}
+
 impl<SP> StarknetProvider<SP>
 where
-    SP: starknet::providers::Provider + Send + Sync,
+    SP: Provider + Send + Sync,
 {
     /// Creates a new [`StarknetProvider`] instance from an [`Arc`]-wrapped Starknet provider.
     pub const fn new(provider: Arc<SP>) -> Self {

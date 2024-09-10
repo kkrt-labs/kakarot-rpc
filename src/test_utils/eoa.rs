@@ -94,7 +94,7 @@ impl<P: Provider + Send + Sync + Clone> Eoa<P> for KakarotEOA<P> {
 
 impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
     fn starknet_provider(&self) -> &P {
-        self.eth_client.eth_provider().starknet_provider()
+        self.eth_client.starknet_provider()
     }
 
     /// Deploys an EVM contract given a contract name and constructor arguments
@@ -140,7 +140,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let tx_hash: Felt252Wrapper = tx_hash.into();
 
         watch_tx(
-            self.eth_client.eth_provider().starknet_provider(),
+            self.eth_client.eth_provider().starknet_provider_inner(),
             tx_hash.clone().into(),
             std::time::Duration::from_millis(300),
             60,
@@ -197,7 +197,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let starknet_tx_hash = Felt::from_bytes_be(&bytes);
 
         watch_tx(
-            self.eth_client.eth_provider().starknet_provider(),
+            self.eth_client.eth_provider().starknet_provider_inner(),
             starknet_tx_hash,
             std::time::Duration::from_millis(300),
             60,

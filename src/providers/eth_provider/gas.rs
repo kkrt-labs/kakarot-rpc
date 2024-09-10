@@ -107,7 +107,7 @@ where
     }
 
     async fn gas_price(&self) -> EthApiResult<U256> {
-        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, self.starknet_provider());
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, self.starknet_provider_inner());
         let span = tracing::span!(tracing::Level::INFO, "sn::base_fee");
         let gas_price =
             kakarot_contract.get_base_fee().call().instrument(span).await.map_err(ExecutionError::from)?.base_fee;

@@ -14,8 +14,12 @@ use crate::{
         block::{EthBlockId, EthBlockNumberOrTag},
         felt::Felt252Wrapper,
     },
-    providers::eth_provider::{
-        BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider, TxPoolProvider,
+    providers::{
+        eth_provider::{
+            BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
+            TxPoolProvider,
+        },
+        sn_provider::StarknetProvider,
     },
 };
 use cainome::cairo_serde::CairoArrayLegacy;
@@ -61,7 +65,7 @@ impl<T> EthereumProvider for T where
 #[derive(Debug, Clone)]
 pub struct EthDataProvider<SP: starknet::providers::Provider + Send + Sync> {
     database: Database,
-    starknet_provider: SP,
+    starknet_provider: StarknetProvider<SP>,
     pub(crate) chain_id: u64,
 }
 
@@ -75,7 +79,12 @@ where
     }
 
     /// Returns a reference to the Starknet provider.
-    pub const fn starknet_provider(&self) -> &SP {
+    pub const fn starknet_provider(&self) -> &StarknetProvider<SP> {
+        &self.starknet_provider
+    }
+
+    /// Returns a reference to the underlying SP provider.
+    pub fn starknet_provider_inner(&self) -> &SP {
         &self.starknet_provider
     }
 }
@@ -84,7 +93,7 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    pub async fn try_new(database: Database, starknet_provider: SP) -> Result<Self> {
+    pub async fn try_new(database: Database, starknet_provider: StarknetProvider<SP>) -> Result<Self> {
         // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
@@ -157,7 +166,7 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
-        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, self.starknet_provider_inner());
         let span = tracing::span!(tracing::Level::INFO, "sn::eth_call");
         let call_output = kakarot_contract
             .eth_call(
@@ -194,7 +203,7 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
-        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &self.starknet_provider);
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, self.starknet_provider_inner());
         let span = tracing::span!(tracing::Level::INFO, "sn::eth_estimate_gas");
         let estimate_gas_output = kakarot_contract
             .eth_estimate_gas(
@@ -305,7 +314,7 @@ where
         };
 
         let signer_starknet_address = starknet_address(signer);
-        let account_contract = AccountContractReader::new(signer_starknet_address, &self.starknet_provider);
+        let account_contract = AccountContractReader::new(signer_starknet_address, self.starknet_provider_inner());
         let maybe_is_initialized = account_contract
             .is_initialized()
             .block_id(starknet::core::types::BlockId::Tag(BlockTag::Latest))
