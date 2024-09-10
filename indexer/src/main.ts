@@ -194,7 +194,11 @@ function accumulateGasAndUpdateStore(
   let cumulativeGasUsed = 0n;
   const cumulativeGasUsages: bigint[] = [];
 
-  processedEvents.forEach((event, index) => {
+  if (!Array.isArray(processedEvents)) {
+    return { cumulativeGasUsed, cumulativeGasUsages };
+  }
+
+  processedEvents?.forEach((event, index) => {
     cumulativeGasUsed += BigInt(event.ethReceipt.gasUsed);
     cumulativeGasUsages[index] = cumulativeGasUsed;
 
@@ -254,7 +258,7 @@ function processTransactions(
   blockInfo: BlockInfo,
   cumulativeGasUsages: bigint[],
 ): ProcessedTransaction[] {
-  return transactions
+  return (transactions ?? [])
     .filter((tx): tx is TransactionWithReceipt => {
       return tx && tx.receipt != null && tx.transaction != null &&
         isRevertedWithOutOfResources(tx.receipt) &&
