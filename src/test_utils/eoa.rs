@@ -94,7 +94,7 @@ impl<P: Provider + Send + Sync + Clone> Eoa<P> for KakarotEOA<P> {
 
 impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
     fn starknet_provider(&self) -> &P {
-        self.eth_client.eth_provider().starknet_provider()
+        self.eth_client.starknet_provider()
     }
 
     /// Deploys an EVM contract given a contract name and constructor arguments

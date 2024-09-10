@@ -62,7 +62,6 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                     accounts.insert(
                         felt_address,
                         eth_client
-                            .eth_provider()
                             .starknet_provider()
                             .get_nonce(starknet_block_id, felt_address)
                             .await
@@ -125,10 +124,8 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     async fn get_balance(&self, account_address: Felt) -> eyre::Result<U256> {
         // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = self.eth_client.eth_provider().to_starknet_block_id(Some(BlockId::default())).await?;
-        // Create a new Starknet provider wrapper.
-        let starknet_provider = self.eth_client.eth_provider().starknet_provider();
         // Get the balance of the address at the given block ID.
-        starknet_provider.balance_at(account_address, starknet_block_id).await.map_err(Into::into)
+        self.eth_client.starknet_provider().balance_at(account_address, starknet_block_id).await.map_err(Into::into)
     }
 
     /// Processes a transaction for the given account if the balance is sufficient.
