@@ -166,7 +166,7 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
-        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &*self.starknet_provider);
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, self.starknet_provider_inner());
         let span = tracing::span!(tracing::Level::INFO, "sn::eth_call");
         let call_output = kakarot_contract
             .eth_call(
@@ -203,7 +203,7 @@ where
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         let call_input = self.prepare_call_input(request, block_id).await?;
 
-        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, &*self.starknet_provider);
+        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, self.starknet_provider_inner());
         let span = tracing::span!(tracing::Level::INFO, "sn::eth_estimate_gas");
         let estimate_gas_output = kakarot_contract
             .eth_estimate_gas(
