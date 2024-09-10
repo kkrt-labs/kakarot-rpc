@@ -1,5 +1,5 @@
 use super::validate::KakarotTransactionValidator;
-use crate::{client::EthClient};
+use crate::client::EthClient;
 use futures::future::select_all;
 use reth_primitives::{BlockId, U256};
 use reth_transaction_pool::{
