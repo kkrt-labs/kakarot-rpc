@@ -551,7 +551,7 @@ RPC:
 
 - Add a [GitHub Star](https://github.com/kkrt-labs/kakarot-rpc) to the
   project.
-- Tweet about the Kakarot RPC: <https://twitter.com/KakarotZkEvm>.
+- Tweet about the Kakarot RPC: <https://x.com/KakarotZkEvm>.
 
 ## Contributing
 
