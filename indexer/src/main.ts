@@ -83,7 +83,7 @@ export default async function transform({
   const store: Array<StoreItem> = [];
   const blockLogsBloom = new Bloom();
 
-  const processedEvents = events
+  const processedEvents = (events ?? [])
     // Can be false if the transaction is not related to a specific instance of the Kakarot contract.
     // This is typically the case if there are multiple Kakarot contracts on the same chain.
     .filter((event) => isKakarotTransaction(event.transaction))
@@ -193,17 +193,16 @@ function accumulateGasAndUpdateStore(
   let cumulativeGasUsed = 0n;
   const cumulativeGasUsages: bigint[] = [];
 
-  processedEvents.forEach((event) => {
-    // Accumulate the gas used in the block in order to calculate the cumulative gas used.
-    // We increment it by the gas used in each transaction.
+  if (!Array.isArray(processedEvents)) {
+    return { cumulativeGasUsed, cumulativeGasUsages };
+  }
+
+  processedEvents?.forEach((event, index) => {
     cumulativeGasUsed += BigInt(event.ethReceipt.gasUsed);
-    // ethTx.transactionIndex can be null (if the block is pending) but
-    // Number(null) is 0 so this won't panic.
-    const transactionIndex = Number(event.ethTx.transactionIndex);
-    // An array containing the cumulative gas used up to that transaction, indexed by
-    // transaction index. This is used to later get the cumulative gas used for an out of
-    // resources transaction.
-    cumulativeGasUsages[transactionIndex] = cumulativeGasUsed;
+    cumulativeGasUsages[index] = cumulativeGasUsed;
+
+    // Update the cumulative gas used in the receipt
+    event.ethReceipt.cumulativeGasUsed = `0x${cumulativeGasUsed.toString(16)}`;
 
     updateStore(store, event);
     updateBlockLogsBloom(blockLogsBloom, event);
@@ -237,21 +236,17 @@ async function computeBlooms(
   const transactionTrie = new Trie();
   const receiptTrie = new Trie();
 
-  // Compute the blooms in an async manner.
-  await Promise.all(
-    trieData.map(
-      async ({
-        encodedTransactionIndex,
-        encodedTransaction,
-        encodedReceipt,
-      }) => {
-        // Add the transaction to the transaction trie.
-        await transactionTrie.put(encodedTransactionIndex, encodedTransaction);
-        // Add the receipt to the receipt trie.
-        await receiptTrie.put(encodedTransactionIndex, encodedReceipt);
-      },
-    ),
+  trieData.sort((a, b) =>
+    Number(a.encodedTransactionIndex) - Number(b.encodedTransactionIndex)
   );
+
+  for (
+    const { encodedTransactionIndex, encodedTransaction, encodedReceipt }
+      of trieData
+  ) {
+    await transactionTrie.put(encodedTransactionIndex, encodedTransaction);
+    await receiptTrie.put(encodedTransactionIndex, encodedReceipt);
+  }
 
   return { transactionTrie, receiptTrie };
 }
@@ -261,7 +256,7 @@ function processTransactions(
   blockInfo: BlockInfo,
   cumulativeGasUsages: bigint[],
 ): ProcessedTransaction[] {
-  return transactions
+  return (transactions ?? [])
     .filter(
       (tx) =>
         isRevertedWithOutOfResources(tx.receipt) &&
@@ -276,6 +271,8 @@ function createProcessedTransaction(
   blockInfo: BlockInfo,
   cumulativeGasUsages: bigint[],
 ): ProcessedTransaction | null {
+  if (!tx.transaction || !tx.receipt) return null;
+
   const ethTx = toEthTx({
     transaction: tx.transaction,
     receipt: tx.receipt,
