@@ -90,6 +90,11 @@ COPY . .
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get install -y gcc-aarch64-linux-gnu libssl-dev clang libclang-dev
+
 FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
@@ -97,12 +102,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 COPY --from=planner /app/recipe.json recipe.json
 
+# Build dependencies - this is the caching Docker layer!
+RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
-# Install system dependencies
-RUN apt-get update && \
-    apt-get -y upgrade && \
-    apt-get install -y gcc-aarch64-linux-gnu libssl-dev clang libclang-dev
 
 # Set working directory
 WORKDIR /usr/src/rpc
