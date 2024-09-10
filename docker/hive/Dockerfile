@@ -114,6 +114,7 @@ COPY . .
 
 COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/artifacts
 
+WORKDIR /app
 
 RUN cargo build \
     --features hive --release --target-dir /usr/src/rpc/target && \
@@ -121,6 +122,8 @@ RUN cargo build \
     --bin hive_genesis --release --features testing --target-dir /usr/src/rpc/target && \
     cargo build \
     --bin hive_chain --release --features testing --target-dir /usr/src/rpc/target
+
+WORKDIR /usr/src/rpc
 
 FROM ubuntu:24.10 as base
 # Install any necessary dependencies
