@@ -256,7 +256,7 @@ function processTransactions(
 ): ProcessedTransaction[] {
   return transactions
     .filter((tx): tx is TransactionWithReceipt => {
-      return tx.receipt != null && tx.transaction != null &&
+      return tx && tx.receipt != null && tx.transaction != null &&
         isRevertedWithOutOfResources(tx.receipt) &&
         isKakarotTransaction(tx.transaction);
     })
