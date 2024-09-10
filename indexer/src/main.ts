@@ -84,12 +84,8 @@ export default async function transform({
   const blockLogsBloom = new Bloom();
 
   const processedEvents = (events ?? [])
-    .filter((event): event is EventWithTransaction =>
-      event.transaction !== undefined && isKakarotTransaction(event.transaction)
-    )
-    .filter((event) =>
-      event.event !== undefined && !ethValidationFailed(event.event)
-    )
+    .filter((event) => isKakarotTransaction(event.transaction))
+    .filter((event) => !ethValidationFailed(event.event))
     .map(processEvent(blockInfo))
     .filter((event): event is ProcessedEvent => event !== null);
 
@@ -259,11 +255,11 @@ function processTransactions(
   cumulativeGasUsages: bigint[],
 ): ProcessedTransaction[] {
   return (transactions ?? [])
-    .filter((tx): tx is TransactionWithReceipt => {
-      return tx && tx.receipt != null && tx.transaction != null &&
+    .filter(
+      (tx) =>
         isRevertedWithOutOfResources(tx.receipt) &&
-        isKakarotTransaction(tx.transaction);
-    })
+        isKakarotTransaction(tx.transaction),
+    )
     .map((tx) => createProcessedTransaction(tx, blockInfo, cumulativeGasUsages))
     .filter((tx): tx is ProcessedTransaction => tx !== null);
 }
