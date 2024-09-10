@@ -430,7 +430,7 @@ You can take a look at `rpc-call-examples` directory. Please note the following:
   the call will only work once. If you want to keep incrementing (or
   decrementing) the counter, you need to regenerate the payload for the call
   with an updated nonce using the
-  [provided python script](https://github.com/sayajin-labs/kakarot/blob/main/scripts/utils/kakarot.py#L273).
+  [provided python script](https://github.com/kkrt-labs/kakarot/blob/main/kakarot_scripts/utils/kakarot.py).
 
 ## Testing
 
