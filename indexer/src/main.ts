@@ -255,13 +255,11 @@ function processTransactions(
   cumulativeGasUsages: bigint[],
 ): ProcessedTransaction[] {
   return transactions
-    .filter(
-      (tx) => {
-        // Check if tx.receipt exists before accessing its properties
-        return tx.receipt && isRevertedWithOutOfResources(tx.receipt) &&
-          tx.transaction && isKakarotTransaction(tx.transaction);
-      },
-    )
+    .filter((tx): tx is TransactionWithReceipt => {
+      return tx.receipt != null && tx.transaction != null &&
+        isRevertedWithOutOfResources(tx.receipt) &&
+        isKakarotTransaction(tx.transaction);
+    })
     .map((tx) => createProcessedTransaction(tx, blockInfo, cumulativeGasUsages))
     .filter((tx): tx is ProcessedTransaction => tx !== null);
 }
