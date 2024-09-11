@@ -91,14 +91,14 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 let best_hashes =
                     self.eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
                 if let Some(best_hash) = best_hashes.first() {
-                    let (_address, mut lock) = self.lock_account().await;
+                    let (_address, mut locked_account_nonce) = self.lock_account().await;
 
                     // TODO: here we send the transaction on the starknet network
                     // Increment account_nonce after sending a transaction
-                    *lock = *lock + 1;
+                    *locked_account_nonce = *locked_account_nonce + 1;
 
                     // Only release the lock once the transaction has been broadcast
-                    drop(lock);
+                    drop(locked_account_nonce);
 
                     self.eth_client.mempool().as_ref().remove_transactions(vec![*best_hash]);
                 }
