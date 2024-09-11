@@ -5,11 +5,11 @@ use crate::{
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
         constant::{MAIN_RPC_URL, MAX_PRIORITY_FEE_PER_GAS},
-        error::EthApiError,
+        error::{EthApiError, EthereumDataFormatError},
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
 };
-use alloy::providers::ProviderBuilder;
+use alloy_provider::{Provider as provider_alloy, ProviderBuilder};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
 use reth_rpc_types::{
@@ -20,6 +20,7 @@ use reth_rpc_types::{
 use serde_json::Value;
 use starknet::providers::Provider;
 use std::sync::Arc;
+use url::Url;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
@@ -259,8 +260,14 @@ where
         tracing::info!("Serving eth_sendRawTransaction");
         #[cfg(feature = "rpc_forwarding")]
         {
-            let provider = ProviderBuilder::new().with_recommended_fillers().on_http(MAIN_RPC_URL);
-            Ok(provider.send_raw_transaction(bytes).await?)
+            let provider_builded = ProviderBuilder::new().on_http(Url::parse(&MAIN_RPC_URL).expect("invalid rpc url"));
+
+            let tx_hash = provider_builded
+                .send_raw_transaction(&bytes)
+                .await
+                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?;
+
+            return Ok(*tx_hash.tx_hash());
         }
         Ok(self.eth_client.send_raw_transaction(bytes).await?)
     }
