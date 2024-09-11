@@ -3,7 +3,7 @@ services:
     platform: linux/amd64
     image: ghcr.io/foundry-rs/foundry:latest
     command:
-      [ "anvil --host 0.0.0.0 --port 8545 --load-state /app/.anvil/state.json" ]
+      [anvil --host 0.0.0.0 --port 8545 --load-state /app/.anvil/state.json]
     # Initial state has the StarknetMessaging and L1KakarotMessaging contracts deployed
     volumes:
       - .anvil:/app/.anvil
@@ -107,21 +107,22 @@ services:
       DATABASE_POOL_SIZE: 10
       DATABASE_TIMEOUT: 5000
       ECTO_USE_SSL: "false"
-      BLOCKSCOUT_HOST: "0.0.0.0"
+      BLOCKSCOUT_HOST: 0.0.0.0
       PORT: 4000
-      APP_NAME: "Blockscout"
-      ETHEREUM_JSONRPC_VARIANT: "geth"
-      ETHEREUM_JSONRPC_HTTP_URL: "http://kakarot-rpc:3030"
-      ETHEREUM_JSONRPC_TRACE_URL: "http://kakarot-rpc:3030"
+      APP_NAME: Blockscout
+      ETHEREUM_JSONRPC_VARIANT: geth
+      ETHEREUM_JSONRPC_HTTP_URL: http://kakarot-rpc:3030
+      ETHEREUM_JSONRPC_TRACE_URL: http://kakarot-rpc:3030
     ports:
       - 4000:4000
     networks:
       - internal
     command:
       [
-        "/bin/sh",
-        "-c",
-        "bin/blockscout eval \"Elixir.Explorer.ReleaseTasks.create_and_migrate()\" && bin/blockscout start"
+        /bin/sh,
+        -c,
+        bin/blockscout eval "Elixir.Explorer.ReleaseTasks.create_and_migrate()
+        && bin/blockscout start,
       ]
     depends_on:
       - postgres

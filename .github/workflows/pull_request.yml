@@ -1,7 +1,7 @@
 ---
 name: Workflow - Pull Request
 
-on: [pull_request]
+on: [pull_request, merge_group]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,3 +19,10 @@ jobs:
   deno-tests:
     name: Deno tests
     uses: ./.github/workflows/deno_test.yml
+
+  trunk-check:
+    name: Trunk check
+    permissions:
+      checks: write
+      contents: read
+    uses: ./.github/workflows/trunk_check.yml
