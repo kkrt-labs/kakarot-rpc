@@ -80,3 +80,6 @@ pub mod hive {
         })
     });
 }
+
+pub static MAIN_RPC_URL: LazyLock<String> =
+    LazyLock::new(|| std::env::var("MAIN_RPC_URL").expect("Missing MAIN_RPC_URL environment variable"));

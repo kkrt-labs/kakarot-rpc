@@ -2,7 +2,7 @@ use crate::{
     client::{EthClient, KakarotTransactions, TransactionHashProvider},
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
-        constant::MAX_PRIORITY_FEE_PER_GAS,
+        constant::{MAX_PRIORITY_FEE_PER_GAS, MAIN_RPC_URL},
         database::types::{header::ExtendedBlock, receipt::ExtendedTxReceipt, transaction::ExtendedTransaction},
         error::EthApiError,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
@@ -243,6 +243,11 @@ where
     #[tracing::instrument(skip_all, ret, err)]
     async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256> {
         tracing::info!("Serving eth_sendRawTransaction");
+        #[cfg(feature = "rpc_forwarding")]
+        {
+            let provider = ProviderBuilder::new().with_recommended_fillers().on_http(MAIN_RPC_URL);
+            Ok(provider.send_raw_transaction(bytes).await?)
+        }
         Ok(self.eth_client.send_raw_transaction(bytes).await?)
     }
 
