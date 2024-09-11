@@ -18,7 +18,12 @@ use reth_primitives::{BlockId, BlockNumberOrTag};
 use serde_json::Value;
 use starknet::providers::Provider;
 use std::sync::Arc;
-use url::Url;
+#[cfg(feature = "rpc_forwarding")]
+use {
+    crate::providers::eth_provider::{constant::MAIN_RPC_URL, error::EthereumDataFormatError},
+    alloy_provider::{Provider as provider_alloy, ProviderBuilder},
+    url::Url,
+};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
