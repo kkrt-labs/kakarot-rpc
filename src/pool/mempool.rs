@@ -203,7 +203,7 @@ mod tests {
         ];
 
         // Validate if the accounts are initialized with the correct nonce values
-        for (account, nonce) in accounts.iter() {
+        for (account, nonce) in &accounts {
             // Assert that the account address is in the expected list
             assert!(expected_addresses.contains(account), "Account address should be in the expected list");
             // Assert that the account nonce is initialized to 0
