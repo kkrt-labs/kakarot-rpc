@@ -86,9 +86,11 @@ export default async function transform({
   const processedEvents = (events ?? [])
     // Can be false if the transaction is not related to a specific instance of the Kakarot contract.
     // This is typically the case if there are multiple Kakarot contracts on the same chain.
-    .filter((event) => isKakarotTransaction(event.transaction))
     // Skip if the transaction_executed event contains "eth validation failed".
-    .filter((event) => !ethValidationFailed(event.event))
+    .filter((event) =>
+      isKakarotTransaction(event.transaction) &&
+      !ethValidationFailed(event.event)
+    )
     .map(processEvent(blockInfo))
     .filter((event): event is ProcessedEvent => event !== null);
 
@@ -193,10 +195,6 @@ function accumulateGasAndUpdateStore(
   let cumulativeGasUsed = 0n;
   const cumulativeGasUsages: bigint[] = [];
 
-  if (!Array.isArray(processedEvents)) {
-    return { cumulativeGasUsed, cumulativeGasUsages };
-  }
-
   processedEvents?.forEach((event, index) => {
     cumulativeGasUsed += BigInt(event.ethReceipt.gasUsed);
     cumulativeGasUsages[index] = cumulativeGasUsed;
@@ -204,7 +202,20 @@ function accumulateGasAndUpdateStore(
     // Update the cumulative gas used in the receipt
     event.ethReceipt.cumulativeGasUsed = `0x${cumulativeGasUsed.toString(16)}`;
 
-    updateStore(store, event);
+    store.push(...[
+      {
+        collection: Collection.Transactions,
+        data: { tx: event.ethTx },
+      },
+      {
+        collection: Collection.Receipts,
+        data: { receipt: event.ethReceipt },
+      },
+      ...event.ethLogs.map((log) => ({
+        collection: Collection.Logs,
+        data: { log },
+      })),
+    ]);
     updateBlockLogsBloom(blockLogsBloom, event);
   });
 
