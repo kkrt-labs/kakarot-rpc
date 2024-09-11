@@ -13,19 +13,30 @@ runtimes:
     - go@1.21.0
     - node@18.12.1
     - python@3.10.8
+  definitions:
+    - type: rust
+      system_version: allowed
+# This is the section where you manage your linters. (https://docs.trunk.io/check/configuration)
 lint:
   disabled:
     - checkov
+  definitions:
+    - name: clippy
+      commands:
+        - name: lint
+          run:
+            cargo clippy --message-format json --locked --all-targets
+            --all-features -- --cap-lints=warn --no-deps
   enabled:
     - actionlint@1.7.1
-    - clippy@1.65.0
+    - clippy@SYSTEM
+    - rustfmt@SYSTEM
     - git-diff-check
     - hadolint@2.12.0
     - markdownlint@0.41.0
     - osv-scanner@1.8.2
     - oxipng@9.1.1
     - prettier@3.3.2
-    - rustfmt@1.65.0
     - shellcheck@0.10.0
     - shfmt@3.6.0
     - taplo@0.8.1
@@ -44,7 +55,7 @@ lint:
 actions:
   disabled:
     - trunk-announce
-    - trunk-check-pre-push
-    - trunk-fmt-pre-commit
   enabled:
     - trunk-upgrade-available
+    - trunk-fmt-pre-commit
+    - trunk-check-pre-push

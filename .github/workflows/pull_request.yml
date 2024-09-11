@@ -19,3 +19,10 @@ jobs:
   deno-tests:
     name: Deno tests
     uses: ./.github/workflows/deno_test.yml
+
+  trunk-check:
+    name: Trunk check
+    permissions:
+      checks: write
+      contents: read
+    uses: ./.github/workflows/trunk_check.yml

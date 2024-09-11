@@ -5,17 +5,6 @@ on:
   workflow_call:
 
 jobs:
-  fmt:
-    name: fmt
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rustfmt
-      - run: cargo fmt --all --check
-
   test:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 30
@@ -64,10 +53,6 @@ jobs:
       # Create dump
       - name: Create dump
         run: ./scripts/make_with_env.sh katana-genesis
-      - name: Lint
-        run: |
-          cargo check &&
-          cargo clippy --workspace --all-features --all-targets -- -D warnings
       - name: Test code
         run: make test
 
@@ -124,7 +109,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        sim: [ ethereum/rpc ]
+        sim: [ethereum/rpc]
         include:
           - sim: ethereum/rpc-compat
             include:

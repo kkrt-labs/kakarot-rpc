@@ -57,8 +57,10 @@ async function collectTransactions(targetCount: number) {
 
     // Combine transaction data with receipts
     let transactionReceipts = getTransaction.map((tx) => {
-      let receipt = getTransactionReceipts.find((r) =>
-        "transaction_hash" in tx && r.transaction_hash === tx.transaction_hash
+      let receipt = getTransactionReceipts.find(
+        (r) =>
+          "transaction_hash" in tx &&
+          r.transaction_hash === tx.transaction_hash,
       );
       return { ...tx, ...receipt };
     });
@@ -71,9 +73,7 @@ async function collectTransactions(targetCount: number) {
       transformedTransactions,
       eventsWithTransaction,
       toTypedEthTxTransaction,
-    } = transformTransactionsAndEvents(
-      transactionReceipts,
-    );
+    } = transformTransactionsAndEvents(transactionReceipts);
     transactions = transformedTransactions;
     events = eventsWithTransaction;
 
@@ -117,9 +117,7 @@ function transformBlockHeader(block: any): BlockHeader {
 }
 
 // Function to transform transactions and events
-function transformTransactionsAndEvents(
-  transactions: any[],
-): {
+function transformTransactionsAndEvents(transactions: any[]): {
   transformedTransactions: TransactionWithReceipt[];
   eventsWithTransaction: EventWithTransaction[];
   toTypedEthTxTransaction: Transaction[];
@@ -154,13 +152,12 @@ function transformTransactionsAndEvents(
       actualFee: tx.actual_fee,
       contractAddress: tx.contractAddress,
       l2ToL1Messages: tx.messages_sent,
-      events: tx.events
-        .map((evt: any, evtIndex: number) => ({
-          fromAddress: evt.from_address,
-          keys: evt.keys,
-          data: evt.data,
-          index: evtIndex,
-        })),
+      events: tx.events.map((evt: any, evtIndex: number) => ({
+        fromAddress: evt.from_address,
+        keys: evt.keys,
+        data: evt.data,
+        index: evtIndex,
+      })),
     };
 
     // Add the transformed transaction and receipt to the list

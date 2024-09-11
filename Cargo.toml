@@ -98,8 +98,16 @@ serde_json = { version = "1", default-features = false }
 tracing = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 opentelemetry = { version = "0.23.0", features = ["metrics"] }
-opentelemetry-otlp = { version = "0.16.0", features = ["trace", "tonic", "metrics"] }
-opentelemetry_sdk = { version = "0.23.0", features = ["trace", "metrics", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.16.0", features = [
+  "trace",
+  "tonic",
+  "metrics",
+] }
+opentelemetry_sdk = { version = "0.23.0", features = [
+  "trace",
+  "metrics",
+  "rt-tokio",
+] }
 tracing-opentelemetry = "0.24.0"
 
 
