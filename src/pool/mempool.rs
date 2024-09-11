@@ -91,7 +91,13 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 let best_hashes =
                     self.eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
                 if let Some(best_hash) = best_hashes.first() {
-                    let (_address, mut locked_account_nonce) = self.lock_account().await;
+                    let maybe_lock = self.lock_account().await;
+                    if maybe_lock.is_err() {
+                        tracing::error!(target: "account_manager", err = ?maybe_lock.unwrap(), "failed to fetch relayer");
+                        continue;
+                    }
+
+                    let (_account_address, mut locked_account_nonce) = maybe_lock.expect("maybe_lock is not error");
 
                     // TODO: here we send the transaction on the starknet network
                     // Increment account_nonce after sending a transaction
@@ -109,20 +115,23 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     }
 
     /// Returns the next available account from the manager.
-    async fn lock_account(&self) -> (Felt, MutexGuard<'_, Felt>)
+    async fn lock_account(&self) -> eyre::Result<(Felt, MutexGuard<'_, Felt>)>
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
+        let mut accounts = self.accounts.iter().collect::<HashMap<_, _>>();
         loop {
+            if accounts.is_empty() {
+                return Err(eyre::eyre!("failed to fetch funded account"));
+            }
             // use [`select_all`] to poll an iterator over impl Future<Output = (Felt, MutexGuard<Felt>)>
             // We use Box::pin because this Future doesn't implement `Unpin`.
-            let fut_locks =
-                self.accounts.iter().map(|(address, nonce)| Box::pin(async { (*address, nonce.lock().await) }));
+            let fut_locks = accounts.iter().map(|(address, nonce)| Box::pin(async { (*address, nonce.lock().await) }));
             let ((account_address, guard), _, _) = select_all(fut_locks).await;
 
             // Fetch the balance of the selected account
             let balance = self
-                .get_balance(account_address)
+                .get_balance(*account_address)
                 .await
                 .inspect_err(|err| {
                     tracing::error!(target: "account_manager", ?account_address, ?err, "failed to fetch balance");
@@ -131,11 +140,12 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
 
             // If the balance is lower than the threshold, continue
             if balance < U256::from(u128::pow(10, 18)) {
+                accounts.remove(account_address);
                 continue;
             }
 
             // Return the account address and the guard on the nonce
-            return (account_address, guard);
+            return Ok((*account_address, guard));
         }
     }
 
