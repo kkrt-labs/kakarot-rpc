@@ -222,20 +222,6 @@ function accumulateGasAndUpdateStore(
   return { cumulativeGasUsed, cumulativeGasUsages };
 }
 
-function updateStore(store: Array<StoreItem>, event: ProcessedEvent) {
-  store.push({
-    collection: Collection.Transactions,
-    data: { tx: event.ethTx },
-  });
-  store.push({
-    collection: Collection.Receipts,
-    data: { receipt: event.ethReceipt },
-  });
-  event.ethLogs.forEach((log) =>
-    store.push({ collection: Collection.Logs, data: { log } })
-  );
-}
-
 function updateBlockLogsBloom(blockLogsBloom: Bloom, event: ProcessedEvent) {
   const receiptLogsBloom = new Bloom(hexToBytes(event.ethReceipt.logsBloom));
   blockLogsBloom.or(receiptLogsBloom);
