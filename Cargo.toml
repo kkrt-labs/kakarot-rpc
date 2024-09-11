@@ -211,6 +211,7 @@ testing = [
 ]
 binaries = ["clap"]
 hive = []
+rpc_forwarding = []
 arbitrary = ["rand", "dep:arbitrary"]
 
 [[bin]]
