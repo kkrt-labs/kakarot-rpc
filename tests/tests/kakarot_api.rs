@@ -9,11 +9,12 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use mockito::Server;
 use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
 use rstest::*;
 use serde_json::Value;
-use std::{env, str::FromStr};
+use std::str::FromStr;
+#[cfg(feature = "rpc_forwarding")]
+use {mockito::Server, std::env};
 
 #[cfg(feature = "rpc_forwarding")]
 #[rstest]
