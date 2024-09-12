@@ -5,20 +5,6 @@ on:
   workflow_call:
 
 jobs:
-  formatting:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          sparse-checkout: indexer
-      - uses: denoland/setup-deno@v1
-        with:
-          deno-version: vx.x.x
-      - name: Run formatting
-        run: deno fmt --check indexer/
-
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -29,7 +15,10 @@ jobs:
           deno-version: v1.x
       # Checkout target branch and run tests
       - name: Run Tests with Coverage on target branch
-        run: DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --allow-read --coverage=cov_profile
+        run:
+          DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010
+          KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
+          deno test --allow-env --allow-read --coverage=cov_profile
       - name: Generate Coverage Report on target branch
         run: deno coverage cov_profile --html
       - name: Install bc
@@ -47,7 +36,10 @@ jobs:
           ref: ${{ github.base_ref }}
           clean: false
       - name: Run Tests with Coverage on base branch
-        run: DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010 KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda deno test --allow-env --allow-read --coverage=cov_profile_main
+        run:
+          DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010
+          KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
+          deno test --allow-env --allow-read --coverage=cov_profile_main
       - name: Generate HTML report from for the base branch
         run: deno coverage cov_profile_main --html
       - name: Extract coverage percentage from HTML for the base branch

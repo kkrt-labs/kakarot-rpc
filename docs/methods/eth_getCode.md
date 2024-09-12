@@ -11,8 +11,11 @@
 
 Returns the value from a storage position at a given address.
 
-Kakarot specificity: note that Kakarot zkEVM is implemented as a set of Cairo Programs running on an underlying StarknetOS chain (so-called CairoVM chain).
+Kakarot specificity: note that Kakarot zkEVM is implemented as a set of Cairo
+Programs running on an underlying StarknetOS chain (so-called CairoVM chain).
 
-Every deployed EVM smart contract is a Starknet smart contract under the hood. The EVM bytecode of a contract is stored as a Starknet storage variable.
+Every deployed EVM smart contract is a Starknet smart contract under the hood.
+The EVM bytecode of a contract is stored as a Starknet storage variable.
 
-Running the eth_getCode amounts to querying a storage slot in the underlying StarknetOS chain.
+Running the eth_getCode amounts to querying a storage slot in the underlying
+StarknetOS chain.

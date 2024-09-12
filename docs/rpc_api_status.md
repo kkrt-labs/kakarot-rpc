@@ -17,6 +17,8 @@ The template for the method file can be found
 edit it corresponding to the method you're implementing. All methods should be
 documented in `./methods/{method}.md`
 
+<!-- markdownlint-disable MD013 -->
+
 | Name                                                              | Description                                                                                                                                                                                        | State |
 | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | eth_chainId                                                       | Returns the chain ID of the current network.                                                                                                                                                       | ✅    |
@@ -60,3 +62,5 @@ documented in `./methods/{method}.md`
 | [eth_maxPriorityFeePerGas](./methods/eth_maxPriorityFeePerGas.md) | Returns the current maxPriorityFeePerGas per gas in wei. This value is equal to 0.                                                                                                                 | 🟡    |
 | [eth_feeHistory](./methods/eth_feeHistory.md)                     | Returns transaction base fee per gas and effective priority fee per gas for the requested/supported block range.                                                                                   | 🟡    |
 | eth_getProof                                                      | Returns the merkle proof for a given account and optionally some storage keys.                                                                                                                     | ✅    |
+
+<!-- markdownlint-enable MD013 -->

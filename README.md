@@ -66,23 +66,27 @@
 - [Benchmarks](#benchmarks)
 - [Contributors ✨](#contributors-)
 
-
 </details>
 
 ---
 
 ## About
 
-Kakarot RPC fits in the three-part architecture of the Kakarot zkEVM rollup ([Kakarot EVM Cairo Programs](https://github.com/kkrt-labs/kakarot), Kakarot RPC, [Kakarot Indexer](indexer/README.md)). It is the implementation of the Ethereum JSON-RPC specification made to interact with Kakarot zkEVM in a fully Ethereum-compatible way.
+Kakarot RPC fits in the three-part architecture of the Kakarot zkEVM rollup
+([Kakarot EVM Cairo Programs](https://github.com/kkrt-labs/kakarot), Kakarot
+RPC, [Kakarot Indexer](indexer/README.md)). It is the implementation of the
+Ethereum JSON-RPC specification made to interact with Kakarot zkEVM in a fully
+Ethereum-compatible way.
 
 ![Kakarot zkEVM architecture](./docs/images/Kakarot%20zkEVM.png)
 
-The Kakarot RPC layer's goal is to receive and output EVM-compatible
-payloads & calls while interacting with an underlying StarknetOS client. This enables
+The Kakarot RPC layer's goal is to receive and output EVM-compatible payloads &
+calls while interacting with an underlying StarknetOS client. This enables
 Kakarot zkEVM to interact with the usual Ethereum tooling: Metamask, Hardhat,
 Foundry, etc.
 
-Note that this is necessary because Kakarot zkEVM is implemented as a set of Cairo Programs that run on an underlying CairoVM (so-called StarknetOS) chain.
+Note that this is necessary because Kakarot zkEVM is implemented as a set of
+Cairo Programs that run on an underlying CairoVM (so-called StarknetOS) chain.
 
 This adapter layer is based on:
 
@@ -111,7 +115,8 @@ TL;DR:
 - Run `cargo build` to build Kakarot RPC.
 - Test with `make test`.
 - Run Kakarot RPC in dev mode:
-  - Run dev RPC: `make run-dev` (you'll need a StarknetOS instance running in another process and Kakarot contracts deployed)
+  - Run dev RPC: `make run-dev` (you'll need a StarknetOS instance running in
+    another process and Kakarot contracts deployed)
 - Run with Docker Compose:
   - `make local-rpc-up`
   - To kill these processes, `make docker-down`
@@ -120,19 +125,27 @@ TL;DR:
 
 ### Prerequisites
 
-- [Rust](https://www.rust-lang.org/tools/install): The codebase is written in Rust to ensure high performance, maintainability, and a developer-friendly experience.
-- [Docker](https://docs.docker.com/engine/install): Required for containerizing and running the various services and components in a consistent environment.
-- [Python](https://www.python.org/): Used primarily for interacting with and building our Kakarot programs.
-- [Poetry](https://python-poetry.org/docs/): A Python dependency management tool used for managing the dependencies of our Kakarot programs.
-- [Deno](https://docs.deno.com/runtime/manual/): A JavaScript runtime used for our indexing service, based on the [Apibara](https://www.apibara.com/docs) third-party service.
-- Make: Utilized to interact with the `Makefile` for running commands such as building the project or executing tests.
+- [Rust](https://www.rust-lang.org/tools/install): The codebase is written in
+  Rust to ensure high performance, maintainability, and a developer-friendly
+  experience.
+- [Docker](https://docs.docker.com/engine/install): Required for containerizing
+  and running the various services and components in a consistent environment.
+- [Python](https://www.python.org/): Used primarily for interacting with and
+  building our Kakarot programs.
+- [Poetry](https://python-poetry.org/docs/): A Python dependency management tool
+  used for managing the dependencies of our Kakarot programs.
+- [Deno](https://docs.deno.com/runtime/manual/): A JavaScript runtime used for
+  our indexing service, based on the [Apibara](https://www.apibara.com/docs)
+  third-party service.
+- Make: Utilized to interact with the `Makefile` for running commands such as
+  building the project or executing tests.
 
 ## Installation
 
 ### Setup the project
 
-To set up the repository (pulling git submodule and building Cairo dependencies),
-run:
+To set up the repository (pulling git submodule and building Cairo
+dependencies), run:
 
 ```console
 make setup
@@ -142,12 +155,14 @@ Caveats:
 
 1. the `setup` make command uses linux (MacOs compatible) commands to allow
    running the `./scripts/extract_abi.sh`. This script is used to use strongly
-   typed Rust bindings for Cairo programs. If you encounter problems when building
-   the project, try running `./scripts/extract_abi.sh`.
-2. the [kakarot](https://github.com/kkrt-labs/kakarot) submodule uses Python to build
-   and deploy Kakarot contracts. If you don't have the right version available, we
-   recommend to use [pyenv](https://github.com/pyenv/pyenv) to install it.
-3. We use a pre-commit hook to ensure code quality and consistency. The hook will be installed automatically by running `make setup`, otherwise you can install it manually by running the script `scripts/install_hooks.sh`.
+   typed Rust bindings for Cairo programs. If you encounter problems when
+   building the project, try running `./scripts/extract_abi.sh`.
+2. the [kakarot](https://github.com/kkrt-labs/kakarot) submodule uses Python to
+   build and deploy Kakarot contracts. If you don't have the right version
+   available, we recommend to use [pyenv](https://github.com/pyenv/pyenv) to
+   install it.
+3. We use a pre-commit hook to ensure code quality and consistency. The hook are
+   managed and automatically installed by trunk.
 
 ### Build from source
 
@@ -157,7 +172,9 @@ To build the project from source (in release mode):
 cargo build --release
 ```
 
-Note that there are sometimes issues with some dependencies (notably scarb or cairo related packages, there are sometimes needs to `cargo clean` and `cargo build`)
+Note that there are sometimes issues with some dependencies (notably scarb or
+cairo related packages, there are sometimes needs to `cargo clean` and
+`cargo build`)
 
 ### Environment variables
 
@@ -177,13 +194,21 @@ The binaries will be located in `target/release/`.
 
 ### Dev mode with [Katana](https://github.com/dojoengine/dojo/tree/main/crates/katana)
 
-To run a local Starknet sequencer, you can use Katana. Katana, developed by the Dojo team, is a sequencer designed to aid in local development. It allows you to perform all Starknet-related activities in a local environment, making it an efficient platform for development and testing. To run Katana and deploy the Kakarot zkEVM (a set of Cairo smart contracts implementing the EVM):
+To run a local Starknet sequencer, you can use Katana. Katana, developed by the
+Dojo team, is a sequencer designed to aid in local development. It allows you to
+perform all Starknet-related activities in a local environment, making it an
+efficient platform for development and testing. To run Katana and deploy the
+Kakarot zkEVM (a set of Cairo smart contracts implementing the EVM):
 
 ```console
 make run-katana
 ```
 
-This command will install Katana and generate a genesis file at `.katana/genesis.json`. Katana's genesis configuration feature is a way to define the initial state and settings of the Kakarot blockchain network locally, providing a customizable starting point for the chain. Among other things, it allows you to:
+This command will install Katana and generate a genesis file at
+`.katana/genesis.json`. Katana's genesis configuration feature is a way to
+define the initial state and settings of the Kakarot blockchain network locally,
+providing a customizable starting point for the chain. Among other things, it
+allows you to:
 
 - Specify the token used for network fees.
 - Allocate initial token balances to accounts.
@@ -205,7 +230,8 @@ STARKNET_NETWORK=katana make run-dev
 Some notes on this local devnet:
 
 - this will run a devnet by running katana, **with contracts automatically
-  deployed**, so you don't have to do them manually (see in `./lib/kakarot/kakarot_scripts/deploy_kakarot.py` for the list of contracts).
+  deployed**, so you don't have to do them manually (see in
+  `./lib/kakarot/kakarot_scripts/deploy_kakarot.py` for the list of contracts).
 
 - the deployments and declarations for the devnet will be written to the
   `deployments/katana` folder inside your project root after a successful run of
@@ -231,22 +257,31 @@ forge script scripts/PlainOpcodes.s.sol --broadcast --legacy --slow
 
 ### Configuration
 
-Kakarot RPC is configurable through environment variables.
-Check out `.env.example` file to see the environment variables.
+Kakarot RPC is configurable through environment variables. Check out
+`.env.example` file to see the environment variables.
 
 ## Running a Node in Various Environments
 
-This section outlines how to run a complete node in different environments: local, staging, and production. Running a node involves several critical components to ensure the system operates effectively:
+This section outlines how to run a complete node in different environments:
+local, staging, and production. Running a node involves several critical
+components to ensure the system operates effectively:
 
-- **Starknet Engine**: Interacts with the Starknet ecosystem and processes transactions.
+- **Starknet Engine**: Interacts with the Starknet ecosystem and processes
+  transactions.
 - **Kakarot Programs**: Implement the EVM logic using Cairo.
-- **RPC Node**: Manages the Ethereum RPC logic, facilitating smooth interaction with the Kakarot chain.
+- **RPC Node**: Manages the Ethereum RPC logic, facilitating smooth interaction
+  with the Kakarot chain.
 - **Apibara Service**: Monitors the Kakarot chain and indexes its data.
-- **MongoDB**: Serves as the database for storing transactions after indexing and acts as the core component for fetching information.
+- **MongoDB**: Serves as the database for storing transactions after indexing
+  and acts as the core component for fetching information.
 
-By correctly configuring these components, you can ensure that the node functions as a robust part of the system.
+By correctly configuring these components, you can ensure that the node
+functions as a robust part of the system.
 
-In the following sections we have tried to provide the most important parameters useful for understanding and configuring the node. However for the sake of brevity, certain parameters deemed less important are omitted and can all be found in the corresponding Docker compose files:
+In the following sections we have tried to provide the most important parameters
+useful for understanding and configuring the node. However for the sake of
+brevity, certain parameters deemed less important are omitted and can all be
+found in the corresponding Docker compose files:
 
 - Local: `docker-compose.yaml`
 - Staging: `docker-compose.staging.yaml`
@@ -260,7 +295,8 @@ To start the entire infrastructure locally, use the following command:
 make local-rpc-up
 ```
 
-This command will use the `docker-compose.yaml` file to set up the whole infrastructure locally utilizing the following elements:
+This command will use the `docker-compose.yaml` file to set up the whole
+infrastructure locally utilizing the following elements:
 
 - **Katana (local sequencer)**:
 
@@ -272,20 +308,27 @@ This command will use the `docker-compose.yaml` file to set up the whole infrast
 - **Kakarot EVM Programs**:
 
   - Prefunded Katana account with:
-    - Account address: `0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca`.
-    - Private key: `0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a`.
+    - Account address:
+      `0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca`.
+    - Private key:
+      `0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a`.
   - Anvil (local Ethereum node):
-    - Private key: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`.
+    - Private key:
+      `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`.
   - Katana RPC URL: `http://starknet:5050`.
   - Network: `STARKNET_NETWORK=katana`.
 
 - **Kakarot RPC Node** on port 3030:
 
-  - MongoDB connection string: `MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017`.
+  - MongoDB connection string:
+    `MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017`.
   - Database name: `MONGO_DATABASE_NAME=kakarot-local`.
   - Max calldata felts: 30,000.
-  - Pending transactions stored in MongoDB, with a retry service running every second.
-  - Currently, Kakarot does not support pre-EIP-155 transactions, except for a whitelist of specific transaction hashes that can be found in the corresponding Docker compose file.
+  - Pending transactions stored in MongoDB, with a retry service running every
+    second.
+  - Currently, Kakarot does not support pre-EIP-155 transactions, except for a
+    whitelist of specific transaction hashes that can be found in the
+    corresponding Docker compose file.
 
 - **Apibara Indexer Service** on port 7171:
 
@@ -293,25 +336,31 @@ This command will use the `docker-compose.yaml` file to set up the whole infrast
   - Configured with MongoDB and Kakarot addresses.
 
 - **MongoDB** with Mongo Express on port 27017 for data management.
-- **Blockscout** on port 4000, provides a web interface for exploring and analyzing blockchain data.
+- **Blockscout** on port 4000, provides a web interface for exploring and
+  analyzing blockchain data.
 
 ### Staging Environment
 
-To start the entire infrastructure in the staging environment, use the following command:
+To start the entire infrastructure in the staging environment, use the following
+command:
 
 ```console
 make staging-rpc-up
 ```
 
-This command will use the `docker-compose.staging.yaml` file to set up the whole infrastructure in the staging configuration utilizing the following elements:
+This command will use the `docker-compose.staging.yaml` file to set up the whole
+infrastructure in the staging configuration utilizing the following elements:
 
 - **Starknet Full-Node (Juno)** on port 6060:
 
   - Pending block is synced to the head of the chain every second.
-  - Ethereum node websocket endpoint to be specified by env variable `ETH_NODE_WS` (for example `ETH_NODE_WS=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`).
+  - Ethereum node websocket endpoint to be specified by env variable
+    `ETH_NODE_WS` (for example
+    `ETH_NODE_WS=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`).
   - Network configuration:
     - Network name: `KKRT_BETA`.
-    - Network feeder URL: `https://gateway-beta.kakarot.sw-dev.io/feeder_gateway/`.
+    - Network feeder URL:
+      `https://gateway-beta.kakarot.sw-dev.io/feeder_gateway/`.
     - Network gateway URL: `https://gateway-beta.kakarot.sw-dev.io/gateway/`.
     - L1 chain ID: `11155111` (Ethereum Sepolia).
     - L2 chain ID: `kkrt`.
@@ -332,11 +381,15 @@ This command will use the `docker-compose.staging.yaml` file to set up the whole
   - Starknet network URL: `http://starknet:6060`.
   - MongoDB connection string: `mongodb://mongo:mongo@mongo:27017`.
   - Database name: `kakarot-local`.
-  - Kakarot address: `0x2824d6ed6759ac4c4a54a39b78d04c0e48be8937237026bf8c3bf46a8bea722`.
-  - Uninitialized account class hash: `0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e`.
+  - Kakarot address:
+    `0x2824d6ed6759ac4c4a54a39b78d04c0e48be8937237026bf8c3bf46a8bea722`.
+  - Uninitialized account class hash:
+    `0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e`.
   - Max calldata felts: 30,000.
-  - Pending transactions stored in MongoDB, with a retry service running every 10 second.
-  - Whitelisted pre-EIP-155 transaction hashes (see the corresponding Docker compose file).
+  - Pending transactions stored in MongoDB, with a retry service running every
+    10 second.
+  - Whitelisted pre-EIP-155 transaction hashes (see the corresponding Docker
+    compose file).
 
 - **Apibara DNA Indexer Service** on port 7171:
 
@@ -344,22 +397,26 @@ This command will use the `docker-compose.staging.yaml` file to set up the whole
   - Configured with MongoDB and Kakarot addresses.
 
 - **MongoDB** with Mongo Express on port 27017 for data management.
-- **Blockscout** on port 4001, provides a web interface for exploring and analyzing blockchain data.
+- **Blockscout** on port 4001, provides a web interface for exploring and
+  analyzing blockchain data.
 
 ### Production Environment
 
-To start the entire infrastructure in the production environment, use the following command:
+To start the entire infrastructure in the production environment, use the
+following command:
 
 ```console
 make testnet-rpc-up
 ```
 
-This command will use the `docker-compose.prod.yaml` file to set up the whole infrastructure in the production configuration utilizing the following elements:
+This command will use the `docker-compose.prod.yaml` file to set up the whole
+infrastructure in the production configuration utilizing the following elements:
 
 - **Starknet Full-Node (Juno)** on port 6060:
 
   - Synchronizes pending blocks to the head of the chain every second.
-  - Ethereum node websocket endpoint specified by `ETH_NODE_WS` (for example `ETH_NODE_WS=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`).
+  - Ethereum node websocket endpoint specified by `ETH_NODE_WS` (for example
+    `ETH_NODE_WS=wss://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY`).
   - Network configuration:
     - Network name: `kakarot-sepolia`.
     - Network feeder URL: `https://gateway.kakarot.sw-dev.io/feeder_gateway/`.
@@ -383,11 +440,15 @@ This command will use the `docker-compose.prod.yaml` file to set up the whole in
   - Starknet network URL: `http://starknet:6060`.
   - MongoDB connection string: `mongodb://mongo:mongo@mongo:27017`.
   - Database name: `kakarot-local`.
-  - Kakarot address: `0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda`.
-  - Uninitialized account class hash: `0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e`.
-  - Account contract class hash: `0x1276d0b017701646f8646b69de6c3b3584edce71879678a679f28c07a9971cf`.
+  - Kakarot address:
+    `0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda`.
+  - Uninitialized account class hash:
+    `0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e`.
+  - Account contract class hash:
+    `0x1276d0b017701646f8646b69de6c3b3584edce71879678a679f28c07a9971cf`.
   - Max calldata felts: 30,000.
-  - Pending transactions stored in MongoDB, with a retry service running every 10 seconds.
+  - Pending transactions stored in MongoDB, with a retry service running every
+    10 seconds.
   - Whitelisted pre-EIP-155 transaction hashes (see local environment).
 
 - **Apibara DNA Indexer Service** on port 7171:
@@ -396,29 +457,45 @@ This command will use the `docker-compose.prod.yaml` file to set up the whole in
   - Configured with MongoDB and Kakarot addresses.
 
 - **MongoDB** with Mongo Express on port 27017 for data management.
-- **Blockscout** on port 4001, provides a web interface for exploring and analyzing blockchain data.
+- **Blockscout** on port 4001, provides a web interface for exploring and
+  analyzing blockchain data.
 
 ### Potential Pitfalls, Caveats, and Requirements
 
-When setting up the Kakarot node in any environment, it's important to be aware of the following:
+When setting up the Kakarot node in any environment, it's important to be aware
+of the following:
 
 #### Requirements
 
-- **Hardware**: Ensure your system meets the necessary hardware requirements for running Docker containers efficiently. A modern multi-core CPU, at least 16GB of RAM, and ample storage space are recommended.
-- **Software**: Install the latest versions of Docker and Docker Compose to ensure compatibility with the provided configuration.
-- **Network**: Stable internet connection for downloading images and communicating with remote services if needed. We have noticed difficulties on networks with low bandwidth.
+- **Hardware**: Ensure your system meets the necessary hardware requirements for
+  running Docker containers efficiently. A modern multi-core CPU, at least 16GB
+  of RAM, and ample storage space are recommended.
+- **Software**: Install the latest versions of Docker and Docker Compose to
+  ensure compatibility with the provided configuration.
+- **Network**: Stable internet connection for downloading images and
+  communicating with remote services if needed. We have noticed difficulties on
+  networks with low bandwidth.
 
 #### Potential Pitfalls
 
-- **Resource Limits**: Docker containers might consume significant system resources. Monitor system performance and consider adjusting container resource limits if necessary.
-- **Network Configuration**: Ensure no port conflicts on your local machine, especially with ports 3030, 5050, 6060, 7171, 27017... used by the services.
-- **Volume Persistence**: Docker volumes are used for data persistence. Ensure they are properly managed and backed up to prevent data loss.
+- **Resource Limits**: Docker containers might consume significant system
+  resources. Monitor system performance and consider adjusting container
+  resource limits if necessary.
+- **Network Configuration**: Ensure no port conflicts on your local machine,
+  especially with ports 3030, 5050, 6060, 7171, 27017... used by the services.
+- **Volume Persistence**: Docker volumes are used for data persistence. Ensure
+  they are properly managed and backed up to prevent data loss.
 
 #### Caveats
 
-- **Pre-EIP-155 Transactions**: Kakarot does not natively support pre-EIP-155 transactions, except for those whitelisted. Be cautious about transaction compatibility.
-- **Environment Configuration**: Double-check environment variables and their values, particularly those related to security, such as private keys and database credentials.
-- **Service Dependencies**: The order of service initialization is crucial. Dependencies between services must be respected to avoid runtime errors.
+- **Pre-EIP-155 Transactions**: Kakarot does not natively support pre-EIP-155
+  transactions, except for those whitelisted. Be cautious about transaction
+  compatibility.
+- **Environment Configuration**: Double-check environment variables and their
+  values, particularly those related to security, such as private keys and
+  database credentials.
+- **Service Dependencies**: The order of service initialization is crucial.
+  Dependencies between services must be respected to avoid runtime errors.
 
 ### API
 
@@ -439,70 +516,77 @@ You can take a look at `rpc-call-examples` directory. Please note the following:
 In order to execute the Rust tests, follow the below instructions:
 
 - Run `make setup` in order to setup the project.
-- Run `make test` which will create a Genesis test file for Kakarot
-  and launch tests.
-- If you which to only run a specific test, be sure to first at least
-  run `make katana-genesis` once, then run `make test-target TARGET=test_you_want_to_run`.
+- Run `make test` which will create a Genesis test file for Kakarot and launch
+  tests.
+- If you which to only run a specific test, be sure to first at least run
+  `make katana-genesis` once, then run
+  `make test-target TARGET=test_you_want_to_run`.
 
 ### Apibara indexer tests
 
-In order to run the Typescript unit tests, you will need to have [Deno](https://docs.deno.com/runtime/manual/)
-installed. Then you can run `KAKAROT_ADDRESS=ADDRESS_YOU_WANT_TO_USE_FOR_KAKAROT
-deno test --allow-env`.
+In order to run the Typescript unit tests, you will need to have
+[Deno](https://docs.deno.com/runtime/manual/) installed. Then you can run
+`KAKAROT_ADDRESS=ADDRESS_YOU_WANT_TO_USE_FOR_KAKAROT deno test --allow-env`.
 
 ### Hive
 
 The [Hive](https://github.com/ethereum/hive/tree/master) end-to-end test suite
-is set up in the Github Continuous Integration (CI) flow of the repository.
-This ensures a safe guard when modifying the current RPC implementation and/or
-the [execution layer](https://github.com/kkrt-labs/kakarot).
+is set up in the Github Continuous Integration (CI) flow of the repository. This
+ensures a safe guard when modifying the current RPC implementation and/or the
+[execution layer](https://github.com/kkrt-labs/kakarot).
 
-Due to the current existing differences between the Kakarot EVM implementation which
-aims to be a type 2 ZK-EVM (see the blog post from [Vitalik](https://vitalik.eth.limo/general/2022/08/04/zkevm.html)
-for more details), some of the Hive tests need to be skipped or slightly modified
-in order to pass.
+Due to the current existing differences between the Kakarot EVM implementation
+which aims to be a type 2 ZK-EVM (see the blog post from
+[Vitalik](https://vitalik.eth.limo/general/2022/08/04/zkevm.html) for more
+details), some of the Hive tests need to be skipped or slightly modified in
+order to pass.
 
-For the [hive rpc tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc),
-all the websockets related tests are skipped as websockets aren't currently supported
-by the Kakarot RPC.
+For the
+[hive rpc tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc),
+all the websockets related tests are skipped as websockets aren't currently
+supported by the Kakarot RPC.
 
-For the [hive rpc compatibility tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc-compat),
+For the
+[hive rpc compatibility tests](https://github.com/kkrt-labs/hive/tree/master/simulators/ethereum/rpc-compat),
 the following tests are skipped:
 
-- debug_getRawBlock/get-block-n: the Kakarot implementation currently
-  doesn't compute the block hash following EVM standards.
+- debug_getRawBlock/get-block-n: the Kakarot implementation currently doesn't
+  compute the block hash following EVM standards.
 - debug_getRawBlock/get-genesis: see `debug_getRawBlock/get-block-n`.
 - debug_getRawHeader/get-block-n: debug API is currently not supported by the
   Kakarot RPC.
 - debug_getRawHeader/get-genesis: debug API is currently not supported by the
   Kakarot RPC.
-- debug_getRawHeader/get-invalid-number: debug API is currently not supported
-  by the Kakarot RPC.
+- debug_getRawHeader/get-invalid-number: debug API is currently not supported by
+  the Kakarot RPC.
 - debug_getRawTransaction/get-invalid-hash: the Kakarot implementation of the
   debug_getRawTransaction endpoint uses `reth_primitives::B256` type when
-  deserializing the hash. This test is expected to fail as the provided hash
-  in the query doesn't start with `0x`. As this test doesn't bring much, we
-  decide to skip it.
+  deserializing the hash. This test is expected to fail as the provided hash in
+  the query doesn't start with `0x`. As this test doesn't bring much, we decide
+  to skip it.
 - eth_createAccessList/create-al-multiple-reads: the createAccessList endpoint
   is currently not supported by the Kakarot RPC.
 - eth_createAccessList/create-al-simple-contract: the createAccessList endpoint
   is currently not supported by the Kakarot RPC.
 - eth_createAccessList/create-al-simple-transfer: the createAccessList endpoint
   is currently not supported by the Kakarot RPC.
-- eth_feeHistory/fee-history: the Kakarot implementation doesn't currently
-  set the block gas limit dynamically, which causes some disparity in the
-  returned data. Additionally, the rewards of the blocks aren't available.
+- eth_feeHistory/fee-history: the Kakarot implementation doesn't currently set
+  the block gas limit dynamically, which causes some disparity in the returned
+  data. Additionally, the rewards of the blocks aren't available.
 - eth_getBalance/get-balance-blockhash: see `debug_getRawBlock/get-block-n`.
 - eth_getBlockByHash/get-block-by-hash: see `debug_getRawBlock/get-block-n`.
-- eth_getBlockReceipts/get-block-receipts-by-hash: see `debug_getRawBlock/get-block-n`.
-- eth_getBlockTransactionCountByHash/get-block-n: see `debug_getRawBlock/get-block-n`.
-- eth_getBlockTransactionCountByHash/get-genesis: see `debug_getRawBlock/get-block-n`.
+- eth_getBlockReceipts/get-block-receipts-by-hash: see
+  `debug_getRawBlock/get-block-n`.
+- eth_getBlockTransactionCountByHash/get-block-n: see
+  `debug_getRawBlock/get-block-n`.
+- eth_getBlockTransactionCountByHash/get-genesis: see
+  `debug_getRawBlock/get-block-n`.
 - eth_getProof/get-account-proof-blockhash: the getProof endpoint is currently
   not supported by the Kakarot RPC.
-- eth_getProof/get-account-proof-with-storage: the getProof endpoint is currently
-  not supported by the Kakarot RPC.
-- eth_getProof/get-account-proof: the getProof endpoint is currently
-  not supported by the Kakarot RPC.
+- eth_getProof/get-account-proof-with-storage: the getProof endpoint is
+  currently not supported by the Kakarot RPC.
+- eth_getProof/get-account-proof: the getProof endpoint is currently not
+  supported by the Kakarot RPC.
 - eth_getStorage/get-storage-invalid-key-too-large: the Kakarot implementation
   of the eth_getStorage endpoint uses `reth_primitives::U256` type when
   deserializing the number. This test is expected to fail as the provided block
@@ -513,44 +597,47 @@ the following tests are skipped:
   of the ETH API. This test passes an invalid block hash `0xasdf` and expects
   the server to return with an error code `-32000` which corresponds to an
   invalid input error. The code derived from the `rpc` macro returns an error
-  code of `-32602` which corresponds to an invalid parameters error, whenever
-  it encounters issues when deserializing the input. We decide to ignore this
-  test as the only issue is the error code returned.
-- eth_getTransactionByBlockHashAndIndex/get-block-n: see `debug_getRawBlock/get-block-n`.
+  code of `-32602` which corresponds to an invalid parameters error, whenever it
+  encounters issues when deserializing the input. We decide to ignore this test
+  as the only issue is the error code returned.
+- eth_getTransactionByBlockHashAndIndex/get-block-n: see
+  `debug_getRawBlock/get-block-n`.
 
-In addition to the tests we skip, some of the objects fields need to be ignored in
-the passing tests:
+In addition to the tests we skip, some of the objects fields need to be ignored
+in the passing tests:
 
-- For blocks: the hash, parent hash, timestamp, base fee per gas, difficulty, gas
-  limit, miner, size, state root, total difficulty and withdrawals are all skipped.
-  Due to the difference between a type 1 and a type 2 ZK-EVM, these fields are
-  currently not computed according to the EVM specifications and need to be skipped.
+- For blocks: the hash, parent hash, timestamp, base fee per gas, difficulty,
+  gas limit, miner, size, state root, total difficulty and withdrawals are all
+  skipped. Due to the difference between a type 1 and a type 2 ZK-EVM, these
+  fields are currently not computed according to the EVM specifications and need
+  to be skipped.
 - For receipts, transactions and logs: the block hash is skipped.
 
-If you which to run our hive test suite locally, the following steps should be taken:
+If you which to run our hive test suite locally, the following steps should be
+taken:
 
 - Set up the repo: `make setup`.
-- Build a local docker image of the RPC. Check the hive [Dockerfile](docker/hive/Dockerfile)
-  for the values for `xxx` and `yyy`:
+- Build a local docker image of the RPC. Check the hive
+  [Dockerfile](docker/hive/Dockerfile) for the values for `xxx` and `yyy`:
 
   ```shell
   docker build --build-arg APIBARA_STARKNET_BIN_DIR=xxx --build-arg APIBARA_SINK_BIN_DIR=yyy  -t hive . -f docker/hive/Dockerfile
   ```
 
-- Checkout the Kakarot fork of hive: `git clone https://github.com/kkrt-labs/hive`
+- Checkout the Kakarot fork of hive:
+  `git clone https://github.com/kkrt-labs/hive`
 - Build the hive binary: `go build hive.go`
 - Run the full rpc test suite against Kakarot:
   `./hive --sim "ethereum/rpc" --client kakarot`
-- Additional filtering can be provided using `--sim.limit` if you which to run
-  a certain limited set of tests.
+- Additional filtering can be provided using `--sim.limit` if you which to run a
+  certain limited set of tests.
 
 ## Project assistance
 
 If you want to say **thank you** or/and support active development of Kakarot
 RPC:
 
-- Add a [GitHub Star](https://github.com/kkrt-labs/kakarot-rpc) to the
-  project.
+- Add a [GitHub Star](https://github.com/kkrt-labs/kakarot-rpc) to the project.
 - Tweet about the Kakarot RPC: <https://x.com/KakarotZkEvm>.
 
 ## Contributing
@@ -565,11 +652,22 @@ for being involved!
 
 ## Glossary
 
-- StarknetOS chain: also called CairoVM chain, or Starknet appchain, it is a full-node (or sequencer) that is powered by the Cairo VM (Cairo smart contracts can be deployed to it). It a chain that behaves in most ways similarly to Starknet L2.
-- Kakarot Core EVM: The set of Cairo Programs that implement the Ethereum Virtual Machine instruction set.
-- Katana: A StarknetOS sequencer developed by the Dojo team. Serves as the underlying StarknetOS client for Kakarot zkEVM locally. It is built with speed and minimalism in mind.
-- Madara: A StarknetOS sequencer and full-node developed by the Madara (e.g. Pragma Oracle, Deoxys, etc.) and Starkware exploration teams. Based on the Substrate framework, it is built with decentralization and robustness in mind.
-- Kakarot zkEVM: the entire system that forms the Kakarot zkRollup: the core EVM Cairo Programs and the StarknetOS chain they are deployed to, the RPC layer (this repository), and the Kakarot Indexer (the backend service that ingests Starknet data types and formats them in EVM format for RPC read requests).
+- StarknetOS chain: also called CairoVM chain, or Starknet appchain, it is a
+  full-node (or sequencer) that is powered by the Cairo VM (Cairo smart
+  contracts can be deployed to it). It a chain that behaves in most ways
+  similarly to Starknet L2.
+- Kakarot Core EVM: The set of Cairo Programs that implement the Ethereum
+  Virtual Machine instruction set.
+- Katana: A StarknetOS sequencer developed by the Dojo team. Serves as the
+  underlying StarknetOS client for Kakarot zkEVM locally. It is built with speed
+  and minimalism in mind.
+- Madara: A StarknetOS sequencer and full-node developed by the Madara (e.g.
+  Pragma Oracle, Deoxys, etc.) and Starkware exploration teams. Based on the
+  Substrate framework, it is built with decentralization and robustness in mind.
+- Kakarot zkEVM: the entire system that forms the Kakarot zkRollup: the core EVM
+  Cairo Programs and the StarknetOS chain they are deployed to, the RPC layer
+  (this repository), and the Kakarot Indexer (the backend service that ingests
+  Starknet data types and formats them in EVM format for RPC read requests).
 
 ## Authors & contributors
 
@@ -595,25 +693,25 @@ See [LICENSE](LICENSE) for more information.
 
 We warmly thank all the people who made this project possible.
 
-- [Reth](https://github.com/paradigmxyz/reth) (Rust Ethereum),
-  Thank you for providing open source libraries for us to reuse.
+- [Reth](https://github.com/paradigmxyz/reth) (Rust Ethereum), Thank you for
+  providing open source libraries for us to reuse.
 - [jsonrpsee](https://github.com/paritytech/jsonrpsee)
-- Starkware and its exploration team,
-  thank you for helping and providing a great test environment with Madara.
+- Starkware and its exploration team, thank you for helping and providing a
+  great test environment with Madara.
 - [Lambdaclass](https://github.com/lambdaclass)
-- [Dojo](https://github.com/dojoengine/dojo),
-  thank you for providing great test utils.
-- [starknet-rs](https://github.com/xJonathanLEI/starknet-rs),
-  thank you for a great SDK.
+- [Dojo](https://github.com/dojoengine/dojo), thank you for providing great test
+  utils.
+- [starknet-rs](https://github.com/xJonathanLEI/starknet-rs), thank you for a
+  great SDK.
 - All our contributors. This journey wouldn't be possible without you.
 
 ## Benchmarks
 
-For now, Kakarot RPC provides a minimal benchmarking methodology.
-You'll need [Bun](https://bun.sh/) installed locally.
+For now, Kakarot RPC provides a minimal benchmarking methodology. You'll need
+[Bun](https://bun.sh/) installed locally.
 
-- Run a Starknet node locally (Katana or Madara),
-  e.g. `katana --block-time 6000 --disable-fee` if you have the dojo binary locally,
+- Run a Starknet node locally (Katana or Madara), e.g.
+  `katana --block-time 6000 --disable-fee` if you have the dojo binary locally,
   or `make madara-rpc-up` for Madara.
 - Deploy the Kakarot smart contract (`make deploy-kakarot`)
 - Run the Kakarot RPC binary (`make run-dev`)
