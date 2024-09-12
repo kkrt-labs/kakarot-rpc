@@ -9,10 +9,49 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
+use mockito::Server;
+use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
 use rstest::*;
 use serde_json::Value;
-use starknet::core::types::Felt;
-use std::str::FromStr;
+use std::{env, str::FromStr};
+
+#[cfg(feature = "rpc_forwarding")]
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_send_raw_transaction_rpc_forwarding(#[future] katana: Katana, _setup: ()) {
+    let mut server = Server::new();
+    let mock_server = server
+        .mock("POST", "/")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(
+            r#"{"jsonrpc":"2.0","id":1,"result":"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"}"#,
+        )
+        .create();
+
+    let (_, _) = start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+    // Set the MAIN_RPC_URL environment variable
+    env::set_var("MAIN_RPC_URL", server.url());
+    drop(server);
+
+    let eth_client = katana.eth_client();
+
+    // Create a sample raw transaction
+    let raw_tx = Bytes::from(vec![1, 2, 3, 4]);
+
+    // Call the function
+    let result = eth_client.send_raw_transaction(raw_tx).await;
+
+    // Assert the result
+    assert!(result.is_ok());
+    let tx_hash = result.unwrap();
+    assert_eq!(tx_hash, B256::from_str("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").unwrap());
+
+    // Verify that the mock was called
+    mock_server.assert();
+}
 
 #[rstest]
 #[awt]
