@@ -119,6 +119,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let transaction_signed  = transaction.to_recovered_transaction().into_signed();
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
+// If the relayer failed to relay the transaction, we need to reposition it in the mempool 
                             let _ = self.eth_client.mempool().add_transaction(TransactionOrigin::Local, transaction.transaction.clone()).await;
                             return
                         }
