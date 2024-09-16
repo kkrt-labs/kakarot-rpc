@@ -108,7 +108,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         // Lock the relayer account
                         let maybe_relayer = self.lock_account().await;
                         if maybe_relayer.is_err() {
-                            // If we fail to fetch a relayer, we need to replace the transaction in the pool
+                            // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
                             tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap(), "failed to fetch relayer");
                             let _ = self.eth_client.mempool().add_transaction(TransactionOrigin::Local, transaction.transaction.clone()).await;
                             return

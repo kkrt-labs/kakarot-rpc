@@ -66,6 +66,7 @@ pub fn transaction_data_to_starknet_calldata(
     let mut execute_from_outside_calldata = Vec::with_capacity(capacity);
 
     // Construct the execute from outside calldata
+    // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/accounts/account_contract.cairo#L73
     execute_from_outside_calldata.append(&mut vec![
         relayer_address,          // OutsideExecution caller
         Felt::ZERO,               // OutsideExecution nonce
