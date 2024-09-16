@@ -115,9 +115,9 @@ COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/
 RUN cargo build \
     --features hive --release --target-dir /usr/src/rpc/target && \
     cargo build \
-    --bin hive_genesis --release --features testing --target-dir /usr/src/rpc/target && \
+    --bin hive_genesis --release --features "testing,binaries" --target-dir /usr/src/rpc/target && \
     cargo build \
-    --bin hive_chain --release --features testing --target-dir /usr/src/rpc/target
+    --bin hive_chain --release --features "testing,binaries" --target-dir /usr/src/rpc/target
 
 FROM ubuntu:24.10 as base
 # Install any necessary dependencies
