@@ -10,10 +10,7 @@ use super::{
 };
 use crate::{
     into_via_try_wrapper, into_via_wrapper,
-    models::{
-        block::{EthBlockId, EthBlockNumberOrTag},
-        felt::Felt252Wrapper,
-    },
+    models::block::{EthBlockId, EthBlockNumberOrTag},
     providers::{
         eth_provider::{
             BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,

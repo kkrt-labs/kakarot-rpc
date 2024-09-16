@@ -6,7 +6,6 @@ use super::{
 };
 use crate::{
     into_via_wrapper,
-    models::felt::Felt252Wrapper,
     providers::eth_provider::{
         provider::{EthApiResult, EthDataProvider},
         BlockProvider, ChainProvider,

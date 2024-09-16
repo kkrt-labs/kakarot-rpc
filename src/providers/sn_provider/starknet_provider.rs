@@ -1,6 +1,5 @@
 use crate::{
     into_via_wrapper,
-    models::felt::Felt252Wrapper,
     providers::eth_provider::{
         error::ExecutionError,
         starknet::{ERC20Reader, STARKNET_NATIVE_TOKEN},
@@ -12,14 +11,14 @@ use starknet::{
     core::types::{BlockId, Felt},
     providers::Provider,
 };
-use std::{ops::Deref, sync::Arc};
+use std::ops::Deref;
 use tracing::Instrument;
 
 /// A provider wrapper around the Starknet provider to expose utility methods.
 #[derive(Debug, Clone)]
 pub struct StarknetProvider<SP: Provider + Send + Sync> {
     /// The underlying Starknet provider wrapped in an [`Arc`] for shared ownership across threads.
-    provider: Arc<SP>,
+    provider: SP,
 }
 
 impl<SP: Provider + Send + Sync> Deref for StarknetProvider<SP> {
@@ -34,8 +33,8 @@ impl<SP> StarknetProvider<SP>
 where
     SP: Provider + Send + Sync,
 {
-    /// Creates a new [`StarknetProvider`] instance from an [`Arc`]-wrapped Starknet provider.
-    pub const fn new(provider: Arc<SP>) -> Self {
+    /// Creates a new [`StarknetProvider`] instance from a Starknet provider.
+    pub const fn new(provider: SP) -> Self {
         Self { provider }
     }
 

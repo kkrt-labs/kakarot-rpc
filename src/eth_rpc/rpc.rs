@@ -44,7 +44,6 @@ where
 {
     pub fn new(eth_client: EthClient<SP>) -> Self {
         let eth_provider = eth_client.eth_provider().clone();
-        let starknet_provider = eth_provider.starknet_provider_inner().clone();
 
         let alchemy_provider = Arc::new(AlchemyDataProvider::new(eth_provider.clone()));
         let pool_provider = Arc::new(PoolDataProvider::new(eth_provider.clone()));
@@ -55,8 +54,8 @@ where
         let web3_rpc_module = Web3Rpc::default().into_rpc();
         let net_rpc_module = NetRpc::new(eth_provider.clone()).into_rpc();
         let debug_rpc_module = DebugRpc::new(debug_provider).into_rpc();
-        let trace_rpc_module = TraceRpc::new(eth_provider.clone()).into_rpc();
-        let kakarot_rpc_module = KakarotRpc::new(eth_provider, starknet_provider).into_rpc();
+        let trace_rpc_module = TraceRpc::new(eth_provider).into_rpc();
+        let kakarot_rpc_module = KakarotRpc.into_rpc();
         let txpool_rpc_module = TxpoolRpc::new(pool_provider).into_rpc();
 
         let mut modules = HashMap::new();

@@ -92,7 +92,7 @@ impl DerefMut for Felt252Wrapper {
 #[macro_export]
 macro_rules! into_via_wrapper {
     ($val: expr) => {{
-        let intermediate: Felt252Wrapper = $val.into();
+        let intermediate: $crate::models::felt::Felt252Wrapper = $val.into();
         intermediate.into()
     }};
 }

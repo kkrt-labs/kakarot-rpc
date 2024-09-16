@@ -100,7 +100,10 @@ fn setup_tracing() -> Result<()> {
 #[allow(clippy::significant_drop_tightening)]
 #[cfg(feature = "hive")]
 async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<()> {
-    use kakarot_rpc::providers::eth_provider::constant::hive::{CHAIN_ID, DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+    use kakarot_rpc::providers::eth_provider::constant::{
+        hive::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE},
+        CHAIN_ID,
+    };
     use starknet::{accounts::ConnectedAccount, core::types::Felt, providers::Provider as _};
 
     let chain_id = starknet_provider.chain_id().await?;

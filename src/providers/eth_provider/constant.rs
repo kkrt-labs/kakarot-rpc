@@ -1,6 +1,11 @@
+use crate::config::KakarotRpcConfig;
 use reth_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
-use std::{str::FromStr, sync::LazyLock};
+use starknet::core::types::Felt;
+use std::{
+    str::FromStr,
+    sync::{LazyLock, OnceLock},
+};
 
 /// Maximum priority fee per gas
 pub static MAX_PRIORITY_FEE_PER_GAS: LazyLock<u64> = LazyLock::new(|| 0);
@@ -37,9 +42,13 @@ pub struct Constant {
     pub white_listed_eip_155_transaction_hashes: Vec<B256>,
 }
 
+pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
+pub static RPC_CONFIG: LazyLock<KakarotRpcConfig> =
+    LazyLock::new(|| KakarotRpcConfig::from_env().expect("failed to load Kakarot RPC config"));
+
 #[cfg(feature = "hive")]
 pub mod hive {
-    use crate::config::KakarotRpcConfig;
+    use super::{CHAIN_ID, RPC_CONFIG};
     use starknet::{
         accounts::{ExecutionEncoding, SingleOwnerAccount},
         core::types::Felt,
@@ -49,13 +58,10 @@ pub mod hive {
     use std::{
         env::var,
         str::FromStr,
-        sync::{Arc, LazyLock, OnceLock},
+        sync::{Arc, LazyLock},
     };
     use tokio::sync::Mutex;
 
-    pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
-    pub static RPC_CONFIG: LazyLock<KakarotRpcConfig> =
-        LazyLock::new(|| KakarotRpcConfig::from_env().expect("Failed to load Kakarot RPC config"));
     pub static DEPLOY_WALLET: LazyLock<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> =
         LazyLock::new(|| {
             SingleOwnerAccount::new(
@@ -66,7 +72,7 @@ pub mod hive {
                 )),
                 Felt::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
                     .expect("Failed to parse deployer address"),
-                *CHAIN_ID.get().expect("Failed to get chain id"),
+                *CHAIN_ID.get().expect("failed to fetch chain id"),
                 ExecutionEncoding::New,
             )
         });

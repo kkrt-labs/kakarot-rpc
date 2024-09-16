@@ -4,6 +4,7 @@ use num_traits::cast::ToPrimitive;
 use reth_primitives::{Bytes, B256};
 use reth_rpc_eth_types::EthApiError as RethEthApiError;
 use reth_rpc_types::{BlockHashOrNumber, ToRpcError};
+use reth_transaction_pool::error::PoolError;
 use starknet::core::types::Felt;
 use thiserror::Error;
 
@@ -39,7 +40,8 @@ impl From<&EthApiError> for EthRpcErrorCode {
             | EthApiError::CalldataExceededLimit(_, _)
             | EthApiError::RethEthApi(_) => Self::InvalidParams,
             EthApiError::Transaction(err) => err.into(),
-            EthApiError::Unsupported(_) | EthApiError::Kakarot(_) => Self::InternalError,
+            // TODO improve the error
+            EthApiError::Unsupported(_) | EthApiError::Kakarot(_) | EthApiError::Pool(_) => Self::InternalError,
             EthApiError::Execution(_) => Self::ExecutionError,
         }
     }
@@ -62,6 +64,8 @@ pub enum EthApiError {
     TransactionNotFound(B256),
     /// Error related to transaction
     Transaction(#[from] TransactionError),
+    /// Error related to transaction pool
+    Pool(#[from] PoolError),
     /// Error related to signing
     Signature(#[from] SignatureError),
     /// Unsupported feature
@@ -85,6 +89,7 @@ impl std::fmt::Display for EthApiError {
             Self::UnknownBlockNumber(block) => write!(f, "unknown block number {block:?}"),
             Self::TransactionNotFound(tx) => write!(f, "transaction not found {tx}"),
             Self::Transaction(err) => write!(f, "{err}"),
+            Self::Pool(err) => write!(f, "{err}"),
             Self::Signature(err) => write!(f, "{err}"),
             Self::RethEthApi(err) => write!(f, "{err}"),
             Self::Unsupported(feature) => write!(f, "unsupported: {feature}"),
@@ -303,6 +308,9 @@ pub enum TransactionError {
     /// [`BlockTransactions::FullTransactions`] variant.
     #[error("expected full transactions")]
     ExpectedFullTransactions,
+    /// Thrown if the broadcasting of the Starknet transaction fails
+    #[error("broadcasting error: {0}")]
+    Broadcast(Box<dyn std::error::Error + Send + Sync>),
     /// Thrown if the tracing fails
     #[error("tracing error: {0}")]
     Tracing(Box<dyn std::error::Error + Send + Sync>),
@@ -321,6 +329,7 @@ impl From<&TransactionError> for EthRpcErrorCode {
             TransactionError::ExpectedFullTransactions
             | TransactionError::Tracing(_)
             | TransactionError::Call(_)
+            | TransactionError::Broadcast(_)
             | TransactionError::ExceedsBlockGasLimit(_, _) => Self::InternalError,
         }
     }
