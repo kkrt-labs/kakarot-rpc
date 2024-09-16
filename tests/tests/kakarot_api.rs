@@ -13,14 +13,14 @@ use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSign
 use rstest::*;
 use serde_json::Value;
 use std::str::FromStr;
-#[cfg(feature = "rpc_forwarding")]
-use {mockito::Server, std::env};
 
 #[cfg(feature = "rpc_forwarding")]
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_send_raw_transaction_rpc_forwarding(#[future] katana: Katana, _setup: ()) {
+    use mockito::Server;
+    use std::env;
     let mut server = Server::new();
     let mock_server = server
         .mock("POST", "/")

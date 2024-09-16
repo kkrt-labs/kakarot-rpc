@@ -20,7 +20,7 @@ use starknet::providers::Provider;
 use std::sync::Arc;
 #[cfg(feature = "rpc_forwarding")]
 use {
-    crate::providers::eth_provider::{constant::MAIN_RPC_URL, error::EthereumDataFormatError},
+    crate::providers::eth_provider::constant::MAIN_RPC_URL,
     alloy_provider::{Provider as provider_alloy, ProviderBuilder},
     url::Url,
 };
@@ -251,12 +251,8 @@ where
         tracing::info!("Serving eth_sendRawTransaction");
         #[cfg(feature = "rpc_forwarding")]
         {
-            let provider_builded = ProviderBuilder::new().on_http(Url::parse(&MAIN_RPC_URL).expect("invalid rpc url"));
-
-            let tx_hash = provider_builded
-                .send_raw_transaction(&bytes)
-                .await
-                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?;
+            let provider = ProviderBuilder::new().on_http(Url::parse(MAIN_RPC_URL.as_ref()).unwrap());
+            let tx_hash = provider.send_raw_transaction(&bytes).await.expect("failed to send transaction");
 
             return Ok(*tx_hash.tx_hash());
         }
