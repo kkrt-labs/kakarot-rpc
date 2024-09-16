@@ -11,7 +11,7 @@ use reth_primitives::TransactionSigned;
 use starknet::{
     accounts::{Account, ExecutionEncoding, ExecutionV1, SingleOwnerAccount},
     core::types::Felt,
-    providers::{jsonrpc::HttpTransport, JsonRpcClient},
+    providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
     signers::{LocalWallet, SigningKey},
 };
 use std::{env::var, ops::Deref, str::FromStr, sync::LazyLock};
@@ -28,23 +28,27 @@ static RELAYER_SIGNER: LazyLock<LocalWallet> = LazyLock::new(|| {
 /// A relayer holding a lock on a mutex on an account and connected to the Starknet network.
 /// The relayer is used to sign  transactions and broadcast them on the network.
 #[derive(Debug)]
-pub struct LockedRelayer<'a> {
+pub struct LockedRelayer<'a, SP: Provider + Send + Sync> {
     /// The account used to sign and broadcast the transaction
-    account: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+    account: SingleOwnerAccount<SP, LocalWallet>,
     /// The balance of the relayer
     balance: Felt,
     /// The locked nonce held by the relayer
     nonce: MutexGuard<'a, Felt>,
 }
 
-impl<'a> LockedRelayer<'a> {
-    pub fn new(lock: MutexGuard<'a, Felt>, address: Felt, balance: Felt) -> Self {
+impl<'a, SP> LockedRelayer<'a, SP>
+where
+    SP: Provider + Send + Sync,
+{
+    /// Create a new relayer with the provided Starknet provider, address, balance and nonce.
+    pub fn new(lock: MutexGuard<'a, Felt>, address: Felt, balance: Felt, provider: SP) -> Self {
         let relayer = SingleOwnerAccount::new(
-            JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+            provider,
             RELAYER_SIGNER.clone(),
             address,
             *CHAIN_ID.get().expect("Failed to get chain id"),
-            ExecutionEncoding::Legacy,
+            ExecutionEncoding::New,
         );
         Self { account: relayer, balance, nonce: lock }
     }
@@ -84,8 +88,11 @@ impl<'a> LockedRelayer<'a> {
     }
 }
 
-impl<'a> Deref for LockedRelayer<'a> {
-    type Target = SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>;
+impl<'a, SP> Deref for LockedRelayer<'a, SP>
+where
+    SP: Provider + Send + Sync,
+{
+    type Target = SingleOwnerAccount<SP, LocalWallet>;
 
     fn deref(&self) -> &Self::Target {
         &self.account

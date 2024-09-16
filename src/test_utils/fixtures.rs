@@ -1,4 +1,5 @@
 use rstest::fixture;
+use starknet::accounts::Account;
 use tracing_subscriber::{filter, FmtSubscriber};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
@@ -15,7 +16,10 @@ use {
 #[awt]
 pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     let eoa = katana.eoa();
-    let contract = eoa.deploy_evm_contract(Some("Counter"), &[]).await.expect("Failed to deploy Counter contract");
+    let contract = eoa
+        .deploy_evm_contract(Some("Counter"), &[], katana.sequencer.account())
+        .await
+        .expect("Failed to deploy Counter contract");
     (katana, contract)
 }
 
@@ -25,7 +29,8 @@ pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
 #[awt]
 pub async fn contract_empty(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
     let eoa = katana.eoa();
-    let contract = eoa.deploy_evm_contract(None, &[]).await.expect("Failed to deploy empty contract");
+    let contract =
+        eoa.deploy_evm_contract(None, &[], katana.sequencer.account()).await.expect("Failed to deploy empty contract");
     (katana, contract)
 }
 
@@ -44,6 +49,7 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
                 DynSolValue::String("TT".into()),     // symbol
                 DynSolValue::Uint(U256::from(18), 8), // decimals
             ],
+            katana.sequencer.account(),
         )
         .await
         .expect("Failed to deploy ERC20 contract");
@@ -65,6 +71,7 @@ pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (
             &[
                 DynSolValue::Address(counter_address), // counter address
             ],
+            katana.sequencer.account(),
         )
         .await
         .expect("Failed to deploy PlainOpcodes contract");

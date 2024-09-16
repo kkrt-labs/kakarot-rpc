@@ -1,7 +1,13 @@
 use crate::{
     client::{EthClient, KakarotTransactions},
+    into_via_try_wrapper,
     models::felt::Felt252Wrapper,
-    providers::eth_provider::{starknet::kakarot_core::starknet_address, ChainProvider, TransactionProvider},
+    pool::mempool::AccountManager,
+    providers::eth_provider::{
+        constant::RPC_CONFIG,
+        starknet::{kakarot_core::starknet_address, relayer::LockedRelayer},
+        ChainProvider, TransactionProvider,
+    },
     test_utils::{
         evm_contract::{EvmContract, KakarotEvmContract, TransactionInfo, TxCommonInfo, TxFeeMarketInfo},
         tx_waiter::watch_tx,
@@ -11,18 +17,22 @@ use alloy_dyn_abi::DynSolValue;
 use alloy_json_abi::ContractObject;
 use alloy_signer_local::PrivateKeySigner;
 use async_trait::async_trait;
+use dojo_test_utils::sequencer::TestAccount;
 use reth_primitives::{
     sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, B256, U256,
 };
 use reth_rpc_types_compat::transaction::from_recovered;
 use starknet::{
+    accounts::{Account, SingleOwnerAccount},
     core::{
-        types::{Felt, TransactionReceipt},
+        types::{BlockId, BlockTag, Felt, TransactionReceipt},
         utils::get_selector_from_name,
     },
-    providers::Provider,
+    providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
+    signers::LocalWallet,
 };
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
 pub const TX_GAS_PRICE: u128 = 10;
@@ -70,7 +80,7 @@ pub trait Eoa<P: Provider + Send + Sync + Clone> {
 }
 
 #[derive(Clone, Debug)]
-pub struct KakarotEOA<P: Provider + Send + Sync + Clone> {
+pub struct KakarotEOA<P: Provider + Send + Sync + Clone + 'static> {
     pub private_key: B256,
     pub eth_client: Arc<EthClient<P>>,
 }
@@ -103,6 +113,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         &self,
         contract_name: Option<&str>,
         constructor_args: &[DynSolValue],
+        relayer: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     ) -> Result<KakarotEvmContract, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
@@ -136,12 +147,28 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             )?
         };
         let tx_signed = self.sign_transaction(tx)?;
-        let tx_hash = self.send_transaction(tx_signed).await?;
-        let tx_hash: Felt252Wrapper = tx_hash.into();
+        let _ = self.send_transaction(tx_signed.clone()).await?;
+
+        // Prepare the relayer
+        let relayer_balance =
+            self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
+        let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
+
+        let current_nonce = Mutex::new(Felt::ZERO);
+        let relayer = LockedRelayer::new(
+            current_nonce.lock().await,
+            relayer.address(),
+            relayer_balance,
+            self.starknet_provider(),
+        );
+
+        // Relay the transaction
+        let starknet_transaction_hash =
+            relayer.relay_transaction(&tx_signed).await.expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),
-            tx_hash.clone().into(),
+            starknet_transaction_hash,
             std::time::Duration::from_millis(300),
             60,
         )
@@ -150,7 +177,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
 
         let maybe_receipt = self
             .starknet_provider()
-            .get_transaction_receipt(Felt::from(tx_hash))
+            .get_transaction_receipt(starknet_transaction_hash)
             .await
             .expect("Failed to get transaction receipt after retries");
 

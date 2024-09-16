@@ -58,6 +58,9 @@ test: katana-genesis load-env
 test-target: load-env
 	cargo test --tests --all-features $(TARGET) -- --nocapture
 
+test-target1: load-env
+	cargo test --package kakarot-rpc --test entry --all-features -- tests::alchemy_api::test_token_balances --exact --show-output --ignored
+
 benchmark:
 	cd benchmarks && bun i && bun run benchmark
 

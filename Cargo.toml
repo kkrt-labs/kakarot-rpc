@@ -160,6 +160,7 @@ katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-
   "serde",
 ], optional = true }
 mockall = { version = "0.13.0", default-features = false, optional = true }
+clap = { version = "4.5.17", optional = true }
 
 [patch.crates-io]
 starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
@@ -173,7 +174,6 @@ tempfile = "3.8"
 
 [features]
 testing = [
-  "reth-testing-utils",
   "alloy-json-abi",
   "alloy-primitives",
   "alloy-signer-local",
@@ -187,6 +187,7 @@ testing = [
   "mockall",
   "rand",
   "rayon",
+  "reth-testing-utils",
   "rstest",
   "serde_with",
   "strum",
@@ -196,6 +197,7 @@ testing = [
   "tokio-util",
   "walkdir",
 ]
+binaries = ["clap"]
 hive = []
 arbitrary = ["rand", "dep:arbitrary"]
 
@@ -205,8 +207,8 @@ required-features = ["testing"]
 
 [[bin]]
 name = "hive_genesis"
-required-features = ["testing"]
+required-features = ["testing", "binaries"]
 
 [[bin]]
 name = "hive_chain"
-required-features = ["testing"]
+required-features = ["testing", "binaries"]

@@ -1,14 +1,21 @@
 #![allow(clippy::significant_drop_tightening)]
 
 use super::validate::KakarotTransactionValidator;
-use crate::{client::EthClient, into_via_try_wrapper, providers::eth_provider::starknet::relayer::LockedRelayer};
+use crate::{
+    client::EthClient,
+    into_via_try_wrapper,
+    providers::eth_provider::{constant::RPC_CONFIG, starknet::relayer::LockedRelayer},
+};
 use futures::future::select_all;
 use reth_primitives::{BlockId, IntoRecoveredTransaction, U256};
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionOrigin, TransactionPool,
 };
 use serde_json::Value;
-use starknet::core::types::{BlockTag, Felt};
+use starknet::{
+    core::types::{BlockTag, Felt},
+    providers::{jsonrpc::HttpTransport, JsonRpcClient},
+};
 use std::{collections::HashMap, fs::File, io::Read, str::FromStr, sync::Arc, time::Duration};
 use tokio::{runtime::Handle, sync::Mutex};
 
@@ -82,6 +89,32 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
         Ok(Self { accounts, eth_client })
     }
 
+    /// Creates a new [`AccountManager`] instance by initializing account data from a vector of addresses.
+    #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+    pub async fn new_from_addresses(addresses: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Arc<Self>> {
+        let mut accounts = HashMap::new();
+
+        // Loop through the provided addresses
+        for address in addresses {
+            let starknet_block_id = eth_client
+                .eth_provider()
+                .to_starknet_block_id(Some(BlockId::default()))
+                .await
+                .map_err(|e| eyre::eyre!("Error converting block ID: {:?}", e))?;
+
+            // Query the initial account_nonce for each address
+            let nonce = eth_client.starknet_provider().get_nonce(starknet_block_id, address).await.unwrap_or_default();
+
+            accounts.insert(address, Arc::new(Mutex::new(nonce)));
+        }
+
+        if accounts.is_empty() {
+            return Err(eyre::eyre!("No valid accounts provided"));
+        }
+
+        Ok(Arc::new(Self { accounts, eth_client }))
+    }
+
     /// Starts the account manager task that periodically checks account balances and processes transactions.
     pub fn start(&'static self, rt_handle: &Handle) {
         rt_handle.spawn(async move {
@@ -96,7 +129,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                     let transaction = self.eth_client.mempool().get(best_hash);
                     if transaction.is_none() {
                         // Probably a race condition here
-                        continue
+                        continue;
                     }
                     let transaction = transaction.expect("not None");
 
@@ -109,24 +142,32 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let maybe_relayer = self.lock_account().await;
                         if maybe_relayer.is_err() {
                             // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
-                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap(), "failed to fetch relayer");
-                            let _ = self.eth_client.mempool().add_transaction(TransactionOrigin::Local, transaction.transaction.clone()).await;
-                            return
+                            // tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap(), "failed to fetch relayer");
+                            let _ = self
+                                .eth_client
+                                .mempool()
+                                .add_transaction(TransactionOrigin::Local, transaction.transaction.clone())
+                                .await;
+                            return;
                         }
                         let mut relayer = maybe_relayer.expect("maybe_lock is not error");
 
                         // Send the Ethereum transaction using the relayer
-                        let transaction_signed  = transaction.to_recovered_transaction().into_signed();
+                        let transaction_signed = transaction.to_recovered_transaction().into_signed();
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
-// If the relayer failed to relay the transaction, we need to reposition it in the mempool 
-                            let _ = self.eth_client.mempool().add_transaction(TransactionOrigin::Local, transaction.transaction.clone()).await;
-                            return
+                            // If the relayer failed to relay the transaction, we need to reposition it in the mempool
+                            let _ = self
+                                .eth_client
+                                .mempool()
+                                .add_transaction(TransactionOrigin::Local, transaction.transaction.clone())
+                                .await;
+                            return;
                         }
 
                         // Increment account_nonce after sending a transaction
                         let nonce = relayer.nonce_mut();
-                        *nonce= *nonce + 1;
+                        *nonce = *nonce + 1;
                     });
                 }
 
@@ -136,7 +177,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     }
 
     /// Returns the next available account from the manager.
-    async fn lock_account(&self) -> eyre::Result<LockedRelayer<'_>>
+    pub async fn lock_account(&self) -> eyre::Result<LockedRelayer<'_, JsonRpcClient<HttpTransport>>>
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
@@ -166,7 +207,12 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
             }
 
             let balance = into_via_try_wrapper!(balance)?;
-            let account = LockedRelayer::new(guard, *account_address, balance);
+            let account = LockedRelayer::new(
+                guard,
+                *account_address,
+                balance,
+                JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+            );
 
             // Return the account address and the guard on the nonce
             return Ok(account);
