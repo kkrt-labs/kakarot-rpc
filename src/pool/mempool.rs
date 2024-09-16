@@ -1,17 +1,16 @@
+#![allow(clippy::significant_drop_tightening)]
+
 use super::validate::KakarotTransactionValidator;
-use crate::client::EthClient;
+use crate::{client::EthClient, into_via_try_wrapper, providers::eth_provider::starknet::relayer::LockedRelayer};
 use futures::future::select_all;
-use reth_primitives::{BlockId, U256};
+use reth_primitives::{BlockId, IntoRecoveredTransaction, U256};
 use reth_transaction_pool::{
-    blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionPool,
+    blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionOrigin, TransactionPool,
 };
 use serde_json::Value;
-use starknet::core::types::Felt;
+use starknet::core::types::{BlockTag, Felt};
 use std::{collections::HashMap, fs::File, io::Read, str::FromStr, sync::Arc, time::Duration};
-use tokio::{
-    runtime::Handle,
-    sync::{Mutex, MutexGuard},
-};
+use tokio::{runtime::Handle, sync::Mutex};
 
 /// A type alias for the Kakarot Transaction Validator.
 /// Uses the Reth implementation [`TransactionValidationTaskExecutor`].
@@ -94,22 +93,41 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 let best_hashes =
                     self.eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
                 if let Some(best_hash) = best_hashes.first() {
-                    let maybe_lock = self.lock_account().await;
-                    if maybe_lock.is_err() {
-                        tracing::error!(target: "account_manager", err = ?maybe_lock.unwrap(), "failed to fetch relayer");
-                        continue;
+                    let transaction = self.eth_client.mempool().get(best_hash);
+                    if transaction.is_none() {
+                        // Probably a race condition here
+                        continue
                     }
+                    let transaction = transaction.expect("not None");
 
-                    let (_account_address, mut locked_account_nonce) = maybe_lock.expect("maybe_lock is not error");
-
-                    // TODO: here we send the transaction on the starknet network
-                    // Increment account_nonce after sending a transaction
-                    *locked_account_nonce = *locked_account_nonce + 1;
-
-                    // Only release the lock once the transaction has been broadcast
-                    drop(locked_account_nonce);
-
+                    // We remove the transaction to avoid another relayer from picking it up.
                     self.eth_client.mempool().as_ref().remove_transactions(vec![*best_hash]);
+
+                    // Spawn a task for the transaction to be sent
+                    tokio::spawn(async move {
+                        // Lock the relayer account
+                        let maybe_relayer = self.lock_account().await;
+                        if maybe_relayer.is_err() {
+                            // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
+                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap(), "failed to fetch relayer");
+                            let _ = self.eth_client.mempool().add_transaction(TransactionOrigin::Local, transaction.transaction.clone()).await;
+                            return
+                        }
+                        let mut relayer = maybe_relayer.expect("maybe_lock is not error");
+
+                        // Send the Ethereum transaction using the relayer
+                        let transaction_signed  = transaction.to_recovered_transaction().into_signed();
+                        let res = relayer.relay_transaction(&transaction_signed).await;
+                        if res.is_err() {
+// If the relayer failed to relay the transaction, we need to reposition it in the mempool 
+                            let _ = self.eth_client.mempool().add_transaction(TransactionOrigin::Local, transaction.transaction.clone()).await;
+                            return
+                        }
+
+                        // Increment account_nonce after sending a transaction
+                        let nonce = relayer.nonce_mut();
+                        *nonce= *nonce + 1;
+                    });
                 }
 
                 tokio::time::sleep(Duration::from_secs(1)).await;
@@ -118,7 +136,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     }
 
     /// Returns the next available account from the manager.
-    async fn lock_account(&self) -> eyre::Result<(Felt, MutexGuard<'_, Felt>)>
+    async fn lock_account(&self) -> eyre::Result<LockedRelayer<'_>>
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
@@ -147,17 +165,22 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 continue;
             }
 
+            let balance = into_via_try_wrapper!(balance)?;
+            let account = LockedRelayer::new(guard, *account_address, balance);
+
             // Return the account address and the guard on the nonce
-            return Ok((*account_address, guard));
+            return Ok(account);
         }
     }
 
-    /// Retrieves the balance of the specified account address.
+    /// Retrieves the balance of the specified account address for the [`BlockTag::Pending`]
     async fn get_balance(&self, account_address: Felt) -> eyre::Result<U256> {
-        // Convert the optional Ethereum block ID to a Starknet block ID.
-        let starknet_block_id = self.eth_client.eth_provider().to_starknet_block_id(Some(BlockId::default())).await?;
-        // Get the balance of the address at the given block ID.
-        self.eth_client.starknet_provider().balance_at(account_address, starknet_block_id).await.map_err(Into::into)
+        // Get the balance of the address for the Pending block.
+        self.eth_client
+            .starknet_provider()
+            .balance_at(account_address, starknet::core::types::BlockId::Tag(BlockTag::Pending))
+            .await
+            .map_err(Into::into)
     }
 }
 

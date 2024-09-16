@@ -11,7 +11,6 @@ use super::{
 };
 use crate::{
     into_via_wrapper,
-    models::felt::Felt252Wrapper,
     providers::eth_provider::{
         database::filter::{self, format_hex},
         provider::{EthApiResult, EthDataProvider},

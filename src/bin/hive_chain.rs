@@ -1,13 +1,17 @@
+#![allow(clippy::significant_drop_tightening)]
+
 use alloy_rlp::Decodable;
-use eyre::OptionExt;
-use kakarot_rpc::providers::eth_provider::starknet::kakarot_core::to_starknet_transaction;
+use kakarot_rpc::{
+    into_via_try_wrapper,
+    providers::{eth_provider::starknet::relayer::LockedRelayer, sn_provider::StarknetProvider},
+};
 use reth_primitives::{bytes::Buf, Block, BlockBody, BytesMut};
 use starknet::{
-    core::types::{BroadcastedInvokeTransaction, Felt},
+    core::types::{BlockId, BlockTag, Felt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
 use std::{path::Path, str::FromStr};
-use tokio::{fs::File, io::AsyncReadExt};
+use tokio::{fs::File, io::AsyncReadExt, sync::Mutex};
 use tokio_stream::StreamExt;
 use tokio_util::codec::{Decoder, FramedRead};
 use url::Url;
@@ -34,6 +38,8 @@ impl Decoder for BlockFileCodec {
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     let chain_path = Path::new(&std::env::var("CHAIN_PATH")?).to_path_buf();
+    let relayer_address = Felt::from_str(&std::env::var("RELAYER_ADDRESS")?)?;
+
     let mut file = File::open(chain_path).await?;
 
     let metadata = file.metadata().await?;
@@ -51,29 +57,24 @@ async fn main() -> eyre::Result<()> {
     }
 
     let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str(&std::env::var("STARKNET_NETWORK")?)?));
-    let mut current_nonce = Felt::ZERO;
+    let starknet_provider = StarknetProvider::new(provider);
+    let relayer_balance = starknet_provider.balance_at(relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
+    let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
+
+    let current_nonce = Mutex::new(Felt::ZERO);
+    let mut relayer = LockedRelayer::new(current_nonce.lock().await, relayer_address, relayer_balance);
 
     for (block_number, body) in bodies.into_iter().enumerate() {
-        while provider.block_number().await? < block_number as u64 {
+        while starknet_provider.block_number().await? < block_number as u64 {
             tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         }
 
-        for transaction in body.transactions {
-            let signer = transaction.recover_signer().ok_or_eyre("failed to recover signer")?;
-            let starknet_tx = to_starknet_transaction(&transaction, signer, 0)?;
-
-            let nonce = match &starknet_tx {
-                BroadcastedInvokeTransaction::V1(starknet_tx) => starknet_tx.nonce,
-                BroadcastedInvokeTransaction::V3(starknet_tx) => starknet_tx.nonce,
-            };
-
-            // Stop if the nonce is incorrect
-            assert_eq!(nonce, current_nonce);
-
-            provider.add_invoke_transaction(starknet_tx).await?;
-
+        for transaction in &body.transactions {
+            relayer.relay_transaction(transaction).await?;
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            current_nonce += Felt::ONE;
+
+            let nonce = relayer.nonce_mut();
+            *nonce += Felt::ONE;
         }
     }
 
