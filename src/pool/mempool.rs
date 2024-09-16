@@ -8,12 +8,9 @@ use reth_transaction_pool::{
     blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionOrigin, TransactionPool,
 };
 use serde_json::Value;
-use starknet::core::types::Felt;
-use std::{collections::HashMap, fs::File, io::Read, sync::Arc, time::Duration};
-use tokio::{
-    runtime::Handle,
-    sync::{Mutex, MutexGuard},
-};
+use starknet::core::types::{BlockTag, Felt};
+use std::{collections::HashMap, fs::File, io::Read, str::FromStr, sync::Arc, time::Duration};
+use tokio::{runtime::Handle, sync::Mutex};
 
 /// A type alias for the Kakarot Transaction Validator.
 /// Uses the Reth implementation [`TransactionValidationTaskExecutor`].
