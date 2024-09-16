@@ -1,10 +1,11 @@
 #![allow(clippy::significant_drop_tightening)]
 
 use alloy_rlp::Decodable;
+use clap::Parser;
 use kakarot_rpc::{
     into_via_try_wrapper,
     providers::{
-        eth_provider::{constant::RPC_CONFIG, starknet::relayer::LockedRelayer},
+        eth_provider::{constant::{CHAIN_ID, RPC_CONFIG}, starknet::relayer::LockedRelayer},
         sn_provider::StarknetProvider,
     },
 };
@@ -13,7 +14,7 @@ use starknet::{
     core::types::{BlockId, BlockTag, Felt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
-use std::{path::Path, str::FromStr};
+use std::{path::PathBuf, str::FromStr};
 use tokio::{fs::File, io::AsyncReadExt, sync::Mutex};
 use tokio_stream::StreamExt;
 use tokio_util::codec::{Decoder, FramedRead};
@@ -36,23 +37,62 @@ impl Decoder for BlockFileCodec {
     }
 }
 
+/// The inputs to the binary.
+#[derive(Parser, Debug)]
+pub struct Args {
+    /// The path to the chain file for the hive test.
+    #[clap(short, long)]
+    chain_path: PathBuf,
+    /// The relayer address.
+    #[clap(long)]
+    relayer_address: Felt,
+    /// The relayer private key.
+    #[clap(long)]
+    relayer_pk: Felt,
+}
+
+const STARKNET_RPC_URL: &str = "http://0.0.0.0:5050";
+const MAX_FELTS_IN_CALLDATA: &str = "30000";
+
 /// Inspired by the Import command from Reth.
 /// https://github.com/paradigmxyz/reth/blob/main/bin/reth/src/commands/import.rs
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
-    let chain_path = Path::new(&std::env::var("CHAIN_PATH")?).to_path_buf();
-    let relayer_address = Felt::from_str(&std::env::var("RELAYER_ADDRESS")?)?;
+    let args = Args::parse();
 
-    let mut file = File::open(chain_path).await?;
+    // Get the provider
+    let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str(STARKNET_RPC_URL)?));
+    let starknet_provider = StarknetProvider::new(provider);
+
+    // Set the env
+    std::env::set_var("RELAYER_PRIVATE_KEY", format!("0x{:x}", args.relayer_pk));
+    std::env::set_var("MAX_FELTS_IN_CALLDATA", MAX_FELTS_IN_CALLDATA);
+    std::env::set_var("STARKNET_NETWORK", STARKNET_RPC_URL);
+
+    // Set the chain id
+    let chain_id = starknet_provider.chain_id().await?;
+    let chain_id: u64 = (Felt::from(u64::MAX).to_bigint() & chain_id.to_bigint()).try_into()?;
+    let _ = CHAIN_ID.get_or_init(|| Felt::from(chain_id));
+
+    // Prepare the relayer
+    let relayer_balance = starknet_provider.balance_at(args.relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
+    let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
+
+    let current_nonce = Mutex::new(Felt::ZERO);
+    let mut relayer = LockedRelayer::new(current_nonce.lock().await, args.relayer_address, relayer_balance);
+
+    // Read the rlp file
+    let mut file = File::open(args.chain_path).await?;
 
     let metadata = file.metadata().await?;
     let file_len = metadata.len();
 
-    // read the entire file into memory
+    // Read the entire file into memory
     let mut reader = vec![];
-    file.read_to_end(&mut reader).await.unwrap();
+    file.read_to_end(&mut reader).await?;
     let mut stream = FramedRead::with_capacity(&reader[..], BlockFileCodec, file_len as usize);
 
+    // Extract the block
     let mut bodies: Vec<BlockBody> = Vec::new();
     while let Some(block_res) = stream.next().await {
         let block = block_res?;
@@ -82,6 +122,7 @@ async fn main() -> eyre::Result<()> {
             relayer.relay_transaction(transaction).await?;
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
+            // Increase the relayer's nonce
             let nonce = relayer.nonce_mut();
             *nonce += Felt::ONE;
         }
