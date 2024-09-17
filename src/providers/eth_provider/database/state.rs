@@ -46,14 +46,21 @@ impl<P: EthereumProvider + Send + Sync> DatabaseRef for EthDatabase<P> {
     fn basic_ref(&self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
         tokio::task::block_in_place(|| {
             let account_info = Handle::current().block_on(async {
-                let bytecode = self.provider.get_code(address, Some(self.block_id)).await?;
-                let bytecode = Bytecode::new_raw(bytecode);
+                let bytecode = self.provider.get_code(address, Some(self.block_id));
+                let nonce = self.provider.transaction_count(address, Some(self.block_id));
+                let balance = self.provider.balance(address, Some(self.block_id));
+
+                let (bytecode, nonce, balance) = tokio::join!(bytecode, nonce, balance);
+
+                let bytecode = Bytecode::new_raw(bytecode?);
                 let code_hash = bytecode.hash_slow();
 
-                let nonce = self.provider.transaction_count(address, Some(self.block_id)).await?.to();
-                let balance = self.provider.balance(address, Some(self.block_id)).await?;
-
-                Result::<_, EthApiError>::Ok(AccountInfo { nonce, balance, code: Some(bytecode), code_hash })
+                Result::<_, EthApiError>::Ok(AccountInfo {
+                    nonce: nonce?.to(),
+                    balance: balance?,
+                    code: Some(bytecode),
+                    code_hash,
+                })
             })?;
 
             Ok(Some(account_info))
