@@ -776,7 +776,7 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let current_nonce = Mutex::new(nonce);
 
     // Relay the transaction
-    let starknet_transaction_hash = LockedRelayer::new(
+    let _ = LockedRelayer::new(
         current_nonce.lock().await,
         relayer.address(),
         relayer_balance,

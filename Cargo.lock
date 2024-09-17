@@ -7332,7 +7332,6 @@ dependencies = [
  "auto_impl",
  "bytes",
  "cainome",
- "clap",
  "dojo-test-utils",
  "dotenvy",
  "ef-testing",

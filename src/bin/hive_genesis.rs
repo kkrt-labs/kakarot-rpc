@@ -1,26 +1,16 @@
-use clap::Parser;
+use dotenvy::dotenv;
 use kakarot_rpc::test_utils::{hive::HiveGenesisConfig, katana::genesis::KatanaGenesisBuilder};
 use starknet::core::types::Felt;
-use std::path::PathBuf;
-
-#[derive(Parser)]
-struct Args {
-    #[clap(long, short)]
-    kakarot_contracts: PathBuf,
-    #[clap(long)]
-    hive_genesis: PathBuf,
-    #[clap(long, short)]
-    genesis_out: PathBuf,
-    #[clap(long, short)]
-    manifest_out: PathBuf,
-}
+use std::{env::var, path::Path};
 
 fn main() {
-    let args = Args::parse();
-    let kakarot_contracts_path = args.kakarot_contracts;
-    let hive_genesis_path = args.hive_genesis;
-    let genesis_path = args.genesis_out;
-    let manifest_path = args.manifest_out;
+    // Load the env vars.
+    dotenv().ok();
+
+    let kakarot_contracts_path =
+        Path::new(&var("KAKAROT_CONTRACTS_PATH").expect("Failed to load KAKAROT_CONTRACTS_PATH var")).to_path_buf();
+    let hive_genesis_path =
+        Path::new(&var("HIVE_GENESIS_PATH").expect("Failed to load HIVE_GENESIS_PATH var")).to_path_buf();
 
     // Read all the classes.
     let mut builder = KatanaGenesisBuilder::default().load_classes(kakarot_contracts_path);
@@ -41,10 +31,12 @@ fn main() {
     let manifest = builder.manifest();
 
     // Write the genesis json to the file.
+    let genesis_path = Path::new(&var("GENESIS_OUTPUT").expect("Failed to load GENESIS_OUTPUT var")).to_path_buf();
     std::fs::write(genesis_path, serde_json::to_string(&genesis_json).expect("Failed to serialize genesis json"))
         .expect("Failed to write genesis json");
 
     // Write the manifest to the file.
+    let manifest_path = Path::new(&var("MANIFEST_OUTPUT").expect("Failed to load MANIFEST_OUTPUT var")).to_path_buf();
     std::fs::write(manifest_path, serde_json::to_string(&manifest).expect("Failed to serialize manifest json"))
         .expect("Failed to write manifest json");
 }
