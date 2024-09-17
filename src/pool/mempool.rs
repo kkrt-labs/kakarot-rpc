@@ -89,32 +89,6 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
         Ok(Self { accounts, eth_client })
     }
 
-    /// Creates a new [`AccountManager`] instance by initializing account data from a vector of addresses.
-    #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-    pub async fn new_from_addresses(addresses: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Arc<Self>> {
-        let mut accounts = HashMap::new();
-
-        // Loop through the provided addresses
-        for address in addresses {
-            let starknet_block_id = eth_client
-                .eth_provider()
-                .to_starknet_block_id(Some(BlockId::default()))
-                .await
-                .map_err(|e| eyre::eyre!("Error converting block ID: {:?}", e))?;
-
-            // Query the initial account_nonce for each address
-            let nonce = eth_client.starknet_provider().get_nonce(starknet_block_id, address).await.unwrap_or_default();
-
-            accounts.insert(address, Arc::new(Mutex::new(nonce)));
-        }
-
-        if accounts.is_empty() {
-            return Err(eyre::eyre!("No valid accounts provided"));
-        }
-
-        Ok(Arc::new(Self { accounts, eth_client }))
-    }
-
     /// Starts the account manager task that periodically checks account balances and processes transactions.
     pub fn start(&'static self, rt_handle: &Handle) {
         rt_handle.spawn(async move {

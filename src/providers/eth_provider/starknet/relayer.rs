@@ -1,7 +1,6 @@
 use crate::{
     models::transaction::transaction_data_to_starknet_calldata,
     providers::eth_provider::{
-        constant::{CHAIN_ID, RPC_CONFIG},
         error::{SignatureError, TransactionError},
         provider::EthApiResult,
         starknet::kakarot_core::{starknet_address, EXECUTE_FROM_OUTSIDE},
@@ -11,7 +10,7 @@ use reth_primitives::TransactionSigned;
 use starknet::{
     accounts::{Account, ExecutionEncoding, ExecutionV1, SingleOwnerAccount},
     core::types::Felt,
-    providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
+    providers::Provider,
     signers::{LocalWallet, SigningKey},
 };
 use std::{env::var, ops::Deref, str::FromStr, sync::LazyLock};

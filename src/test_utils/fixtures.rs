@@ -1,5 +1,4 @@
 use rstest::fixture;
-use starknet::accounts::Account;
 use tracing_subscriber::{filter, FmtSubscriber};
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {

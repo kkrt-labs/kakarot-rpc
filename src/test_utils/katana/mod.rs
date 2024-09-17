@@ -4,7 +4,7 @@ use super::mongo::MongoImage;
 use crate::{
     client::EthClient,
     providers::eth_provider::{
-        constant::{CHAIN_ID, U64_HEX_STRING_LEN},
+        constant::U64_HEX_STRING_LEN,
         database::{
             ethereum::EthereumTransactionStore,
             filter::{self, format_hex, EthDatabaseFilterBuilder},
@@ -29,10 +29,7 @@ use mongodb::{
 };
 use reth_primitives::{Address, Bytes};
 use reth_rpc_types::Log;
-use starknet::{
-    core::types::Felt,
-    providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
-};
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
@@ -120,24 +117,8 @@ impl<'a> Katana {
         let pk = std::env::var("EVM_PRIVATE_KEY").expect("Failed to get EVM private key");
         let pk = B256::from_str(&pk).expect("Failed to parse EVM private key");
 
+        // Set the relayer private key in the environment variables.
         std::env::set_var("RELAYER_PRIVATE_KEY", format!("0x{:x}", sequencer.raw_account().private_key));
-
-        // tracing::info!(
-        //     "chain id initial avant changement: {:?}",
-        //     (*CHAIN_ID.get().expect("Failed to get chain id")).to_hex_string()
-        // );
-        tracing::info!("starknet provider chain id: {:?}", starknet_provider.chain_id().await.unwrap().to_hex_string());
-
-        // // Set the chain id
-        // let chain_id = starknet_provider.chain_id().await.expect("Failed to get chain id");
-        // let chain_id: u64 =
-        //     (Felt::from(u32::MAX).to_bigint() & chain_id.to_bigint()).try_into().expect("Failed to convert chain id");
-        // let _ = CHAIN_ID.get_or_init(|| Felt::from(chain_id));
-
-        // tracing::info!(
-        //     "chain id initial apres changement: {:?}",
-        //     (*CHAIN_ID.get().expect("Failed to get chain id")).to_hex_string()
-        // );
 
         // Initialize a MongoFuzzer instance with the specified random bytes size.
         let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;

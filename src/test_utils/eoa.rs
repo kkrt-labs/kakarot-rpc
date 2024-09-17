@@ -1,10 +1,7 @@
 use crate::{
     client::{EthClient, KakarotTransactions},
     into_via_try_wrapper,
-    models::felt::Felt252Wrapper,
-    pool::mempool::AccountManager,
     providers::eth_provider::{
-        constant::RPC_CONFIG,
         starknet::{kakarot_core::starknet_address, relayer::LockedRelayer},
         ChainProvider, TransactionProvider,
     },
@@ -17,7 +14,6 @@ use alloy_dyn_abi::DynSolValue;
 use alloy_json_abi::ContractObject;
 use alloy_signer_local::PrivateKeySigner;
 use async_trait::async_trait;
-use dojo_test_utils::sequencer::TestAccount;
 use reth_primitives::{
     sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, B256, U256,
 };
@@ -149,8 +145,6 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let tx_signed = self.sign_transaction(tx)?;
         let _ = self.send_transaction(tx_signed.clone()).await?;
 
-        tracing::info!("Kakarot EOA: {:?}", self.evm_address()?);
-
         // Prepare the relayer
         let relayer_balance =
             self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
@@ -172,23 +166,17 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
 
         let current_nonce = Mutex::new(nonce);
 
-        tracing::info!("chain id relayer: {:?}", relayer.chain_id().to_hex_string());
-
-        let relayer = LockedRelayer::new(
+        // Relay the transaction
+        let starknet_transaction_hash = LockedRelayer::new(
             current_nonce.lock().await,
             relayer.address(),
             relayer_balance,
             self.starknet_provider(),
             self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
-        );
-
-        tracing::info!("chain_id eth client: {:?}", chain_id);
-
-        // Relay the transaction
-        let starknet_transaction_hash =
-            relayer.relay_transaction(&tx_signed).await.expect("Failed to relay transaction");
-
-        tracing::info!("Deploying contract with Starknet transaction hash: {:?}", starknet_transaction_hash);
+        )
+        .relay_transaction(&tx_signed)
+        .await
+        .expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),
@@ -245,14 +233,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             }),
         )?;
         let tx_signed = self.sign_transaction(tx.clone())?;
-        // let tx_hash = self.send_transaction(tx_signed).await?;
-
-        // let bytes = tx_hash.0;
-        // let starknet_tx_hash = Felt::from_bytes_be(&bytes);
-
         let _ = self.send_transaction(tx_signed.clone()).await?;
-
-        tracing::info!("Kakarot EOA: {:?}", self.evm_address()?);
 
         // Prepare the relayer
         let relayer_balance =
@@ -275,23 +256,17 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
 
         let current_nonce = Mutex::new(nonce);
 
-        tracing::info!("chain id relayer: {:?}", relayer.chain_id().to_hex_string());
-
-        let relayer = LockedRelayer::new(
+        // Relay the transaction
+        let starknet_transaction_hash = LockedRelayer::new(
             current_nonce.lock().await,
             relayer.address(),
             relayer_balance,
             self.starknet_provider(),
             self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
-        );
-
-        tracing::info!("chain_id eth client: {:?}", chain_id);
-
-        // Relay the transaction
-        let starknet_transaction_hash =
-            relayer.relay_transaction(&tx_signed).await.expect("Failed to relay transaction");
-
-        tracing::info!("Deploying contract with Starknet transaction hash: {:?}", starknet_transaction_hash);
+        )
+        .relay_transaction(&tx_signed)
+        .await
+        .expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),
