@@ -149,22 +149,32 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let tx_signed = self.sign_transaction(tx)?;
         let _ = self.send_transaction(tx_signed.clone()).await?;
 
+        tracing::info!("Kakarot EOA: {:?}", self.evm_address()?);
+
         // Prepare the relayer
         let relayer_balance =
             self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
         let current_nonce = Mutex::new(Felt::ZERO);
+
+        tracing::info!("chain id relayer: {:?}", relayer.chain_id().to_hex_string());
+
         let relayer = LockedRelayer::new(
             current_nonce.lock().await,
             relayer.address(),
             relayer_balance,
             self.starknet_provider(),
+            self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
         );
+
+        tracing::info!("chain_id eth client: {:?}", chain_id);
 
         // Relay the transaction
         let starknet_transaction_hash =
             relayer.relay_transaction(&tx_signed).await.expect("Failed to relay transaction");
+
+        tracing::info!("Deploying contract with Starknet transaction hash: {:?}", starknet_transaction_hash);
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),

@@ -70,6 +70,7 @@ async fn main() -> eyre::Result<()> {
         relayer_address,
         relayer_balance,
         JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+        starknet_provider.chain_id().await.expect("failed to fetch chain id"),
     );
 
     for (block_number, body) in bodies.into_iter().enumerate() {

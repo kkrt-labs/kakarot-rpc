@@ -212,6 +212,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 *account_address,
                 balance,
                 JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+                self.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
             );
 
             // Return the account address and the guard on the nonce
