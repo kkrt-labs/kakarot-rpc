@@ -4,11 +4,13 @@ use alloy_primitives::{address, bytes};
 use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
     client::KakarotTransactions,
+    into_via_try_wrapper,
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
         provider::EthereumProvider,
+        starknet::relayer::LockedRelayer,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
     test_utils::{
@@ -29,8 +31,13 @@ use reth_rpc_types::{
 };
 use reth_transaction_pool::TransactionPool;
 use rstest::*;
-use starknet::core::types::{BlockTag, Felt};
+use starknet::{
+    accounts::Account,
+    core::types::{BlockId, BlockTag, Felt},
+    providers::Provider,
+};
 use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 
 #[rstest]
 #[awt]
@@ -251,7 +258,6 @@ async fn test_nonce_contract_account(#[future] counter: (Katana, KakarotEvmContr
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana: Katana = counter.0;
@@ -482,7 +488,6 @@ async fn test_get_logs_block_hash(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_get_code_empty(#[future] contract_empty: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana: Katana = contract_empty.0;
@@ -516,7 +521,6 @@ async fn test_get_code_no_contract(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let eoa = counter.0.eoa();
@@ -716,7 +720,6 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
     // Given
     let eth_provider = katana.eth_provider();
@@ -752,29 +755,48 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .await
         .expect("failed to send transaction");
 
-    // Retrieve the transaction from the database
-    let tx: Option<StoredPendingTransaction> =
-        eth_provider.database().get_first().await.expect("Failed to get transaction");
+    // Prepare the relayer
+    let relayer = katana.sequencer.account();
+    let relayer_balance = eth_client
+        .starknet_provider()
+        .balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest))
+        .await
+        .expect("Failed to get relayer balance");
+    let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    // Assert that the number of retries is 0
-    assert_eq!(0, tx.clone().unwrap().retries);
+    let starknet_block_id = eth_client
+        .eth_provider()
+        .to_starknet_block_id(Some(reth_rpc_types::BlockId::default()))
+        .await
+        .expect("Failed to get Starknet block id");
 
-    let tx = tx.unwrap().tx;
+    let nonce =
+        eth_client.starknet_provider().get_nonce(starknet_block_id, relayer.address()).await.unwrap_or_default();
 
-    // Assert the transaction hash and block number
-    assert_eq!(tx.hash, transaction_signed.hash());
-    assert!(tx.block_number.is_none());
+    let current_nonce = Mutex::new(nonce);
+
+    // Relay the transaction
+    let starknet_transaction_hash = LockedRelayer::new(
+        current_nonce.lock().await,
+        relayer.address(),
+        relayer_balance,
+        &(*(*eth_client.starknet_provider())),
+        eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+    )
+    .relay_transaction(&transaction_signed)
+    .await
+    .expect("Failed to relay transaction");
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
     // Assert that the number of pending transactions in the mempool is 1
     assert_eq!(mempool_size_after_send.pending, 1);
     assert_eq!(mempool_size_after_send.total, 1);
-    let tx_in_mempool = eth_client.mempool().get(&tx.hash);
+    let tx_in_mempool = eth_client.mempool().get(&transaction_signed.hash());
     // Assert that the transaction in the mempool exists
     assert!(tx_in_mempool.is_some());
     // Verify that the hash of the transaction in the mempool matches the expected hash
-    assert_eq!(tx_in_mempool.unwrap().hash(), *tx.hash);
+    assert_eq!(tx_in_mempool.unwrap().hash(), *transaction_signed.hash());
 }
 
 #[rstest]

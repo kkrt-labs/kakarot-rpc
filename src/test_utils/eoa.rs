@@ -229,7 +229,6 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
                 common: TxCommonInfo { chain_id: Some(chain_id), nonce, value },
                 max_fee_per_gas: 1000,
                 max_priority_fee_per_gas: 1000,
-                // ..Default::default()
             }),
         )?;
         let tx_signed = self.sign_transaction(tx.clone())?;
