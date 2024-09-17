@@ -1,7 +1,4 @@
-use super::{
-    database::ethereum::EthereumBlockStore,
-    error::{EthApiError, KakarotError},
-};
+use super::{database::ethereum::EthereumBlockStore, error::KakarotError};
 use crate::providers::eth_provider::{
     database::ethereum::EthereumTransactionStore,
     provider::{EthApiResult, EthDataProvider},
@@ -53,21 +50,8 @@ where
     }
 
     async fn block_number(&self) -> EthApiResult<U64> {
-        let block_number = match self.database().latest_header().await? {
-            // In case the database is empty, use the starknet provider
-            None => {
-                let span = tracing::span!(tracing::Level::INFO, "sn::block_number");
-                U64::from(
-                    self.starknet_provider_inner().block_number().instrument(span).await.map_err(KakarotError::from)?,
-                )
-            }
-            Some(header) => {
-                let number = header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;
-                let is_pending_block = header.hash.unwrap_or_default().is_zero();
-                U64::from(if is_pending_block { number - 1 } else { number })
-            }
-        };
-        Ok(block_number)
+        let span = tracing::span!(tracing::Level::INFO, "sn::block_number");
+        Ok(U64::from(self.starknet_provider_inner().block_number().instrument(span).await.map_err(KakarotError::from)?))
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> EthApiResult<Option<RichBlock>> {
