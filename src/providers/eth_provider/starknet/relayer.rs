@@ -46,9 +46,6 @@ where
         let relayer =
             SingleOwnerAccount::new(provider, RELAYER_SIGNER.clone(), address, chain_id, ExecutionEncoding::New);
 
-        tracing::info!("balance of the relayer: {:?}", balance);
-
-        tracing::info!("chain id to create the relayer: {:?}", chain_id);
         Self { account: relayer, balance, nonce: lock }
     }
 

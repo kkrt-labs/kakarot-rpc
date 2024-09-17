@@ -205,7 +205,9 @@ async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup
     let counter_address = counter_address.try_into().expect("Failed to convert EVM address");
 
     // When
-    eoa.call_evm_contract(&counter, "inc", &[], 0).await.expect("Failed to increment counter");
+    eoa.call_evm_contract(&counter, "inc", &[], 0, katana.sequencer.account())
+        .await
+        .expect("Failed to increment counter");
 
     // Then
     let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
@@ -260,7 +262,9 @@ async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract), _setup: ())
     let nonce_before = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
 
     // When
-    eoa.call_evm_contract(&counter, "inc", &[], 0).await.expect("Failed to increment counter");
+    eoa.call_evm_contract(&counter, "inc", &[], 0, katana.sequencer.account())
+        .await
+        .expect("Failed to increment counter");
 
     // Then
     let nonce_after = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();

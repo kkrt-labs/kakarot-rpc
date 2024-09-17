@@ -60,7 +60,7 @@ pub fn katana_config() -> StarknetConfig {
         disable_fee: true,
         env: Environment {
             // Since kaka_test > u32::MAX, we should return the last 4 bytes of the chain_id: test
-            chain_id: ChainId::parse("kaka_test").unwrap(),
+            chain_id: ChainId::parse("test").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
         },

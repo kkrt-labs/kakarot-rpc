@@ -117,7 +117,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
     ) -> Result<KakarotEvmContract, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
-        let chain_id = self.eth_client.eth_provider().chain_id().await?.unwrap_or_default();
+        let chain_id: u64 = self.eth_client.eth_provider().chain_id().await?.unwrap_or_default().try_into()?;
 
         // Empty bytecode if contract_name is None
         let bytecode = if let Some(name) = contract_name {
@@ -133,7 +133,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
 
         let tx = if contract_name.is_none() {
             Transaction::Eip1559(TxEip1559 {
-                chain_id: chain_id.try_into()?,
+                chain_id,
                 nonce,
                 gas_limit: TX_GAS_LIMIT,
                 max_fee_per_gas: TX_GAS_PRICE,
@@ -143,7 +143,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             <KakarotEvmContract as EvmContract>::prepare_create_transaction(
                 &bytecode,
                 constructor_args,
-                &TxCommonInfo { nonce, chain_id: Some(chain_id.try_into()?), ..Default::default() },
+                &TxCommonInfo { nonce, chain_id: Some(chain_id), ..Default::default() },
             )?
         };
         let tx_signed = self.sign_transaction(tx)?;
@@ -156,7 +156,21 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-        let current_nonce = Mutex::new(Felt::ZERO);
+        let starknet_block_id = self
+            .eth_client
+            .eth_provider()
+            .to_starknet_block_id(Some(reth_rpc_types::BlockId::default()))
+            .await
+            .expect("Failed to get Starknet block id");
+
+        let nonce = self
+            .eth_client
+            .starknet_provider()
+            .get_nonce(starknet_block_id, relayer.address())
+            .await
+            .unwrap_or_default();
+
+        let current_nonce = Mutex::new(nonce);
 
         tracing::info!("chain id relayer: {:?}", relayer.chain_id().to_hex_string());
 
@@ -215,6 +229,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         function: &str,
         args: &[DynSolValue],
         value: u128,
+        relayer: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     ) -> Result<Transaction, eyre::Error> {
         let nonce = self.nonce().await?.try_into()?;
         let chain_id = self.eth_client.eth_provider().chain_id().await?.unwrap_or_default().to();
@@ -224,18 +239,63 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             args,
             &TransactionInfo::FeeMarketInfo(TxFeeMarketInfo {
                 common: TxCommonInfo { chain_id: Some(chain_id), nonce, value },
-                ..Default::default()
+                max_fee_per_gas: 1000,
+                max_priority_fee_per_gas: 1000,
+                // ..Default::default()
             }),
         )?;
         let tx_signed = self.sign_transaction(tx.clone())?;
-        let tx_hash = self.send_transaction(tx_signed).await?;
+        // let tx_hash = self.send_transaction(tx_signed).await?;
 
-        let bytes = tx_hash.0;
-        let starknet_tx_hash = Felt::from_bytes_be(&bytes);
+        // let bytes = tx_hash.0;
+        // let starknet_tx_hash = Felt::from_bytes_be(&bytes);
+
+        let _ = self.send_transaction(tx_signed.clone()).await?;
+
+        tracing::info!("Kakarot EOA: {:?}", self.evm_address()?);
+
+        // Prepare the relayer
+        let relayer_balance =
+            self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
+        let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
+
+        let starknet_block_id = self
+            .eth_client
+            .eth_provider()
+            .to_starknet_block_id(Some(reth_rpc_types::BlockId::default()))
+            .await
+            .expect("Failed to get Starknet block id");
+
+        let nonce = self
+            .eth_client
+            .starknet_provider()
+            .get_nonce(starknet_block_id, relayer.address())
+            .await
+            .unwrap_or_default();
+
+        let current_nonce = Mutex::new(nonce);
+
+        tracing::info!("chain id relayer: {:?}", relayer.chain_id().to_hex_string());
+
+        let relayer = LockedRelayer::new(
+            current_nonce.lock().await,
+            relayer.address(),
+            relayer_balance,
+            self.starknet_provider(),
+            self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+        );
+
+        tracing::info!("chain_id eth client: {:?}", chain_id);
+
+        // Relay the transaction
+        let starknet_transaction_hash =
+            relayer.relay_transaction(&tx_signed).await.expect("Failed to relay transaction");
+
+        tracing::info!("Deploying contract with Starknet transaction hash: {:?}", starknet_transaction_hash);
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),
-            starknet_tx_hash,
+            starknet_transaction_hash,
             std::time::Duration::from_millis(300),
             60,
         )
