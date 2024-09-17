@@ -5,7 +5,7 @@ use crate::{
     },
     providers::{
         eth_provider::{
-            database::{state::EthDatabase, Database},
+            database::Database,
             error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError},
             provider::{EthApiResult, EthDataProvider},
         },
@@ -58,7 +58,7 @@ where
 
         let validator =
             KakarotTransactionValidatorBuilder::new(Arc::new(ChainSpec { chain: chain.into(), ..Default::default() }))
-                .build::<_, EthPooledTransaction>(EthDatabase::new(eth_provider.clone(), 0.into()));
+                .build::<_, EthPooledTransaction>(eth_provider.clone());
 
         let pool = Arc::new(KakarotPool::new(
             validator,

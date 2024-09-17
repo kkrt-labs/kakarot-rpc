@@ -6,8 +6,8 @@ use crate::{
 };
 use reth_chainspec::ChainSpec;
 use reth_primitives::{
-    GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID,
-    LEGACY_TX_TYPE_ID,
+    BlockId, BlockNumberOrTag, GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID,
+    EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID, LEGACY_TX_TYPE_ID,
 };
 use reth_revm::DatabaseRef;
 use reth_transaction_pool::{
@@ -39,7 +39,7 @@ pub struct KakarotTransactionValidatorBuilder {
 impl KakarotTransactionValidatorBuilder {
     /// Creates a new builder for the given [`ChainSpec`]
     ///
-    /// By default this assumes the network is on the `Cancun` hardfork and the following
+    /// By default, this assumes the network is on the `Cancun` hardfork and the following
     /// transactions are allowed:
     ///  - Legacy
     ///  - EIP-2718
@@ -63,8 +63,8 @@ impl KakarotTransactionValidatorBuilder {
         }
     }
 
-    /// Builds a the [`EthTransactionValidator`] without spawning validator tasks.
-    pub fn build<P, Tx>(self, client: EthDatabase<P>) -> KakarotTransactionValidator<P, Tx>
+    /// Builds the [`EthTransactionValidator`] without spawning validator tasks.
+    pub fn build<P, Tx>(self, provider: P) -> KakarotTransactionValidator<P, Tx>
     where
         P: EthereumProvider + Send + Sync,
     {
@@ -74,7 +74,7 @@ impl KakarotTransactionValidatorBuilder {
 
         let inner = KakarotTransactionValidatorInner {
             chain_spec,
-            client,
+            provider,
             eip2718,
             eip1559,
             eip4844,
@@ -106,9 +106,9 @@ where
         self.inner.chain_spec.clone()
     }
 
-    /// Returns the configured client
-    pub fn client(&self) -> &EthDatabase<P> {
-        &self.inner.client
+    /// Returns the provider
+    pub fn provider(&self) -> &P {
+        &self.inner.provider
     }
 }
 
@@ -167,8 +167,8 @@ where
 {
     /// Spec of the chain
     chain_spec: Arc<ChainSpec>,
-    /// This type fetches account info from the db
-    client: EthDatabase<P>,
+    /// This type fetches network info.
+    provider: P,
     /// Fork indicator whether we are using EIP-2718 type transactions.
     eip2718: bool,
     /// Fork indicator whether we are using EIP-1559 type transactions.
@@ -279,7 +279,14 @@ where
             return TransactionValidationOutcome::Invalid(transaction, err);
         }
 
-        let account = match self.client.basic_ref(transaction.sender()) {
+        let handle = tokio::runtime::Handle::current();
+        let block = match tokio::task::block_in_place(|| handle.block_on(self.provider.block_number())) {
+            Ok(b) => b,
+            Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),
+        };
+        let db = EthDatabase::new(Arc::new(&self.provider), BlockId::Number(BlockNumberOrTag::Number(block.to())));
+
+        let account = match db.basic_ref(transaction.sender()) {
             Ok(account) => account.unwrap_or_default(),
             Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),
         };
