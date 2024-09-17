@@ -48,6 +48,13 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install asdf & tools
+        uses: asdf-vm/actions/setup@v3
+      - name: install scarb
+        run: |
+          asdf plugin add scarb
+          asdf install scarb 2.6.5
+          asdf install scarb 0.7.0
       - name: Setup the Kakarot submodule
         run: make setup
       # Create dump
@@ -55,7 +62,6 @@ jobs:
         run: ./scripts/make_with_env.sh katana-genesis
       - name: Test code
         run: make test
-
 # We skip the hive tests for now, will be fixed in the next PR.
 
 #  # Inspired by Reth CI.
