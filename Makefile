@@ -59,7 +59,7 @@ test-target: load-env
 	cargo test --tests --all-features $(TARGET) -- --nocapture
 
 test-target1: load-env
-	RUST_LOG=info cargo test --package kakarot-rpc --test entry --all-features -- tests::eth_provider::test_transaction_by_hash --exact --show-output
+	RUST_LOG=info cargo test --package kakarot-rpc --test entry --all-features -- tests::alchemy_api::test_token_allowance --exact --show-output
 
 benchmark:
 	cd benchmarks && bun i && bun run benchmark
