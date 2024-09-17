@@ -47,12 +47,18 @@ pub type EthApiResult<T> = Result<T, EthApiError>;
 
 /// A trait that defines the interface for an Ethereum Provider.
 pub trait EthereumProvider:
-    GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
+    GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider + BlockProvider
 {
 }
 
 impl<T> EthereumProvider for T where
-    T: GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider
+    T: GasProvider
+        + StateProvider
+        + TransactionProvider
+        + ReceiptProvider
+        + LogProvider
+        + TxPoolProvider
+        + BlockProvider
 {
 }
 
