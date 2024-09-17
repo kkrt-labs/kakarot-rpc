@@ -1,9 +1,7 @@
-use super::{
-    database::ethereum::EthereumBlockStore,
-    error::{EthApiError, KakarotError},
-};
+use super::{database::ethereum::EthereumBlockStore, error::KakarotError};
 use crate::providers::eth_provider::{
     database::ethereum::EthereumTransactionStore,
+    error::EthApiError,
     provider::{EthApiResult, EthDataProvider},
 };
 use async_trait::async_trait;
