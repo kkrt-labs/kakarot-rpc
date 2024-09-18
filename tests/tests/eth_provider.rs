@@ -16,7 +16,7 @@ use kakarot_rpc::{
     test_utils::{
         eoa::Eoa,
         evm_contract::{EvmContract, KakarotEvmContract},
-        fixtures::{contract_empty, counter, katana, plain_opcodes, setup},
+        fixtures::{contract_empty, counter, katana, katana_empty, plain_opcodes, setup},
         katana::Katana,
         tx_waiter::watch_tx,
     },
@@ -720,8 +720,9 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
+async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
     // Given
+    let katana = katana_empty;
     let eth_provider = katana.eth_provider();
     let eth_client = katana.eth_client();
     let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
