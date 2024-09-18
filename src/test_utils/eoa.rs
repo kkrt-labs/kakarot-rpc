@@ -2,7 +2,6 @@ use crate::{
     client::{EthClient, KakarotTransactions},
     into_via_try_wrapper,
     providers::eth_provider::{
-        blocks::BlockProvider,
         starknet::{kakarot_core::starknet_address, relayer::LockedRelayer},
         ChainProvider, TransactionProvider,
     },
@@ -151,19 +150,10 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-        let starknet_block_id = self
-            .eth_client
-            .eth_provider()
-            .to_starknet_block_id(Some(reth_rpc_types::BlockId::from(
-                self.eth_client.eth_provider().block_number().await?,
-            )))
-            .await
-            .expect("Failed to get Starknet block id");
-
         let nonce = self
             .eth_client
             .starknet_provider()
-            .get_nonce(starknet_block_id, relayer.address())
+            .get_nonce(BlockId::Tag(BlockTag::Latest), relayer.address())
             .await
             .unwrap_or_default();
 
@@ -242,19 +232,10 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-        let starknet_block_id = self
-            .eth_client
-            .eth_provider()
-            .to_starknet_block_id(Some(reth_rpc_types::BlockId::from(
-                self.eth_client.eth_provider().block_number().await?,
-            )))
-            .await
-            .expect("Failed to get Starknet block id");
-
         let nonce = self
             .eth_client
             .starknet_provider()
-            .get_nonce(starknet_block_id, relayer.address())
+            .get_nonce(BlockId::Tag(BlockTag::Latest), relayer.address())
             .await
             .unwrap_or_default();
 

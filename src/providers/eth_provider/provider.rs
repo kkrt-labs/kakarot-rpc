@@ -1,8 +1,6 @@
-#[cfg(not(feature = "testing"))]
-use super::database::ethereum::EthereumBlockStore;
 use super::{
     constant::CALL_REQUEST_GAS_LIMIT,
-    database::Database,
+    database::{ethereum::EthereumBlockStore, Database},
     error::{EthApiError, EthereumDataFormatError, EvmError, ExecutionError, TransactionError},
     starknet::kakarot_core::{
         self,
@@ -255,24 +253,16 @@ where
                 // 3. The block number is not found, then we return an error
                 match number_or_tag {
                     BlockNumberOrTag::Number(number) => {
-                        #[cfg(feature = "testing")]
-                        {
-                            return Ok(starknet::core::types::BlockId::Number(number));
-                        }
-
-                        #[cfg(not(feature = "testing"))]
-                        {
-                            let header = self
-                                .database
-                                .header(number.into())
-                                .await?
-                                .ok_or(EthApiError::UnknownBlockNumber(Some(number)))?;
-                            // If the block hash is zero, then the block corresponds to a Starknet pending block
-                            if header.hash.ok_or(EthApiError::UnknownBlock(number.into()))?.is_zero() {
-                                Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
-                            } else {
-                                Ok(starknet::core::types::BlockId::Number(number))
-                            }
+                        let header = self
+                            .database
+                            .header(number.into())
+                            .await?
+                            .ok_or(EthApiError::UnknownBlockNumber(Some(number)))?;
+                        // If the block hash is zero, then the block corresponds to a Starknet pending block
+                        if header.hash.ok_or(EthApiError::UnknownBlock(number.into()))?.is_zero() {
+                            Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
+                        } else {
+                            Ok(starknet::core::types::BlockId::Number(number))
                         }
                     }
                     _ => Ok(EthBlockNumberOrTag::from(number_or_tag).into()),

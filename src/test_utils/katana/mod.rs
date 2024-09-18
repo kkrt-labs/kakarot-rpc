@@ -105,6 +105,60 @@ impl<'a> Katana {
         Self::initialize(sequencer, starknet_provider, rnd_bytes_size).await
     }
 
+    #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+    pub async fn new_empty() -> Self {
+        use reth_primitives::{constants::EMPTY_ROOT_HASH, B64, U256};
+
+        let sequencer = katana_sequencer().await;
+        let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
+
+        // Load the private key from the environment variables.
+        dotenvy::dotenv().expect("Failed to load .env file");
+        let pk = std::env::var("EVM_PRIVATE_KEY").expect("Failed to get EVM private key");
+        let pk = B256::from_str(&pk).expect("Failed to parse EVM private key");
+
+        // Set the relayer private key in the environment variables.
+        std::env::set_var("RELAYER_PRIVATE_KEY", format!("0x{:x}", sequencer.raw_account().private_key));
+
+        // Initialize a MongoFuzzer instance with the specified random bytes size.
+        let mut mongo_fuzzer = MongoFuzzer::new(0).await;
+        mongo_fuzzer.headers.push(StoredHeader {
+            header: Header {
+                hash: Some(B256::random()),
+                total_difficulty: Some(U256::default()),
+                mix_hash: Some(B256::default()),
+                nonce: Some(B64::default()),
+                withdrawals_root: Some(EMPTY_ROOT_HASH),
+                base_fee_per_gas: Some(0),
+                blob_gas_used: Some(0),
+                excess_blob_gas: Some(0),
+                number: Some(0),
+                ..Default::default()
+            },
+        });
+
+        // Finalize the empty MongoDB database initialization and get the database instance.
+        let database = mongo_fuzzer.finalize().await;
+
+        // Initialize the EthClient
+        let eth_client = EthClient::try_new(starknet_provider, database).await.expect("failed to start eth client");
+
+        // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
+        let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()));
+
+        // Return a new instance of Katana with initialized fields.
+        Self {
+            sequencer,
+            eoa,
+            eth_client,
+            container: Some(mongo_fuzzer.container),
+            transactions: mongo_fuzzer.transactions,
+            receipts: mongo_fuzzer.receipts,
+            logs: mongo_fuzzer.logs,
+            headers: mongo_fuzzer.headers,
+        }
+    }
+
     /// Initializes the Katana test environment.
     #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
     async fn initialize(

@@ -764,14 +764,11 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let starknet_block_id = eth_client
-        .eth_provider()
-        .to_starknet_block_id(Some(reth_rpc_types::BlockId::default()))
+    let nonce = eth_client
+        .starknet_provider()
+        .get_nonce(BlockId::Tag(BlockTag::Latest), relayer.address())
         .await
-        .expect("Failed to get Starknet block id");
-
-    let nonce =
-        eth_client.starknet_provider().get_nonce(starknet_block_id, relayer.address()).await.unwrap_or_default();
+        .unwrap_or_default();
 
     let current_nonce = Mutex::new(nonce);
 

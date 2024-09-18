@@ -13,32 +13,34 @@ use {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
-pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
-    let eoa = katana.eoa();
+pub async fn counter(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana_empty.eoa();
     let contract = eoa
-        .deploy_evm_contract(Some("Counter"), &[], katana.sequencer.account())
+        .deploy_evm_contract(Some("Counter"), &[], katana_empty.sequencer.account())
         .await
         .expect("Failed to deploy Counter contract");
-    (katana, contract)
+    (katana_empty, contract)
 }
 
 /// This fixture deploys an empty contract on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
-pub async fn contract_empty(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
-    let eoa = katana.eoa();
-    let contract =
-        eoa.deploy_evm_contract(None, &[], katana.sequencer.account()).await.expect("Failed to deploy empty contract");
-    (katana, contract)
+pub async fn contract_empty(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana_empty.eoa();
+    let contract = eoa
+        .deploy_evm_contract(None, &[], katana_empty.sequencer.account())
+        .await
+        .expect("Failed to deploy empty contract");
+    (katana_empty, contract)
 }
 
 /// This fixture deploys an ERC20 contract on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
-pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
-    let eoa = katana.eoa();
+pub async fn erc20(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana_empty.eoa();
 
     let contract = eoa
         .deploy_evm_contract(
@@ -48,11 +50,11 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
                 DynSolValue::String("TT".into()),     // symbol
                 DynSolValue::Uint(U256::from(18), 8), // decimals
             ],
-            katana.sequencer.account(),
+            katana_empty.sequencer.account(),
         )
         .await
         .expect("Failed to deploy ERC20 contract");
-    (katana, contract)
+    (katana_empty, contract)
 }
 
 /// This fixture deploys the plain opcodes contract on Katana.
@@ -83,6 +85,14 @@ pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (
 pub async fn katana() -> Katana {
     // Create a new test environment on Katana
     Katana::new(RANDOM_BYTES_SIZE).await
+}
+
+/// This fixture creates a new test environment on Katana.
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+#[fixture]
+pub async fn katana_empty() -> Katana {
+    // Create a new test environment on Katana
+    Katana::new_empty().await
 }
 
 /// This fixture configures the tests. The following setup
