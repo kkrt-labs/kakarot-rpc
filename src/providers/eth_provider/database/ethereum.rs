@@ -2,10 +2,7 @@
 use super::{
     filter,
     filter::EthDatabaseFilterBuilder,
-    types::{
-        header::StoredHeader,
-        transaction::{StoredPendingTransaction, StoredTransaction},
-    },
+    types::{header::StoredHeader, transaction::StoredTransaction},
     Database,
 };
 use crate::providers::eth_provider::error::{EthApiError, EthereumDataFormatError};
@@ -25,16 +22,8 @@ pub trait EthereumTransactionStore {
     async fn transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError>;
     /// Returns all transactions for the given block hash or number.
     async fn transactions(&self, block_hash_or_number: BlockHashOrNumber) -> Result<Vec<Transaction>, EthApiError>;
-    /// Returns the pending transaction with the given hash. Returns None if the
-    /// transaction is not found.
-    async fn pending_transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError>;
-    /// Returns the pending transaction's retries with the given hash.
-    /// Returns 0 if the transaction is not found.
-    async fn pending_transaction_retries(&self, hash: &B256) -> Result<u8, EthApiError>;
     /// Upserts the given transaction.
     async fn upsert_transaction(&self, transaction: Transaction) -> Result<(), EthApiError>;
-    /// Upserts the given transaction as a pending transaction with the given number of retries.
-    async fn upsert_pending_transaction(&self, transaction: Transaction, retries: u8) -> Result<(), EthApiError>;
 }
 
 #[async_trait]
@@ -54,28 +43,10 @@ impl EthereumTransactionStore for Database {
         Ok(self.get::<StoredTransaction>(filter, None).await?.into_iter().map(Into::into).collect())
     }
 
-    #[instrument(skip_all, name = "db::pending_transaction", err)]
-    async fn pending_transaction(&self, hash: &B256) -> Result<Option<Transaction>, EthApiError> {
-        let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(hash).build();
-        Ok(self.get_one::<StoredPendingTransaction>(filter, None).await?.map(Into::into))
-    }
-
-    #[instrument(skip_all, name = "db::pending_transaction_retries", err)]
-    async fn pending_transaction_retries(&self, hash: &B256) -> Result<u8, EthApiError> {
-        let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(hash).build();
-        Ok(self.get_one::<StoredPendingTransaction>(filter, None).await?.map(|tx| tx.retries + 1).unwrap_or_default())
-    }
-
     #[instrument(skip_all, name = "db::upsert_transaction", err)]
     async fn upsert_transaction(&self, transaction: Transaction) -> Result<(), EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&transaction.hash).build();
         Ok(self.update_one(StoredTransaction::from(transaction), filter, true).await?)
-    }
-
-    #[instrument(skip_all, name = "db::upsert_pending_transaction", err)]
-    async fn upsert_pending_transaction(&self, transaction: Transaction, retries: u8) -> Result<(), EthApiError> {
-        let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&transaction.hash).build();
-        Ok(self.update_one(StoredPendingTransaction::new(transaction, retries), filter, true).await?)
     }
 }
 
@@ -225,9 +196,6 @@ mod tests {
         // Test fetching transactions by their block number
         test_get_transactions_by_block_number(&database, &mongo_fuzzer).await;
 
-        // Test upserting pending transactions into the database
-        test_upsert_pending_transactions(&mut unstructured, &database).await;
-
         // Test upserting transactions into the database
         test_upsert_transactions(&mut unstructured, &database).await;
     }
@@ -282,40 +250,6 @@ mod tests {
         assert_eq!(database.transactions(first_block_number.into()).await.unwrap(), transactions_first_block_number);
     }
 
-    async fn test_upsert_pending_transactions(unstructured: &mut arbitrary::Unstructured<'_>, database: &Database) {
-        // Generate 10 pending transactions and add them to the database
-        let pending_transactions: Vec<StoredPendingTransaction> =
-            (0..10).map(|_| StoredPendingTransaction::arbitrary(unstructured).unwrap()).collect();
-
-        // Add pending transactions to the database
-        for tx in &pending_transactions {
-            database
-                .upsert_pending_transaction(tx.into(), tx.retries)
-                .await
-                .expect("Failed to update pending transaction in database");
-        }
-
-        // Test retrieving a pending transaction by its hash
-        let first_pending_transaction = pending_transactions.first().unwrap();
-        assert_eq!(
-            database.pending_transaction(&first_pending_transaction.hash).await.unwrap(),
-            Some(first_pending_transaction.into())
-        );
-
-        // Test retrieving a non-existent pending transaction by its hash
-        let unstored_transaction = StoredTransaction::arbitrary(unstructured).unwrap();
-        assert_eq!(database.pending_transaction(&unstored_transaction.hash).await.unwrap(), None);
-
-        // Test retrieving the number of retries for a pending transaction
-        assert_eq!(
-            database.pending_transaction_retries(&first_pending_transaction.hash).await.unwrap(),
-            first_pending_transaction.clone().retries.saturating_add(1)
-        );
-
-        // Test retrieving the number of retries for a non-existent pending transaction
-        assert_eq!(database.pending_transaction_retries(&unstored_transaction.hash).await.unwrap(), 0);
-    }
-
     async fn test_upsert_transactions(unstructured: &mut arbitrary::Unstructured<'_>, database: &Database) {
         // Generate and upsert a mock transaction into the database
         let mock_transaction = StoredTransaction::arbitrary(unstructured).unwrap();
@@ -323,19 +257,6 @@ mod tests {
 
         // Test retrieving an upserted transaction by its hash
         assert_eq!(database.transaction(&mock_transaction.hash).await.unwrap(), Some(mock_transaction.into()));
-
-        // Generate and upsert a mock pending transaction into the database
-        let mock_pending_transaction = StoredPendingTransaction::arbitrary(unstructured).unwrap();
-        database
-            .upsert_pending_transaction(mock_pending_transaction.clone().tx, mock_pending_transaction.clone().retries)
-            .await
-            .unwrap();
-
-        // Test retrieving an upserted pending transaction by its hash
-        assert_eq!(
-            database.pending_transaction(&mock_pending_transaction.hash).await.unwrap(),
-            Some(mock_pending_transaction.tx)
-        );
     }
 
     #[tokio::test(flavor = "multi_thread")]

@@ -2,9 +2,7 @@
 #![cfg(feature = "testing")]
 use kakarot_rpc::{
     client::KakarotTransactions,
-    providers::eth_provider::{
-        constant::Constant, database::types::transaction::StoredPendingTransaction, ChainProvider,
-    },
+    providers::eth_provider::{constant::Constant, ChainProvider},
     test_utils::{
         eoa::Eoa,
         fixtures::{katana, setup},
@@ -22,7 +20,7 @@ use std::str::FromStr;
 #[tokio::test(flavor = "multi_thread")]
 #[ignore = "failing because of relayer change"]
 async fn test_kakarot_get_starknet_transaction_hash(#[future] katana: Katana, _setup: ()) {
-    let (server_addr, server_handle) =
+    let (_server_addr, server_handle) =
         start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
 
     let eth_provider = katana.eth_provider();
@@ -47,41 +45,42 @@ async fn test_kakarot_get_starknet_transaction_hash(#[future] katana: Katana, _s
     let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     // Send the transaction
-    let tx_return = eth_client
+    let _tx_return = eth_client
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
 
-    // Retrieve the transaction from the database
-    let tx: Option<StoredPendingTransaction> =
-        eth_provider.database().get_first().await.expect("Failed to get transaction");
+    // TODO: this needs to be transferred inside the mempool
+    // // Retrieve the transaction from the database
+    // let tx: Option<StoredPendingTransaction> =
+    //     eth_provider.database().get_first().await.expect("Failed to get transaction");
 
-    // Assert that the number of retries is 0
-    assert_eq!(0, tx.clone().unwrap().retries);
+    // // Assert that the number of retries is 0
+    // assert_eq!(0, tx.clone().unwrap().retries);
 
-    let tx = tx.unwrap().tx;
+    // let tx = tx.unwrap().tx;
 
-    // Assert the transaction hash and block number
-    assert_eq!(tx.hash, transaction_signed.hash());
-    assert!(tx.block_number.is_none());
+    // // Assert the transaction hash and block number
+    // assert_eq!(tx.hash, transaction_signed.hash());
+    // assert!(tx.block_number.is_none());
 
-    let hash = tx.hash;
-    let retries: u8 = 0;
+    // let hash = tx.hash;
+    // let retries: u8 = 0;
 
-    let reqwest_client = reqwest::Client::new();
-    let res = reqwest_client
-        .post(format!("http://localhost:{}", server_addr.port()))
-        .header("Content-Type", "application/json")
-        .body(RawRpcParamsBuilder::new("kakarot_getStarknetTransactionHash").add_param(hash).add_param(retries).build())
-        .send()
-        .await
-        .expect("kakarot_getStarknetTransactionHash error");
-    let result_starknet_transaction_hash: B256 =
-        serde_json::from_str(&res.text().await.expect("Failed to get response body"))
-            .and_then(|raw: Value| serde_json::from_value(raw["result"].clone()))
-            .expect("Failed to deserialize result");
+    // let reqwest_client = reqwest::Client::new();
+    // let res = reqwest_client
+    //     .post(format!("http://localhost:{}", server_addr.port()))
+    //     .header("Content-Type", "application/json")
+    //     .body(RawRpcParamsBuilder::new("kakarot_getStarknetTransactionHash").add_param(hash).add_param(retries).build())
+    //     .send()
+    //     .await
+    //     .expect("kakarot_getStarknetTransactionHash error");
+    // let result_starknet_transaction_hash: B256 =
+    //     serde_json::from_str(&res.text().await.expect("Failed to get response body"))
+    //         .and_then(|raw: Value| serde_json::from_value(raw["result"].clone()))
+    //         .expect("Failed to deserialize result");
 
-    assert_eq!(result_starknet_transaction_hash, tx_return);
+    // assert_eq!(result_starknet_transaction_hash, tx_return);
 
     drop(server_handle);
 }

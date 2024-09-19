@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use crate::into_via_wrapper;
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
