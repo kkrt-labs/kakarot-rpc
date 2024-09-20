@@ -7,15 +7,7 @@ import {
 } from "./utils/filter.ts";
 
 // Constants
-import {
-  AUTH_TOKEN,
-  NULL_HASH,
-  SINK_OPTIONS,
-  SINK_TYPE,
-  STARTING_BLOCK,
-  STREAM_URL,
-  TRANSACTION_EXECUTED,
-} from "./constants.ts";
+import { NULL_HASH } from "./constants.ts";
 
 // Types
 import {
@@ -34,12 +26,9 @@ import { Collection, JsonRpcLog, StoreItem, TrieData } from "./types/types.ts";
 // Starknet
 import {
   BlockHeader,
-  Config,
   EventWithTransaction,
   hexToBytes,
   JsonRpcTx,
-  NetworkOptions,
-  SinkOptions,
   TransactionWithReceipt,
 } from "./deps.ts";
 // Eth
@@ -49,26 +38,6 @@ import {
   ProcessedEvent,
   ProcessedTransaction,
 } from "./types/interfaces.ts";
-
-export const config: Config<NetworkOptions, SinkOptions> = {
-  streamUrl: STREAM_URL,
-  authToken: AUTH_TOKEN,
-  startingBlock: STARTING_BLOCK,
-  network: "starknet",
-  finality: "DATA_STATUS_PENDING",
-  filter: {
-    header: { weak: false },
-    // Filters are unions
-    events: [
-      {
-        keys: [TRANSACTION_EXECUTED],
-      },
-    ],
-    transactions: [{ includeReverted: true }],
-  },
-  sinkType: SINK_TYPE,
-  sinkOptions: SINK_OPTIONS,
-};
 
 export default async function transform({
   header,

@@ -1,5 +1,5 @@
 import { padString } from "./utils/hex.ts";
-import { hash } from "./deps.ts";
+import { Config, hash, NetworkOptions, SinkOptions } from "./deps.ts";
 
 // Get Sink Type or returns "console" if the value is null or undefined
 export const SINK_TYPE: "console" | "mongo" = (() => {
@@ -76,3 +76,23 @@ export const IGNORED_KEYS: bigint[] = [
   BigInt(hash.getSelectorFromName("Approval")),
   BigInt(hash.getSelectorFromName("OwnershipTransferred")),
 ];
+
+export const config: Config<NetworkOptions, SinkOptions> = {
+  streamUrl: STREAM_URL,
+  authToken: AUTH_TOKEN,
+  startingBlock: STARTING_BLOCK,
+  network: "starknet",
+  finality: "DATA_STATUS_PENDING",
+  filter: {
+    header: { weak: false },
+    // Filters are unions
+    events: [
+      {
+        keys: [TRANSACTION_EXECUTED],
+      },
+    ],
+    transactions: [{ includeReverted: true }],
+  },
+  sinkType: SINK_TYPE,
+  sinkOptions: SINK_OPTIONS,
+};
