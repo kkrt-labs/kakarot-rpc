@@ -229,7 +229,7 @@ async fn test_txpool_inspect(#[future] katana_empty: Katana, _setup: ()) {
         TxpoolInspectSummary {
             to: transaction_signed.to(),
             value: transaction_signed.value(),
-            gas: transaction_signed.gas_limit() as u128,
+            gas: transaction_signed.gas_limit().into(),
             gas_price: transaction_signed.max_fee_per_gas(),
         }
     );

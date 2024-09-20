@@ -1,5 +1,5 @@
 use super::eth_provider::TxPoolProvider;
-use crate::providers::eth_provider::provider::{EthApiResult, EthereumProvider};
+use crate::providers::eth_provider::provider::EthApiResult;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use reth_primitives::Address;
@@ -38,9 +38,9 @@ impl<P: TxPoolProvider + Send + Sync + 'static> PoolProvider for PoolDataProvide
         let transactions = self.eth_provider.content();
 
         // Organize the pending transactions in the inspect summary struct.
-        for (sender, nonce_transaction) in transactions.pending.iter() {
-            for (nonce, transaction) in nonce_transaction.iter() {
-                inspect.pending.entry(*sender).or_default().insert(
+        for (sender, nonce_transaction) in transactions.pending {
+            for (nonce, transaction) in nonce_transaction {
+                inspect.pending.entry((*sender).into()).or_default().insert(
                     nonce.clone(),
                     TxpoolInspectSummary {
                         to: transaction.to,
@@ -53,9 +53,9 @@ impl<P: TxPoolProvider + Send + Sync + 'static> PoolProvider for PoolDataProvide
         }
 
         // Organize the queued transactions in the inspect summary struct.
-        for (sender, nonce_transaction) in transactions.queued.iter() {
-            for (nonce, transaction) in nonce_transaction.iter() {
-                inspect.queued.entry(*sender).or_default().insert(
+        for (sender, nonce_transaction) in transactions.queued {
+            for (nonce, transaction) in nonce_transaction {
+                inspect.queued.entry((*sender).into()).or_default().insert(
                     nonce.clone(),
                     TxpoolInspectSummary {
                         to: transaction.to,
