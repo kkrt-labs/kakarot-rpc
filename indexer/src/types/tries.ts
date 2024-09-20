@@ -1,12 +1,6 @@
 import { encodeReceipt, RLP, TypedTransaction } from "../deps.ts";
-import { fromJsonRpcReceipt, JsonRpcReceipt } from "./receipt.ts";
-
-export type TrieData = {
-  encodedTransactionIndex: Uint8Array;
-  encodedTransaction: Uint8Array;
-  encodedReceipt: Uint8Array;
-};
-
+import { fromJsonRpcReceipt } from "./receipt.ts";
+import { JsonRpcReceipt, TrieData } from "./types.ts";
 export function createTrieData({
   transactionIndex,
   typedTransaction,
