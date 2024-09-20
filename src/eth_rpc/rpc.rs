@@ -46,7 +46,7 @@ where
         let eth_provider = eth_client.eth_provider().clone();
 
         let alchemy_provider = Arc::new(AlchemyDataProvider::new(eth_provider.clone()));
-        let pool_provider = Arc::new(PoolDataProvider::new(eth_provider.clone()));
+        let pool_provider = Arc::new(PoolDataProvider::new(eth_client.clone()));
         let debug_provider = Arc::new(DebugDataProvider::new(eth_provider.clone()));
 
         let eth_rpc_module = EthRpc::new(eth_client).into_rpc();
