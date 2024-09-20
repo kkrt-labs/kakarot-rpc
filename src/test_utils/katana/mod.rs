@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 pub mod genesis;
 
 use super::mongo::MongoImage;
@@ -37,7 +39,7 @@ use {
     super::mongo::MongoFuzzer,
     dojo_test_utils::sequencer::SequencerConfig,
     reth_primitives::B256,
-    reth_rpc_types::{Header, Transaction},
+    reth_rpc_types::{Header, Transaction, WithOtherFields},
     std::str::FromStr as _,
 };
 
@@ -212,11 +214,15 @@ impl<'a> Katana {
     }
 
     /// Adds transactions to the database along with a corresponding header.
-    pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, header: Header) {
+    pub async fn add_transactions_with_header_to_database(
+        &self,
+        txs: Vec<WithOtherFields<Transaction>>,
+        header: Header,
+    ) {
         let provider = self.eth_provider();
         let database = provider.database();
         let Header { number, .. } = header;
-        let block_number = number.expect("Failed to get block number");
+        let block_number = number;
 
         // Add the transactions to the database.
         let tx_collection = database.collection::<StoredTransaction>();
@@ -256,17 +262,17 @@ impl<'a> Katana {
     }
 
     /// Retrieves the first stored transaction
-    pub fn first_transaction(&self) -> Option<Transaction> {
+    pub fn first_transaction(&self) -> Option<WithOtherFields<Transaction>> {
         self.transactions.first().map(Into::into)
     }
 
     /// Retrieves the current block number
     pub fn block_number(&self) -> u64 {
-        self.headers.iter().map(|header| header.number.unwrap_or_default()).max().unwrap_or_default()
+        self.headers.iter().map(|header| header.number).max().unwrap_or_default()
     }
 
     /// Retrieves the most recent stored transaction based on block number
-    pub fn most_recent_transaction(&self) -> Option<Transaction> {
+    pub fn most_recent_transaction(&self) -> Option<WithOtherFields<Transaction>> {
         self.transactions
             .iter()
             .max_by_key(|stored_transaction| stored_transaction.block_number.unwrap_or_default())
@@ -275,13 +281,15 @@ impl<'a> Katana {
 
     /// Retrieves the stored header by hash
     pub fn header_by_hash(&self, hash: B256) -> Option<Header> {
-        self.headers.iter().find_map(|stored_header| {
-            if stored_header.hash == Some(hash) {
-                Some(stored_header.header.clone())
-            } else {
-                None
-            }
-        })
+        self.headers.iter().find_map(
+            |stored_header| {
+                if stored_header.hash == hash {
+                    Some(stored_header.header.clone())
+                } else {
+                    None
+                }
+            },
+        )
     }
 
     pub fn logs_with_min_topics(&self, min_topics: usize) -> Vec<Log> {

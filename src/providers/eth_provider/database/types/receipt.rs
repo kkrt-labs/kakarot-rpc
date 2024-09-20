@@ -66,6 +66,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
                     3 => reth_rpc_types::ReceiptEnvelope::Eip4844(receipt),
                     _ => unreachable!(),
                 },
+                authorization_list: None,
             },
         })
     }

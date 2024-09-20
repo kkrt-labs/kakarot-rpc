@@ -11,9 +11,9 @@ use crate::{
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
 use reth_rpc_types::{
-    serde_helpers::JsonStorageKey, state::StateOverride, AccessListWithGasUsed, BlockOverrides,
-    EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus, Transaction,
-    TransactionReceipt, TransactionRequest, Work,
+    serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, Block, BlockOverrides,
+    EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, SyncStatus, Transaction, TransactionReceipt,
+    TransactionRequest, WithOtherFields, Work,
 };
 use serde_json::Value;
 use starknet::providers::Provider;
@@ -66,12 +66,20 @@ where
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn block_by_hash(&self, hash: B256, full: bool) -> Result<Option<RichBlock>> {
+    async fn block_by_hash(
+        &self,
+        hash: B256,
+        full: bool,
+    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
         Ok(self.eth_client.eth_provider().block_by_hash(hash, full).await?)
     }
 
     #[tracing::instrument(skip(self), err)]
-    async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>> {
+    async fn block_by_number(
+        &self,
+        number: BlockNumberOrTag,
+        full: bool,
+    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
         Ok(self.eth_client.eth_provider().block_by_number(number, full).await?)
     }
 
@@ -95,7 +103,11 @@ where
         Ok(U256::ZERO)
     }
 
-    async fn uncle_by_block_hash_and_index(&self, _hash: B256, _index: Index) -> Result<Option<RichBlock>> {
+    async fn uncle_by_block_hash_and_index(
+        &self,
+        _hash: B256,
+        _index: Index,
+    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
         tracing::warn!("Kakarot chain does not produce uncles");
         Ok(None)
     }
@@ -104,18 +116,22 @@ where
         &self,
         _number: BlockNumberOrTag,
         _index: Index,
-    ) -> Result<Option<RichBlock>> {
+    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
         tracing::warn!("Kakarot chain does not produce uncles");
         Ok(None)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn transaction_by_hash(&self, hash: B256) -> Result<Option<Transaction>> {
+    async fn transaction_by_hash(&self, hash: B256) -> Result<Option<WithOtherFields<Transaction>>> {
         Ok(self.eth_client.eth_provider().transaction_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn transaction_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<Transaction>> {
+    async fn transaction_by_block_hash_and_index(
+        &self,
+        hash: B256,
+        index: Index,
+    ) -> Result<Option<WithOtherFields<Transaction>>> {
         Ok(self.eth_client.eth_provider().transaction_by_block_hash_and_index(hash, index).await?)
     }
 
@@ -124,7 +140,7 @@ where
         &self,
         number: BlockNumberOrTag,
         index: Index,
-    ) -> Result<Option<Transaction>> {
+    ) -> Result<Option<WithOtherFields<Transaction>>> {
         Ok(self.eth_client.eth_provider().transaction_by_block_number_and_index(number, index).await?)
     }
 
@@ -174,7 +190,7 @@ where
         &self,
         _request: TransactionRequest,
         _block_id: Option<BlockId>,
-    ) -> Result<AccessListWithGasUsed> {
+    ) -> Result<AccessListResult> {
         Err(EthApiError::Unsupported("eth_createAccessList").into())
     }
 

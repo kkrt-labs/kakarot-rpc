@@ -1,5 +1,5 @@
 use reth_primitives::B256;
-use reth_rpc_types::Transaction;
+use reth_rpc_types::{Transaction, WithOtherFields};
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
@@ -14,29 +14,29 @@ use {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredTransaction {
     #[serde(deserialize_with = "crate::providers::eth_provider::database::types::serde::deserialize_intermediate")]
-    pub tx: Transaction,
+    pub tx: WithOtherFields<Transaction>,
 }
 
-impl From<StoredTransaction> for Transaction {
+impl From<StoredTransaction> for WithOtherFields<Transaction> {
     fn from(tx: StoredTransaction) -> Self {
         tx.tx
     }
 }
 
-impl From<&StoredTransaction> for Transaction {
+impl From<&StoredTransaction> for WithOtherFields<Transaction> {
     fn from(tx: &StoredTransaction) -> Self {
         tx.tx.clone()
     }
 }
 
-impl From<Transaction> for StoredTransaction {
-    fn from(tx: Transaction) -> Self {
+impl From<WithOtherFields<Transaction>> for StoredTransaction {
+    fn from(tx: WithOtherFields<Transaction>) -> Self {
         Self { tx }
     }
 }
 
 impl Deref for StoredTransaction {
-    type Target = Transaction;
+    type Target = WithOtherFields<Transaction>;
 
     fn deref(&self) -> &Self::Target {
         &self.tx
@@ -75,7 +75,7 @@ impl Arbitrary<'_> for StoredTransaction {
                 r: transaction_signed.signature.r,
                 s: transaction_signed.signature.s,
                 v: if transaction_signed.is_legacy() {
-                    U256::from(transaction_signed.signature.v(transaction_signed.chain_id()))
+                    U256::from(transaction_signed.signature.legacy_parity(transaction_signed.chain_id()).to_u64())
                 } else {
                     U256::from(transaction_signed.signature.odd_y_parity)
                 },
@@ -105,11 +105,13 @@ impl Arbitrary<'_> for StoredTransaction {
                 tx.max_priority_fee_per_gas = Some(transaction.max_priority_fee_per_gas);
                 tx.access_list = Some(transaction.access_list);
             }
-            reth_primitives::Transaction::Eip4844(_) => unreachable!("Non supported transaction type"),
+            reth_primitives::Transaction::Eip4844(_) | reth_primitives::Transaction::Eip7702(_) => {
+                unreachable!("Non supported transaction type")
+            }
         };
 
         // Return the constructed `StoredTransaction` instance.
-        Ok(Self { tx })
+        Ok(Self { tx: WithOtherFields::new(tx) })
     }
 }
 

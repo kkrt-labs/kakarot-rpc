@@ -11,7 +11,7 @@ use reth_revm::{
 };
 use reth_rpc_types::{
     trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
-    Block, BlockHashOrNumber, BlockId, BlockTransactions, Header,
+    Block, BlockHashOrNumber, BlockId, BlockTransactions, Header, Transaction, WithOtherFields,
 };
 use revm_inspectors::tracing::TracingInspectorConfig;
 
@@ -91,7 +91,7 @@ impl From<GethDebugTracingCallOptions> for TracingOptions {
 pub struct TracerBuilder<P: EthereumProvider + Send + Sync + Clone, Status = Floating> {
     eth_provider: P,
     env: Env,
-    block: Block,
+    block: Block<WithOtherFields<Transaction>>,
     tracing_options: TracingOptions,
     _phantom: std::marker::PhantomData<Status>,
 }
@@ -151,7 +151,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
     /// # Returns
     ///
     /// Returns the block if it exists, otherwise returns None
-    async fn block(&self, block_id: BlockId) -> TracerResult<reth_rpc_types::Block> {
+    async fn block(&self, block_id: BlockId) -> TracerResult<reth_rpc_types::Block<WithOtherFields<Transaction>>> {
         let block = match block_id {
             BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.block_hash, true).await?,
             BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
@@ -164,7 +164,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
         })?;
 
         // we can't trace a pending block
-        if block.header.hash.unwrap_or_default().is_zero() {
+        if block.header.hash.is_zero() {
             return Err(EthApiError::UnknownBlock(BlockHashOrNumber::Hash(B256::ZERO)));
         }
 
@@ -209,7 +209,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
 
         let Header { number, timestamp, miner, base_fee_per_gas, difficulty, .. } = self.block.header.clone();
         let block_env = BlockEnv {
-            number: U256::from(number.unwrap_or_default()),
+            number: U256::from(number),
             timestamp: U256::from(timestamp),
             gas_limit: U256::from(TRACING_BLOCK_GAS_LIMIT),
             coinbase: miner,
@@ -230,7 +230,7 @@ mod tests {
     use super::*;
     use crate::test_utils::mock_provider::MockEthereumProviderStruct;
     use reth_primitives::U64;
-    use reth_rpc_types::Transaction;
+    use reth_rpc_types::{Transaction, WithOtherFields};
     use std::sync::Arc;
     #[tokio::test]
     async fn test_tracer_builder_block_failure_with_none_block_number() {
@@ -292,7 +292,7 @@ mod tests {
         // Expect the transaction_by_hash call to return a transaction with no block number
         mock_provider
             .expect_transaction_by_hash()
-            .returning(|_| Ok(Some(Transaction { block_number: None, ..Default::default() })));
+            .returning(|_| Ok(Some(WithOtherFields::new(Transaction { block_number: None, ..Default::default() }))));
 
         // Create a TracerBuilder with the mock provider
         let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
@@ -310,14 +310,11 @@ mod tests {
         mock_provider.expect_chain_id().returning(|| Ok(Some(U64::from(1))));
         // Expect the block_by_number call to return a block with non-full transactions
         mock_provider.expect_block_by_number().returning(|_, _| {
-            Ok(Some(
-                Block {
-                    transactions: BlockTransactions::Hashes(vec![]),
-                    header: Header { hash: Some(B256::repeat_byte(1)), ..Default::default() },
-                    ..Default::default()
-                }
-                .into(),
-            ))
+            Ok(Some(WithOtherFields::new(Block {
+                transactions: BlockTransactions::Hashes(vec![]),
+                header: Header { hash: B256::repeat_byte(1), ..Default::default() },
+                ..Default::default()
+            })))
         });
 
         // Create a TracerBuilder with the mock provider

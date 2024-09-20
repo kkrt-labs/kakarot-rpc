@@ -6,7 +6,8 @@ use async_trait::async_trait;
 use mockall::mock;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, U256, U64};
 use reth_rpc_types::{
-    txpool::TxpoolContent, Filter, FilterChanges, Header, SyncStatus, TransactionReceipt, TransactionRequest,
+    txpool::TxpoolContent, Block, Filter, FilterChanges, Header, SyncStatus, Transaction, TransactionReceipt,
+    TransactionRequest, WithOtherFields,
 };
 
 mock! {
@@ -20,15 +21,23 @@ mock! {
 
         async fn block_number(&self) -> EthApiResult<U64>;
 
-        async fn block_by_hash(&self, hash: B256, full: bool) -> EthApiResult<Option<reth_rpc_types::RichBlock>>;
+        async fn block_by_hash(
+            &self,
+            hash: B256,
+            full: bool,
+        ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
 
-        async fn block_by_number(&self, number_or_tag: BlockNumberOrTag, full: bool) -> EthApiResult<Option<reth_rpc_types::RichBlock>>;
+        async fn block_by_number(
+            &self,
+            number: BlockNumberOrTag,
+            full: bool,
+        ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
 
         async fn block_transaction_count_by_hash(&self, hash: B256) -> EthApiResult<Option<U256>>;
 
         async fn block_transaction_count_by_number(&self, number_or_tag: BlockNumberOrTag) -> EthApiResult<Option<U256>>;
 
-        async fn block_transactions(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<reth_rpc_types::Transaction>>>;
+        async fn block_transactions(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<WithOtherFields<Transaction>>>>;
     }
 
     #[async_trait]
@@ -72,18 +81,18 @@ mock! {
 
     #[async_trait]
     impl TransactionProvider for EthereumProviderStruct {
-        async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
+        async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
 
-        async fn transaction_by_block_hash_and_index(&self, hash: B256, index: reth_rpc_types::Index) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
+        async fn transaction_by_block_hash_and_index(&self, hash: B256, index: reth_rpc_types::Index) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
 
-        async fn transaction_by_block_number_and_index(&self, number_or_tag: BlockNumberOrTag, index: reth_rpc_types::Index) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
+        async fn transaction_by_block_number_and_index(&self, number_or_tag: BlockNumberOrTag, index: reth_rpc_types::Index) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
 
         async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
     }
 
     #[async_trait]
     impl TxPoolProvider for EthereumProviderStruct {
-        async fn txpool_transactions(&self) -> EthApiResult<Vec<reth_rpc_types::Transaction>>;
+        async fn txpool_transactions(&self) -> EthApiResult<Vec<Transaction>>;
 
         async fn txpool_content(&self) -> EthApiResult<TxpoolContent>;
     }

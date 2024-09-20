@@ -1,9 +1,6 @@
 #![allow(unused_variables, clippy::struct_excessive_bools)]
 
-use crate::{
-    providers::eth_provider::{database::state::EthDatabase, provider::EthereumProvider},
-    tracing::builder::TRACING_BLOCK_GAS_LIMIT,
-};
+use crate::providers::eth_provider::{database::state::EthDatabase, provider::EthereumProvider};
 use reth_chainspec::ChainSpec;
 use reth_primitives::{
     BlockId, GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID,
@@ -12,10 +9,13 @@ use reth_primitives::{
 use reth_revm::DatabaseRef;
 use reth_transaction_pool::{
     error::InvalidPoolTransactionError,
-    validate::{ensure_intrinsic_gas, ValidTransaction, DEFAULT_MAX_TX_INPUT_BYTES},
+    validate::{ensure_intrinsic_gas, ForkTracker, ValidTransaction, DEFAULT_MAX_TX_INPUT_BYTES},
     EthPoolTransaction, TransactionOrigin, TransactionValidationOutcome, TransactionValidator,
 };
-use std::{marker::PhantomData, sync::Arc};
+use std::{
+    marker::PhantomData,
+    sync::{atomic::AtomicBool, Arc},
+};
 
 #[derive(Debug, Clone)]
 pub struct KakarotTransactionValidatorBuilder {
@@ -24,6 +24,8 @@ pub struct KakarotTransactionValidatorBuilder {
     pub shanghai: bool,
     /// Fork indicator whether we are in the Cancun hardfork.
     pub cancun: bool,
+    /// Fork indicator whether we are in the Prague hardfork.
+    pub prague: bool,
     /// Whether using EIP-2718 type transactions is allowed
     pub eip2718: bool,
     /// Whether using EIP-1559 type transactions is allowed
@@ -44,10 +46,10 @@ impl KakarotTransactionValidatorBuilder {
     ///  - Legacy
     ///  - EIP-2718
     ///  - EIP-1559
-    pub const fn new(chain_spec: Arc<ChainSpec>) -> Self {
+    pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
         Self {
-            chain_spec,
-            block_gas_limit: TRACING_BLOCK_GAS_LIMIT,
+            chain_spec: chain_spec.clone(),
+            block_gas_limit: chain_spec.max_gas_limit,
             max_tx_input_bytes: DEFAULT_MAX_TX_INPUT_BYTES,
 
             // by default all transaction types are allowed except EIP-4844
@@ -60,6 +62,9 @@ impl KakarotTransactionValidatorBuilder {
 
             // cancun is activated by default
             cancun: true,
+
+            // prague not yet activated
+            prague: false,
         }
     }
 
@@ -69,8 +74,23 @@ impl KakarotTransactionValidatorBuilder {
         P: EthereumProvider + Send + Sync,
     {
         let Self {
-            chain_spec, shanghai, cancun, eip2718, eip1559, eip4844, block_gas_limit, max_tx_input_bytes, ..
+            chain_spec,
+            shanghai,
+            cancun,
+            prague,
+            eip2718,
+            eip1559,
+            eip4844,
+            block_gas_limit,
+            max_tx_input_bytes,
+            ..
         } = self;
+
+        let fork_tracker = ForkTracker {
+            shanghai: AtomicBool::new(shanghai),
+            cancun: AtomicBool::new(cancun),
+            prague: AtomicBool::new(prague),
+        };
 
         let inner = KakarotTransactionValidatorInner {
             chain_spec,
@@ -80,6 +100,7 @@ impl KakarotTransactionValidatorBuilder {
             eip4844,
             block_gas_limit,
             max_tx_input_bytes,
+            fork_tracker,
             _marker: Default::default(),
         };
 
@@ -179,6 +200,8 @@ where
     block_gas_limit: u64,
     /// Maximum size in bytes a single transaction can have in order to be accepted into the pool.
     max_tx_input_bytes: usize,
+    /// tracks activated forks relevant for transaction validation
+    fork_tracker: ForkTracker,
     /// Marker for the transaction type
     _marker: PhantomData<T>,
 }
@@ -274,8 +297,7 @@ where
         }
 
         // intrinsic gas checks
-        let is_shanghai = true;
-        if let Err(err) = ensure_intrinsic_gas(&transaction, is_shanghai) {
+        if let Err(err) = ensure_intrinsic_gas(&transaction, &self.fork_tracker) {
             return TransactionValidationOutcome::Invalid(transaction, err);
         }
 
@@ -303,8 +325,8 @@ where
         // Checks for nonce
         if transaction.nonce() < account.nonce {
             return TransactionValidationOutcome::Invalid(
-                transaction,
-                InvalidTransactionError::NonceNotConsistent.into(),
+                transaction.clone(),
+                InvalidTransactionError::NonceNotConsistent { tx: transaction.nonce(), state: account.nonce }.into(),
             );
         }
 

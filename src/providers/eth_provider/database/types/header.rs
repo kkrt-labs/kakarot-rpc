@@ -39,7 +39,7 @@ impl Arbitrary<'_> for StoredHeader {
     fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
         Ok(Self {
             header: Header {
-                hash: Some(B256::arbitrary(u)?),
+                hash: B256::arbitrary(u)?,
                 total_difficulty: Some(U256::arbitrary(u).unwrap()),
                 mix_hash: Some(B256::arbitrary(u).unwrap()),
                 nonce: Some(B64::arbitrary(u).unwrap()),
@@ -49,7 +49,7 @@ impl Arbitrary<'_> for StoredHeader {
                 excess_blob_gas: Some(u128::from(u64::arbitrary(u).unwrap())),
                 gas_limit: u128::from(u64::arbitrary(u).unwrap()),
                 gas_used: u128::from(u64::arbitrary(u).unwrap()),
-                number: Some(u64::arbitrary(u).unwrap()),
+                number: u64::arbitrary(u).unwrap(),
                 ..Header::arbitrary(u)?
             },
         })

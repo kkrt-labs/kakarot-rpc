@@ -14,7 +14,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-          toolchain: 1.80.0
+          toolchain: 1.81.0
       - name: Retrieve cached dependencies
         uses: Swatinem/rust-cache@v2
       # nextest setup
@@ -55,7 +55,6 @@ jobs:
         run: ./scripts/make_with_env.sh katana-genesis
       - name: Test code
         run: make test
-
 # We skip the hive tests for now, will be fixed in the next PR.
 
 #  # Inspired by Reth CI.

@@ -259,7 +259,7 @@ where
                             .await?
                             .ok_or(EthApiError::UnknownBlockNumber(Some(number)))?;
                         // If the block hash is zero, then the block corresponds to a Starknet pending block
-                        if header.hash.ok_or(EthApiError::UnknownBlock(number.into()))?.is_zero() {
+                        if header.hash.is_zero() {
                             Ok(starknet::core::types::BlockId::Tag(starknet::core::types::BlockTag::Pending))
                         } else {
                             Ok(starknet::core::types::BlockId::Number(number))

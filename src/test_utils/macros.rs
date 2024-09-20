@@ -25,6 +25,6 @@
 #[macro_export]
 macro_rules! root_project_path {
     ($relative_path:expr) => {{
-        find_project_root_path(None).expect("Failed to find project root").join(Path::new(&$relative_path))
+        find_project_root(None).join(Path::new(&$relative_path))
     }};
 }
