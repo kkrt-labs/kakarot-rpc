@@ -1,5 +1,3 @@
-constants.ts;
-
 import { padString } from "./utils/hex.ts";
 import { hash } from "./deps.ts";
 
@@ -46,7 +44,7 @@ export const STREAM_URL: string = Deno.env.get("STREAM_URL") ??
   "http://localhost:7171";
 
 // Creates string that starts with "0x" and is padded to a total length of 64 chars
-export const NULL_HASH = padString("0x", 32);
+export const NULL_HASH: string = padString("0x", 32);
 
 // Get the hash selector from the transaction executed
 export const TRANSACTION_EXECUTED: string = hash.getSelectorFromName(
@@ -58,4 +56,13 @@ export const KAKAROT_ADDRESS: string = (() => {
   const kakarotAddress = Deno.env.get("KAKAROT_ADDRESS");
   if (!kakarotAddress) throw new Error("ENV: KAKAROT_ADDRESS is not set");
   return kakarotAddress;
+})();
+
+// A default block gas limit in case the call to get_block_gas_limit fails.
+export const DEFAULT_BLOCK_GAS_LIMIT: string = (() => {
+  const defaultBlockGasLimitStr = Deno.env.get("DEFAULT_BLOCK_GAS_LIMIT");
+  if (!defaultBlockGasLimitStr) {
+    throw new Error("ENV: DEFAULT_BLOCK_GAS_LIMIT is not set");
+  }
+  return defaultBlockGasLimitStr;
 })();
