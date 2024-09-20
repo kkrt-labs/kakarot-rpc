@@ -1,8 +1,10 @@
+constants.ts;
+
 import { padString } from "./utils/hex.ts";
 import { hash } from "./deps.ts";
 
 // Get Sink Type or returns "console" if the value is null or undefined
-export const SINK_TYPE = (() => {
+export const SINK_TYPE: "console" | "mongo" = (() => {
   const addr = Deno.env.get("SINK_TYPE") ?? "console";
   if (addr !== "console" && addr !== "mongo") {
     throw new Error("Invalid SINK_TYPE");
@@ -11,17 +13,23 @@ export const SINK_TYPE = (() => {
 })();
 
 // Get the sink options from the sink type
-export const SINK_OPTIONS = SINK_TYPE === "mongo"
+export const SINK_OPTIONS: {
+  connectionString?: string;
+  database?: string;
+  collectionNames: string[];
+} = SINK_TYPE === "mongo"
   ? {
     connectionString: Deno.env.get("MONGO_CONNECTION_STRING") ??
       "mongodb://mongo:mongo@mongo:27017",
     database: Deno.env.get("MONGO_DATABASE_NAME") ?? "kakarot-test-db",
     collectionNames: ["headers", "transactions", "receipts", "logs"],
   }
-  : {};
+  : {
+    collectionNames: [],
+  };
 
 // Get the starting block or returns 0 if the value is null or undefined
-export const STARTING_BLOCK = (() => {
+export const STARTING_BLOCK: number = (() => {
   const startingBlock = Number(Deno.env.get("STARTING_BLOCK") ?? 0);
   return Number.isSafeInteger(startingBlock) && startingBlock >= 0
     ? startingBlock
@@ -31,16 +39,17 @@ export const STARTING_BLOCK = (() => {
 })();
 
 // Get authentication token from Apibara or returns an empty string if the value is null or undefined
-export const AUTH_TOKEN = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
+export const AUTH_TOKEN: string = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
 
 // Get stream URL or returns "http://localhost:7171" if the value is null or undefined
-export const STREAM_URL = Deno.env.get("STREAM_URL") ?? "http://localhost:7171";
+export const STREAM_URL: string = Deno.env.get("STREAM_URL") ??
+  "http://localhost:7171";
 
 // Creates string that starts with "0x" and is padded to a total length of 64 chars
 export const NULL_HASH = padString("0x", 32);
 
 // Get the hash selector from the transaction executed
-export const TRANSACTION_EXECUTED = hash.getSelectorFromName(
+export const TRANSACTION_EXECUTED: string = hash.getSelectorFromName(
   "transaction_executed",
 );
 
