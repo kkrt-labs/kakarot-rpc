@@ -78,11 +78,4 @@ mock! {
 
         async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
     }
-
-    // #[async_trait]
-    // impl TxPoolProvider for EthereumProviderStruct {
-    //     async fn txpool_transactions(&self) -> EthApiResult<Vec<reth_rpc_types::Transaction>>;
-
-    //     async fn txpool_content(&self) -> EthApiResult<TxpoolContent>;
-    // }
 }
