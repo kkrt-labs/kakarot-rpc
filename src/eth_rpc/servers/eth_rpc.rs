@@ -252,10 +252,14 @@ where
         #[cfg(feature = "rpc_forwarding")]
         {
             let provider = ProviderBuilder::new().on_http(Url::parse(MAIN_RPC_URL.as_ref()).unwrap());
-            let tx_hash = provider.send_raw_transaction(&bytes).await.expect("failed to send transaction");
+            let tx_hash = provider
+                .send_raw_transaction(&bytes)
+                .await
+                .map_err(|e| EthApiError::Transaction(TransactionError::Broadcast(e.into())))?;
 
             return Ok(*tx_hash.tx_hash());
         }
+        #[cfg(not(feature = "rpc_forwarding"))]
         Ok(self.eth_client.send_raw_transaction(bytes).await?)
     }
 
