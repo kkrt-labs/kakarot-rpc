@@ -66,3 +66,13 @@ export const DEFAULT_BLOCK_GAS_LIMIT: string = (() => {
   }
   return defaultBlockGasLimitStr;
 })();
+
+// Events containing these keys are not
+// ETH logs and should be ignored.
+export const IGNORED_KEYS: bigint[] = [
+  BigInt(hash.getSelectorFromName("transaction_executed")),
+  BigInt(hash.getSelectorFromName("evm_contract_deployed")),
+  BigInt(hash.getSelectorFromName("Transfer")),
+  BigInt(hash.getSelectorFromName("Approval")),
+  BigInt(hash.getSelectorFromName("OwnershipTransferred")),
+];
