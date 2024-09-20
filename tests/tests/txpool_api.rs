@@ -56,7 +56,7 @@ async fn request<D: DeserializeOwned, S: Serialize>(method: &str, port: u16, par
 async fn test_txpool_content(#[future] katana_empty: Katana, _setup: ()) {
     let (server_addr, server_handle, katana_empty) = initial_setup(katana_empty).await;
 
-    // Create a sample transactions
+    // Create a sample transaction
     let (transaction, transaction_signed) = create_sample_transactions(&katana_empty, 1)
         .await
         .expect("Failed to create sample transaction")
@@ -109,7 +109,7 @@ async fn test_txpool_content(#[future] katana_empty: Katana, _setup: ()) {
 async fn test_txpool_content_from(#[future] katana_empty: Katana, _setup: ()) {
     let (server_addr, server_handle, katana_empty) = initial_setup(katana_empty).await;
 
-    // Create a sample transactions
+    // Create a sample transaction
     let (transaction, transaction_signed) = create_sample_transactions(&katana_empty, 1)
         .await
         .expect("Failed to create sample transaction")
@@ -153,7 +153,7 @@ async fn test_txpool_content_from(#[future] katana_empty: Katana, _setup: ()) {
 async fn test_txpool_status(#[future] katana_empty: Katana, _setup: ()) {
     let (server_addr, server_handle, katana_empty) = initial_setup(katana_empty).await;
 
-    // Create a sample transactions
+    // Create a sample transaction
     let (transaction, _) = create_sample_transactions(&katana_empty, 1)
         .await
         .expect("Failed to create sample transaction")
@@ -188,7 +188,7 @@ async fn test_txpool_status(#[future] katana_empty: Katana, _setup: ()) {
 async fn test_txpool_inspect(#[future] katana_empty: Katana, _setup: ()) {
     let (server_addr, server_handle, katana_empty) = initial_setup(katana_empty).await;
 
-    // Create a sample transactions
+    // Create a sample transaction
     let (transaction, transaction_signed) = create_sample_transactions(&katana_empty, 1)
         .await
         .expect("Failed to create sample transaction")
