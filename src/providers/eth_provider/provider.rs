@@ -12,10 +12,7 @@ use crate::{
     into_via_try_wrapper, into_via_wrapper,
     models::block::{EthBlockId, EthBlockNumberOrTag},
     providers::{
-        eth_provider::{
-            BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
-            TxPoolProvider,
-        },
+        eth_provider::{BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider},
         sn_provider::StarknetProvider,
     },
 };
@@ -47,18 +44,12 @@ pub type EthApiResult<T> = Result<T, EthApiError>;
 
 /// A trait that defines the interface for an Ethereum Provider.
 pub trait EthereumProvider:
-    GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + TxPoolProvider + BlockProvider
+    GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + BlockProvider
 {
 }
 
 impl<T> EthereumProvider for T where
-    T: GasProvider
-        + StateProvider
-        + TransactionProvider
-        + ReceiptProvider
-        + LogProvider
-        + TxPoolProvider
-        + BlockProvider
+    T: GasProvider + StateProvider + TransactionProvider + ReceiptProvider + LogProvider + BlockProvider
 {
 }
 
@@ -69,7 +60,7 @@ impl<T> EthereumProvider for T where
 pub struct EthDataProvider<SP: starknet::providers::Provider + Send + Sync> {
     database: Database,
     starknet_provider: StarknetProvider<SP>,
-    pub(crate) chain_id: u64,
+    pub chain_id: u64,
 }
 
 impl<SP> EthDataProvider<SP>

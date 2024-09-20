@@ -296,7 +296,7 @@ async fn test_mempool_get_private_transactions(#[future] katana: Katana, _setup:
 }
 
 // Helper function to create a sample transaction
-async fn create_sample_transactions(
+pub async fn create_sample_transactions(
     katana: &Katana,
     num_transactions: usize,
 ) -> Result<Vec<(EthPooledTransaction, TransactionSigned)>, SignatureError> {

@@ -79,6 +79,14 @@ pub async fn katana() -> Katana {
     Katana::new(RANDOM_BYTES_SIZE).await
 }
 
+/// This fixture creates a new test environment on Katana.
+#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
+#[fixture]
+pub async fn katana_empty() -> Katana {
+    // Create a new test environment on Katana
+    Katana::new_empty().await
+}
+
 /// This fixture configures the tests. The following setup
 /// is used:
 /// - The log level is set to `info`
