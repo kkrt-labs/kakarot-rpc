@@ -12,6 +12,7 @@ use kakarot_rpc::{
 use reth_primitives::{
     Block, BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered,
 };
+use reth_rpc_types::{Transaction, TransactionInfo, WithOtherFields};
 use reth_rpc_types_compat::transaction::from_recovered_with_block_context;
 use rstest::*;
 use serde_json::Value;
@@ -47,10 +48,13 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
 
     let mut transaction = from_recovered_with_block_context(
         TransactionSignedEcRecovered::from_signed_transaction(transaction, signer),
-        tx.block_hash.unwrap(),
-        tx.block_number.unwrap(),
-        header.base_fee_per_gas.map(|x| x.try_into().unwrap()),
-        tx.transaction_index.unwrap() as usize,
+        TransactionInfo {
+            hash: Some(tx.hash),
+            block_hash: tx.block_hash,
+            block_number: tx.block_number,
+            base_fee: header.base_fee_per_gas,
+            index: tx.transaction_index,
+        },
     );
 
     let res = reqwest_client
@@ -78,7 +82,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         transaction.gas_price = rpc_transaction.gas_price;
     }
 
-    assert_eq!(transaction, rpc_transaction);
+    assert_eq!(transaction, WithOtherFields::new(rpc_transaction));
 
     drop(server_handle);
 }
@@ -310,9 +314,9 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
         .expect("Failed to call Debug RPC");
     let response = res.text().await.expect("Failed to get response body");
     let response: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let rpc_block: reth_rpc_types::Block =
+    let rpc_block: WithOtherFields<reth_rpc_types::Block<WithOtherFields<Transaction>>> =
         serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
-    let primitive_block = Block::try_from(rpc_block).unwrap();
+    let primitive_block = Block::try_from(rpc_block.inner).unwrap();
 
     // Encode primitive block and compare with the result of debug_getRawBlock
     let mut buf = Vec::new();

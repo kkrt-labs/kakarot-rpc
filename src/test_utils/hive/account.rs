@@ -1,12 +1,12 @@
+#![allow(unreachable_pub)]
 use crate::providers::eth_provider::utils::split_u256;
 use alloy_primitives::Bytes;
-use blockifier::abi::{abi_utils::get_storage_var_address, sierra_types::next_storage_key};
 use reth_primitives::{alloy_primitives::keccak256, Address, KECCAK_EMPTY, U256};
 use revm_interpreter::analysis::to_analysed;
 use revm_primitives::Bytecode;
-use starknet::core::utils::cairo_short_string_to_felt;
-use starknet_api::{core::Nonce, state::StorageKey, StarknetApiError};
-use starknet_crypto::{poseidon_permute_comp, Felt};
+use starknet::core::utils::get_storage_var_address;
+use starknet_api::{core::Nonce, StarknetApiError};
+use starknet_crypto::Felt;
 
 pub const ACCOUNT_BYTECODE_LEN: &str = "Account_bytecode_len";
 pub const ACCOUNT_CODE_HASH: &str = "Account_code_hash";
@@ -33,7 +33,7 @@ pub struct Account {
 macro_rules! starknet_storage {
     ($storage_var: expr, $felt: expr) => {
         (
-            get_storage_var_address($storage_var, &[]),
+            get_storage_var_address($storage_var, &[]).expect("Failed to get storage var address"),
             Felt::from($felt),
         )
     };
@@ -41,7 +41,7 @@ macro_rules! starknet_storage {
         {
             let args = vec![$($key),*];
             (
-                get_storage_var_address($storage_var, &args),
+                get_storage_var_address($storage_var, &args).expect("Failed to get storage var address"),
                 Felt::from($felt),
             )
         }
@@ -54,31 +54,15 @@ macro_rules! starknet_storage {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct KakarotAccount {
-    pub(crate) evm_address: Felt,
-    pub(crate) nonce: Nonce,
-    pub(crate) storage: Vec<(StorageKey, Felt)>,
+    pub evm_address: Felt,
+    pub nonce: Nonce,
+    pub storage: Vec<(Felt, Felt)>,
 }
 
 impl KakarotAccount {
-    pub const fn evm_address(&self) -> &Felt {
-        &self.evm_address
-    }
-
-    pub const fn nonce(&self) -> &Nonce {
-        &self.nonce
-    }
-
-    pub fn storage(&self) -> &[(StorageKey, Felt)] {
+    pub fn storage(&self) -> &[(Felt, Felt)] {
         self.storage.as_slice()
     }
-}
-
-#[derive(Debug, Default, Clone)]
-pub enum AccountType {
-    #[default]
-    Uninitialized = 0,
-    EOA = 1,
-    Contract = 2,
 }
 
 impl KakarotAccount {
@@ -98,9 +82,9 @@ impl KakarotAccount {
         ];
 
         // Initialize the bytecode storage var.
-        let mut bytecode_storage = pack_byte_array_to_starkfelt_array(&account.code)
+        let mut bytecode_storage: Vec<(Felt, Felt)> = pack_byte_array_to_starkfelt_array(&account.code)
             .enumerate()
-            .map(|(i, bytes)| (StorageKey::from(i as u32), bytes))
+            .map(|(i, bytes)| (Felt::from(i as u32), bytes))
             .collect();
         storage.append(&mut bytecode_storage);
 
@@ -114,9 +98,10 @@ impl KakarotAccount {
             U256::from_be_slice(keccak256(account.code.clone()).as_slice())
         };
 
-        let code_hash_values = split_u256(code_hash);
-        let code_hash_low_key = get_storage_var_address(ACCOUNT_CODE_HASH, &[]);
-        let code_hash_high_key = next_storage_key(&code_hash_low_key)?;
+        let code_hash_values: [u128; 2] = split_u256(code_hash);
+        let code_hash_low_key =
+            get_storage_var_address(ACCOUNT_CODE_HASH, &[]).expect("Failed to get storage var address");
+        let code_hash_high_key = next_storage_key(&code_hash_low_key);
         storage.extend([
             (code_hash_low_key, Felt::from(code_hash_values[0])),
             (code_hash_high_key, Felt::from(code_hash_values[1])),
@@ -135,21 +120,27 @@ impl KakarotAccount {
             _ => unreachable!("Bytecode should be analysed"),
         };
 
-        let jumdpests_storage_address = get_storage_var_address(ACCOUNT_VALID_JUMPDESTS, &[]);
-        let jumdpests_storage_address = Felt::from(jumdpests_storage_address);
-        valid_jumpdests.into_iter().for_each(|index| {
-            storage.push(((jumdpests_storage_address + Felt::from(index)).try_into().unwrap(), Felt::ONE))
-        });
+        let jumdpests_storage_address =
+            get_storage_var_address(ACCOUNT_VALID_JUMPDESTS, &[]).expect("Failed to get storage var address");
+
+        for index in valid_jumpdests {
+            storage.push((jumdpests_storage_address + Felt::from(index), Felt::ONE));
+        }
 
         // Initialize the storage vars.
-        let mut evm_storage_storage: Vec<(StorageKey, Felt)> = account
+        let mut evm_storage_storage: Vec<(Felt, Felt)> = account
             .storage
             .iter()
             .flat_map(|(k, v)| {
-                let keys = split_u256(*k).map(Into::into);
-                let values = split_u256(*v).map(Into::<Felt>::into);
-                let low_key = get_storage_var_address(ACCOUNT_STORAGE, &keys);
-                let high_key = next_storage_key(&low_key).unwrap(); // can fail only if low is the max key
+                let keys: [u128; 2] = split_u256(*k);
+                let keys = keys.map(Into::into);
+
+                let values: [u128; 2] = split_u256(*v);
+                let values = values.map(Into::<Felt>::into);
+
+                let low_key =
+                    get_storage_var_address(ACCOUNT_STORAGE, &keys).expect("Failed to get storage var address");
+                let high_key = next_storage_key(&low_key);
                 vec![(low_key, values[0]), (high_key, values[1])]
             })
             .collect();
@@ -159,38 +150,19 @@ impl KakarotAccount {
     }
 }
 
-/// Splits a byte array into 31-byte chunks and converts each chunk to a Felt.
-pub fn pack_byte_array_to_starkfelt_array(bytes: &[u8]) -> impl Iterator<Item = Felt> + '_ {
-    bytes.chunks(31).map(Felt::from_bytes_be_slice)
+fn next_storage_key(key: &Felt) -> Felt {
+    key + Felt::ONE
 }
 
-/// Computes the inner pointer of a byte array in storage.
-///
-/// The pointer is determined by the hash of:
-/// - The base address of the byte array.
-/// - The storage segment.
-/// - The short string `ByteArray`.
-///
-/// # Arguments
-/// * `base_address` - The base address of the byte array.
-/// * `storage_segment` - The index of the storage segment to compute the pointer for. Each segment should store at most 256 * 31 bytes
-///
-/// # Returns
-/// The inner pointer of the byte array.
-pub fn inner_byte_array_pointer(base_address: Felt, storage_segment: Felt) -> Felt {
-    let suffix = cairo_short_string_to_felt("ByteArray").unwrap();
-    let mut state = [base_address, storage_segment, suffix];
-    poseidon_permute_comp(&mut state);
-    state[0]
+/// Splits a byte array into 31-byte chunks and converts each chunk to a Felt.
+fn pack_byte_array_to_starkfelt_array(bytes: &[u8]) -> impl Iterator<Item = Felt> + '_ {
+    bytes.chunks(31).map(Felt::from_bytes_be_slice)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use blockifier::abi::abi_utils::get_storage_var_address;
     use reth_primitives::Bytes;
-
-    const ACCOUNT_BYTECODE: &str = "Account_bytecode";
 
     #[test]
     fn test_pack_byte_array_to_starkfelt_array() {
@@ -202,21 +174,5 @@ mod tests {
 
         // Then
         assert_eq!(result, vec![Felt::from(0x0001_0203_0405_u64)]);
-    }
-
-    #[test]
-    fn test_inner_byte_array_pointer() {
-        // Given
-        let base_address: Felt = get_storage_var_address(ACCOUNT_BYTECODE, &[]).into();
-        let chunk = Felt::ZERO;
-
-        // When
-        let result = inner_byte_array_pointer(base_address, chunk);
-
-        // Then
-        assert_eq!(
-            result,
-            Felt::from_hex("0x030dc4fd6786155d4743a0f56ea73bea9521eba2552a2ca5080b830ad047907a").unwrap()
-        );
     }
 }

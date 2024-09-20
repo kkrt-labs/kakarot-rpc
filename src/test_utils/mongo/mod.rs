@@ -152,7 +152,7 @@ impl MongoFuzzer {
 
     /// Gets the highest block number in the transactions collection.
     pub fn max_block_number(&self) -> u64 {
-        self.headers.iter().filter_map(|header| Some(header.number)).max().unwrap_or_default()
+        self.headers.iter().map(|header| header.number).max().unwrap_or_default()
     }
 
     /// Adds random transactions to the collection of transactions.

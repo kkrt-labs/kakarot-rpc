@@ -46,7 +46,7 @@ impl KakarotTransactionValidatorBuilder {
     ///  - Legacy
     ///  - EIP-2718
     ///  - EIP-1559
-    pub fn new(chain_spec: Arc<ChainSpec>) -> Self {
+    pub fn new(chain_spec: &Arc<ChainSpec>) -> Self {
         Self {
             chain_spec: chain_spec.clone(),
             block_gas_limit: chain_spec.max_gas_limit,

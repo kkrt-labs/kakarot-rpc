@@ -17,7 +17,7 @@ use reth_rpc_types::{
         geth::{GethDebugTracingOptions, GethTrace, TraceResult},
         parity::{Action, CallAction, CallOutput, CallType, TraceOutput, TransactionTrace},
     },
-    OtherFields,
+    OtherFields, WithOtherFields,
 };
 use revm_inspectors::tracing::TracingInspectorConfig;
 use rstest::*;
@@ -33,8 +33,8 @@ const TRACING_TRANSACTIONS_COUNT: usize = 5;
 /// Helper to create a header.
 fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> reth_rpc_types::Header {
     reth_rpc_types::Header {
-        number: Some(block_number),
-        hash: Some(hash),
+        number: block_number,
+        hash,
         parent_hash,
         gas_limit: u128::from(u64::MAX),
         base_fee_per_gas: Some(base_fee),
@@ -73,7 +73,7 @@ pub async fn tracing(
             .expect("Failed to prepare call transaction");
         // Sign the transaction and convert it to a RPC transaction.
         let tx_signed = eoa.sign_transaction(tx.clone()).expect("Failed to sign transaction");
-        let mut tx = reth_rpc_types::Transaction {
+        let tx = reth_rpc_types::Transaction {
             transaction_type: Some(2),
             nonce: tx.nonce(),
             hash: tx_signed.hash(),
@@ -96,6 +96,8 @@ pub async fn tracing(
             access_list: Some(Default::default()),
             ..Default::default()
         };
+
+        let mut tx = WithOtherFields::new(tx);
 
         // Add an out of resources field to the last transaction.
         if i == TRACING_TRANSACTIONS_COUNT - 1 {

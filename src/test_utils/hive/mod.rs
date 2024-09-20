@@ -83,7 +83,7 @@ impl HiveGenesisConfig {
                 let kakarot_account = KakarotAccount::new(&address, Account { code, storage, ..Default::default() })?;
 
                 let mut kakarot_account_storage: Vec<(Felt, Felt)> =
-                    kakarot_account.storage().iter().map(|(k, v)| (*k.0.key(), *v)).collect();
+                    kakarot_account.storage().iter().map(|(k, v)| (*k, *v)).collect();
 
                 // Add the implementation to the storage.
                 let implementation_key = get_storage_var_address(ACCOUNT_IMPLEMENTATION, &[])?;

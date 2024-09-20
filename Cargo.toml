@@ -49,7 +49,7 @@ no_effect_underscore_binding = "allow"
 
 [dependencies]
 # Starknet dependencies
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.3.0", default-features = false, features = [
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.1", default-features = false, features = [
   "abigen-rs",
 ] }
 starknet = { version = "0.12", default-features = false }
@@ -60,28 +60,28 @@ alloy-rlp = { version = "0.3.8", default-features = false }
 alloy-sol-types = { version = "0.8.3", default-features = false }
 alloy-contract = { version = "0.3.6", default-features = false }
 jsonrpsee = { version = "0.24", features = ["macros", "server"] }
-reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false, features = [
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
   "std",
 ] }
-reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false, features = [
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
   "std",
 ] }
-reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false, features = [
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
   "alloy-compat",
   "std",
   "arbitrary",
 ] }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false, features = [
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
   "std",
 ] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false, features = [
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
   "arbitrary",
 ] }
-reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false }
-reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false, optional = true }
-reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", rev = "883975d", default-features = false, optional = true }
+reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
+reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, optional = true }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, optional = true }
 revm-inspectors = "0.7.4"
 
 # Error
@@ -146,14 +146,11 @@ alloy-signer-local = { version = "0.3.6", default-features = false, optional = t
 alloy-signer = { version = "0.3.6", default-features = false, optional = true }
 anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
-# ef-testing = { git = "https://github.com/kkrt-labs/ef-tests", rev = "e7c9c48", default-features = false, features = [
-#   "v0",
-# ], optional = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master", optional = true }
 rand = { version = "0.8", default-features = false, optional = true }
 rayon = { version = "1", default-features = false, optional = true }
 rstest = { version = "0.21", default-features = false, optional = true }
-serde_with = { version = "2.3.1", default-features = false, optional = true }
+serde_with = { version = "3.9", default-features = false, optional = true }
 strum = { version = "0.26", default-features = false, optional = true }
 strum_macros = { version = "0.26", default-features = false, optional = true }
 testcontainers = { version = "0.19", default-features = false, optional = true }
@@ -163,34 +160,17 @@ tokio-util = { version = "0.7", features = [
 tokio-stream = { version = "0.1", default-features = false, optional = true }
 walkdir = { version = "2.5", default-features = false, optional = true }
 
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.12", default-features = false, optional = true }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.12", default-features = false, features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', rev = "7ff6593", default-features = false, optional = true }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', rev = "7ff6593", default-features = false, features = [
   "serde",
 ], optional = true }
 mockall = { version = "0.13.0", default-features = false, optional = true }
 
-# [patch.crates-io]
-# starknet-core = { git = "https://github.com/kariy/starknet-rs", branch = "dojo-patch" }
 
-# [patch.crates-io]
-# cairo-lang-casm = { git = 'https://github.com/starkware-libs/cairo', tag = "v2.7.0" }
-# cairo-lang-starknet = { git = 'https://github.com/starkware-libs/cairo', tag = "v2.7.0" }
-# cairo-lang-utils = { git = 'https://github.com/starkware-libs/cairo', tag = "v2.7.0" }
-# cairo-lang-starknet-classes = { git = 'https://github.com/starkware-libs/cairo', tag = "v2.7.0" }
-
-blockifier = { package = "blockifier", git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3", default-features = false, optional = true }
 starknet_api = { version = "0.13.0-rc.0", optional = true }
-# starknet_api = { git = "https://github.com/dojoengine/sequencer", tag = "v0.8.0-rc3", optional = true}
 revm-interpreter = { version = "10.0", default-features = false, optional = true }
 revm-primitives = { version = "9.0", default-features = false, optional = true }
 starknet-crypto = { version = "0.7", optional = true }
-
-# [patch.crates-io]
-# # # Matching the same rev that `cainome` is using. Mainly because `starknet-rs` hasn't create a new release yet.
-# # starknet = { git = "https://github.com/xJonathanLEI/starknet-rs", rev = "2ddc694" }
-# # This patch is required especially for `katana-db` to work properly.
-# # Ref: https://github.com/dojoengine/types-rs/commit/1943cb974a8738d2473d58479a3ace7badb0262f
-# starknet-types-core = { git = "https://github.com/dojoengine/types-rs", rev = "289e2f0" }
 
 [dev-dependencies]
 hex = { version = "0.4", default-features = false }
@@ -210,7 +190,6 @@ testing = [
   "anyhow",
   "dep:arbitrary",
   "dojo-test-utils",
-  # "ef-testing",
   "foundry-config",
   "katana-primitives",
   "mockall",
@@ -226,7 +205,6 @@ testing = [
   "walkdir",
 ]
 hive = [
-  "blockifier",
   "starknet_api",
   "revm-interpreter",
   "revm-primitives",

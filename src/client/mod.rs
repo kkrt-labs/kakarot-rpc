@@ -57,7 +57,7 @@ where
         let eth_provider = EthDataProvider::try_new(database, StarknetProvider::new(starknet_provider)).await?;
 
         let validator =
-            KakarotTransactionValidatorBuilder::new(Arc::new(ChainSpec { chain: chain.into(), ..Default::default() }))
+            KakarotTransactionValidatorBuilder::new(&Arc::new(ChainSpec { chain: chain.into(), ..Default::default() }))
                 .build::<_, EthPooledTransaction>(eth_provider.clone());
 
         let pool = Arc::new(KakarotPool::new(

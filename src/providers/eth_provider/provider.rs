@@ -30,13 +30,12 @@ use starknet::core::types::Felt;
 use tracing::{instrument, Instrument};
 #[cfg(feature = "hive")]
 use {
-    crate::providers::eth_provider::error::{KakarotError, SignatureError},
+    crate::providers::eth_provider::error::SignatureError,
     crate::providers::eth_provider::starknet::kakarot_core::{
         account_contract::AccountContractReader, starknet_address,
     },
     crate::providers::eth_provider::utils::contract_not_found,
     reth_primitives::Address,
-    starknet::core::types::BroadcastedInvokeTransaction,
 };
 
 /// A type alias representing a result type for Ethereum API operations.
@@ -312,8 +311,11 @@ where
     pub(crate) async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthApiResult<()> {
         use crate::providers::eth_provider::constant::hive::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
         use starknet::{
-            accounts::{Call, ExecutionV1},
-            core::{types::BlockTag, utils::get_selector_from_name},
+            accounts::ExecutionV1,
+            core::{
+                types::{BlockTag, Call},
+                utils::get_selector_from_name,
+            },
         };
 
         let signer_starknet_address = starknet_address(signer);
@@ -337,18 +339,26 @@ where
             let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
             let current_nonce = *nonce;
 
-            let tx = execution
+            // let tx = execution
+            //     .nonce(current_nonce)
+            //     .max_fee(u64::MAX.into())
+            //     .prepared()
+            //     .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?
+            //     .get_invoke_request(false)
+            //     .await
+            //     .map_err(|_| SignatureError::SigningFailure)?;
+            // self.starknet_provider
+            //     .add_invoke_transaction(BroadcastedInvokeTransaction::V1(tx))
+            //     .await
+            //     .map_err(KakarotError::from)?;
+
+            let prepared_execution = execution
                 .nonce(current_nonce)
                 .max_fee(u64::MAX.into())
                 .prepared()
-                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?
-                .get_invoke_request(false)
-                .await
-                .map_err(|_| SignatureError::SigningFailure)?;
-            self.starknet_provider
-                .add_invoke_transaction(BroadcastedInvokeTransaction::V1(tx))
-                .await
-                .map_err(KakarotError::from)?;
+                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?;
+
+            let _ = prepared_execution.send().await.map_err(|_| SignatureError::SigningFailure)?;
 
             *nonce += Felt::ONE;
             drop(nonce);

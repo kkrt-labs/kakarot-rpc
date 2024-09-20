@@ -21,7 +21,7 @@ pub mod core {
     use super::{abigen_legacy, Felt};
     abigen_legacy!(KakarotCore, "./.kakarot/artifacts/kakarot.json");
 
-    #[derive(Debug)]
+    #[allow(missing_debug_implementations)]
     pub struct CallInput {
         pub(crate) nonce: Felt,
         pub(crate) from: Felt,
