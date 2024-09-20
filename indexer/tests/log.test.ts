@@ -1,10 +1,6 @@
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/mod.ts";
-import {
-  fromJsonRpcLog,
-  IGNORED_KEYS,
-  JsonRpcLog,
-  toEthLog,
-} from "../src/types/log.ts";
+import { fromJsonRpcLog, IGNORED_KEYS, toEthLog } from "../src/types/log.ts";
+import { JsonRpcLog } from "../src/types/types.ts";
 import { bigIntToHex, Event, JsonRpcTx } from "../src/deps.ts";
 import { KAKAROT_ADDRESS } from "../src/constants.ts";
 

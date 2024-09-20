@@ -10,7 +10,7 @@ import {
   toTypedEthTx,
   typedTransactionToEthTx,
 } from "../src/types/transaction.ts";
-import { JsonRpcLog, toEthLog } from "../src/types/log.ts";
+import { toEthLog } from "../src/types/log.ts";
 import { toEthReceipt } from "../src/types/receipt.ts";
 import {
   BlockHeader,
@@ -23,7 +23,7 @@ import {
   TransactionWithReceipt,
   TypedTransaction,
 } from "../src/deps.ts";
-import { JsonRpcReceipt } from "../src/types/receipt.ts";
+import { JsonRpcLog, JsonRpcReceipt } from "../src/types/types.ts";
 import {
   EXPECTED_TRANSFORM_DATA_FILE,
   TRANSACTIONS_DATA_FILE,

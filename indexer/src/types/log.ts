@@ -16,6 +16,8 @@ import {
   PrefixedHexString,
 } from "../deps.ts";
 
+import { JsonRpcLog } from "./types.ts";
+
 // Events containing these keys are not
 // ETH logs and should be ignored.
 export const IGNORED_KEYS = [
@@ -109,20 +111,3 @@ export function fromJsonRpcLog(log: JsonRpcLog): Log {
     hexToBytes(log.data),
   ];
 }
-
-/**
- * Acknowledgement: Code taken from <https://github.com/ethereumjs/ethereumjs-monorepo>
- */
-export type JsonRpcLog = {
-  removed: boolean; // TAG - true when the log was removed, due to a chain reorganization. false if it's a valid log.
-  logIndex: string | null; // QUANTITY - integer of the log index position in the block. null when it's pending.
-  transactionIndex: string | null; // QUANTITY - integer of the transactions index position log was created from. null when it's pending.
-  transactionHash: string | null; // DATA, 32 Bytes - hash of the transactions this log was created from. null when it's pending.
-  blockHash: string | null; // DATA, 32 Bytes - hash of the block where this log was in. null when it's pending.
-  blockNumber: string | null; // QUANTITY - the block number where this log was in. null when it's pending.
-  address: string; // DATA, 20 Bytes - address from which this log originated.
-  data: string; // DATA - contains one or more 32 Bytes non-indexed arguments of the log.
-  topics: string[]; // Array of DATA - Array of 0 to 4 32 Bytes DATA of indexed log arguments.
-  // (In solidity: The first topic is the hash of the signature of the event
-  // (e.g. Deposit(address,bytes32,uint256)), except you declared the event with the anonymous specifier.)
-};
