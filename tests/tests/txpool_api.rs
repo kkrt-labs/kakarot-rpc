@@ -212,15 +212,6 @@ async fn test_txpool_inspect(#[future] katana_empty: Katana, _setup: ()) {
     // Assert that no queued transactions are registered
     assert!(tx_pool_inspect.queued.is_empty());
 
-    // // Retrieve the first pending transaction from the database
-    // let first_pending_tx = katana
-    //     .eth_provider()
-    //     .database()
-    //     .get_first::<StoredPendingTransaction>()
-    //     .await
-    //     .expect("Failed to get the first pending transaction")
-    //     .unwrap();
-
     // Recover the signer from the transaction
     let transaction_signer = transaction_signed.recover_signer().unwrap();
 
