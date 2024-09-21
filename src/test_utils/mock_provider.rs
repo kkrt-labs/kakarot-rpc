@@ -1,6 +1,6 @@
 use crate::providers::eth_provider::{
     provider::EthApiResult, BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider,
-    TransactionProvider, TxPoolProvider,
+    TransactionProvider,
 };
 use async_trait::async_trait;
 use mockall::mock;
@@ -9,6 +9,7 @@ use reth_rpc_types::{
     txpool::TxpoolContent, Block, Filter, FilterChanges, Header, SyncStatus, Transaction, TransactionReceipt,
     TransactionRequest, WithOtherFields,
 };
+use reth_rpc_types::{Filter, FilterChanges, Header, SyncStatus, TransactionReceipt, TransactionRequest};
 
 mock! {
     #[derive(Clone, Debug)]
@@ -88,12 +89,5 @@ mock! {
         async fn transaction_by_block_number_and_index(&self, number_or_tag: BlockNumberOrTag, index: reth_rpc_types::Index) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
 
         async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
-    }
-
-    #[async_trait]
-    impl TxPoolProvider for EthereumProviderStruct {
-        async fn txpool_transactions(&self) -> EthApiResult<Vec<Transaction>>;
-
-        async fn txpool_content(&self) -> EthApiResult<TxpoolContent>;
     }
 }

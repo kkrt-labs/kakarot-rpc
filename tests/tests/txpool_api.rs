@@ -1,12 +1,14 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use crate::tests::mempool::create_sample_transactions;
 use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::test_utils::{
-    fixtures::{katana, setup},
+    fixtures::{katana_empty, setup},
     katana::Katana,
     rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
 };
-use reth_rpc_types::txpool::{TxpoolContent, TxpoolInspect, TxpoolStatus};
+use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
+use reth_transaction_pool::{TransactionOrigin, TransactionPool};
 use rstest::*;
 use serde::{de::DeserializeOwned, Serialize};
 use serde_json::Value;
@@ -51,73 +53,51 @@ async fn request<D: DeserializeOwned, S: Serialize>(method: &str, port: u16, par
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_txpool_content(#[future] katana: Katana, _setup: ()) {
-    let (server_addr, server_handle, _katana) = initial_setup(katana).await;
+async fn test_txpool_content(#[future] katana_empty: Katana, _setup: ()) {
+    let (server_addr, server_handle, katana_empty) = initial_setup(katana_empty).await;
 
-    let _tx_pool_content: TxpoolContent = request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
+    // Create a sample transaction
+    let (transaction, transaction_signed) = create_sample_transactions(&katana_empty, 1)
+        .await
+        .expect("Failed to create sample transaction")
+        .pop()
+        .expect("Expected at least one transaction");
 
-    // TODO: this needs to be transferred inside the mempool
-    // TODO: this needs to be transferred inside the mempool
-    // let tx_pool_content: TxpoolContent = request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
+    // Insert the transaction into the mempool
+    let _tx_hash = katana_empty
+        .eth_client
+        .mempool()
+        .add_transaction(TransactionOrigin::Local, transaction)
+        .await
+        .expect("Failed to insert transaction into the mempool");
 
-    // TODO: this needs to be transferred inside the mempool
-    // let tx_pool_content: TxpoolContent = request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
+    // Fetch the transaction pool content
+    let tx_pool_content: TxpoolContent = request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
 
-    // // Assert that we recovered the 10 pending transactions
-    // assert_eq!(tx_pool_content.pending.len(), 10);
+    // Get updated mempool size
+    let mempool_size = katana_empty.eth_client.mempool().pool_size();
+    // Check pending, queued and total transactions
+    assert_eq!(mempool_size.pending, 1);
+    assert_eq!(mempool_size.queued, 0);
+    assert_eq!(mempool_size.total, 1);
 
-    // // Assert that no queued transactions are registered
-    // assert!(tx_pool_content.queued.is_empty());
+    // Recover the signer from the transaction
+    let transaction_signer = transaction_signed.recover_signer().unwrap();
 
-    // // Retrieve the first pending transaction from the database
-    // let first_pending_tx = katana
-    //     .eth_provider()
-    //     .database()
-    //     .get_first::<StoredPendingTransaction>()
-    //     .await
-    //     .expect("Failed to get the first pending transaction")
-    //     .unwrap();
+    // Assert that the pool content contains the sender of the first pending transaction
+    assert!(tx_pool_content.pending.contains_key(&transaction_signer));
 
-    // // Assert that the pool content contains the sender of the first pending transaction
-    // assert!(tx_pool_content.pending.contains_key(&first_pending_tx.from));
-
-    // // Check that the first transaction in the pool matches the first pending transaction
-    // assert_eq!(
-    //     *tx_pool_content.pending.get(&first_pending_tx.from).unwrap().get(&first_pending_tx.nonce.to_string()).unwrap(),
-    //     first_pending_tx.into()
-    // );
-
-    // Drop the server handle to shut down the server after the test
-    drop(server_handle);
-}
-
-#[rstest]
-#[awt]
-#[tokio::test(flavor = "multi_thread")]
-async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
-    let (_server_addr, server_handle, _katana) = initial_setup(katana).await;
-
-    // TODO: this needs to be transferred inside the mempool
-    // // Retrieve the first pending transaction from the database
-    // let first_pending_tx = katana
-    //     .eth_provider()
-    //     .database()
-    //     .get_first::<StoredPendingTransaction>()
-    //     .await
-    //     .expect("Failed to get the first pending transaction")
-    //     .unwrap();
-
-    // let tx_pool_content: TxpoolContentFrom =
-    //     request("txpool_contentFrom", server_addr.port(), vec![first_pending_tx.tx.from.to_string()]).await;
-
-    // // Assert that we recovered a single pending transaction
-    // assert_eq!(tx_pool_content.pending.len(), 1);
-
-    // // Assert that no queued transactions are registered
-    // assert!(tx_pool_content.queued.is_empty());
-
-    // // Assert the validity of the recovered pending transaction
-    // assert_eq!(*tx_pool_content.pending.get(&first_pending_tx.nonce.to_string()).unwrap(), first_pending_tx.tx);
+    // Check that the transaction in the pool matches the pending transaction that was inserted
+    assert_eq!(
+        *tx_pool_content
+            .pending
+            .get(&transaction_signer)
+            .unwrap()
+            .get(&transaction_signed.transaction.nonce().to_string())
+            .unwrap()
+            .hash,
+        transaction_signed.hash()
+    );
 
     // Drop the server handle to shut down the server after the test
     drop(server_handle);
@@ -126,72 +106,133 @@ async fn test_txpool_content_from(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_txpool_status(#[future] katana: Katana, _setup: ()) {
-    let (server_addr, server_handle, katana) = initial_setup(katana).await;
+async fn test_txpool_content_from(#[future] katana_empty: Katana, _setup: ()) {
+    let (server_addr, server_handle, katana_empty) = initial_setup(katana_empty).await;
 
-    let _tx_pool_status: TxpoolStatus = request("txpool_status", server_addr.port(), Vec::<String>::new()).await;
+    // Create a sample transaction
+    let (transaction, transaction_signed) = create_sample_transactions(&katana_empty, 1)
+        .await
+        .expect("Failed to create sample transaction")
+        .pop()
+        .expect("Expected at least one transaction");
 
-    // TODO: this needs to be transferred inside the mempool
-    // TODO: this needs to be transferred inside the mempool
-    // let tx_pool_status: TxpoolStatus = request("txpool_status", server_addr.port(), Vec::<String>::new()).await;
+    // Insert the transaction into the mempool
+    let _tx_hash = katana_empty
+        .eth_client
+        .mempool()
+        .add_transaction(TransactionOrigin::Local, transaction)
+        .await
+        .expect("Failed to insert transaction into the mempool");
 
-    // TODO: this needs to be transferred inside the mempool
-    // let tx_pool_status: TxpoolStatus = request("txpool_status", server_addr.port(), Vec::<String>::new()).await;
+    // Recover the signer from the transaction
+    let transaction_signer = transaction_signed.recover_signer().unwrap();
 
-    // // Assert that we recovered the 10 pending transactions
-    // assert_eq!(tx_pool_status.pending, 10);
+    // Fetch the transaction pool content from the sender
+    let tx_pool_content: TxpoolContentFrom =
+        request("txpool_contentFrom", server_addr.port(), vec![transaction_signer.to_string()]).await;
 
-    // // Assert that no queued transactions are registered
-    // assert_eq!(tx_pool_status.queued, 0);
+    // Assert that we recovered a single pending transaction
+    assert_eq!(tx_pool_content.pending.len(), 1);
+
+    // Assert that no queued transactions are registered
+    assert!(tx_pool_content.queued.is_empty());
+
+    // Assert the validity of the recovered pending transaction
+    assert_eq!(
+        *tx_pool_content.pending.get(&transaction_signed.transaction.nonce().to_string()).unwrap().hash,
+        transaction_signed.hash()
+    );
 
     // Drop the server handle to shut down the server after the test
     drop(server_handle);
-    drop(katana);
 }
 
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_txpool_inspect(#[future] katana: Katana, _setup: ()) {
-    let (server_addr, server_handle, _katana) = initial_setup(katana).await;
+async fn test_txpool_status(#[future] katana_empty: Katana, _setup: ()) {
+    let (server_addr, server_handle, katana_empty) = initial_setup(katana_empty).await;
 
-    let _tx_pool_inspect: TxpoolInspect = request("txpool_inspect", server_addr.port(), Vec::<String>::new()).await;
+    // Create a sample transaction
+    let (transaction, _) = create_sample_transactions(&katana_empty, 1)
+        .await
+        .expect("Failed to create sample transaction")
+        .pop()
+        .expect("Expected at least one transaction");
 
-    // TODO: this needs to be transferred inside the mempool
-    // TODO: this needs to be transferred inside the mempool
-    // let tx_pool_inspect: TxpoolInspect = request("txpool_inspect", server_addr.port(), Vec::<String>::new()).await;
+    // Insert the transaction into the mempool
+    let _tx_hash = katana_empty
+        .eth_client
+        .mempool()
+        .add_transaction(TransactionOrigin::Local, transaction)
+        .await
+        .expect("Failed to insert transaction into the mempool");
 
-    // TODO: this needs to be transferred inside the mempool
-    // let tx_pool_inspect: TxpoolInspect = request("txpool_inspect", server_addr.port(), Vec::<String>::new()).await;
+    // Fetch the transaction pool status
+    let tx_pool_status: TxpoolStatus = request("txpool_status", server_addr.port(), Vec::<String>::new()).await;
 
-    // // Assert that we recovered the 10 pending transactions
-    // assert_eq!(tx_pool_inspect.pending.len(), 10);
+    // Assert that we recovered the pending transaction
+    assert_eq!(tx_pool_status.pending, 1);
 
-    // // Assert that no queued transactions are registered
-    // assert!(tx_pool_inspect.queued.is_empty());
+    // Assert that no queued transactions are registered
+    assert_eq!(tx_pool_status.queued, 0);
 
-    // // Retrieve the first pending transaction from the database
-    // let first_pending_tx = katana
-    //     .eth_provider()
-    //     .database()
-    //     .get_first::<StoredPendingTransaction>()
-    //     .await
-    //     .expect("Failed to get the first pending transaction")
-    //     .unwrap();
+    // Drop the server handle to shut down the server after the test
+    drop(server_handle);
+    drop(katana_empty);
+}
 
-    // // Assert that the pool content contains the sender of the first pending transaction
-    // assert!(tx_pool_inspect.pending.contains_key(&first_pending_tx.from));
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_txpool_inspect(#[future] katana_empty: Katana, _setup: ()) {
+    let (server_addr, server_handle, katana_empty) = initial_setup(katana_empty).await;
 
-    // // Check that the first transaction in the pool matches the first pending transaction
-    // assert_eq!(
-    //     *tx_pool_inspect.pending.get(&first_pending_tx.from).unwrap().get(&first_pending_tx.nonce.to_string()).unwrap(),
-    //     TxpoolInspectSummary {
-    //         to: first_pending_tx.to,
-    //         value: first_pending_tx.value,
-    //         gas: first_pending_tx.gas,
-    //         gas_price: first_pending_tx.gas_price.unwrap_or_default(),
-    //     }
-    // );
+    // Create a sample transaction
+    let (transaction, transaction_signed) = create_sample_transactions(&katana_empty, 1)
+        .await
+        .expect("Failed to create sample transaction")
+        .pop()
+        .expect("Expected at least one transaction");
+
+    // Insert the transaction into the mempool
+    let _tx_hash = katana_empty
+        .eth_client
+        .mempool()
+        .add_transaction(TransactionOrigin::Local, transaction)
+        .await
+        .expect("Failed to insert transaction into the mempool");
+
+    // Inspect the transaction pool
+    let tx_pool_inspect: TxpoolInspect = request("txpool_inspect", server_addr.port(), Vec::<String>::new()).await;
+
+    // Assert that we recovered the pending transaction
+    assert_eq!(tx_pool_inspect.pending.len(), 1);
+
+    // Assert that no queued transactions are registered
+    assert!(tx_pool_inspect.queued.is_empty());
+
+    // Recover the signer from the transaction
+    let transaction_signer = transaction_signed.recover_signer().unwrap();
+
+    // Assert that the pool content contains the sender of the first pending transaction
+    assert!(tx_pool_inspect.pending.contains_key(&transaction_signer));
+
+    // Check that the first transaction in the pool matches the first pending transaction
+    assert_eq!(
+        *tx_pool_inspect
+            .pending
+            .get(&transaction_signer)
+            .unwrap()
+            .get(&transaction_signed.transaction.nonce().to_string())
+            .unwrap(),
+        TxpoolInspectSummary {
+            to: transaction_signed.to(),
+            value: transaction_signed.value(),
+            gas: transaction_signed.gas_limit().into(),
+            gas_price: transaction_signed.max_fee_per_gas(),
+        }
+    );
 
     // Drop the server handle to shut down the server after the test
     drop(server_handle);

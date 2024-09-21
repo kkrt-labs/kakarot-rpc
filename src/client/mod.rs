@@ -8,6 +8,7 @@ use crate::{
             database::Database,
             error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError},
             provider::{EthApiResult, EthDataProvider},
+            TxPoolProvider,
         },
         sn_provider::StarknetProvider,
     },
@@ -16,12 +17,14 @@ use alloy_rlp::Decodable;
 use async_trait::async_trait;
 use num_traits::ToPrimitive;
 use reth_chainspec::ChainSpec;
-use reth_primitives::{Bytes, TransactionSigned, TransactionSignedEcRecovered, B256};
+use reth_primitives::{Address, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256};
+use reth_rpc_types::{txpool::TxpoolContent, Transaction};
 use reth_transaction_pool::{
-    blobstore::NoopBlobStore, EthPooledTransaction, PoolConfig, TransactionOrigin, TransactionPool,
+    blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
+    TransactionOrigin, TransactionPool,
 };
 use starknet::{core::types::Felt, providers::Provider};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 #[async_trait]
 pub trait KakarotTransactions {
@@ -107,5 +110,37 @@ where
         let hash = self.pool.add_transaction(TransactionOrigin::Local, pool_transaction).await?;
 
         Ok(hash)
+    }
+}
+
+#[async_trait]
+impl<SP> TxPoolProvider for EthClient<SP>
+where
+    SP: starknet::providers::Provider + Send + Sync,
+{
+    fn content(&self) -> TxpoolContent {
+        #[inline]
+        fn insert<T: PoolTransaction>(tx: &T, content: &mut BTreeMap<Address, BTreeMap<String, Transaction>>) {
+            content.entry(tx.sender()).or_default().insert(
+                tx.nonce().to_string(),
+                reth_rpc_types_compat::transaction::from_recovered(tx.to_recovered_transaction()),
+            );
+        }
+
+        let AllPoolTransactions { pending, queued } = self.pool.all_transactions();
+
+        let mut content = TxpoolContent::default();
+        for pending in pending {
+            insert(&pending.transaction, &mut content.pending);
+        }
+        for queued in queued {
+            insert(&queued.transaction, &mut content.queued);
+        }
+
+        content
+    }
+
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent> {
+        Ok(self.content())
     }
 }
