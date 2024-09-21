@@ -2,15 +2,15 @@ use crate::providers::eth_provider::provider::EthApiResult;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_rpc_types::txpool::TxpoolContent;
+use reth_rpc_types::{txpool::TxpoolContent, Transaction, WithOtherFields};
 
 /// Ethereum provider trait. Used to abstract away the database and the network.
 #[async_trait]
 #[auto_impl(Arc, &)]
 pub trait TxPoolProvider {
     /// Returns a vec of pending pool transactions.
-    fn content(&self) -> TxpoolContent;
+    fn content(&self) -> TxpoolContent<WithOtherFields<Transaction>>;
 
     /// Returns the content of the pending pool.
-    async fn txpool_content(&self) -> EthApiResult<TxpoolContent>;
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>>;
 }

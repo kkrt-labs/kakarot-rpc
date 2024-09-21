@@ -18,7 +18,7 @@ use async_trait::async_trait;
 use num_traits::ToPrimitive;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{Address, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256};
-use reth_rpc_types::{txpool::TxpoolContent, Transaction};
+use reth_rpc_types::{txpool::TxpoolContent, Transaction, WithOtherFields};
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
     TransactionOrigin, TransactionPool,
@@ -118,12 +118,15 @@ impl<SP> TxPoolProvider for EthClient<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    fn content(&self) -> TxpoolContent {
+    fn content(&self) -> TxpoolContent<WithOtherFields<Transaction>> {
         #[inline]
-        fn insert<T: PoolTransaction>(tx: &T, content: &mut BTreeMap<Address, BTreeMap<String, Transaction>>) {
+        fn insert<T: PoolTransaction<Consensus = TransactionSignedEcRecovered>>(
+            tx: &T,
+            content: &mut BTreeMap<Address, BTreeMap<String, WithOtherFields<Transaction>>>,
+        ) {
             content.entry(tx.sender()).or_default().insert(
                 tx.nonce().to_string(),
-                reth_rpc_types_compat::transaction::from_recovered(tx.to_recovered_transaction()),
+                reth_rpc_types_compat::transaction::from_recovered(tx.clone().into_consensus()),
             );
         }
 
@@ -140,7 +143,7 @@ where
         content
     }
 
-    async fn txpool_content(&self) -> EthApiResult<TxpoolContent> {
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>> {
         Ok(self.content())
     }
 }

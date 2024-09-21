@@ -126,7 +126,7 @@ impl<'a> Katana {
         let mut mongo_fuzzer = MongoFuzzer::new(0).await;
         mongo_fuzzer.headers.push(StoredHeader {
             header: Header {
-                hash: Some(B256::random()),
+                hash: B256::random(),
                 total_difficulty: Some(U256::default()),
                 mix_hash: Some(B256::default()),
                 nonce: Some(B64::default()),
@@ -134,7 +134,7 @@ impl<'a> Katana {
                 base_fee_per_gas: Some(0),
                 blob_gas_used: Some(0),
                 excess_blob_gas: Some(0),
-                number: Some(0),
+                number: 0,
                 ..Default::default()
             },
         });

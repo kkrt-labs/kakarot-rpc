@@ -6,10 +6,9 @@ use async_trait::async_trait;
 use mockall::mock;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, U256, U64};
 use reth_rpc_types::{
-    txpool::TxpoolContent, Block, Filter, FilterChanges, Header, SyncStatus, Transaction, TransactionReceipt,
-    TransactionRequest, WithOtherFields,
+    Block, Filter, FilterChanges, Header, SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
+    WithOtherFields,
 };
-use reth_rpc_types::{Filter, FilterChanges, Header, SyncStatus, TransactionReceipt, TransactionRequest};
 
 mock! {
     #[derive(Clone, Debug)]
