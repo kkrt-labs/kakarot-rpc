@@ -55,10 +55,17 @@ impl Arbitrary<'_> for StoredTransaction {
         let primitive_tx = match random_choice {
             0 => reth_primitives::Transaction::Legacy(reth_primitives::transaction::TxLegacy {
                 chain_id: Some(u8::arbitrary(u)?.into()),
+                gas_limit: u64::arbitrary(u)?.into(),
                 ..Arbitrary::arbitrary(u)?
             }),
-            1 => reth_primitives::Transaction::Eip2930(reth_primitives::TxEip2930::arbitrary(u)?),
-            _ => reth_primitives::Transaction::Eip1559(reth_primitives::TxEip1559::arbitrary(u)?),
+            1 => reth_primitives::Transaction::Eip2930(reth_primitives::TxEip2930 {
+                gas_limit: u64::arbitrary(u)?.into(),
+                ..Arbitrary::arbitrary(u)?
+            }),
+            _ => reth_primitives::Transaction::Eip1559(reth_primitives::TxEip1559 {
+                gas_limit: u64::arbitrary(u)?.into(),
+                ..Arbitrary::arbitrary(u)?
+            }),
         };
 
         // Sign the generated transaction with a randomly generated key pair.
@@ -145,20 +152,13 @@ mod tests {
             let transaction = StoredTransaction::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
 
             // Extract the signature from the generated transaction.
-            let signature = transaction.signature.unwrap();
+            let signature = transaction.signature.unwrap().try_into().unwrap();
 
             // Convert the transaction to primitive type.
             let tx = transaction.clone().tx.try_into().unwrap();
 
             // Reconstruct the signed transaction using the extracted `tx` and `signature`.
-            let transaction_signed = reth_primitives::TransactionSigned::from_transaction_and_signature(
-                tx,
-                reth_primitives::Signature {
-                    r: signature.r,
-                    s: signature.s,
-                    odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-                },
-            );
+            let transaction_signed = reth_primitives::TransactionSigned::from_transaction_and_signature(tx, signature);
 
             // Verify that the `from` address in the original transaction matches the recovered signer address
             // from the reconstructed signed transaction. This confirms that the signature is valid.
