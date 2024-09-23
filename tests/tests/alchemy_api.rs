@@ -41,15 +41,9 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
     // Set the amount of tokens to mint
     let amount = U256::from(10_000);
     // Call the mint function of the ERC20 contract
-    eoa.call_evm_contract(
-        &erc20,
-        "mint",
-        &[DynSolValue::Address(to), DynSolValue::Uint(amount, 256)],
-        0,
-        katana.sequencer.account(),
-    )
-    .await
-    .expect("Failed to mint ERC20 tokens");
+    eoa.call_evm_contract(&erc20, "mint", &[DynSolValue::Address(to), DynSolValue::Uint(amount, 256)], 0)
+        .await
+        .expect("Failed to mint ERC20 tokens");
 
     // Then
     let reqwest_client = reqwest::Client::new();
@@ -171,7 +165,6 @@ async fn test_token_allowance(#[future] erc20: (Katana, KakarotEvmContract), _se
         "approve",
         &[DynSolValue::Address(spender_address), DynSolValue::Uint(allowance_amount, 256)],
         0,
-        katana.sequencer.account(),
     )
     .await
     .expect("Failed to approve allowance for ERC20 tokens");

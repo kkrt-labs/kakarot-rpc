@@ -211,9 +211,7 @@ async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup
     let counter_address = counter_address.try_into().expect("Failed to convert EVM address");
 
     // When
-    eoa.call_evm_contract(&counter, "inc", &[], 0, katana.sequencer.account())
-        .await
-        .expect("Failed to increment counter");
+    eoa.call_evm_contract(&counter, "inc", &[], 0).await.expect("Failed to increment counter");
 
     // Then
     let count = eth_provider.storage_at(counter_address, JsonStorageKey::from(U256::from(0)), None).await.unwrap();
@@ -267,9 +265,7 @@ async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract), _setup: ())
     let nonce_before = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
 
     // When
-    eoa.call_evm_contract(&counter, "inc", &[], 0, katana.sequencer.account())
-        .await
-        .expect("Failed to increment counter");
+    eoa.call_evm_contract(&counter, "inc", &[], 0).await.expect("Failed to increment counter");
 
     // Then
     let nonce_after = eth_provider.transaction_count(eoa.evm_address().unwrap(), None).await.unwrap();
@@ -597,10 +593,12 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     let other_eoa_1 = KakarotEOA::new(
         b256!("00000000000000012330000000000000000000000000000000000000000abde1"),
         Arc::new(eth_client.clone()),
+        katana.sequencer.account(),
     );
     let other_eoa_2 = KakarotEOA::new(
         b256!("00000000000000123123456000000000000000000000000000000000000abde2"),
         Arc::new(eth_client),
+        katana.sequencer.account(),
     );
     let chain_id = starknet_provider.chain_id().await.unwrap();
     CHAIN_ID.set(chain_id).expect("Failed to set chain id");
@@ -756,17 +754,16 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
         .expect("failed to send transaction");
 
     // Prepare the relayer
-    let relayer = katana.sequencer.account();
     let relayer_balance = eth_client
         .starknet_provider()
-        .balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest))
+        .balance_at(katana.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
         .await
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
     let nonce = eth_client
         .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), relayer.address())
+        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
         .await
         .unwrap_or_default();
 
@@ -775,7 +772,7 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
     // Relay the transaction
     let _ = LockedRelayer::new(
         current_nonce.lock().await,
-        relayer.address(),
+        katana.eoa.relayer.address(),
         relayer_balance,
         &(*(*eth_client.starknet_provider())),
         eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),

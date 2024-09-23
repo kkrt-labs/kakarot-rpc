@@ -15,10 +15,7 @@ use {
 #[awt]
 pub async fn counter(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContract) {
     let eoa = katana_empty.eoa();
-    let contract = eoa
-        .deploy_evm_contract(Some("Counter"), &[], katana_empty.sequencer.account())
-        .await
-        .expect("Failed to deploy Counter contract");
+    let contract = eoa.deploy_evm_contract(Some("Counter"), &[]).await.expect("Failed to deploy Counter contract");
     (katana_empty, contract)
 }
 
@@ -28,10 +25,7 @@ pub async fn counter(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContr
 #[awt]
 pub async fn contract_empty(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContract) {
     let eoa = katana_empty.eoa();
-    let contract = eoa
-        .deploy_evm_contract(None, &[], katana_empty.sequencer.account())
-        .await
-        .expect("Failed to deploy empty contract");
+    let contract = eoa.deploy_evm_contract(None, &[]).await.expect("Failed to deploy empty contract");
     (katana_empty, contract)
 }
 
@@ -50,7 +44,6 @@ pub async fn erc20(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContrac
                 DynSolValue::String("TT".into()),     // symbol
                 DynSolValue::Uint(U256::from(18), 8), // decimals
             ],
-            katana_empty.sequencer.account(),
         )
         .await
         .expect("Failed to deploy ERC20 contract");
@@ -72,7 +65,6 @@ pub async fn plain_opcodes(#[future] counter: (Katana, KakarotEvmContract)) -> (
             &[
                 DynSolValue::Address(counter_address), // counter address
             ],
-            katana.sequencer.account(),
         )
         .await
         .expect("Failed to deploy PlainOpcodes contract");

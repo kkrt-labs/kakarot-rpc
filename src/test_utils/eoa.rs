@@ -75,15 +75,20 @@ pub trait Eoa<P: Provider + Send + Sync + Clone> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct KakarotEOA<P: Provider + Send + Sync + Clone + 'static> {
     pub private_key: B256,
     pub eth_client: Arc<EthClient<P>>,
+    pub relayer: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 }
 
 impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
-    pub const fn new(private_key: B256, eth_client: Arc<EthClient<P>>) -> Self {
-        Self { private_key, eth_client }
+    pub const fn new(
+        private_key: B256,
+        eth_client: Arc<EthClient<P>>,
+        relayer: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
+    ) -> Self {
+        Self { private_key, eth_client, relayer }
     }
 }
 
@@ -109,7 +114,6 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         &self,
         contract_name: Option<&str>,
         constructor_args: &[DynSolValue],
-        relayer: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     ) -> Result<KakarotEvmContract, eyre::Error> {
         let nonce = self.nonce().await?;
         let nonce: u64 = nonce.try_into()?;
@@ -146,14 +150,17 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let _ = self.send_transaction(tx_signed.clone()).await?;
 
         // Prepare the relayer
-        let relayer_balance =
-            self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
+        let relayer_balance = self
+            .eth_client
+            .starknet_provider()
+            .balance_at(self.relayer.address(), BlockId::Tag(BlockTag::Latest))
+            .await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
         let nonce = self
             .eth_client
             .starknet_provider()
-            .get_nonce(BlockId::Tag(BlockTag::Latest), relayer.address())
+            .get_nonce(BlockId::Tag(BlockTag::Latest), self.relayer.address())
             .await
             .unwrap_or_default();
 
@@ -162,7 +169,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         // Relay the transaction
         let starknet_transaction_hash = LockedRelayer::new(
             current_nonce.lock().await,
-            relayer.address(),
+            self.relayer.address(),
             relayer_balance,
             self.starknet_provider(),
             self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
@@ -210,7 +217,6 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         function: &str,
         args: &[DynSolValue],
         value: u128,
-        relayer: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     ) -> Result<Transaction, eyre::Error> {
         let nonce = self.nonce().await?.try_into()?;
         let chain_id = self.eth_client.eth_provider().chain_id().await?.unwrap_or_default().to();
@@ -228,14 +234,17 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let _ = self.send_transaction(tx_signed.clone()).await?;
 
         // Prepare the relayer
-        let relayer_balance =
-            self.eth_client.starknet_provider().balance_at(relayer.address(), BlockId::Tag(BlockTag::Latest)).await?;
+        let relayer_balance = self
+            .eth_client
+            .starknet_provider()
+            .balance_at(self.relayer.address(), BlockId::Tag(BlockTag::Latest))
+            .await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
         let nonce = self
             .eth_client
             .starknet_provider()
-            .get_nonce(BlockId::Tag(BlockTag::Latest), relayer.address())
+            .get_nonce(BlockId::Tag(BlockTag::Latest), self.relayer.address())
             .await
             .unwrap_or_default();
 
@@ -244,7 +253,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         // Relay the transaction
         let starknet_transaction_hash = LockedRelayer::new(
             current_nonce.lock().await,
-            relayer.address(),
+            self.relayer.address(),
             relayer_balance,
             self.starknet_provider(),
             self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
