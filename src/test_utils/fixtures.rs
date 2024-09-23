@@ -13,28 +13,28 @@ use {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
-pub async fn counter(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
-    let eoa = katana.eoa();
+pub async fn counter(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana_empty.eoa();
     let contract = eoa.deploy_evm_contract(Some("Counter"), &[]).await.expect("Failed to deploy Counter contract");
-    (katana, contract)
+    (katana_empty, contract)
 }
 
 /// This fixture deploys an empty contract on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
-pub async fn contract_empty(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
-    let eoa = katana.eoa();
+pub async fn contract_empty(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana_empty.eoa();
     let contract = eoa.deploy_evm_contract(None, &[]).await.expect("Failed to deploy empty contract");
-    (katana, contract)
+    (katana_empty, contract)
 }
 
 /// This fixture deploys an ERC20 contract on Katana.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 #[fixture]
 #[awt]
-pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
-    let eoa = katana.eoa();
+pub async fn erc20(#[future] katana_empty: Katana) -> (Katana, KakarotEvmContract) {
+    let eoa = katana_empty.eoa();
 
     let contract = eoa
         .deploy_evm_contract(
@@ -47,7 +47,7 @@ pub async fn erc20(#[future] katana: Katana) -> (Katana, KakarotEvmContract) {
         )
         .await
         .expect("Failed to deploy ERC20 contract");
-    (katana, contract)
+    (katana_empty, contract)
 }
 
 /// This fixture deploys the plain opcodes contract on Katana.

@@ -4,16 +4,18 @@ use alloy_primitives::{address, bytes};
 use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
     client::KakarotTransactions,
+    into_via_try_wrapper,
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         provider::EthereumProvider,
+        starknet::relayer::LockedRelayer,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
     test_utils::{
         eoa::Eoa,
         evm_contract::{EvmContract, KakarotEvmContract},
-        fixtures::{contract_empty, counter, katana, plain_opcodes, setup},
+        fixtures::{contract_empty, counter, katana, katana_empty, plain_opcodes, setup},
         katana::Katana,
         tx_waiter::watch_tx,
     },
@@ -28,8 +30,13 @@ use reth_rpc_types::{
 };
 use reth_transaction_pool::TransactionPool;
 use rstest::*;
-use starknet::core::types::{BlockTag, Felt};
+use starknet::{
+    accounts::Account,
+    core::types::{BlockId, BlockTag, Felt},
+    providers::Provider,
+};
 use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 
 #[rstest]
 #[awt]
@@ -248,7 +255,6 @@ async fn test_nonce_contract_account(#[future] counter: (Katana, KakarotEvmContr
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana: Katana = counter.0;
@@ -477,7 +483,6 @@ async fn test_get_logs_block_hash(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_get_code_empty(#[future] contract_empty: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana: Katana = contract_empty.0;
@@ -511,7 +516,6 @@ async fn test_get_code_no_contract(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_estimate_gas(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let eoa = counter.0.eoa();
@@ -589,10 +593,12 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     let other_eoa_1 = KakarotEOA::new(
         b256!("00000000000000012330000000000000000000000000000000000000000abde1"),
         Arc::new(eth_client.clone()),
+        katana.sequencer.account(),
     );
     let other_eoa_2 = KakarotEOA::new(
         b256!("00000000000000123123456000000000000000000000000000000000000abde2"),
         Arc::new(eth_client),
+        katana.sequencer.account(),
     );
     let chain_id = starknet_provider.chain_id().await.unwrap();
     CHAIN_ID.set(chain_id).expect("Failed to set chain id");
@@ -711,9 +717,9 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
-async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
+async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
     // Given
+    let katana = katana_empty;
     let eth_provider = katana.eth_provider();
     let eth_client = katana.eth_client();
     let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
@@ -746,6 +752,34 @@ async fn test_send_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
+
+    // Prepare the relayer
+    let relayer_balance = eth_client
+        .starknet_provider()
+        .balance_at(katana.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
+        .await
+        .expect("Failed to get relayer balance");
+    let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
+
+    let nonce = eth_client
+        .starknet_provider()
+        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
+        .await
+        .unwrap_or_default();
+
+    let current_nonce = Mutex::new(nonce);
+
+    // Relay the transaction
+    let _ = LockedRelayer::new(
+        current_nonce.lock().await,
+        katana.eoa.relayer.address(),
+        relayer_balance,
+        &(*(*eth_client.starknet_provider())),
+        eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+    )
+    .relay_transaction(&transaction_signed)
+    .await
+    .expect("Failed to relay transaction");
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
