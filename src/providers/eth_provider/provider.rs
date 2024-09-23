@@ -330,19 +330,6 @@ where
             let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
             let current_nonce = *nonce;
 
-            // let tx = execution
-            //     .nonce(current_nonce)
-            //     .max_fee(u64::MAX.into())
-            //     .prepared()
-            //     .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?
-            //     .get_invoke_request(false)
-            //     .await
-            //     .map_err(|_| SignatureError::SigningFailure)?;
-            // self.starknet_provider
-            //     .add_invoke_transaction(BroadcastedInvokeTransaction::V1(tx))
-            //     .await
-            //     .map_err(KakarotError::from)?;
-
             let prepared_execution = execution
                 .nonce(current_nonce)
                 .max_fee(u64::MAX.into())
