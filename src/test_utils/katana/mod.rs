@@ -143,7 +143,9 @@ impl<'a> Katana {
         let database = mongo_fuzzer.finalize().await;
 
         // Initialize the EthClient
-        let eth_client = EthClient::try_new(starknet_provider, database).await.expect("failed to start eth client");
+        let eth_client = EthClient::try_new(starknet_provider, Default::default(), database)
+            .await
+            .expect("failed to start eth client");
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
@@ -187,7 +189,9 @@ impl<'a> Katana {
         let database = mongo_fuzzer.finalize().await;
 
         // Initialize the EthClient
-        let eth_client = EthClient::try_new(starknet_provider, database).await.expect("failed to start eth client");
+        let eth_client = EthClient::try_new(starknet_provider, Default::default(), database)
+            .await
+            .expect("failed to start eth client");
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());

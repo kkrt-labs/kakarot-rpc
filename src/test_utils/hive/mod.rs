@@ -81,7 +81,8 @@ impl HiveGenesisConfig {
                 let storage: Vec<(U256, U256)> = storage.into_iter().collect();
                 let nonce = if code.is_empty() && storage.is_empty() { U256::ZERO } else { U256::from(1u8) };
 
-                let kakarot_account = KakarotAccount::new(&address, Account { code, storage, nonce, ..Default::default())?;
+                let kakarot_account =
+                    KakarotAccount::new(&address, Account { code, nonce, storage, ..Default::default() })?;
 
                 let mut kakarot_account_storage: Vec<(Felt, Felt)> =
                     kakarot_account.storage().iter().map(|(k, v)| (*k, *v)).collect();
