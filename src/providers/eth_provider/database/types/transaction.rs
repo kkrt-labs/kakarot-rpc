@@ -113,48 +113,6 @@ impl Arbitrary<'_> for StoredTransaction {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
-pub struct StoredPendingTransaction {
-    /// Transaction object
-    #[serde(deserialize_with = "crate::providers::eth_provider::database::types::serde::deserialize_intermediate")]
-    pub tx: Transaction,
-    /// Number of retries
-    pub retries: u8,
-}
-
-impl StoredPendingTransaction {
-    pub const fn new(tx: Transaction, retries: u8) -> Self {
-        Self { tx, retries }
-    }
-}
-
-#[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-impl Arbitrary<'_> for StoredPendingTransaction {
-    fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
-        Ok(Self { tx: StoredTransaction::arbitrary(u)?.into(), retries: u8::arbitrary(u)? })
-    }
-}
-
-impl From<StoredPendingTransaction> for Transaction {
-    fn from(tx: StoredPendingTransaction) -> Self {
-        tx.tx
-    }
-}
-
-impl From<&StoredPendingTransaction> for Transaction {
-    fn from(tx: &StoredPendingTransaction) -> Self {
-        tx.tx.clone()
-    }
-}
-
-impl Deref for StoredPendingTransaction {
-    type Target = Transaction;
-
-    fn deref(&self) -> &Self::Target {
-        &self.tx
-    }
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Hash {

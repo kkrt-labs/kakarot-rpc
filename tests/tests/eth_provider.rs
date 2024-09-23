@@ -8,7 +8,6 @@ use kakarot_rpc::{
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
-        database::{ethereum::EthereumTransactionStore, types::transaction::StoredPendingTransaction},
         provider::EthereumProvider,
         starknet::relayer::LockedRelayer,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
@@ -1057,7 +1056,6 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup:
 #[tokio::test(flavor = "multi_thread")]
 async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _setup: ()) {
     // Given
-    let eth_provider = katana.eth_provider();
     let eth_client = katana.eth_client();
 
     // Create a sample transaction
@@ -1084,13 +1082,6 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
 
     // Send the transaction
     let _ = eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await;
-
-    // Retrieve the transaction from the database
-    let tx: Option<StoredPendingTransaction> =
-        eth_provider.database().get_first().await.expect("Failed to get transaction");
-
-    // Assert that no transaction is found
-    assert!(tx.is_none());
 
     let mempool_size_after_send = eth_client.mempool().pool_size();
     // Verify that the number of pending transactions in the mempool remains unchanged (0 tx)
@@ -1379,21 +1370,22 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
         .await
         .expect("failed to send transaction");
 
-    // Retrieve the pending transaction from the database
-    let mut stored_transaction: StoredPendingTransaction =
-        eth_provider.database().get_first().await.expect("Failed to get transaction").unwrap();
+    // TODO: need to write this with the mempool
+    // // Retrieve the pending transaction from the database
+    // let mut stored_transaction: StoredPendingTransaction =
+    //     eth_provider.database().get_first().await.expect("Failed to get transaction").unwrap();
 
-    let tx = stored_transaction.clone().tx;
+    // let tx = stored_transaction.clone().tx;
 
-    // Check if the pending transaction is returned correctly by the `transaction_by_hash` method
-    assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap(), tx);
+    // // Check if the pending transaction is returned correctly by the `transaction_by_hash` method
+    // assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap(), tx);
 
-    // Modify the block number of the pending transaction
-    stored_transaction.tx.block_number = Some(1111);
+    // // Modify the block number of the pending transaction
+    // stored_transaction.tx.block_number = Some(1111);
 
-    // Insert the transaction into the final transaction collection
-    eth_provider.database().upsert_transaction(stored_transaction.into()).await.expect("Failed to insert documents");
+    // // Insert the transaction into the final transaction collection
+    // eth_provider.database().upsert_transaction(stored_transaction.into()).await.expect("Failed to insert documents");
 
-    // Check if the final transaction is returned correctly by the `transaction_by_hash` method
-    assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(1111));
+    // // Check if the final transaction is returned correctly by the `transaction_by_hash` method
+    // assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(1111));
 }

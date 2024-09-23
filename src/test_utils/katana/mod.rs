@@ -268,17 +268,6 @@ impl<'a> Katana {
             .expect("Failed to insert logs into the database");
     }
 
-    /// Adds pending transactions to the database.
-    pub async fn add_pending_transactions_to_database(&self, txs: Vec<Transaction>) {
-        let provider = self.eth_provider();
-        let database = provider.database();
-
-        // Add the transactions to the database.
-        for tx in txs {
-            database.upsert_pending_transaction(tx, 0).await.expect("Failed to update pending transaction in database");
-        }
-    }
-
     /// Adds transactions to the database along with a corresponding header.
     pub async fn add_transactions_with_header_to_database(&self, txs: Vec<Transaction>, header: Header) {
         let provider = self.eth_provider();

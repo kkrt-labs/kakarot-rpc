@@ -1,10 +1,6 @@
 use super::{
     constant::HASH_HEX_STRING_LEN,
-    database::{
-        filter::EthDatabaseFilterBuilder,
-        types::transaction::{StoredPendingTransaction, StoredTransaction},
-        CollectionName,
-    },
+    database::{filter::EthDatabaseFilterBuilder, types::transaction::StoredTransaction, CollectionName},
     error::ExecutionError,
     starknet::kakarot_core::{account_contract::AccountContractReader, starknet_address},
     utils::{contract_not_found, entrypoint_not_found},
@@ -54,11 +50,13 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<reth_rpc_types::Transaction>> {
+        // TODO: modify this for the tests to pass because now we don't have a pending transactions collection anymore.
+        // TODO: So we need to remove the unionWith part and we need to search inside the final transactions collection + inside the mempool.
         let pipeline = vec![
             doc! {
                 // Union with pending transactions with only specified hash
                 "$unionWith": {
-                    "coll": StoredPendingTransaction::collection_name(),
+                    "coll": StoredTransaction::collection_name(),
                     "pipeline": [
                         {
                             "$match": {
