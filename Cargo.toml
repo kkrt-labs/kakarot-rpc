@@ -203,13 +203,12 @@ testing = [
   "tokio-stream",
   "tokio-util",
   "walkdir",
-]
-hive = [
   "starknet_api",
   "revm-interpreter",
   "revm-primitives",
   "starknet-crypto",
 ]
+hive = []
 arbitrary = ["rand", "dep:arbitrary"]
 
 [[bin]]
