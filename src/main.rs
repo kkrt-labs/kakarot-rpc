@@ -8,6 +8,7 @@ use kakarot_rpc::{
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
+use reth_transaction_pool::PoolConfig;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{env::var, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
@@ -47,7 +48,20 @@ async fn main() -> Result<()> {
     // Setup the eth provider
     let starknet_provider = Arc::new(starknet_provider);
 
-    let eth_client = EthClient::try_new(starknet_provider, db.clone()).await.expect("failed to start ethereum client");
+    // Get the pool config
+    let config = {
+        #[cfg(feature = "hive")]
+        {
+            PoolConfig { minimal_protocol_basefee: 0, ..Default::default() }
+        }
+        #[cfg(not(feature = "hive"))]
+        {
+            PoolConfig::default()
+        }
+    };
+
+    let eth_client =
+        EthClient::try_new(starknet_provider, config, db.clone()).await.expect("failed to start ethereum client");
 
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;

@@ -5,7 +5,7 @@ use clap::Parser;
 use kakarot_rpc::{
     into_via_try_wrapper,
     providers::{
-        eth_provider::{constant::{CHAIN_ID, RPC_CONFIG}, starknet::relayer::LockedRelayer},
+        eth_provider::{constant::CHAIN_ID, starknet::relayer::LockedRelayer},
         sn_provider::StarknetProvider,
     },
 };
@@ -71,15 +71,21 @@ async fn main() -> eyre::Result<()> {
 
     // Set the chain id
     let chain_id = starknet_provider.chain_id().await?;
-    let chain_id: u64 = (Felt::from(u64::MAX).to_bigint() & chain_id.to_bigint()).try_into()?;
-    let _ = CHAIN_ID.get_or_init(|| Felt::from(chain_id));
+    let chain_id_mod: u64 = (Felt::from(u64::MAX).to_bigint() & chain_id.to_bigint()).try_into()?;
+    let _ = CHAIN_ID.get_or_init(|| Felt::from(chain_id_mod));
 
     // Prepare the relayer
     let relayer_balance = starknet_provider.balance_at(args.relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
     let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
     let current_nonce = Mutex::new(Felt::ZERO);
-    let mut relayer = LockedRelayer::new(current_nonce.lock().await, args.relayer_address, relayer_balance);
+    let mut relayer = LockedRelayer::new(
+        current_nonce.lock().await,
+        args.relayer_address,
+        relayer_balance,
+        JsonRpcClient::new(HttpTransport::new(Url::from_str(STARKNET_RPC_URL)?)),
+        chain_id,
+    );
 
     // Read the rlp file
     let mut file = File::open(args.chain_path).await?;
@@ -98,20 +104,6 @@ async fn main() -> eyre::Result<()> {
         let block = block_res?;
         bodies.push(block.into());
     }
-
-    let provider = JsonRpcClient::new(HttpTransport::new(Url::from_str(&std::env::var("STARKNET_NETWORK")?)?));
-    let starknet_provider = StarknetProvider::new(provider);
-    let relayer_balance = starknet_provider.balance_at(relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
-    let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
-
-    let current_nonce = Mutex::new(Felt::ZERO);
-    let mut relayer = LockedRelayer::new(
-        current_nonce.lock().await,
-        relayer_address,
-        relayer_balance,
-        JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
-        starknet_provider.chain_id().await.expect("failed to fetch chain id"),
-    );
 
     for (block_number, body) in bodies.into_iter().enumerate() {
         while starknet_provider.block_number().await? < block_number as u64 {
