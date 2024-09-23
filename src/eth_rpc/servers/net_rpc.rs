@@ -1,7 +1,6 @@
 use crate::{eth_rpc::api::net_api::NetApiServer, providers::eth_provider::provider::EthereumProvider};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::U64;
-use reth_rpc_types::PeerCount;
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]
@@ -21,9 +20,9 @@ impl<P: EthereumProvider + Send + Sync + 'static> NetApiServer for NetRpc<P> {
         Ok(self.eth_provider.chain_id().await?.unwrap_or_default())
     }
 
-    fn peer_count(&self) -> Result<PeerCount> {
+    fn peer_count(&self) -> Result<U64> {
         // Kakarot RPC currently does not have peers connected to node
-        Ok(PeerCount::Number(0))
+        Ok(U64::ZERO)
     }
 
     fn listening(&self) -> Result<bool> {

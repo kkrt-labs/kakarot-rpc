@@ -3,15 +3,19 @@ use crate::providers::eth_provider::provider::EthApiResult;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use reth_primitives::Address;
-use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
+use reth_rpc_types::{
+    txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus},
+    Transaction, WithOtherFields,
+};
 
 #[async_trait]
 #[auto_impl(Arc, &)]
 pub trait PoolProvider {
     async fn txpool_status(&self) -> EthApiResult<TxpoolStatus>;
     async fn txpool_inspect(&self) -> EthApiResult<TxpoolInspect>;
-    async fn txpool_content_from(&self, from: Address) -> EthApiResult<TxpoolContentFrom>;
-    async fn txpool_content(&self) -> EthApiResult<TxpoolContent>;
+    async fn txpool_content_from(&self, from: Address)
+        -> EthApiResult<TxpoolContentFrom<WithOtherFields<Transaction>>>;
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>>;
 }
 
 #[derive(Debug, Clone)]
@@ -70,11 +74,14 @@ impl<P: TxPoolProvider + Send + Sync + 'static> PoolProvider for PoolDataProvide
         Ok(inspect)
     }
 
-    async fn txpool_content_from(&self, from: Address) -> EthApiResult<TxpoolContentFrom> {
+    async fn txpool_content_from(
+        &self,
+        from: Address,
+    ) -> EthApiResult<TxpoolContentFrom<WithOtherFields<Transaction>>> {
         Ok(self.eth_provider.txpool_content().await?.remove_from(&from))
     }
 
-    async fn txpool_content(&self) -> EthApiResult<TxpoolContent> {
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>> {
         Ok(self.eth_provider.txpool_content().await?)
     }
 }

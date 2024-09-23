@@ -60,7 +60,7 @@ where
         let eoa_address = starknet_address(eoa_address);
 
         // Construct the call
-        let call = starknet::accounts::Call { to: eoa_address, selector: *EXECUTE_FROM_OUTSIDE, calldata };
+        let call = starknet::core::types::Call { to: eoa_address, selector: *EXECUTE_FROM_OUTSIDE, calldata };
         let mut execution = ExecutionV1::new(vec![call], &self.account);
         execution = execution.nonce(*self.nonce);
 

@@ -28,12 +28,12 @@ where
         let span = tracing::span!(tracing::Level::INFO, "sn::syncing");
         Ok(match self.starknet_provider_inner().syncing().instrument(span).await.map_err(KakarotError::from)? {
             SyncStatusType::NotSyncing => SyncStatus::None,
-            SyncStatusType::Syncing(data) => SyncStatus::Info(SyncInfo {
+            SyncStatusType::Syncing(data) => SyncStatus::Info(Box::new(SyncInfo {
                 starting_block: U256::from(data.starting_block_num),
                 current_block: U256::from(data.current_block_num),
                 highest_block: U256::from(data.highest_block_num),
                 ..Default::default()
-            }),
+            })),
         })
     }
 

@@ -49,9 +49,9 @@ async fn test_mempool_add_transaction(#[future] katana: Katana, _setup: ()) {
 
     // get_transactions_by_sender_and_nonce test
     // Get transactions by sender address and nonce
-    let sender_transactions = eth_client.mempool().get_transactions_by_sender_and_nonce(address, 0);
+    let sender_transaction = eth_client.mempool().get_transaction_by_sender_and_nonce(address, 0);
     // Check if the returned transaction hash matches
-    assert_eq!(*sender_transactions.unwrap().hash(), transaction_signed.hash());
+    assert_eq!(*sender_transaction.unwrap().hash(), transaction_signed.hash());
 
     // get_transactions_by_origin function test
     // Get transactions by origin

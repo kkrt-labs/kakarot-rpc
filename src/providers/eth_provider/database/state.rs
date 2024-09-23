@@ -103,8 +103,7 @@ impl<P: EthereumProvider + Send + Sync> DatabaseRef for EthDatabase<P> {
                     .await?
                     .ok_or(EthApiError::UnknownBlock(BlockHashOrNumber::Number(block_number)))?
                     .header
-                    .hash
-                    .unwrap_or_default();
+                    .hash;
                 Result::<_, EthApiError>::Ok(hash)
             })?;
 

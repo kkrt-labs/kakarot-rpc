@@ -2,7 +2,7 @@ use super::eoa::{TX_GAS_LIMIT, TX_GAS_PRICE};
 use crate::{models::felt::Felt252Wrapper, root_project_path};
 use alloy_dyn_abi::{DynSolValue, JsonAbiExt};
 use alloy_json_abi::ContractObject;
-use foundry_config::{find_project_root_path, load_config};
+use foundry_config::{find_project_root, load_config};
 use reth_primitives::{Transaction, TxEip1559, TxKind, TxLegacy, U256};
 use starknet::core::types::Felt;
 use std::{fs, path::Path};

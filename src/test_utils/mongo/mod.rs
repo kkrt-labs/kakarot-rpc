@@ -152,7 +152,7 @@ impl MongoFuzzer {
 
     /// Gets the highest block number in the transactions collection.
     pub fn max_block_number(&self) -> u64 {
-        self.headers.iter().filter_map(|header| header.number).max().unwrap_or_default()
+        self.headers.iter().map(|header| header.number).max().unwrap_or_default()
     }
 
     /// Adds random transactions to the collection of transactions.
@@ -192,7 +192,7 @@ impl MongoFuzzer {
         ))
         .unwrap();
 
-        header_with_base_fee.header.number = Some(self.max_block_number() + 1);
+        header_with_base_fee.header.number = self.max_block_number() + 1;
         header_with_base_fee.header.base_fee_per_gas = Some(0);
 
         self.headers.push(header_with_base_fee);
@@ -224,6 +224,7 @@ impl MongoFuzzer {
             Ok(TxType::Eip2930) => reth_rpc_types::ReceiptEnvelope::Eip2930(modified_logs),
             Ok(TxType::Eip1559) => reth_rpc_types::ReceiptEnvelope::Eip1559(modified_logs),
             Ok(TxType::Eip4844) => reth_rpc_types::ReceiptEnvelope::Eip4844(modified_logs),
+            Ok(TxType::Eip7702) => reth_rpc_types::ReceiptEnvelope::Eip7702(modified_logs),
             Err(_) => unreachable!(),
         };
         receipt
@@ -235,8 +236,8 @@ impl MongoFuzzer {
         let mut unstructured = arbitrary::Unstructured::new(&bytes);
         let mut header = StoredHeader::arbitrary(&mut unstructured).unwrap();
 
-        header.header.hash = transaction.block_hash;
-        header.header.number = transaction.block_number;
+        header.header.hash = transaction.block_hash.unwrap();
+        header.header.number = transaction.block_number.unwrap();
         header
     }
 

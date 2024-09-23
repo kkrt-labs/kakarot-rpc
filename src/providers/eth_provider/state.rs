@@ -18,17 +18,15 @@ use num_traits::cast::ToPrimitive;
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::ConfigureEvm;
 use reth_primitives::{Address, BlockId, Bytes, B256, U256};
-use reth_revm::{
-    db::CacheDB,
-    primitives::{BlockEnv, CfgEnv, CfgEnvWithHandlerCfg, HandlerCfg, SpecId},
-};
-use reth_rpc_eth_types::{error::ensure_success, revm_utils::prepare_call_env};
+use reth_revm::db::CacheDB;
+use reth_rpc_eth_types::error::ensure_success;
 use reth_rpc_types::{
     serde_helpers::JsonStorageKey,
     state::{EvmOverrides, StateOverride},
-    BlockOverrides, Header, TransactionRequest,
+    BlockOverrides, TransactionRequest,
 };
 use starknet::core::utils::get_storage_var_address;
+use std::sync::Arc;
 use tracing::Instrument;
 
 #[async_trait]
@@ -129,44 +127,46 @@ where
 
         // Check if either state_overrides or block_overrides is present.
         if evm_overrides.has_state() || evm_overrides.has_block() {
-            // Create the configuration environment with the chain ID.
-            let cfg_env = CfgEnv::default().with_chain_id(self.chain_id().await?.unwrap_or_default().to());
+            // // Create the configuration environment with the chain ID.
+            // let cfg_env = CfgEnv::default().with_chain_id(self.chain_id().await?.unwrap_or_default().to());
 
-            // Retrieve the block header details.
-            let Header { number, timestamp, miner, base_fee_per_gas, difficulty, .. } =
-                self.header(&block_id.unwrap_or_default()).await?.unwrap_or_default();
+            // // Retrieve the block header details.
+            // let Header { number, timestamp, miner, base_fee_per_gas, difficulty, .. } =
+            //     self.header(&block_id.unwrap_or_default()).await?.unwrap_or_default();
 
-            // Create the block environment with the retrieved header details and transaction request.
-            let block_env = BlockEnv {
-                number: U256::from(number.unwrap_or_default()),
-                timestamp: U256::from(timestamp),
-                gas_limit: U256::from(request.gas.unwrap_or_default()),
-                coinbase: miner,
-                basefee: U256::from(base_fee_per_gas.unwrap_or_default()),
-                prevrandao: Some(B256::from_slice(&difficulty.to_be_bytes::<32>()[..])),
-                ..Default::default()
-            };
+            // // Create the block environment with the retrieved header details and transaction request.
+            // let block_env = BlockEnv {
+            //     number: U256::from(number),
+            //     timestamp: U256::from(timestamp),
+            //     gas_limit: U256::from(request.gas.unwrap_or_default()),
+            //     coinbase: miner,
+            //     basefee: U256::from(base_fee_per_gas.unwrap_or_default()),
+            //     prevrandao: Some(B256::from_slice(&difficulty.to_be_bytes::<32>()[..])),
+            //     ..Default::default()
+            // };
 
-            // Combine the configuration environment with the handler configuration.
-            let cfg_env_with_handler_cfg =
-                CfgEnvWithHandlerCfg { cfg_env, handler_cfg: HandlerCfg::new(SpecId::CANCUN) };
+            // // Combine the configuration environment with the handler configuration.
+            // let cfg_env_with_handler_cfg =
+            //     CfgEnvWithHandlerCfg { cfg_env, handler_cfg: HandlerCfg::new(SpecId::CANCUN) };
 
             // Create a snapshot of the Ethereum database using the block ID.
-            let mut db = EthCacheDatabase(CacheDB::new(EthDatabase::new(self, block_id.unwrap_or_default())));
+            let db = EthCacheDatabase(CacheDB::new(EthDatabase::new(self, block_id.unwrap_or_default())));
 
-            // Prepare the call environment with the transaction request, gas limit, and overrides.
-            let env = prepare_call_env(
-                cfg_env_with_handler_cfg,
-                block_env,
-                request.clone(),
-                request.gas.unwrap_or_default().try_into().expect("Gas limit is too large"),
-                &mut db.0,
-                evm_overrides,
-            )?;
+            // TODO: no more prepare_call_env function (was put in trait, to be discussed)
+            // // Prepare the call environment with the transaction request, gas limit, and overrides.
+            // let env = prepare_call_env(
+            //     cfg_env_with_handler_cfg,
+            //     block_env,
+            //     request.clone(),
+            //     request.gas.unwrap_or_default().try_into().expect("Gas limit is too large"),
+            //     &mut db.0,
+            //     evm_overrides,
+            // )?;
 
             // Execute the transaction using the configured EVM asynchronously.
-            let res = EthEvmConfig::default()
-                .evm_with_env(db.0, env)
+            let res = EthEvmConfig::new(Arc::new(Default::default()))
+            // TODO: We should not use default here, to be modified to activate the correct EVM config
+                .evm_with_env(db.0, Default::default())
                 .transact()
                 .map_err(|err| <TransactionError as Into<EthApiError>>::into(TransactionError::Call(err.into())))?;
 

@@ -5,7 +5,7 @@ use super::{
     },
     katana::genesis::{KatanaGenesisBuilder, Loaded},
 };
-use ef_testing::evm_sequencer::account::KakarotAccount;
+use account::{Account, KakarotAccount};
 use katana_primitives::{
     contract::ContractAddress,
     genesis::json::{ClassNameOrHash, GenesisContractJson, GenesisJson},
@@ -14,6 +14,8 @@ use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::{types::Felt, utils::get_storage_var_address};
 use std::collections::HashMap;
+
+mod account;
 
 /// Types from <https://github.com/ethereum/go-ethereum/blob/master/core/genesis.go#L49C1-L58>
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -78,10 +80,10 @@ impl HiveGenesisConfig {
                 let code = info.code.unwrap_or_default();
                 let storage = info.storage.unwrap_or_default();
                 let storage: Vec<(U256, U256)> = storage.into_iter().collect();
-                let kakarot_account = KakarotAccount::new(&address, &code, U256::ZERO, &storage)?;
+                let kakarot_account = KakarotAccount::new(&address, Account { code, storage, ..Default::default() })?;
 
                 let mut kakarot_account_storage: Vec<(Felt, Felt)> =
-                    kakarot_account.storage().iter().map(|(k, v)| (*k.0.key(), *v)).collect();
+                    kakarot_account.storage().iter().map(|(k, v)| (*k, *v)).collect();
 
                 // Add the implementation to the storage.
                 let implementation_key = get_storage_var_address(ACCOUNT_IMPLEMENTATION, &[])?;

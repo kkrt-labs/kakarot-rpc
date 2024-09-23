@@ -17,28 +17,28 @@ use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, B256, U256};
-use reth_rpc_types::Index;
+use reth_rpc_types::{Index, Transaction, WithOtherFields};
 use tracing::Instrument;
 
 #[async_trait]
 #[auto_impl(Arc, &)]
 pub trait TransactionProvider: ChainProvider {
     /// Returns the transaction by hash.
-    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
+    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
 
     /// Returns the transaction by block hash and index.
     async fn transaction_by_block_hash_and_index(
         &self,
         hash: B256,
         index: Index,
-    ) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
+    ) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
 
     /// Returns the transaction by block number and index.
     async fn transaction_by_block_number_and_index(
         &self,
         number_or_tag: BlockNumberOrTag,
         index: Index,
-    ) -> EthApiResult<Option<reth_rpc_types::Transaction>>;
+    ) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
 
     /// Returns the nonce for the address at the given block.
     async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
@@ -49,7 +49,7 @@ impl<SP> TransactionProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<reth_rpc_types::Transaction>> {
+    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>> {
         // TODO: modify this for the tests to pass because now we don't have a pending transactions collection anymore.
         // TODO: So we need to remove the unionWith part and we need to search inside the final transactions collection + inside the mempool.
         let pipeline = vec![
@@ -89,7 +89,7 @@ where
         &self,
         hash: B256,
         index: Index,
-    ) -> EthApiResult<Option<reth_rpc_types::Transaction>> {
+    ) -> EthApiResult<Option<WithOtherFields<Transaction>>> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
             .with_block_hash(&hash)
             .with_tx_index(&index)
@@ -101,7 +101,7 @@ where
         &self,
         number_or_tag: BlockNumberOrTag,
         index: Index,
-    ) -> EthApiResult<Option<reth_rpc_types::Transaction>> {
+    ) -> EthApiResult<Option<WithOtherFields<Transaction>>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
             .with_block_number(block_number)

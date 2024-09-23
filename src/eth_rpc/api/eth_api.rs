@@ -1,9 +1,9 @@
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
 use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
 use reth_rpc_types::{
-    serde_helpers::JsonStorageKey, state::StateOverride, AccessListWithGasUsed, BlockOverrides,
-    EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, RichBlock, SyncStatus,
-    Transaction as EthTransaction, TransactionReceipt, TransactionRequest, Work,
+    serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, Block, BlockOverrides,
+    EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, SyncStatus, Transaction as EthTransaction,
+    TransactionReceipt, TransactionRequest, WithOtherFields, Work,
 };
 
 /// Ethereum JSON-RPC API Trait
@@ -33,11 +33,19 @@ pub trait EthApi {
 
     /// Returns information about a block by hash.
     #[method(name = "getBlockByHash")]
-    async fn block_by_hash(&self, hash: B256, full: bool) -> Result<Option<RichBlock>>;
+    async fn block_by_hash(
+        &self,
+        hash: B256,
+        full: bool,
+    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
 
     /// Returns information about a block by number.
     #[method(name = "getBlockByNumber")]
-    async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> Result<Option<RichBlock>>;
+    async fn block_by_number(
+        &self,
+        number: BlockNumberOrTag,
+        full: bool,
+    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
 
     /// Returns the number of transactions in a block from a block matching the given block hash.
     #[method(name = "getBlockTransactionCountByHash")]
@@ -57,7 +65,11 @@ pub trait EthApi {
 
     /// Returns an uncle block of the given block and index.
     #[method(name = "getUncleByBlockHashAndIndex")]
-    async fn uncle_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<RichBlock>>;
+    async fn uncle_by_block_hash_and_index(
+        &self,
+        hash: B256,
+        index: Index,
+    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
 
     /// Returns an uncle block of the given block and index.
     #[method(name = "getUncleByBlockNumberAndIndex")]
@@ -65,15 +77,19 @@ pub trait EthApi {
         &self,
         number: BlockNumberOrTag,
         index: Index,
-    ) -> Result<Option<RichBlock>>;
+    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
 
     /// Returns the information about a transaction requested by transaction hash.
     #[method(name = "getTransactionByHash")]
-    async fn transaction_by_hash(&self, hash: B256) -> Result<Option<EthTransaction>>;
+    async fn transaction_by_hash(&self, hash: B256) -> Result<Option<WithOtherFields<EthTransaction>>>;
 
     /// Returns information about a transaction by block hash and transaction index position.
     #[method(name = "getTransactionByBlockHashAndIndex")]
-    async fn transaction_by_block_hash_and_index(&self, hash: B256, index: Index) -> Result<Option<EthTransaction>>;
+    async fn transaction_by_block_hash_and_index(
+        &self,
+        hash: B256,
+        index: Index,
+    ) -> Result<Option<WithOtherFields<EthTransaction>>>;
 
     /// Returns information about a transaction by block number and transaction index position.
     #[method(name = "getTransactionByBlockNumberAndIndex")]
@@ -81,7 +97,7 @@ pub trait EthApi {
         &self,
         number: BlockNumberOrTag,
         index: Index,
-    ) -> Result<Option<EthTransaction>>;
+    ) -> Result<Option<WithOtherFields<EthTransaction>>>;
 
     /// Returns the receipt of a transaction by transaction hash.
     #[method(name = "getTransactionReceipt")]
@@ -136,7 +152,7 @@ pub trait EthApi {
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> Result<AccessListWithGasUsed>;
+    ) -> Result<AccessListResult>;
 
     /// Generates and returns an estimate of how much gas is necessary to allow the transaction to
     /// complete.

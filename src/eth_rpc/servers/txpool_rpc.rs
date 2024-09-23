@@ -1,7 +1,10 @@
 use crate::{eth_rpc::api::txpool_api::TxPoolApiServer, providers::pool_provider::PoolProvider};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
 use reth_primitives::Address;
-use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus};
+use reth_rpc_types::{
+    txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus},
+    Transaction, WithOtherFields,
+};
 use tracing::instrument;
 
 /// The RPC module for implementing the Txpool api
@@ -51,7 +54,7 @@ where
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_contentFrom) for more details
     /// Handler for `txpool_contentFrom`
     #[instrument(skip(self))]
-    async fn txpool_content_from(&self, from: Address) -> Result<TxpoolContentFrom> {
+    async fn txpool_content_from(&self, from: Address) -> Result<TxpoolContentFrom<WithOtherFields<Transaction>>> {
         self.pool_provider.txpool_content_from(from).await.map_err(Into::into)
     }
 
@@ -61,7 +64,7 @@ where
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_content) for more details
     /// Handler for `txpool_content`
     #[instrument(skip(self))]
-    async fn txpool_content(&self) -> Result<TxpoolContent> {
+    async fn txpool_content(&self) -> Result<TxpoolContent<WithOtherFields<Transaction>>> {
         self.pool_provider.txpool_content().await.map_err(Into::into)
     }
 }

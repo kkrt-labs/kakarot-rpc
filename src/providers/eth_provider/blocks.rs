@@ -1,14 +1,13 @@
 use super::{database::ethereum::EthereumBlockStore, error::KakarotError};
 use crate::providers::eth_provider::{
     database::ethereum::EthereumTransactionStore,
-    error::EthApiError,
     provider::{EthApiResult, EthDataProvider},
 };
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
 use reth_primitives::{BlockId, BlockNumberOrTag, B256, U256, U64};
-use reth_rpc_types::{Header, RichBlock};
+use reth_rpc_types::{Block, Header, Transaction, WithOtherFields};
 use tracing::Instrument;
 
 /// Ethereum block provider trait.
@@ -22,10 +21,18 @@ pub trait BlockProvider {
     async fn block_number(&self) -> EthApiResult<U64>;
 
     /// Returns a block by hash. Block can be full or just the hashes of the transactions.
-    async fn block_by_hash(&self, hash: B256, full: bool) -> EthApiResult<Option<RichBlock>>;
+    async fn block_by_hash(
+        &self,
+        hash: B256,
+        full: bool,
+    ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
 
     /// Returns a block by number. Block can be full or just the hashes of the transactions.
-    async fn block_by_number(&self, number_or_tag: BlockNumberOrTag, full: bool) -> EthApiResult<Option<RichBlock>>;
+    async fn block_by_number(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+        full: bool,
+    ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
 
     /// Returns the transaction count for a block by hash.
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthApiResult<Option<U256>>;
@@ -37,7 +44,7 @@ pub trait BlockProvider {
     async fn block_transactions(
         &self,
         block_id: Option<BlockId>,
-    ) -> EthApiResult<Option<Vec<reth_rpc_types::Transaction>>>;
+    ) -> EthApiResult<Option<Vec<WithOtherFields<Transaction>>>>;
 }
 
 #[async_trait]
@@ -60,19 +67,26 @@ where
                 )
             }
             Some(header) => {
-                let number = header.number.ok_or(EthApiError::UnknownBlockNumber(None))?;
-                let is_pending_block = header.hash.unwrap_or_default().is_zero();
-                U64::from(if is_pending_block { number - 1 } else { number })
+                let is_pending_block = header.hash.is_zero();
+                U64::from(if is_pending_block { header.number - 1 } else { header.number })
             }
         };
         Ok(block_number)
     }
 
-    async fn block_by_hash(&self, hash: B256, full: bool) -> EthApiResult<Option<RichBlock>> {
+    async fn block_by_hash(
+        &self,
+        hash: B256,
+        full: bool,
+    ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
         Ok(self.database().block(hash.into(), full).await?)
     }
 
-    async fn block_by_number(&self, number_or_tag: BlockNumberOrTag, full: bool) -> EthApiResult<Option<RichBlock>> {
+    async fn block_by_number(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+        full: bool,
+    ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
         Ok(self.database().block(block_number.into(), full).await?)
     }
@@ -89,7 +103,7 @@ where
     async fn block_transactions(
         &self,
         block_id: Option<BlockId>,
-    ) -> EthApiResult<Option<Vec<reth_rpc_types::Transaction>>> {
+    ) -> EthApiResult<Option<Vec<WithOtherFields<Transaction>>>> {
         let block_hash_or_number = self
             .block_id_into_block_number_or_hash(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)))
             .await?;

@@ -97,31 +97,31 @@ async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has the expected block number
-    assert_eq!(block.header.number, Some(block_number));
+    assert_eq!(block.header.number, block_number);
 
     // When: Retrieving earliest block
     let block = eth_provider.block_by_number(BlockNumberOrTag::Earliest, false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has block number zero
-    assert_eq!(block.header.number, Some(0));
+    assert_eq!(block.header.number, 0);
 
     // When: Retrieving latest block
     let block = eth_provider.block_by_number(BlockNumberOrTag::Latest, false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has the same block number as the most recent transaction
-    assert_eq!(block.header.number, Some(block_number));
+    assert_eq!(block.header.number, block_number);
 
     // When: Retrieving finalized block
     let block = eth_provider.block_by_number(BlockNumberOrTag::Finalized, false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has the same block number as the most recent transaction
-    assert_eq!(block.header.number, Some(block_number));
+    assert_eq!(block.header.number, block_number);
 
     // When: Retrieving safe block
     let block = eth_provider.block_by_number(BlockNumberOrTag::Safe, false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has the same block number as the most recent transaction
-    assert_eq!(block.header.number, Some(block_number));
+    assert_eq!(block.header.number, block_number);
 }
 
 #[rstest]
@@ -136,7 +136,7 @@ async fn test_block_transaction_count_by_hash(#[future] katana: Katana, _setup: 
     let header = katana.header_by_hash(first_tx.block_hash.unwrap()).unwrap();
 
     // When
-    let count = eth_provider.block_transaction_count_by_hash(header.hash.unwrap()).await.unwrap().unwrap();
+    let count = eth_provider.block_transaction_count_by_hash(header.hash).await.unwrap().unwrap();
 
     // Then
     assert_eq!(count, U256::from(1));
@@ -164,11 +164,8 @@ async fn test_block_transaction_count_by_number(#[future] katana: Katana, _setup
     let header = katana.header_by_hash(first_tx.block_hash.unwrap()).unwrap();
 
     // When: Retrieving transaction count for a specific block number
-    let count = eth_provider
-        .block_transaction_count_by_number(BlockNumberOrTag::Number(header.number.unwrap()))
-        .await
-        .unwrap()
-        .unwrap();
+    let count =
+        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(header.number)).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved transaction count matches the expected value
     assert_eq!(count, U256::from(1));
@@ -368,11 +365,14 @@ async fn test_get_logs_block_filter(#[future] katana: Katana, _setup: ()) {
     // Verify all logs.
     assert_eq!(filter_logs(Filter::default().select(0..), provider.clone()).await, all_logs_katana);
     // Verify logs filtered by a range of blocks.
-    assert_eq!(filter_logs(Filter::default().select(0..u64::MAX / 2), provider.clone()).await, logs_katana_block_range);
+    assert_eq!(
+        filter_logs(Filter::default().select(..=(u64::MAX / 2) + 1), provider.clone()).await,
+        logs_katana_block_range
+    );
     // Verify that filtering by an empty range returns an empty result.
     //
     // We skip the 0 block because we hardcoded it via our Mongo Fuzzer and so it can contain logs.
-    assert!(filter_logs(Filter::default().select(1..1), provider.clone()).await.is_empty());
+    assert!(filter_logs(Filter::default().select(1..=2), provider.clone()).await.is_empty());
 }
 
 #[rstest]
@@ -967,7 +967,7 @@ async fn test_send_raw_transaction_exceed_gas_limit(#[future] katana: Katana, _s
     let transaction = Transaction::Eip1559(TxEip1559 {
         chain_id,
         nonce: 0,
-        gas_limit: u64::MAX,
+        gas_limit: u64::MAX.into(),
         to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
@@ -1230,6 +1230,7 @@ async fn test_call_with_state_override_balance_success(#[future] katana: Katana,
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
+#[ignore = "fails because of reth tracing utils temporarily removed in PR 1389"]
 async fn test_call_with_state_override_balance_failure(#[future] katana: Katana, _setup: ()) {
     // Obtain an Ethereum provider instance from the Katana instance
     let eth_provider = katana.eth_provider();

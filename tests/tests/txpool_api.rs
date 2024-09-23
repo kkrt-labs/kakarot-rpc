@@ -7,7 +7,10 @@ use kakarot_rpc::test_utils::{
     katana::Katana,
     rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
 };
-use reth_rpc_types::txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
+use reth_rpc_types::{
+    txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus},
+    Transaction, WithOtherFields,
+};
 use reth_transaction_pool::{TransactionOrigin, TransactionPool};
 use rstest::*;
 use serde::{de::DeserializeOwned, Serialize};
@@ -72,7 +75,8 @@ async fn test_txpool_content(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to insert transaction into the mempool");
 
     // Fetch the transaction pool content
-    let tx_pool_content: TxpoolContent = request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
+    let tx_pool_content: TxpoolContent<WithOtherFields<Transaction>> =
+        request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
 
     // Get updated mempool size
     let mempool_size = katana_empty.eth_client.mempool().pool_size();
@@ -128,7 +132,7 @@ async fn test_txpool_content_from(#[future] katana_empty: Katana, _setup: ()) {
     let transaction_signer = transaction_signed.recover_signer().unwrap();
 
     // Fetch the transaction pool content from the sender
-    let tx_pool_content: TxpoolContentFrom =
+    let tx_pool_content: TxpoolContentFrom<WithOtherFields<Transaction>> =
         request("txpool_contentFrom", server_addr.port(), vec![transaction_signer.to_string()]).await;
 
     // Assert that we recovered a single pending transaction
