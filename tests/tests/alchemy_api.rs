@@ -23,7 +23,6 @@ use serde_json::Value;
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana = erc20.0;
@@ -83,7 +82,6 @@ async fn test_token_balances(#[future] erc20: (Katana, KakarotEvmContract), _set
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_token_metadata(#[future] erc20: (Katana, KakarotEvmContract), _setup: ()) {
     // Obtain the Katana instance
     let katana = erc20.0;
@@ -133,7 +131,6 @@ async fn test_token_metadata(#[future] erc20: (Katana, KakarotEvmContract), _set
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_token_allowance(#[future] erc20: (Katana, KakarotEvmContract), _setup: ()) {
     // Obtain the Katana instance
     let katana = erc20.0;

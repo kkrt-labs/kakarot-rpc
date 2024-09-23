@@ -48,6 +48,13 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install asdf & tools
+        uses: asdf-vm/actions/setup@v3
+      - name: install scarb
+        run: |
+          asdf plugin add scarb
+          asdf install scarb 2.6.5
+          asdf install scarb 0.7.0
       - name: Setup the Kakarot submodule
         run: make setup
       # Create dump

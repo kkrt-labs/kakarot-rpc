@@ -3,7 +3,10 @@
 use alloy_rlp::Decodable;
 use kakarot_rpc::{
     into_via_try_wrapper,
-    providers::{eth_provider::starknet::relayer::LockedRelayer, sn_provider::StarknetProvider},
+    providers::{
+        eth_provider::{constant::RPC_CONFIG, starknet::relayer::LockedRelayer},
+        sn_provider::StarknetProvider,
+    },
 };
 use reth_primitives::{bytes::Buf, Block, BlockBody, BytesMut};
 use starknet::{
@@ -62,7 +65,13 @@ async fn main() -> eyre::Result<()> {
     let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
     let current_nonce = Mutex::new(Felt::ZERO);
-    let mut relayer = LockedRelayer::new(current_nonce.lock().await, relayer_address, relayer_balance);
+    let mut relayer = LockedRelayer::new(
+        current_nonce.lock().await,
+        relayer_address,
+        relayer_balance,
+        JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+        starknet_provider.chain_id().await.expect("failed to fetch chain id"),
+    );
 
     for (block_number, body) in bodies.into_iter().enumerate() {
         while starknet_provider.block_number().await? < block_number as u64 {

@@ -71,7 +71,7 @@ pub fn transaction_data_to_starknet_calldata(
         relayer_address,          // OutsideExecution caller
         Felt::ZERO,               // OutsideExecution nonce
         Felt::ZERO,               // OutsideExecution execute_after
-        Felt::MAX,                // OutsideExecution execute_before
+        Felt::from(u32::MAX),     // OutsideExecution execute_before
         Felt::ONE,                // call_array_len
         *KAKAROT_ADDRESS,         // CallArray to
         *ETH_SEND_TRANSACTION,    // CallArray selector

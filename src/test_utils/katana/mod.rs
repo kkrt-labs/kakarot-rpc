@@ -59,7 +59,7 @@ pub fn katana_config() -> StarknetConfig {
         disable_fee: true,
         env: Environment {
             // Since kaka_test > u32::MAX, we should return the last 4 bytes of the chain_id: test
-            chain_id: ChainId::parse("kaka_test").unwrap(),
+            chain_id: ChainId::parse("test").unwrap(),
             invoke_max_steps: max_steps,
             validate_max_steps: max_steps,
         },
@@ -146,7 +146,7 @@ impl<'a> Katana {
         let eth_client = EthClient::try_new(starknet_provider, database).await.expect("failed to start eth client");
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
-        let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()));
+        let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
 
         // Return a new instance of Katana with initialized fields.
         Self {
@@ -173,6 +173,9 @@ impl<'a> Katana {
         let pk = std::env::var("EVM_PRIVATE_KEY").expect("Failed to get EVM private key");
         let pk = B256::from_str(&pk).expect("Failed to parse EVM private key");
 
+        // Set the relayer private key in the environment variables.
+        std::env::set_var("RELAYER_PRIVATE_KEY", format!("0x{:x}", sequencer.raw_account().private_key));
+
         // Initialize a MongoFuzzer instance with the specified random bytes size.
         let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;
 
@@ -187,7 +190,7 @@ impl<'a> Katana {
         let eth_client = EthClient::try_new(starknet_provider, database).await.expect("failed to start eth client");
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
-        let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()));
+        let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
 
         // Return a new instance of Katana with initialized fields.
         Self {
@@ -214,8 +217,8 @@ impl<'a> Katana {
         self.eoa.eth_client.eth_provider().starknet_provider_inner().clone()
     }
 
-    pub fn eoa(&self) -> KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
-        self.eoa.clone()
+    pub const fn eoa(&self) -> &KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
+        &self.eoa
     }
 
     #[allow(dead_code)]
