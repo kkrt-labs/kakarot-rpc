@@ -81,7 +81,7 @@ reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.
 reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
 reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, optional = true }
 reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, optional = true }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
 revm-inspectors = "0.7.4"
 
 # Error
@@ -182,7 +182,6 @@ tempfile = "3.8"
 
 [features]
 testing = [
-  "reth-rpc-types-compat",
   "alloy-json-abi",
   "alloy-primitives",
   "alloy-signer-local",
