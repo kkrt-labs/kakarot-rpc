@@ -4,7 +4,7 @@ use kakarot_rpc::{
     providers::eth_provider::{error::SignatureError, ChainProvider},
     test_utils::{
         eoa::Eoa,
-        fixtures::{katana, setup},
+        fixtures::{katana_empty, setup},
         katana::Katana,
     },
 };
@@ -17,8 +17,9 @@ use rstest::*;
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "fails because of the fix on the fetching of accounts state PR 1383"]
-async fn test_mempool_add_transaction(#[future] katana: Katana, _setup: ()) {
+async fn test_mempool_add_transaction(#[future] katana_empty: Katana, _setup: ()) {
+    let katana: Katana = katana_empty;
+
     let eth_client = katana.eth_client();
 
     // Create a sample transaction
@@ -90,8 +91,9 @@ async fn test_mempool_add_transaction(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "fails because of the fix on the fetching of accounts state PR 1383"]
-async fn test_mempool_add_external_transaction(#[future] katana: Katana, _setup: ()) {
+async fn test_mempool_add_external_transaction(#[future] katana_empty: Katana, _setup: ()) {
+    let katana: Katana = katana_empty;
+
     let eth_client = katana.eth_client();
 
     // Create a sample transaction
@@ -123,8 +125,9 @@ async fn test_mempool_add_external_transaction(#[future] katana: Katana, _setup:
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "fails because of the fix on the fetching of accounts state PR 1383"]
-async fn test_mempool_add_transactions(#[future] katana: Katana, _setup: ()) {
+async fn test_mempool_add_transactions(#[future] katana_empty: Katana, _setup: ()) {
+    let katana: Katana = katana_empty;
+
     let eth_client = katana.eth_client();
     // Get the EOA address
     let address = katana.eoa().evm_address().expect("Failed to get eoa address");
@@ -185,8 +188,9 @@ async fn test_mempool_add_transactions(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "fails because of the fix on the fetching of accounts state PR 1383"]
-async fn test_mempool_add_external_transactions(#[future] katana: Katana, _setup: ()) {
+async fn test_mempool_add_external_transactions(#[future] katana_empty: Katana, _setup: ()) {
+    let katana: Katana = katana_empty;
+
     let eth_client = katana.eth_client();
 
     // Create multiple sample transactions
@@ -250,8 +254,9 @@ async fn test_mempool_add_external_transactions(#[future] katana: Katana, _setup
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "fails because of the fix on the fetching of accounts state PR 1383"]
-async fn test_mempool_transaction_event_listener(#[future] katana: Katana, _setup: ()) {
+async fn test_mempool_transaction_event_listener(#[future] katana_empty: Katana, _setup: ()) {
+    let katana: Katana = katana_empty;
+
     let eth_client = katana.eth_client();
 
     // Create a sample transaction
@@ -275,8 +280,9 @@ async fn test_mempool_transaction_event_listener(#[future] katana: Katana, _setu
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "fails because of the fix on the fetching of accounts state PR 1383"]
-async fn test_mempool_get_private_transactions(#[future] katana: Katana, _setup: ()) {
+async fn test_mempool_get_private_transactions(#[future] katana_empty: Katana, _setup: ()) {
+    let katana: Katana = katana_empty;
+
     let eth_client = katana.eth_client();
 
     // Create a sample transaction
