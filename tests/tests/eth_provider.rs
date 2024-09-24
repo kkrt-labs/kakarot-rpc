@@ -1333,10 +1333,6 @@ async fn test_call_with_state_override_bytecode(#[future] plain_opcodes: (Katana
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
-    // Given
-    // Retrieve an instance of the Ethereum provider from the test environment
-    let eth_provider = katana_empty.eth_provider();
-
     // Create a sample transaction
     let (transaction, transaction_signed) = create_sample_transactions(&katana_empty, 1)
         .await
@@ -1353,32 +1349,35 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to insert transaction into the mempool");
 
     // Check if the first transaction is returned correctly by the `transaction_by_hash` method
-    assert!(eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
+    assert!(katana_empty.eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
 
     // Check if a non-existent transaction returns None
-    assert!(eth_client.transaction_by_hash(B256::random()).await.unwrap().is_none());
+    assert!(katana_empty.eth_client.transaction_by_hash(B256::random()).await.unwrap().is_none());
 
     // Remove the transaction from the mempool
-    eth_client.mempool().remove_transactions(vec![tx_hash]);
+    katana_empty.eth_client.mempool().remove_transactions(vec![tx_hash]);
 
     // Check that the transaction is no longer in the mempool
-    assert_eq!(eth_client.mempool().pool_size().total, 0);
+    assert_eq!(katana_empty.eth_client.mempool().pool_size().total, 0);
 
     // Send the transaction
-    let _ = eth_client
+    let _ = katana_empty
+        .eth_client
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
 
     // Prepare the relayer
-    let relayer_balance = eth_client
+    let relayer_balance = katana_empty
+        .eth_client
         .starknet_provider()
         .balance_at(katana_empty.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
         .await
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = eth_client
+    let nonce = katana_empty
+        .eth_client
         .starknet_provider()
         .get_nonce(BlockId::Tag(BlockTag::Latest), katana_empty.eoa.relayer.address())
         .await
@@ -1391,19 +1390,19 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         current_nonce.lock().await,
         katana_empty.eoa.relayer.address(),
         relayer_balance,
-        &(*(*eth_client.starknet_provider())),
-        eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+        &(*(*katana_empty.eth_client.starknet_provider())),
+        katana_empty.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
     .relay_transaction(&transaction_signed)
     .await
     .expect("Failed to relay transaction");
 
     // Retrieve the current size of the mempool
-    let mempool_size_after_send = eth_client.mempool().pool_size();
+    let mempool_size_after_send = katana_empty.eth_client.mempool().pool_size();
     // Assert that the number of pending transactions in the mempool is 1
     assert_eq!(mempool_size_after_send.pending, 1);
     assert_eq!(mempool_size_after_send.total, 1);
 
     // Check if the pending transaction is returned correctly by the `transaction_by_hash` method
-    assert!(eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
+    assert!(katana_empty.eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
 }
