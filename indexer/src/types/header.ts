@@ -15,7 +15,7 @@ import {
 import { KAKAROT } from "../provider.ts";
 
 // Constant
-import { NULL_HASH } from "../constants";
+import { NULL_HASH } from "../constants.ts";
 
 // A default block gas limit in case the call to get_block_gas_limit fails.
 export const DEFAULT_BLOCK_GAS_LIMIT = (() => {
