@@ -155,20 +155,6 @@ where
     }
 }
 
-// #[async_trait]
-// impl<SP> TransactionHashProvider for EthClient<SP>
-// where
-//     SP: starknet::providers::Provider + Send + Sync,
-// {
-//     async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>> {
-//         if let Some(transaction) = self.pool.get(&hash) {
-//             return Ok(Some(TransactionSource::Pool(transaction.transaction.transaction().clone()).into()));
-//         }
-
-//         Ok(self.eth_provider.transaction_by_hash(hash).await?)
-//     }
-// }
-
 #[async_trait]
 impl<SP> TransactionHashProvider for EthClient<SP>
 where
