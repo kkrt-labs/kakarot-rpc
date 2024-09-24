@@ -1,5 +1,6 @@
 use dotenvy::dotenv;
 use eyre::Result;
+use kakarot_rpc::pool::mempool::AccountManager;
 use kakarot_rpc::{
     client::EthClient,
     config::KakarotRpcConfig,
@@ -9,6 +10,7 @@ use kakarot_rpc::{
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
+use starknet::macros::felt;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{env::var, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
@@ -62,6 +64,21 @@ async fn main() -> Result<()> {
 
     let eth_client =
         EthClient::try_new(starknet_provider, config, db.clone()).await.expect("failed to start ethereum client");
+    let eth_client = Arc::new(eth_client);
+
+    // Start the relayer manager
+    let account_manager = {
+        #[cfg(feature = "hive")]
+        {
+            let addresses = vec![felt!("0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca")];
+            AccountManager::from_addresses(addresses, eth_client.clone()).await?
+        }
+        #[cfg(not(feature = "hive"))]
+        {
+            AccountManager::new("./src/pool/accounts.json", eth_client.clone()).await?
+        }
+    };
+    account_manager.start(&tokio::runtime::Handle::current());
 
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;
@@ -101,12 +118,17 @@ fn setup_tracing() -> Result<()> {
     let metrics_layer = MetricsLayer::new(metrics).boxed();
 
     // Add a filter to the subscriber to control the verbosity of the logs
-    let filter = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
+    let filter = var("RUST_LOG").unwrap_or_else(|_| "info".to_string());
     let env_filter = EnvFilter::builder().parse(filter)?;
 
     // Stack the layers and initialize the subscriber
     let stacked_layer = tracing_layer.and_then(metrics_layer).and_then(env_filter);
-    tracing_subscriber::registry().with(stacked_layer).init();
+
+    // Add a fmt subscriber
+    let filter = EnvFilter::builder().from_env()?;
+    let stdout = tracing_subscriber::fmt::layer().with_filter(filter).boxed();
+
+    tracing_subscriber::registry().with(stacked_layer).with(stdout).init();
 
     Ok(())
 }
@@ -121,7 +143,8 @@ async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<
     use starknet::{accounts::ConnectedAccount, core::types::Felt, providers::Provider as _};
 
     let chain_id = starknet_provider.chain_id().await?;
-    let chain_id: u64 = (Felt::from(u64::MAX).to_bigint() & chain_id.to_bigint()).try_into()?;
+    let modulo = 1u32 << 53;
+    let chain_id: u64 = (Felt::from(modulo).to_bigint() & chain_id.to_bigint()).try_into()?;
 
     CHAIN_ID.set(chain_id.into()).expect("Failed to set chain id");
 

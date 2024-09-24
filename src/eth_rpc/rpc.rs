@@ -42,7 +42,7 @@ impl<SP> KakarotRpcModuleBuilder<SP>
 where
     SP: Provider + Clone + Send + Sync + 'static,
 {
-    pub fn new(eth_client: EthClient<SP>) -> Self {
+    pub fn new(eth_client: Arc<EthClient<SP>>) -> Self {
         let eth_provider = eth_client.eth_provider().clone();
 
         let alchemy_provider = Arc::new(AlchemyDataProvider::new(eth_provider.clone()));

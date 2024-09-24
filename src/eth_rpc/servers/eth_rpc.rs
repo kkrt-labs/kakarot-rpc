@@ -17,6 +17,7 @@ use reth_rpc_types::{
 };
 use serde_json::Value;
 use starknet::providers::Provider;
+use std::sync::Arc;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
@@ -24,14 +25,14 @@ pub struct EthRpc<SP>
 where
     SP: Provider + Send + Sync,
 {
-    eth_client: EthClient<SP>,
+    eth_client: Arc<EthClient<SP>>,
 }
 
 impl<SP> EthRpc<SP>
 where
     SP: Provider + Send + Sync,
 {
-    pub const fn new(eth_client: EthClient<SP>) -> Self {
+    pub const fn new(eth_client: Arc<EthClient<SP>>) -> Self {
         Self { eth_client }
     }
 }

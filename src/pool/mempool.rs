@@ -7,7 +7,7 @@ use crate::{
     providers::eth_provider::{constant::RPC_CONFIG, starknet::relayer::LockedRelayer},
 };
 use futures::future::select_all;
-use reth_primitives::{BlockId, IntoRecoveredTransaction, U256};
+use reth_primitives::{IntoRecoveredTransaction, U256};
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionOrigin, TransactionPool,
 };
@@ -64,16 +64,10 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let felt_address = Felt::from_str(account_address)
                             .map_err(|e| eyre::eyre!("Error converting account address to Felt: {:?}", e))?;
 
-                        let starknet_block_id = eth_client
-                            .eth_provider()
-                            .to_starknet_block_id(Some(BlockId::default()))
-                            .await
-                            .map_err(|e| eyre::eyre!("Error converting block ID: {:?}", e))?;
-
                         // Query the initial account_nonce for the account from the provider
                         let nonce = eth_client
                             .starknet_provider()
-                            .get_nonce(starknet_block_id, felt_address)
+                            .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), felt_address)
                             .await
                             .unwrap_or_default();
                         accounts.insert(felt_address, Arc::new(Mutex::new(nonce)));
@@ -89,8 +83,26 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
         Ok(Self { accounts, eth_client })
     }
 
+    /// Initialize the account manager with a set of passed accounts
+    pub async fn from_addresses(addresses: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Self> {
+        let mut accounts = HashMap::new();
+
+        for add in addresses {
+            // Query the initial account_nonce for the account from the provider
+            let nonce = eth_client
+                .starknet_provider()
+                .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), add)
+                .await
+                .unwrap_or_default();
+            accounts.insert(add, Arc::new(Mutex::new(nonce)));
+        }
+
+        Ok(Self { accounts, eth_client })
+    }
+
     /// Starts the account manager task that periodically checks account balances and processes transactions.
-    pub fn start(&'static self, rt_handle: &Handle) {
+    pub fn start(self, rt_handle: &Handle) {
+        let this = Arc::new(self);
         rt_handle.spawn(async move {
             loop {
                 // TODO: add a listener on the pool and only try to call [`best_transaction`]
@@ -98,9 +110,9 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 // TODO: constant loop which rarely yields to the executor combined with a
                 // TODO: sleep which could sleep for a while before handling transactions.
                 let best_hashes =
-                    self.eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
+                    this.eth_client.mempool().as_ref().best_transactions().map(|x| *x.hash()).collect::<Vec<_>>();
                 if let Some(best_hash) = best_hashes.first() {
-                    let transaction = self.eth_client.mempool().get(best_hash);
+                    let transaction = this.eth_client.mempool().get(best_hash);
                     if transaction.is_none() {
                         // Probably a race condition here
                         continue;
@@ -108,16 +120,17 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                     let transaction = transaction.expect("not None");
 
                     // We remove the transaction to avoid another relayer from picking it up.
-                    self.eth_client.mempool().as_ref().remove_transactions(vec![*best_hash]);
+                    this.eth_client.mempool().as_ref().remove_transactions(vec![*best_hash]);
 
                     // Spawn a task for the transaction to be sent
+                    let manager = this.clone();
                     tokio::spawn(async move {
                         // Lock the relayer account
-                        let maybe_relayer = self.lock_account().await;
+                        let maybe_relayer = manager.lock_account().await;
                         if maybe_relayer.is_err() {
                             // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
                             tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap(), "failed to fetch relayer");
-                            let _ = self
+                            let _ = manager
                                 .eth_client
                                 .mempool()
                                 .add_transaction(TransactionOrigin::Local, transaction.transaction.clone())
@@ -131,7 +144,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
                             // If the relayer failed to relay the transaction, we need to reposition it in the mempool
-                            let _ = self
+                            let _ = manager
                                 .eth_client
                                 .mempool()
                                 .add_transaction(TransactionOrigin::Local, transaction.transaction.clone())

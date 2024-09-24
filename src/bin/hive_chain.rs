@@ -71,7 +71,8 @@ async fn main() -> eyre::Result<()> {
 
     // Set the chain id
     let chain_id = starknet_provider.chain_id().await?;
-    let chain_id_mod: u64 = (Felt::from(u64::MAX).to_bigint() & chain_id.to_bigint()).try_into()?;
+    let modulo = 1u32 << 53;
+    let chain_id_mod: u64 = (Felt::from(modulo).to_bigint() & chain_id.to_bigint()).try_into()?;
     let _ = CHAIN_ID.get_or_init(|| Felt::from(chain_id_mod));
 
     // Prepare the relayer
