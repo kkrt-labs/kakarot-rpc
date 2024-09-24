@@ -132,7 +132,6 @@ pub async fn tracing(
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
@@ -160,7 +159,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     let trace_vec = block_traces.unwrap_or_default();
     // We expect 3 traces per transaction: CALL, CREATE, and CALL.
     // Except for the last one which is out of resources.
-    assert!(trace_vec.len() == 3 * (TRACING_TRANSACTIONS_COUNT - 1) + 1);
+    assert_eq!(trace_vec.len(), TRACING_TRANSACTIONS_COUNT);
 
     // Get the last trace from the trace vector, which is expected to be out of resources.
     let out_of_resources_trace = trace_vec.last().unwrap();
@@ -190,7 +189,6 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;
@@ -231,7 +229,6 @@ async fn test_debug_trace_block_by_number(#[future] plain_opcodes: (Katana, Kaka
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_debug_trace_transaction(#[future] plain_opcodes: (Katana, KakarotEvmContract), _setup: ()) {
     let katana = plain_opcodes.0;
     let plain_opcodes = plain_opcodes.1;

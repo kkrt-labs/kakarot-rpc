@@ -61,6 +61,7 @@ impl TracingResult {
             None
         }
     }
+
     /// Creates a default failure [`TracingResult`] based on the [`TracingOptions`].
     fn default_failure(tracing_options: &TracingOptions, tx: &WithOtherFields<reth_rpc_types::Transaction>) -> Self {
         match tracing_options {
