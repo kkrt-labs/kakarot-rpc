@@ -10,20 +10,20 @@ import { KAKAROT_ADDRESS } from "../constants.ts";
  * This function checks the calldata of the transaction to see if the
  * `to` field matches the KAKAROT_ADDRESS. The calldata structure is
  * expected to follow a specific format:
- * - callArrayLen <- calldata[0]
+ * - callLen <- calldata[0]
  * - to <- calldata[1]
  * - selector <- calldata[2]
- * - dataOffset <- calldata[3]
- * - dataLength <- calldata[4]
- * - calldataLen <- calldata[5]
- * - signedDataLen <- calldata[6]
+ * - calldataLen <- calldata[3]
+ * - OutsideExecution <- calldata[4..=7] skip
+ * - callArrayLen <- calldata[8]
+ * - to <- calldata[9]
  *
  * @param {Transaction} transaction - The transaction to check.
  * @returns {boolean} - Returns true if the transaction is related to Kakarot, otherwise false.
  */
 export function isKakarotTransaction(transaction: Transaction): boolean {
   return (
-    BigInt(transaction.invokeV1?.calldata?.[1] ?? 0) === BigInt(KAKAROT_ADDRESS)
+    BigInt(transaction.invokeV1?.calldata?.[9] ?? 0) === BigInt(KAKAROT_ADDRESS)
   );
 }
 
