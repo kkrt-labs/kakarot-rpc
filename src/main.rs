@@ -1,17 +1,19 @@
 use dotenvy::dotenv;
 use eyre::Result;
-use kakarot_rpc::pool::mempool::AccountManager;
 use kakarot_rpc::{
     client::EthClient,
     config::KakarotRpcConfig,
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
+    pool::mempool::AccountManager,
     providers::eth_provider::database::Database,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
-use starknet::macros::felt;
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use starknet::{
+    macros::felt,
+    providers::{jsonrpc::HttpTransport, JsonRpcClient},
+};
 use std::{env::var, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
