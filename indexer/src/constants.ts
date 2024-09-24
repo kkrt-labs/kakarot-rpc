@@ -37,7 +37,7 @@ export const AUTH_TOKEN = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
 export const STREAM_URL = Deno.env.get("STREAM_URL") ?? "http://localhost:7171";
 
 // Creates string that starts with "0x" and is padded to a total length of 64 chars
-export const NULL_BLOCK_HASH = padString("0x", 32);
+export const NULL_HASH = padString("0x", 32);
 
 // Get the hash selector from the transaction executed
 export const TRANSACTION_EXECUTED = hash.getSelectorFromName(
