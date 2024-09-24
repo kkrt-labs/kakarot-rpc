@@ -9,7 +9,7 @@ import {
 // Constants
 import {
   AUTH_TOKEN,
-  NULL_BLOCK_HASH,
+  NULL_HASH,
   SINK_OPTIONS,
   SINK_TYPE,
   STARTING_BLOCK,
@@ -138,7 +138,7 @@ export default async function transform({
 function createBlockInfo(header: BlockHeader): BlockInfo {
   const blockNumber = padString(toHexString(header.blockNumber), 8);
   const blockHash = padString(header.blockHash, 32);
-  const isPendingBlock = blockHash === NULL_BLOCK_HASH;
+  const isPendingBlock = blockHash === NULL_HASH;
   return { blockNumber, blockHash, isPendingBlock };
 }
 
