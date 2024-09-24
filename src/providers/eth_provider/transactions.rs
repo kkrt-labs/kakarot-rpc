@@ -49,40 +49,7 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>> {
-        // // TODO: modify this for the tests to pass because now we don't have a pending transactions collection anymore.
-        // // TODO: So we need to remove the unionWith part and we need to search inside the final transactions collection + inside the mempool.
-        // let pipeline = vec![
-        //     doc! {
-        //         // Union with pending transactions with only specified hash
-        //         "$unionWith": {
-        //             "coll": StoredTransaction::collection_name(),
-        //             "pipeline": [
-        //                 {
-        //                     "$match": {
-        //                         "tx.hash": format_hex(hash, HASH_HEX_STRING_LEN)
-        //                     }
-        //                 }
-        //             ]
-        //         },
-        //     },
-        //     // Only specified hash in the transactions collection
-        //     doc! {
-        //         "$match": {
-        //             "tx.hash": format_hex(hash, HASH_HEX_STRING_LEN)
-        //         }
-        //     },
-        //     // Sort in descending order by block number as pending transactions have null block number
-        //     doc! {
-        //         "$sort": { "tx.blockNumber" : -1 }
-        //     },
-        //     // Only one document in the final result with priority to the final transactions collection if available
-        //     doc! {
-        //         "$limit": 1
-        //     },
-        // ];
-
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&hash).build();
-
         Ok(self.database().get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
 
