@@ -3,7 +3,7 @@
 use alloy_primitives::{address, bytes};
 use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
-    client::KakarotTransactions,
+    client::{KakarotTransactions, TransactionHashProvider},
     into_via_try_wrapper,
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
@@ -28,7 +28,7 @@ use reth_rpc_types::{
     request::TransactionInput, serde_helpers::JsonStorageKey, state::AccountOverride, Filter, FilterBlockOption,
     FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest,
 };
-use reth_transaction_pool::TransactionPool;
+use reth_transaction_pool::{TransactionOrigin, TransactionPool};
 use rstest::*;
 use starknet::{
     accounts::Account,
@@ -37,6 +37,8 @@ use starknet::{
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
+
+use crate::tests::mempool::create_sample_transactions;
 
 #[rstest]
 #[awt]
@@ -1330,37 +1332,37 @@ async fn test_call_with_state_override_bytecode(#[future] plain_opcodes: (Katana
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
-async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
+async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
     // Given
     // Retrieve an instance of the Ethereum provider from the test environment
-    let eth_provider = katana.eth_provider();
-    let eth_client = katana.eth_client();
-    let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default().to();
+    let eth_provider = katana_empty.eth_provider();
 
-    // Retrieve the first transaction from the test environment
-    let first_transaction = katana.first_transaction().unwrap();
+    // Create a sample transaction
+    let (transaction, transaction_signed) = create_sample_transactions(&katana_empty, 1)
+        .await
+        .expect("Failed to create sample transaction")
+        .pop()
+        .expect("Expected at least one transaction");
+
+    // Insert the transaction into the mempool
+    let tx_hash = katana_empty
+        .eth_client
+        .mempool()
+        .add_transaction(TransactionOrigin::Local, transaction.clone())
+        .await
+        .expect("Failed to insert transaction into the mempool");
 
     // Check if the first transaction is returned correctly by the `transaction_by_hash` method
-    assert_eq!(eth_provider.transaction_by_hash(first_transaction.hash).await.unwrap().unwrap(), first_transaction);
+    assert!(eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
 
     // Check if a non-existent transaction returns None
-    assert!(eth_provider.transaction_by_hash(B256::random()).await.unwrap().is_none());
+    assert!(eth_client.transaction_by_hash(B256::random()).await.unwrap().is_none());
 
-    // Generate a pending transaction to be stored in the pending transactions collection
-    // Create a sample transaction
-    let transaction = Transaction::Eip1559(TxEip1559 {
-        chain_id,
-        gas_limit: 21000,
-        to: TxKind::Call(Address::random()),
-        value: U256::from(1000),
-        max_fee_per_gas: 875_000_000,
-        ..Default::default()
-    });
+    // Remove the transaction from the mempool
+    eth_client.mempool().remove_transactions(vec![tx_hash]);
 
-    // Sign the transaction
-    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
-    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+    // Check that the transaction is no longer in the mempool
+    assert_eq!(eth_client.mempool().pool_size().total, 0);
 
     // Send the transaction
     let _ = eth_client
@@ -1368,22 +1370,40 @@ async fn test_transaction_by_hash(#[future] katana: Katana, _setup: ()) {
         .await
         .expect("failed to send transaction");
 
-    // TODO: need to write this with the mempool
-    // // Retrieve the pending transaction from the database
-    // let mut stored_transaction: StoredPendingTransaction =
-    //     eth_provider.database().get_first().await.expect("Failed to get transaction").unwrap();
+    // Prepare the relayer
+    let relayer_balance = eth_client
+        .starknet_provider()
+        .balance_at(katana_empty.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
+        .await
+        .expect("Failed to get relayer balance");
+    let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    // let tx = stored_transaction.clone().tx;
+    let nonce = eth_client
+        .starknet_provider()
+        .get_nonce(BlockId::Tag(BlockTag::Latest), katana_empty.eoa.relayer.address())
+        .await
+        .unwrap_or_default();
 
-    // // Check if the pending transaction is returned correctly by the `transaction_by_hash` method
-    // assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap(), tx);
+    let current_nonce = Mutex::new(nonce);
 
-    // // Modify the block number of the pending transaction
-    // stored_transaction.tx.block_number = Some(1111);
+    // Relay the transaction
+    let _ = LockedRelayer::new(
+        current_nonce.lock().await,
+        katana_empty.eoa.relayer.address(),
+        relayer_balance,
+        &(*(*eth_client.starknet_provider())),
+        eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+    )
+    .relay_transaction(&transaction_signed)
+    .await
+    .expect("Failed to relay transaction");
 
-    // // Insert the transaction into the final transaction collection
-    // eth_provider.database().upsert_transaction(stored_transaction.into()).await.expect("Failed to insert documents");
+    // Retrieve the current size of the mempool
+    let mempool_size_after_send = eth_client.mempool().pool_size();
+    // Assert that the number of pending transactions in the mempool is 1
+    assert_eq!(mempool_size_after_send.pending, 1);
+    assert_eq!(mempool_size_after_send.total, 1);
 
-    // // Check if the final transaction is returned correctly by the `transaction_by_hash` method
-    // assert_eq!(eth_provider.transaction_by_hash(tx.hash).await.unwrap().unwrap().block_number, Some(1111));
+    // Check if the pending transaction is returned correctly by the `transaction_by_hash` method
+    assert!(eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
 }

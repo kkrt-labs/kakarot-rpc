@@ -8,7 +8,7 @@ use crate::{
             database::Database,
             error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError},
             provider::{EthApiResult, EthDataProvider},
-            TxPoolProvider,
+            TransactionProvider, TxPoolProvider,
         },
         sn_provider::StarknetProvider,
     },
@@ -18,6 +18,7 @@ use async_trait::async_trait;
 use num_traits::ToPrimitive;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{Address, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256};
+use reth_rpc_eth_types::TransactionSource;
 use reth_rpc_types::{txpool::TxpoolContent, Transaction, WithOtherFields};
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
@@ -30,6 +31,12 @@ use std::{collections::BTreeMap, sync::Arc};
 pub trait KakarotTransactions {
     /// Send a raw transaction to the network and returns the transactions hash.
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthApiResult<B256>;
+}
+
+#[async_trait]
+pub trait TransactionHashProvider {
+    /// Returns the transaction by hash.
+    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
 }
 
 /// Provides a wrapper structure around the Ethereum Provider
@@ -145,5 +152,33 @@ where
 
     async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>> {
         Ok(self.content())
+    }
+}
+
+// #[async_trait]
+// impl<SP> TransactionHashProvider for EthClient<SP>
+// where
+//     SP: starknet::providers::Provider + Send + Sync,
+// {
+//     async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>> {
+//         if let Some(transaction) = self.pool.get(&hash) {
+//             return Ok(Some(TransactionSource::Pool(transaction.transaction.transaction().clone()).into()));
+//         }
+
+//         Ok(self.eth_provider.transaction_by_hash(hash).await?)
+//     }
+// }
+
+#[async_trait]
+impl<SP> TransactionHashProvider for EthClient<SP>
+where
+    SP: starknet::providers::Provider + Send + Sync,
+{
+    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>> {
+        Ok(self
+            .pool
+            .get(&hash)
+            .map(|transaction| TransactionSource::Pool(transaction.transaction.transaction().clone()).into())
+            .or(self.eth_provider.transaction_by_hash(hash).await?))
     }
 }

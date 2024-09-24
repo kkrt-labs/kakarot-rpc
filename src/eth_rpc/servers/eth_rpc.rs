@@ -1,7 +1,7 @@
 #![allow(clippy::blocks_in_conditions)]
 
 use crate::{
-    client::{EthClient, KakarotTransactions},
+    client::{EthClient, KakarotTransactions, TransactionHashProvider},
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
         constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, BlockProvider, ChainProvider, GasProvider, LogProvider,
@@ -123,7 +123,7 @@ where
 
     #[tracing::instrument(skip(self), ret, err)]
     async fn transaction_by_hash(&self, hash: B256) -> Result<Option<WithOtherFields<Transaction>>> {
-        Ok(self.eth_client.eth_provider().transaction_by_hash(hash).await?)
+        Ok(self.eth_client.transaction_by_hash(hash).await?)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
