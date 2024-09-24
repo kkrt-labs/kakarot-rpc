@@ -75,7 +75,7 @@ async fn get_next_port() -> u16 {
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
     let eth_client = katana.eth_client();
     Ok(run_server(
-        KakarotRpcModuleBuilder::new(eth_client).rpc_module()?,
+        KakarotRpcModuleBuilder::new(eth_client.into()).rpc_module()?,
         #[cfg(feature = "testing")]
         RPCConfig::new_test_config_from_port(get_next_port().await),
         #[cfg(not(feature = "testing"))]
