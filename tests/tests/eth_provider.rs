@@ -2,12 +2,14 @@
 #![cfg(feature = "testing")]
 use alloy_primitives::{address, bytes};
 use alloy_sol_types::{sol, SolCall};
+use arbitrary::Arbitrary;
 use kakarot_rpc::{
     client::{KakarotTransactions, TransactionHashProvider},
     into_via_try_wrapper,
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
+        database::{ethereum::EthereumTransactionStore, types::transaction::StoredTransaction},
         provider::EthereumProvider,
         starknet::relayer::LockedRelayer,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
@@ -20,6 +22,7 @@ use kakarot_rpc::{
         tx_waiter::watch_tx,
     },
 };
+use rand::Rng;
 use reth_primitives::{
     sign_message, transaction::Signature, Address, BlockNumberOrTag, Bytes, Transaction, TransactionSigned, TxEip1559,
     TxKind, TxLegacy, B256, U256, U64,
@@ -1405,4 +1408,18 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
 
     // Check if the pending transaction is returned correctly by the `transaction_by_hash` method
     assert!(katana_empty.eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
+
+    // Generate a random transaction
+    let mut bytes = [0u8; 1024];
+    rand::thread_rng().fill(bytes.as_mut_slice());
+    let transaction = StoredTransaction::arbitrary(&mut arbitrary::Unstructured::new(&bytes)).unwrap();
+
+    // Insert the transaction into the database to simulate a transaction that has been indexed
+    katana_empty.eth_provider().database().upsert_transaction(transaction.clone().tx).await.unwrap();
+
+    // Check if the indexed transaction is returned correctly by the `transaction_by_hash` method
+    assert_eq!(
+        katana_empty.eth_client.transaction_by_hash(transaction.tx.hash).await.unwrap().unwrap(),
+        transaction.tx
+    );
 }
