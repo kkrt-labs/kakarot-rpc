@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use crate::tests::mempool::create_sample_transactions;
 use alloy_primitives::{address, bytes};
 use alloy_sol_types::{sol, SolCall};
 use arbitrary::Arbitrary;
@@ -40,8 +41,6 @@ use starknet::{
 };
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
-
-use crate::tests::mempool::create_sample_transactions;
 
 #[rstest]
 #[awt]
@@ -202,7 +201,6 @@ async fn test_balance(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_storage_at(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana = counter.0;
@@ -238,7 +236,6 @@ async fn test_nonce_eoa(#[future] katana: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_nonce_contract_account(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana = counter.0;
@@ -277,7 +274,6 @@ async fn test_nonce(#[future] counter: (Katana, KakarotEvmContract), _setup: ())
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
 async fn test_get_code(#[future] counter: (Katana, KakarotEvmContract), _setup: ()) {
     // Given
     let katana: Katana = counter.0;
@@ -801,29 +797,16 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
-async fn test_send_raw_transaction_wrong_nonce(#[future] katana: Katana, _setup: ()) {
+async fn test_send_raw_transaction_wrong_nonce(#[future] katana_empty: Katana, _setup: ()) {
     // Given
-    let eth_provider = katana.eth_provider();
-    let eth_client = katana.eth_client();
-    let chain_id = eth_provider.chain_id().await.unwrap_or_default().unwrap_or_default().to();
+    let eth_client = katana_empty.eth_client();
 
     // Create a sample transaction
-    let transaction = Transaction::Eip1559(TxEip1559 {
-        chain_id,
-        nonce: 0,
-        gas_limit: 21000,
-        to: TxKind::Call(Address::random()),
-        value: U256::from(1000),
-        input: Bytes::default(),
-        max_fee_per_gas: 875_000_000,
-        max_priority_fee_per_gas: 0,
-        access_list: Default::default(),
-    });
-
-    // Sign the transaction
-    let signature = sign_message(katana.eoa().private_key(), transaction.signature_hash()).unwrap();
-    let transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
+    let (_, mut transaction_signed) = create_sample_transactions(&katana_empty, 1)
+        .await
+        .expect("Failed to create sample transaction")
+        .pop()
+        .expect("Expected at least one transaction");
 
     // Retrieve the current size of the mempool
     let mempool_size = eth_client.mempool().pool_size();
@@ -832,31 +815,10 @@ async fn test_send_raw_transaction_wrong_nonce(#[future] katana: Katana, _setup:
     assert_eq!(mempool_size.total, 0);
 
     // Send the transaction
-    let _ = eth_client
+    let tx_hash = eth_client
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
-
-    // Assert that the number of pending transactions in the mempool is 1
-    assert_eq!(eth_client.mempool().pool_size().pending, 1);
-
-    // Create a sample transaction with nonce 0 instead of 1
-    let wrong_transaction = Transaction::Eip1559(TxEip1559 {
-        chain_id,
-        nonce: 0,
-        gas_limit: 21000,
-        to: TxKind::Call(Address::random()),
-        value: U256::from(1000),
-        input: Bytes::default(),
-        max_fee_per_gas: 875_000_000,
-        max_priority_fee_per_gas: 0,
-        access_list: Default::default(),
-    });
-
-    // Sign the transaction
-    let wrong_signature = sign_message(katana.eoa().private_key(), wrong_transaction.signature_hash()).unwrap();
-    let wrong_transaction_signed =
-        TransactionSigned::from_transaction_and_signature(wrong_transaction, wrong_signature);
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
@@ -864,17 +826,23 @@ async fn test_send_raw_transaction_wrong_nonce(#[future] katana: Katana, _setup:
     assert_eq!(mempool_size_after_send.pending, 1);
     assert_eq!(mempool_size_after_send.total, 1);
 
-    // Send the transaction
-    let _ = eth_client
-        .send_raw_transaction(wrong_transaction_signed.envelope_encoded())
-        .await
-        .expect("failed to send transaction");
+    // Remove the transaction from the mempool
+    katana_empty.eth_client.mempool().remove_transactions(vec![tx_hash]);
+
+    // Check that the transaction is no longer in the mempool
+    assert_eq!(katana_empty.eth_client.mempool().pool_size().total, 0);
+
+    // Insert a wrong field in the transaction signature to mimic a wrong signature
+    transaction_signed.signature.r = U256::from(0);
+
+    // Attempt to send the transaction with the wrong signature and assert that it fails
+    assert!(eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await.is_err());
 
     // Retrieve the current size of the mempool
     let mempool_size_after_wrong_send = eth_client.mempool().pool_size();
     // Assert that the number of pending transactions in the mempool is still 1 (wrong_transaction was not added to the mempool)
-    assert_eq!(mempool_size_after_wrong_send.pending, 1);
-    assert_eq!(mempool_size_after_wrong_send.total, 1);
+    assert_eq!(mempool_size_after_wrong_send.pending, 0);
+    assert_eq!(mempool_size_after_wrong_send.total, 0);
 }
 
 #[rstest]
