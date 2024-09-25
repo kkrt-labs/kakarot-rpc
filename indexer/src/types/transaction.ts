@@ -285,18 +285,17 @@ export function toTypedEthTx({
     return null;
   }
 
-    // Validate signature length
-    // [call_array_len, to, selector, data_offset, data_len, calldata_len, calldata, signature_len, signature]
-    const eth_data_len = Number(calldata[5]);
-    const signature = calldata.slice(5 + 1 + eth_data_len + 1);
-    console.log(signature);
-    if (signature.length !== 5) {
-        console.error(
-            `Invalid signature length ${signature.length}`,
-            JSON.stringify(transaction, null, 2),
-        );
-        return null;
-    }
+  // Validate signature length
+  // [call_array_len, to, selector, data_offset, data_len, calldata_len, calldata, signature_len, signature]
+  const eth_data_len = Number(calldata[5]);
+  const signature = calldata.slice(5 + 1 + eth_data_len + 1);
+  if (signature.length !== 5) {
+    console.error(
+      `Invalid signature length ${signature.length}`,
+      JSON.stringify(transaction, null, 2),
+    );
+    return null;
+  }
 
   // Extract signature components
   const [rLow, rHigh, sLow, sHigh, vBigInt] = signature;
@@ -309,6 +308,8 @@ export function toTypedEthTx({
     // [call_array_len, to, selector, data_offset, data_len, calldata_len, bytes_len, bytes, signature_len, signature]
     const eth_data = calldata.slice(5 + 2, 5 + 2 + eth_data_len - 1);
     const newFormatBytes = unpackCallData(eth_data);
+    const calldataWithoutSignature = calldata.slice(0, calldata.length - 6);
+    const newFormatBytes = unpackCallData(calldataWithoutSignature);
 
     const ethTxUnsigned = fromSerializedData(newFormatBytes);
     return addSignature(ethTxUnsigned, r, s, v);
