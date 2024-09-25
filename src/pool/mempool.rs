@@ -144,6 +144,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
                             // If the relayer failed to relay the transaction, we need to reposition it in the mempool
+                            tracing::error!(target: "account_manager", err = ?res.unwrap(), "failed to relay transaction");
                             let _ = manager
                                 .eth_client
                                 .mempool()

@@ -1,41 +1,41 @@
 // Utils
-import { padBigint, padBytes } from "../utils/hex.ts";
-import { isRevertedWithOutOfResources } from "../utils/filter.ts";
+import {padBigint, padBytes} from "../utils/hex.ts";
+import {isRevertedWithOutOfResources} from "../utils/filter.ts";
 
 // Starknet
-import { Transaction, TransactionReceipt, uint256 } from "../deps.ts";
+import {Transaction, TransactionReceipt, uint256} from "../deps.ts";
 
 // Eth
 import {
-  AccessListEIP2930Transaction,
-  bigIntToBytes,
-  bigIntToHex,
-  bytesToBigInt,
-  Capability,
-  concatBytes,
-  FeeMarketEIP1559Transaction,
-  hexToBytes,
-  intToHex,
-  isAccessListEIP2930Tx,
-  isFeeMarketEIP1559TxData,
-  isLegacyTx,
-  JsonTx,
-  LegacyTransaction,
-  RLP,
-  TransactionFactory,
-  TransactionType,
-  TxValuesArray,
-  TypedTransaction,
-  TypedTxData,
+    AccessListEIP2930Transaction,
+    bigIntToBytes,
+    bigIntToHex,
+    bytesToBigInt,
+    Capability,
+    concatBytes,
+    FeeMarketEIP1559Transaction,
+    hexToBytes,
+    intToHex,
+    isAccessListEIP2930Tx,
+    isFeeMarketEIP1559TxData,
+    isLegacyTx,
+    JsonTx,
+    LegacyTransaction,
+    RLP,
+    TransactionFactory,
+    TransactionType,
+    TxValuesArray,
+    TypedTransaction,
+    TypedTxData,
 } from "../deps.ts";
 
 //Interfaces
 import {
-  ExtendedJsonRpcTx,
-  HexString,
-  TransactionContext,
-  TransactionConversionInput,
-  TypedTransactionContext,
+    ExtendedJsonRpcTx,
+    HexString,
+    TransactionContext,
+    TransactionConversionInput,
+    TypedTransactionContext,
 } from "./interfaces.ts";
 
 /**
@@ -50,24 +50,24 @@ import {
  * Acknowledgement: Code taken from <https://github.com/ethereumjs/ethereumjs-monorepo>
  */
 export function toEthTx({
-  transaction,
-  receipt,
-  blockNumber,
-  blockHash,
-  isPendingBlock,
-}: TransactionContext): ExtendedJsonRpcTx | null {
-  const typedEthTx = toTypedEthTx({ transaction });
-  if (!typedEthTx) {
-    return null;
-  }
+                            transaction,
+                            receipt,
+                            blockNumber,
+                            blockHash,
+                            isPendingBlock,
+                        }: TransactionContext): ExtendedJsonRpcTx | null {
+    const typedEthTx = toTypedEthTx({transaction});
+    if (!typedEthTx) {
+        return null;
+    }
 
-  return typedTransactionToEthTx({
-    typedTransaction: typedEthTx,
-    receipt,
-    blockNumber,
-    blockHash,
-    isPendingBlock,
-  });
+    return typedTransactionToEthTx({
+        typedTransaction: typedEthTx,
+        receipt,
+        blockNumber,
+        blockHash,
+        isPendingBlock,
+    });
 }
 
 /**
@@ -82,20 +82,20 @@ export function toEthTx({
  * v = 35 + 2 * chainId + yParity -> chainId = (v - 35) / 2
  */
 export function chainId(
-  typedTransaction: TypedTransaction,
-  jsonTx: JsonTx,
+    typedTransaction: TypedTransaction,
+    jsonTx: JsonTx,
 ): string | undefined {
-  const { v, chainId } = jsonTx;
+    const {v, chainId} = jsonTx;
 
-  if (
-    isLegacyTx(typedTransaction) &&
-    typedTransaction.supports(Capability.EIP155ReplayProtection)
-  ) {
-    return v
-      ? bigIntToHex((BigInt(v) - 35n) / 2n)
-      : (console.error("jsonTx.v is undefined"), undefined);
-  }
-  return chainId;
+    if (
+        isLegacyTx(typedTransaction) &&
+        typedTransaction.supports(Capability.EIP155ReplayProtection)
+    ) {
+        return v
+            ? bigIntToHex((BigInt(v) - 35n) / 2n)
+            : (console.error("jsonTx.v is undefined"), undefined);
+    }
+    return chainId;
 }
 
 /**
@@ -106,18 +106,18 @@ export function chainId(
  * @param result - The transaction result object in Ethereum format.
  */
 export function setYParityFlag(
-  typedTransaction: TypedTransaction,
-  jsonTx: JsonTx,
-  result: ExtendedJsonRpcTx,
+    typedTransaction: TypedTransaction,
+    jsonTx: JsonTx,
+    result: ExtendedJsonRpcTx,
 ): void {
-  // Check if the transaction is an EIP-1559 or EIP-2930 transaction
-  if (
-    isFeeMarketEIP1559TxData(typedTransaction) ||
-    isAccessListEIP2930Tx(typedTransaction)
-  ) {
-    // Add the yParity field to the result
-    result.yParity = jsonTx.v;
-  }
+    // Check if the transaction is an EIP-1559 or EIP-2930 transaction
+    if (
+        isFeeMarketEIP1559TxData(typedTransaction) ||
+        isAccessListEIP2930Tx(typedTransaction)
+    ) {
+        // Add the yParity field to the result
+        result.yParity = jsonTx.v;
+    }
 }
 
 /**
@@ -128,14 +128,14 @@ export function setYParityFlag(
  * @param result - The transaction result object in Ethereum format.
  */
 export function setFlagRunOutOfResources(
-  receipt: TransactionReceipt,
-  result: ExtendedJsonRpcTx,
+    receipt: TransactionReceipt,
+    result: ExtendedJsonRpcTx,
 ): void {
-  // Check if the transaction was reverted due to running out of resources
-  if (isRevertedWithOutOfResources(receipt)) {
-    // Set the isRunOutOfResources flag to true in the result
-    result.isRunOutOfResources = true;
-  }
+    // Check if the transaction was reverted due to running out of resources
+    if (isRevertedWithOutOfResources(receipt)) {
+        // Set the isRunOutOfResources flag to true in the result
+        result.isRunOutOfResources = true;
+    }
 }
 
 /**
@@ -151,45 +151,45 @@ export function setFlagRunOutOfResources(
  * @returns - The transaction in the Ethereum format, or null if the transaction is not signed.
  */
 export function transactionEthFormat({
-  typedTransaction,
-  jsonTx,
-  blockNumber,
-  blockHash,
-  isPendingBlock,
-  chainId,
-  index,
-}: TransactionConversionInput): ExtendedJsonRpcTx | null {
-  if (!jsonTx.v || !jsonTx.r || !jsonTx.s) {
-    console.error(
-      `Transaction is not signed: {r: ${jsonTx.r}, s: ${jsonTx.s}, v: ${jsonTx.v}}`,
-    );
-    // TODO: Ping alert webhooks
-    return null;
-  }
+                                         typedTransaction,
+                                         jsonTx,
+                                         blockNumber,
+                                         blockHash,
+                                         isPendingBlock,
+                                         chainId,
+                                         index,
+                                     }: TransactionConversionInput): ExtendedJsonRpcTx | null {
+    if (!jsonTx.v || !jsonTx.r || !jsonTx.s) {
+        console.error(
+            `Transaction is not signed: {r: ${jsonTx.r}, s: ${jsonTx.s}, v: ${jsonTx.v}}`,
+        );
+        // TODO: Ping alert webhooks
+        return null;
+    }
 
-  return {
-    blockHash: isPendingBlock ? null : blockHash,
-    blockNumber,
-    from: typedTransaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
-    gas: jsonTx.gasLimit!,
-    gasPrice: jsonTx.gasPrice ?? jsonTx.maxFeePerGas!,
-    maxFeePerGas: jsonTx.maxFeePerGas,
-    maxPriorityFeePerGas: jsonTx.maxPriorityFeePerGas,
-    type: intToHex(typedTransaction.type),
-    accessList: jsonTx.accessList,
-    chainId,
-    hash: padBytes(typedTransaction.hash(), 32),
-    input: jsonTx.data!,
-    nonce: jsonTx.nonce!,
-    to: typedTransaction.to?.toString() ?? null,
-    transactionIndex: isPendingBlock ? null : padBigint(BigInt(index ?? 0), 8),
-    value: jsonTx.value!,
-    v: jsonTx.v,
-    r: jsonTx.r,
-    s: jsonTx.s,
-    maxFeePerBlobGas: jsonTx.maxFeePerBlobGas,
-    blobVersionedHashes: jsonTx.blobVersionedHashes,
-  };
+    return {
+        blockHash: isPendingBlock ? null : blockHash,
+        blockNumber,
+        from: typedTransaction.getSenderAddress().toString(), // no need to pad as the `Address` type is 40 bytes.
+        gas: jsonTx.gasLimit!,
+        gasPrice: jsonTx.gasPrice ?? jsonTx.maxFeePerGas!,
+        maxFeePerGas: jsonTx.maxFeePerGas,
+        maxPriorityFeePerGas: jsonTx.maxPriorityFeePerGas,
+        type: intToHex(typedTransaction.type),
+        accessList: jsonTx.accessList,
+        chainId,
+        hash: padBytes(typedTransaction.hash(), 32),
+        input: jsonTx.data!,
+        nonce: jsonTx.nonce!,
+        to: typedTransaction.to?.toString() ?? null,
+        transactionIndex: isPendingBlock ? null : padBigint(BigInt(index ?? 0), 8),
+        value: jsonTx.value!,
+        v: jsonTx.v,
+        r: jsonTx.r,
+        s: jsonTx.s,
+        maxFeePerBlobGas: jsonTx.maxFeePerBlobGas,
+        blobVersionedHashes: jsonTx.blobVersionedHashes,
+    };
 }
 
 /**
@@ -203,42 +203,42 @@ export function transactionEthFormat({
  * @returns - The transaction in the Ethereum format, or null if the transaction is invalid.
  */
 export function typedTransactionToEthTx({
-  typedTransaction,
-  receipt,
-  blockNumber,
-  blockHash,
-  isPendingBlock,
-}: TypedTransactionContext): ExtendedJsonRpcTx | null {
-  const index = receipt.transactionIndex;
+                                            typedTransaction,
+                                            receipt,
+                                            blockNumber,
+                                            blockHash,
+                                            isPendingBlock,
+                                        }: TypedTransactionContext): ExtendedJsonRpcTx | null {
+    const index = receipt.transactionIndex;
 
-  if (!index) {
-    console.error(
-      "Known bug (apibara): ⚠️ Transaction index is undefined - Transaction index will be set to 0.",
-    );
-  }
+    if (!index) {
+        console.error(
+            "Known bug (apibara): ⚠️ Transaction index is undefined - Transaction index will be set to 0.",
+        );
+    }
 
-  const jsonTx = typedTransaction.toJSON();
+    const jsonTx = typedTransaction.toJSON();
 
-  const result = transactionEthFormat({
-    typedTransaction,
-    jsonTx,
-    receipt,
-    blockNumber,
-    blockHash,
-    isPendingBlock,
-    chainId: chainId(typedTransaction, jsonTx),
-    index,
-  });
+    const result = transactionEthFormat({
+        typedTransaction,
+        jsonTx,
+        receipt,
+        blockNumber,
+        blockHash,
+        isPendingBlock,
+        chainId: chainId(typedTransaction, jsonTx),
+        index,
+    });
 
-  if (!result) {
-    return null;
-  }
+    if (!result) {
+        return null;
+    }
 
-  setYParityFlag(typedTransaction, jsonTx, result);
+    setYParityFlag(typedTransaction, jsonTx, result);
 
-  setFlagRunOutOfResources(receipt, result);
+    setFlagRunOutOfResources(receipt, result);
 
-  return result;
+    return result;
 }
 
 /**
@@ -248,82 +248,80 @@ export function typedTransactionToEthTx({
  * @returns - The Typed transaction in the Ethereum format, or null if invalid.
  */
 export function toTypedEthTx({
-  transaction,
-}: {
-  transaction: Transaction;
+                                 transaction,
+                             }: {
+    transaction: Transaction;
 }): TypedTransaction | null {
-  const execute_from_outside_calldata = transaction.invokeV1?.calldata;
+    const execute_from_outside_calldata = transaction.invokeV1?.calldata;
 
-  // Validate calldata presence
-  if (!execute_from_outside_calldata) {
-    console.error("No calldata", JSON.stringify(transaction, null, 2));
-    return null;
-  }
-
-  // Calldata should have a length of at least 15
-  if (execute_from_outside_calldata.length < 15) {
-    console.error(
-      "Calldata length mismatch",
-      JSON.stringify(transaction, null, 2),
-    );
-    return null;
-  }
-
-  // [call_array_len, to, selector, calldata_len, execute_from_outside_caller, execute_from_outside_nonce, execute_from_outside_after,
-  // execute_from_outside_before, rest]
-  const calldata = execute_from_outside_calldata.slice(8);
-
-  // Validate single call transaction
-  // [call_array_len, to, selector, data_offset, data_len, calldata_len, calldata, signature_len, signature]
-  const callArrayLen = BigInt(calldata[0]);
-  // Multi-calls are not supported for now.
-  if (callArrayLen !== 1n) {
-    console.error(
-      `Invalid call array length ${BigInt(calldata[0])}`,
-      JSON.stringify(transaction, null, 2),
-    );
-    return null;
-  }
-
-  // Validate signature length
-  // [call_array_len, to, selector, data_offset, data_len, calldata_len, calldata, signature_len, signature]
-  const eth_data_len = Number(calldata[5]);
-  const signature = calldata.slice(5 + 1 + eth_data_len + 1);
-  if (signature.length !== 5) {
-    console.error(
-      `Invalid signature length ${signature.length}`,
-      JSON.stringify(transaction, null, 2),
-    );
-    return null;
-  }
-
-  // Extract signature components
-  const [rLow, rHigh, sLow, sHigh, vBigInt] = signature;
-  const r = uint256.uint256ToBN({ low: rLow, high: rHigh });
-  const s = uint256.uint256ToBN({ low: sLow, high: sHigh });
-  const v = BigInt(vBigInt);
-
-  try {
-    // 31 bytes chunks packing
-    // [call_array_len, to, selector, data_offset, data_len, calldata_len, bytes_len, bytes, signature_len, signature]
-    const eth_data = calldata.slice(5 + 2, 5 + 2 + eth_data_len - 1);
-    const newFormatBytes = unpackCallData(eth_data);
-    const calldataWithoutSignature = calldata.slice(0, calldata.length - 6);
-    const newFormatBytes = unpackCallData(calldataWithoutSignature);
-
-    const ethTxUnsigned = fromSerializedData(newFormatBytes);
-    return addSignature(ethTxUnsigned, r, s, v);
-  } catch (e) {
-    if (e instanceof Error) {
-      console.error(`Invalid transaction: ${e.message}`);
-    } else {
-      console.error(`Unknown throw ${e}`);
-      throw e;
+    // Validate calldata presence
+    if (!execute_from_outside_calldata) {
+        console.error("No calldata", JSON.stringify(transaction, null, 2));
+        return null;
     }
-    // TODO: Ping alert webhooks
-    console.error(e);
-    return null;
-  }
+
+    // Calldata should have a length of at least 15
+    if (execute_from_outside_calldata.length < 15) {
+        console.error(
+            "Calldata length mismatch",
+            JSON.stringify(transaction, null, 2),
+        );
+        return null;
+    }
+
+    // [call_array_len, to, selector, calldata_len, execute_from_outside_caller, execute_from_outside_nonce, execute_from_outside_after,
+    // execute_from_outside_before, rest]
+    const calldata = execute_from_outside_calldata.slice(8);
+
+    // Validate single call transaction
+    // [call_array_len, to, selector, data_offset, data_len, calldata_len, calldata, signature_len, signature]
+    const callArrayLen = BigInt(calldata[0]);
+    // Multi-calls are not supported for now.
+    if (callArrayLen !== 1n) {
+        console.error(
+            `Invalid call array length ${BigInt(calldata[0])}`,
+            JSON.stringify(transaction, null, 2),
+        );
+        return null;
+    }
+
+    // Validate signature length
+    // [call_array_len, to, selector, data_offset, data_len, calldata_len, calldata, signature_len, signature]
+    const eth_data_len = Number(calldata[5]);
+    const signature = calldata.slice(5 + 1 + eth_data_len + 1);
+    if (signature.length !== 5) {
+        console.error(
+            `Invalid signature length ${signature.length}`,
+            JSON.stringify(transaction, null, 2),
+        );
+        return null;
+    }
+
+    // Extract signature components
+    const [rLow, rHigh, sLow, sHigh, vBigInt] = signature;
+    const r = uint256.uint256ToBN({low: rLow, high: rHigh});
+    const s = uint256.uint256ToBN({low: sLow, high: sHigh});
+    const v = BigInt(vBigInt);
+
+    try {
+        // 31 bytes chunks packing
+        // [call_array_len, to, selector, data_offset, data_len, calldata_len, bytes_len, bytes, signature_len, signature]
+        const calldataWithoutSignature = calldata.slice(0, calldata.length - 6);
+        const newFormatBytes = unpackCallData(calldataWithoutSignature);
+
+        const ethTxUnsigned = fromSerializedData(newFormatBytes);
+        return addSignature(ethTxUnsigned, r, s, v);
+    } catch (e) {
+        if (e instanceof Error) {
+            console.error(`Invalid transaction: ${e.message}`);
+        } else {
+            console.error(`Unknown throw ${e}`);
+            throw e;
+        }
+        // TODO: Ping alert webhooks
+        console.error(e);
+        return null;
+    }
 }
 
 /**
@@ -337,30 +335,30 @@ export function toTypedEthTx({
  * @throws - Error if the transaction is a BlobEIP4844Tx or the rlp encoding is not an array.
  */
 function fromSerializedData(bytes: Uint8Array): TypedTransaction {
-  const txType = bytes[0];
-  if (txType <= 0x7f) {
-    switch (txType) {
-      case TransactionType.AccessListEIP2930:
-        return AccessListEIP2930Transaction.fromSerializedTx(bytes);
-      case TransactionType.FeeMarketEIP1559:
-        return FeeMarketEIP1559Transaction.fromSerializedTx(bytes);
-      default:
-        throw new Error(`Invalid tx type: ${txType}`);
+    const txType = bytes[0];
+    if (txType <= 0x7f) {
+        switch (txType) {
+            case TransactionType.AccessListEIP2930:
+                return AccessListEIP2930Transaction.fromSerializedTx(bytes);
+            case TransactionType.FeeMarketEIP1559:
+                return FeeMarketEIP1559Transaction.fromSerializedTx(bytes);
+            default:
+                throw new Error(`Invalid tx type: ${txType}`);
+        }
+    } else {
+        const values = RLP.decode(bytes);
+        if (!Array.isArray(values)) {
+            throw new Error("Invalid serialized tx input: must be array");
+        }
+        // In the case of a Legacy, we need to update the chain id to be a value >= 37.
+        // This is due to the fact that LegacyTransaction's constructor (used by fromValuesArray)
+        // will check if v >= 37. Since we pass it [v, r, s] = [chain_id, 0, 0], we need to force
+        // the chain id to be >= 37. This value will be updated during the call to addSignature.
+        values[6] = bigIntToBytes(37n);
+        return LegacyTransaction.fromValuesArray(
+            values as TxValuesArray[TransactionType.Legacy],
+        );
     }
-  } else {
-    const values = RLP.decode(bytes);
-    if (!Array.isArray(values)) {
-      throw new Error("Invalid serialized tx input: must be array");
-    }
-    // In the case of a Legacy, we need to update the chain id to be a value >= 37.
-    // This is due to the fact that LegacyTransaction's constructor (used by fromValuesArray)
-    // will check if v >= 37. Since we pass it [v, r, s] = [chain_id, 0, 0], we need to force
-    // the chain id to be >= 37. This value will be updated during the call to addSignature.
-    values[6] = bigIntToBytes(37n);
-    return LegacyTransaction.fromValuesArray(
-      values as TxValuesArray[TransactionType.Legacy],
-    );
-  }
 }
 
 /**
@@ -375,69 +373,69 @@ function fromSerializedData(bytes: Uint8Array): TypedTransaction {
  *         LegacyTx.
  */
 function addSignature(
-  tx: TypedTransaction,
-  r: bigint,
-  s: bigint,
-  v: bigint,
+    tx: TypedTransaction,
+    r: bigint,
+    s: bigint,
+    v: bigint,
 ): TypedTransaction {
-  const TypedTxData = ((): TypedTxData => {
-    if (isLegacyTx(tx)) {
-      const legacyTx = LegacyTransaction.fromTxData({
-        nonce: tx.nonce,
-        gasPrice: tx.gasPrice,
-        gasLimit: tx.gasLimit,
-        to: tx.to,
-        value: tx.value,
-        data: tx.data,
-        v,
-        r,
-        s,
-      });
+    const TypedTxData = ((): TypedTxData => {
+        if (isLegacyTx(tx)) {
+            const legacyTx = LegacyTransaction.fromTxData({
+                nonce: tx.nonce,
+                gasPrice: tx.gasPrice,
+                gasLimit: tx.gasLimit,
+                to: tx.to,
+                value: tx.value,
+                data: tx.data,
+                v,
+                r,
+                s,
+            });
 
-      if (
-        v < 35 && Number(v) !== 27 && Number(v) !== 28
-      ) {
-        throw new Error(
-          `Legacy txs need either v = 27/28 or v >= 35 (EIP-155 replay protection), got v = ${v}`,
-        );
-      }
+            if (
+                v < 35 && Number(v) !== 27 && Number(v) !== 28
+            ) {
+                throw new Error(
+                    `Legacy txs need either v = 27/28 or v >= 35 (EIP-155 replay protection), got v = ${v}`,
+                );
+            }
 
-      return legacyTx;
-    } else if (isAccessListEIP2930Tx(tx)) {
-      return AccessListEIP2930Transaction.fromTxData({
-        chainId: tx.chainId,
-        nonce: tx.nonce,
-        gasPrice: tx.gasPrice,
-        gasLimit: tx.gasLimit,
-        to: tx.to,
-        value: tx.value,
-        data: tx.data,
-        accessList: tx.accessList,
-        v,
-        r,
-        s,
-      });
-    } else if (isFeeMarketEIP1559TxData(tx)) {
-      return FeeMarketEIP1559Transaction.fromTxData({
-        chainId: tx.chainId,
-        nonce: tx.nonce,
-        maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
-        maxFeePerGas: tx.maxFeePerGas,
-        gasLimit: tx.gasLimit,
-        to: tx.to,
-        value: tx.value,
-        data: tx.data,
-        accessList: tx.accessList,
-        v,
-        r,
-        s,
-      });
-    } else {
-      throw new Error(`Invalid transaction type: ${tx}`);
-    }
-  })();
+            return legacyTx;
+        } else if (isAccessListEIP2930Tx(tx)) {
+            return AccessListEIP2930Transaction.fromTxData({
+                chainId: tx.chainId,
+                nonce: tx.nonce,
+                gasPrice: tx.gasPrice,
+                gasLimit: tx.gasLimit,
+                to: tx.to,
+                value: tx.value,
+                data: tx.data,
+                accessList: tx.accessList,
+                v,
+                r,
+                s,
+            });
+        } else if (isFeeMarketEIP1559TxData(tx)) {
+            return FeeMarketEIP1559Transaction.fromTxData({
+                chainId: tx.chainId,
+                nonce: tx.nonce,
+                maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
+                maxFeePerGas: tx.maxFeePerGas,
+                gasLimit: tx.gasLimit,
+                to: tx.to,
+                value: tx.value,
+                data: tx.data,
+                accessList: tx.accessList,
+                v,
+                r,
+                s,
+            });
+        } else {
+            throw new Error(`Invalid transaction type: ${tx}`);
+        }
+    })();
 
-  return TransactionFactory.fromTxData(TypedTxData);
+    return TransactionFactory.fromTxData(TypedTxData);
 }
 
 /**
@@ -451,22 +449,22 @@ function addSignature(
  * each string represents 64 hexadecimal characters (32 bytes) before being prefixed with '0x'.
  */
 export function packCallData(input: Uint8Array): HexString[] {
-  const serializedTx: HexString[] = [];
+    const serializedTx: HexString[] = [];
 
-  // Process the input bytes in chunks of 31 bytes each and pack them into hexadecimal strings.
-  for (let i = 0; i < input.length; i += 31) {
-    // Obtain a chunk of 31 bytes.
-    const chunk = input.slice(i, i + 31);
+    // Process the input bytes in chunks of 31 bytes each and pack them into hexadecimal strings.
+    for (let i = 0; i < input.length; i += 31) {
+        // Obtain a chunk of 31 bytes.
+        const chunk = input.slice(i, i + 31);
 
-    // Convert the chunk into a BigInt, then into a hexadecimal string, padding to 64 characters.
-    const hexString = ("0x" +
-      bytesToBigInt(chunk).toString(16).padStart(64, "0")) as HexString;
+        // Convert the chunk into a BigInt, then into a hexadecimal string, padding to 64 characters.
+        const hexString = ("0x" +
+            bytesToBigInt(chunk).toString(16).padStart(64, "0")) as HexString;
 
-    // Push the resulting hexadecimal string into the serializedTx array.
-    serializedTx.push(hexString);
-  }
+        // Push the resulting hexadecimal string into the serializedTx array.
+        serializedTx.push(hexString);
+    }
 
-  return serializedTx;
+    return serializedTx;
 }
 
 /**
@@ -483,20 +481,20 @@ export function packCallData(input: Uint8Array): HexString[] {
  *    specified by the sixth element in the input array.
  */
 export function unpackCallData(input: HexString[]): Uint8Array {
-  // Convert a hex string to bytes and remove the first byte.
-  const hexToBytesSlice = (x: HexString) => hexToBytes(x).slice(1);
+    // Convert a hex string to bytes and remove the first byte.
+    const hexToBytesSlice = (x: HexString) => hexToBytes(x).slice(1);
 
-  // Process the main part of the calldata, converting and slicing each chunk, then concatenating them.
-  const calldataCore = concatBytes(...input.slice(7, -1).map(hexToBytesSlice));
+    // Process the main part of the calldata, converting and slicing each chunk, then concatenating them.
+    const calldataCore = concatBytes(...input.slice(7, -1).map(hexToBytesSlice));
 
-  // Calculate the remaining length required to match the length specified by the sixth element in input.
-  const remainingLength = parseInt(input[6], 16) - calldataCore.length;
+    // Calculate the remaining length required to match the length specified by the sixth element in input.
+    const remainingLength = parseInt(input[6], 16) - calldataCore.length;
 
-  // Process the last element to ensure the final byte array matches the required length.
-  const higher_chunk = hexToBytesSlice(input[input.length - 1]).slice(
-    31 - remainingLength,
-  );
+    // Process the last element to ensure the final byte array matches the required length.
+    const higher_chunk = hexToBytesSlice(input[input.length - 1]).slice(
+        31 - remainingLength,
+    );
 
-  // Concatenate the processed core calldata and the adjusted last chunk into a single Uint8Array.
-  return new Uint8Array([...calldataCore, ...higher_chunk]);
+    // Concatenate the processed core calldata and the adjusted last chunk into a single Uint8Array.
+    return new Uint8Array([...calldataCore, ...higher_chunk]);
 }
