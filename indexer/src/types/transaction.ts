@@ -288,6 +288,7 @@ export function toTypedEthTx({
   // Validate signature length
   // [call_array_len, to, selector, data_offset, data_len, calldata_len, calldata, signature_len, signature]
   const eth_data_len = calldata[5];
+  const signature = calldata.slice(5 + 2 + eth_data_len + 1);
   const signature = calldata.slice(5 + 1 + eth_data_len + 1);
   if (signature.length !== 5) {
     console.error(
@@ -305,8 +306,8 @@ export function toTypedEthTx({
 
   try {
     // 31 bytes chunks packing
-    // [call_array_len, to, selector, data_offset, data_len, calldata_len, calldata, signature_len, signature]
-    const eth_data = calldata.slice(5 + 1, 5 + 1 + eth_data_len);
+    // [call_array_len, to, selector, data_offset, data_len, calldata_len, bytes_len, bytes, signature_len, signature]
+    const eth_data = calldata.slice(5 + 2, 5 + 2 + eth_data_len - 1);
     const newFormatBytes = unpackCallData(eth_data);
 
     const ethTxUnsigned = fromSerializedData(newFormatBytes);
