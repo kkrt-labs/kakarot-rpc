@@ -971,9 +971,9 @@ async fn test_send_raw_transaction_exceed_gas_limit(#[future] katana: Katana, _s
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-#[ignore = "failing because of relayer change"]
-async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup: ()) {
+async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _setup: ()) {
     // Given
+    let katana = katana_empty;
     let eth_provider = katana.eth_provider();
     let eth_client = katana.eth_client();
     let nonce: u64 = katana.eoa().nonce().await.unwrap().try_into().expect("Failed to convert nonce");
@@ -998,22 +998,54 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana: Katana, _setup:
     assert_eq!(mempool_size.total, 0);
 
     // Send the transaction
-    let tx_hash = eth_client
+    let _ = eth_client
         .send_raw_transaction(transaction_signed.envelope_encoded())
         .await
         .expect("failed to send transaction");
-
-    let bytes = tx_hash.0;
-    let starknet_tx_hash = Felt::from_bytes_be(&bytes);
 
     let mempool_size_after_send = eth_client.mempool().pool_size();
     // Assert that the number of pending transactions in the mempool is 1
     assert_eq!(mempool_size_after_send.pending, 1);
     assert_eq!(mempool_size_after_send.total, 1);
 
-    watch_tx(eth_provider.starknet_provider_inner(), starknet_tx_hash, std::time::Duration::from_millis(300), 60)
+    // Prepare the relayer
+    let relayer_balance = katana
+        .eth_client
+        .starknet_provider()
+        .balance_at(katana.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
         .await
-        .expect("Tx polling failed");
+        .expect("Failed to get relayer balance");
+    let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
+
+    let nonce = katana
+        .eth_client
+        .starknet_provider()
+        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
+        .await
+        .unwrap_or_default();
+
+    let current_nonce = Mutex::new(nonce);
+
+    // Relay the transaction
+    let starknet_transaction_hash = LockedRelayer::new(
+        current_nonce.lock().await,
+        katana.eoa.relayer.address(),
+        relayer_balance,
+        &(*(*katana.eth_client.starknet_provider())),
+        katana.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+    )
+    .relay_transaction(&transaction_signed)
+    .await
+    .expect("Failed to relay transaction");
+
+    watch_tx(
+        eth_provider.starknet_provider_inner(),
+        starknet_transaction_hash,
+        std::time::Duration::from_millis(300),
+        60,
+    )
+    .await
+    .expect("Tx polling failed");
 
     // Then
     // Check that the Arachnid deployer contract was deployed
