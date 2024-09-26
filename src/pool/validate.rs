@@ -1,6 +1,9 @@
 #![allow(unused_variables, clippy::struct_excessive_bools)]
 
-use crate::providers::eth_provider::{database::state::EthDatabase, provider::EthereumProvider};
+use crate::providers::eth_provider::{
+    database::state::EthDatabase, provider::EthereumProvider,
+    starknet::kakarot_core::get_white_listed_eip_155_transaction_hashes,
+};
 use reth_chainspec::ChainSpec;
 use reth_primitives::{
     BlockId, GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID,
@@ -222,11 +225,17 @@ where
     Tx: EthPoolTransaction,
 {
     /// Validates a single transaction.
+    #[allow(clippy::too_many_lines)]
     fn validate_one(&self, transaction: Tx) -> TransactionValidationOutcome<Tx> {
         // Checks for tx_type
         match transaction.tx_type() {
             LEGACY_TX_TYPE_ID => {
-                // Accept legacy transactions
+                if !get_white_listed_eip_155_transaction_hashes().contains(transaction.hash()) {
+                    return TransactionValidationOutcome::Invalid(
+                        transaction,
+                        InvalidTransactionError::TxTypeNotSupported.into(),
+                    );
+                }
             }
             EIP2930_TX_TYPE_ID => {
                 // Accept only legacy transactions until EIP-2718/2930 activates
