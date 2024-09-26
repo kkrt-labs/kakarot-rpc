@@ -1,8 +1,6 @@
 #![allow(clippy::significant_drop_tightening)]
 
 use super::validate::KakarotTransactionValidator;
-use crate::providers::eth_provider::database::state::EthDatabase;
-use crate::providers::eth_provider::BlockProvider;
 use crate::{
     client::EthClient,
     into_via_try_wrapper,
