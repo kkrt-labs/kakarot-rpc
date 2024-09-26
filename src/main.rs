@@ -1,5 +1,6 @@
 use dotenvy::dotenv;
 use eyre::Result;
+use kakarot_rpc::pool::mempool::maintain_transaction_pool;
 use kakarot_rpc::{
     client::EthClient,
     config::KakarotRpcConfig,
@@ -10,10 +11,7 @@ use kakarot_rpc::{
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
-use starknet::{
-    macros::felt,
-    providers::{jsonrpc::HttpTransport, JsonRpcClient},
-};
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{env::var, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
@@ -72,15 +70,19 @@ async fn main() -> Result<()> {
     let account_manager = {
         #[cfg(feature = "hive")]
         {
+            use starknet::macros::felt;
             let addresses = vec![felt!("0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca")];
-            AccountManager::from_addresses(addresses, eth_client.clone()).await?
+            AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?
         }
         #[cfg(not(feature = "hive"))]
         {
-            AccountManager::new("./src/pool/accounts.json", eth_client.clone()).await?
+            AccountManager::new("./src/pool/accounts.json", Arc::clone(&eth_client)).await?
         }
     };
-    account_manager.start(&tokio::runtime::Handle::current());
+    account_manager.start();
+
+    // Start the maintenance of the mempool
+    maintain_transaction_pool(Arc::clone(&eth_client));
 
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;
