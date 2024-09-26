@@ -4,12 +4,19 @@ use super::validate::KakarotTransactionValidator;
 use crate::{
     client::EthClient,
     into_via_try_wrapper,
-    providers::eth_provider::{constant::RPC_CONFIG, starknet::relayer::LockedRelayer},
+    providers::eth_provider::{
+        constant::RPC_CONFIG, database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider,
+    },
 };
 use futures::future::select_all;
-use reth_primitives::{BlockId, IntoRecoveredTransaction, U256};
+use reth_chainspec::ChainSpec;
+use reth_execution_types::ChangedAccount;
+use reth_primitives::{basefee::calc_next_block_base_fee, Address, BlockId, IntoRecoveredTransaction, U256};
+use reth_revm::DatabaseRef;
+use reth_rpc_types::BlockNumberOrTag;
 use reth_transaction_pool::{
-    blobstore::NoopBlobStore, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionOrigin, TransactionPool,
+    blobstore::NoopBlobStore, BlockInfo, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionOrigin,
+    TransactionPool, TransactionPoolExt,
 };
 use serde_json::Value;
 use starknet::{
@@ -203,6 +210,82 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
             .await
             .map_err(Into::into)
     }
+}
+
+#[derive(Default)]
+struct LoadedAccounts {
+    /// All accounts that were loaded
+    accounts: Vec<ChangedAccount>,
+    /// All accounts that failed to load
+    failed_to_load: Vec<Address>,
+}
+
+/// Loads all accounts at the given state
+///
+/// Note: this expects _unique_ addresses
+fn load_accounts<SP, I>(client: &Arc<EthClient<SP>>, addresses: I) -> LoadedAccounts
+where
+    SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
+    I: IntoIterator<Item = Address>,
+{
+    let addresses = addresses.into_iter();
+    let mut res = LoadedAccounts::default();
+
+    let db = EthDatabase::new(Arc::new(client.eth_provider()), BlockNumberOrTag::Latest.into());
+
+    for addr in addresses {
+        if let Ok(maybe_acc) = db.basic_ref(addr) {
+            let acc = maybe_acc.map_or_else(
+                || ChangedAccount::empty(addr),
+                |acc| ChangedAccount { address: addr, nonce: acc.nonce, balance: acc.balance },
+            );
+            res.accounts.push(acc);
+        } else {
+            // failed to load account.
+            res.failed_to_load.push(addr);
+        }
+    }
+    res
+}
+
+pub fn maintain_transaction_pool<SP>(eth_client: Arc<EthClient<SP>>, rt_handle: &Handle)
+where
+    SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
+{
+    rt_handle.spawn(async move {
+        loop {
+            // ensure the pool points to latest state
+            if let Ok(Some(latest)) = eth_client.eth_provider().header(&BlockNumberOrTag::Latest.into()).await {
+                let chain_spec = ChainSpec { chain: eth_client.eth_provider().chain_id.into(), ..Default::default() };
+                let info = BlockInfo {
+                    block_gas_limit: latest.gas_limit as u64,
+                    last_seen_block_hash: latest.hash,
+                    last_seen_block_number: latest.number,
+                    pending_basefee: calc_next_block_base_fee(
+                        latest.gas_used,
+                        latest.gas_limit,
+                        latest.base_fee_per_gas.unwrap_or_default(),
+                        chain_spec.base_fee_params_at_timestamp(latest.timestamp + 12),
+                    ) as u64,
+                    pending_blob_fee: latest.next_block_blob_fee(),
+                };
+                eth_client.mempool().set_block_info(info);
+            }
+
+            // Fetch unique senders from the mempool that are out of sync
+            let dirty_addresses = eth_client.mempool().unique_senders();
+
+            // if we have accounts that are out of sync with the pool, we reload them in chunks
+            if !dirty_addresses.is_empty() {
+                // can fetch all dirty accounts at once
+                let reloaded = load_accounts(&eth_client.clone(), dirty_addresses);
+                // update the pool with the loaded accounts
+                eth_client.mempool().update_accounts(reloaded.accounts);
+            }
+
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    });
 }
 
 #[cfg(test)]

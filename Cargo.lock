@@ -5996,6 +5996,7 @@ dependencies = [
  "reqwest 0.12.7",
  "reth-chainspec",
  "reth-evm-ethereum",
+ "reth-execution-types",
  "reth-node-api",
  "reth-primitives",
  "reth-revm",
