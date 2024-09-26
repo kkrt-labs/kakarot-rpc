@@ -329,8 +329,8 @@ impl KatanaGenesisBuilder<Initialized> {
         Ok(ContractAddress::new(get_contract_address(
             evm_address,
             uninitialized_account_class_hash,
-            &[kakarot_address, evm_address],
-            Felt::ZERO,
+            &[Felt::ONE, evm_address],
+            kakarot_address,
         )))
     }
 

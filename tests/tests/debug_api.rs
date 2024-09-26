@@ -2,7 +2,8 @@
 #![cfg(feature = "testing")]
 use alloy_rlp::Encodable;
 use kakarot_rpc::{
-    providers::eth_provider::{BlockProvider, ReceiptProvider, TransactionProvider},
+    client::TransactionHashProvider,
+    providers::eth_provider::{BlockProvider, ReceiptProvider},
     test_utils::{
         fixtures::{katana, setup},
         katana::Katana,
@@ -154,7 +155,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         .enumerate()
     {
         // Fetch the transaction for the current transaction hash.
-        let tx = eth_provider.transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
+        let tx = katana.eth_client.transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
         let signature = tx.signature.unwrap();
 
         // Convert the transaction to a primitives transactions and encode it.

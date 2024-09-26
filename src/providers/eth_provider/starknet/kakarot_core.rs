@@ -76,5 +76,5 @@ pub fn get_white_listed_eip_155_transaction_hashes() -> Vec<B256> {
 #[inline]
 pub fn starknet_address(address: Address) -> Felt {
     let evm_address = into_via_wrapper!(address);
-    get_contract_address(evm_address, *UNINITIALIZED_ACCOUNT_CLASS_HASH, &[*KAKAROT_ADDRESS, evm_address], Felt::ZERO)
+    get_contract_address(evm_address, *UNINITIALIZED_ACCOUNT_CLASS_HASH, &[Felt::ONE, evm_address], *KAKAROT_ADDRESS)
 }
