@@ -1,12 +1,12 @@
 #![allow(clippy::significant_drop_tightening)]
 
 use super::validate::KakarotTransactionValidator;
-use crate::providers::eth_provider::database::state::EthDatabase;
-use crate::providers::eth_provider::BlockProvider;
 use crate::{
     client::EthClient,
     into_via_try_wrapper,
-    providers::eth_provider::{constant::RPC_CONFIG, starknet::relayer::LockedRelayer},
+    providers::eth_provider::{
+        constant::RPC_CONFIG, database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider,
+    },
 };
 use futures::future::select_all;
 use reth_chainspec::ChainSpec;

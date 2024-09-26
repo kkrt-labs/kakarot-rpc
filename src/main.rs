@@ -1,11 +1,10 @@
 use dotenvy::dotenv;
 use eyre::Result;
-use kakarot_rpc::pool::mempool::maintain_transaction_pool;
 use kakarot_rpc::{
     client::EthClient,
     config::KakarotRpcConfig,
     eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
-    pool::mempool::AccountManager,
+    pool::mempool::{maintain_transaction_pool, AccountManager},
     providers::eth_provider::database::Database,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
