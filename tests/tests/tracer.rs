@@ -159,7 +159,7 @@ async fn test_trace_block(#[future] plain_opcodes: (Katana, KakarotEvmContract),
     let trace_vec = block_traces.unwrap_or_default();
     // We expect 3 traces per transaction: CALL, CREATE, and CALL.
     // Except for the last one which is out of resources.
-    assert_eq!(trace_vec.len(), TRACING_TRANSACTIONS_COUNT);
+    assert!(trace_vec.len() == 3 * (TRACING_TRANSACTIONS_COUNT - 1) + 1);
 
     // Get the last trace from the trace vector, which is expected to be out of resources.
     let out_of_resources_trace = trace_vec.last().unwrap();
