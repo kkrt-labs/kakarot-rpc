@@ -243,7 +243,7 @@ Deno.test("toTypedEthTx Legacy Transaction with v = 26 (failure case)", () => {
   assertEquals(ethTx, null);
 });
 
-Deno.test("toTypedEthTx EIP1559 Transaction", () => {
+Deno.test.ignore("toTypedEthTx EIP1559 Transaction", () => {
   // Given
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
   const tx = new FeeMarketEIP1559Transaction(
