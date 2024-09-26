@@ -253,6 +253,8 @@ where
     SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
 {
     rt_handle.spawn(async move {
+        let mut last_block_number: u64 = 0;
+
         loop {
             // ensure the pool points to latest state
             let latest_block = eth_client
@@ -261,6 +263,14 @@ where
                 .await
                 .expect("Failed to get latest block")
                 .unwrap_or_default();
+
+            if latest_block.inner.header.number == last_block_number {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                continue;
+            }
+
+            last_block_number = latest_block.inner.header.number;
+
             let latest_header: reth_primitives::Header = latest_block.header.clone().try_into().unwrap();
             let latest_header = latest_header.seal_slow();
 
