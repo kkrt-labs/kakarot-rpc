@@ -82,6 +82,7 @@ reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v
 reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, optional = true }
 reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
 reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
+reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
 revm-inspectors = "0.7.4"
 
 # Error
