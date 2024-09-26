@@ -11,12 +11,12 @@ use crate::{
 use futures::future::select_all;
 use reth_chainspec::ChainSpec;
 use reth_execution_types::ChangedAccount;
-use reth_primitives::{basefee::calc_next_block_base_fee, Address, BlockId, IntoRecoveredTransaction, U256};
+use reth_primitives::{Address, BlockId, IntoRecoveredTransaction, U256};
 use reth_revm::DatabaseRef;
 use reth_rpc_types::BlockNumberOrTag;
 use reth_transaction_pool::{
-    blobstore::NoopBlobStore, BlockInfo, CoinbaseTipOrdering, EthPooledTransaction, Pool, TransactionOrigin,
-    TransactionPool, TransactionPoolExt,
+    blobstore::NoopBlobStore, BlockInfo, CanonicalStateUpdate, CoinbaseTipOrdering, EthPooledTransaction, Pool,
+    TransactionOrigin, TransactionPool, TransactionPoolExt,
 };
 use serde_json::Value;
 use starknet::{
@@ -255,33 +255,56 @@ where
     rt_handle.spawn(async move {
         loop {
             // ensure the pool points to latest state
-            if let Ok(Some(latest)) = eth_client.eth_provider().header(&BlockNumberOrTag::Latest.into()).await {
-                let chain_spec = ChainSpec { chain: eth_client.eth_provider().chain_id.into(), ..Default::default() };
-                let info = BlockInfo {
-                    block_gas_limit: latest.gas_limit as u64,
-                    last_seen_block_hash: latest.hash,
-                    last_seen_block_number: latest.number,
-                    pending_basefee: calc_next_block_base_fee(
-                        latest.gas_used,
-                        latest.gas_limit,
-                        latest.base_fee_per_gas.unwrap_or_default(),
-                        chain_spec.base_fee_params_at_timestamp(latest.timestamp + 12),
-                    ) as u64,
-                    pending_blob_fee: latest.next_block_blob_fee(),
-                };
-                eth_client.mempool().set_block_info(info);
-            }
+            let latest_block = eth_client
+                .eth_provider()
+                .block_by_number(BlockNumberOrTag::Latest, true)
+                .await
+                .expect("Failed to get latest block")
+                .unwrap_or_default();
+            let latest_header: reth_primitives::Header = latest_block.header.clone().try_into().unwrap();
+            let latest_header = latest_header.seal_slow();
+
+            let chain_spec = ChainSpec { chain: eth_client.eth_provider().chain_id.into(), ..Default::default() };
+            let info = BlockInfo {
+                block_gas_limit: latest_header.gas_limit as u64,
+                last_seen_block_hash: latest_header.hash(),
+                last_seen_block_number: latest_header.number,
+                pending_basefee: latest_header
+                    .next_block_base_fee(chain_spec.base_fee_params_at_timestamp(latest_header.timestamp + 12))
+                    .unwrap_or_default(),
+                pending_blob_fee: latest_header.next_block_blob_fee(),
+            };
+            eth_client.mempool().set_block_info(info);
 
             // Fetch unique senders from the mempool that are out of sync
             let dirty_addresses = eth_client.mempool().unique_senders();
+
+            let mut changed_accounts = Vec::new();
 
             // if we have accounts that are out of sync with the pool, we reload them in chunks
             if !dirty_addresses.is_empty() {
                 // can fetch all dirty accounts at once
                 let reloaded = load_accounts(&eth_client.clone(), dirty_addresses);
+                changed_accounts.extend(reloaded.accounts);
                 // update the pool with the loaded accounts
-                eth_client.mempool().update_accounts(reloaded.accounts);
+                eth_client.mempool().update_accounts(changed_accounts.clone());
             }
+
+            let last_block: reth_primitives::Block = latest_block.inner.clone().try_into().unwrap();
+            let sealed_block = last_block.seal_slow();
+
+            let mined_transactions =
+                latest_block.transactions.as_hashes().map(|hashes| hashes.to_vec()).unwrap_or_default();
+
+            // Canonical update
+            let update = CanonicalStateUpdate {
+                new_tip: &sealed_block,
+                pending_block_base_fee: info.pending_basefee,
+                pending_block_blob_fee: None,
+                changed_accounts,
+                mined_transactions,
+            };
+            eth_client.mempool().on_canonical_state_change(update);
 
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
