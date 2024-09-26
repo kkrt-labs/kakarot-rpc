@@ -230,7 +230,9 @@ where
         // Checks for tx_type
         match transaction.tx_type() {
             LEGACY_TX_TYPE_ID => {
-                if !get_white_listed_eip_155_transaction_hashes().contains(transaction.hash()) {
+                if transaction.chain_id().is_none()
+                    && !get_white_listed_eip_155_transaction_hashes().contains(transaction.hash())
+                {
                     return TransactionValidationOutcome::Invalid(
                         transaction,
                         InvalidTransactionError::TxTypeNotSupported.into(),
