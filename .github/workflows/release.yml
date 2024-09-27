@@ -45,6 +45,8 @@ jobs:
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install asdf & tools
+        uses: asdf-vm/actions/setup@v3
       - name: install scarb
         run: |
           asdf plugin add scarb
