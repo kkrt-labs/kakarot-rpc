@@ -70,6 +70,8 @@ async fn main() -> Result<()> {
         #[cfg(feature = "hive")]
         {
             use starknet::macros::felt;
+            // This address is the first address in the prefunded addresses for Katana.
+            // To check, run `katana` and check the list of prefunded accounts.
             let addresses = vec![felt!("0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca")];
             AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?
         }
