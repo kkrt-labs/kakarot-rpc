@@ -10,8 +10,8 @@ import { DEFAULT_BLOCK_GAS_LIMIT, toEthHeader } from "../src/types/header.ts";
 import { JsonRpcBlock } from "../src/types/types.ts";
 import { padString } from "../src/utils/hex.ts";
 import sinon from "npm:sinon";
-import { KAKAROT } from "../provider.ts";
-import { NULL_HASH } from "../constants.ts";
+import { KAKAROT } from "../src/provider.ts";
+import { NULL_HASH } from "../src/constants.ts";
 
 Deno.test("toEthHeader with a complete header", async () => {
   // Define a complete BlockHeader object with necessary properties
