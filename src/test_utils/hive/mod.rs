@@ -1,7 +1,6 @@
 use super::{
     constants::{
-        ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_IMPLEMENTATION, ACCOUNT_NONCE, KAKAROT_EVM_TO_STARKNET_ADDRESS,
-        OWNABLE_OWNER,
+        ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_IMPLEMENTATION, KAKAROT_EVM_TO_STARKNET_ADDRESS, OWNABLE_OWNER,
     },
     katana::genesis::{KatanaGenesisBuilder, Loaded},
 };
@@ -80,7 +79,10 @@ impl HiveGenesisConfig {
                 let code = info.code.unwrap_or_default();
                 let storage = info.storage.unwrap_or_default();
                 let storage: Vec<(U256, U256)> = storage.into_iter().collect();
-                let kakarot_account = KakarotAccount::new(&address, Account { code, storage, ..Default::default() })?;
+                let nonce = if code.is_empty() && storage.is_empty() { U256::ZERO } else { U256::from(1u8) };
+
+                let kakarot_account =
+                    KakarotAccount::new(&address, Account { code, nonce, storage, ..Default::default() })?;
 
                 let mut kakarot_account_storage: Vec<(Felt, Felt)> =
                     kakarot_account.storage().iter().map(|(k, v)| (*k, *v)).collect();
@@ -89,7 +91,6 @@ impl HiveGenesisConfig {
                 let implementation_key = get_storage_var_address(ACCOUNT_IMPLEMENTATION, &[])?;
                 kakarot_account_storage.append(&mut vec![
                     (implementation_key, account_contract_class_hash),
-                    (get_storage_var_address(ACCOUNT_NONCE, &[])?, Felt::ONE),
                     (get_storage_var_address(OWNABLE_OWNER, &[])?, kakarot_address),
                     (
                         get_storage_var_address(ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, &[])?,

@@ -77,7 +77,18 @@ COPY . .
 # Similar to `make setup` but we remove the `make build-sol` step
 # which uses docker to build the experimental solidity contracts.
 # Using docker in docker is not supported in the current setup.
-RUN chmod +x ./scripts/extract_abi.sh \
+
+# Install asdf for multiple scarb versions
+RUN git clone --depth 1 https://github.com/asdf-vm/asdf.git "$HOME/.asdf" && \
+    echo ". $HOME/.asdf/asdf.sh" >> "$HOME/.bashrc" && \
+    echo ". $HOME/.asdf/asdf.sh" >> "$HOME/.profile"
+
+SHELL ["/bin/bash", "-c"]
+RUN source "$HOME/.asdf/asdf.sh" && asdf plugin add scarb && asdf install scarb 0.7.0  && asdf install scarb 2.6.5
+
+RUN --mount=type=cache,target=/root/.cache \
+    source "$HOME/.asdf/asdf.sh" \
+    && chmod +x ./scripts/extract_abi.sh \
     && git submodule update --init --recursive \
     && cd lib/kakarot && make setup && make build \
     && mv build/ssj/contracts_Cairo1Helpers.contract_class.json build/cairo1_helpers.json && rm -fr build/ssj && cd ../.. \
@@ -115,9 +126,9 @@ COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/
 RUN cargo build \
     --features hive --release --target-dir /usr/src/rpc/target && \
     cargo build \
-    --bin hive_genesis --release --features testing --target-dir /usr/src/rpc/target && \
+    --bin hive_genesis --release --features "testing,binaries" --target-dir /usr/src/rpc/target && \
     cargo build \
-    --bin hive_chain --release --features testing --target-dir /usr/src/rpc/target
+    --bin hive_chain --release --features "testing,binaries" --target-dir /usr/src/rpc/target
 
 FROM ubuntu:24.10 as base
 # Install any necessary dependencies

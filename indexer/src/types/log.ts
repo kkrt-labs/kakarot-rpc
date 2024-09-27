@@ -2,7 +2,7 @@
 import { padBigint } from "../utils/hex.ts";
 
 // Constants
-import { KAKAROT_ADDRESS, NULL_BLOCK_HASH } from "../constants.ts";
+import { KAKAROT_ADDRESS, NULL_HASH } from "../constants.ts";
 
 // Starknet
 import { Event, hash } from "../deps.ts";
@@ -89,7 +89,7 @@ export function toEthLog({
     logIndex: null,
     transactionIndex: bigIntToHex(BigInt(transactionIndex ?? 0)),
     transactionHash: hash,
-    blockHash: isPendingBlock ? NULL_BLOCK_HASH : blockHash,
+    blockHash: isPendingBlock ? NULL_HASH : blockHash,
     blockNumber,
     // The address is the first key of the event.
     address: padBigint(BigInt(keys[0]), 20),

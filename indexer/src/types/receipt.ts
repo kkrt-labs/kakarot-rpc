@@ -2,7 +2,7 @@
 import { padBytes } from "../utils/hex.ts";
 
 // Constants
-import { NULL_BLOCK_HASH } from "../constants.ts";
+import { NULL_HASH } from "../constants.ts";
 
 // Types
 import { fromJsonRpcLog, JsonRpcLog } from "./log.ts";
@@ -70,7 +70,7 @@ export function toEthReceipt({
   return {
     transactionHash: transaction.hash,
     transactionIndex: bigIntToHex(BigInt(transaction.transactionIndex ?? 0)),
-    blockHash: isPendingBlock ? NULL_BLOCK_HASH : blockHash,
+    blockHash: isPendingBlock ? NULL_HASH : blockHash,
     blockNumber,
     from: transaction.from,
     to: transaction.to,
@@ -113,7 +113,7 @@ export function toRevertedOutOfResourcesReceipt({
   return {
     transactionHash: transaction.hash,
     transactionIndex: bigIntToHex(BigInt(transaction.transactionIndex ?? 0)),
-    blockHash: isPendingBlock ? NULL_BLOCK_HASH : blockHash,
+    blockHash: isPendingBlock ? NULL_HASH : blockHash,
     blockNumber,
     from: transaction.from,
     to: transaction.to,

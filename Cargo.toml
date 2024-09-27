@@ -81,7 +81,8 @@ reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.
 reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
 reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, optional = true }
 reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, optional = true }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
+reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
 revm-inspectors = "0.7.4"
 
 # Error
@@ -165,6 +166,7 @@ katana-primitives = { git = 'https://github.com/dojoengine/dojo', rev = "7ff6593
   "serde",
 ], optional = true }
 mockall = { version = "0.13.0", default-features = false, optional = true }
+clap = { version = "4.5.17", optional = true }
 
 
 starknet_api = { version = "0.13.0-rc.0", optional = true }
@@ -181,8 +183,6 @@ tempfile = "3.8"
 
 [features]
 testing = [
-  "reth-testing-utils",
-  "reth-rpc-types-compat",
   "alloy-json-abi",
   "alloy-primitives",
   "alloy-signer-local",
@@ -195,6 +195,7 @@ testing = [
   "mockall",
   "rand",
   "rayon",
+  "reth-testing-utils",
   "rstest",
   "serde_with",
   "strum",
@@ -208,6 +209,7 @@ testing = [
   "revm-primitives",
   "starknet-crypto",
 ]
+binaries = ["clap"]
 hive = []
 arbitrary = ["rand", "dep:arbitrary"]
 
@@ -217,8 +219,8 @@ required-features = ["testing"]
 
 [[bin]]
 name = "hive_genesis"
-required-features = ["testing"]
+required-features = ["testing", "binaries"]
 
 [[bin]]
 name = "hive_chain"
-required-features = ["testing"]
+required-features = ["testing", "binaries"]

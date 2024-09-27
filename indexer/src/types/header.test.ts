@@ -14,6 +14,7 @@ import {
 import { padString } from "../utils/hex.ts";
 import sinon from "npm:sinon";
 import { KAKAROT } from "../provider.ts";
+import { NULL_HASH } from "../constants.ts";
 
 Deno.test("toEthHeader with a complete header", async () => {
   // Define a complete BlockHeader object with necessary properties
@@ -162,7 +163,7 @@ Deno.test("toEthHeader with pending block", async () => {
     // Block number
     number: blockNumber,
     // Block hash (null for pending block)
-    hash: null,
+    hash: NULL_HASH,
     // Parent block hash
     parentHash: header.parentBlockHash,
     // Mix hash (unused in this context)

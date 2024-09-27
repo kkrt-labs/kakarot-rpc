@@ -57,7 +57,7 @@ where
     }
 
     /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and a [`Pool`].
-    pub async fn try_new(starknet_provider: SP, database: Database) -> eyre::Result<Self> {
+    pub async fn try_new(starknet_provider: SP, pool_config: PoolConfig, database: Database) -> eyre::Result<Self> {
         let chain = (starknet_provider.chain_id().await.map_err(KakarotError::from)?.to_bigint()
             & Felt::from(u32::MAX).to_bigint())
         .to_u64()
@@ -74,7 +74,7 @@ where
             validator,
             TransactionOrdering::default(),
             NoopBlobStore::default(),
-            PoolConfig::default(),
+            pool_config,
         ));
 
         Ok(Self { eth_provider, pool })

@@ -77,7 +77,7 @@ pub fn transaction_data_to_starknet_calldata(
         *ETH_SEND_TRANSACTION,    // CallArray selector
         Felt::ZERO,               // CallArray data_offset
         signed_data.len().into(), // CallArray data_len
-        signed_data.len().into(), // calldata_len
+        signed_data.len().into(), // CallArray calldata_len
     ]);
     execute_from_outside_calldata.append(&mut signed_data);
     execute_from_outside_calldata.push(signature.len().into());

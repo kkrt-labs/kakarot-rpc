@@ -14,6 +14,9 @@ import {
 } from "../deps.ts";
 import { KAKAROT } from "../provider.ts";
 
+// Constant
+import { NULL_HASH } from "../constants.ts";
+
 // A default block gas limit in case the call to get_block_gas_limit fails.
 export const DEFAULT_BLOCK_GAS_LIMIT = (() => {
   const defaultBlockGasLimitStr = Deno.env.get("DEFAULT_BLOCK_GAS_LIMIT");
@@ -115,11 +118,11 @@ export async function toEthHeader({
     // Block number in hexadecimal format
     number: blockNumber,
     // Block hash or null if pending
-    hash: isPendingBlock ? null : blockHash,
+    hash: isPendingBlock ? NULL_HASH : blockHash,
     // Padded parent block hash
     parentHash: padString(header.parentBlockHash, 32),
     // Padded mix hash (unused in this context)
-    mixHash: padString("0x", 32),
+    mixHash: NULL_HASH,
     // Padded nonce (unused in this context)
     nonce: padString("0x", 8),
     // Empty list of uncles -> RLP encoded to 0xC0 -> Keccak(0xc0) == 0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347
@@ -130,7 +133,7 @@ export async function toEthHeader({
     // Convert transaction trie root to hexadecimal string
     transactionsRoot: bytesToHex(transactionRoot),
     // New state root or padded string
-    stateRoot: header.newRoot ?? padString("0x", 32),
+    stateRoot: header.newRoot ?? NULL_HASH,
     // Convert receipt trie root to hexadecimal string
     receiptsRoot: bytesToHex(receiptRoot),
     // Convert coinbase address to padded hexadecimal string
