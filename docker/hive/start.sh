@@ -13,7 +13,7 @@ mv /genesis/hive-genesis.json /hive-genesis.json && rm -fr /genesis
 # 2. Start Katana
 echo "Launching Katana..."
 chain_id=$(printf '%x' $(jq -r '.config.chainId' hive-genesis.json))
-RUST_LOG=info katana --block-time 6000 --disable-fee --chain-id=0x$chain_id --genesis genesis.json &
+katana --block-time 6000 --disable-fee --chain-id=0x$chain_id --genesis genesis.json &
 ###### 2.5. Await Katana to be healthy
 # Loop until the curl command succeeds
 until
@@ -63,4 +63,4 @@ sleep 9
 # 4. Start the Kakarot RPC service
 echo "Launching Kakarot RPC..."
 # THIS needs to be changed if Katana ever updates their predeployed accounts
-RELAYER_PRIVATE_KEY=0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a RUST_LOG=info kakarot-rpc
+kakarot-rpc

@@ -157,6 +157,8 @@ ENV RUST_LOG=info
 ENV MAX_FELTS_IN_CALLDATA=30000
 ENV MAX_LOGS=10000
 ENV DEFAULT_BLOCK_GAS_LIMIT=7000000
+ENV RELAYER_PRIVATE_KEY=0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a
+ENV RUST_LOG=info
 
 HEALTHCHECK --interval=10s --timeout=10s --start-period=15s --retries=5 \
     CMD response=$(curl --silent --request POST \
