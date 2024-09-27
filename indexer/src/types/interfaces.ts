@@ -12,8 +12,7 @@ import {
   PrefixedHexString,
   TypedTransaction,
 } from "../deps.ts";
-import { JsonRpcLog } from "./log.ts";
-import { JsonRpcReceipt } from "./receipt.ts";
+import { JsonRpcLog, JsonRpcReceipt } from "./types.ts";
 
 /**
  * Represents a hexadecimal string with a `0x` prefix.
