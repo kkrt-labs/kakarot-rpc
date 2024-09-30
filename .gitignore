@@ -30,9 +30,9 @@ broadcast
 # ignore genesis.json
 .hive
 
-#artifacts/
-#build/
-#.kakarot/
+artifacts/
+build/
+.kakarot/
 
 # ignore katana dump directory
 .katana/
