@@ -55,7 +55,7 @@ jobs:
           asdf install scarb 0.7.0
       - name: Setup the Kakarot submodule
         run: make setup
-      - run: mkdir /tmp && mv .kakarot/* /tmp
+      - run: mkdir /tmp_kakarot && mv .kakarot/* /tmp_kakarot
       - name: log
         run: |
           echo $PWD
@@ -68,7 +68,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
-          path: /tmp
+          path: /tmp_kakarot
 
   # Inspired by Reth CI.
   # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
