@@ -30,6 +30,8 @@ setup: .gitmodules
 	cd lib/kakarot && make setup && make build && make build-sol && \
 	mv build/ssj/contracts_Cairo1Helpers.contract_class.json build/cairo1_helpers.json && rm -fr build/ssj
 	./scripts/extract_abi.sh
+	cd ./.kakarot
+	echo $PWD
 
 deploy-kakarot:
 	cd lib/kakarot && STARKNET_NETWORK=$(STARKNET_NETWORK) poetry run python ./kakarot_scripts/deploy_kakarot.py && cd ..

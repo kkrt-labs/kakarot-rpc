@@ -1,9 +1,10 @@
 ---
 name: release
 
-on:
-  release:
-    types: [published]
+#on:
+#  release:
+#    types: [published]
+on: [pull_request, merge_group]
 
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
@@ -54,6 +55,11 @@ jobs:
           asdf install scarb 0.7.0
       - name: Setup the Kakarot submodule
         run: make setup
+      - name: log
+        run: |
+          echo $PWD
+          cd ./.kakarot
+          echo $PWD
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
