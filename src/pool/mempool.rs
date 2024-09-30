@@ -17,12 +17,11 @@ use reth_transaction_pool::{
     blobstore::NoopBlobStore, BlockInfo, CanonicalStateUpdate, CoinbaseTipOrdering, EthPooledTransaction, Pool,
     TransactionOrigin, TransactionPool, TransactionPoolExt,
 };
-use serde_json::Value;
 use starknet::{
     core::types::{BlockTag, Felt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
-use std::{collections::HashMap, fs::File, io::Read, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
 /// A type alias for the Kakarot Transaction Validator.
@@ -49,47 +48,7 @@ pub struct AccountManager<SP: starknet::providers::Provider + Send + Sync + Clon
 }
 
 impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountManager<SP> {
-    /// Creates a new [`AccountManager`] instance by initializing account data from a JSON file.
-    pub async fn new(path: PathBuf, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Self> {
-        let mut accounts = HashMap::new();
-
-        // Open the file specified by `path`
-        let mut file = File::open(path)?;
-
-        let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
-
-        // Parse the file contents as JSON
-        let json: Value = serde_json::from_str(&contents)?;
-
-        // Extract the account addresses from the JSON array of objects
-        if let Some(array) = json.as_array() {
-            for item in array {
-                if let Some(address_value) = item.get("address") {
-                    if let Some(account_address) = address_value.as_str() {
-                        let felt_address = Felt::from_str(account_address)
-                            .map_err(|e| eyre::eyre!("Error converting account address to Felt: {:?}", e))?;
-
-                        // Query the initial account_nonce for the account from the provider
-                        let nonce = eth_client
-                            .starknet_provider()
-                            .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), felt_address)
-                            .await
-                            .unwrap_or_default();
-                        accounts.insert(felt_address, Arc::new(Mutex::new(nonce)));
-                    }
-                }
-            }
-        }
-
-        if accounts.is_empty() {
-            return Err(eyre::eyre!("No accounts found in file"));
-        }
-
-        Ok(Self { accounts, eth_client })
-    }
-
-    /// Initialize the account manager with a set of passed accounts
+    /// Initialize the account manager with a set of passed accounts.
     pub async fn from_addresses(addresses: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Self> {
         let mut accounts = HashMap::new();
 
@@ -342,54 +301,4 @@ where
             tokio::time::sleep(Duration::from_secs(1)).await;
         }
     });
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test_utils::{fixtures::katana, katana::Katana};
-    use rstest::rstest;
-    use serde_json::json;
-    use std::io::Write;
-    use tempfile::NamedTempFile;
-
-    #[rstest]
-    #[awt]
-    #[tokio::test(flavor = "multi_thread")]
-    async fn test_account_manager_setup(#[future] katana: Katana) {
-        let eth_client = katana.eth_client();
-
-        // Create a temporary file to simulate the account JSON file
-        let mut temp_file = NamedTempFile::new().unwrap();
-        let json_data = json!([
-            {"address": "2883640181176136234335915321173609316686035330597712783682502353343947167672"},
-            {"address": "163189206500119404227396165700254790683726361202744501915894563246389642629"}
-        ]);
-        write!(temp_file, "{json_data}").unwrap();
-
-        // Create an AccountManager instance with the temporary file
-        let account_manager = AccountManager::new(temp_file.path().to_path_buf(), Arc::new(eth_client)).await.unwrap();
-
-        // Verify that the accounts are loaded correctly
-        let accounts = account_manager.accounts;
-        assert_eq!(accounts.len(), 2, "Expected 2 accounts in the manager");
-
-        // Expected account addresses.
-        //
-        // These are the addresses from the temporary JSON file converted to hex.
-        //
-        // We want to test a different init method from hex to be sure that the account manager handle the initialization of Felts correctly.
-        let expected_addresses = [
-            Felt::from_hex("0x660151ef6c0c8a4eda708478c8b909a8f784fd5b25c6d0f08fa9ea9957b57b8").unwrap(),
-            Felt::from_hex("0x5c5ca015b2dbfa8a25113a9e89fe996211f25a32887d43b5e9afefa3b8c585").unwrap(),
-        ];
-
-        // Validate if the accounts are initialized with the correct nonce values
-        for (account, nonce) in &accounts {
-            // Assert that the account address is in the expected list
-            assert!(expected_addresses.contains(account), "Account address should be in the expected list");
-            // Assert that the account nonce is initialized to 0
-            assert_eq!(*(nonce.lock().await), Felt::ZERO, "Account nonce should be initialized to 0");
-        }
-    }
 }

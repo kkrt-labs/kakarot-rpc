@@ -1,4 +1,3 @@
-use clap::Parser;
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
@@ -12,14 +11,9 @@ use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
-use std::{env::var, path::PathBuf, sync::Arc};
+use std::{env::var, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
-
-#[derive(Parser)]
-struct Cli {
-    accounts_path: PathBuf,
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -83,15 +77,17 @@ async fn main() -> Result<()> {
         }
         #[cfg(not(feature = "hive"))]
         {
-            let args = Cli::parse();
-            AccountManager::new(args.accounts_path, Arc::clone(&eth_client)).await?
+            use starknet::core::types::Felt;
+            use std::str::FromStr;
+            let addresses =
+                var("RELAYERS_ADDRESSES")?.split(',').filter_map(|addr| Felt::from_str(addr).ok()).collect::<Vec<_>>();
+            AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?
         }
     };
     account_manager.start();
 
     // Start the maintenance of the mempool
     maintain_transaction_pool(Arc::clone(&eth_client));
-
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;
 

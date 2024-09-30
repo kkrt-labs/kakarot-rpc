@@ -37,8 +37,8 @@ HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
     --data '{"jsonrpc": "2.0", "method": "eth_chainId", "id": 1}' http://${KAKAROT_RPC_URL} || exit 1
 
 RUN apt-get update && \
-    apt-get -y upgrade && \ 
-    apt-get install --no-install-recommends -y libssl-dev ca-certificates tini curl && \ 
+    apt-get -y upgrade && \
+    apt-get install --no-install-recommends -y libssl-dev ca-certificates tini curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy the indexer code into the RPC
