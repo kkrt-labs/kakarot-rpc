@@ -22,8 +22,7 @@ use starknet::{
     core::types::{BlockTag, Felt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
-use std::path::PathBuf;
-use std::{collections::HashMap, fs::File, io::Read, str::FromStr, sync::Arc, time::Duration};
+use std::{collections::HashMap, fs::File, io::Read, path::PathBuf, str::FromStr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
 /// A type alias for the Kakarot Transaction Validator.
@@ -369,8 +368,7 @@ mod tests {
         write!(temp_file, "{json_data}").unwrap();
 
         // Create an AccountManager instance with the temporary file
-        let account_manager =
-            AccountManager::new(temp_file.path().to_str().unwrap(), Arc::new(eth_client)).await.unwrap();
+        let account_manager = AccountManager::new(temp_file.path().to_path_buf(), Arc::new(eth_client)).await.unwrap();
 
         // Verify that the accounts are loaded correctly
         let accounts = account_manager.accounts;
