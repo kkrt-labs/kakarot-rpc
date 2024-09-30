@@ -1,3 +1,4 @@
+use clap::Parser;
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
@@ -11,9 +12,14 @@ use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
-use std::{env::var, sync::Arc};
+use std::{env::var, path::PathBuf, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
+
+#[derive(Parser)]
+struct Cli {
+    accounts_path: PathBuf,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -77,7 +83,8 @@ async fn main() -> Result<()> {
         }
         #[cfg(not(feature = "hive"))]
         {
-            AccountManager::new("./src/pool/accounts.json", Arc::clone(&eth_client)).await?
+            let args = Cli::parse();
+            AccountManager::new(args.accounts_path, Arc::clone(&eth_client)).await?
         }
     };
     account_manager.start();
