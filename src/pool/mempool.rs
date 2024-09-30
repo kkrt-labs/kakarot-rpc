@@ -22,6 +22,7 @@ use starknet::{
     core::types::{BlockTag, Felt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
+use std::path::PathBuf;
 use std::{collections::HashMap, fs::File, io::Read, str::FromStr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 
@@ -50,7 +51,7 @@ pub struct AccountManager<SP: starknet::providers::Provider + Send + Sync + Clon
 
 impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountManager<SP> {
     /// Creates a new [`AccountManager`] instance by initializing account data from a JSON file.
-    pub async fn new(path: &str, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Self> {
+    pub async fn new(path: PathBuf, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Self> {
         let mut accounts = HashMap::new();
 
         // Open the file specified by `path`
