@@ -12,6 +12,7 @@ use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
+use std::{env::var, sync::Arc};
 use std::{env::var, path::PathBuf, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
