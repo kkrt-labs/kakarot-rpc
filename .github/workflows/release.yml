@@ -59,6 +59,7 @@ jobs:
         with:
           name: artifacts
           path: ./.kakarot
+          include-hidden-files: true
 
   # Inspired by Reth CI.
   # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
