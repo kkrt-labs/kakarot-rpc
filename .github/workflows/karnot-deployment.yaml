@@ -20,7 +20,7 @@ jobs:
             echo "Directory contents:"
             ls -R
       - name: Run Karnot Cloud Pro
-        uses: karnotxyz/kcloud-pro-github-action@node-js-script
+        uses: karnotxyz/kcloud-pro-github-action@main
         with:
           input_file: './lib/kakarot/deployments/karnot/deployment-config.yaml'
           environment: ${{ github.event.inputs.environment }}
