@@ -2,11 +2,11 @@
 # To learn more about the format of this file, see https://docs.trunk.io/reference/trunk-yaml
 version: 0.1
 cli:
-  version: 1.22.2
+  version: 1.22.5
 plugins:
   sources:
     - id: trunk
-      ref: v1.6.0
+      ref: v1.6.2
       uri: https://github.com/trunk-io/plugins
 runtimes:
   enabled:
@@ -28,23 +28,23 @@ lint:
             cargo clippy --message-format json --locked --all-targets
             --all-features -- --cap-lints=warn --no-deps
   enabled:
-    - actionlint@1.7.1
+    - actionlint@1.7.3
     - clippy@SYSTEM
     - rustfmt@SYSTEM
     - git-diff-check
     - hadolint@2.12.0
-    - markdownlint@0.41.0
-    - osv-scanner@1.8.2
-    - oxipng@9.1.1
-    - prettier@3.3.2
+    - markdownlint@0.42.0
+    - osv-scanner@1.8.5
+    - oxipng@9.1.2
+    - prettier@3.3.3
     - shellcheck@0.10.0
     - shfmt@3.6.0
-    - taplo@0.8.1
+    - taplo@0.9.3
     - terrascan@1.19.1
-    - trivy@0.52.2
-    - trufflehog@3.79.0
+    - trivy@0.55.2
+    - trufflehog@3.82.6
     - yamllint@1.35.1
-    - deno@1.45.1
+    - deno@1.46.3
   ignore:
     - linters: [ALL]
       paths:
