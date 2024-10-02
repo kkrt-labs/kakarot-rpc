@@ -34,7 +34,14 @@ use starknet::core::{
     },
     utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness},
 };
-use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf, str::FromStr, sync::LazyLock};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs,
+    marker::PhantomData,
+    path::PathBuf,
+    str::FromStr,
+    sync::LazyLock,
+};
 use walkdir::WalkDir;
 
 pub static SALT: LazyLock<Felt> = LazyLock::new(|| Felt::from_bytes_be(&[0u8; 32]));
@@ -61,9 +68,9 @@ pub struct KatanaGenesisBuilder<T = Uninitialized> {
     coinbase: Felt,
     classes: Vec<GenesisClassJson>,
     class_hashes: HashMap<String, Felt>,
-    contracts: HashMap<ContractAddress, GenesisContractJson>,
-    accounts: HashMap<ContractAddress, GenesisAccountJson>,
-    fee_token_storage: HashMap<StorageKey, StorageValue>,
+    contracts: BTreeMap<ContractAddress, GenesisContractJson>,
+    accounts: BTreeMap<ContractAddress, GenesisAccountJson>,
+    fee_token_storage: BTreeMap<StorageKey, StorageValue>,
     cache: HashMap<String, Felt>,
     status: PhantomData<T>,
 }
@@ -236,7 +243,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
 
         // Set the eoa storage
-        let mut eoa_storage: HashMap<StorageKey, Felt> = [
+        let mut eoa_storage: BTreeMap<StorageKey, Felt> = [
             (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
             (storage_addr(OWNABLE_OWNER)?, kakarot_address),
             (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
@@ -271,7 +278,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let kakarot_contract = self.contracts.get_mut(&kakarot_address).ok_or_eyre("Kakarot contract missing")?;
         kakarot_contract
             .storage
-            .get_or_insert_with(HashMap::new)
+            .get_or_insert_with(BTreeMap::new)
             .extend([(get_storage_var_address(KAKAROT_EVM_TO_STARKNET_ADDRESS, &[evm_address])?, starknet_address.0)]);
 
         Ok(self)
