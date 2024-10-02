@@ -81,7 +81,7 @@ function createSignedLegacyTransaction(): LegacyTransaction {
   return signedTx;
 }
 
-Deno.test.ignore("toTypedEthTx Legacy Transaction", () => {
+Deno.test("toTypedEthTx Legacy Transaction", () => {
   // Given
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
   const tx = new LegacyTransaction(
@@ -106,8 +106,23 @@ Deno.test.ignore("toTypedEthTx Legacy Transaction", () => {
     "0x0",
     "0x0",
     "0x0",
+    "0x0",
+    "0x0",
+    "0x1",
+    "0x1",
+    "0x0",
+    "0x0",
+    "0x40",
+    "0x4",
+    `0x${bytesLength.toString(16)}`,
     `0x${bytesLength.toString(16)}`,
     ...packCallData(raw),
+    "0x5",
+    "0x1",
+    "0x2",
+    "0x3",
+    "0x4",
+    "0x1c",
   ];
 
   const starknetTx: Transaction = {
@@ -137,7 +152,7 @@ Deno.test.ignore("toTypedEthTx Legacy Transaction", () => {
   assertEquals(ethTx.data, tx.data);
 });
 
-Deno.test.ignore("toTypedEthTx Legacy Transaction with v = 28", () => {
+Deno.test("toTypedEthTx Legacy Transaction with v = 28", () => {
   // Given
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
   const tx = new LegacyTransaction(
@@ -162,8 +177,23 @@ Deno.test.ignore("toTypedEthTx Legacy Transaction with v = 28", () => {
     "0x0",
     "0x0",
     "0x0",
+    "0x0",
+    "0x0",
+    "0x1",
+    "0x1",
+    "0x0",
+    "0x0",
+    "0x40",
+    "0x4",
+    `0x${bytesLength.toString(16)}`,
     `0x${bytesLength.toString(16)}`,
     ...packCallData(raw),
+    "0x5",
+    "0x1",
+    "0x2",
+    "0x3",
+    "0x4",
+    "0x1c",
   ];
 
   const starknetTx: Transaction = {
@@ -243,7 +273,7 @@ Deno.test("toTypedEthTx Legacy Transaction with v = 26 (failure case)", () => {
   assertEquals(ethTx, null);
 });
 
-Deno.test.ignore("toTypedEthTx EIP1559 Transaction", () => {
+Deno.test("toTypedEthTx EIP1559 Transaction", () => {
   // Given
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
   const tx = new FeeMarketEIP1559Transaction(
@@ -277,8 +307,23 @@ Deno.test.ignore("toTypedEthTx EIP1559 Transaction", () => {
     "0x0",
     "0x0",
     "0x0",
+    "0x0",
+    "0x0",
+    "0x1",
+    "0x1",
+    "0x0",
+    "0x0",
+    "0x40",
+    "0x5",
+    `0x${bytesLength.toString(16)}`,
     `0x${bytesLength.toString(16)}`,
     ...packCallData(raw),
+    "0x5",
+    "0x1",
+    "0x2",
+    "0x3",
+    "0x4",
+    "0x1",
   ];
 
   const starknetTx: Transaction = {
@@ -311,7 +356,7 @@ Deno.test.ignore("toTypedEthTx EIP1559 Transaction", () => {
   assertEquals(ethTx.data, new Uint8Array([0x12, 0x34]));
 });
 
-Deno.test.ignore("toTypedEthTx EIP2930 Transaction", () => {
+Deno.test("toTypedEthTx EIP2930 Transaction", () => {
   // Given
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
   const tx = new AccessListEIP2930Transaction(
@@ -344,8 +389,23 @@ Deno.test.ignore("toTypedEthTx EIP2930 Transaction", () => {
     "0x0",
     "0x0",
     "0x0",
+    "0x0",
+    "0x0",
+    "0x1",
+    "0x1",
+    "0x0",
+    "0x0",
+    "0x40",
+    "0x5",
+    `0x${bytesLength.toString(16)}`,
     `0x${bytesLength.toString(16)}`,
     ...packCallData(raw),
+    "0x5",
+    "0x1",
+    "0x2",
+    "0x3",
+    "0x4",
+    "0x1",
   ];
 
   const starknetTx: Transaction = {
@@ -491,7 +551,7 @@ Deno.test("unpackCallData by chunks", () => {
   assertEquals(unpackCallData(input), expected_calldata);
 });
 
-Deno.test.ignore(
+Deno.test(
   "toTypedEthTx Legacy Transaction before release with 31 bytes chunks packing",
   () => {
     // Given
@@ -505,6 +565,7 @@ Deno.test.ignore(
       data: new Uint8Array([0x12, 0x34]),
     }, { common });
     const raw = RLP.encode(tx.getMessageToSign());
+    const bytesLength = raw.byteLength;
 
     const serializedTx: `0x${string}`[] = [];
     raw.forEach((x) => serializedTx.push(`0x${x.toString(16)}`));
@@ -515,7 +576,23 @@ Deno.test.ignore(
       "0x0",
       "0x0",
       "0x0",
-      ...serializedTx,
+      "0x0",
+      "0x0",
+      "0x1",
+      "0x1",
+      "0x0",
+      "0x0",
+      "0x40",
+      "0x4",
+      `0x${bytesLength.toString(16)}`,
+      `0x${bytesLength.toString(16)}`,
+      ...packCallData(raw),
+      "0x5",
+      "0x1",
+      "0x2",
+      "0x3",
+      "0x4",
+      "0x1c",
     ];
 
     const starknetTx: Transaction = {
@@ -548,7 +625,7 @@ Deno.test.ignore(
   },
 );
 
-Deno.test.ignore(
+Deno.test(
   "toTypedEthTx EIP1559 Transaction before release with 31 bytes chunks packing",
   () => {
     // Given
@@ -570,6 +647,7 @@ Deno.test.ignore(
     }, { common });
 
     const raw = tx.getMessageToSign();
+    const bytesLength = raw.byteLength;
     const serializedTx: `0x${string}`[] = [];
     raw.forEach((x) => serializedTx.push(`0x${x.toString(16)}`));
     const starknetTxCalldata: `0x${string}`[] = [
@@ -579,7 +657,23 @@ Deno.test.ignore(
       "0x0",
       "0x0",
       "0x0",
-      ...serializedTx,
+      "0x0",
+      "0x0",
+      "0x1",
+      "0x1",
+      "0x0",
+      "0x0",
+      "0x40",
+      "0x5",
+      `0x${bytesLength.toString(16)}`,
+      `0x${bytesLength.toString(16)}`,
+      ...packCallData(raw),
+      "0x5",
+      "0x1",
+      "0x2",
+      "0x3",
+      "0x4",
+      "0x1",
     ];
 
     const starknetTx: Transaction = {
@@ -613,7 +707,7 @@ Deno.test.ignore(
   },
 );
 
-Deno.test.ignore(
+Deno.test(
   "toTypedEthTx EIP2930 Transaction before release with 31 bytes chunks packing",
   () => {
     // Given
@@ -634,6 +728,7 @@ Deno.test.ignore(
     }, { common });
 
     const raw = tx.getMessageToSign();
+    const bytesLength = raw.byteLength;
     const serializedTx: `0x${string}`[] = [];
     raw.forEach((x) => serializedTx.push(`0x${x.toString(16)}`));
     const starknetTxCalldata: `0x${string}`[] = [
@@ -643,7 +738,23 @@ Deno.test.ignore(
       "0x0",
       "0x0",
       "0x0",
-      ...serializedTx,
+      "0x0",
+      "0x0",
+      "0x1",
+      "0x1",
+      "0x0",
+      "0x0",
+      "0x40",
+      "0x5",
+      `0x${bytesLength.toString(16)}`,
+      `0x${bytesLength.toString(16)}`,
+      ...packCallData(raw),
+      "0x5",
+      "0x1",
+      "0x2",
+      "0x3",
+      "0x4",
+      "0x1",
     ];
 
     const starknetTx: Transaction = {

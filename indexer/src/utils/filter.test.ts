@@ -214,11 +214,19 @@ Deno.test(
   },
 );
 
-Deno.test.ignore(
+Deno.test(
   "isKakarotTransaction: `to` address matching KAKAROT_ADDRESS",
   () => {
     const starknetTxCalldata: `0x${string}`[] = [
-      "0x1",
+      "0x0",
+      "0x0",
+      "0x0",
+      "0x0",
+      "0x0",
+      "0x0",
+      "0x0",
+      "0x0",
+      "0x0",
       "0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda",
     ];
     const transaction: Transaction = {
