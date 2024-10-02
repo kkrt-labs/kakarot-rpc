@@ -12,7 +12,7 @@ use katana_primitives::{
 use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::{types::Felt, utils::get_storage_var_address};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 mod account;
 
@@ -120,10 +120,10 @@ impl HiveGenesisConfig {
 
         let kakarot_contract = genesis.contracts.entry(kakarot_address);
         kakarot_contract.and_modify(|contract| {
-            contract.storage.get_or_insert_with(HashMap::new).extend(additional_kakarot_storage);
+            contract.storage.get_or_insert_with(BTreeMap::new).extend(additional_kakarot_storage);
         });
 
-        genesis.fee_token.storage.get_or_insert_with(HashMap::new).extend(fee_token_storage);
+        genesis.fee_token.storage.get_or_insert_with(BTreeMap::new).extend(fee_token_storage);
 
         // Add the contracts to the genesis.
         genesis.contracts.extend(contracts);
