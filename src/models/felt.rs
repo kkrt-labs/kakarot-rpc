@@ -21,7 +21,6 @@ impl From<Felt252Wrapper> for Felt {
 #[allow(clippy::fallible_impl_from)]
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
-        // safe unwrap since H160 is 20 bytes
         Self(Felt::from_bytes_be_slice(address.as_slice()))
     }
 }
