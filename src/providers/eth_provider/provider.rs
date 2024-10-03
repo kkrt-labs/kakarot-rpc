@@ -90,7 +90,7 @@ where
         // We take the chain_id modulo 2**53 to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
-        let modulo = 1 << 53;
+        let modulo = 1u64 << 53;
         let chain_id =
             (Felt::from(modulo).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
 
