@@ -87,11 +87,12 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     pub async fn try_new(database: Database, starknet_provider: StarknetProvider<SP>) -> Result<Self> {
-        // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
+        // We take the chain_id modulo 2**53 to ensure compatibility with tooling
         // see: https://github.com/ethereum/EIPs/issues/2294
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
+        let modulo = 1 << 53;
         let chain_id =
-            (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
+            (Felt::from(modulo).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
 
         Ok(Self { database, starknet_provider, chain_id })
     }
