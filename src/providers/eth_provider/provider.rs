@@ -92,7 +92,7 @@ where
         // Note: Metamask is breaking for a chain_id = u64::MAX - 1
         let modulo = (1u64 << 53) - 1;
         let chain_id =
-            (Felt::from(modulo).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into()?; // safe unwrap
+            (Felt::from(modulo).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into()?;
 
         Ok(Self { database, starknet_provider, chain_id })
     }
