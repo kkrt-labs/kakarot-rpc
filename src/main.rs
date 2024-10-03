@@ -151,7 +151,7 @@ async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<
     use starknet::{accounts::ConnectedAccount, core::types::Felt, providers::Provider as _};
 
     let chain_id = starknet_provider.chain_id().await?;
-    let modulo = 1u64 << 53;
+    let modulo = (1u64 << 53) - 1;
     let chain_id: u64 = (Felt::from(modulo).to_bigint() & chain_id.to_bigint()).try_into()?;
 
     CHAIN_ID.set(chain_id.into()).expect("Failed to set chain id");
