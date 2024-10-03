@@ -4,6 +4,7 @@ use super::validate::KakarotTransactionValidator;
 use crate::{
     client::EthClient,
     into_via_try_wrapper,
+    pool::constants::ONE_TENTH_ETH,
     providers::eth_provider::{
         constant::RPC_CONFIG, database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider,
     },
@@ -154,7 +155,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 .unwrap_or_default();
 
             // If the balance is lower than the threshold, continue
-            if balance < U256::from(u128::pow(10, 18)) {
+            if balance < U256::from(ONE_TENTH_ETH) {
                 accounts.remove(account_address);
                 continue;
             }
