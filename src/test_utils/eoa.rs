@@ -69,7 +69,9 @@ pub trait Eoa<P: Provider + Send + Sync + Clone> {
 
     async fn send_transaction(&self, tx: TransactionSigned) -> Result<B256, eyre::Error> {
         let eth_client = self.eth_client();
-        Ok(eth_client.send_raw_transaction(tx.encoded_2718().into()).await?)
+        let mut v = Vec::new();
+        tx.encode_2718(&mut v);
+        Ok(eth_client.send_raw_transaction(v.into()).await?)
     }
 }
 
