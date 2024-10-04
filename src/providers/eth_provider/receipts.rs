@@ -6,11 +6,12 @@ use crate::providers::eth_provider::{
     },
     provider::{EthApiResult, EthDataProvider},
 };
+use alloy_primitives::B256;
+use alloy_rpc_types::TransactionReceipt;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag, B256};
-use reth_rpc_types::TransactionReceipt;
+use reth_primitives::{BlockId, BlockNumberOrTag};
 
 #[async_trait]
 #[auto_impl(Arc, &)]

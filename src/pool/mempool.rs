@@ -9,10 +9,11 @@ use crate::{
         constant::RPC_CONFIG, database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider,
     },
 };
+use alloy_primitives::{Address, U256};
 use futures::future::select_all;
 use reth_chainspec::ChainSpec;
 use reth_execution_types::ChangedAccount;
-use reth_primitives::{Address, BlockNumberOrTag, IntoRecoveredTransaction, U256};
+use reth_primitives::BlockNumberOrTag;
 use reth_revm::DatabaseRef;
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, BlockInfo, CanonicalStateUpdate, CoinbaseTipOrdering, EthPooledTransaction, Pool,
@@ -249,7 +250,7 @@ where
                             ChainSpec { chain: eth_client.eth_provider().chain_id.into(), ..Default::default() };
                         let info = BlockInfo {
                             block_gas_limit: latest_header.gas_limit,
-                            last_seen_block_hash: latest_header.hash(),
+                            last_seen_block_hash: hash,
                             last_seen_block_number: latest_header.number,
                             pending_basefee: latest_header
                                 .next_block_base_fee(
@@ -275,7 +276,7 @@ where
                         }
 
                         let sealed_block = latest_block.seal(hash);
-                        let mined_transactions = sealed_block.body.iter().map(|tx| tx.hash).collect();
+                        let mined_transactions = sealed_block.body.transactions.iter().map(|tx| tx.hash).collect();
 
                         // Canonical update
                         let update = CanonicalStateUpdate {

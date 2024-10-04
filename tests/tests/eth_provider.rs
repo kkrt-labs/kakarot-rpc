@@ -1,7 +1,15 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use crate::tests::mempool::create_sample_transactions;
-use alloy_primitives::{address, bytes};
+use alloy_consensus::{TxEip1559, TxLegacy};
+use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::{address, bytes, Address, Bytes, TxKind, B256, U256, U64};
+use alloy_rpc_types::{
+    request::TransactionInput,
+    serde_helpers::JsonStorageKey,
+    state::{AccountOverride, StateOverride},
+    Filter, FilterBlockOption, FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest,
+};
 use alloy_sol_types::{sol, SolCall};
 use arbitrary::Arbitrary;
 use kakarot_rpc::{
@@ -24,14 +32,7 @@ use kakarot_rpc::{
     },
 };
 use rand::Rng;
-use reth_primitives::{
-    sign_message, transaction::Signature, Address, BlockNumberOrTag, Bytes, Transaction, TransactionSigned, TxEip1559,
-    TxKind, TxLegacy, B256, U256, U64,
-};
-use reth_rpc_types::{
-    request::TransactionInput, serde_helpers::JsonStorageKey, state::AccountOverride, Filter, FilterBlockOption,
-    FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest,
-};
+use reth_primitives::{sign_message, transaction::Signature, BlockNumberOrTag, Transaction, TransactionSigned};
 use reth_transaction_pool::{TransactionOrigin, TransactionPool};
 use rstest::*;
 use starknet::{
@@ -39,7 +40,7 @@ use starknet::{
     core::types::{BlockId, BlockTag, Felt},
     providers::Provider,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 
 #[rstest]
@@ -645,7 +646,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
 
     // Then: Retrieve receipts by block number
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(
+        .block_receipts(Some(alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(
             transaction.block_number.unwrap(),
         ))))
         .await
@@ -659,7 +660,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
 
     // Then: Retrieve receipts by block hash
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(transaction.block_hash.unwrap()))))
+        .block_receipts(Some(alloy_rpc_types::BlockId::Hash(RpcBlockHash::from(transaction.block_hash.unwrap()))))
         .await
         .unwrap()
         .unwrap();
@@ -671,7 +672,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
 
     // Then: Attempt to retrieve receipts for a non-existing block
     let receipts = eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::from(U256::from(0x00c0_fefe))))))
+        .block_receipts(Some(alloy_rpc_types::BlockId::Hash(RpcBlockHash::from(B256::from(U256::from(0x00c0_fefe))))))
         .await
         .unwrap();
     assert!(receipts.is_none());
@@ -686,19 +687,19 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let transaction = katana.most_recent_transaction().unwrap();
 
     // When: Convert block number identifier to StarkNet block identifier
-    let block_id = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(transaction.block_number.unwrap()));
+    let block_id = alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(transaction.block_number.unwrap()));
     let pending_starknet_block_id = eth_provider.to_starknet_block_id(block_id).await.unwrap();
 
     // When: Convert block hash identifier to StarkNet block identifier
-    let some_block_hash = reth_rpc_types::BlockId::Hash(RpcBlockHash::from(transaction.block_hash.unwrap()));
+    let some_block_hash = alloy_rpc_types::BlockId::Hash(RpcBlockHash::from(transaction.block_hash.unwrap()));
     let some_starknet_block_hash = eth_provider.to_starknet_block_id(some_block_hash).await.unwrap();
 
     // When: Convert block tag identifier to StarkNet block identifier
-    let pending_block_tag = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Pending);
+    let pending_block_tag = alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Pending);
     let pending_block_tag_starknet = eth_provider.to_starknet_block_id(pending_block_tag).await.unwrap();
 
     // When: Attempt to convert an unknown block number identifier to StarkNet block identifier
-    let unknown_block_number = reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(u64::MAX));
+    let unknown_block_number = alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(u64::MAX));
     let unknown_starknet_block_number = eth_provider.to_starknet_block_id(unknown_block_number).await;
 
     // Then: Ensure the converted StarkNet block identifiers match the expected values
@@ -750,7 +751,7 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
 
     // Send the transaction
     let _ = eth_client
-        .send_raw_transaction(transaction_signed.envelope_encoded())
+        .send_raw_transaction(transaction_signed.encoded_2718().into())
         .await
         .expect("failed to send transaction");
 
@@ -816,7 +817,7 @@ async fn test_send_raw_transaction_wrong_nonce(#[future] katana_empty: Katana, _
 
     // Send the transaction
     let tx_hash = eth_client
-        .send_raw_transaction(transaction_signed.envelope_encoded())
+        .send_raw_transaction(transaction_signed.encoded_2718().into())
         .await
         .expect("failed to send transaction");
 
@@ -833,10 +834,12 @@ async fn test_send_raw_transaction_wrong_nonce(#[future] katana_empty: Katana, _
     assert_eq!(katana_empty.eth_client.mempool().pool_size().total, 0);
 
     // Insert a wrong field in the transaction signature to mimic a wrong signature
-    transaction_signed.signature.r = U256::from(0);
+    transaction_signed.signature =
+        Signature::from_rs_and_parity(U256::ZERO, transaction_signed.signature.s(), transaction_signed.signature.v())
+            .unwrap();
 
     // Attempt to send the transaction with the wrong signature and assert that it fails
-    assert!(eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await.is_err());
+    assert!(eth_client.send_raw_transaction(transaction_signed.encoded_2718().into()).await.is_err());
 
     // Retrieve the current size of the mempool
     let mempool_size_after_wrong_send = eth_client.mempool().pool_size();
@@ -877,7 +880,7 @@ async fn test_send_raw_transaction_exceed_size_limit(#[future] katana: Katana, _
     assert_eq!(mempool_size.pending, 0);
     assert_eq!(mempool_size.total, 0);
 
-    let _ = eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+    let _ = eth_client.send_raw_transaction(transaction_signed.encoded_2718().into()).await;
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
@@ -918,7 +921,7 @@ async fn test_send_raw_transaction_exceed_max_priority_fee_per_gas(#[future] kat
     assert_eq!(mempool_size.pending, 0);
     assert_eq!(mempool_size.total, 0);
 
-    let _ = eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+    let _ = eth_client.send_raw_transaction(transaction_signed.encoded_2718().into()).await;
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
@@ -940,7 +943,7 @@ async fn test_send_raw_transaction_exceed_gas_limit(#[future] katana: Katana, _s
     let transaction = Transaction::Eip1559(TxEip1559 {
         chain_id,
         nonce: 0,
-        gas_limit: u64::MAX.into(),
+        gas_limit: u64::MAX,
         to: TxKind::Call(Address::random()),
         value: U256::from(1000),
         input: Bytes::default(),
@@ -959,7 +962,7 @@ async fn test_send_raw_transaction_exceed_gas_limit(#[future] katana: Katana, _s
     assert_eq!(mempool_size.pending, 0);
     assert_eq!(mempool_size.total, 0);
 
-    let _ = eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+    let _ = eth_client.send_raw_transaction(transaction_signed.encoded_2718().into()).await;
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
@@ -999,7 +1002,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
 
     // Send the transaction
     let _ = eth_client
-        .send_raw_transaction(transaction_signed.envelope_encoded())
+        .send_raw_transaction(transaction_signed.encoded_2718().into())
         .await
         .expect("failed to send transaction");
 
@@ -1075,7 +1078,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
     let mut transaction_signed = TransactionSigned::from_transaction_and_signature(transaction, signature);
 
     // Set an incorrect signature
-    transaction_signed.signature = Signature::default();
+    transaction_signed.signature = Signature::from_rs_and_parity(U256::ZERO, U256::ZERO, false).unwrap();
 
     let mempool_size = eth_client.mempool().pool_size();
     // Assert that the number of pending and total transactions in the mempool is 0
@@ -1083,7 +1086,7 @@ async fn test_send_raw_transaction_wrong_signature(#[future] katana: Katana, _se
     assert_eq!(mempool_size.total, 0);
 
     // Send the transaction
-    let _ = eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+    let _ = eth_client.send_raw_transaction(transaction_signed.encoded_2718().into()).await;
 
     let mempool_size_after_send = eth_client.mempool().pool_size();
     // Verify that the number of pending transactions in the mempool remains unchanged (0 tx)
@@ -1122,7 +1125,7 @@ async fn test_send_raw_transaction_wrong_chain_id(#[future] katana: Katana, _set
     assert_eq!(mempool_size.total, 0);
 
     // Attempt to send the transaction
-    let result = eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+    let result = eth_client.send_raw_transaction(transaction_signed.encoded_2718().into()).await;
 
     // Then
     assert!(result.is_err()); // Ensure the transaction is rejected
@@ -1166,7 +1169,7 @@ async fn test_send_raw_transaction_insufficient_balance(#[future] katana: Katana
     assert_eq!(mempool_size.total, 0);
 
     // Attempt to send the transaction
-    let _ = eth_client.send_raw_transaction(transaction_signed.envelope_encoded()).await;
+    let _ = eth_client.send_raw_transaction(transaction_signed.encoded_2718().into()).await;
 
     let mempool_size_after_send = eth_client.mempool().pool_size();
     // Verify that the number of pending transactions in the mempool remains unchanged (0 tx)
@@ -1220,7 +1223,7 @@ async fn test_call_with_state_override_balance_success(#[future] katana: Katana,
     };
 
     // Initialize state override with the EOA address having a lower balance than the required value
-    let mut state_override: HashMap<Address, AccountOverride> = HashMap::new();
+    let mut state_override = StateOverride::default();
     state_override
         .insert(eoa_address, AccountOverride { balance: Some(U256::from(1_000_000_000)), ..Default::default() });
 
@@ -1254,7 +1257,7 @@ async fn test_call_with_state_override_balance_failure(#[future] katana: Katana,
     };
 
     // Initialize state override with the EOA address having a lower balance than the required value
-    let mut state_override: HashMap<Address, AccountOverride> = HashMap::new();
+    let mut state_override = StateOverride::default();
     state_override
         .insert(eoa_address, AccountOverride { balance: Some(U256::from(1_000_000_000)), ..Default::default() });
 
@@ -1310,7 +1313,7 @@ async fn test_call_with_state_override_bytecode(#[future] plain_opcodes: (Katana
     let calldata = Counter::setNumberCall { newNumber: U256::from(10) }.abi_encode();
 
     // State override with the Counter bytecode
-    let mut state_override: HashMap<Address, AccountOverride> = HashMap::new();
+    let mut state_override = StateOverride::default();
     state_override.insert(contract_address, AccountOverride { code: Some(bytecode.into()), ..Default::default() });
 
     // Define the transaction request for invoking the setNumber function
@@ -1366,7 +1369,7 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
     // Send the transaction
     let _ = katana_empty
         .eth_client
-        .send_raw_transaction(transaction_signed.envelope_encoded())
+        .send_raw_transaction(transaction_signed.encoded_2718().into())
         .await
         .expect("failed to send transaction");
 

@@ -1,6 +1,6 @@
 use crate::eth_rpc::api::web3_api::Web3ApiServer;
+use alloy_primitives::{keccak256, Bytes, B256};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{keccak256, Bytes, B256};
 
 /// The RPC module for the implementing Web3 Api { i.e rpc endpoints prefixed with web3_ }
 #[derive(Default, Debug)]

@@ -5,11 +5,11 @@ use super::{
     katana::genesis::{KatanaGenesisBuilder, Loaded},
 };
 use account::{Account, KakarotAccount};
+use alloy_primitives::{Address, Bytes, B256, U256, U64};
 use katana_primitives::{
     contract::ContractAddress,
     genesis::json::{ClassNameOrHash, GenesisContractJson, GenesisJson},
 };
-use reth_primitives::{Address, Bytes, B256, U256, U64};
 use serde::{Deserialize, Serialize};
 use starknet::core::{types::Felt, utils::get_storage_var_address};
 use std::collections::{BTreeMap, HashMap};

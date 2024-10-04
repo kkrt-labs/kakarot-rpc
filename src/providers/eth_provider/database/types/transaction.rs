@@ -1,12 +1,13 @@
-use reth_primitives::B256;
-use reth_rpc_types::{Transaction, WithOtherFields};
+use alloy_primitives::B256;
+use alloy_rpc_types::Transaction;
+use alloy_serde::WithOtherFields;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
+    alloy_primitives::U256,
     arbitrary::Arbitrary,
     rand::Rng,
-    reth_primitives::U256,
     reth_testing_utils::generators::{self},
 };
 
@@ -53,19 +54,12 @@ impl Arbitrary<'_> for StoredTransaction {
 
         // Create a `primitive_tx` of a specific transaction type based on the random choice.
         let primitive_tx = match random_choice {
-            0 => reth_primitives::Transaction::Legacy(reth_primitives::transaction::TxLegacy {
+            0 => reth_primitives::Transaction::Legacy(alloy_consensus::TxLegacy {
                 chain_id: Some(u8::arbitrary(u)?.into()),
-                gas_limit: u64::arbitrary(u)?.into(),
                 ..Arbitrary::arbitrary(u)?
             }),
-            1 => reth_primitives::Transaction::Eip2930(reth_primitives::TxEip2930 {
-                gas_limit: u64::arbitrary(u)?.into(),
-                ..Arbitrary::arbitrary(u)?
-            }),
-            _ => reth_primitives::Transaction::Eip1559(reth_primitives::TxEip1559 {
-                gas_limit: u64::arbitrary(u)?.into(),
-                ..Arbitrary::arbitrary(u)?
-            }),
+            1 => reth_primitives::Transaction::Eip2930(alloy_consensus::TxEip2930::arbitrary(u)?),
+            _ => reth_primitives::Transaction::Eip1559(alloy_consensus::TxEip1559::arbitrary(u)?),
         };
 
         // Sign the generated transaction with a randomly generated key pair.
@@ -78,15 +72,17 @@ impl Arbitrary<'_> for StoredTransaction {
             block_hash: Some(B256::arbitrary(u)?),
             block_number: Some(u64::arbitrary(u)?),
             transaction_index: Some(u64::arbitrary(u)?),
-            signature: Some(reth_rpc_types::Signature {
-                r: transaction_signed.signature.r,
-                s: transaction_signed.signature.s,
+            signature: Some(alloy_rpc_types::Signature {
+                r: transaction_signed.signature.r(),
+                s: transaction_signed.signature.s(),
                 v: if transaction_signed.is_legacy() {
-                    U256::from(transaction_signed.signature.legacy_parity(transaction_signed.chain_id()).to_u64())
+                    U256::from(
+                        transaction_signed.signature.with_chain_id(transaction_signed.chain_id().unwrap()).v().to_u64(),
+                    )
                 } else {
-                    U256::from(transaction_signed.signature.odd_y_parity)
+                    U256::from(transaction_signed.signature.v().to_u64())
                 },
-                y_parity: Some(transaction_signed.signature.odd_y_parity.into()),
+                y_parity: Some((transaction_signed.signature.v().to_u64() != 0).into()),
             }),
             nonce: transaction_signed.nonce(),
             value: transaction_signed.value(),
@@ -94,7 +90,7 @@ impl Arbitrary<'_> for StoredTransaction {
             chain_id: transaction_signed.chain_id(),
             transaction_type: Some(transaction_signed.tx_type().into()),
             to: transaction_signed.to(),
-            gas: transaction_signed.gas_limit().into(),
+            gas: transaction_signed.gas_limit(),
             ..Default::default()
         };
 

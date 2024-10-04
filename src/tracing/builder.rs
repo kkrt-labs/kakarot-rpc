@@ -4,14 +4,13 @@ use crate::providers::eth_provider::{
     error::{EthApiError, TransactionError},
     provider::EthereumProvider,
 };
-use reth_primitives::{B256, U256};
+use alloy_primitives::{B256, U256};
+use alloy_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header, Transaction};
+use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions};
+use alloy_serde::WithOtherFields;
 use reth_revm::{
     db::CacheDB,
     primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId},
-};
-use reth_rpc_types::{
-    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions},
-    Block, BlockHashOrNumber, BlockId, BlockTransactions, Header, Transaction, WithOtherFields,
 };
 use revm_inspectors::tracing::TracingInspectorConfig;
 
@@ -151,7 +150,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
     /// # Returns
     ///
     /// Returns the block if it exists, otherwise returns None
-    async fn block(&self, block_id: BlockId) -> TracerResult<reth_rpc_types::Block<WithOtherFields<Transaction>>> {
+    async fn block(&self, block_id: BlockId) -> TracerResult<alloy_rpc_types::Block<WithOtherFields<Transaction>>> {
         let block = match block_id {
             BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.block_hash, true).await?,
             BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
@@ -229,9 +228,11 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Pinned> {
 mod tests {
     use super::*;
     use crate::test_utils::mock_provider::MockEthereumProviderStruct;
-    use reth_primitives::U64;
-    use reth_rpc_types::{Transaction, WithOtherFields};
+    use alloy_primitives::U64;
+    use alloy_rpc_types::Transaction;
+    use alloy_serde::WithOtherFields;
     use std::sync::Arc;
+
     #[tokio::test]
     async fn test_tracer_builder_block_failure_with_none_block_number() {
         // Create a mock Ethereum provider

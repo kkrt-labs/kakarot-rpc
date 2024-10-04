@@ -19,6 +19,8 @@ use crate::{
     },
     test_utils::eoa::KakarotEOA,
 };
+use alloy_primitives::{Address, Bytes, U256};
+use alloy_rpc_types::Log;
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
 use katana_primitives::{
     chain::ChainId,
@@ -29,18 +31,13 @@ use mongodb::{
     bson::{doc, Document},
     options::{UpdateModifications, UpdateOptions},
 };
-use reth_primitives::{Address, Bytes};
-use reth_rpc_types::Log;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    super::mongo::MongoFuzzer,
-    dojo_test_utils::sequencer::SequencerConfig,
-    reth_primitives::B256,
-    reth_rpc_types::{Header, Transaction, WithOtherFields},
-    std::str::FromStr as _,
+    super::mongo::MongoFuzzer, alloy_primitives::B256, alloy_rpc_types::Header, alloy_rpc_types::Transaction,
+    alloy_serde::WithOtherFields, dojo_test_utils::sequencer::SequencerConfig, std::str::FromStr as _,
 };
 
 fn load_genesis() -> Genesis {
@@ -109,7 +106,8 @@ impl<'a> Katana {
 
     #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
     pub async fn new_empty() -> Self {
-        use reth_primitives::{constants::EMPTY_ROOT_HASH, B64, U256};
+        use alloy_primitives::{B256, B64};
+        use reth_primitives::constants::EMPTY_ROOT_HASH;
 
         let sequencer = katana_sequencer().await;
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));

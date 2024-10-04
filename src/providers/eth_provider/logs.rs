@@ -13,7 +13,7 @@ use crate::providers::eth_provider::{
 };
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use reth_rpc_types::{Filter, FilterChanges};
+use alloy_rpc_types::{Filter, FilterChanges};
 
 #[async_trait]
 #[auto_impl(Arc, &)]

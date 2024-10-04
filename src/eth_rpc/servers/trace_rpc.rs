@@ -2,8 +2,9 @@ use crate::{
     eth_rpc::api::trace_api::TraceApiServer, providers::eth_provider::provider::EthereumProvider,
     tracing::builder::TracerBuilder,
 };
+use alloy_rpc_types::BlockId;
+use alloy_rpc_types_trace::parity::LocalizedTransactionTrace;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_rpc_types::{trace::parity::LocalizedTransactionTrace, BlockId};
 use revm_inspectors::tracing::TracingInspectorConfig;
 use std::sync::Arc;
 

@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use alloy_primitives::B256;
 use kakarot_rpc::{
     providers::eth_provider::constant::Constant,
     test_utils::{
@@ -8,7 +9,6 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::B256;
 use rstest::*;
 use serde_json::Value;
 use std::str::FromStr;

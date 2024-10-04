@@ -1,10 +1,11 @@
-use reth_rpc_types::Header;
+use alloy_rpc_types::Header;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
+    alloy_primitives::{B256, B64, U256},
     arbitrary::Arbitrary,
-    reth_primitives::{constants::EMPTY_ROOT_HASH, B256, B64, U256},
+    reth_primitives::constants::EMPTY_ROOT_HASH,
 };
 
 /// A header as stored in the database
@@ -44,11 +45,11 @@ impl Arbitrary<'_> for StoredHeader {
                 mix_hash: Some(B256::arbitrary(u).unwrap()),
                 nonce: Some(B64::arbitrary(u).unwrap()),
                 withdrawals_root: Some(EMPTY_ROOT_HASH),
-                base_fee_per_gas: Some(u128::from(u64::arbitrary(u).unwrap())),
-                blob_gas_used: Some(u128::from(u64::arbitrary(u).unwrap())),
-                excess_blob_gas: Some(u128::from(u64::arbitrary(u).unwrap())),
-                gas_limit: u128::from(u64::arbitrary(u).unwrap()),
-                gas_used: u128::from(u64::arbitrary(u).unwrap()),
+                base_fee_per_gas: Some(u64::arbitrary(u).unwrap()),
+                blob_gas_used: Some(u64::arbitrary(u).unwrap()),
+                excess_blob_gas: Some(u64::arbitrary(u).unwrap()),
+                gas_limit: u64::arbitrary(u).unwrap(),
+                gas_used: u64::arbitrary(u).unwrap(),
                 number: u64::arbitrary(u).unwrap(),
                 ..Header::arbitrary(u)?
             },

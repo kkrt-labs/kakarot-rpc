@@ -1,11 +1,9 @@
 #![allow(clippy::blocks_in_conditions)]
 use crate::{eth_rpc::api::debug_api::DebugApiServer, providers::debug_provider::DebugProvider};
+use alloy_primitives::{Bytes, B256};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionRequest};
+use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult};
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::{Bytes, B256};
-use reth_rpc_types::{
-    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult},
-    BlockId, BlockNumberOrTag, TransactionRequest,
-};
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]

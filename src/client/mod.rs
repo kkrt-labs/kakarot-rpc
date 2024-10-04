@@ -13,13 +13,17 @@ use crate::{
         sn_provider::StarknetProvider,
     },
 };
+use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
+use alloy_rpc_types::Transaction;
+use alloy_rpc_types_txpool::TxpoolContent;
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use num_traits::ToPrimitive;
 use reth_chainspec::ChainSpec;
-use reth_primitives::{Address, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256};
+use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
 use reth_rpc_eth_types::TransactionSource;
-use reth_rpc_types::{txpool::TxpoolContent, Transaction, WithOtherFields};
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
     TransactionOrigin, TransactionPool,
@@ -106,7 +110,8 @@ where
         let transaction_signed_ec_recovered =
             TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer);
 
-        let encoded_length = transaction_signed_ec_recovered.clone().length_without_header();
+        let encoded_length = transaction_signed_ec_recovered.clone().encode_2718_len();
+
         let pool_transaction = EthPooledTransaction::new(transaction_signed_ec_recovered, encoded_length);
 
         // Deploy EVM transaction signer if Hive feature is enabled
@@ -133,7 +138,9 @@ where
         ) {
             content.entry(tx.sender()).or_default().insert(
                 tx.nonce().to_string(),
-                reth_rpc_types_compat::transaction::from_recovered(tx.clone().into_consensus()),
+                reth_rpc_types_compat::transaction::from_recovered::<reth_rpc::eth::EthTxBuilder>(
+                    tx.clone().into_consensus(),
+                ),
             );
         }
 
@@ -164,7 +171,10 @@ where
         Ok(self
             .pool
             .get(&hash)
-            .map(|transaction| TransactionSource::Pool(transaction.transaction.transaction().clone()).into())
+            .map(|transaction| {
+                TransactionSource::Pool(transaction.transaction.transaction().clone())
+                    .into_transaction::<reth_rpc::eth::EthTxBuilder>()
+            })
             .or(self.eth_provider.transaction_by_hash(hash).await?))
     }
 }

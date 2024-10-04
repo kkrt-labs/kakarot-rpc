@@ -1,9 +1,7 @@
+use alloy_primitives::{Bytes, B256};
+use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionRequest};
+use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult};
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
-use reth_primitives::{Bytes, B256};
-use reth_rpc_types::{
-    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult},
-    BlockId, BlockNumberOrTag, TransactionRequest,
-};
 
 /// Debug API
 /// Taken from Reth's DebugApi trait:

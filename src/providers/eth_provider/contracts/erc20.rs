@@ -5,9 +5,10 @@ use crate::providers::eth_provider::{
     provider::{EthApiResult, EthereumProvider},
 };
 use alloy_dyn_abi::DynSolType;
+use alloy_primitives::{Address, Bytes, TxKind, U256};
+use alloy_rpc_types::{request::TransactionInput, TransactionRequest};
 use alloy_sol_types::{sol, SolCall};
-use reth_primitives::{Address, BlockId, Bytes, TxKind, U256};
-use reth_rpc_types::{request::TransactionInput, TransactionRequest};
+use reth_primitives::BlockId;
 
 sol! {
     #[sol(rpc)]

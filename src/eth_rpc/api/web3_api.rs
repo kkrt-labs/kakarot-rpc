@@ -1,5 +1,5 @@
+use alloy_primitives::{Bytes, B256};
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
-use reth_primitives::{Bytes, B256};
 
 #[rpc(server, namespace = "web3")]
 #[async_trait]

@@ -1,5 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use alloy_consensus::TxEip1559;use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::{Address, TxKind, U256};
 use kakarot_rpc::{
     providers::eth_provider::{error::SignatureError, ChainProvider},
     test_utils::{
@@ -8,9 +10,7 @@ use kakarot_rpc::{
         katana::Katana,
     },
 };
-use reth_primitives::{
-    sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, U256,
-};
+use reth_primitives::{sign_message, Transaction, TransactionSigned, TransactionSignedEcRecovered};
 use reth_transaction_pool::{EthPooledTransaction, TransactionOrigin, TransactionPool};
 use rstest::*;
 
@@ -340,7 +340,7 @@ pub async fn create_sample_transactions(
             TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer);
 
         // Get the encoded length of the transaction
-        let encoded_length = transaction_signed_ec_recovered.clone().length_without_header();
+        let encoded_length = transaction_signed_ec_recovered.clone().encode_2718_len();
 
         // Create a pooled transaction
         let eth_pooled_transaction = EthPooledTransaction::new(transaction_signed_ec_recovered, encoded_length);

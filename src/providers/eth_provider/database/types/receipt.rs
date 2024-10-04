@@ -1,6 +1,7 @@
+use alloy_primitives::{Address, Bloom, B256};
+use alloy_rpc_types::TransactionReceipt;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
-use reth_primitives::{Address, Bloom, Receipt, B256};
-use reth_rpc_types::TransactionReceipt;
+use reth_primitives::Receipt;
 use serde::{Deserialize, Serialize};
 
 /// A transaction receipt as stored in the database
@@ -24,7 +25,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
         let mut logs = Vec::new();
 
         for log in receipt.logs {
-            logs.push(reth_rpc_types::Log {
+            logs.push(alloy_rpc_types::Log {
                 transaction_index: Some(u64::arbitrary(u)?),
                 log_index: Some(u64::arbitrary(u)?),
                 removed: bool::arbitrary(u)?,
@@ -36,8 +37,8 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
             });
         }
 
-        let receipt = reth_rpc_types::ReceiptWithBloom {
-            receipt: reth_rpc_types::Receipt {
+        let receipt = alloy_rpc_types::ReceiptWithBloom {
+            receipt: alloy_rpc_types::Receipt {
                 status: bool::arbitrary(u)?.into(),
                 cumulative_gas_used: u128::from(u64::arbitrary(u)?),
                 logs,
@@ -60,10 +61,10 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
                 contract_address: Some(Address::arbitrary(u)?),
                 state_root: Some(B256::arbitrary(u)?),
                 inner: match u.int_in_range(0..=3)? {
-                    0 => reth_rpc_types::ReceiptEnvelope::Legacy(receipt),
-                    1 => reth_rpc_types::ReceiptEnvelope::Eip2930(receipt),
-                    2 => reth_rpc_types::ReceiptEnvelope::Eip1559(receipt),
-                    3 => reth_rpc_types::ReceiptEnvelope::Eip4844(receipt),
+                    0 => alloy_consensus::ReceiptEnvelope::Legacy(receipt),
+                    1 => alloy_consensus::ReceiptEnvelope::Eip2930(receipt),
+                    2 => alloy_consensus::ReceiptEnvelope::Eip1559(receipt),
+                    3 => alloy_consensus::ReceiptEnvelope::Eip4844(receipt),
                     _ => unreachable!(),
                 },
                 authorization_list: None,

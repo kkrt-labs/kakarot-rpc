@@ -5,16 +5,14 @@ use crate::{
     },
     tracing::builder::TracerBuilder,
 };
+use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Encodable;
+use alloy_rpc_types::TransactionRequest;
+use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use reth_primitives::{
-    Block, BlockId, BlockNumberOrTag, Bytes, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned, B256,
-};
-use reth_rpc_types::{
-    trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult},
-    TransactionRequest,
-};
+use reth_primitives::{Block, BlockId, BlockNumberOrTag, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned};
 use std::sync::Arc;
 
 #[async_trait]
@@ -99,13 +97,15 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
             let tx = tx.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::Primitive))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
-                reth_primitives::Signature {
-                    r: signature.r,
-                    s: signature.s,
-                    odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-                },
+                reth_primitives::Signature::from_rs_and_parity(
+                    signature.r,
+                    signature.s,
+                    signature.y_parity.map_or(false, |v| v.0),
+                )
+                .expect("Invalid signature"),
             )
-            .envelope_encoded();
+            .encoded_2718()
+            .into();
             Ok(Some(bytes))
         } else {
             Ok(None)
@@ -121,13 +121,15 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
             let tx = t.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::Primitive))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx,
-                reth_primitives::Signature {
-                    r: signature.r,
-                    s: signature.s,
-                    odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-                },
+                reth_primitives::Signature::from_rs_and_parity(
+                    signature.r,
+                    signature.s,
+                    signature.y_parity.map_or(false, |v| v.0),
+                )
+                .expect("Invalid signature"),
             )
-            .envelope_encoded();
+            .encoded_2718()
+            .into();
             raw_transactions.push(bytes);
         }
 

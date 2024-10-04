@@ -4,13 +4,13 @@ use crate::providers::eth_provider::{
     database::state::EthDatabase, provider::EthereumProvider,
     starknet::kakarot_core::get_white_listed_eip_155_transaction_hashes,
 };
+use alloy_rpc_types::BlockNumberOrTag;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{
     BlockId, GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID,
     EIP4844_TX_TYPE_ID, LEGACY_TX_TYPE_ID,
 };
 use reth_revm::DatabaseRef;
-use reth_rpc_types::BlockNumberOrTag;
 use reth_transaction_pool::{
     error::InvalidPoolTransactionError,
     validate::{ensure_intrinsic_gas, ForkTracker, ValidTransaction, DEFAULT_MAX_TX_INPUT_BYTES},

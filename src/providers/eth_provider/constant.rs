@@ -1,5 +1,5 @@
 use crate::config::KakarotRpcConfig;
-use reth_primitives::{B256, U256};
+use alloy_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
 use starknet::core::types::Felt;
 use std::{
@@ -15,7 +15,7 @@ pub static MAX_LOGS: LazyLock<Option<u64>> =
     LazyLock::new(|| std::env::var("MAX_LOGS").ok().and_then(|val| u64::from_str(&val).ok()));
 
 /// Gas limit for estimate gas and call
-pub const CALL_REQUEST_GAS_LIMIT: u128 = 50_000_000;
+pub const CALL_REQUEST_GAS_LIMIT: u64 = 50_000_000;
 /// Number of characters for representing a U256 in a hex string form. Used for padding hashes
 pub const HASH_HEX_STRING_LEN: usize = 64;
 /// Number of characters for representing logs topics in a hex string form. Used for padding logs topics
