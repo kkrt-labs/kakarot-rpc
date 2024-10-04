@@ -50,16 +50,8 @@ async fn main() -> Result<()> {
     let starknet_provider = Arc::new(starknet_provider);
 
     // Get the pool config
-    let config = {
-        #[cfg(feature = "hive")]
-        {
-            PoolConfig { minimal_protocol_basefee: 0, ..Default::default() }
-        }
-        #[cfg(not(feature = "hive"))]
-        {
-            PoolConfig::default()
-        }
-    };
+    // TODO call Kakarot.get_base_fee
+    let config = PoolConfig { minimal_protocol_basefee: 0, ..Default::default() };
 
     let eth_client =
         EthClient::try_new(starknet_provider, config, db.clone()).await.expect("failed to start ethereum client");
