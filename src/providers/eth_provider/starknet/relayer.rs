@@ -69,11 +69,7 @@ where
         execution = execution.max_fee(self.balance - 1);
 
         let prepared = execution.prepared().map_err(|_| SignatureError::SigningFailure)?;
-        let res = prepared
-            .send()
-            .await
-            .inspect_err(|err| tracing::error!(target: "relayer", ?err))
-            .map_err(|err| TransactionError::Broadcast(err.into()))?;
+        let res = prepared.send().await.map_err(|err| TransactionError::Broadcast(err.into()))?;
 
         Ok(res.transaction_hash)
     }

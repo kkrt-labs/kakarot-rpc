@@ -10,6 +10,7 @@ use reth_primitives::{
     EIP4844_TX_TYPE_ID, LEGACY_TX_TYPE_ID,
 };
 use reth_revm::DatabaseRef;
+use reth_rpc_types::BlockNumberOrTag;
 use reth_transaction_pool::{
     error::InvalidPoolTransactionError,
     validate::{ensure_intrinsic_gas, ForkTracker, ValidTransaction, DEFAULT_MAX_TX_INPUT_BYTES},
@@ -312,13 +313,8 @@ where
             return TransactionValidationOutcome::Invalid(transaction, err);
         }
 
-        let handle = tokio::runtime::Handle::current();
-        let block = match tokio::task::block_in_place(|| handle.block_on(self.provider.block_number())) {
-            Ok(b) => b,
-            Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),
-        };
-        let db = EthDatabase::new(Arc::new(&self.provider), BlockId::from(block.to::<u64>()));
-
+        // Fetch the account state for the Pending block
+        let db = EthDatabase::new(Arc::new(&self.provider), BlockId::from(BlockNumberOrTag::Pending));
         let account = match db.basic_ref(transaction.sender()) {
             Ok(account) => account.unwrap_or_default(),
             Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),
