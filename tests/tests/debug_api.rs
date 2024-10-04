@@ -1,8 +1,9 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use alloy_eips::eip2718::{Decodable2718, Encodable2718};
 use alloy_primitives::Bytes;
 use alloy_rlp::Encodable;
-use alloy_rpc_types::{Transaction, TransactionInfo};use alloy_eips::eip2718::Encodable2718;use alloy_eips::eip2718::Decodable2718;
+use alloy_rpc_types::{Transaction, TransactionInfo};
 use alloy_serde::WithOtherFields;
 use kakarot_rpc::{
     client::TransactionHashProvider,

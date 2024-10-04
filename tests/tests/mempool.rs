@@ -1,6 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use alloy_consensus::TxEip1559;use alloy_eips::eip2718::Encodable2718;
+use alloy_consensus::TxEip1559;
+use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{Address, TxKind, U256};
 use kakarot_rpc::{
     providers::eth_provider::{error::SignatureError, ChainProvider},
