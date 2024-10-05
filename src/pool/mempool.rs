@@ -4,6 +4,7 @@ use super::validate::KakarotTransactionValidator;
 use crate::{
     client::EthClient,
     into_via_try_wrapper,
+    pool::constants::ONE_TENTH_ETH,
     providers::eth_provider::{
         constant::RPC_CONFIG, database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider,
     },
@@ -94,7 +95,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let maybe_relayer = manager.lock_account().await;
                         if maybe_relayer.is_err() {
                             // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
-                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap(), "failed to fetch relayer");
+                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap_err(), "failed to fetch relayer");
                             let _ = manager
                                 .eth_client
                                 .mempool()
@@ -109,7 +110,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
                             // If the relayer failed to relay the transaction, we need to reposition it in the mempool
-                            tracing::error!(target: "account_manager", err = ?res.unwrap(), "failed to relay transaction");
+                            tracing::error!(target: "account_manager", err = ?res.unwrap_err(), "failed to relay transaction");
                             let _ = manager
                                 .eth_client
                                 .mempool()
@@ -145,27 +146,23 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
             let ((account_address, guard), _, _) = select_all(fut_locks).await;
 
             // Fetch the balance of the selected account
-            let balance = self
-                .get_balance(*account_address)
-                .await
-                .inspect_err(|err| {
-                    tracing::error!(target: "account_manager", ?account_address, ?err, "failed to fetch balance");
-                })
-                .unwrap_or_default();
+            let balance = self.get_balance(*account_address).await?;
 
             // If the balance is lower than the threshold, continue
-            if balance < U256::from(u128::pow(10, 18)) {
+            if balance < U256::from(ONE_TENTH_ETH) {
                 accounts.remove(account_address);
                 continue;
             }
 
             let balance = into_via_try_wrapper!(balance)?;
+            let chain_id = self.eth_client.starknet_provider().chain_id().await?;
+
             let account = LockedRelayer::new(
                 guard,
                 *account_address,
                 balance,
                 JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
-                self.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+                chain_id,
             );
 
             // Return the account address and the guard on the nonce

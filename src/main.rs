@@ -50,16 +50,8 @@ async fn main() -> Result<()> {
     let starknet_provider = Arc::new(starknet_provider);
 
     // Get the pool config
-    let config = {
-        #[cfg(feature = "hive")]
-        {
-            PoolConfig { minimal_protocol_basefee: 0, ..Default::default() }
-        }
-        #[cfg(not(feature = "hive"))]
-        {
-            PoolConfig::default()
-        }
-    };
+    // TODO call Kakarot.get_base_fee
+    let config = PoolConfig { minimal_protocol_basefee: 0, ..Default::default() };
 
     let eth_client =
         EthClient::try_new(starknet_provider, config, db.clone()).await.expect("failed to start ethereum client");
@@ -151,7 +143,7 @@ async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<
     use starknet::{accounts::ConnectedAccount, core::types::Felt, providers::Provider as _};
 
     let chain_id = starknet_provider.chain_id().await?;
-    let modulo = 1u64 << 53;
+    let modulo = (1u64 << 53) - 1;
     let chain_id: u64 = (Felt::from(modulo).to_bigint() & chain_id.to_bigint()).try_into()?;
 
     CHAIN_ID.set(chain_id.into()).expect("Failed to set chain id");
