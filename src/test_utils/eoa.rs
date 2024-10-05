@@ -198,7 +198,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             return Err(eyre::eyre!("Failed to deploy contract"));
         };
 
-        let selector = get_selector_from_name("evm_contract_deployed").unwrap(); // safe unwrap
+        let selector = get_selector_from_name("evm_contract_deployed")?;
 
         let event = receipt
             .events

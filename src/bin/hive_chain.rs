@@ -82,6 +82,8 @@ async fn main() -> eyre::Result<()> {
     let chain_id_mod = apply_chain_id_modulo(chain_id);
 
     // Initialize the chain ID globally
+    let modulo = (1u64 << 53) - 1;
+    let chain_id_mod: u64 = (Felt::from(modulo).to_bigint() & chain_id.to_bigint()).try_into()?;
     let _ = CHAIN_ID.get_or_init(|| Felt::from(chain_id_mod));
 
     // Prepare the relayer
