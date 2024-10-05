@@ -54,6 +54,14 @@ pub struct Args {
 const STARKNET_RPC_URL: &str = "http://0.0.0.0:5050";
 const MAX_FELTS_IN_CALLDATA: &str = "30000";
 
+// Define the modulo constant
+const CHAIN_ID_MODULO: u64 = 1u64 << 53;
+
+// Utility function to apply the chain ID modulo
+fn apply_chain_id_modulo(chain_id: u64) -> u64 {
+    chain_id % CHAIN_ID_MODULO
+}
+
 /// Inspired by the Import command from Reth.
 /// https://github.com/paradigmxyz/reth/blob/main/bin/reth/src/commands/import.rs
 #[tokio::main]
@@ -71,8 +79,9 @@ async fn main() -> eyre::Result<()> {
 
     // Set the chain id
     let chain_id = starknet_provider.chain_id().await?;
-    let modulo = 1u64 << 53;
-    let chain_id_mod: u64 = (Felt::from(modulo).to_bigint() & chain_id.to_bigint()).try_into()?;
+    let chain_id_mod = apply_chain_id_modulo(chain_id);
+
+    // Initialize the chain ID globally
     let _ = CHAIN_ID.get_or_init(|| Felt::from(chain_id_mod));
 
     // Prepare the relayer
