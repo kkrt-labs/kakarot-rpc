@@ -82,7 +82,7 @@ impl Arbitrary<'_> for StoredTransaction {
                 } else {
                     U256::from(transaction_signed.signature.v().to_u64())
                 },
-                y_parity: Some((transaction_signed.signature.v().to_u64() != 0).into()),
+                y_parity: Some((transaction_signed.signature.v().y_parity()).into()),
             }),
             nonce: transaction_signed.nonce(),
             value: transaction_signed.value(),

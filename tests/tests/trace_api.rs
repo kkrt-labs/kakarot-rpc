@@ -86,7 +86,7 @@ pub async fn tracing(
                 r: tx_signed.signature().r(),
                 s: tx_signed.signature().s(),
                 v: U256::from(tx_signed.signature().v().to_u64()),
-                y_parity: Some(alloy_rpc_types::Parity(tx_signed.signature().v().to_u64() != 0)),
+                y_parity: Some(alloy_rpc_types::Parity(tx_signed.signature().v().y_parity())),
             }),
             max_fee_per_gas: Some(max_fee_per_gas),
             gas_price: Some(max_fee_per_gas),
