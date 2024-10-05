@@ -60,7 +60,8 @@ alloy-rlp = { version = "0.3.8", default-features = false }
 alloy-sol-types = { version = "0.8.4", default-features = false }
 alloy-contract = { version = "0.3.6", default-features = false }
 alloy-rpc-types = { version = "0.4.2", features = [
-    "eth", "arbitrary"
+  "eth",
+  "arbitrary",
 ], default-features = false }
 alloy-consensus = { version = "0.4.2", default-features = false }
 alloy-rpc-types-txpool = { version = "0.4.2", default-features = false }
