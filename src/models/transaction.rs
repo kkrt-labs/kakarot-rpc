@@ -28,7 +28,7 @@ pub(crate) fn transaction_signature_to_field_elements(transaction_signed: &Trans
     // Else, it is odd_y_parity
     if let Transaction::Legacy(_) = transaction_signed.transaction {
         let chain_id = transaction_signed.chain_id();
-        signature.push(legacy_parity(&transaction_signature, chain_id).to_u64().into());
+        signature.push(legacy_parity(transaction_signature, chain_id).to_u64().into());
     } else {
         signature.push(transaction_signature.v().to_u64().into());
     }

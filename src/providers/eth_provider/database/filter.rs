@@ -200,7 +200,8 @@ impl<T: LogFiltering + BlockFiltering + Display + Default> EthDatabaseFilterBuil
             return self;
         }
         let key = format!("{}.{}", self.target, self.target.address());
-        self.filter.insert(key, doc! {"$in": addresses.iter().map(|a| a.to_string()).collect::<Vec<_>>()});
+        self.filter
+            .insert(key, doc! {"$in": addresses.iter().map(std::string::ToString::to_string).collect::<Vec<_>>()});
         self
     }
 
