@@ -147,7 +147,7 @@ pin-project-lite = { version = "0.2", default-features = false }
 # Testing crates
 alloy-dyn-abi = { version = "0.8.4", default-features = false }
 alloy-json-abi = { version = "0.8.4", default-features = false, optional = true }
-alloy-primitives = { version = "0.8.4", default-features = false, optional = true }
+alloy-primitives = { version = "0.8.4", default-features = false }
 alloy-signer-local = { version = "0.4.2", default-features = false, optional = true }
 alloy-signer = { version = "0.4.2", default-features = false, optional = true }
 alloy-serde = { version = "0.4.2", default-features = false }
@@ -191,7 +191,6 @@ tempfile = "3.8"
 [features]
 testing = [
   "alloy-json-abi",
-  "alloy-primitives",
   "alloy-signer-local",
   "alloy-signer",
   "anyhow",
