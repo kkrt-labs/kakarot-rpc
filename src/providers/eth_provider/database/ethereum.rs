@@ -139,7 +139,11 @@ impl EthereumBlockStore for Database {
             .collect::<Result<Vec<_>, _>>()?;
 
         let block = reth_primitives::Block {
-            body: reth_primitives::BlockBody { transactions: signed_transactions, ..Default::default() },
+            body: reth_primitives::BlockBody {
+                transactions: signed_transactions,
+                withdrawals: Some(Default::default()),
+                ..Default::default()
+            },
             header: reth_primitives::Header::try_from(header.clone())
                 .map_err(|_| EthereumDataFormatError::Primitive)?,
         };
@@ -325,7 +329,11 @@ mod tests {
                 transactions.into_iter().map(TransactionSigned::try_from).collect::<Result<Vec<_>, _>>().unwrap();
 
             let block = reth_primitives::Block {
-                body: reth_primitives::BlockBody { transactions: signed_transactions, ..Default::default() },
+                body: reth_primitives::BlockBody {
+                    transactions: signed_transactions,
+                    withdrawals: Some(Default::default()),
+                    ..Default::default()
+                },
                 header: reth_primitives::Header::try_from(header.clone()).unwrap(),
             };
 
