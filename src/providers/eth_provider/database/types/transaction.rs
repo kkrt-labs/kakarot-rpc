@@ -8,6 +8,7 @@ use {
     alloy_primitives::U256,
     arbitrary::Arbitrary,
     rand::Rng,
+    reth_primitives::transaction::legacy_parity,
     reth_testing_utils::generators::{self},
 };
 
@@ -76,9 +77,7 @@ impl Arbitrary<'_> for StoredTransaction {
                 r: transaction_signed.signature.r(),
                 s: transaction_signed.signature.s(),
                 v: if transaction_signed.is_legacy() {
-                    U256::from(
-                        transaction_signed.signature.with_chain_id(transaction_signed.chain_id().unwrap()).v().to_u64(),
-                    )
+                    U256::from(legacy_parity(&transaction_signed.signature, transaction_signed.chain_id()).to_u64())
                 } else {
                     U256::from(transaction_signed.signature.v().to_u64())
                 },
