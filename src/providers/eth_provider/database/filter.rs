@@ -1,6 +1,5 @@
 use crate::providers::eth_provider::constant::{
-    ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, HASH_HEX_STRING_LEN, LOGS_TOPICS_HEX_STRING_LEN,
-    U64_HEX_STRING_LEN,
+    BLOCK_NUMBER_HEX_STRING_LEN, HASH_HEX_STRING_LEN, LOGS_TOPICS_HEX_STRING_LEN, U64_HEX_STRING_LEN,
 };
 use alloy_primitives::{Address, B256};
 use alloy_rpc_types::{BlockHashOrNumber, Index, Topic};
@@ -201,10 +200,7 @@ impl<T: LogFiltering + BlockFiltering + Display + Default> EthDatabaseFilterBuil
             return self;
         }
         let key = format!("{}.{}", self.target, self.target.address());
-        self.filter.insert(
-            key,
-            doc! {"$in": addresses.iter().map(|a| format_hex(a, ADDRESS_HEX_STRING_LEN)).collect::<Vec<_>>()},
-        );
+        self.filter.insert(key, doc! {"$in": addresses.iter().map(|a| a.to_string()).collect::<Vec<_>>()});
         self
     }
 

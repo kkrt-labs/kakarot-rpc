@@ -4,7 +4,7 @@ use crate::providers::eth_provider::{
     utils::split_u256,
 };
 use alloy_rlp::Encodable;
-use reth_primitives::{Transaction, TransactionSigned};
+use reth_primitives::{transaction::legacy_parity, Transaction, TransactionSigned};
 use starknet::core::types::Felt;
 #[cfg(not(feature = "hive"))]
 use {
@@ -27,8 +27,8 @@ pub(crate) fn transaction_signature_to_field_elements(transaction_signed: &Trans
     // or {0, 1} + 27 for pre EIP-155 transactions.
     // Else, it is odd_y_parity
     if let Transaction::Legacy(_) = transaction_signed.transaction {
-        let chain_id = transaction_signed.chain_id().unwrap();
-        signature.push(transaction_signature.with_chain_id(chain_id).v().to_u64().into());
+        let chain_id = transaction_signed.chain_id();
+        signature.push(legacy_parity(&transaction_signature, chain_id).to_u64().into());
     } else {
         signature.push(transaction_signature.v().to_u64().into());
     }

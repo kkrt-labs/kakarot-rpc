@@ -1,7 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use alloy_dyn_abi::DynSolValue;
-use alloy_primitives::{Address, Bytes, B256, U256};
+use alloy_primitives::{Address, Bytes, B256, B64, U256};
 use alloy_rpc_types_trace::{
     geth::{GethDebugTracingOptions, GethTrace, TraceResult},
     parity::{Action, CallAction, CallOutput, CallType, TraceOutput, TransactionTrace},
@@ -36,6 +36,8 @@ fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u64) -> al
         parent_hash,
         gas_limit: u64::MAX,
         base_fee_per_gas: Some(base_fee),
+        mix_hash: Some(B256::ZERO),
+        nonce: Some(B64::ZERO),
         ..Default::default()
     }
 }
