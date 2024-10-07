@@ -55,7 +55,7 @@ test: katana-genesis load-env
 	cargo test --all --features testing
 
 test-ci: load-env
-	cargo test --all --features testing --profile ci
+	cargo nextest run --all --features testing --profile ci
 
 # Example: `make test-target TARGET=test_raw_transaction`
 test-target: load-env
