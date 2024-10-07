@@ -47,7 +47,7 @@ jobs:
       - name: Create dump
         run: ./scripts/make_with_env.sh katana-genesis
       - name: Test code
-        run: make test
+        run: make test-ci
 
   # Inspired by Reth CI.
   # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/hive.yml>
