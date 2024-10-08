@@ -91,7 +91,7 @@ services:
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
       - STARKNET_NETWORK=https://juno-kakarot-sepolia.karnot.xyz/
-      - RUST_LOG=kakarot_rpc=info
+      - RUST_LOG=kakarot_rpc=debug
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
       - MONGO_DATABASE_NAME=kakarot-local
       # These values are unique to Sepolia Testnet
@@ -111,22 +111,6 @@ services:
       - indexer_code_prod:/usr/src/indexer
     networks:
       - internal_prod
-
-  apibara-dna:
-    image: quay.io/apibara/starknet:1.6
-    command:
-      - start
-      - --rpc=https://juno-kakarot-sepolia.karnot.xyz/
-      - --wait-for-rpc
-      - --data=/data
-      - --head-refresh-interval-ms=1000
-    ports:
-      - 7171:7171
-    volumes:
-      - apibara_prod:/data
-    networks:
-      - internal_prod
-    restart: on-failure
 
   ### MongoDB with Mongo Express
   mongo:
@@ -151,16 +135,16 @@ services:
       # Whitelist environment variables
       - ALLOW_ENV_FROM_ENV=DEBUG,APIBARA_AUTH_TOKEN,STARTING_BLOCK,STREAM_URL,SINK_TYPE,MONGO_CONNECTION_STRING,MONGO_DATABASE_NAME,STARKNET_NETWORK,KAKAROT_ADDRESS,ALLOW_NET,MONGO_REPLACE_DATA_INSIDE_TRANSACTION,DEFAULT_BLOCK_GAS_LIMIT
       - DEBUG=""
-      - APIBARA_AUTH_TOKEN=""
+      - APIBARA_AUTH_TOKEN=${APIBARA_AUTH_TOKEN}
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
       - MONGO_DATABASE_NAME=kakarot-local
-      - STARTING_BLOCK=0
-      - STREAM_URL=http://apibara-dna:7171
+      - STARTING_BLOCK=220000
+      - STREAM_URL=sepolia.starknet.a5a.ch
       - SINK_TYPE=mongo
       - STARKNET_NETWORK=https://juno-kakarot-sepolia.karnot.xyz/
       - ALLOW_NET=
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
-      - KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
+      - KAKAROT_ADDRESS=0x78bd079b79aa45111313f200a22e5c52ff7526c746d73b65672cc28acbe2263
       - DEFAULT_BLOCK_GAS_LIMIT=7000000
     restart: on-failure
     volumes:
@@ -177,7 +161,6 @@ networks:
     driver: bridge
 
 volumes:
-  apibara_prod:
   mongo_data_prod:
   indexer_code_prod:
   pgadmin_data_prod:
