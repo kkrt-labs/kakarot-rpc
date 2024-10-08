@@ -67,27 +67,27 @@ alloy-consensus = { version = "0.4.2", default-features = false }
 alloy-rpc-types-txpool = { version = "0.4.2", default-features = false }
 alloy-rpc-types-trace = { version = "0.4.2", default-features = false }
 jsonrpsee = { version = "0.24", features = ["macros", "server"] }
-reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false, features = [
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, features = [
   "std",
 ] }
-reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false, features = [
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, features = [
   "std",
 ] }
-reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false, features = [
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, features = [
   "alloy-compat",
   "std",
   "arbitrary",
 ] }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false, features = [
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, features = [
   "std",
 ] }
-reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false }
-reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false, optional = true }
-reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false }
-reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false }
-reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.8", default-features = false }
+reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, optional = true }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
 revm-inspectors = "0.8.1"
 
 # Error
