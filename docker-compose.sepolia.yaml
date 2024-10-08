@@ -1,15 +1,4 @@
 services:
-  starknet:
-    image: nethermind/juno:v0.12.2
-    ports:
-      - 6060:6060
-    volumes:
-      - $HOME/snapshots/juno_sepolia:/var/lib/juno
-    command: >
-      --pending-poll-interval "1s" --http --http-host 0.0.0.0 --http-port 6060
-      --db-path /var/lib/juno --eth-node ${ETH_NODE_WS} --network sepolia
-    networks:
-      - internal_prod
   starknet-explorer:
     image: public.ecr.aws/o5q6k5w4/stark_compass_explorer:latest
     ports:
@@ -17,9 +6,9 @@ services:
     environment:
       - PHX_HOST=localhost
       - PORT=4000
-      - RPC_API_HOST=http://host.docker.internal_prod:6060
-      - TESTNET_RPC_API_HOST=http://host.docker.internal_prod:6060
-      - SEPOLIA_RPC_API_HOST=http://host.docker.internal_prod:6060
+      - RPC_API_HOST=https://juno-kakarot-sepolia.karnot.xyz/
+      - TESTNET_RPC_API_HOST=https://juno-kakarot-sepolia.karnot.xyz/
+      - SEPOLIA_RPC_API_HOST=https://juno-kakarot-sepolia.karnot.xyz/
       - DISABLE_MAINNET_SYNC=true
       - DISABLE_SEPOLIA_SYNC=true
       - DATABASE_PATH=ecto://postgres:postgres@starknet-explorer-db:5432/starknet_explorer_dev
@@ -28,8 +17,6 @@ services:
       - ENABLE_LISTENER=true
     depends_on:
       starknet-explorer-db:
-        condition: service_started
-      starknet:
         condition: service_started
     extra_hosts:
       - host.docker.internal_prod:172.17.0.1
@@ -103,7 +90,7 @@ services:
       - 3030:3030
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
-      - STARKNET_NETWORK=http://starknet:6060
+      - STARKNET_NETWORK=https://juno-kakarot-sepolia.karnot.xyz/
       - RUST_LOG=kakarot_rpc=info
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
       - MONGO_DATABASE_NAME=kakarot-local
@@ -122,9 +109,6 @@ services:
     volumes:
       # Mount the indexer code
       - indexer_code_prod:/usr/src/indexer
-    depends_on:
-      starknet:
-        condition: service_started
     networks:
       - internal_prod
 
@@ -132,7 +116,7 @@ services:
     image: quay.io/apibara/starknet:1.6
     command:
       - start
-      - --rpc=http://starknet:6060
+      - --rpc=https://juno-kakarot-sepolia.karnot.xyz/
       - --wait-for-rpc
       - --data=/data
       - --head-refresh-interval-ms=1000
@@ -173,7 +157,7 @@ services:
       - STARTING_BLOCK=0
       - STREAM_URL=http://apibara-dna:7171
       - SINK_TYPE=mongo
-      - STARKNET_NETWORK=http://starknet:6060
+      - STARKNET_NETWORK=https://juno-kakarot-sepolia.karnot.xyz/
       - ALLOW_NET=
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
       - KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
@@ -183,9 +167,6 @@ services:
       - indexer_code_prod:/indexer
     networks:
       - internal_prod
-    depends_on:
-      starknet:
-        condition: service_started
 
 networks:
   internal_prod:
