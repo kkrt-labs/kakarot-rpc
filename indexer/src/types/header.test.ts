@@ -6,11 +6,8 @@ import {
   PrefixedHexString,
 } from "../deps.ts";
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/assert_equals.ts";
-import {
-  DEFAULT_BLOCK_GAS_LIMIT,
-  JsonRpcBlock,
-  toEthHeader,
-} from "./header.ts";
+import { JsonRpcBlock, toEthHeader } from "./header.ts";
+import { DEFAULT_BLOCK_GAS_LIMIT } from "../constants.ts";
 import { padString } from "../utils/hex.ts";
 import sinon from "npm:sinon";
 import { KAKAROT } from "../provider.ts";
