@@ -30,9 +30,6 @@ export const STARTING_BLOCK = (() => {
     })();
 })();
 
-// Get authentication token from Apibara or returns an empty string if the value is null or undefined
-export const AUTH_TOKEN = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
-
 // Get stream URL or returns "http://localhost:7171" if the value is null or undefined
 export const STREAM_URL = Deno.env.get("STREAM_URL") ?? "http://localhost:7171";
 

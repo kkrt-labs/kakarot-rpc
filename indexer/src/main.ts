@@ -8,7 +8,6 @@ import {
 
 // Constants
 import {
-  AUTH_TOKEN,
   NULL_HASH,
   SINK_OPTIONS,
   SINK_TYPE,
@@ -52,7 +51,6 @@ import {
 
 export const config: Config<NetworkOptions, SinkOptions> = {
   streamUrl: STREAM_URL,
-  authToken: AUTH_TOKEN,
   startingBlock: STARTING_BLOCK,
   network: "starknet",
   finality: "DATA_STATUS_PENDING",
