@@ -91,7 +91,7 @@ services:
     environment:
       - KAKAROT_RPC_URL=0.0.0.0:3030
       - STARKNET_NETWORK=https://juno-kakarot-sepolia.karnot.xyz/
-      - RUST_LOG=kakarot_rpc=debug
+      - RUST_LOG=trace
       - MONGO_CONNECTION_STRING=mongodb://mongo:mongo@mongo:27017
       - MONGO_DATABASE_NAME=kakarot-local
       # These values are unique to Sepolia Testnet
