@@ -1,10 +1,9 @@
 ---
 name: release
 
-#on:
-#  release:
-#    types: [published]
-on: [pull_request, merge_group]
+on:
+  release:
+    types: [published]
 
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
