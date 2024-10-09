@@ -1,5 +1,6 @@
 #![allow(clippy::significant_drop_tightening)]
 
+use alloy_primitives::bytes::{Buf, BytesMut};
 use alloy_rlp::Decodable;
 use clap::Parser;
 use kakarot_rpc::{
@@ -7,7 +8,7 @@ use kakarot_rpc::{
     into_via_try_wrapper,
     providers::{eth_provider::starknet::relayer::LockedRelayer, sn_provider::StarknetProvider},
 };
-use reth_primitives::{bytes::Buf, Block, BlockBody, BytesMut};
+use reth_primitives::{Block, BlockBody};
 use starknet::{
     core::types::{BlockId, BlockTag, Felt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},

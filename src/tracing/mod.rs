@@ -8,23 +8,22 @@ use crate::{
     },
     tracing::builder::TracingOptions,
 };
+use alloy_primitives::{ruint::FromUintError, B256};
+use alloy_rpc_types::{TransactionInfo, TransactionRequest};
+use alloy_rpc_types_trace::{
+    geth::{
+        GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions, GethDebugTracingOptions,
+        GethTrace, TraceResult,
+    },
+    parity::LocalizedTransactionTrace,
+};
+use alloy_serde::WithOtherFields;
 use eyre::eyre;
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::{ConfigureEvm, ConfigureEvmEnv};
-use reth_primitives::{ruint::FromUintError, B256};
 use reth_revm::{
     primitives::{Env, EnvWithHandlerCfg},
     DatabaseCommit,
-};
-use reth_rpc_types::{
-    trace::{
-        geth::{
-            GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions, GethDebugTracingOptions,
-            GethTrace, TraceResult,
-        },
-        parity::LocalizedTransactionTrace,
-    },
-    TransactionInfo, TransactionRequest, WithOtherFields,
 };
 use revm_inspectors::tracing::{TracingInspector, TracingInspectorConfig};
 use std::{collections::HashMap, sync::Arc};
@@ -63,10 +62,10 @@ impl TracingResult {
     }
 
     /// Creates a default failure [`TracingResult`] based on the [`TracingOptions`].
-    fn default_failure(tracing_options: &TracingOptions, tx: &WithOtherFields<reth_rpc_types::Transaction>) -> Self {
+    fn default_failure(tracing_options: &TracingOptions, tx: &WithOtherFields<alloy_rpc_types::Transaction>) -> Self {
         match tracing_options {
             TracingOptions::Geth(_) | TracingOptions::GethCall(_) => Self::Geth(vec![TraceResult::Success {
-                result: GethTrace::Default(reth_rpc_types::trace::geth::DefaultFrame {
+                result: GethTrace::Default(alloy_rpc_types_trace::geth::DefaultFrame {
                     failed: true,
                     ..Default::default()
                 }),
@@ -83,7 +82,7 @@ impl TracingResult {
 
 #[derive(Debug)]
 pub struct Tracer<P: EthereumProvider + Send + Sync> {
-    transactions: Vec<WithOtherFields<reth_rpc_types::Transaction>>,
+    transactions: Vec<WithOtherFields<alloy_rpc_types::Transaction>>,
     env: EnvWithHandlerCfg,
     db: EthCacheDatabase<P>,
     tracing_options: TracingOptions,
@@ -94,7 +93,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     fn trace_geth(
         env: EnvWithHandlerCfg,
         db: &EthCacheDatabase<P>,
-        tx: &WithOtherFields<reth_rpc_types::Transaction>,
+        tx: &WithOtherFields<alloy_rpc_types::Transaction>,
         opts: GethDebugTracingOptions,
     ) -> TracingStateResult {
         // Extract options
@@ -172,7 +171,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     fn trace_parity(
         env: EnvWithHandlerCfg,
         db: &EthCacheDatabase<P>,
-        tx: &WithOtherFields<reth_rpc_types::Transaction>,
+        tx: &WithOtherFields<alloy_rpc_types::Transaction>,
         tracing_config: TracingInspectorConfig,
     ) -> TracingStateResult {
         // Get block base fee
@@ -331,7 +330,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
     fn trace_transactions<T: Clone>(
         self,
         convert_result: fn(&TracingResult) -> Option<&Vec<T>>,
-        transactions: &[WithOtherFields<reth_rpc_types::Transaction>],
+        transactions: &[WithOtherFields<alloy_rpc_types::Transaction>],
     ) -> TracerResult<Vec<T>> {
         let mut traces: Vec<T> = Vec::with_capacity(self.transactions.len());
         let mut transactions = transactions.iter().peekable();
@@ -373,7 +372,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 /// Returns the environment with the transaction env updated to the given transaction.
 fn env_with_tx(
     env: &EnvWithHandlerCfg,
-    tx: WithOtherFields<reth_rpc_types::Transaction>,
+    tx: WithOtherFields<alloy_rpc_types::Transaction>,
 ) -> TracerResult<EnvWithHandlerCfg> {
     // Convert the transaction to an ec recovered transaction and update the env with it.
     let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversion)?;

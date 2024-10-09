@@ -1,6 +1,10 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use alloy_eips::eip2718::{Decodable2718, Encodable2718};
+use alloy_primitives::Bytes;
 use alloy_rlp::Encodable;
+use alloy_rpc_types::{Transaction, TransactionInfo};
+use alloy_serde::WithOtherFields;
 use kakarot_rpc::{
     client::TransactionHashProvider,
     providers::eth_provider::{BlockProvider, ReceiptProvider},
@@ -11,9 +15,8 @@ use kakarot_rpc::{
     },
 };
 use reth_primitives::{
-    Block, BlockNumberOrTag, Bytes, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered,
+    Block, BlockNumberOrTag, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered,
 };
-use reth_rpc_types::{Transaction, TransactionInfo, WithOtherFields};
 use reth_rpc_types_compat::transaction::from_recovered_with_block_context;
 use rstest::*;
 use serde_json::Value;
@@ -44,16 +47,16 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let rlp_bytes: Option<Bytes> = serde_json::from_value(raw["result"].clone()).expect("Failed to deserialize result");
     assert!(rlp_bytes.is_some());
     // We can decode the RLP bytes to get the transaction and compare it with the original transaction
-    let transaction = TransactionSigned::decode_enveloped(&mut rlp_bytes.unwrap().as_ref()).unwrap();
+    let transaction = TransactionSigned::decode_2718(&mut rlp_bytes.unwrap().as_ref()).unwrap();
     let signer = transaction.recover_signer().unwrap();
 
-    let mut transaction = from_recovered_with_block_context(
+    let mut transaction = from_recovered_with_block_context::<reth_rpc::eth::EthTxBuilder>(
         TransactionSignedEcRecovered::from_signed_transaction(transaction, signer),
         TransactionInfo {
             hash: Some(tx.hash),
             block_hash: tx.block_hash,
             block_number: tx.block_number,
-            base_fee: header.base_fee_per_gas,
+            base_fee: header.base_fee_per_gas.map(Into::into),
             index: tx.transaction_index,
         },
     );
@@ -67,12 +70,12 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         .expect("Failed to call Debug RPC");
     let response = res.text().await.expect("Failed to get response body");
     let response: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let rpc_transaction: reth_rpc_types::Transaction =
+    let rpc_transaction: alloy_rpc_types::Transaction =
         serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
 
     // As per https://github.com/paradigmxyz/reth/blob/603e39ab74509e0863fc023461a4c760fb2126d1/crates/rpc/rpc-types-compat/src/transaction/signature.rs#L17
     if rpc_transaction.transaction_type.unwrap() == 0 {
-        transaction.signature = Some(reth_rpc_types::Signature {
+        transaction.signature = Some(alloy_rpc_types::Signature {
             y_parity: rpc_transaction.signature.unwrap().y_parity,
             ..transaction.signature.unwrap()
         });
@@ -147,7 +150,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     for (i, actual_tx) in eth_provider
-        .block_transactions(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
+        .block_transactions(Some(alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
         .await
         .unwrap()
         .unwrap()
@@ -161,13 +164,14 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         // Convert the transaction to a primitives transactions and encode it.
         let rlp_bytes = TransactionSigned::from_transaction_and_signature(
             tx.try_into().unwrap(),
-            reth_primitives::Signature {
-                r: signature.r,
-                s: signature.s,
-                odd_y_parity: signature.y_parity.unwrap_or(reth_rpc_types::Parity(false)).0,
-            },
+            reth_primitives::Signature::from_rs_and_parity(
+                signature.r,
+                signature.s,
+                signature.y_parity.map_or(false, |v| v.0),
+            )
+            .expect("Invalid signature"),
         )
-        .envelope_encoded();
+        .encoded_2718();
 
         // Assert the equality of the constructed receipt with the corresponding receipt from both block hash and block number.
         assert_eq!(rlp_bytes_by_block_number[i], rlp_bytes);
@@ -237,7 +241,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     for (i, receipt) in eth_provider
-        .block_receipts(Some(reth_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
+        .block_receipts(Some(alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
         .await
         .unwrap()
         .unwrap()
@@ -315,7 +319,7 @@ async fn test_raw_block(#[future] katana: Katana, _setup: ()) {
         .expect("Failed to call Debug RPC");
     let response = res.text().await.expect("Failed to get response body");
     let response: Value = serde_json::from_str(&response).expect("Failed to deserialize response body");
-    let rpc_block: WithOtherFields<reth_rpc_types::Block<WithOtherFields<Transaction>>> =
+    let rpc_block: WithOtherFields<alloy_rpc_types::Block<WithOtherFields<Transaction>>> =
         serde_json::from_value(response["result"].clone()).expect("Failed to deserialize result");
     let primitive_block = Block::try_from(rpc_block.inner).unwrap();
 

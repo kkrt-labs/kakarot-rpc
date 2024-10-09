@@ -1,4 +1,4 @@
-use reth_primitives::{Address, U256};
+use alloy_primitives::{Address, U256};
 use serde::{Deserialize, Serialize};
 
 /// Represents the balance of a specific ERC20 token.

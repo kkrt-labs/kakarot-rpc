@@ -1,9 +1,8 @@
+use alloy_primitives::Address;
+use alloy_rpc_types::Transaction;
+use alloy_rpc_types_txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus};
+use alloy_serde::WithOtherFields;
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
-use reth_primitives::Address;
-use reth_rpc_types::{
-    txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus},
-    Transaction, WithOtherFields,
-};
 
 /// Txpool API
 #[rpc(server, namespace = "txpool")]

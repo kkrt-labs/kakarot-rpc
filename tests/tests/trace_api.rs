@@ -1,6 +1,13 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use alloy_dyn_abi::DynSolValue;
+use alloy_primitives::{Address, TxKind, B256, U256};
+use alloy_rpc_types::{request::TransactionInput, TransactionRequest};
+use alloy_rpc_types_trace::geth::{
+    CallFrame, GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions, GethDebugTracingOptions,
+    GethTrace,
+};
+use alloy_serde::{OtherFields, WithOtherFields};
 use alloy_sol_types::{sol, SolCall};
 use kakarot_rpc::{
     providers::eth_provider::ChainProvider,
@@ -12,15 +19,7 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::{Address, BlockId, TxKind, B256, U256};
-use reth_rpc_types::{
-    request::TransactionInput,
-    trace::geth::{
-        CallFrame, GethDebugBuiltInTracerType, GethDebugTracerType, GethDebugTracingCallOptions,
-        GethDebugTracingOptions, GethTrace,
-    },
-    OtherFields, TransactionRequest, WithOtherFields,
-};
+use reth_primitives::BlockId;
 use rstest::*;
 use serde_json::Value;
 use starknet::{core::types::MaybePendingBlockWithTxHashes, providers::Provider};
@@ -31,12 +30,12 @@ const TRACING_BLOCK_NUMBER: u64 = 0x3;
 const TRACING_TRANSACTIONS_COUNT: usize = 5;
 
 /// Helper to create a header.
-fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u128) -> reth_rpc_types::Header {
-    reth_rpc_types::Header {
+fn header(block_number: u64, hash: B256, parent_hash: B256, base_fee: u64) -> alloy_rpc_types::Header {
+    alloy_rpc_types::Header {
         number: block_number,
         hash,
         parent_hash,
-        gas_limit: u128::from(u64::MAX),
+        gas_limit: u64::MAX,
         base_fee_per_gas: Some(base_fee),
         ..Default::default()
     }
@@ -73,7 +72,7 @@ pub async fn tracing(
             .expect("Failed to prepare call transaction");
         // Sign the transaction and convert it to a RPC transaction.
         let tx_signed = eoa.sign_transaction(tx.clone()).expect("Failed to sign transaction");
-        let tx = reth_rpc_types::Transaction {
+        let tx = alloy_rpc_types::Transaction {
             transaction_type: Some(2),
             nonce: tx.nonce(),
             hash: tx_signed.hash(),
@@ -81,13 +80,13 @@ pub async fn tracing(
             from: eoa_address,
             block_number: Some(TRACING_BLOCK_NUMBER),
             chain_id: tx.chain_id(),
-            gas: u128::from(tx.gas_limit()),
+            gas: tx.gas_limit(),
             input: tx.input().clone(),
-            signature: Some(reth_rpc_types::Signature {
-                r: tx_signed.signature().r,
-                s: tx_signed.signature().s,
-                v: U256::from(tx_signed.signature().odd_y_parity),
-                y_parity: Some(reth_rpc_types::Parity(tx_signed.signature().odd_y_parity)),
+            signature: Some(alloy_rpc_types::Signature {
+                r: tx_signed.signature().r(),
+                s: tx_signed.signature().s(),
+                v: U256::from(tx_signed.signature().v().to_u64()),
+                y_parity: Some(alloy_rpc_types::Parity(tx_signed.signature().v().y_parity())),
             }),
             max_fee_per_gas: Some(max_fee_per_gas),
             gas_price: Some(max_fee_per_gas),
@@ -123,8 +122,8 @@ pub async fn tracing(
     };
     let parent_block_hash = B256::from_slice(&parent_block_hash.to_bytes_be()[..]);
 
-    let parent_header = header(TRACING_BLOCK_NUMBER - 1, parent_block_hash, B256::random(), max_fee_per_gas);
-    let header = header(TRACING_BLOCK_NUMBER, B256::random(), parent_block_hash, max_fee_per_gas);
+    let parent_header = header(TRACING_BLOCK_NUMBER - 1, parent_block_hash, B256::random(), max_fee_per_gas as u64);
+    let header = header(TRACING_BLOCK_NUMBER, B256::random(), parent_block_hash, max_fee_per_gas as u64);
     katana.add_transactions_with_header_to_database(vec![], parent_header).await;
     katana.add_transactions_with_header_to_database(txs, header).await;
 }
@@ -245,7 +244,7 @@ async fn test_trace_call_counter(#[future] plain_opcodes: (Katana, KakarotEvmCon
         tracing_options: GethDebugTracingOptions::default()
             .with_tracer(GethDebugTracerType::BuiltInTracer(GethDebugBuiltInTracerType::CallTracer))
             .with_timeout(std::time::Duration::from_secs(300))
-            .with_call_config(reth_rpc_types::trace::geth::CallConfig { only_top_call: Some(false), with_log: None }),
+            .with_call_config(alloy_rpc_types_trace::geth::CallConfig { only_top_call: Some(false), with_log: None }),
         state_overrides: Default::default(),
         block_overrides: Default::default(),
     };

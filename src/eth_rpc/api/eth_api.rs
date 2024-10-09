@@ -1,10 +1,12 @@
-use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, Bytes, B256, B64, U256, U64};
-use reth_rpc_types::{
+use alloy_primitives::{Address, Bytes, B256, B64, U256, U64};
+use alloy_rpc_types::{
     serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, Block, BlockOverrides,
     EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, SyncStatus, Transaction as EthTransaction,
-    TransactionReceipt, TransactionRequest, WithOtherFields, Work,
+    TransactionReceipt, TransactionRequest, Work,
 };
+use alloy_serde::WithOtherFields;
+use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
+use reth_primitives::{BlockId, BlockNumberOrTag};
 
 /// Ethereum JSON-RPC API Trait
 /// Mostly based on <https://github.com/paradigmxyz/reth/blob/559124ac5a0b25030250203babcd8a94693df648/crates/rpc/rpc-api/src/eth.rs#L15>

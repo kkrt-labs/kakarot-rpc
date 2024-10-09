@@ -8,6 +8,7 @@ use crate::{
         KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
     },
 };
+use alloy_primitives::{B256, U256};
 use alloy_signer_local::PrivateKeySigner;
 use eyre::{eyre, OptionExt, Result};
 use katana_primitives::{
@@ -22,7 +23,6 @@ use katana_primitives::{
     },
 };
 use rayon::prelude::*;
-use reth_primitives::{B256, U256};
 use serde::Serialize;
 use serde_json::Value;
 use serde_with::serde_as;

@@ -1,5 +1,5 @@
 use super::receipt::StoredTransactionReceipt;
-use reth_rpc_types::Log;
+use alloy_rpc_types::Log;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
@@ -47,10 +47,10 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredLog {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
         Ok(Self {
             log: Log {
-                block_hash: Some(reth_primitives::B256::arbitrary(u)?),
+                block_hash: Some(alloy_primitives::B256::arbitrary(u)?),
                 block_number: Some(u64::arbitrary(u)?),
                 block_timestamp: Some(u64::arbitrary(u)?),
-                transaction_hash: Some(reth_primitives::B256::arbitrary(u)?),
+                transaction_hash: Some(alloy_primitives::B256::arbitrary(u)?),
                 transaction_index: Some(u64::arbitrary(u)?),
                 log_index: Some(u64::arbitrary(u)?),
                 ..Log::arbitrary(u)?

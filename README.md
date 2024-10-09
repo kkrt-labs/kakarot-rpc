@@ -561,7 +561,7 @@ the following tests are skipped:
 - debug_getRawHeader/get-invalid-number: debug API is currently not supported by
   the Kakarot RPC.
 - debug_getRawTransaction/get-invalid-hash: the Kakarot implementation of the
-  debug_getRawTransaction endpoint uses `reth_primitives::B256` type when
+  debug_getRawTransaction endpoint uses `alloy_primitives::B256` type when
   deserializing the hash. This test is expected to fail as the provided hash in
   the query doesn't start with `0x`. As this test doesn't bring much, we decide
   to skip it.
@@ -589,7 +589,7 @@ the following tests are skipped:
 - eth_getProof/get-account-proof: the getProof endpoint is currently not
   supported by the Kakarot RPC.
 - eth_getStorage/get-storage-invalid-key-too-large: the Kakarot implementation
-  of the eth_getStorage endpoint uses `reth_primitives::U256` type when
+  of the eth_getStorage endpoint uses `alloy_primitives::U256` type when
   deserializing the number. This test is expected to fail as the provided block
   number in the query doesn't start with exceeds 32 bytes. As this test doesn't
   bring much, we decide to skip it.

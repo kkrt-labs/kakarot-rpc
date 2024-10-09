@@ -1,5 +1,6 @@
+use alloy_rpc_types::BlockId;
+use alloy_rpc_types_trace::parity::LocalizedTransactionTrace;
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
-use reth_rpc_types::{trace::parity::LocalizedTransactionTrace, BlockId};
 
 /// Trace API
 #[rpc(server, namespace = "trace")]

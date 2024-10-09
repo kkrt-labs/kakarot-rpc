@@ -10,15 +10,14 @@ use crate::{
         tx_waiter::watch_tx,
     },
 };
+use alloy_consensus::TxEip1559;
 use alloy_dyn_abi::DynSolValue;
+use alloy_eips::eip2718::Encodable2718;
 use alloy_json_abi::ContractObject;
+use alloy_primitives::{Address, TxKind, B256, U256};
 use alloy_signer_local::PrivateKeySigner;
 use async_trait::async_trait;
-use reth_primitives::{
-    sign_message, Address, Transaction, TransactionSigned, TransactionSignedEcRecovered, TxEip1559, TxKind, B256, U256,
-};
-use reth_rpc_types::WithOtherFields;
-use reth_rpc_types_compat::transaction::from_recovered;
+use reth_primitives::{sign_message, Transaction, TransactionSigned};
 use starknet::{
     accounts::{Account, SingleOwnerAccount},
     core::{
@@ -31,8 +30,8 @@ use starknet::{
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-pub const TX_GAS_LIMIT: u128 = 5_000_000;
-pub const TX_GAS_PRICE: u128 = 10;
+pub const TX_GAS_LIMIT: u64 = 5_000_000;
+pub const TX_GAS_PRICE: u64 = 10;
 
 /// EOA is an Ethereum-like Externally Owned Account (EOA) that can sign transactions and send them to the underlying Starknet provider.
 #[async_trait]
@@ -71,7 +70,7 @@ pub trait Eoa<P: Provider + Send + Sync + Clone> {
     async fn send_transaction(&self, tx: TransactionSigned) -> Result<B256, eyre::Error> {
         let eth_client = self.eth_client();
         let mut v = Vec::new();
-        tx.encode_enveloped(&mut v);
+        tx.encode_2718(&mut v);
         Ok(eth_client.send_raw_transaction(v.into()).await?)
     }
 }
@@ -137,7 +136,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
                 chain_id,
                 nonce,
                 gas_limit: TX_GAS_LIMIT,
-                max_fee_per_gas: TX_GAS_PRICE,
+                max_fee_per_gas: TX_GAS_PRICE.into(),
                 ..Default::default()
             })
         } else {
@@ -282,7 +281,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             chain_id: self.eth_client.eth_provider().chain_id().await?.unwrap_or_default().try_into()?,
             nonce: self.nonce().await?.try_into()?,
             gas_limit: TX_GAS_LIMIT,
-            max_fee_per_gas: TX_GAS_PRICE,
+            max_fee_per_gas: TX_GAS_PRICE.into(),
             to: TxKind::Call(to),
             value: U256::from(value),
             ..Default::default()
@@ -292,25 +291,5 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
 
         let _ = self.send_transaction(tx_signed).await;
         Ok(tx)
-    }
-
-    /// Mocks a transaction with the given nonce without executing it
-    pub async fn mock_transaction_with_nonce(
-        &self,
-        nonce: u64,
-    ) -> Result<WithOtherFields<reth_rpc_types::Transaction>, eyre::Error> {
-        let chain_id = self.eth_client.eth_provider().chain_id().await?.unwrap_or_default().to();
-        Ok(from_recovered(TransactionSignedEcRecovered::from_signed_transaction(
-            self.sign_transaction(Transaction::Eip1559(TxEip1559 {
-                chain_id,
-                nonce,
-                gas_limit: 21000,
-                to: TxKind::Call(Address::random()),
-                value: U256::from(1000),
-                max_fee_per_gas: TX_GAS_PRICE,
-                ..Default::default()
-            }))?,
-            self.evm_address()?,
-        )))
     }
 }

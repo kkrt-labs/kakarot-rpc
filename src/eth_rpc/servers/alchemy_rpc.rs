@@ -5,9 +5,9 @@ use crate::{
     models::token::{TokenBalances, TokenMetadata},
     providers::alchemy_provider::AlchemyProvider,
 };
+use alloy_primitives::{Address, U256};
 use async_trait::async_trait;
 use jsonrpsee::core::RpcResult as Result;
-use reth_primitives::{Address, U256};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]

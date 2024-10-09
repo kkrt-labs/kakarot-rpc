@@ -3,11 +3,13 @@ use crate::providers::eth_provider::{
     database::ethereum::EthereumTransactionStore,
     provider::{EthApiResult, EthDataProvider},
 };
+use alloy_primitives::{B256, U256, U64};
+use alloy_rpc_types::{Block, Header, Transaction};
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag, B256, U256, U64};
-use reth_rpc_types::{Block, Header, Transaction, WithOtherFields};
+use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
 
 /// Ethereum block provider trait.

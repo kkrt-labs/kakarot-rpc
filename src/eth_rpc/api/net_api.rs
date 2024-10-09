@@ -1,5 +1,5 @@
+use alloy_primitives::U64;
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
-use reth_primitives::U64;
 
 // TODO: Define and implement of methods of Net API
 #[rpc(server, namespace = "net")]

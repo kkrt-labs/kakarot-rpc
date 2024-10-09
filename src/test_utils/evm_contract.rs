@@ -1,9 +1,11 @@
 use super::eoa::{TX_GAS_LIMIT, TX_GAS_PRICE};
 use crate::{models::felt::Felt252Wrapper, root_project_path};
+use alloy_consensus::{TxEip1559, TxLegacy};
 use alloy_dyn_abi::{DynSolValue, JsonAbiExt};
 use alloy_json_abi::ContractObject;
+use alloy_primitives::{TxKind, U256};
 use foundry_config::{find_project_root, load_config};
-use reth_primitives::{Transaction, TxEip1559, TxKind, TxLegacy, U256};
+use reth_primitives::Transaction;
 use starknet::core::types::Felt;
 use std::{fs, path::Path};
 
@@ -89,7 +91,7 @@ pub trait EvmContract {
             chain_id: tx_info.chain_id.expect("chain id required"),
             nonce: tx_info.nonce,
             gas_limit: TX_GAS_LIMIT,
-            max_fee_per_gas: TX_GAS_PRICE,
+            max_fee_per_gas: TX_GAS_PRICE.into(),
             input: deploy_data.into(),
             ..Default::default()
         }))

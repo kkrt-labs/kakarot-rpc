@@ -1,6 +1,6 @@
 use crate::{eth_rpc::api::net_api::NetApiServer, providers::eth_provider::provider::EthereumProvider};
+use alloy_primitives::U64;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::U64;
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]

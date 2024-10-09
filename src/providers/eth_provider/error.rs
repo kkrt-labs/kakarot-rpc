@@ -1,9 +1,9 @@
+use alloy_primitives::{Bytes, B256};
+use alloy_rpc_types::BlockHashOrNumber;
 use alloy_sol_types::decode_revert_reason;
 use jsonrpsee::types::ErrorObject;
 use num_traits::cast::ToPrimitive;
-use reth_primitives::{Bytes, B256};
-use reth_rpc_eth_types::EthApiError as RethEthApiError;
-use reth_rpc_types::{BlockHashOrNumber, ToRpcError};
+use reth_rpc_eth_types::{error::ToRpcError, EthApiError as RethEthApiError};
 use reth_transaction_pool::error::PoolError;
 use starknet::core::types::Felt;
 use thiserror::Error;

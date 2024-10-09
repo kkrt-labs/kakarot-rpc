@@ -10,12 +10,13 @@ use crate::{
         provider::{EthApiResult, EthDataProvider},
     },
 };
+use alloy_primitives::{U256, U64};
+use alloy_rpc_types::{FeeHistory, TransactionRequest};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use eyre::eyre;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag, U256, U64};
-use reth_rpc_types::{FeeHistory, TransactionRequest};
+use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
 
 #[async_trait]
@@ -43,7 +44,7 @@ where
 {
     async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> EthApiResult<U256> {
         // Set a high gas limit to make sure the transaction will not fail due to gas.
-        let request = TransactionRequest { gas: Some(u128::from(u64::MAX)), ..request };
+        let request = TransactionRequest { gas: Some(u64::MAX), ..request };
 
         let gas_used = self.estimate_gas(request, block_id).await?;
 
@@ -97,7 +98,7 @@ where
         base_fee_per_gas.extend_from_within((base_fee_per_gas.len() - 1)..);
 
         Ok(FeeHistory {
-            base_fee_per_gas,
+            base_fee_per_gas: base_fee_per_gas.into_iter().map(Into::into).collect(),
             gas_used_ratio,
             oldest_block: start_block,
             reward: Some(vec![]),

@@ -1,6 +1,6 @@
 use crate::models::token::{TokenBalances, TokenMetadata};
+use alloy_primitives::{Address, U256};
 use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
-use reth_primitives::{Address, U256};
 
 #[rpc(server, namespace = "alchemy")]
 #[async_trait]

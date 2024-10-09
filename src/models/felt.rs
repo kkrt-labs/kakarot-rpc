@@ -1,5 +1,5 @@
 use crate::providers::eth_provider::error::EthereumDataFormatError;
-use reth_primitives::{Address, B256, U256, U64};
+use alloy_primitives::{Address, B256, U256, U64};
 use starknet::core::types::{EthAddress, Felt};
 use std::ops::{Deref, DerefMut};
 

@@ -57,33 +57,38 @@ num-traits = { version = "0.2", default-features = false }
 
 # Ethereum dependencies
 alloy-rlp = { version = "0.3.8", default-features = false }
-alloy-sol-types = { version = "0.8.3", default-features = false }
+alloy-sol-types = { version = "0.8.4", default-features = false }
 alloy-contract = { version = "0.3.6", default-features = false }
+alloy-rpc-types = { version = "0.4.2", features = [
+  "eth",
+  "arbitrary",
+], default-features = false }
+alloy-consensus = { version = "0.4.2", default-features = false }
+alloy-rpc-types-txpool = { version = "0.4.2", default-features = false }
+alloy-rpc-types-trace = { version = "0.4.2", default-features = false }
 jsonrpsee = { version = "0.24", features = ["macros", "server"] }
-reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
+reth-chainspec = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, features = [
   "std",
 ] }
-reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
+reth-evm-ethereum = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, features = [
   "std",
 ] }
-reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
+reth-node-api = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, features = [
   "alloy-compat",
   "std",
   "arbitrary",
 ] }
-reth-revm = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
+reth-revm = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, features = [
   "std",
 ] }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, features = [
-  "arbitrary",
-] }
-reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
-reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false, optional = true }
-reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
-reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
-reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", tag = "v1.0.7", default-features = false }
-revm-inspectors = "0.7.4"
+reth-rpc-eth-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-testing-utils = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false, optional = true }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-rpc-types-compat = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-execution-types = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+reth-rpc = { git = "https://github.com/paradigmxyz/reth.git", rev = "e427eb2", default-features = false }
+revm-inspectors = "0.8.1"
 
 # Error
 eyre = { version = "0.6", default-features = false }
@@ -140,11 +145,13 @@ http-body-util = { version = "0.1", default-features = false }
 pin-project-lite = { version = "0.2", default-features = false }
 
 # Testing crates
-alloy-dyn-abi = { version = "0.8.3", default-features = false }
-alloy-json-abi = { version = "0.8.3", default-features = false, optional = true }
-alloy-primitives = { version = "0.8.3", default-features = false, optional = true }
-alloy-signer-local = { version = "0.3.6", default-features = false, optional = true }
-alloy-signer = { version = "0.3.6", default-features = false, optional = true }
+alloy-dyn-abi = { version = "0.8.4", default-features = false }
+alloy-json-abi = { version = "0.8.4", default-features = false, optional = true }
+alloy-primitives = { version = "0.8.4", default-features = false }
+alloy-signer-local = { version = "0.4.2", default-features = false, optional = true }
+alloy-signer = { version = "0.4.2", default-features = false, optional = true }
+alloy-serde = { version = "0.4.2", default-features = false }
+alloy-eips = { version = "0.4.2", default-features = false }
 anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master", optional = true }
@@ -171,7 +178,7 @@ clap = { version = "4.5.17", optional = true }
 
 starknet_api = { version = "0.13.0-rc.0", optional = true }
 revm-interpreter = { version = "10.0", default-features = false, optional = true }
-revm-primitives = { version = "9.0", default-features = false, optional = true }
+revm-primitives = { version = "10.0", default-features = false, optional = true }
 starknet-crypto = { version = "0.7", optional = true }
 
 [dev-dependencies]
@@ -184,7 +191,6 @@ tempfile = "3.8"
 [features]
 testing = [
   "alloy-json-abi",
-  "alloy-primitives",
   "alloy-signer-local",
   "alloy-signer",
   "anyhow",

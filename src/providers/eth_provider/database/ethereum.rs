@@ -6,11 +6,13 @@ use super::{
     Database,
 };
 use crate::providers::eth_provider::error::{EthApiError, EthereumDataFormatError};
+use alloy_primitives::{B256, U256};
 use alloy_rlp::Encodable;
+use alloy_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, Transaction};
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use mongodb::bson::doc;
-use reth_primitives::{constants::EMPTY_ROOT_HASH, TransactionSigned, B256, U256};
-use reth_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, Transaction, WithOtherFields};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, TransactionSigned};
 use tracing::instrument;
 
 /// Trait for interacting with a database that stores Ethereum typed
@@ -137,11 +139,13 @@ impl EthereumBlockStore for Database {
             .collect::<Result<Vec<_>, _>>()?;
 
         let block = reth_primitives::Block {
-            body: signed_transactions,
+            body: reth_primitives::BlockBody {
+                transactions: signed_transactions,
+                withdrawals: Some(Default::default()),
+                ..Default::default()
+            },
             header: reth_primitives::Header::try_from(header.clone())
                 .map_err(|_| EthereumDataFormatError::Primitive)?,
-            withdrawals: Some(Default::default()),
-            ..Default::default()
         };
 
         // This is how Reth computes the block size.
@@ -325,10 +329,12 @@ mod tests {
                 transactions.into_iter().map(TransactionSigned::try_from).collect::<Result<Vec<_>, _>>().unwrap();
 
             let block = reth_primitives::Block {
-                body: signed_transactions,
+                body: reth_primitives::BlockBody {
+                    transactions: signed_transactions,
+                    withdrawals: Some(Default::default()),
+                    ..Default::default()
+                },
                 header: reth_primitives::Header::try_from(header.clone()).unwrap(),
-                withdrawals: Some(Default::default()),
-                ..Default::default()
             };
 
             let size = block.length();

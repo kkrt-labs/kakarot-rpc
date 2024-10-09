@@ -17,13 +17,14 @@ use crate::{
         sn_provider::StarknetProvider,
     },
 };
+use alloy_primitives::{TxKind, U256};
+use alloy_rpc_types::{BlockHashOrNumber, TransactionRequest};
 use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
-use reth_primitives::{BlockId, BlockNumberOrTag, TxKind, U256};
-use reth_rpc_types::{BlockHashOrNumber, TransactionRequest};
+use reth_primitives::{BlockId, BlockNumberOrTag};
 use starknet::core::types::Felt;
 use tracing::{instrument, Instrument};
 #[cfg(feature = "hive")]
@@ -33,7 +34,7 @@ use {
         account_contract::AccountContractReader, starknet_address,
     },
     crate::providers::eth_provider::utils::contract_not_found,
-    reth_primitives::Address,
+    alloy_primitives::Address,
 };
 
 /// A type alias representing a result type for Ethereum API operations.

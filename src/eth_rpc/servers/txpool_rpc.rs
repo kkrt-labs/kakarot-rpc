@@ -1,10 +1,9 @@
 use crate::{eth_rpc::api::txpool_api::TxPoolApiServer, providers::pool_provider::PoolProvider};
+use alloy_primitives::Address;
+use alloy_rpc_types::Transaction;
+use alloy_rpc_types_txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus};
+use alloy_serde::WithOtherFields;
 use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_primitives::Address;
-use reth_rpc_types::{
-    txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus},
-    Transaction, WithOtherFields,
-};
 use tracing::instrument;
 
 /// The RPC module for implementing the Txpool api
