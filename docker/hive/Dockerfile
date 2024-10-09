@@ -5,7 +5,7 @@ FROM ghcr.io/dojoengine/dojo:v1.0.0-alpha.14 as katana
 
 # Indexer service
 ### Apibara DNA indexer and indexer
-FROM quay.io/apibara/starknet:1.5.0 as apibara
+FROM quay.io/apibara/starknet:1.6.0 as apibara
 FROM quay.io/apibara/sink-mongo:0.7.1 as indexer
 FROM debian:bookworm as apibara-build
 RUN apt-get update && apt-get install --no-install-recommends -y patchelf && rm -rf /var/lib/apt/lists/*
@@ -15,17 +15,17 @@ RUN apt-get update && apt-get install --no-install-recommends -y patchelf && rm 
 # Depending on the platform, the path to the binaries will be different
 # These values need to be updated if the version of ApiBara Starknet or Sink change.
 # platform: linux/amd64:
-#   - APIBARA_STARKNET_BIN_DIR: ns4qwsl6fgbv7mxhxpnaqhd66wnic8i6
+#   - APIBARA_STARKNET_BIN_DIR: 3l93dydg7m71r66x5wllf1j9czvj7zdk
 #   - APIBARA_SINK_BIN_DIR: 81f00xxzyxs6ih6376cw0qbznf6cl6bn
 # platform: linux/arm64
-#   - APIBARA_STARKNET_BIN_DIR: 3fz40zh8pscx7wp54nb78wm6p5y2v3g0
+#   - APIBARA_STARKNET_BIN_DIR: ksmcmb1ybrij98hjy4q54v31ag7d2l6l
 #   - APIBARA_SINK_BIN_DIR: ww2ghdaw1xpx42cf93zk5n3h222438ia
 ARG APIBARA_STARKNET_BIN_DIR
 ARG APIBARA_SINK_BIN_DIR
-# Run `docker image inspect apibara/starknet:1.5.0-x86_64` to get the exact path
-# Run `docker image inspect apibara/starknet:1.5.0-aarch64` to get the exact path
+# Run `docker image inspect apibara/starknet:1.6.0-x86_64` to get the exact path
+# Run `docker image inspect apibara/starknet:1.6.0-aarch64` to get the exact path
 # ⚠️ This path is subject to change, so it's important to check it before building the image ⚠️
-COPY --from=apibara /nix/store/${APIBARA_STARKNET_BIN_DIR}-apibara-starknet-1.5.0/bin/apibara-starknet /usr/local/bin/starknet
+COPY --from=apibara /nix/store/${APIBARA_STARKNET_BIN_DIR}-apibara-starknet-1.6.0/bin/apibara-starknet /usr/local/bin/starknet
 COPY --from=indexer /nix/store/${APIBARA_SINK_BIN_DIR}-apibara-sink-mongo-0.7.1/bin/apibara-sink-mongo /usr/local/bin/sink-mongo
 # Change the interpreter path.
 ARG BUILDPLATFORM
@@ -50,17 +50,12 @@ FROM mongo:6.0.8 as mongo
 # Ethereum RPC Server
 ### Build the Cairo programs artifacts
 FROM python:3.10.13 as compiler
-# install poetry
-ENV POETRY_VERSION=1.7.1
-ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin"
+ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin:/root/.cargo/bin"
 
-RUN curl -sSL https://install.python-poetry.org | python3 -
-RUN poetry config virtualenvs.create false
-
-WORKDIR /usr/src/compiler
 
 # Install dependencies
-RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
+RUN --mount=type=cache,target=/root/.cache curl -L https://foundry.paradigm.xyz -o foundry.sh \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && chmod +x foundry.sh \
     && ./foundry.sh \
     && foundryup \
@@ -71,6 +66,8 @@ RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
     tar \
     unzip \
     zip
+
+WORKDIR /usr/src/compiler
 
 COPY . .
 
@@ -122,8 +119,7 @@ COPY . .
 
 COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/artifacts
 
-
-RUN cargo build \
+RUN --mount=type=cache,target=/root/.cache/cargo cargo build \
     --features hive --release --target-dir /usr/src/rpc/target && \
     cargo build \
     --bin hive_genesis --release --features "testing,binaries" --target-dir /usr/src/rpc/target && \
@@ -158,6 +154,7 @@ ENV MAX_FELTS_IN_CALLDATA=30000
 ENV MAX_LOGS=10000
 ENV DEFAULT_BLOCK_GAS_LIMIT=7000000
 ENV RELAYER_PRIVATE_KEY=0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a
+ENV RELAYERS_ADDRESSES=0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca
 ENV RUST_LOG=info
 
 HEALTHCHECK --interval=10s --timeout=10s --start-period=15s --retries=5 \

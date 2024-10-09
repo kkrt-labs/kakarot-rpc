@@ -1,17 +1,21 @@
+use std::{env::var, str::FromStr, sync::Arc};
+
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
     client::EthClient,
-    config::KakarotRpcConfig,
-    eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server},
+    constants::{KAKAROT_RPC_CONFIG, RPC_CONFIG},
+    eth_rpc::{rpc::KakarotRpcModuleBuilder, run_server},
     pool::mempool::{maintain_transaction_pool, AccountManager},
     providers::eth_provider::database::Database,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
-use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
-use std::{env::var, sync::Arc};
+use starknet::{
+    core::types::Felt,
+    providers::{jsonrpc::HttpTransport, JsonRpcClient},
+};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
@@ -22,11 +26,7 @@ async fn main() -> Result<()> {
 
     setup_tracing().expect("failed to start tracing and metrics");
 
-    // Load the configuration
-    let starknet_config = KakarotRpcConfig::from_env()?;
-    let rpc_config = RPCConfig::from_env()?;
-
-    let starknet_provider = JsonRpcClient::new(HttpTransport::new(starknet_config.network_url));
+    let starknet_provider = JsonRpcClient::new(HttpTransport::new(KAKAROT_RPC_CONFIG.network_url.clone()));
 
     // Setup the database
     let db_client =
@@ -42,10 +42,6 @@ async fn main() -> Result<()> {
         ),
     );
 
-    // Setup hive
-    #[cfg(feature = "hive")]
-    setup_hive(&starknet_provider).await?;
-
     // Setup the eth provider
     let starknet_provider = Arc::new(starknet_provider);
 
@@ -53,39 +49,22 @@ async fn main() -> Result<()> {
     // TODO call Kakarot.get_base_fee
     let config = PoolConfig { minimal_protocol_basefee: 0, ..Default::default() };
 
-    let eth_client =
-        EthClient::try_new(starknet_provider, config, db.clone()).await.expect("failed to start ethereum client");
+    let eth_client = EthClient::new(starknet_provider, config, db.clone());
     let eth_client = Arc::new(eth_client);
 
     // Start the relayer manager
-    let account_manager = {
-        #[cfg(feature = "hive")]
-        {
-            use starknet::macros::felt;
-            // This address is the first address in the prefunded addresses for Katana.
-            // To check, run `katana` and check the list of prefunded accounts.
-            let addresses = vec![felt!("0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca")];
-            AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?
-        }
-        #[cfg(not(feature = "hive"))]
-        {
-            use starknet::core::types::Felt;
-            use std::str::FromStr;
-            let addresses =
-                var("RELAYERS_ADDRESSES")?.split(',').filter_map(|addr| Felt::from_str(addr).ok()).collect::<Vec<_>>();
-            AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?
-        }
-    };
-    account_manager.start();
+    let addresses =
+        var("RELAYERS_ADDRESSES")?.split(',').filter_map(|addr| Felt::from_str(addr).ok()).collect::<Vec<_>>();
+    AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?.start();
 
     // Start the maintenance of the mempool
     maintain_transaction_pool(Arc::clone(&eth_client));
+
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;
 
     // Start the RPC server
-    let (socket_addr, server_handle) = run_server(kakarot_rpc_module, rpc_config).await?;
-
+    let (socket_addr, server_handle) = run_server(kakarot_rpc_module, RPC_CONFIG.clone()).await?;
     let url = format!("http://{socket_addr}");
 
     tracing::info!("RPC Server running on {url}...");
@@ -129,28 +108,6 @@ fn setup_tracing() -> Result<()> {
     let stdout = tracing_subscriber::fmt::layer().with_filter(filter).boxed();
 
     tracing_subscriber::registry().with(stacked_layer).with(stdout).init();
-
-    Ok(())
-}
-
-#[allow(clippy::significant_drop_tightening)]
-#[cfg(feature = "hive")]
-async fn setup_hive(starknet_provider: &JsonRpcClient<HttpTransport>) -> Result<()> {
-    use kakarot_rpc::providers::eth_provider::constant::{
-        hive::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE},
-        CHAIN_ID,
-    };
-    use starknet::{accounts::ConnectedAccount, core::types::Felt, providers::Provider as _};
-
-    let chain_id = starknet_provider.chain_id().await?;
-    let modulo = (1u64 << 53) - 1;
-    let chain_id: u64 = (Felt::from(modulo).to_bigint() & chain_id.to_bigint()).try_into()?;
-
-    CHAIN_ID.set(chain_id.into()).expect("Failed to set chain id");
-
-    let deployer_nonce = DEPLOY_WALLET.get_nonce().await?;
-    let mut nonce = DEPLOY_WALLET_NONCE.lock().await;
-    *nonce = deployer_nonce;
 
     Ok(())
 }

@@ -3,11 +3,10 @@
 use super::validate::KakarotTransactionValidator;
 use crate::{
     client::EthClient,
+    constants::KAKAROT_RPC_CONFIG,
     into_via_try_wrapper,
     pool::constants::ONE_TENTH_ETH,
-    providers::eth_provider::{
-        constant::RPC_CONFIG, database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider,
-    },
+    providers::eth_provider::{database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider},
 };
 use alloy_primitives::{Address, U256};
 use futures::future::select_all;
@@ -120,6 +119,8 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                             return;
                         }
 
+                        tracing::info!(target: "account_manager", starknet_hash = ?res.expect("not error"), ethereum_hash = ?transaction_signed.hash());
+
                         // Increment account_nonce after sending a transaction
                         let nonce = relayer.nonce_mut();
                         *nonce = *nonce + 1;
@@ -162,7 +163,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 guard,
                 *account_address,
                 balance,
-                JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+                JsonRpcClient::new(HttpTransport::new(KAKAROT_RPC_CONFIG.network_url.clone())),
                 chain_id,
             );
 

@@ -120,6 +120,9 @@ impl<'a> Katana {
         // Set the relayer private key in the environment variables.
         std::env::set_var("RELAYER_PRIVATE_KEY", format!("0x{:x}", sequencer.raw_account().private_key));
 
+        // Set the starknet network in the environment variables.
+        std::env::set_var("STARKNET_NETWORK", format!("{}", sequencer.url()));
+
         // Initialize a MongoFuzzer instance with the specified random bytes size.
         let mut mongo_fuzzer = MongoFuzzer::new(0).await;
         mongo_fuzzer.headers.push(StoredHeader {
@@ -141,9 +144,7 @@ impl<'a> Katana {
         let database = mongo_fuzzer.finalize().await;
 
         // Initialize the EthClient
-        let eth_client = EthClient::try_new(starknet_provider, Default::default(), database)
-            .await
-            .expect("failed to start eth client");
+        let eth_client = EthClient::new(starknet_provider, Default::default(), database);
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
@@ -176,6 +177,9 @@ impl<'a> Katana {
         // Set the relayer private key in the environment variables.
         std::env::set_var("RELAYER_PRIVATE_KEY", format!("0x{:x}", sequencer.raw_account().private_key));
 
+        // Set the starknet network in the environment variables.
+        std::env::set_var("STARKNET_NETWORK", format!("{}", sequencer.url()));
+
         // Initialize a MongoFuzzer instance with the specified random bytes size.
         let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;
 
@@ -187,9 +191,7 @@ impl<'a> Katana {
         let database = mongo_fuzzer.finalize().await;
 
         // Initialize the EthClient
-        let eth_client = EthClient::try_new(starknet_provider, Default::default(), database)
-            .await
-            .expect("failed to start eth client");
+        let eth_client = EthClient::new(starknet_provider, Default::default(), database);
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());

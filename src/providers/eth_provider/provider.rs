@@ -9,6 +9,7 @@ use super::{
     },
 };
 use crate::{
+    constants::ETH_CHAIN_ID,
     into_via_try_wrapper, into_via_wrapper,
     models::block::{EthBlockId, EthBlockNumberOrTag},
     providers::{
@@ -87,15 +88,8 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    pub async fn try_new(database: Database, starknet_provider: StarknetProvider<SP>) -> Result<Self> {
-        // We take the chain_id modulo 2**53 to ensure compatibility with tooling
-        // see: https://github.com/ethereum/EIPs/issues/2294
-        // Note: Metamask is breaking for a chain_id = u64::MAX - 1
-        let modulo = (1u64 << 53) - 1;
-        let chain_id =
-            (Felt::from(modulo).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into()?;
-
-        Ok(Self { database, starknet_provider, chain_id })
+    pub fn new(database: Database, starknet_provider: StarknetProvider<SP>) -> Self {
+        Self { database, starknet_provider, chain_id: *ETH_CHAIN_ID }
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.

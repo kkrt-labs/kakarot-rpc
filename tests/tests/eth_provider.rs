@@ -581,8 +581,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
 async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     use alloy_primitives::b256;
     use futures::future::join_all;
-    use kakarot_rpc::{providers::eth_provider::constant::CHAIN_ID, test_utils::eoa::KakarotEOA};
-    use starknet::providers::Provider;
+    use kakarot_rpc::test_utils::eoa::KakarotEOA;
 
     // Given
     let one_ether = 1_000_000_000_000_000_000u128;
@@ -591,7 +590,6 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     let eoa = katana.eoa();
     let eth_provider = katana.eth_provider();
     let eth_client = katana.eth_client();
-    let starknet_provider = eth_provider.starknet_provider();
     let other_eoa_1 = KakarotEOA::new(
         b256!("00000000000000012330000000000000000000000000000000000000000abde1"),
         Arc::new(eth_client.clone()),
@@ -602,8 +600,6 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
         Arc::new(eth_client),
         katana.sequencer.account(),
     );
-    let chain_id = starknet_provider.chain_id().await.unwrap();
-    CHAIN_ID.set(chain_id).expect("Failed to set chain id");
 
     let evm_address = eoa.evm_address().unwrap();
     let balance_before = eth_provider.balance(eoa.evm_address().unwrap(), None).await.unwrap();

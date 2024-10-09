@@ -1,4 +1,5 @@
 use crate::{
+    constants::ETH_CHAIN_ID,
     pool::{
         mempool::{KakarotPool, TransactionOrdering},
         validate::KakarotTransactionValidatorBuilder,
@@ -6,7 +7,7 @@ use crate::{
     providers::{
         eth_provider::{
             database::Database,
-            error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError},
+            error::{EthApiError, EthereumDataFormatError, SignatureError},
             provider::{EthApiResult, EthDataProvider},
             TransactionProvider, TxPoolProvider,
         },
@@ -20,7 +21,6 @@ use alloy_rpc_types::Transaction;
 use alloy_rpc_types_txpool::TxpoolContent;
 use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
-use num_traits::ToPrimitive;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
 use reth_rpc_eth_types::TransactionSource;
@@ -28,7 +28,7 @@ use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
     TransactionOrigin, TransactionPool,
 };
-use starknet::{core::types::Felt, providers::Provider};
+use starknet::providers::Provider;
 use std::{collections::BTreeMap, sync::Arc};
 
 #[async_trait]
@@ -61,18 +61,15 @@ where
     }
 
     /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and a [`Pool`].
-    pub async fn try_new(starknet_provider: SP, pool_config: PoolConfig, database: Database) -> eyre::Result<Self> {
-        // We take the chain id modulo 2**53 to keep compatibility with the tooling.
-        let modulo = (1u64 << 53) - 1;
-        let starknet_chain_id = starknet_provider.chain_id().await.map_err(KakarotError::from)?;
-        let chain = (starknet_chain_id.to_bigint() & Felt::from(modulo).to_bigint()).to_u64().unwrap();
-
+    pub fn new(starknet_provider: SP, pool_config: PoolConfig, database: Database) -> Self {
         // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let eth_provider = EthDataProvider::try_new(database, StarknetProvider::new(starknet_provider)).await?;
+        let eth_provider = EthDataProvider::new(database, StarknetProvider::new(starknet_provider));
 
-        let validator =
-            KakarotTransactionValidatorBuilder::new(&Arc::new(ChainSpec { chain: chain.into(), ..Default::default() }))
-                .build::<_, EthPooledTransaction>(eth_provider.clone());
+        let validator = KakarotTransactionValidatorBuilder::new(&Arc::new(ChainSpec {
+            chain: (*ETH_CHAIN_ID).into(),
+            ..Default::default()
+        }))
+        .build::<_, EthPooledTransaction>(eth_provider.clone());
 
         let pool = Arc::new(KakarotPool::new(
             validator,
@@ -81,7 +78,7 @@ where
             pool_config,
         ));
 
-        Ok(Self { eth_provider, pool })
+        Self { eth_provider, pool }
     }
 
     /// Returns a clone of the [`EthDataProvider`]

@@ -132,8 +132,9 @@ TL;DR:
   and running the various services and components in a consistent environment.
 - [Python](https://www.python.org/): Used primarily for interacting with and
   building our Kakarot programs.
-- [Poetry](https://python-poetry.org/docs/): A Python dependency management tool
-  used for managing the dependencies of our Kakarot programs.
+- [UV](https://github.com/astral-sh/uv): An extremely fast Python package and
+  project manager, written in Rust. Used for managing the dependencies of our
+  Kakarot programs.
 - [Deno](https://docs.deno.com/runtime/manual/): A JavaScript runtime used for
   our indexing service, based on the [Apibara](https://www.apibara.com/docs)
   third-party service.
