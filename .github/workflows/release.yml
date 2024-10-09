@@ -1,9 +1,10 @@
 ---
 name: release
 
-on:
-  release:
-    types: [published]
+#on:
+#  release:
+#    types: [published]
+on: [pull_request, merge_group]
 
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
@@ -16,6 +17,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       # Install Foundry
       - name: install foundry
         uses: foundry-rs/foundry-toolchain@v1
