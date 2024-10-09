@@ -150,13 +150,21 @@ impl KatanaGenesisBuilder<Uninitialized> {
         let entries = WalkDir::new(path).into_iter().filter(|e| e.is_ok() && e.as_ref().unwrap().file_type().is_file());
         let classes = entries
             .par_bridge()
-            .map(|entry| {
+            .filter_map(|entry| {
                 let path = entry.unwrap().path().to_path_buf();
                 let artifact = fs::read_to_string(&path).expect("Failed to read artifact");
                 let artifact = serde_json::from_str(&artifact).expect("Failed to parse artifact");
-                let class_hash =
-                    compute_class_hash(&artifact).inspect_err(|e| eprint!("Failed to compute class hash: {e:?}")).ok();
-                (path, GenesisClassJson { class: PathOrFullArtifact::Artifact(artifact), class_hash, name: None })
+                let class_hash = compute_class_hash(&artifact)
+                    .inspect_err(|e| eprintln!("Failed to compute class hash: {e:?} for {path:?}"))
+                    .ok()?;
+                Some((
+                    path,
+                    GenesisClassJson {
+                        class: PathOrFullArtifact::Artifact(artifact),
+                        class_hash: Some(class_hash),
+                        name: None,
+                    },
+                ))
             })
             .collect::<Vec<_>>();
 
@@ -363,7 +371,7 @@ fn compute_class_hash(class: &Value) -> Result<Felt> {
     if let Ok(sierra) = serde_json::from_value::<SierraClass>(class.clone()) {
         Ok(sierra.class_hash()?)
     } else {
-        let casm: LegacyContractClass = serde_json::from_value(class.clone()).expect("Failed to parse class code v0");
+        let casm: LegacyContractClass = serde_json::from_value(class.clone())?;
         Ok(casm.class_hash()?)
     }
 }
