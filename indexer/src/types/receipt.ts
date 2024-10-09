@@ -5,7 +5,8 @@ import { padBytes } from "../utils/hex.ts";
 import { NULL_HASH } from "../constants.ts";
 
 // Types
-import { fromJsonRpcLog, JsonRpcLog } from "./log.ts";
+import { fromJsonRpcLog } from "./log.ts";
+import { JsonRpcLog, JsonRpcReceipt } from "./types.ts";
 
 // Starknet
 import { Event } from "../deps.ts";
@@ -162,28 +163,3 @@ export function fromJsonRpcReceipt(receipt: JsonRpcReceipt): TxReceipt {
     status: status === 0n ? 0 : 1,
   };
 }
-
-/**
- * Acknowledgement: Code taken from <https://github.com/ethereumjs/ethereumjs-monorepo>
- */
-export type JsonRpcReceipt = {
-  transactionHash: string; // DATA, 32 Bytes - hash of the transaction.
-  transactionIndex: string | null; // QUANTITY - integer of the transactions index position in the block.
-  blockHash: string | null; // DATA, 32 Bytes - hash of the block where this transaction was in.
-  blockNumber: string | null; // QUANTITY - block number where this transaction was in.
-  from: string; // DATA, 20 Bytes - address of the sender.
-  to: string | null; // DATA, 20 Bytes - address of the receiver. null when it's a contract creation transaction.
-  cumulativeGasUsed: string; // QUANTITY  - cumulativeGasUsed is the sum of gasUsed by this specific transaction plus the gasUsed
-  // in all preceding transactions in the same block.
-  effectiveGasPrice: string; // QUANTITY - The final gas price per gas paid by the sender in wei.
-  gasUsed: string; // QUANTITY - The amount of gas used by this specific transaction alone.
-  contractAddress: string | null; // DATA, 20 Bytes - The contract address created, if the transaction was a contract creation, otherwise null.
-  logs: JsonRpcLog[]; // Array - Array of log objects, which this transaction generated.
-  logsBloom: string; // DATA, 256 Bytes - Bloom filter for light clients to quickly retrieve related logs.
-  // It also returns either:
-  type: string; // QUANTITY - integer of the transaction's type
-  root?: string; // DATA, 32 bytes of post-transaction stateroot (pre Byzantium)
-  status?: string; // QUANTITY, either 1 (success) or 0 (failure)
-  blobGasUsed?: string; // QUANTITY, blob gas consumed by transaction (if blob transaction)
-  blobGasPrice?: string; // QUAntity, blob gas price for block including this transaction (if blob transaction)
-};

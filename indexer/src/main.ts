@@ -28,9 +28,9 @@ import {
   toEthReceipt,
   toRevertedOutOfResourcesReceipt,
 } from "./types/receipt.ts";
-import { JsonRpcLog, toEthLog } from "./types/log.ts";
-import { createTrieData, TrieData } from "./types/tries.ts";
-import { Collection, StoreItem } from "./types/storeItem.ts";
+import { toEthLog } from "./types/log.ts";
+import { createTrieData } from "./types/tries.ts";
+import { Collection, JsonRpcLog, StoreItem, TrieData } from "./types/types.ts";
 // Starknet
 import {
   BlockHeader,
