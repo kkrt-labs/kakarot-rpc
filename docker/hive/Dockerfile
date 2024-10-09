@@ -50,13 +50,12 @@ FROM mongo:6.0.8 as mongo
 # Ethereum RPC Server
 ### Build the Cairo programs artifacts
 FROM python:3.10.13 as compiler
-ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin"
+ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin:/root/.cargo/bin"
 
-RUN --mount=type=cache,target=/root/.cache curl -LsSf https://astral.sh/uv/install.sh | sh
-WORKDIR /usr/src/compiler
 
 # Install dependencies
-RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
+RUN --mount=type=cache,target=/root/.cache curl -L https://foundry.paradigm.xyz -o foundry.sh \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && chmod +x foundry.sh \
     && ./foundry.sh \
     && foundryup \
@@ -67,6 +66,8 @@ RUN curl -L https://foundry.paradigm.xyz -o foundry.sh \
     tar \
     unzip \
     zip
+
+WORKDIR /usr/src/compiler
 
 COPY . .
 
