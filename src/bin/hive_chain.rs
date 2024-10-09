@@ -3,11 +3,9 @@
 use alloy_rlp::Decodable;
 use clap::Parser;
 use kakarot_rpc::{
+    constants::STARKNET_CHAIN_ID,
     into_via_try_wrapper,
-    providers::{
-        eth_provider::{constant::CHAIN_ID, starknet::relayer::LockedRelayer},
-        sn_provider::StarknetProvider,
-    },
+    providers::{eth_provider::starknet::relayer::LockedRelayer, sn_provider::StarknetProvider},
 };
 use reth_primitives::{bytes::Buf, Block, BlockBody, BytesMut};
 use starknet::{
@@ -69,12 +67,6 @@ async fn main() -> eyre::Result<()> {
     std::env::set_var("MAX_FELTS_IN_CALLDATA", MAX_FELTS_IN_CALLDATA);
     std::env::set_var("STARKNET_NETWORK", STARKNET_RPC_URL);
 
-    // Set the chain id
-    let chain_id = starknet_provider.chain_id().await?;
-    let modulo = (1u64 << 53) - 1;
-    let chain_id_mod: u64 = (Felt::from(modulo).to_bigint() & chain_id.to_bigint()).try_into()?;
-    let _ = CHAIN_ID.get_or_init(|| Felt::from(chain_id_mod));
-
     // Prepare the relayer
     let relayer_balance = starknet_provider.balance_at(args.relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
     let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
@@ -85,7 +77,7 @@ async fn main() -> eyre::Result<()> {
         args.relayer_address,
         relayer_balance,
         JsonRpcClient::new(HttpTransport::new(Url::from_str(STARKNET_RPC_URL)?)),
-        chain_id,
+        *STARKNET_CHAIN_ID,
     );
 
     // Read the rlp file

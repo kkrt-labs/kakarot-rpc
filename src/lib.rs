@@ -14,6 +14,7 @@ pub mod providers {
 }
 pub mod client;
 pub mod config;
+pub mod constants;
 pub mod eth_rpc;
 pub mod models;
 pub mod pool;

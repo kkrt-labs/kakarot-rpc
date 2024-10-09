@@ -1,11 +1,7 @@
-use crate::config::KakarotRpcConfig;
+use std::{str::FromStr, sync::LazyLock};
+
 use reth_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::Felt;
-use std::{
-    str::FromStr,
-    sync::{LazyLock, OnceLock},
-};
 
 /// Maximum priority fee per gas
 pub static MAX_PRIORITY_FEE_PER_GAS: LazyLock<u64> = LazyLock::new(|| 0);
@@ -42,39 +38,43 @@ pub struct Constant {
     pub white_listed_eip_155_transaction_hashes: Vec<B256>,
 }
 
-pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
-pub static RPC_CONFIG: LazyLock<KakarotRpcConfig> =
-    LazyLock::new(|| KakarotRpcConfig::from_env().expect("failed to load Kakarot RPC config"));
-
 #[cfg(feature = "hive")]
 pub mod hive {
-    use super::{CHAIN_ID, RPC_CONFIG};
-    use starknet::{
-        accounts::{ExecutionEncoding, SingleOwnerAccount},
-        core::types::Felt,
-        providers::{jsonrpc::HttpTransport, JsonRpcClient},
-        signers::{LocalWallet, SigningKey},
-    };
     use std::{
         env::var,
         str::FromStr,
         sync::{Arc, LazyLock},
     };
+
+    use starknet::{
+        accounts::{ConnectedAccount, ExecutionEncoding, SingleOwnerAccount},
+        core::types::Felt,
+        providers::{jsonrpc::HttpTransport, JsonRpcClient},
+        signers::{LocalWallet, SigningKey},
+    };
     use tokio::sync::Mutex;
+
+    use crate::constants::{KAKAROT_RPC_CONFIG, STARKNET_CHAIN_ID};
 
     pub static DEPLOY_WALLET: LazyLock<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> =
         LazyLock::new(|| {
             SingleOwnerAccount::new(
-                JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+                JsonRpcClient::new(HttpTransport::new(KAKAROT_RPC_CONFIG.network_url.clone())),
                 LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                     Felt::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
                         .expect("Failed to parse deployer private key"),
                 )),
                 Felt::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
                     .expect("Failed to parse deployer address"),
-                *CHAIN_ID.get().expect("failed to fetch chain id"),
+                *STARKNET_CHAIN_ID,
                 ExecutionEncoding::New,
             )
         });
-    pub static DEPLOY_WALLET_NONCE: LazyLock<Arc<Mutex<Felt>>> = LazyLock::new(|| Arc::new(Mutex::new(Felt::ZERO)));
+    pub static DEPLOY_WALLET_NONCE: LazyLock<Arc<Mutex<Felt>>> = LazyLock::new(|| {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                Arc::new(Mutex::new(DEPLOY_WALLET.get_nonce().await.expect("failed to fetch deploy wallet nonce")))
+            })
+        })
+    });
 }
