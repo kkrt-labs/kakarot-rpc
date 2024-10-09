@@ -3877,7 +3877,7 @@ dependencies = [
 [[package]]
 name = "foundry-config"
 version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry?branch=master#a17869a6dcce7ce3765c5ed521d40ddb572de9f0"
+source = "git+https://github.com/foundry-rs/foundry?branch=master#a96b8266cf1f11e08ef0dfca9325ea6560d17c55"
 dependencies = [
  "Inflector",
  "alloy-chains",

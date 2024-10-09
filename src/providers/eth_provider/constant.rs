@@ -1,8 +1,6 @@
-use crate::config::KakarotRpcConfig;
 use alloy_primitives::{B256, U256};
-use std::{str::FromStr, sync::LazyLock};
-
 use serde::{Deserialize, Serialize};
+use std::{str::FromStr, sync::LazyLock};
 
 /// Maximum priority fee per gas
 pub static MAX_PRIORITY_FEE_PER_GAS: LazyLock<u64> = LazyLock::new(|| 0);
