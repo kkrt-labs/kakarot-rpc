@@ -69,6 +69,10 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     /// Starts the account manager task that periodically checks account balances and processes transactions.
     pub fn start(self) {
         let this = Arc::new(self);
+
+        // Start the nonce updater in a separate task
+        this.clone().start_nonce_updater();
+
         tokio::spawn(async move {
             loop {
                 // TODO: add a listener on the pool and only try to call [`best_transaction`]
@@ -180,6 +184,31 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
             .balance_at(account_address, starknet::core::types::BlockId::Tag(BlockTag::Pending))
             .await
             .map_err(Into::into)
+    }
+
+    /// Update the nonces for all accounts every minute.
+    pub fn start_nonce_updater(self: Arc<Self>) {
+        tokio::spawn(async move {
+            loop {
+                for (address, nonce_mutex) in &self.accounts {
+                    // Query the updated nonce for the account from the provider
+                    let new_nonce = self
+                        .eth_client
+                        .starknet_provider()
+                        .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), *address)
+                        .await
+                        .unwrap_or_default();
+
+                    let mut nonce = nonce_mutex.lock().await;
+                    *nonce = new_nonce;
+
+                    tracing::info!(target: "account_manager", account = ?address, new_nonce = ?new_nonce, "updated account nonce");
+                }
+
+                // Sleep for 1 minute before the next update
+                tokio::time::sleep(Duration::from_secs(60)).await;
+            }
+        });
     }
 }
 
