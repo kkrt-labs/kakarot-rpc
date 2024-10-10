@@ -103,7 +103,7 @@ elif [ "${ENV}" = "sepolia" ]; then
 		echo "Please provide the EVM_PRIVATE_KEY environment variable"
 		exit 1
 	fi
-	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles --ignore tests/end_to_end/EvmPrecompiles--ignore tests/end_to_end/test_kakarot.py"
+	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles --ignore tests/end_to_end/EvmPrecompiles --ignore tests/end_to_end/test_kakarot.py"
 fi
 
 # Deploy the contracts if the deploy command is provided
