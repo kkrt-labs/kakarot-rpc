@@ -96,7 +96,6 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    #[ignore = "failing because of relayer change"]
     fn test_transaction_data_to_starknet_calldata() {
         // Define a sample signed transaction.
         // Using https://sepolia.kakarotscan.org/tx/0x5be347c9eb86cf04b884c7e6f432c6daa2054b46c3c70c7d4536e4c009765abe
@@ -118,18 +117,22 @@ mod tests {
 
         // Assert the length of calldata.
         // We must adapt the check as we pack the calldata in 31-byte chunks.
-        assert_eq!(calldata.len(), (transaction.transaction.length() + 30) / 31 + 1 + 6);
+        assert_eq!(calldata.len(), 59);
 
         // Assert the first 6 elements of calldata.
         assert_eq!(
-            calldata[0..6],
+            calldata[0..10],
             vec![
-                Felt::ONE,
-                *KAKAROT_ADDRESS,
-                *ETH_SEND_TRANSACTION,
-                Felt::ZERO,
-                Felt::from((transaction.transaction.length() + 30) / 31 + 1),
-                Felt::from((transaction.transaction.length() + 30) / 31 + 1),
+                Felt::ZERO,                                                   // OutsideExecution caller
+                Felt::ZERO,                                                   // OutsideExecution nonce
+                Felt::ZERO,                                                   // OutsideExecution execute_after
+                Felt::from(u32::MAX),                                         // OutsideExecution execute_before
+                Felt::ONE,                                                    // call_array_len
+                *KAKAROT_ADDRESS,                                             // CallArray to
+                *ETH_SEND_TRANSACTION,                                        // CallArray selector
+                Felt::ZERO,                                                   // CallArray data_offset
+                Felt::from((transaction.transaction.length() + 30) / 31 + 1), // CallArray data_len
+                Felt::from((transaction.transaction.length() + 30) / 31 + 1), // CallArray calldata_len
             ]
         );
     }
