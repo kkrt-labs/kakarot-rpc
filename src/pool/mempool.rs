@@ -202,7 +202,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                     let mut nonce = nonce_mutex.lock().await;
                     *nonce = new_nonce;
 
-                    tracing::info!(target: "account_manager", account = ?address, new_nonce = ?new_nonce, "updated account nonce");
+                    tracing::info!(target: "account_manager", ?address, ?new_nonce);
                 }
 
                 // Sleep for 1 minute before the next update
