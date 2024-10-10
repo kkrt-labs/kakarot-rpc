@@ -18,6 +18,8 @@ readme = "./README.md"
 license = "MIT"
 rust-version = "1.81"
 
+# Lints
+
 [lints]
 rust.missing_debug_implementations = "warn"
 rust.unreachable_pub = "warn"
@@ -46,6 +48,8 @@ missing_panics_doc = "allow"
 default_trait_access = "allow"
 module_name_repetitions = "allow"
 no_effect_underscore_binding = "allow"
+
+# Deps
 
 [dependencies]
 # Starknet dependencies

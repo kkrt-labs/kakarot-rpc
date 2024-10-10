@@ -3,24 +3,7 @@ use crate::eth_rpc::{config::RPCConfig, rpc::KakarotRpcModuleBuilder, run_server
 use jsonrpsee::server::ServerHandle;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{net::SocketAddr, sync::LazyLock};
-use tokio::sync::Mutex;
-
-/// A lazy static mutex for managing the next available port number.
-///
-/// It ensures thread-safe access to the next port number.
-pub static NEXT_PORT: LazyLock<Mutex<u16>> = LazyLock::new(|| Mutex::new(3030));
-
-/// Asynchronously gets the next available port number.
-///
-/// This function locks the `NEXT_PORT` mutex to ensure exclusive access
-/// to the next port number and increments it for subsequent calls.
-async fn get_next_port() -> u16 {
-    let mut port = NEXT_PORT.lock().await;
-    let next_port = *port;
-    *port += 1;
-    next_port
-}
+use std::net::SocketAddr;
 
 /// Sets up the environment for Kakarot RPC integration tests by deploying the Kakarot contracts
 /// and starting the Kakarot RPC server.
@@ -77,9 +60,9 @@ pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, Se
     Ok(run_server(
         KakarotRpcModuleBuilder::new(eth_client.into()).rpc_module()?,
         #[cfg(feature = "testing")]
-        RPCConfig::new_test_config_from_port(get_next_port().await),
+        RPCConfig::new_test_config_from_port(rand::random()),
         #[cfg(not(feature = "testing"))]
-        RPCConfig::from_port(get_next_port().await),
+        RPCConfig::from_port(3030),
     )
     .await?)
 }
