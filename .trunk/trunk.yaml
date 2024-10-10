@@ -44,7 +44,7 @@ lint:
     - trivy@0.56.1
     - trufflehog@3.82.7
     - yamllint@1.35.1
-    - deno@1.46.3
+    - deno@2.0.0
   ignore:
     - linters: [ALL]
       paths:
