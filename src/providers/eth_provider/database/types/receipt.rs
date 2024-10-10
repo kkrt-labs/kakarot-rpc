@@ -1,4 +1,3 @@
-use alloy_primitives::{Address, Bloom, B256};
 use alloy_rpc_types::TransactionReceipt;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use reth_primitives::Receipt;
@@ -20,6 +19,8 @@ impl From<StoredTransactionReceipt> for TransactionReceipt {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
     fn arbitrary(u: &mut arbitrary::Unstructured<'a>) -> arbitrary::Result<Self> {
+        use alloy_primitives::{Address, Bloom, B256};
+
         let receipt = Receipt::arbitrary(u)?;
 
         let mut logs = Vec::new();

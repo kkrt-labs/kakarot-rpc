@@ -18,6 +18,8 @@ readme = "./README.md"
 license = "MIT"
 rust-version = "1.81"
 
+# Lints
+
 [lints]
 rust.missing_debug_implementations = "warn"
 rust.unreachable_pub = "warn"
@@ -47,6 +49,8 @@ default_trait_access = "allow"
 module_name_repetitions = "allow"
 no_effect_underscore_binding = "allow"
 
+# Deps
+
 [dependencies]
 # Starknet dependencies
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.1", default-features = false, features = [
@@ -63,7 +67,7 @@ alloy-rpc-types = { version = "0.4.2", features = [
   "eth",
   "arbitrary",
 ], default-features = false }
-alloy-consensus = { version = "0.4.2", default-features = false }
+alloy-consensus = { version = "0.4.2", default-features = false, optional = true }
 alloy-rpc-types-txpool = { version = "0.4.2", default-features = false }
 alloy-rpc-types-trace = { version = "0.4.2", default-features = false }
 jsonrpsee = { version = "0.24", features = ["macros", "server"] }
@@ -193,6 +197,7 @@ testing = [
   "alloy-json-abi",
   "alloy-signer-local",
   "alloy-signer",
+  "alloy-consensus",
   "anyhow",
   "dep:arbitrary",
   "dojo-test-utils",
