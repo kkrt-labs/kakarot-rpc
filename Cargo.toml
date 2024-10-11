@@ -172,8 +172,9 @@ tokio-util = { version = "0.7", features = [
 tokio-stream = { version = "0.1", default-features = false, optional = true }
 walkdir = { version = "2.5", default-features = false, optional = true }
 
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.14", default-features = false, optional = true }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.14", default-features = false, features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.15", default-features = false, optional = true }
+katana-node = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.15", default-features = false, optional = true }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.15", default-features = false, features = [
   "serde",
 ], optional = true }
 mockall = { version = "0.13.0", default-features = false, optional = true }
@@ -201,6 +202,7 @@ testing = [
   "anyhow",
   "dep:arbitrary",
   "dojo-test-utils",
+  "katana-node",
   "foundry-config",
   "katana-primitives",
   "mockall",

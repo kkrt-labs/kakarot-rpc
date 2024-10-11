@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 pub mod genesis;
 
 use super::mongo::MongoImage;
@@ -36,8 +34,18 @@ use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    super::mongo::MongoFuzzer, alloy_primitives::B256, alloy_rpc_types::Header, alloy_rpc_types::Transaction,
-    alloy_serde::WithOtherFields, dojo_test_utils::sequencer::SequencerConfig, std::str::FromStr as _,
+    super::mongo::MongoFuzzer,
+    alloy_primitives::B256,
+    alloy_rpc_types::Header,
+    alloy_rpc_types::Transaction,
+    alloy_serde::WithOtherFields,
+    katana_node::config::{
+        rpc::{ApiKind, RpcConfig},
+        Config, SequencingConfig,
+    },
+    katana_primitives::chain_spec::ChainSpec,
+    std::collections::HashSet,
+    std::str::FromStr as _,
 };
 
 fn load_genesis() -> Genesis {
@@ -48,27 +56,26 @@ fn load_genesis() -> Genesis {
     .expect("Failed to convert GenesisJson to Genesis")
 }
 
-/// Returns a `StarknetConfig` instance customized for Kakarot.
-/// If `with_dumped_state` is true, the config will be initialized with the dumped state.
-pub fn katana_config() -> StarknetConfig {
-    let max_steps = u32::MAX;
-    StarknetConfig {
-        disable_fee: true,
-        env: Environment {
-            // Since kaka_test > u32::MAX, we should return the last 4 bytes of the chain_id: test
-            chain_id: ChainId::parse("test").unwrap(),
-            invoke_max_steps: max_steps,
-            validate_max_steps: max_steps,
-        },
-        genesis: load_genesis(),
-        ..Default::default()
-    }
-}
-
 /// Returns a `TestSequencer` configured for Kakarot.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 pub async fn katana_sequencer() -> TestSequencer {
-    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, katana_config()).await
+    TestSequencer::start(Config {
+        chain: ChainSpec { id: ChainId::parse("kaka_test").unwrap(), genesis: load_genesis() },
+        starknet: StarknetConfig {
+            env: Environment { invoke_max_steps: u32::MAX, validate_max_steps: u32::MAX },
+            ..Default::default()
+        },
+        sequencing: SequencingConfig { block_time: None, no_mining: false },
+        rpc: RpcConfig {
+            addr: "127.0.0.1".parse().expect("Failed to parse IP address"),
+            port: 0,
+            max_connections: 100,
+            allowed_origins: None,
+            apis: HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]),
+        },
+        ..Default::default()
+    })
+    .await
 }
 
 /// Represents the Katana test environment.
