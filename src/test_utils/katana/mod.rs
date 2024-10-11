@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 pub mod genesis;
 
 use super::mongo::MongoImage;
@@ -41,8 +39,12 @@ use {
     alloy_rpc_types::Header,
     alloy_rpc_types::Transaction,
     alloy_serde::WithOtherFields,
-    katana_node::config::{Config, SequencingConfig},
+    katana_node::config::{
+        rpc::{ApiKind, RpcConfig},
+        Config, SequencingConfig,
+    },
     katana_primitives::chain_spec::ChainSpec,
+    std::collections::HashSet,
     std::str::FromStr as _,
 };
 
@@ -64,6 +66,13 @@ pub async fn katana_sequencer() -> TestSequencer {
             ..Default::default()
         },
         sequencing: SequencingConfig { block_time: None, no_mining: false },
+        rpc: RpcConfig {
+            addr: "127.0.0.1".parse().expect("Failed to parse IP address"),
+            port: 0,
+            max_connections: 100,
+            allowed_origins: None,
+            apis: HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]),
+        },
         ..Default::default()
     })
     .await
