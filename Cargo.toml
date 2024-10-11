@@ -159,7 +159,7 @@ alloy-eips = { version = "0.4.2", default-features = false }
 anyhow = { version = "1", default-features = false, optional = true }
 arbitrary = { version = "1", features = ["derive"], optional = true }
 foundry-config = { git = "https://github.com/foundry-rs/foundry", branch = "master", optional = true }
-rand = { version = "0.8", default-features = false, optional = true }
+rand = { version = "0.8", default-features = false }
 rayon = { version = "1", default-features = false, optional = true }
 rstest = { version = "0.21", default-features = false, optional = true }
 serde_with = { version = "3.9", default-features = false, optional = true }
@@ -204,7 +204,6 @@ testing = [
   "foundry-config",
   "katana-primitives",
   "mockall",
-  "rand",
   "rayon",
   "reth-testing-utils",
   "rstest",
@@ -222,7 +221,7 @@ testing = [
 ]
 binaries = ["clap"]
 hive = []
-arbitrary = ["rand", "dep:arbitrary"]
+arbitrary = ["dep:arbitrary"]
 
 [[bin]]
 name = "katana_genesis"

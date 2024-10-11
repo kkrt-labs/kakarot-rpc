@@ -10,6 +10,7 @@ use crate::{
 };
 use alloy_primitives::{Address, U256};
 use futures::future::select_all;
+use rand::{seq::SliceRandom, SeedableRng};
 use reth_chainspec::ChainSpec;
 use reth_execution_types::ChangedAccount;
 use reth_primitives::BlockNumberOrTag;
@@ -143,11 +144,20 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
-        let mut accounts = self.accounts.iter().collect::<HashMap<_, _>>();
+        // Use `StdRng` instead of `ThreadRng` as it is `Send`
+        let mut rng = rand::rngs::StdRng::from_entropy();
+
+        // Collect the accounts into a vector for shuffling
+        let mut accounts: Vec<_> = self.accounts.iter().collect();
+
         loop {
             if accounts.is_empty() {
                 return Err(eyre::eyre!("failed to fetch funded account"));
             }
+
+            // Shuffle the accounts randomly before iterating
+            accounts.shuffle(&mut rng);
+
             // use [`select_all`] to poll an iterator over impl Future<Output = (Felt, MutexGuard<Felt>)>
             // We use Box::pin because this Future doesn't implement `Unpin`.
             let fut_locks = accounts.iter().map(|(address, nonce)| Box::pin(async { (*address, nonce.lock().await) }));
@@ -158,7 +168,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
 
             // If the balance is lower than the threshold, continue
             if balance < U256::from(ONE_TENTH_ETH) {
-                accounts.remove(account_address);
+                accounts.retain(|(addr, _)| *addr != account_address);
                 continue;
             }
 
