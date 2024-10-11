@@ -70,9 +70,8 @@ async fn test_chain_id(#[future] katana: Katana, _setup: ()) {
     let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default();
 
     // Then
-    // ASCII code for "test" is 0x74657374
-    // Since kaka_test > u32::MAX, we should return the last 4 bytes of the chain_id.
-    assert_eq!(chain_id, U64::from(0x7465_7374_u64));
+    // Chain ID should correspond to "kaka_test"
+    assert_eq!(chain_id, U64::from_str_radix("b615f74ebad2c", 16).unwrap());
 }
 
 #[rstest]
