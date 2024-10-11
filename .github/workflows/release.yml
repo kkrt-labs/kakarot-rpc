@@ -124,9 +124,9 @@ jobs:
       matrix:
         include:
           - platform: linux/amd64
-            apibara_download_url: https://github.com/apibara/dna/releases/download/sink-mongo%2Fv0.7.1/sink-mongo-x86_64-linux.gz
+            apibara_download_url: https://github.com/apibara/dna/releases/download/sink-mongo%2Fv0.9.2/sink-mongo-x86_64-linux.gz
           - platform: linux/arm64
-            apibara_download_url: https://github.com/apibara/dna/releases/download/sink-mongo%2Fv0.7.1/sink-mongo-aarch64-linux.gz
+            apibara_download_url: https://github.com/apibara/dna/releases/download/sink-mongo%2Fv0.9.2/sink-mongo-aarch64-linux.gz
     steps:
       - name: Prepare
         run: |
