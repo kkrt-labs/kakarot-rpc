@@ -22,7 +22,7 @@ jobs:
       - name: Run Karnot Cloud Pro
         uses: karnotxyz/kcloud-pro-github-action@main
         with:
-          input_file: './lib/kakarot/deployments/karnot/deployment-config.yaml'
+          input_file: './deployments/karnot/deployment-config.yaml'
           environment: ${{ github.event.inputs.environment }}
           KARNOT_CLOUD_URL: ${{ secrets.KARNOT_CLOUD_URL }}
           KARNOT_CLOUD_TOKEN: ${{ secrets.KARNOT_CLOUD_TOKEN }}
