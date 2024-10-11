@@ -2,7 +2,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy'
+        description: Environment to deploy
         required: true
         type: choice
         options:
@@ -15,14 +15,14 @@ jobs:
       - uses: actions/checkout@v3
       - name: Debug Information
         run: |
-            echo "Selected environment: ${{ github.event.inputs.environment }}"
-            echo "Current directory: $(pwd)"
-            echo "Directory contents:"
-            ls -R
+          echo "Selected environment: ${{ github.event.inputs.environment }}"
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -R
       - name: Run Karnot Cloud Pro
         uses: karnotxyz/kcloud-pro-github-action@main
         with:
-          input_file: './deployments/karnot/deployment-config.yaml'
+          input_file: ./deployments/karnot/deployment-config.yaml
           environment: ${{ github.event.inputs.environment }}
           KARNOT_CLOUD_URL: ${{ secrets.KARNOT_CLOUD_URL }}
           KARNOT_CLOUD_TOKEN: ${{ secrets.KARNOT_CLOUD_TOKEN }}
