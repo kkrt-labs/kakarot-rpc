@@ -107,7 +107,10 @@ fn setup_tracing() -> Result<()> {
     let filter = EnvFilter::builder().from_env()?;
     let stdout = tracing_subscriber::fmt::layer().with_filter(filter).boxed();
 
-    tracing_subscriber::registry().with(stacked_layer).with(stdout).init();
+    // Add the console subscriber
+    let console_layer = console_subscriber::spawn();
+
+    tracing_subscriber::registry().with(console_layer).with(stacked_layer).with(stdout).init();
 
     Ok(())
 }

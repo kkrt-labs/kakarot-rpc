@@ -101,7 +101,7 @@ thiserror = { version = "1", default-features = false }
 # Futures
 async-trait = { version = "0.1", default-features = false }
 futures = { version = "0.3", default-features = false }
-tokio = { version = "1", features = ["macros"] }
+tokio = { version = "1", features = ["macros", "tracing"] }
 
 # Network
 tower = { version = "0.4", default-features = false }
