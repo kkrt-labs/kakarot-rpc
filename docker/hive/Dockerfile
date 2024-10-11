@@ -16,10 +16,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y patchelf && rm 
 # These values need to be updated if the version of ApiBara Starknet or Sink change.
 # platform: linux/amd64:
 #   - APIBARA_STARKNET_BIN_DIR: 3l93dydg7m71r66x5wllf1j9czvj7zdk
-#   - APIBARA_SINK_BIN_DIR: 81f00xxzyxs6ih6376cw0qbznf6cl6bn
+#   - APIBARA_SINK_BIN_DIR: 8z122nm3b42lgknvv5zp7h921n3f6ia6
 # platform: linux/arm64
 #   - APIBARA_STARKNET_BIN_DIR: ksmcmb1ybrij98hjy4q54v31ag7d2l6l
-#   - APIBARA_SINK_BIN_DIR: ww2ghdaw1xpx42cf93zk5n3h222438ia
+#   - APIBARA_SINK_BIN_DIR: g30fi76vhnamm9wiaqnynnckbhvwdyg1
 ARG APIBARA_STARKNET_BIN_DIR
 ARG APIBARA_SINK_BIN_DIR
 # Run `docker image inspect apibara/starknet:1.6.0-x86_64` to get the exact path

@@ -72,7 +72,7 @@ jobs:
           build-args: |
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
             APIBARA_STARKNET_BIN_DIR=3l93dydg7m71r66x5wllf1j9czvj7zdk
-            APIBARA_SINK_BIN_DIR=81f00xxzyxs6ih6376cw0qbznf6cl6bn
+            APIBARA_SINK_BIN_DIR=8z122nm3b42lgknvv5zp7h921n3f6ia6
           outputs: type=docker,dest=./artifacts/kakarot_image.tar
       - name: Checkout hive tests
         uses: actions/checkout@v4
