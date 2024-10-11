@@ -9,7 +9,6 @@ usage() {
 	echo "Options:"
 	echo "  --sepolia    Use sepolia environment for command"
 	echo "  --staging    Use staging environment for command"
-	echo "  --appchain   Use appchain environment for command"
 	exit 1
 }
 
@@ -36,9 +35,6 @@ for arg in "$@"; do
 	--staging)
 		ENV="kakarot-staging"
 		;;
-	--appchain)
-		ENV="kakarot-sepolia"
-		;;
 	--sepolia)
 		ENV="sepolia"
 		;;
@@ -60,32 +56,7 @@ export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION="python"
 export STARKNET_NETWORK="${ENV}"
 
 # Set the environment variables based on the provided environment
-if [ "${ENV}" = "kakarot-staging" ]; then
-	export EVM_PRIVATE_KEY="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
-	export KAKAROT_STAGING_RPC_URL="https://juno-kakarot-testnet-stage.karnot.xyz"
-	export KAKAROT_STAGING_ACCOUNT_ADDRESS="0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
-	export WEB3_HTTP_PROVIDER_URI="https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz"
-	if [ -z "${KAKAROT_STAGING_PRIVATE_KEY}" ]; then
-		echo "Please provide the KAKAROT_STAGING_PRIVATE_KEY environment variable. The private key should be loaded using gpg: gpg -r recipient@kakarot.org --decrypt path/to/encrypted/key.gpg"
-		exit 1
-	fi
-
-	SKIP="--ignore tests/end_to_end/L1L2Messaging"
-elif [ "${ENV}" = "kakarot-sepolia" ]; then
-	export KAKAROT_SEPOLIA_RPC_URL="https://juno-kakarot-dev.karnot.xyz/"
-	export KAKAROT_SEPOLIA_ACCOUNT_ADDRESS="0x43ABAA073C768EBF039C0C4F46DB9ACC39E9EC165690418060A652AAB39E7D8"
-	export WEB3_HTTP_PROVIDER_URI="https://sepolia-rpc.kakarot.org"
-	if [ -z "${EVM_PRIVATE_KEY}" ]; then
-		echo "Please provide the EVM_PRIVATE_KEY environment variable"
-		exit 1
-	fi
-	if [ -z "${KAKAROT_SEPOLIA_PRIVATE_KEY}" ]; then
-		echo "Please provide the KAKAROT_SEPOLIA_PRIVATE_KEY environment variable. The private key should be loaded using gpg: gpg -r recipient@kakarot.org --decrypt path/to/encrypted/key.gpg"
-		exit 1
-	fi
-
-	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/test_kakarot.py --ignore tests/end_to_end/CairoPrecompiles -k 'not test_should_return_starknet_timestamp'"
-elif [ "${ENV}" = "sepolia" ]; then
+if [ "${ENV}" = "sepolia" ]; then
 	# Note: you might need to modify the following values in `lib/kakarot/kakarot_scripts/constants.py`:
 	#   - NETWORKS["sepolia"].rpc_url = https://juno-kakarot-sepolia.karnot.xyz
 	#   - NETWORKS["sepolia"].max_wait = 40
@@ -103,7 +74,18 @@ elif [ "${ENV}" = "sepolia" ]; then
 		echo "Please provide the EVM_PRIVATE_KEY environment variable"
 		exit 1
 	fi
-	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles --ignore tests/end_to_end/EvmPrecompiles--ignore tests/end_to_end/test_kakarot.py"
+	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles --ignore tests/end_to_end/EvmPrecompiles --ignore tests/end_to_end/test_kakarot.py"
+elif [ "${ENV}" = "kakarot-staging" ]; then
+	export EVM_PRIVATE_KEY="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+	export KAKAROT_STAGING_RPC_URL="https://juno-kakarot-testnet-stage.karnot.xyz"
+	export KAKAROT_STAGING_ACCOUNT_ADDRESS="0x7ecf6cd45c32ce84812e660cc176cb8b4de2e7a6d5916fe326bf871466fbe02"
+	export WEB3_HTTP_PROVIDER_URI="https://kkrt-rpc-kakarot-testnet-stage.karnot.xyz"
+	if [ -z "${KAKAROT_STAGING_PRIVATE_KEY}" ]; then
+		echo "Please provide the KAKAROT_STAGING_PRIVATE_KEY environment variable. The private key should be loaded using gpg: gpg -r recipient@kakarot.org --decrypt path/to/encrypted/key.gpg"
+		exit 1
+	fi
+
+	SKIP="--ignore tests/end_to_end/L1L2Messaging"
 fi
 
 # Deploy the contracts if the deploy command is provided
