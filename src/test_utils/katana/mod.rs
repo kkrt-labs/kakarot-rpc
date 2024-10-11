@@ -36,8 +36,13 @@ use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
-    super::mongo::MongoFuzzer, alloy_primitives::B256, alloy_rpc_types::Header, alloy_rpc_types::Transaction,
-    alloy_serde::WithOtherFields, katana_node::config::Config, katana_primitives::chain_spec::ChainSpec,
+    super::mongo::MongoFuzzer,
+    alloy_primitives::B256,
+    alloy_rpc_types::Header,
+    alloy_rpc_types::Transaction,
+    alloy_serde::WithOtherFields,
+    katana_node::config::{Config, SequencingConfig},
+    katana_primitives::chain_spec::ChainSpec,
     std::str::FromStr as _,
 };
 
@@ -58,6 +63,7 @@ pub async fn katana_sequencer() -> TestSequencer {
             env: Environment { invoke_max_steps: u32::MAX, validate_max_steps: u32::MAX },
             ..Default::default()
         },
+        sequencing: SequencingConfig { block_time: None, no_mining: false },
         ..Default::default()
     })
     .await
