@@ -393,6 +393,7 @@ dependencies = [
  "alloy-rpc-client",
  "alloy-rpc-types-eth 0.3.6",
  "alloy-transport",
+ "alloy-transport-http",
  "async-stream",
  "async-trait",
  "auto_impl",
@@ -401,11 +402,13 @@ dependencies = [
  "futures-utils-wasm",
  "lru",
  "pin-project",
+ "reqwest 0.12.8",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -441,12 +444,14 @@ dependencies = [
  "alloy-transport-http",
  "futures",
  "pin-project",
+ "reqwest 0.12.8",
  "serde",
  "serde_json",
  "tokio",
  "tokio-stream",
  "tower 0.5.1",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -694,6 +699,7 @@ version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ecbabb8fc3d75a0c2cea5215be22e7a267e3efde835b0f2a8922f5e3f5d47683"
 dependencies = [
+ "alloy-json-abi",
  "alloy-sol-macro-input",
  "const-hex",
  "heck 0.5.0",
@@ -712,11 +718,13 @@ version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "16517f2af03064485150d89746b8ffdcdbc9b6eeb3d536fb66efd7c2846fbc75"
 dependencies = [
+ "alloy-json-abi",
  "const-hex",
  "dunce",
  "heck 0.5.0",
  "proc-macro2",
  "quote",
+ "serde_json",
  "syn 2.0.79",
  "syn-solidity",
 ]
@@ -769,7 +777,12 @@ version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a944f5310c690b62bbb3e7e5ce34527cbd36b2d18532a797af123271ce595a49"
 dependencies = [
+ "alloy-json-rpc 0.3.6",
  "alloy-transport",
+ "reqwest 0.12.8",
+ "serde_json",
+ "tower 0.5.1",
+ "tracing",
  "url",
 ]
 
@@ -3228,8 +3241,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3267,8 +3280,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-metrics"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "hyper 0.14.30",
@@ -3286,8 +3299,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3300,8 +3313,6 @@ dependencies = [
  "katana-executor",
  "katana-node",
  "katana-primitives",
- "katana-rpc",
- "katana-rpc-api",
  "scarb",
  "scarb-ui",
  "serde",
@@ -3314,8 +3325,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "cainome",
  "crypto-bigint",
@@ -3332,8 +3343,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "futures",
@@ -3346,8 +3357,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6165,6 +6176,7 @@ dependencies = [
  "hyper-util",
  "itertools 0.13.0",
  "jsonrpsee 0.24.6",
+ "katana-node",
  "katana-primitives",
  "mockall",
  "mongodb",
@@ -6219,8 +6231,8 @@ dependencies = [
 
 [[package]]
 name = "katana-cairo"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
@@ -6235,11 +6247,18 @@ dependencies = [
 
 [[package]]
 name = "katana-core"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
+ "alloy-contract",
+ "alloy-network 0.3.6",
  "alloy-primitives",
+ "alloy-provider",
+ "alloy-rpc-types-eth 0.3.6",
+ "alloy-sol-types",
+ "alloy-transport",
  "anyhow",
+ "async-trait",
  "derive_more 0.99.18",
  "dojo-metrics",
  "futures",
@@ -6251,8 +6270,10 @@ dependencies = [
  "katana-tasks",
  "lazy_static",
  "metrics",
- "num-traits 0.2.19",
  "parking_lot 0.12.3",
+ "reqwest 0.12.8",
+ "serde",
+ "serde_json",
  "starknet",
  "thiserror",
  "tokio",
@@ -6262,8 +6283,8 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "dojo-metrics",
@@ -6283,8 +6304,8 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "blockifier",
  "katana-cairo",
@@ -6298,16 +6319,18 @@ dependencies = [
 
 [[package]]
 name = "katana-node"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "dojo-metrics",
+ "futures",
  "hyper 0.14.30",
  "jsonrpsee 0.16.3",
  "katana-core",
  "katana-db",
  "katana-executor",
+ "katana-pipeline",
  "katana-pool",
  "katana-primitives",
  "katana-provider",
@@ -6317,15 +6340,33 @@ dependencies = [
  "num-traits 0.2.19",
  "serde_json",
  "starknet",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
  "tower 0.4.13",
  "tower-http 0.4.4",
  "tracing",
 ]
 
 [[package]]
+name = "katana-pipeline"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "katana-core",
+ "katana-executor",
+ "katana-pool",
+ "katana-tasks",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
 name = "katana-pool"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "futures",
  "katana-executor",
@@ -6338,8 +6379,8 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6362,8 +6403,8 @@ dependencies = [
 
 [[package]]
 name = "katana-provider"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -6379,8 +6420,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "dojo-metrics",
@@ -6403,8 +6444,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -6415,8 +6456,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6439,8 +6480,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -6452,8 +6493,8 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "1.0.0-alpha.14"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.14#6bafcb55178888268d86aae9dccef8a1ba6e7542"
+version = "1.0.0-alpha.15"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
 dependencies = [
  "futures",
  "rayon",
