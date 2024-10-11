@@ -24,6 +24,7 @@ use starknet::{
 };
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
+use tracing::instrument;
 
 /// A type alias for the Kakarot Transaction Validator.
 /// Uses the Reth implementation [`TransactionValidationTaskExecutor`].
@@ -67,6 +68,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     }
 
     /// Starts the account manager task that periodically checks account balances and processes transactions.
+    #[instrument(skip_all, name = "mempool")]
     pub fn start(self) {
         let this = Arc::new(self);
 
