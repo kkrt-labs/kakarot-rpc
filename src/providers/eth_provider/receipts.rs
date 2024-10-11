@@ -8,6 +8,7 @@ use crate::providers::eth_provider::{
 };
 use alloy_primitives::B256;
 use alloy_rpc_types::TransactionReceipt;
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
@@ -17,10 +18,13 @@ use reth_primitives::{BlockId, BlockNumberOrTag};
 #[auto_impl(Arc, &)]
 pub trait ReceiptProvider {
     /// Returns the transaction receipt by hash of the transaction.
-    async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<TransactionReceipt>>;
+    async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<TransactionReceipt>>>;
 
     /// Returns the block receipts for a block.
-    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<TransactionReceipt>>>;
+    async fn block_receipts(
+        &self,
+        block_id: Option<BlockId>,
+    ) -> EthApiResult<Option<Vec<WithOtherFields<TransactionReceipt>>>>;
 }
 
 #[async_trait]
@@ -28,12 +32,15 @@ impl<SP> ReceiptProvider for EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<TransactionReceipt>> {
+    async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<TransactionReceipt>>> {
         let filter = EthDatabaseFilterBuilder::<filter::Receipt>::default().with_tx_hash(&hash).build();
         Ok(self.database().get_one::<StoredTransactionReceipt>(filter, None).await?.map(Into::into))
     }
 
-    async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<TransactionReceipt>>> {
+    async fn block_receipts(
+        &self,
+        block_id: Option<BlockId>,
+    ) -> EthApiResult<Option<Vec<WithOtherFields<TransactionReceipt>>>> {
         match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
             BlockId::Number(number_or_tag) => {
                 let block_number = self.tag_into_block_number(number_or_tag).await?;

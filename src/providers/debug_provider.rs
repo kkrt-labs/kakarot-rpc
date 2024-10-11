@@ -150,7 +150,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversion))?;
 
             // Tries to convert the cumulative gas used to u64
-            let cumulative_gas_used = TryInto::<u64>::try_into(receipt.inner.cumulative_gas_used())
+            let cumulative_gas_used = TryInto::<u64>::try_into(receipt.inner.inner.cumulative_gas_used())
                 .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversion))?;
 
             // Creates a ReceiptWithBloom from the receipt data
@@ -162,12 +162,13 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
                         cumulative_gas_used,
                         logs: receipt
                             .inner
+                            .inner
                             .logs()
                             .iter()
                             .filter_map(|log| Log::new(log.address(), log.topics().to_vec(), log.data().data.clone()))
                             .collect(),
                     },
-                    bloom: *receipt.inner.logs_bloom(),
+                    bloom: *receipt.inner.inner.logs_bloom(),
                 }
                 .envelope_encoded(),
             );

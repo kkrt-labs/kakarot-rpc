@@ -64,9 +64,9 @@ mock! {
 
     #[async_trait]
     impl ReceiptProvider for EthereumProviderStruct {
-        async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<TransactionReceipt>>;
+        async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<TransactionReceipt>>>;
 
-        async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<TransactionReceipt>>>;
+        async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<WithOtherFields<TransactionReceipt>>>>;
     }
 
     #[async_trait]

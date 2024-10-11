@@ -103,7 +103,7 @@ pub trait EthApi {
 
     /// Returns the receipt of a transaction by transaction hash.
     #[method(name = "getTransactionReceipt")]
-    async fn transaction_receipt(&self, hash: B256) -> Result<Option<TransactionReceipt>>;
+    async fn transaction_receipt(&self, hash: B256) -> Result<Option<WithOtherFields<TransactionReceipt>>>;
 
     /// Returns the balance of the account of given address.
     #[method(name = "getBalance")]
@@ -268,5 +268,8 @@ pub trait EthApi {
 
     /// Returns all transaction receipts for a given block.
     #[method(name = "getBlockReceipts")]
-    async fn block_receipts(&self, block_id: Option<BlockId>) -> Result<Option<Vec<TransactionReceipt>>>;
+    async fn block_receipts(
+        &self,
+        block_id: Option<BlockId>,
+    ) -> Result<Option<Vec<WithOtherFields<TransactionReceipt>>>>;
 }

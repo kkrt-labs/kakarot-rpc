@@ -1,4 +1,5 @@
 use alloy_rpc_types::TransactionReceipt;
+use alloy_serde::WithOtherFields;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use reth_primitives::Receipt;
 use serde::{Deserialize, Serialize};
@@ -7,10 +8,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredTransactionReceipt {
     #[serde(deserialize_with = "crate::providers::eth_provider::database::types::serde::deserialize_intermediate")]
-    pub receipt: TransactionReceipt,
+    pub receipt: WithOtherFields<TransactionReceipt>,
 }
 
-impl From<StoredTransactionReceipt> for TransactionReceipt {
+impl From<StoredTransactionReceipt> for WithOtherFields<TransactionReceipt> {
     fn from(receipt: StoredTransactionReceipt) -> Self {
         receipt.receipt
     }
@@ -48,7 +49,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
         };
 
         Ok(Self {
-            receipt: TransactionReceipt {
+            receipt: WithOtherFields::new(TransactionReceipt {
                 transaction_hash: B256::arbitrary(u)?,
                 transaction_index: Some(u64::arbitrary(u)?),
                 block_hash: Some(B256::arbitrary(u)?),
@@ -69,7 +70,7 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
                     _ => unreachable!(),
                 },
                 authorization_list: None,
-            },
+            }),
         })
     }
 }
