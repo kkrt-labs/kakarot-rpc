@@ -9,7 +9,7 @@ use crate::{
 use reth_primitives::TransactionSigned;
 use starknet::{
     accounts::{Account, ExecutionEncoding, ExecutionV1, SingleOwnerAccount},
-    core::types::Felt,
+    core::types::{Felt, NonZeroFelt},
     providers::Provider,
     signers::{LocalWallet, SigningKey},
 };
@@ -64,9 +64,9 @@ where
         let mut execution = ExecutionV1::new(vec![call], &self.account);
         execution = execution.nonce(*self.nonce);
 
-        // We set the max fee to the balance of the account - 1. This might cause some issues in the future
-        // and should be replaced by a simulation of the transaction (?)
-        execution = execution.max_fee(self.balance - 1);
+        // We set the max fee to the balance of the account / 5. This means that the account could
+        // send up to 5 transactions before hitting a feeder gateway error.
+        execution = execution.max_fee(self.balance.floor_div(&NonZeroFelt::from_felt_unchecked(5.into())));
 
         let prepared = execution.prepared().map_err(|_| SignatureError::SigningFailure)?;
         let res = prepared.send().await.map_err(|err| TransactionError::Broadcast(err.into()))?;
