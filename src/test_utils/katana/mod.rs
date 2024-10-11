@@ -53,11 +53,7 @@ fn load_genesis() -> Genesis {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 pub async fn katana_sequencer() -> TestSequencer {
     TestSequencer::start(Config {
-        chain: ChainSpec {
-            // Since kaka_test > u32::MAX, we should return the last 4 bytes of the chain_id: test
-            id: ChainId::parse("test").unwrap(),
-            genesis: load_genesis(),
-        },
+        chain: ChainSpec { id: ChainId::parse("kaka_test").unwrap(), genesis: load_genesis() },
         starknet: StarknetConfig {
             env: Environment { invoke_max_steps: u32::MAX, validate_max_steps: u32::MAX },
             ..Default::default()
