@@ -52,3 +52,4 @@ environments:
             MONGO_REPLACE_DATA_INSIDE_TRANSACTION: "true"
             STARTING_BLOCK: "0"
             UNINITIALIZED_ACCOUNT_CLASS_HASH: "0x0600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e"
+            
