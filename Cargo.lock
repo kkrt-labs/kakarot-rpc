@@ -6142,7 +6142,7 @@ dependencies = [
 
 [[package]]
 name = "kakarot-rpc"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "alloy-consensus 0.4.2",
  "alloy-contract",
