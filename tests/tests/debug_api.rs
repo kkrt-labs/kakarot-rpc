@@ -256,15 +256,16 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
             receipt: Receipt {
                 tx_type: Into::<u8>::into(tx_receipt.transaction_type()).try_into().unwrap(),
                 success: tx_receipt.inner.status(),
-                cumulative_gas_used: TryInto::<u64>::try_into(tx_receipt.inner.cumulative_gas_used()).unwrap(),
+                cumulative_gas_used: TryInto::<u64>::try_into(tx_receipt.inner.inner.cumulative_gas_used()).unwrap(),
                 logs: tx_receipt
+                    .inner
                     .inner
                     .logs()
                     .iter()
                     .filter_map(|log| Log::new(log.address(), log.topics().to_vec(), log.data().data.clone()))
                     .collect(),
             },
-            bloom: *receipt.inner.logs_bloom(),
+            bloom: *receipt.inner.inner.logs_bloom(),
         }
         .envelope_encoded();
 

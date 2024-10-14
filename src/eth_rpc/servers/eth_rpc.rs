@@ -148,7 +148,7 @@ where
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn transaction_receipt(&self, hash: B256) -> Result<Option<TransactionReceipt>> {
+    async fn transaction_receipt(&self, hash: B256) -> Result<Option<WithOtherFields<TransactionReceipt>>> {
         Ok(self.eth_client.eth_provider().transaction_receipt(hash).await?)
     }
 
@@ -305,7 +305,10 @@ where
         Err(EthApiError::Unsupported("eth_getFilterLogs").into())
     }
 
-    async fn block_receipts(&self, block_id: Option<BlockId>) -> Result<Option<Vec<TransactionReceipt>>> {
+    async fn block_receipts(
+        &self,
+        block_id: Option<BlockId>,
+    ) -> Result<Option<Vec<WithOtherFields<TransactionReceipt>>>> {
         Ok(self.eth_client.eth_provider().block_receipts(block_id).await?)
     }
 }

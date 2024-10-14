@@ -30,7 +30,7 @@ impl From<Log> for StoredLog {
 
 impl From<StoredTransactionReceipt> for Vec<StoredLog> {
     fn from(value: StoredTransactionReceipt) -> Self {
-        value.receipt.inner.logs().iter().cloned().map(Into::into).collect()
+        value.receipt.inner.inner.logs().iter().cloned().map(Into::into).collect()
     }
 }
 
