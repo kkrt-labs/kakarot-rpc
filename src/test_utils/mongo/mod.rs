@@ -8,7 +8,8 @@ use crate::providers::eth_provider::{
     },
 };
 use alloy_primitives::{B256, U256};
-use alloy_rpc_types::Transaction;
+use alloy_rpc_types::{Transaction, TransactionReceipt};
+use alloy_serde::WithOtherFields;
 use arbitrary::Arbitrary;
 use mongodb::{
     bson::{self, doc, Document},
@@ -329,6 +330,24 @@ impl MongoFuzzer {
                 .await
                 .expect("Failed to insert documents");
         }
+    }
+
+    pub async fn insert_transaction_receipt(
+        &mut self,
+        receipt: WithOtherFields<TransactionReceipt>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        // Convert the receipt into a StoredTransactionReceipt
+        let stored_receipt = StoredTransactionReceipt { receipt };
+
+        // Add the receipt to the receipts and logs collections
+        self.receipts.push(stored_receipt.clone());
+        self.logs.append(&mut Vec::from(stored_receipt.clone()));
+
+        // Update the collections in the database
+        self.update_collection(CollectionDB::Receipts).await;
+        self.update_collection(CollectionDB::Logs).await;
+
+        Ok(())
     }
 }
 
