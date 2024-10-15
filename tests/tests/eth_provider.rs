@@ -10,6 +10,7 @@ use alloy_rpc_types::{
     state::{AccountOverride, StateOverride},
     Filter, FilterBlockOption, FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest,
 };
+use alloy_serde::WithOtherFields;
 use alloy_sol_types::{sol, SolCall};
 use arbitrary::Arbitrary;
 use kakarot_rpc::{
@@ -28,6 +29,7 @@ use kakarot_rpc::{
         evm_contract::{EvmContract, KakarotEvmContract},
         fixtures::{contract_empty, counter, katana, katana_empty, plain_opcodes, setup},
         katana::Katana,
+        mongo::{MongoFuzzer, RANDOM_BYTES_SIZE},
         tx_waiter::watch_tx,
     },
 };
