@@ -10,7 +10,6 @@ use alloy_rpc_types::{
     state::{AccountOverride, StateOverride},
     Filter, FilterBlockOption, FilterChanges, Log, RpcBlockHash, Topic, TransactionRequest,
 };
-use alloy_serde::WithOtherFields;
 use alloy_sol_types::{sol, SolCall};
 use arbitrary::Arbitrary;
 use kakarot_rpc::{
@@ -29,7 +28,6 @@ use kakarot_rpc::{
         evm_contract::{EvmContract, KakarotEvmContract},
         fixtures::{contract_empty, counter, katana, katana_empty, plain_opcodes, setup},
         katana::Katana,
-        mongo::{MongoFuzzer, RANDOM_BYTES_SIZE},
         tx_waiter::watch_tx,
     },
 };
@@ -1427,7 +1425,6 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
 async fn test_with_other_fields(#[future] katana: Katana, _setup: ()) {
-    let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
     let eth_provider = katana.eth_provider();
     let transaction = katana.most_recent_transaction().unwrap();
 
@@ -1446,22 +1443,21 @@ async fn test_with_other_fields(#[future] katana: Katana, _setup: ()) {
     assert_eq!(receipt.block_number, transaction.block_number);
 
     // Add a custom field to the receipt to simulate a run out of resources
-    let mut receipt_with_other_fields = WithOtherFields::new(receipt);
+    let mut receipt_with_other_fields = receipt.clone();
     receipt_with_other_fields
         .other
         .insert("run out of resources".to_string(), serde_json::Value::from("run out of resources"));
 
-    // Insert the modified receipt into the database using the mongo_fuzzer
-    mongo_fuzzer.insert_transaction_receipt(receipt_with_other_fields.inner.clone()).await.unwrap();
+    // Insert the modified receipt into the database
+    katana.eth_provider().database().upsert_transaction_receipt(receipt_with_other_fields.clone()).await.unwrap();
 
     // Retrieve the receipt from the database
-    let receipt_from_db =
-        eth_provider.transaction_receipt(receipt_with_other_fields.inner.transaction_hash).await.unwrap();
+    let receipt_from_db = eth_provider.transaction_receipt(receipt_with_other_fields.transaction_hash).await.unwrap();
 
-    // Verify that the transaction hash of the retrieved receipt matches the original
+    // Verify that the other field of the retrieved receipt matches the original
     assert_eq!(
-        receipt_from_db.unwrap().inner.transaction_hash,
-        receipt_with_other_fields.inner.transaction_hash,
+        receipt_from_db.unwrap().other.get("run out of resources"),
+        receipt_with_other_fields.other.get("run out of resources"),
         "Transaction hash should match"
     );
 }
