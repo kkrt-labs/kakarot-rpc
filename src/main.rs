@@ -1,10 +1,10 @@
-use std::{env::var, str::FromStr, sync::Arc};
+use std::{env::var, sync::Arc};
 
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
     client::EthClient,
-    constants::{KAKAROT_RPC_CONFIG, RPC_CONFIG},
+    constants::{KAKAROT_RPC_CONFIG, RELAYERS, RPC_CONFIG},
     eth_rpc::{rpc::KakarotRpcModuleBuilder, run_server},
     pool::mempool::{maintain_transaction_pool, AccountManager},
     providers::eth_provider::database::Database,
@@ -12,10 +12,7 @@ use kakarot_rpc::{
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
-use starknet::{
-    core::types::Felt,
-    providers::{jsonrpc::HttpTransport, JsonRpcClient},
-};
+use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
@@ -53,9 +50,7 @@ async fn main() -> Result<()> {
     let eth_client = Arc::new(eth_client);
 
     // Start the relayer manager
-    let addresses =
-        var("RELAYERS_ADDRESSES")?.split(',').filter_map(|addr| Felt::from_str(addr).ok()).collect::<Vec<_>>();
-    AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?.start();
+    AccountManager::from_addresses(RELAYERS.clone(), Arc::clone(&eth_client)).await?.start();
 
     // Start the maintenance of the mempool
     maintain_transaction_pool(Arc::clone(&eth_client));

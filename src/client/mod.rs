@@ -56,14 +56,14 @@ where
     SP: Provider + Clone + Sync + Send,
 {
     /// Get the Starknet provider from the Ethereum provider.
-    pub const fn starknet_provider(&self) -> &StarknetProvider<SP> {
+    pub const fn starknet_provider(&self) -> &StarknetProvider<Arc<SP>> {
         self.eth_provider.starknet_provider()
     }
 
     /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and a [`Pool`].
     pub fn new(starknet_provider: SP, pool_config: PoolConfig, database: Database) -> Self {
         // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let eth_provider = EthDataProvider::new(database, StarknetProvider::new(starknet_provider));
+        let eth_provider = EthDataProvider::new(database, starknet_provider);
 
         let validator = KakarotTransactionValidatorBuilder::new(&Arc::new(ChainSpec {
             chain: (*ETH_CHAIN_ID).into(),

@@ -591,12 +591,12 @@ async fn test_predeploy_eoa(#[future] katana: Katana, _setup: ()) {
     let eth_client = katana.eth_client();
     let other_eoa_1 = KakarotEOA::new(
         b256!("00000000000000012330000000000000000000000000000000000000000abde1"),
-        Arc::new(eth_client.clone()),
+        eth_client.clone(),
         katana.sequencer.account(),
     );
     let other_eoa_2 = KakarotEOA::new(
         b256!("00000000000000123123456000000000000000000000000000000000000abde2"),
-        Arc::new(eth_client),
+        eth_client,
         katana.sequencer.account(),
     );
 
@@ -823,10 +823,10 @@ async fn test_send_raw_transaction_wrong_nonce(#[future] katana_empty: Katana, _
     assert_eq!(mempool_size_after_send.total, 1);
 
     // Remove the transaction from the mempool
-    katana_empty.eth_client.mempool().remove_transactions(vec![tx_hash]);
+    katana_empty.eth_client().mempool().remove_transactions(vec![tx_hash]);
 
     // Check that the transaction is no longer in the mempool
-    assert_eq!(katana_empty.eth_client.mempool().pool_size().total, 0);
+    assert_eq!(katana_empty.eth_client().mempool().pool_size().total, 0);
 
     // Insert a wrong field in the transaction signature to mimic a wrong signature
     transaction_signed.signature =
@@ -1008,7 +1008,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
 
     // Prepare the relayer
     let relayer_balance = katana
-        .eth_client
+        .eth_client()
         .starknet_provider()
         .balance_at(katana.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
         .await
@@ -1016,7 +1016,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
     let nonce = katana
-        .eth_client
+        .eth_client()
         .starknet_provider()
         .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
         .await
@@ -1029,8 +1029,8 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
         current_nonce.lock().await,
         katana.eoa.relayer.address(),
         relayer_balance,
-        &(*(*katana.eth_client.starknet_provider())),
-        katana.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+        &(*(*katana.eth_client().starknet_provider())),
+        katana.eth_client().starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
     .relay_transaction(&transaction_signed)
     .await
@@ -1343,34 +1343,34 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
 
     // Insert the transaction into the mempool
     let tx_hash = katana_empty
-        .eth_client
+        .eth_client()
         .mempool()
         .add_transaction(TransactionOrigin::Local, transaction.clone())
         .await
         .expect("Failed to insert transaction into the mempool");
 
     // Check if the first transaction is returned correctly by the `transaction_by_hash` method
-    assert!(katana_empty.eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
+    assert!(katana_empty.eth_client().transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
 
     // Check if a non-existent transaction returns None
-    assert!(katana_empty.eth_client.transaction_by_hash(B256::random()).await.unwrap().is_none());
+    assert!(katana_empty.eth_client().transaction_by_hash(B256::random()).await.unwrap().is_none());
 
     // Remove the transaction from the mempool
-    katana_empty.eth_client.mempool().remove_transactions(vec![tx_hash]);
+    katana_empty.eth_client().mempool().remove_transactions(vec![tx_hash]);
 
     // Check that the transaction is no longer in the mempool
-    assert_eq!(katana_empty.eth_client.mempool().pool_size().total, 0);
+    assert_eq!(katana_empty.eth_client().mempool().pool_size().total, 0);
 
     // Send the transaction
     let _ = katana_empty
-        .eth_client
+        .eth_client()
         .send_raw_transaction(transaction_signed.encoded_2718().into())
         .await
         .expect("failed to send transaction");
 
     // Prepare the relayer
     let relayer_balance = katana_empty
-        .eth_client
+        .eth_client()
         .starknet_provider()
         .balance_at(katana_empty.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
         .await
@@ -1378,7 +1378,7 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
     let nonce = katana_empty
-        .eth_client
+        .eth_client()
         .starknet_provider()
         .get_nonce(BlockId::Tag(BlockTag::Latest), katana_empty.eoa.relayer.address())
         .await
@@ -1391,21 +1391,21 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         current_nonce.lock().await,
         katana_empty.eoa.relayer.address(),
         relayer_balance,
-        &(*(*katana_empty.eth_client.starknet_provider())),
-        katana_empty.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+        &(*(*katana_empty.eth_client().starknet_provider())),
+        katana_empty.eth_client().starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
     .relay_transaction(&transaction_signed)
     .await
     .expect("Failed to relay transaction");
 
     // Retrieve the current size of the mempool
-    let mempool_size_after_send = katana_empty.eth_client.mempool().pool_size();
+    let mempool_size_after_send = katana_empty.eth_client().mempool().pool_size();
     // Assert that the number of pending transactions in the mempool is 1
     assert_eq!(mempool_size_after_send.pending, 1);
     assert_eq!(mempool_size_after_send.total, 1);
 
     // Check if the pending transaction is returned correctly by the `transaction_by_hash` method
-    assert!(katana_empty.eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
+    assert!(katana_empty.eth_client().transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
 
     // Generate a random transaction
     let mut bytes = [0u8; 1024];
@@ -1417,7 +1417,7 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
 
     // Check if the indexed transaction is returned correctly by the `transaction_by_hash` method
     assert_eq!(
-        katana_empty.eth_client.transaction_by_hash(transaction.tx.hash).await.unwrap().unwrap(),
+        katana_empty.eth_client().transaction_by_hash(transaction.tx.hash).await.unwrap().unwrap(),
         transaction.tx
     );
 }

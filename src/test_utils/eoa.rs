@@ -27,7 +27,6 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
     signers::LocalWallet,
 };
-use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
@@ -78,14 +77,14 @@ pub trait Eoa<P: Provider + Send + Sync + Clone> {
 #[derive(Debug)]
 pub struct KakarotEOA<P: Provider + Send + Sync + Clone + 'static> {
     pub private_key: B256,
-    pub eth_client: Arc<EthClient<P>>,
+    pub eth_client: EthClient<P>,
     pub relayer: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
 }
 
 impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
     pub const fn new(
         private_key: B256,
-        eth_client: Arc<EthClient<P>>,
+        eth_client: EthClient<P>,
         relayer: SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>,
     ) -> Self {
         Self { private_key, eth_client, relayer }

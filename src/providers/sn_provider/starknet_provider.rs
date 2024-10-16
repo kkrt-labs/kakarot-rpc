@@ -16,12 +16,12 @@ use tracing::Instrument;
 
 /// A provider wrapper around the Starknet provider to expose utility methods.
 #[derive(Debug, Clone)]
-pub struct StarknetProvider<SP: Provider + Send + Sync> {
-    /// The underlying Starknet provider wrapped in an [`Arc`] for shared ownership across threads.
+pub struct StarknetProvider<SP> {
+    /// The underlying Starknet provider
     provider: SP,
 }
 
-impl<SP: Provider + Send + Sync> Deref for StarknetProvider<SP> {
+impl<SP> Deref for StarknetProvider<SP> {
     type Target = SP;
 
     fn deref(&self) -> &Self::Target {

@@ -9,23 +9,35 @@ use super::{
     },
 };
 use crate::{
-    constants::ETH_CHAIN_ID,
+    constants::{ETH_CHAIN_ID, RELAYERS},
     into_via_try_wrapper, into_via_wrapper,
     models::block::{EthBlockId, EthBlockNumberOrTag},
     providers::{
-        eth_provider::{BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider},
+        eth_provider::{
+            error::CairoError,
+            starknet::kakarot_core::core::{EthSendRawUnsignedTxOutput, KakarotCore},
+            BlockProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
+        },
         sn_provider::StarknetProvider,
     },
 };
+use alloy_consensus::{SignableTransaction, TxLegacy};
 use alloy_primitives::{TxKind, U256};
 use alloy_rpc_types::{BlockHashOrNumber, TransactionRequest};
-use cainome::cairo_serde::CairoArrayLegacy;
+use cainome::cairo_serde::{CairoArrayLegacy, CairoSerde};
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
 use reth_primitives::{BlockId, BlockNumberOrTag};
-use starknet::core::types::Felt;
+use starknet::{
+    accounts::{ExecutionEncoding, SingleOwnerAccount},
+    core::types::{
+        ExecuteInvocation, Felt, FunctionInvocation, InvokeTransactionTrace, RevertedInvocation, TransactionTrace,
+    },
+    signers::{LocalWallet, SigningKey},
+};
+use std::sync::Arc;
 use tracing::{instrument, Instrument};
 #[cfg(feature = "hive")]
 use {
@@ -58,29 +70,26 @@ impl<T> EthereumProvider for T where
 /// Uses access to a database for certain data, while
 /// the rest is fetched from the Starknet Provider.
 #[derive(Debug, Clone)]
-pub struct EthDataProvider<SP: starknet::providers::Provider + Send + Sync> {
+pub struct EthDataProvider<SP> {
     database: Database,
-    starknet_provider: StarknetProvider<SP>,
+    starknet_provider: StarknetProvider<Arc<SP>>,
     pub chain_id: u64,
 }
 
-impl<SP> EthDataProvider<SP>
-where
-    SP: starknet::providers::Provider + Send + Sync,
-{
+impl<SP> EthDataProvider<SP> {
     /// Returns a reference to the database.
     pub const fn database(&self) -> &Database {
         &self.database
     }
 
     /// Returns a reference to the Starknet provider.
-    pub const fn starknet_provider(&self) -> &StarknetProvider<SP> {
+    pub const fn starknet_provider(&self) -> &StarknetProvider<Arc<SP>> {
         &self.starknet_provider
     }
 
     /// Returns a reference to the underlying SP provider.
-    pub fn starknet_provider_inner(&self) -> &SP {
-        &self.starknet_provider
+    pub fn starknet_provider_inner(&self) -> Arc<SP> {
+        Arc::clone(&*self.starknet_provider)
     }
 }
 
@@ -88,7 +97,8 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    pub fn new(database: Database, starknet_provider: StarknetProvider<SP>) -> Self {
+    pub fn new(database: Database, starknet_provider: SP) -> Self {
+        let starknet_provider = StarknetProvider::new(Arc::new(starknet_provider));
         Self { database, starknet_provider, chain_id: *ETH_CHAIN_ID }
     }
 
@@ -189,35 +199,79 @@ where
         request: TransactionRequest,
         block_id: Option<BlockId>,
     ) -> EthApiResult<u128> {
-        let starknet_block_id = self.to_starknet_block_id(block_id).await?;
-        let call_input = self.prepare_call_input(request, block_id).await?;
+        // Serialize the unsigned transaction for simulation
+        let gas_price = match request.gas_price {
+            Some(gas_price) => gas_price,
+            None => self.gas_price().await?.try_into().map_err(|_| EthereumDataFormatError::Primitive)?,
+        };
+        let data = request.input.into_input().unwrap_or_default();
+        let tx = TxLegacy {
+            chain_id: Some(*ETH_CHAIN_ID),
+            nonce: request.nonce.unwrap_or_default(),
+            gas_price,
+            gas_limit: request.gas.unwrap_or_default(),
+            to: request.to.unwrap_or_default(),
+            value: request.value.unwrap_or_default(),
+            input: data,
+        };
+        let ser_tx = CairoArrayLegacy(tx.encoded_for_signing().into_iter().map(Felt::from).collect::<Vec<_>>());
+        let ser_tx_len = Felt::from(ser_tx.len());
 
-        let kakarot_contract = KakarotCoreReader::new(*KAKAROT_ADDRESS, self.starknet_provider_inner());
-        let span = tracing::span!(tracing::Level::INFO, "sn::eth_estimate_gas");
-        let estimate_gas_output = kakarot_contract
-            .eth_estimate_gas(
-                &call_input.nonce,
-                &call_input.from,
-                &call_input.to,
-                &call_input.gas_limit,
-                &call_input.gas_price,
-                &call_input.value,
-                &call_input.calldata.len().into(),
-                &CairoArrayLegacy(call_input.calldata),
-                &Felt::ZERO,
-                &CairoArrayLegacy(vec![]),
-            )
-            .block_id(starknet_block_id)
-            .call()
+        // Init a connected account to the first relayer in the set
+        let block_id = self.to_starknet_block_id(block_id).await?;
+        let wallet = LocalWallet::from_signing_key(SigningKey::from_random());
+        let mut connected_account = SingleOwnerAccount::new(
+            self.starknet_provider_inner(),
+            wallet,
+            RELAYERS.first().copied().expect("always at least one relayer"),
+            self.chain_id.into(),
+            ExecutionEncoding::New,
+        );
+        connected_account.set_block_id(block_id);
+
+        let kakarot_contract = KakarotCore::new(*KAKAROT_ADDRESS, connected_account);
+        let span = tracing::span!(tracing::Level::INFO, "sn::eth_send_raw_unsigned_tx");
+
+        // Simulate the execution of an unsigned transaction
+        let res = kakarot_contract
+            .eth_send_raw_unsigned_tx(&ser_tx_len, &ser_tx)
+            .simulate(true, true)
             .instrument(span)
             .await
-            .map_err(ExecutionError::from)?;
+            .map_err(|_| ExecutionError::CairoVm(CairoError::VmOutOfResources))?;
 
-        let return_data = estimate_gas_output.return_data;
-        if estimate_gas_output.success == Felt::ZERO {
+        let res = match res.transaction_trace {
+            // Return the result if the transaction passes
+            TransactionTrace::Invoke(InvokeTransactionTrace {
+                execute_invocation: ExecuteInvocation::Success(FunctionInvocation { result, .. }),
+                ..
+            }) => result,
+            // Return a cairo vm out of steps error in case we reverted with "out of steps"
+            TransactionTrace::Invoke(InvokeTransactionTrace {
+                execute_invocation: ExecuteInvocation::Reverted(RevertedInvocation { revert_reason }),
+                ..
+            }) if revert_reason.contains("RunResources has no remaining steps") => {
+                return Err(ExecutionError::CairoVm(CairoError::VmOutOfResources).into());
+            }
+            // Return the error as normal otherwise.
+            TransactionTrace::Invoke(InvokeTransactionTrace {
+                execute_invocation: ExecuteInvocation::Reverted(RevertedInvocation { revert_reason }),
+                ..
+            }) => {
+                return Err(TransactionError::Call(revert_reason.into()).into());
+            }
+            _ => unreachable!(),
+        };
+        let send_raw_tx_res =
+            EthSendRawUnsignedTxOutput::cairo_deserialize(&res, 0).map_err(|err| TransactionError::Call(err.into()))?;
+
+        let (return_data, gas, success) =
+            (send_raw_tx_res.return_data, send_raw_tx_res.gas_used, send_raw_tx_res.success);
+
+        if success == Felt::ZERO {
             return Err(ExecutionError::from(EvmError::from(return_data.0)).into());
         }
-        let required_gas = estimate_gas_output.required_gas.to_u128().ok_or(TransactionError::GasOverflow)?;
+        let required_gas = gas.to_u128().ok_or(TransactionError::GasOverflow)?;
         Ok(required_gas)
     }
 
