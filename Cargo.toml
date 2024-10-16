@@ -53,7 +53,7 @@ no_effect_underscore_binding = "allow"
 
 [dependencies]
 # Starknet dependencies
-cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.1", default-features = false, features = [
+cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.3", default-features = false, features = [
   "abigen-rs",
 ] }
 starknet = { version = "0.12", default-features = false }

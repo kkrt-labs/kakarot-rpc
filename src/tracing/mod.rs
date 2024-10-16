@@ -388,10 +388,7 @@ fn env_with_tx(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::providers::{
-        eth_provider::{database::Database, provider::EthDataProvider},
-        sn_provider::StarknetProvider,
-    };
+    use crate::providers::eth_provider::{database::Database, provider::EthDataProvider};
     use builder::TracerBuilder;
     use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
     use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
@@ -433,7 +430,7 @@ mod tests {
             ),
         );
 
-        let eth_provider = Arc::new(EthDataProvider::new(db, StarknetProvider::new(Arc::new(starknet_provider))));
+        let eth_provider = Arc::new(EthDataProvider::new(db, Arc::new(starknet_provider)));
         let tracer = TracerBuilder::new(eth_provider)
             .await
             .unwrap()
