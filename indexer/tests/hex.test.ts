@@ -1,5 +1,10 @@
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/mod.ts";
-import { padBigint, padBytes, padString, toHexString } from "./hex.ts";
+import {
+  padBigint,
+  padBytes,
+  padString,
+  toHexString,
+} from "../src/utils/hex.ts";
 
 Deno.test("toHexString converts string to hex format", () => {
   const x = "1234";
