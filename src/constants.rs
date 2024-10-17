@@ -4,7 +4,7 @@ use starknet::{
     core::types::{Felt, NonZeroFelt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
-use std::sync::LazyLock;
+use std::{str::FromStr, sync::LazyLock};
 
 /// The max chain id allowed by [Metamask](https://gist.github.com/rekmarks/a47bd5f2525936c4b8eee31a16345553)
 pub static MAX_CHAIN_ID: u64 = (2u64.pow(53) - 39) / 2;
@@ -29,3 +29,15 @@ pub static KAKAROT_RPC_CONFIG: LazyLock<KakarotRpcConfig> =
 /// The RPC configuration.
 pub static RPC_CONFIG: LazyLock<RPCConfig> =
     LazyLock::new(|| RPCConfig::from_env().expect("failed to load RPC config"));
+
+/// Relayers addresses.
+pub static RELAYERS: LazyLock<Vec<Felt>> = LazyLock::new(|| {
+    let relayers = std::env::var("RELAYERS_ADDRESSES")
+        .expect("missing RELAYER_ADDRESSES in env")
+        .split(',')
+        .filter_map(|addr| Felt::from_str(addr).ok())
+        .collect::<Vec<_>>();
+    // Check that we have at least one relayer
+    assert!(!relayers.is_empty());
+    relayers
+});
