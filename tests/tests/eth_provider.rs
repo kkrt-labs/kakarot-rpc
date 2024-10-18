@@ -1421,3 +1421,27 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         transaction.tx
     );
 }
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_with_other_fields(#[future] katana: Katana, _setup: ()) {
+    let eth_provider = katana.eth_provider();
+    let transaction = katana.most_recent_transaction().unwrap();
+
+    let receipts = katana.receipts_at(transaction.block_number.unwrap());
+    let receipt = receipts.first().unwrap();
+
+    // Add a custom field to the receipt to simulate a run out of resources
+    let mut receipt_with_other_fields = receipt.clone();
+    receipt_with_other_fields.other.insert("isRunOutOfRessources".to_string(), serde_json::Value::Bool(true));
+
+    // Insert the modified receipt into the database
+    katana.upsert_transaction_receipt(receipt_with_other_fields.clone()).await;
+
+    // Retrieve the receipt from the database
+    let receipt_from_db = eth_provider.transaction_receipt(receipt_with_other_fields.transaction_hash).await.unwrap();
+
+    // Verify the receipt
+    assert_eq!(receipt_from_db.unwrap(), receipt_with_other_fields);
+}
