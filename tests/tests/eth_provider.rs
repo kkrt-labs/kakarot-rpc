@@ -1428,36 +1428,19 @@ async fn test_with_other_fields(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
     let transaction = katana.most_recent_transaction().unwrap();
 
-    // Retrieve receipts by block number
-    let receipts = eth_provider
-        .block_receipts(Some(alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(
-            transaction.block_number.unwrap(),
-        ))))
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!(receipts.len(), 1);
+    let receipts = katana.receipts_at(transaction.block_number.unwrap());
     let receipt = receipts.first().unwrap();
-    assert_eq!(receipt.transaction_index, transaction.transaction_index);
-    assert_eq!(receipt.block_hash, transaction.block_hash);
-    assert_eq!(receipt.block_number, transaction.block_number);
 
     // Add a custom field to the receipt to simulate a run out of resources
     let mut receipt_with_other_fields = receipt.clone();
-    receipt_with_other_fields
-        .other
-        .insert("run out of resources".to_string(), serde_json::Value::from("run out of resources"));
+    receipt_with_other_fields.other.insert("isRunOutOfRessources".to_string(), serde_json::Value::Bool(true));
 
     // Insert the modified receipt into the database
-    katana.eth_provider().database().upsert_transaction_receipt(receipt_with_other_fields.clone()).await.unwrap();
+    katana.upsert_transaction_receipt(receipt_with_other_fields.clone()).await;
 
     // Retrieve the receipt from the database
     let receipt_from_db = eth_provider.transaction_receipt(receipt_with_other_fields.transaction_hash).await.unwrap();
 
-    // Verify that the other field of the retrieved receipt matches the original
-    assert_eq!(
-        receipt_from_db.unwrap().other.get("run out of resources"),
-        receipt_with_other_fields.other.get("run out of resources"),
-        "Transaction hash should match"
-    );
+    // Verify the receipt
+    assert_eq!(receipt_from_db.unwrap(), receipt_with_other_fields);
 }

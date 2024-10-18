@@ -4,13 +4,10 @@ use super::{
     types::{header::StoredHeader, transaction::StoredTransaction},
     Database,
 };
-use crate::providers::eth_provider::{
-    database::types::receipt::StoredTransactionReceipt,
-    error::{EthApiError, EthereumDataFormatError},
-};
+use crate::providers::eth_provider::error::{EthApiError, EthereumDataFormatError};
 use alloy_primitives::{B256, U256};
 use alloy_rlp::Encodable;
-use alloy_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, Transaction, TransactionReceipt};
+use alloy_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, Transaction};
 use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use mongodb::bson::doc;
@@ -31,11 +28,6 @@ pub trait EthereumTransactionStore {
     ) -> Result<Vec<WithOtherFields<Transaction>>, EthApiError>;
     /// Upserts the given transaction.
     async fn upsert_transaction(&self, transaction: WithOtherFields<Transaction>) -> Result<(), EthApiError>;
-    /// Upserts the given transaction receipt.
-    async fn upsert_transaction_receipt(
-        &self,
-        transaction: WithOtherFields<TransactionReceipt>,
-    ) -> Result<(), EthApiError>;
 }
 
 #[async_trait]
@@ -62,17 +54,6 @@ impl EthereumTransactionStore for Database {
     async fn upsert_transaction(&self, transaction: WithOtherFields<Transaction>) -> Result<(), EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&transaction.hash).build();
         Ok(self.update_one(StoredTransaction::from(transaction), filter, true).await?)
-    }
-
-    #[instrument(skip_all, name = "db::upsert_transaction_receipt", err)]
-    async fn upsert_transaction_receipt(
-        &self,
-        transaction: WithOtherFields<TransactionReceipt>,
-    ) -> Result<(), EthApiError> {
-        let filter =
-            EthDatabaseFilterBuilder::<filter::Receipt>::default().with_tx_hash(&transaction.transaction_hash).build();
-        let stored_receipt = StoredTransactionReceipt { receipt: transaction };
-        Ok(self.update_one(stored_receipt, filter, true).await?)
     }
 }
 
