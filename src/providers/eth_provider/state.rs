@@ -176,7 +176,7 @@ where
         }
 
         // If no state or block overrides are present, call the helper function to execute the call.
-        let output = self.call_helper(request, block_id).await?;
+        let output = self.call_inner(request, block_id).await?;
         Ok(Bytes::from(output.0.into_iter().filter_map(|x| x.to_u8()).collect::<Vec<_>>()))
     }
 }
