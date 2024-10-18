@@ -145,7 +145,7 @@ where
     }
 
     /// Call the Kakarot contract with the given request.
-    pub(crate) async fn call_helper(
+    pub(crate) async fn call_inner(
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
@@ -184,7 +184,7 @@ where
     }
 
     /// Estimate the gas used in Kakarot for the given request.
-    pub(crate) async fn estimate_gas(
+    pub(crate) async fn estimate_gas_inner(
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
