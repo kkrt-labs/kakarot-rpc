@@ -158,7 +158,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         .enumerate()
     {
         // Fetch the transaction for the current transaction hash.
-        let tx = katana.eth_client.transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
+        let tx = katana.eth_client().transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
         let signature = tx.signature.unwrap();
 
         // Convert the transaction to a primitives transactions and encode it.
