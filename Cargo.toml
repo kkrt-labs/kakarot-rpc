@@ -67,7 +67,7 @@ alloy-rpc-types = { version = "0.4.2", features = [
   "eth",
   "arbitrary",
 ], default-features = false }
-alloy-consensus = { version = "0.4.2", default-features = false, optional = true }
+alloy-consensus = { version = "0.4.2", default-features = false }
 alloy-rpc-types-txpool = { version = "0.4.2", default-features = false }
 alloy-rpc-types-trace = { version = "0.4.2", default-features = false }
 jsonrpsee = { version = "0.24", features = ["macros", "server"] }
@@ -198,7 +198,6 @@ testing = [
   "alloy-json-abi",
   "alloy-signer-local",
   "alloy-signer",
-  "alloy-consensus",
   "anyhow",
   "dep:arbitrary",
   "dojo-test-utils",

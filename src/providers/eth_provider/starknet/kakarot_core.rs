@@ -25,7 +25,7 @@ pub mod core {
     pub struct CallInput {
         pub(crate) nonce: Felt,
         pub(crate) from: Felt,
-        pub(crate) to: Option,
+        pub(crate) to: self::Option,
         pub(crate) gas_limit: Felt,
         pub(crate) gas_price: Felt,
         pub(crate) value: Uint256,

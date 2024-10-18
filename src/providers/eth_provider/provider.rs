@@ -260,7 +260,7 @@ where
             }) => {
                 return Err(TransactionError::Call(revert_reason.into()).into());
             }
-            _ => unreachable!(),
+            _ => return Err(TransactionError::Call(eyre::eyre!("expected InvokeTransaction").into()).into()),
         };
         let send_raw_tx_res =
             EthSendRawUnsignedTxOutput::cairo_deserialize(&res, 0).map_err(|err| TransactionError::Call(err.into()))?;
