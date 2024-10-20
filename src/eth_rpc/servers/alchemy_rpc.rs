@@ -5,7 +5,7 @@ use crate::{
 };
 use alloy_primitives::{Address, U256};
 use async_trait::async_trait;
-use jsonrpsee::core::RpcResult as Result;
+use jsonrpsee::core::RpcResult;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
@@ -28,17 +28,17 @@ where
     AP: AlchemyProvider + Send + Sync + 'static,
 {
     #[tracing::instrument(skip(self, contract_addresses), ret, err)]
-    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> Result<TokenBalances> {
+    async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> RpcResult<TokenBalances> {
         self.alchemy_provider.token_balances(address, contract_addresses).await.map_err(Into::into)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn token_metadata(&self, contract_address: Address) -> Result<TokenMetadata> {
+    async fn token_metadata(&self, contract_address: Address) -> RpcResult<TokenMetadata> {
         self.alchemy_provider.token_metadata(contract_address).await.map_err(Into::into)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn token_allowance(&self, contract_address: Address, owner: Address, spender: Address) -> Result<U256> {
+    async fn token_allowance(&self, contract_address: Address, owner: Address, spender: Address) -> RpcResult<U256> {
         self.alchemy_provider.token_allowance(contract_address, owner, spender).await.map_err(Into::into)
     }
 }
