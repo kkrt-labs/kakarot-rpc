@@ -228,9 +228,7 @@ where
         block_id: impl Into<Option<BlockId>>,
     ) -> EthApiResult<starknet::core::types::BlockId> {
         match block_id.into() {
-            Some(BlockId::Hash(hash)) => {
-                Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(EthereumDataFormatError::from)?)
-            }
+            Some(BlockId::Hash(hash)) => Ok(EthBlockId::new(BlockId::Hash(hash)).try_into()?),
             Some(BlockId::Number(number_or_tag)) => {
                 // There is a need to separate the BlockNumberOrTag case into three subcases
                 // because pending Starknet blocks don't have a number.
