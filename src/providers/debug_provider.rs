@@ -186,7 +186,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         let provider = Arc::new(&self.eth_provider);
         let tracer = TracerBuilder::new(provider)
             .await?
-            .with_block_id(BlockId::Number(block_number))
+            .with_block_id(block_number.into())
             .await?
             .with_tracing_options(opts.unwrap_or_default().into())
             .build()?;
@@ -201,7 +201,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
     ) -> EthApiResult<Vec<TraceResult>> {
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?
-            .with_block_id(BlockId::Hash(block_hash.into()))
+            .with_block_id(block_hash.into())
             .await?
             .with_tracing_options(opts.unwrap_or_default().into())
             .build()?;

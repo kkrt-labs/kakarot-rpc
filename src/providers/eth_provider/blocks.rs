@@ -107,7 +107,7 @@ where
         block_id: Option<BlockId>,
     ) -> EthApiResult<Option<Vec<WithOtherFields<Transaction>>>> {
         let block_hash_or_number = self
-            .block_id_into_block_number_or_hash(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)))
+            .block_id_into_block_number_or_hash(block_id.unwrap_or_else(|| BlockNumberOrTag::Latest.into()))
             .await?;
         if !self.database().block_exists(block_hash_or_number).await? {
             return Ok(None);
