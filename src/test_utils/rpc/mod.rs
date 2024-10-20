@@ -54,7 +54,6 @@ use std::net::SocketAddr;
 ///
 /// `allow(dead_code)` is used because this function is used in tests,
 /// and each test is compiled separately, so the compiler thinks this function is unused
-#[allow(dead_code)]
 pub async fn start_kakarot_rpc_server(katana: &Katana) -> Result<(SocketAddr, ServerHandle), eyre::Report> {
     let eth_client = katana.eth_client();
     Ok(run_server(

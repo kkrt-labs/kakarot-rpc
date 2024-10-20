@@ -1,5 +1,3 @@
-#![allow(clippy::blocks_in_conditions)]
-
 use crate::{
     eth_rpc::api::alchemy_api::AlchemyApiServer,
     models::token::{TokenBalances, TokenMetadata},

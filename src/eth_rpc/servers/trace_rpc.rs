@@ -23,7 +23,6 @@ impl<P: EthereumProvider> TraceRpc<P> {
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> TraceApiServer for TraceRpc<P> {
     /// Returns the parity traces for the given block.
-    #[allow(clippy::blocks_in_conditions)]
     #[tracing::instrument(skip(self), err)]
     async fn trace_block(&self, block_id: BlockId) -> Result<Option<Vec<LocalizedTransactionTrace>>> {
         tracing::info!("Serving debug_traceBlock");
