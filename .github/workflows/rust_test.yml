@@ -16,7 +16,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-          toolchain: 1.81.0
+          toolchain: 1.82.0
       - name: Retrieve cached dependencies
         uses: Swatinem/rust-cache@v2
       # nextest setup

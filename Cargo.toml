@@ -16,7 +16,7 @@ homepage = "https://github.com/kkrt-labs"
 repository = "https://github.com/kkrt-labs/kakarot-rpc"
 readme = "./README.md"
 license = "MIT"
-rust-version = "1.81"
+rust-version = "1.82"
 
 # Lints
 
