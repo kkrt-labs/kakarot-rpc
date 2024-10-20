@@ -1,4 +1,3 @@
-#![allow(clippy::blocks_in_conditions)]
 use crate::{eth_rpc::api::debug_api::DebugApiServer, providers::debug_provider::DebugProvider};
 use alloy_primitives::{Bytes, B256};
 use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionRequest};

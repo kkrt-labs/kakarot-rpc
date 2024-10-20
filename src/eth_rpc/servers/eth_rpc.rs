@@ -1,5 +1,3 @@
-#![allow(clippy::blocks_in_conditions)]
-
 use crate::{
     client::{EthClient, KakarotTransactions, TransactionHashProvider},
     eth_rpc::api::eth_api::EthApiServer,
