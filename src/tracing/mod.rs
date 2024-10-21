@@ -3,7 +3,7 @@ pub mod builder;
 use crate::{
     providers::eth_provider::{
         database::state::EthCacheDatabase,
-        error::{EthApiError, EthereumDataFormatError, TransactionError},
+        error::{EthApiError, TransactionError},
         provider::EthereumProvider,
     },
     tracing::builder::TracingOptions,
@@ -375,9 +375,7 @@ fn env_with_tx(
     tx: WithOtherFields<alloy_rpc_types::Transaction>,
 ) -> TracerResult<EnvWithHandlerCfg> {
     // Convert the transaction to an ec recovered transaction and update the env with it.
-    let tx_ec_recovered = tx.try_into().map_err(|_| EthereumDataFormatError::TransactionConversion)?;
-
-    let tx_env = EthEvmConfig::new(Arc::new(Default::default())).tx_env(&tx_ec_recovered);
+    let tx_env = EthEvmConfig::new(Arc::new(Default::default())).tx_env(&tx.try_into()?);
 
     Ok(EnvWithHandlerCfg {
         env: Env::boxed(env.env.cfg.clone(), env.env.block.clone(), tx_env),

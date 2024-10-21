@@ -1,6 +1,6 @@
 use crate::{
     providers::eth_provider::{
-        error::{EthApiError, EthereumDataFormatError, SignatureError},
+        error::{EthApiError, SignatureError},
         provider::{EthApiResult, EthereumProvider},
     },
     tracing::builder::TracerBuilder,
@@ -61,14 +61,7 @@ impl<P: EthereumProvider> DebugDataProvider<P> {
 impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataProvider<P> {
     async fn raw_header(&self, block_id: BlockId) -> EthApiResult<Bytes> {
         let mut res = Vec::new();
-        if let Some(header) = self
-            .eth_provider
-            .header(&block_id)
-            .await?
-            .map(Header::try_from)
-            .transpose()
-            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::HeaderConversion))?
-        {
+        if let Some(header) = self.eth_provider.header(&block_id).await?.map(Header::try_from).transpose()? {
             header.encode(&mut res);
         }
 
@@ -82,8 +75,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         };
         let mut raw_block = Vec::new();
         if let Some(block) = block {
-            let block =
-                Block::try_from(block.inner).map_err(|_| EthApiError::from(EthereumDataFormatError::Primitive))?;
+            let block = Block::try_from(block.inner)?;
             block.encode(&mut raw_block);
         }
         Ok(raw_block.into())
@@ -94,9 +86,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
 
         if let Some(tx) = transaction {
             let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx = tx.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::Primitive))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
-                tx,
+                tx.try_into()?,
                 reth_primitives::Signature::from_rs_and_parity(
                     signature.r,
                     signature.s,
@@ -118,9 +109,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
 
         for t in transactions {
             let signature = t.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
-            let tx = t.try_into().map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::Primitive))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
-                tx,
+                t.try_into()?,
                 reth_primitives::Signature::from_rs_and_parity(
                     signature.r,
                     signature.s,
@@ -145,13 +135,10 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
         // Iterates through the receipts of the block using the `block_receipts` method of the Ethereum API
         for receipt in receipts {
             // Converts the transaction type to a u8 and then tries to convert it into TxType
-            let tx_type = Into::<u8>::into(receipt.transaction_type())
-                .try_into()
-                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversion))?;
+            let tx_type = Into::<u8>::into(receipt.transaction_type()).try_into()?;
 
             // Tries to convert the cumulative gas used to u64
-            let cumulative_gas_used = TryInto::<u64>::try_into(receipt.inner.inner.cumulative_gas_used())
-                .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::ReceiptConversion))?;
+            let cumulative_gas_used = receipt.inner.inner.cumulative_gas_used().try_into()?;
 
             // Creates a ReceiptWithBloom from the receipt data
             raw_receipts.push(

@@ -7,7 +7,7 @@ use crate::{
     providers::{
         eth_provider::{
             database::Database,
-            error::{EthApiError, EthereumDataFormatError, SignatureError},
+            error::SignatureError,
             provider::{EthApiResult, EthDataProvider},
             TransactionProvider, TxPoolProvider,
         },
@@ -99,8 +99,7 @@ where
 {
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthApiResult<B256> {
         // Decode the transaction data
-        let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
-            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?;
+        let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())?;
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;

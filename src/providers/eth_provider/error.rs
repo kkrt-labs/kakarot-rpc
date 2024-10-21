@@ -367,6 +367,42 @@ pub enum EthereumDataFormatError {
     /// Error related to starknet to eth conversion or vice versa.
     #[error("primitive conversion error")]
     Primitive,
+    /// Error related to rlp conversion.
+    #[error(transparent)]
+    Rlp(#[from] alloy_rlp::Error),
+    /// Error related to alloy rpc/primitive conversion.
+    #[error(transparent)]
+    AlloyTransactionConversion(#[from] alloy_rpc_types::ConversionError),
+    /// Error related to integer conversion.
+    #[error(transparent)]
+    IntConversions(#[from] std::num::TryFromIntError),
+    /// Custom error with a static string.
+    #[error("{0}")]
+    CustomError(&'static str),
+}
+
+impl From<alloy_rlp::Error> for EthApiError {
+    fn from(value: alloy_rlp::Error) -> Self {
+        Self::EthereumDataFormat(EthereumDataFormatError::Rlp(value))
+    }
+}
+
+impl From<alloy_rpc_types::ConversionError> for EthApiError {
+    fn from(value: alloy_rpc_types::ConversionError) -> Self {
+        Self::EthereumDataFormat(EthereumDataFormatError::AlloyTransactionConversion(value))
+    }
+}
+
+impl From<&'static str> for EthApiError {
+    fn from(value: &'static str) -> Self {
+        Self::EthereumDataFormat(EthereumDataFormatError::CustomError(value))
+    }
+}
+
+impl From<std::num::TryFromIntError> for EthApiError {
+    fn from(value: std::num::TryFromIntError) -> Self {
+        Self::EthereumDataFormat(EthereumDataFormatError::IntConversions(value))
+    }
 }
 
 #[cfg(test)]

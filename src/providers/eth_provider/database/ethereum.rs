@@ -4,14 +4,14 @@ use super::{
     types::{header::StoredHeader, transaction::StoredTransaction},
     Database,
 };
-use crate::providers::eth_provider::error::{EthApiError, EthereumDataFormatError};
+use crate::providers::eth_provider::error::EthApiError;
 use alloy_primitives::{B256, U256};
 use alloy_rlp::Encodable;
 use alloy_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, Transaction};
 use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use mongodb::bson::doc;
-use reth_primitives::{constants::EMPTY_ROOT_HASH, TransactionSigned};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, BlockBody};
 use tracing::instrument;
 
 /// Trait for interacting with a database that stores Ethereum typed
@@ -132,19 +132,13 @@ impl EthereumBlockStore for Database {
             BlockTransactions::Hashes(transactions.iter().map(|tx| tx.hash).collect())
         };
 
-        let signed_transactions = transactions
-            .into_iter()
-            .map(|tx| TransactionSigned::try_from(tx).map_err(|_| EthereumDataFormatError::TransactionConversion))
-            .collect::<Result<Vec<_>, _>>()?;
-
         let block = reth_primitives::Block {
-            body: reth_primitives::BlockBody {
-                transactions: signed_transactions,
+            body: BlockBody {
+                transactions: transactions.into_iter().map(TryFrom::try_from).collect::<Result<_, _>>()?,
                 withdrawals: Some(Default::default()),
                 ..Default::default()
             },
-            header: reth_primitives::Header::try_from(header.clone())
-                .map_err(|_| EthereumDataFormatError::Primitive)?,
+            header: header.clone().try_into()?,
         };
 
         // This is how Reth computes the block size.
@@ -325,10 +319,10 @@ mod tests {
             let block_transactions = BlockTransactions::Full(transactions.clone());
 
             let signed_transactions =
-                transactions.into_iter().map(TransactionSigned::try_from).collect::<Result<Vec<_>, _>>().unwrap();
+                transactions.into_iter().map(TryFrom::try_from).collect::<Result<_, _>>().unwrap();
 
             let block = reth_primitives::Block {
-                body: reth_primitives::BlockBody {
+                body: BlockBody {
                     transactions: signed_transactions,
                     withdrawals: Some(Default::default()),
                     ..Default::default()
