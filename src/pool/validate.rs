@@ -7,8 +7,8 @@ use crate::providers::eth_provider::{
 use alloy_rpc_types::BlockNumberOrTag;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{
-    BlockId, GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID,
-    EIP4844_TX_TYPE_ID, LEGACY_TX_TYPE_ID,
+    GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID,
+    LEGACY_TX_TYPE_ID,
 };
 use reth_revm::DatabaseRef;
 use reth_transaction_pool::{
@@ -314,7 +314,7 @@ where
         }
 
         // Fetch the account state for the Pending block
-        let db = EthDatabase::new(Arc::new(&self.provider), BlockId::from(BlockNumberOrTag::Pending));
+        let db = EthDatabase::new(Arc::new(&self.provider), BlockNumberOrTag::Pending.into());
         let account = match db.basic_ref(transaction.sender()) {
             Ok(account) => account.unwrap_or_default(),
             Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),

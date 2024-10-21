@@ -142,7 +142,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
             return Err(EthApiError::TransactionNotFound(transaction_hash));
         }
 
-        self.with_block_id(BlockId::Number(transaction.block_number.unwrap().into())).await
+        self.with_block_id(transaction.block_number.unwrap().into()).await
     }
 
     /// Fetches a block from the Ethereum provider given a block id
@@ -262,7 +262,7 @@ mod tests {
         // Create a TracerBuilder with the mock provider
         let builder = TracerBuilder::new(Arc::new(&mock_provider)).await.unwrap();
         // Attempt to use the builder with a specific block hash, expecting an error
-        let result = builder.block(BlockId::Hash(B256::repeat_byte(1).into())).await;
+        let result = builder.block(B256::repeat_byte(1).into()).await;
         // Check that the result is an UnknownBlock error
         assert!(matches!(result, Err(EthApiError::UnknownBlock(_))));
     }

@@ -682,20 +682,19 @@ async fn test_to_starknet_block_id(#[future] katana: Katana, _setup: ()) {
     let transaction = katana.most_recent_transaction().unwrap();
 
     // When: Convert block number identifier to StarkNet block identifier
-    let block_id = alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(transaction.block_number.unwrap()));
-    let pending_starknet_block_id = eth_provider.to_starknet_block_id(block_id).await.unwrap();
+    let pending_starknet_block_id =
+        eth_provider.to_starknet_block_id(Some(transaction.block_number.unwrap().into())).await.unwrap();
 
     // When: Convert block hash identifier to StarkNet block identifier
-    let some_block_hash = alloy_rpc_types::BlockId::Hash(RpcBlockHash::from(transaction.block_hash.unwrap()));
-    let some_starknet_block_hash = eth_provider.to_starknet_block_id(some_block_hash).await.unwrap();
+    let some_starknet_block_hash =
+        eth_provider.to_starknet_block_id(Some(transaction.block_hash.unwrap().into())).await.unwrap();
 
     // When: Convert block tag identifier to StarkNet block identifier
-    let pending_block_tag = alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Pending);
-    let pending_block_tag_starknet = eth_provider.to_starknet_block_id(pending_block_tag).await.unwrap();
+    let pending_block_tag_starknet =
+        eth_provider.to_starknet_block_id(Some(BlockNumberOrTag::Pending.into())).await.unwrap();
 
     // When: Attempt to convert an unknown block number identifier to StarkNet block identifier
-    let unknown_block_number = alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(u64::MAX));
-    let unknown_starknet_block_number = eth_provider.to_starknet_block_id(unknown_block_number).await;
+    let unknown_starknet_block_number = eth_provider.to_starknet_block_id(Some(u64::MAX.into())).await;
 
     // Then: Ensure the converted StarkNet block identifiers match the expected values
     assert_eq!(pending_starknet_block_id, starknet::core::types::BlockId::Number(transaction.block_number.unwrap()));
