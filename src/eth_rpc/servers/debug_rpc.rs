@@ -2,7 +2,7 @@ use crate::{eth_rpc::api::debug_api::DebugApiServer, providers::debug_provider::
 use alloy_primitives::{Bytes, B256};
 use alloy_rpc_types::{BlockId, BlockNumberOrTag, TransactionRequest};
 use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult};
-use jsonrpsee::core::{async_trait, RpcResult as Result};
+use jsonrpsee::core::{async_trait, RpcResult};
 
 /// The RPC module for the implementing Net api
 #[derive(Debug)]
@@ -26,13 +26,13 @@ where
 {
     /// Returns a RLP-encoded header.
     #[tracing::instrument(skip(self), err)]
-    async fn raw_header(&self, block_id: BlockId) -> Result<Bytes> {
+    async fn raw_header(&self, block_id: BlockId) -> RpcResult<Bytes> {
         self.debug_provider.raw_header(block_id).await.map_err(Into::into)
     }
 
     /// Returns a RLP-encoded block.
     #[tracing::instrument(skip(self), err)]
-    async fn raw_block(&self, block_id: BlockId) -> Result<Bytes> {
+    async fn raw_block(&self, block_id: BlockId) -> RpcResult<Bytes> {
         self.debug_provider.raw_block(block_id).await.map_err(Into::into)
     }
 
@@ -40,19 +40,19 @@ where
     ///
     /// If this is a pooled EIP-4844 transaction, the blob sidecar is included.
     #[tracing::instrument(skip(self), err)]
-    async fn raw_transaction(&self, hash: B256) -> Result<Option<Bytes>> {
+    async fn raw_transaction(&self, hash: B256) -> RpcResult<Option<Bytes>> {
         self.debug_provider.raw_transaction(hash).await.map_err(Into::into)
     }
 
     /// Returns an array of EIP-2718 binary-encoded transactions for the given [BlockId].
     #[tracing::instrument(skip(self), err)]
-    async fn raw_transactions(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
+    async fn raw_transactions(&self, block_id: BlockId) -> RpcResult<Vec<Bytes>> {
         self.debug_provider.raw_transactions(block_id).await.map_err(Into::into)
     }
 
     /// Returns an array of EIP-2718 binary-encoded receipts.
     #[tracing::instrument(skip(self), err)]
-    async fn raw_receipts(&self, block_id: BlockId) -> Result<Vec<Bytes>> {
+    async fn raw_receipts(&self, block_id: BlockId) -> RpcResult<Vec<Bytes>> {
         self.debug_provider.raw_receipts(block_id).await.map_err(Into::into)
     }
 
@@ -62,7 +62,7 @@ where
         &self,
         block_number: BlockNumberOrTag,
         opts: Option<GethDebugTracingOptions>,
-    ) -> Result<Vec<TraceResult>> {
+    ) -> RpcResult<Vec<TraceResult>> {
         self.debug_provider.trace_block_by_number(block_number, opts).await.map_err(Into::into)
     }
 
@@ -72,7 +72,7 @@ where
         &self,
         block_hash: B256,
         opts: Option<GethDebugTracingOptions>,
-    ) -> Result<Vec<TraceResult>> {
+    ) -> RpcResult<Vec<TraceResult>> {
         self.debug_provider.trace_block_by_hash(block_hash, opts).await.map_err(Into::into)
     }
 
@@ -82,7 +82,7 @@ where
         &self,
         transaction_hash: B256,
         opts: Option<GethDebugTracingOptions>,
-    ) -> Result<GethTrace> {
+    ) -> RpcResult<GethTrace> {
         self.debug_provider.trace_transaction(transaction_hash, opts).await.map_err(Into::into)
     }
 
@@ -93,7 +93,7 @@ where
         request: TransactionRequest,
         block_number: Option<BlockId>,
         opts: Option<GethDebugTracingCallOptions>,
-    ) -> Result<GethTrace> {
+    ) -> RpcResult<GethTrace> {
         self.debug_provider.trace_call(request, block_number, opts).await.map_err(Into::into)
     }
 }

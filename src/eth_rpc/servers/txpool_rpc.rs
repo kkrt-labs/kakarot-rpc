@@ -3,7 +3,7 @@ use alloy_primitives::Address;
 use alloy_rpc_types::Transaction;
 use alloy_rpc_types_txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus};
 use alloy_serde::WithOtherFields;
-use jsonrpsee::core::{async_trait, RpcResult as Result};
+use jsonrpsee::core::{async_trait, RpcResult};
 use tracing::instrument;
 
 /// The RPC module for implementing the Txpool api
@@ -32,7 +32,7 @@ where
     ///
     /// Handler for `txpool_status`
     #[instrument(skip(self))]
-    async fn txpool_status(&self) -> Result<TxpoolStatus> {
+    async fn txpool_status(&self) -> RpcResult<TxpoolStatus> {
         self.pool_provider.txpool_status().await.map_err(Into::into)
     }
 
@@ -43,7 +43,7 @@ where
     ///
     /// Handler for `txpool_inspect`
     #[instrument(skip(self))]
-    async fn txpool_inspect(&self) -> Result<TxpoolInspect> {
+    async fn txpool_inspect(&self) -> RpcResult<TxpoolInspect> {
         self.pool_provider.txpool_inspect().await.map_err(Into::into)
     }
 
@@ -53,7 +53,7 @@ where
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_contentFrom) for more details
     /// Handler for `txpool_contentFrom`
     #[instrument(skip(self))]
-    async fn txpool_content_from(&self, from: Address) -> Result<TxpoolContentFrom<WithOtherFields<Transaction>>> {
+    async fn txpool_content_from(&self, from: Address) -> RpcResult<TxpoolContentFrom<WithOtherFields<Transaction>>> {
         self.pool_provider.txpool_content_from(from).await.map_err(Into::into)
     }
 
@@ -63,7 +63,7 @@ where
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_content) for more details
     /// Handler for `txpool_content`
     #[instrument(skip(self))]
-    async fn txpool_content(&self) -> Result<TxpoolContent<WithOtherFields<Transaction>>> {
+    async fn txpool_content(&self) -> RpcResult<TxpoolContent<WithOtherFields<Transaction>>> {
         self.pool_provider.txpool_content().await.map_err(Into::into)
     }
 }
