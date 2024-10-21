@@ -232,7 +232,6 @@ impl<'a> Katana {
         &self.eoa
     }
 
-    #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
     }

@@ -9,7 +9,7 @@ import {
   Transaction,
   TransactionReceipt,
   TransactionWithReceipt,
-} from "../deps.ts";
+} from "../src/deps.ts";
 import {
   chainId,
   packCallData,
@@ -20,14 +20,14 @@ import {
   transactionEthFormat,
   typedTransactionToEthTx,
   unpackCallData,
-} from "./transaction.ts";
+} from "../src/types/transaction.ts";
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/assert_equals.ts";
 import { Common } from "https://esm.sh/v135/@ethereumjs/common@4.1.0/denonext/common.mjs";
-import { ExtendedJsonRpcTx } from "./interfaces.ts";
+import { ExtendedJsonRpcTx } from "../src/types/interfaces.ts";
 import {
   EXPECTED_TRANSFORM_DATA_FILE,
   TRANSACTIONS_DATA_FILE,
-} from "../testConstants.ts";
+} from "./constants.ts";
 
 // Transaction data including headers, events, and transactions
 const jsonTransactionsData = await Deno.readTextFile(

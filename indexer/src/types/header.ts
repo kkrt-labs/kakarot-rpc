@@ -5,13 +5,8 @@ import { padString } from "../utils/hex.ts";
 import { BlockHeader } from "../deps.ts";
 
 // Eth
-import {
-  bigIntToHex,
-  Bloom,
-  bytesToHex,
-  JsonRpcBlock as Block,
-  PrefixedHexString,
-} from "../deps.ts";
+import { bigIntToHex, Bloom, bytesToHex, PrefixedHexString } from "../deps.ts";
+import { JsonRpcBlock } from "./types.ts";
 import { KAKAROT } from "../provider.ts";
 
 // Constant
@@ -166,7 +161,3 @@ export async function toEthHeader({
     baseFeePerGas: padString(bigIntToHex(baseFee), 32),
   };
 }
-
-export type JsonRpcBlock = Omit<Block, "hash"> & {
-  hash: string | null;
-};

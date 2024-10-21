@@ -225,9 +225,9 @@ where
     #[instrument(skip_all, ret)]
     pub async fn to_starknet_block_id(
         &self,
-        block_id: impl Into<Option<BlockId>>,
+        block_id: Option<BlockId>,
     ) -> EthApiResult<starknet::core::types::BlockId> {
-        match block_id.into() {
+        match block_id {
             Some(BlockId::Hash(hash)) => Ok(EthBlockId::new(BlockId::Hash(hash)).try_into()?),
             Some(BlockId::Number(number_or_tag)) => {
                 // There is a need to separate the BlockNumberOrTag case into three subcases

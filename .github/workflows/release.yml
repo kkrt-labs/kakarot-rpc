@@ -70,7 +70,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
-          toolchain: 1.81.0
+          toolchain: 1.82.0
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true

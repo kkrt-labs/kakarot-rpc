@@ -244,7 +244,7 @@ impl KatanaGenesisBuilder<Loaded> {
 impl KatanaGenesisBuilder<Initialized> {
     /// Add an EOA to the genesis. The EOA is deployed to the address derived from the given private key.
     pub fn with_eoa(mut self, private_key: B256) -> Result<Self> {
-        let evm_address = self.evm_address(private_key)?;
+        let evm_address = Self::evm_address(private_key)?;
 
         let kakarot_address = self.cache_load("kakarot_address")?;
         let account_contract_class_hash = self.account_contract_class_hash()?;
@@ -295,7 +295,7 @@ impl KatanaGenesisBuilder<Initialized> {
     /// Fund the starknet address deployed for the evm address of the passed private key
     /// with the given amount of tokens.
     pub fn fund(mut self, pk: B256, amount: U256) -> Result<Self> {
-        let evm_address = self.evm_address(pk)?;
+        let evm_address = Self::evm_address(pk)?;
         let starknet_address = self.compute_starknet_address(evm_address)?;
         let eoa = self.contracts.get_mut(&starknet_address).ok_or_eyre("Missing EOA contract")?;
 
@@ -349,8 +349,7 @@ impl KatanaGenesisBuilder<Initialized> {
         )))
     }
 
-    #[allow(clippy::unused_self)]
-    fn evm_address(&self, pk: B256) -> Result<Felt> {
+    fn evm_address(pk: B256) -> Result<Felt> {
         Ok(Felt::from_bytes_be_slice(&PrivateKeySigner::from_bytes(&pk)?.address().into_array()))
     }
 

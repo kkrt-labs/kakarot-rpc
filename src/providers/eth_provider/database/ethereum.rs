@@ -1,4 +1,3 @@
-#![allow(clippy::blocks_in_conditions)]
 use super::{
     filter,
     filter::EthDatabaseFilterBuilder,

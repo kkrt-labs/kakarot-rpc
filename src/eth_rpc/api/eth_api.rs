@@ -5,7 +5,7 @@ use alloy_rpc_types::{
     TransactionReceipt, TransactionRequest, Work,
 };
 use alloy_serde::WithOtherFields;
-use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
+use jsonrpsee::{core::RpcResult, proc_macros::rpc};
 use reth_primitives::{BlockId, BlockNumberOrTag};
 
 /// Ethereum JSON-RPC API Trait
@@ -15,23 +15,23 @@ use reth_primitives::{BlockId, BlockNumberOrTag};
 #[async_trait]
 pub trait EthApi {
     #[method(name = "blockNumber")]
-    async fn block_number(&self) -> Result<U64>;
+    async fn block_number(&self) -> RpcResult<U64>;
 
     /// Returns an object with data about the sync status or false.
     #[method(name = "syncing")]
-    async fn syncing(&self) -> Result<SyncStatus>;
+    async fn syncing(&self) -> RpcResult<SyncStatus>;
 
     /// Returns the client coinbase address.
     #[method(name = "coinbase")]
-    async fn coinbase(&self) -> Result<Address>;
+    async fn coinbase(&self) -> RpcResult<Address>;
 
     /// Returns a list of addresses owned by client.
     #[method(name = "accounts")]
-    async fn accounts(&self) -> Result<Vec<Address>>;
+    async fn accounts(&self) -> RpcResult<Vec<Address>>;
 
     /// Returns the chain ID of the current network.
     #[method(name = "chainId")]
-    async fn chain_id(&self) -> Result<Option<U64>>;
+    async fn chain_id(&self) -> RpcResult<Option<U64>>;
 
     /// Returns information about a block by hash.
     #[method(name = "getBlockByHash")]
@@ -39,7 +39,7 @@ pub trait EthApi {
         &self,
         hash: B256,
         full: bool,
-    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
+    ) -> RpcResult<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
 
     /// Returns information about a block by number.
     #[method(name = "getBlockByNumber")]
@@ -47,23 +47,23 @@ pub trait EthApi {
         &self,
         number: BlockNumberOrTag,
         full: bool,
-    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
+    ) -> RpcResult<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
 
     /// Returns the number of transactions in a block from a block matching the given block hash.
     #[method(name = "getBlockTransactionCountByHash")]
-    async fn block_transaction_count_by_hash(&self, hash: B256) -> Result<Option<U256>>;
+    async fn block_transaction_count_by_hash(&self, hash: B256) -> RpcResult<Option<U256>>;
 
     /// Returns the number of transactions in a block matching the given block number.
     #[method(name = "getBlockTransactionCountByNumber")]
-    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> Result<Option<U256>>;
+    async fn block_transaction_count_by_number(&self, number: BlockNumberOrTag) -> RpcResult<Option<U256>>;
 
     /// Returns the number of uncles in a block from a block matching the given block hash.
     #[method(name = "getUncleCountByBlockHash")]
-    async fn block_uncles_count_by_block_hash(&self, hash: B256) -> Result<U256>;
+    async fn block_uncles_count_by_block_hash(&self, hash: B256) -> RpcResult<U256>;
 
     /// Returns the number of uncles in a block with given block number.
     #[method(name = "getUncleCountByBlockNumber")]
-    async fn block_uncles_count_by_block_number(&self, number: BlockNumberOrTag) -> Result<U256>;
+    async fn block_uncles_count_by_block_number(&self, number: BlockNumberOrTag) -> RpcResult<U256>;
 
     /// Returns an uncle block of the given block and index.
     #[method(name = "getUncleByBlockHashAndIndex")]
@@ -71,7 +71,7 @@ pub trait EthApi {
         &self,
         hash: B256,
         index: Index,
-    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
+    ) -> RpcResult<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
 
     /// Returns an uncle block of the given block and index.
     #[method(name = "getUncleByBlockNumberAndIndex")]
@@ -79,11 +79,11 @@ pub trait EthApi {
         &self,
         number: BlockNumberOrTag,
         index: Index,
-    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
+    ) -> RpcResult<Option<WithOtherFields<Block<WithOtherFields<EthTransaction>>>>>;
 
     /// Returns the information about a transaction requested by transaction hash.
     #[method(name = "getTransactionByHash")]
-    async fn transaction_by_hash(&self, hash: B256) -> Result<Option<WithOtherFields<EthTransaction>>>;
+    async fn transaction_by_hash(&self, hash: B256) -> RpcResult<Option<WithOtherFields<EthTransaction>>>;
 
     /// Returns information about a transaction by block hash and transaction index position.
     #[method(name = "getTransactionByBlockHashAndIndex")]
@@ -91,7 +91,7 @@ pub trait EthApi {
         &self,
         hash: B256,
         index: Index,
-    ) -> Result<Option<WithOtherFields<EthTransaction>>>;
+    ) -> RpcResult<Option<WithOtherFields<EthTransaction>>>;
 
     /// Returns information about a transaction by block number and transaction index position.
     #[method(name = "getTransactionByBlockNumberAndIndex")]
@@ -99,31 +99,31 @@ pub trait EthApi {
         &self,
         number: BlockNumberOrTag,
         index: Index,
-    ) -> Result<Option<WithOtherFields<EthTransaction>>>;
+    ) -> RpcResult<Option<WithOtherFields<EthTransaction>>>;
 
     /// Returns the receipt of a transaction by transaction hash.
     #[method(name = "getTransactionReceipt")]
-    async fn transaction_receipt(&self, hash: B256) -> Result<Option<WithOtherFields<TransactionReceipt>>>;
+    async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<WithOtherFields<TransactionReceipt>>>;
 
     /// Returns the balance of the account of given address.
     #[method(name = "getBalance")]
-    async fn balance(&self, address: Address, block_number: Option<BlockId>) -> Result<U256>;
+    async fn balance(&self, address: Address, block_number: Option<BlockId>) -> RpcResult<U256>;
 
     /// Returns the value from a storage position at a given address
     #[method(name = "getStorageAt")]
-    async fn storage_at(&self, address: Address, index: JsonStorageKey, block_id: Option<BlockId>) -> Result<B256>;
+    async fn storage_at(&self, address: Address, index: JsonStorageKey, block_id: Option<BlockId>) -> RpcResult<B256>;
 
     /// Returns the number of transactions sent from an address at given block number.
     #[method(name = "getTransactionCount")]
-    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> Result<U256>;
+    async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> RpcResult<U256>;
 
     /// Returns code at a given address at given block number.
     #[method(name = "getCode")]
-    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> Result<Bytes>;
+    async fn get_code(&self, address: Address, block_id: Option<BlockId>) -> RpcResult<Bytes>;
 
     /// Returns the logs corresponding to the given filter object.
     #[method(name = "getLogs")]
-    async fn get_logs(&self, filter: Filter) -> Result<FilterChanges>;
+    async fn get_logs(&self, filter: Filter) -> RpcResult<FilterChanges>;
 
     /// Executes a new message call immediately without creating a transaction on the block chain.
     #[method(name = "call")]
@@ -133,7 +133,7 @@ pub trait EthApi {
         block_id: Option<BlockId>,
         state_overrides: Option<StateOverride>,
         block_overrides: Option<Box<BlockOverrides>>,
-    ) -> Result<Bytes>;
+    ) -> RpcResult<Bytes>;
 
     /// Generates an access list for a transaction.
     ///
@@ -154,16 +154,16 @@ pub trait EthApi {
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
-    ) -> Result<AccessListResult>;
+    ) -> RpcResult<AccessListResult>;
 
     /// Generates and returns an estimate of how much gas is necessary to allow the transaction to
     /// complete.
     #[method(name = "estimateGas")]
-    async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> Result<U256>;
+    async fn estimate_gas(&self, request: TransactionRequest, block_id: Option<BlockId>) -> RpcResult<U256>;
 
     /// Returns the current price per gas in wei.
     #[method(name = "gasPrice")]
-    async fn gas_price(&self) -> Result<U256>;
+    async fn gas_price(&self) -> RpcResult<U256>;
 
     /// Returns the Transaction fee history
     ///
@@ -178,59 +178,59 @@ pub trait EthApi {
         block_count: U64,
         newest_block: BlockNumberOrTag,
         reward_percentiles: Option<Vec<f64>>,
-    ) -> Result<FeeHistory>;
+    ) -> RpcResult<FeeHistory>;
 
     /// Returns the current maxPriorityFeePerGas per gas in wei.
     #[method(name = "maxPriorityFeePerGas")]
-    async fn max_priority_fee_per_gas(&self) -> Result<U256>;
+    async fn max_priority_fee_per_gas(&self) -> RpcResult<U256>;
 
     /// Introduced in EIP-4844, returns the current blob base fee in wei.
     #[method(name = "blobBaseFee")]
-    async fn blob_base_fee(&self) -> Result<U256>;
+    async fn blob_base_fee(&self) -> RpcResult<U256>;
 
     /// Returns whether the client is actively mining new blocks.
     #[method(name = "mining")]
-    async fn mining(&self) -> Result<bool>;
+    async fn mining(&self) -> RpcResult<bool>;
 
     /// Returns the number of hashes per second that the node is mining with.
     #[method(name = "hashrate")]
-    async fn hashrate(&self) -> Result<U256>;
+    async fn hashrate(&self) -> RpcResult<U256>;
 
     /// Returns the hash of the current block, the seedHash, and the boundary condition to be met
     /// (“target”)
     #[method(name = "getWork")]
-    async fn get_work(&self) -> Result<Work>;
+    async fn get_work(&self) -> RpcResult<Work>;
 
     /// Used for submitting mining hashrate.
     #[method(name = "submitHashrate")]
-    async fn submit_hashrate(&self, hashrate: U256, id: B256) -> Result<bool>;
+    async fn submit_hashrate(&self, hashrate: U256, id: B256) -> RpcResult<bool>;
 
     /// Used for submitting a proof-of-work solution.
     #[method(name = "submitWork")]
-    async fn submit_work(&self, nonce: B64, pow_hash: B256, mix_digest: B256) -> Result<bool>;
+    async fn submit_work(&self, nonce: B64, pow_hash: B256, mix_digest: B256) -> RpcResult<bool>;
 
     /// Sends transaction; will block waiting for signer to return the
     /// transaction hash.
     #[method(name = "sendTransaction")]
-    async fn send_transaction(&self, request: TransactionRequest) -> Result<B256>;
+    async fn send_transaction(&self, request: TransactionRequest) -> RpcResult<B256>;
 
     /// Sends signed transaction, returning its hash.
     #[method(name = "sendRawTransaction")]
-    async fn send_raw_transaction(&self, bytes: Bytes) -> Result<B256>;
+    async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256>;
 
     /// Returns an Ethereum specific signature with: sign(keccak256("\x19Ethereum Signed Message:\n"
     /// + len(message) + message))).
     #[method(name = "sign")]
-    async fn sign(&self, address: Address, message: Bytes) -> Result<Bytes>;
+    async fn sign(&self, address: Address, message: Bytes) -> RpcResult<Bytes>;
 
     /// Signs a transaction that can be submitted to the network at a later time using with
     /// `sendRawTransaction.`
     #[method(name = "signTransaction")]
-    async fn sign_transaction(&self, transaction: TransactionRequest) -> Result<Bytes>;
+    async fn sign_transaction(&self, transaction: TransactionRequest) -> RpcResult<Bytes>;
 
     /// Signs data via [EIP-712](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md).
     #[method(name = "signTypedData")]
-    async fn sign_typed_data(&self, address: Address, data: serde_json::Value) -> Result<Bytes>;
+    async fn sign_typed_data(&self, address: Address, data: serde_json::Value) -> RpcResult<Bytes>;
 
     /// Returns the account and storage values of the specified account including the Merkle-proof.
     /// This call can be used to verify that the data you are pulling from is not tampered with.
@@ -240,36 +240,36 @@ pub trait EthApi {
         address: Address,
         keys: Vec<B256>,
         block_id: Option<BlockId>,
-    ) -> Result<EIP1186AccountProofResponse>;
+    ) -> RpcResult<EIP1186AccountProofResponse>;
 
     /// Creates a filter object, based on filter options, to notify when the state changes (logs).
     #[method(name = "newFilter")]
-    async fn new_filter(&self, filter: Filter) -> Result<U64>;
+    async fn new_filter(&self, filter: Filter) -> RpcResult<U64>;
 
     /// Creates a filter in the node, to notify when a new block arrives.
     #[method(name = "newBlockFilter")]
-    async fn new_block_filter(&self) -> Result<U64>;
+    async fn new_block_filter(&self) -> RpcResult<U64>;
 
     /// Creates a filter in the node, to notify when new pending transactions arrive.
     #[method(name = "newPendingTransactionFilter")]
-    async fn new_pending_transaction_filter(&self) -> Result<U64>;
+    async fn new_pending_transaction_filter(&self) -> RpcResult<U64>;
 
     /// Destroys a filter based on filter ID
     #[method(name = "uninstallFilter")]
-    async fn uninstall_filter(&self, id: U64) -> Result<bool>;
+    async fn uninstall_filter(&self, id: U64) -> RpcResult<bool>;
 
     /// Returns a list of all logs based on filter ID since the last log retrieval
     #[method(name = "getFilterChanges")]
-    async fn get_filter_changes(&self, id: U64) -> Result<FilterChanges>;
+    async fn get_filter_changes(&self, id: U64) -> RpcResult<FilterChanges>;
 
     /// Returns a list of all logs based on filter ID
     #[method(name = "getFilterLogs")]
-    async fn get_filter_logs(&self, id: U64) -> Result<FilterChanges>;
+    async fn get_filter_logs(&self, id: U64) -> RpcResult<FilterChanges>;
 
     /// Returns all transaction receipts for a given block.
     #[method(name = "getBlockReceipts")]
     async fn block_receipts(
         &self,
         block_id: Option<BlockId>,
-    ) -> Result<Option<Vec<WithOtherFields<TransactionReceipt>>>>;
+    ) -> RpcResult<Option<Vec<WithOtherFields<TransactionReceipt>>>>;
 }

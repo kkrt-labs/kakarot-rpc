@@ -12,7 +12,7 @@ use auto_impl::auto_impl;
 use eyre::Result;
 use futures::future::join_all;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag};
+use reth_primitives::BlockNumberOrTag;
 
 #[async_trait]
 #[auto_impl(Arc, &)]
@@ -40,7 +40,7 @@ impl<P: EthereumProvider> AlchemyDataProvider<P> {
 impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDataProvider<P> {
     async fn token_balances(&self, address: Address, contract_addresses: Vec<Address>) -> EthApiResult<TokenBalances> {
         // Set the block ID to the latest block
-        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
+        let block_id = BlockNumberOrTag::Latest.into();
 
         Ok(TokenBalances {
             address,
@@ -60,7 +60,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDat
     /// Retrieves the metadata for a given token.
     async fn token_metadata(&self, contract_address: Address) -> EthApiResult<TokenMetadata> {
         // Set the block ID to the latest block
-        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
+        let block_id = BlockNumberOrTag::Latest.into();
         // Create a new instance of `EthereumErc20`
         let token = EthereumErc20::new(contract_address, &self.eth_provider);
 
@@ -75,7 +75,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> AlchemyProvider for AlchemyDat
     /// Retrieves the allowance of a given owner for a spender.
     async fn token_allowance(&self, contract_address: Address, owner: Address, spender: Address) -> EthApiResult<U256> {
         // Set the block ID to the latest block
-        let block_id = BlockId::Number(BlockNumberOrTag::Latest);
+        let block_id = BlockNumberOrTag::Latest.into();
         // Create a new instance of `EthereumErc20`
         let token = EthereumErc20::new(contract_address, &self.eth_provider);
         // Retrieve the allowance for the given owner and spender
