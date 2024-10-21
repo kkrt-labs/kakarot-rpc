@@ -85,8 +85,6 @@ pub struct Katana {
     pub sequencer: TestSequencer,
     /// The Kakarot EOA (Externally Owned Account) instance.
     pub eoa: KakarotEOA<Arc<JsonRpcClient<HttpTransport>>>,
-    /// The Ethereum client which contains the mempool and the eth provider
-    pub eth_client: EthClient<Arc<JsonRpcClient<HttpTransport>>>,
     /// Stored headers to insert into the headers collection.
     pub headers: Vec<StoredHeader>,
     /// Stored transactions to insert into the transactions collection.
@@ -154,13 +152,12 @@ impl<'a> Katana {
         let eth_client = EthClient::new(starknet_provider, Default::default(), database);
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
-        let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
+        let eoa = KakarotEOA::new(pk, eth_client, sequencer.account());
 
         // Return a new instance of Katana with initialized fields.
         Self {
             sequencer,
             eoa,
-            eth_client,
             container: Some(mongo_fuzzer.container),
             transactions: mongo_fuzzer.transactions,
             receipts: mongo_fuzzer.receipts,
@@ -201,13 +198,12 @@ impl<'a> Katana {
         let eth_client = EthClient::new(starknet_provider, Default::default(), database);
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
-        let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
+        let eoa = KakarotEOA::new(pk, eth_client, sequencer.account());
 
         // Return a new instance of Katana with initialized fields.
         Self {
             sequencer,
             eoa,
-            eth_client,
             container: Some(mongo_fuzzer.container),
             transactions: mongo_fuzzer.transactions,
             receipts: mongo_fuzzer.receipts,
@@ -217,15 +213,15 @@ impl<'a> Katana {
     }
 
     pub fn eth_client(&self) -> EthClient<Arc<JsonRpcClient<HttpTransport>>> {
-        self.eth_client.clone()
+        self.eoa.eth_client.clone()
     }
 
     pub fn eth_provider(&self) -> Arc<EthDataProvider<Arc<JsonRpcClient<HttpTransport>>>> {
         Arc::new(self.eoa.eth_client.eth_provider().clone())
     }
 
-    pub fn starknet_provider(&self) -> Arc<JsonRpcClient<HttpTransport>> {
-        self.eoa.eth_client.eth_provider().starknet_provider_inner().clone()
+    pub fn starknet_provider(&self) -> Arc<Arc<JsonRpcClient<HttpTransport>>> {
+        self.eoa.eth_client.eth_provider().starknet_provider_inner()
     }
 
     pub const fn eoa(&self) -> &KakarotEOA<Arc<JsonRpcClient<HttpTransport>>> {
