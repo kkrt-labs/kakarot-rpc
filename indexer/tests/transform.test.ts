@@ -2,16 +2,16 @@ import {
   assertEquals,
   assertExists,
 } from "https://deno.land/std@0.213.0/assert/mod.ts";
-import transform from "./main.ts";
-import { toEthHeader } from "./types/header.ts";
-import { Bloom } from "./deps.ts";
-import { padString, toHexString } from "./utils/hex.ts";
+import transform from "../src/main.ts";
+import { toEthHeader } from "../src/types/header.ts";
+import { Bloom } from "../src/deps.ts";
+import { padString, toHexString } from "../src/utils/hex.ts";
 import {
   toTypedEthTx,
   typedTransactionToEthTx,
 } from "../src/types/transaction.ts";
-import { JsonRpcLog, toEthLog } from "./types/log.ts";
-import { toEthReceipt } from "./types/receipt.ts";
+import { toEthLog } from "../src/types/log.ts";
+import { toEthReceipt } from "../src/types/receipt.ts";
 import {
   BlockHeader,
   Event,
@@ -22,12 +22,12 @@ import {
   TransactionReceipt,
   TransactionWithReceipt,
   TypedTransaction,
-} from "./deps.ts";
-import { JsonRpcReceipt } from "./types/receipt.ts";
+} from "../src/deps.ts";
+import { JsonRpcLog, JsonRpcReceipt } from "../src/types/types.ts";
 import {
   EXPECTED_TRANSFORM_DATA_FILE,
   TRANSACTIONS_DATA_FILE,
-} from "./testConstants.ts";
+} from "./constants.ts";
 
 // Transaction data including headers, events, and transactions
 const jsonTransactionsData = await Deno.readTextFile(
