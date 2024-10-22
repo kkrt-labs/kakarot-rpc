@@ -52,7 +52,6 @@ FROM mongo:6.0.8 as mongo
 FROM python:3.10.13 as compiler
 ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin:/root/.cargo/bin"
 
-
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache curl -L https://foundry.paradigm.xyz -o foundry.sh \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
@@ -87,7 +86,8 @@ RUN --mount=type=cache,target=/root/.cache \
     source "$HOME/.asdf/asdf.sh" \
     && chmod +x ./scripts/extract_abi.sh \
     && git submodule update --init --recursive \
-    && cd lib/kakarot && make setup && make build \
+	&& cp .env.example .env \
+    && cd lib/kakarot && uv sync --all-extras --dev && make build \
     && mv build/ssj/contracts_Cairo1Helpers.contract_class.json build/cairo1_helpers.json && rm -fr build/ssj && cd ../.. \
     && ./scripts/extract_abi.sh
 
@@ -103,7 +103,6 @@ COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
-COPY --from=planner /app/recipe.json recipe.json
 
 # Build application
 COPY . .
@@ -119,6 +118,12 @@ COPY . .
 
 COPY --from=compiler /usr/src/compiler/.kakarot/artifacts /usr/src/rpc/.kakarot/artifacts
 
+# Builds dependencies
+COPY --from=planner /app/recipe.json recipe.json
+RUN cargo chef cook --release --features hive --recipe-path recipe.json
+
+# Build application
+COPY . .
 RUN --mount=type=cache,target=/root/.cache/cargo cargo build \
     --features hive --release --target-dir /usr/src/rpc/target && \
     cargo build \
