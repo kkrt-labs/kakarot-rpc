@@ -13,7 +13,6 @@ pub struct EthCacheDatabase<P: EthereumProvider + Send + Sync>(pub CacheDB<EthDa
 
 /// Ethereum database type.
 #[derive(Debug, Clone)]
-#[allow(clippy::redundant_pub_crate)]
 pub struct EthDatabase<P: EthereumProvider + Send + Sync> {
     /// The Ethereum provider.
     provider: P,

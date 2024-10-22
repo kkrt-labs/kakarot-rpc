@@ -6,8 +6,8 @@ import {
   ethValidationFailed,
   isKakarotTransaction,
   isRevertedWithOutOfResources,
-} from "./filter.ts";
-import { Event, Transaction, TransactionReceipt } from "../deps.ts";
+} from "../src/utils/filter.ts";
+import { Event, Transaction, TransactionReceipt } from "../src/deps.ts";
 
 const event = (data: `0x${string}`[]) => {
   return {
