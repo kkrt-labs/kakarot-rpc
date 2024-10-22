@@ -4,6 +4,9 @@ import { padBigint } from "../utils/hex.ts";
 // Constants
 import { IGNORED_KEYS, KAKAROT_ADDRESS, NULL_HASH } from "../constants.ts";
 
+// Types
+import { JsonRpcLog } from "./types.ts";
+
 // Starknet
 import { Event, hash } from "../deps.ts";
 

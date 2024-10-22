@@ -1,7 +1,8 @@
 import { assertEquals } from "https://deno.land/std@0.213.0/assert/mod.ts";
-import { fromJsonRpcLog, JsonRpcLog, toEthLog } from "./log.ts";
-import { bigIntToHex, Event, JsonRpcTx } from "../deps.ts";
-import { IGNORED_KEYS, KAKAROT_ADDRESS } from "../constants.ts";
+import { fromJsonRpcLog, toEthLog } from "../src/types/log.ts";
+import { JsonRpcLog } from "../src/types/types.ts";
+import { bigIntToHex, Event, JsonRpcTx } from "../src/deps.ts";
+import { IGNORED_KEYS, KAKAROT_ADDRESS } from "../src/constants.ts";
 
 // Mock for hexToBytes
 const mockHexToBytes = (hex: string): Uint8Array => {
