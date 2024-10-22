@@ -1,7 +1,23 @@
 ---
-name: staging
+name: e2e pipeline
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to use
+        required: true
+        type: choice
+        options:
+          - sepolia
+          - staging
+      action:
+        description: Action to perform on the selected environment
+        required: true
+        type: choice
+        options:
+          - deploy
+          - test
 
 jobs:
   stage:
@@ -34,12 +50,12 @@ jobs:
             ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
         run: |
           cd scripts
-          sh upgrade.sh deploy test --staging
+          sh e2e_pipeline.sh ${{ github.event.inputs.action }} --${{ github.event.inputs.environment }}
       - name: Check diff in deployments
         run: |
           cd lib/kakarot
           set +e
-          git diff --no-patch --exit-code -- deployments/kakarot-staging/
+          git diff --no-patch --exit-code -- deployments/
           has_diff=$?
           set -e
           echo "has_diff=$has_diff" >> $GITHUB_ENV
