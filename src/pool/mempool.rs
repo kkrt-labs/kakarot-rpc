@@ -24,7 +24,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, time::Instant};
 use tracing::instrument;
 
 /// A type alias for the Kakarot Transaction Validator.
@@ -268,13 +268,27 @@ where
 
 /// Maintains the transaction pool by periodically polling the database in order to
 /// fetch the latest block and mark the block's transactions as mined by the node.
-pub fn maintain_transaction_pool<SP>(eth_client: Arc<EthClient<SP>>)
+pub fn maintain_transaction_pool<SP>(eth_client: Arc<EthClient<SP>>, prune_duration: Duration)
 where
     SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
 {
     tokio::spawn(async move {
         let mut block_number = 0u64;
+
+        // Mapping to store the transactions in the mempool with a timestamp to potentially prune them
+        let mut mempool_transactions = HashMap::new();
+
         loop {
+            // Adding the transactions to the mempool mapping with a timestamp
+            for tx in eth_client
+                .mempool()
+                .queued_transactions()
+                .into_iter()
+                .chain(eth_client.mempool().pending_transactions())
+            {
+                mempool_transactions.entry(*tx.hash()).or_insert_with(Instant::now);
+            }
+
             // Fetch the latest block number
             let Ok(current_block_number) = eth_client.eth_provider().block_number().await else {
                 tracing::error!(target: "maintain_transaction_pool", "failed to fetch current block number");
@@ -305,7 +319,7 @@ where
                                     chain_spec.base_fee_params_at_timestamp(latest_header.timestamp + 12),
                                 )
                                 .unwrap_or_default(),
-                            pending_blob_fee: latest_header.next_block_blob_fee(),
+                            pending_blob_fee: None,
                         };
                         eth_client.mempool().set_block_info(info);
 
@@ -324,7 +338,31 @@ where
                         }
 
                         let sealed_block = latest_block.seal(hash);
-                        let mined_transactions = sealed_block.body.transactions.iter().map(|tx| tx.hash).collect();
+                        let mut mined_transactions: Vec<_> =
+                            sealed_block.body.transactions.iter().map(|tx| tx.hash).collect();
+
+                        // Prune mined transactions from the mempool mapping
+                        for tx_hash in &mined_transactions {
+                            mempool_transactions.remove(tx_hash);
+                        }
+
+                        // Prune transactions that have been in the mempool for more than 5 minutes
+                        let now = Instant::now();
+
+                        for (tx_hash, timestamp) in &mempool_transactions.clone() {
+                            // - If the transaction has been in the mempool for more than 5 minutes
+                            // - And the transaction is in the mempool right now
+                            if now.duration_since(*timestamp) > prune_duration && eth_client.mempool().contains(tx_hash)
+                            {
+                                tracing::warn!("Transaction {} in mempool for more than 5 minutes. Pruning.", tx_hash);
+
+                                // Add the transaction to the mined transactions so that it can be pruned
+                                mined_transactions.push(*tx_hash);
+
+                                // Remove the transaction from the mempool mapping
+                                mempool_transactions.remove(tx_hash);
+                            }
+                        }
 
                         // Canonical update
                         let update = CanonicalStateUpdate {

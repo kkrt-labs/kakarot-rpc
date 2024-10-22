@@ -1,5 +1,3 @@
-use std::{env::var, str::FromStr, sync::Arc};
-
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
@@ -16,6 +14,7 @@ use starknet::{
     core::types::Felt,
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
+use std::{env::var, str::FromStr, sync::Arc, time::Duration};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
@@ -57,8 +56,11 @@ async fn main() -> Result<()> {
         var("RELAYERS_ADDRESSES")?.split(',').filter_map(|addr| Felt::from_str(addr).ok()).collect::<Vec<_>>();
     AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?.start();
 
+    // Transactions should be pruned after 5 minutes in the mempool
+    let prune_duration = Duration::from_secs(300);
+
     // Start the maintenance of the mempool
-    maintain_transaction_pool(Arc::clone(&eth_client));
+    maintain_transaction_pool(Arc::clone(&eth_client), prune_duration);
 
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;
