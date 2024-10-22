@@ -8,7 +8,8 @@ use crate::providers::eth_provider::{
     },
 };
 use alloy_primitives::{B256, U256};
-use alloy_rpc_types::Transaction;
+use alloy_rpc_types::{Transaction, TransactionReceipt};
+use alloy_serde::WithOtherFields;
 use arbitrary::Arbitrary;
 use mongodb::{
     bson::{self, doc, Document},
@@ -187,6 +188,8 @@ impl MongoFuzzer {
             self.receipts.push(receipt);
         }
 
+        self.add_random_transaction_with_other_field()?;
+
         // At the end of our transaction list, for our tests, we need to add a block header with a base fee.
         let mut header_with_base_fee = StoredHeader::arbitrary(&mut arbitrary::Unstructured::new(
             &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
@@ -197,6 +200,35 @@ impl MongoFuzzer {
         header_with_base_fee.header.base_fee_per_gas = Some(0);
 
         self.headers.push(header_with_base_fee);
+
+        Ok(())
+    }
+
+    pub fn add_random_transaction_with_other_field(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        // Build a transaction using the random byte size.
+        let transaction = StoredTransaction::arbitrary(&mut arbitrary::Unstructured::new(
+            &(0..self.rnd_bytes_size).map(|_| rand::random::<u8>()).collect::<Vec<_>>(),
+        ))?;
+
+        // Generate a receipt for the transaction.
+        let receipt = self.generate_transaction_receipt(&transaction.tx);
+        // add an isRunOutOfRessources field to the receipt
+        let mut receipt_with_other_fields: WithOtherFields<TransactionReceipt> = receipt.into();
+        receipt_with_other_fields.other.insert("isRunOutOfRessources".to_string(), serde_json::Value::Bool(true));
+
+        let stored_receipt = StoredTransactionReceipt { receipt: receipt_with_other_fields };
+
+        // Convert the receipt into a vector of logs and append them to the existing logs collection.
+        self.logs.append(&mut Vec::from(stored_receipt.clone()));
+
+        // Generate a header for the transaction and add it to the headers collection.
+        self.headers.push(self.generate_transaction_header(&transaction.tx));
+
+        // Add the transaction to the transactions collection.
+        self.transactions.push(transaction);
+
+        // Add the receipt to the receipts collection.
+        self.receipts.push(stored_receipt);
 
         Ok(())
     }

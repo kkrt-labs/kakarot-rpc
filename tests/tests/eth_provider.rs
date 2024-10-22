@@ -1420,3 +1420,17 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         transaction.tx
     );
 }
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_with_other_fields(#[future] katana: Katana, _setup: ()) {
+    let eth_provider = katana.eth_provider();
+    let run_out_of_resources_receipt = katana.most_recent_run_out_of_resources_receipt().unwrap();
+
+    let receipt_from_db =
+        eth_provider.transaction_receipt(run_out_of_resources_receipt.transaction_hash).await.unwrap();
+    // Verify the receipt
+    assert_eq!(run_out_of_resources_receipt.other.get("isRunOutOfRessources"), Some(&serde_json::Value::Bool(true)));
+    assert_eq!(receipt_from_db.unwrap(), run_out_of_resources_receipt);
+}
