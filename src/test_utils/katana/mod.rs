@@ -37,7 +37,7 @@ use {
     super::mongo::MongoFuzzer,
     alloy_primitives::B256,
     alloy_rpc_types::Header,
-    alloy_rpc_types::Transaction,
+    alloy_rpc_types::{Transaction, TransactionReceipt},
     alloy_serde::WithOtherFields,
     katana_node::config::{
         rpc::{ApiKind, RpcConfig},
@@ -344,6 +344,20 @@ impl<'a> Katana {
             .iter()
             .max_by_key(|stored_transaction| stored_transaction.block_number.unwrap_or_default())
             .map(Into::into)
+    }
+
+    pub fn most_recent_run_out_of_resources_receipt(&self) -> Option<WithOtherFields<TransactionReceipt>> {
+        self.receipts
+            .iter()
+            .filter_map(|stored_receipt| {
+                let receipt = WithOtherFields::from(stored_receipt.clone());
+                if receipt.other.contains_key("isRunOutOfRessources") {
+                    Some(receipt)
+                } else {
+                    None
+                }
+            })
+            .max_by_key(|receipt| receipt.block_number.unwrap_or_default())
     }
 
     /// Retrieves the stored header by hash
