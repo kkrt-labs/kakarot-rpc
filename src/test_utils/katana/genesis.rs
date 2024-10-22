@@ -8,6 +8,7 @@ use crate::{
         KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
     },
 };
+use alloy_primitives::{B256, U256};
 use alloy_signer_local::PrivateKeySigner;
 use eyre::{eyre, OptionExt, Result};
 use katana_primitives::{
@@ -22,7 +23,6 @@ use katana_primitives::{
     },
 };
 use rayon::prelude::*;
-use reth_primitives::{B256, U256};
 use serde::Serialize;
 use serde_json::Value;
 use serde_with::serde_as;
@@ -34,7 +34,14 @@ use starknet::core::{
     },
     utils::{get_contract_address, get_storage_var_address, get_udc_deployed_address, UdcUniqueness},
 };
-use std::{collections::HashMap, fs, marker::PhantomData, path::PathBuf, str::FromStr, sync::LazyLock};
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs,
+    marker::PhantomData,
+    path::PathBuf,
+    str::FromStr,
+    sync::LazyLock,
+};
 use walkdir::WalkDir;
 
 pub static SALT: LazyLock<Felt> = LazyLock::new(|| Felt::from_bytes_be(&[0u8; 32]));
@@ -61,9 +68,9 @@ pub struct KatanaGenesisBuilder<T = Uninitialized> {
     coinbase: Felt,
     classes: Vec<GenesisClassJson>,
     class_hashes: HashMap<String, Felt>,
-    contracts: HashMap<ContractAddress, GenesisContractJson>,
-    accounts: HashMap<ContractAddress, GenesisAccountJson>,
-    fee_token_storage: HashMap<StorageKey, StorageValue>,
+    contracts: BTreeMap<ContractAddress, GenesisContractJson>,
+    accounts: BTreeMap<ContractAddress, GenesisAccountJson>,
+    fee_token_storage: BTreeMap<StorageKey, StorageValue>,
     cache: HashMap<String, Felt>,
     status: PhantomData<T>,
 }
@@ -143,13 +150,21 @@ impl KatanaGenesisBuilder<Uninitialized> {
         let entries = WalkDir::new(path).into_iter().filter(|e| e.is_ok() && e.as_ref().unwrap().file_type().is_file());
         let classes = entries
             .par_bridge()
-            .map(|entry| {
+            .filter_map(|entry| {
                 let path = entry.unwrap().path().to_path_buf();
                 let artifact = fs::read_to_string(&path).expect("Failed to read artifact");
                 let artifact = serde_json::from_str(&artifact).expect("Failed to parse artifact");
-                let class_hash =
-                    compute_class_hash(&artifact).inspect_err(|e| eprint!("Failed to compute class hash: {e:?}")).ok();
-                (path, GenesisClassJson { class: PathOrFullArtifact::Artifact(artifact), class_hash, name: None })
+                let class_hash = compute_class_hash(&artifact)
+                    .inspect_err(|e| eprintln!("Failed to compute class hash: {e:?} for {path:?}"))
+                    .ok()?;
+                Some((
+                    path,
+                    GenesisClassJson {
+                        class: PathOrFullArtifact::Artifact(artifact),
+                        class_hash: Some(class_hash),
+                        name: None,
+                    },
+                ))
             })
             .collect::<Vec<_>>();
 
@@ -229,14 +244,14 @@ impl KatanaGenesisBuilder<Loaded> {
 impl KatanaGenesisBuilder<Initialized> {
     /// Add an EOA to the genesis. The EOA is deployed to the address derived from the given private key.
     pub fn with_eoa(mut self, private_key: B256) -> Result<Self> {
-        let evm_address = self.evm_address(private_key)?;
+        let evm_address = Self::evm_address(private_key)?;
 
         let kakarot_address = self.cache_load("kakarot_address")?;
         let account_contract_class_hash = self.account_contract_class_hash()?;
         let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
 
         // Set the eoa storage
-        let mut eoa_storage: HashMap<StorageKey, Felt> = [
+        let mut eoa_storage: BTreeMap<StorageKey, Felt> = [
             (storage_addr(ACCOUNT_EVM_ADDRESS)?, evm_address),
             (storage_addr(OWNABLE_OWNER)?, kakarot_address),
             (storage_addr(ACCOUNT_IMPLEMENTATION)?, account_contract_class_hash),
@@ -271,7 +286,7 @@ impl KatanaGenesisBuilder<Initialized> {
         let kakarot_contract = self.contracts.get_mut(&kakarot_address).ok_or_eyre("Kakarot contract missing")?;
         kakarot_contract
             .storage
-            .get_or_insert_with(HashMap::new)
+            .get_or_insert_with(BTreeMap::new)
             .extend([(get_storage_var_address(KAKAROT_EVM_TO_STARKNET_ADDRESS, &[evm_address])?, starknet_address.0)]);
 
         Ok(self)
@@ -280,7 +295,7 @@ impl KatanaGenesisBuilder<Initialized> {
     /// Fund the starknet address deployed for the evm address of the passed private key
     /// with the given amount of tokens.
     pub fn fund(mut self, pk: B256, amount: U256) -> Result<Self> {
-        let evm_address = self.evm_address(pk)?;
+        let evm_address = Self::evm_address(pk)?;
         let starknet_address = self.compute_starknet_address(evm_address)?;
         let eoa = self.contracts.get_mut(&starknet_address).ok_or_eyre("Missing EOA contract")?;
 
@@ -334,8 +349,7 @@ impl KatanaGenesisBuilder<Initialized> {
         )))
     }
 
-    #[allow(clippy::unused_self)]
-    fn evm_address(&self, pk: B256) -> Result<Felt> {
+    fn evm_address(pk: B256) -> Result<Felt> {
         Ok(Felt::from_bytes_be_slice(&PrivateKeySigner::from_bytes(&pk)?.address().into_array()))
     }
 
@@ -356,7 +370,7 @@ fn compute_class_hash(class: &Value) -> Result<Felt> {
     if let Ok(sierra) = serde_json::from_value::<SierraClass>(class.clone()) {
         Ok(sierra.class_hash()?)
     } else {
-        let casm: LegacyContractClass = serde_json::from_value(class.clone()).expect("Failed to parse class code v0");
+        let casm: LegacyContractClass = serde_json::from_value(class.clone())?;
         Ok(casm.class_hash()?)
     }
 }

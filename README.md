@@ -132,8 +132,9 @@ TL;DR:
   and running the various services and components in a consistent environment.
 - [Python](https://www.python.org/): Used primarily for interacting with and
   building our Kakarot programs.
-- [Poetry](https://python-poetry.org/docs/): A Python dependency management tool
-  used for managing the dependencies of our Kakarot programs.
+- [UV](https://github.com/astral-sh/uv): An extremely fast Python package and
+  project manager, written in Rust. Used for managing the dependencies of our
+  Kakarot programs.
 - [Deno](https://docs.deno.com/runtime/manual/): A JavaScript runtime used for
   our indexing service, based on the [Apibara](https://www.apibara.com/docs)
   third-party service.
@@ -560,7 +561,7 @@ the following tests are skipped:
 - debug_getRawHeader/get-invalid-number: debug API is currently not supported by
   the Kakarot RPC.
 - debug_getRawTransaction/get-invalid-hash: the Kakarot implementation of the
-  debug_getRawTransaction endpoint uses `reth_primitives::B256` type when
+  debug_getRawTransaction endpoint uses `alloy_primitives::B256` type when
   deserializing the hash. This test is expected to fail as the provided hash in
   the query doesn't start with `0x`. As this test doesn't bring much, we decide
   to skip it.
@@ -588,7 +589,7 @@ the following tests are skipped:
 - eth_getProof/get-account-proof: the getProof endpoint is currently not
   supported by the Kakarot RPC.
 - eth_getStorage/get-storage-invalid-key-too-large: the Kakarot implementation
-  of the eth_getStorage endpoint uses `reth_primitives::U256` type when
+  of the eth_getStorage endpoint uses `alloy_primitives::U256` type when
   deserializing the number. This test is expected to fail as the provided block
   number in the query doesn't start with exceeds 32 bytes. As this test doesn't
   bring much, we decide to skip it.

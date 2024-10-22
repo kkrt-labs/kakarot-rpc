@@ -1,12 +1,7 @@
-use crate::config::KakarotRpcConfig;
-use reth_primitives::{B256, U256};
+use alloy_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
-use starknet::core::types::Felt;
-use std::{
-    str::FromStr,
-    sync::{LazyLock, OnceLock},
-};
 use url::Url;
+use std::{str::FromStr, sync::LazyLock};
 
 /// Maximum priority fee per gas
 pub static MAX_PRIORITY_FEE_PER_GAS: LazyLock<u64> = LazyLock::new(|| 0);
@@ -16,7 +11,7 @@ pub static MAX_LOGS: LazyLock<Option<u64>> =
     LazyLock::new(|| std::env::var("MAX_LOGS").ok().and_then(|val| u64::from_str(&val).ok()));
 
 /// Gas limit for estimate gas and call
-pub const CALL_REQUEST_GAS_LIMIT: u128 = 50_000_000;
+pub const CALL_REQUEST_GAS_LIMIT: u64 = 50_000_000;
 /// Number of characters for representing a U256 in a hex string form. Used for padding hashes
 pub const HASH_HEX_STRING_LEN: usize = 64;
 /// Number of characters for representing logs topics in a hex string form. Used for padding logs topics
@@ -43,41 +38,45 @@ pub struct Constant {
     pub white_listed_eip_155_transaction_hashes: Vec<B256>,
 }
 
-pub static CHAIN_ID: OnceLock<Felt> = OnceLock::new();
-pub static RPC_CONFIG: LazyLock<KakarotRpcConfig> =
-    LazyLock::new(|| KakarotRpcConfig::from_env().expect("failed to load Kakarot RPC config"));
-
 #[cfg(feature = "hive")]
 pub mod hive {
-    use super::{CHAIN_ID, RPC_CONFIG};
-    use starknet::{
-        accounts::{ExecutionEncoding, SingleOwnerAccount},
-        core::types::Felt,
-        providers::{jsonrpc::HttpTransport, JsonRpcClient},
-        signers::{LocalWallet, SigningKey},
-    };
     use std::{
         env::var,
         str::FromStr,
         sync::{Arc, LazyLock},
     };
+
+    use starknet::{
+        accounts::{ConnectedAccount, ExecutionEncoding, SingleOwnerAccount},
+        core::types::Felt,
+        providers::{jsonrpc::HttpTransport, JsonRpcClient},
+        signers::{LocalWallet, SigningKey},
+    };
     use tokio::sync::Mutex;
+
+    use crate::constants::{KAKAROT_RPC_CONFIG, STARKNET_CHAIN_ID};
 
     pub static DEPLOY_WALLET: LazyLock<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>> =
         LazyLock::new(|| {
             SingleOwnerAccount::new(
-                JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
+                JsonRpcClient::new(HttpTransport::new(KAKAROT_RPC_CONFIG.network_url.clone())),
                 LocalWallet::from_signing_key(SigningKey::from_secret_scalar(
                     Felt::from_str(&var("KATANA_PRIVATE_KEY").expect("Missing deployer private key"))
                         .expect("Failed to parse deployer private key"),
                 )),
                 Felt::from_str(&var("KATANA_ACCOUNT_ADDRESS").expect("Missing deployer address"))
                     .expect("Failed to parse deployer address"),
-                *CHAIN_ID.get().expect("failed to fetch chain id"),
+                *STARKNET_CHAIN_ID,
                 ExecutionEncoding::New,
             )
         });
-    pub static DEPLOY_WALLET_NONCE: LazyLock<Arc<Mutex<Felt>>> = LazyLock::new(|| Arc::new(Mutex::new(Felt::ZERO)));
+    pub static DEPLOY_WALLET_NONCE: LazyLock<Arc<Mutex<Felt>>> = LazyLock::new(|| {
+        tokio::task::block_in_place(|| {
+            tokio::runtime::Handle::current().block_on(async {
+                Arc::new(Mutex::new(DEPLOY_WALLET.get_nonce().await.expect("failed to fetch deploy wallet nonce")))
+            })
+        })
+    });
 }
 
 pub static MAIN_RPC_URL: LazyLock<Url> = LazyLock::new(|| {

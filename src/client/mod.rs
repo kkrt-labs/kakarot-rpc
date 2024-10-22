@@ -1,4 +1,5 @@
 use crate::{
+    constants::ETH_CHAIN_ID,
     pool::{
         mempool::{KakarotPool, TransactionOrdering},
         validate::KakarotTransactionValidatorBuilder,
@@ -6,25 +7,28 @@ use crate::{
     providers::{
         eth_provider::{
             database::Database,
-            error::{EthApiError, EthereumDataFormatError, KakarotError, SignatureError},
+            error::{EthApiError, EthereumDataFormatError, SignatureError},
             provider::{EthApiResult, EthDataProvider},
             TransactionProvider, TxPoolProvider,
         },
         sn_provider::StarknetProvider,
     },
 };
+use alloy_eips::eip2718::Encodable2718;
+use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
+use alloy_rpc_types::Transaction;
+use alloy_rpc_types_txpool::TxpoolContent;
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
-use num_traits::ToPrimitive;
 use reth_chainspec::ChainSpec;
-use reth_primitives::{Address, Bytes, TransactionSigned, TransactionSignedEcRecovered, B256};
+use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
 use reth_rpc_eth_types::TransactionSource;
-use reth_rpc_types::{txpool::TxpoolContent, Transaction, WithOtherFields};
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
     TransactionOrigin, TransactionPool,
 };
-use starknet::{core::types::Felt, providers::Provider};
+use starknet::providers::Provider;
 use std::{collections::BTreeMap, sync::Arc};
 
 #[async_trait]
@@ -57,18 +61,15 @@ where
     }
 
     /// Tries to start a [`EthClient`] by fetching the current chain id, initializing a [`EthDataProvider`] and a [`Pool`].
-    pub async fn try_new(starknet_provider: SP, pool_config: PoolConfig, database: Database) -> eyre::Result<Self> {
-        let chain = (starknet_provider.chain_id().await.map_err(KakarotError::from)?.to_bigint()
-            & Felt::from(u32::MAX).to_bigint())
-        .to_u64()
-        .unwrap();
-
+    pub fn new(starknet_provider: SP, pool_config: PoolConfig, database: Database) -> Self {
         // Create a new EthDataProvider instance with the initialized database and Starknet provider.
-        let eth_provider = EthDataProvider::try_new(database, StarknetProvider::new(starknet_provider)).await?;
+        let eth_provider = EthDataProvider::new(database, StarknetProvider::new(starknet_provider));
 
-        let validator =
-            KakarotTransactionValidatorBuilder::new(&Arc::new(ChainSpec { chain: chain.into(), ..Default::default() }))
-                .build::<_, EthPooledTransaction>(eth_provider.clone());
+        let validator = KakarotTransactionValidatorBuilder::new(&Arc::new(ChainSpec {
+            chain: (*ETH_CHAIN_ID).into(),
+            ..Default::default()
+        }))
+        .build::<_, EthPooledTransaction>(eth_provider.clone());
 
         let pool = Arc::new(KakarotPool::new(
             validator,
@@ -77,7 +78,7 @@ where
             pool_config,
         ));
 
-        Ok(Self { eth_provider, pool })
+        Self { eth_provider, pool }
     }
 
     /// Returns a clone of the [`EthDataProvider`]
@@ -103,10 +104,14 @@ where
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
+        let hash = transaction_signed.hash();
+        let to = transaction_signed.to();
+
         let transaction_signed_ec_recovered =
             TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer);
 
-        let encoded_length = transaction_signed_ec_recovered.clone().length_without_header();
+        let encoded_length = transaction_signed_ec_recovered.clone().encode_2718_len();
+
         let pool_transaction = EthPooledTransaction::new(transaction_signed_ec_recovered, encoded_length);
 
         // Deploy EVM transaction signer if Hive feature is enabled
@@ -114,7 +119,11 @@ where
         self.eth_provider.deploy_evm_transaction_signer(signer).await?;
 
         // Add the transaction to the pool and wait for it to be picked up by a relayer
-        let hash = self.pool.add_transaction(TransactionOrigin::Local, pool_transaction).await?;
+        let hash = self
+            .pool
+            .add_transaction(TransactionOrigin::Local, pool_transaction)
+            .await
+            .inspect_err(|err| tracing::error!(?err, ?hash, ?to, from = ?signer))?;
 
         Ok(hash)
     }
@@ -133,7 +142,9 @@ where
         ) {
             content.entry(tx.sender()).or_default().insert(
                 tx.nonce().to_string(),
-                reth_rpc_types_compat::transaction::from_recovered(tx.clone().into_consensus()),
+                reth_rpc_types_compat::transaction::from_recovered::<reth_rpc::eth::EthTxBuilder>(
+                    tx.clone().into_consensus(),
+                ),
             );
         }
 
@@ -164,7 +175,10 @@ where
         Ok(self
             .pool
             .get(&hash)
-            .map(|transaction| TransactionSource::Pool(transaction.transaction.transaction().clone()).into())
+            .map(|transaction| {
+                TransactionSource::Pool(transaction.transaction.transaction().clone())
+                    .into_transaction::<reth_rpc::eth::EthTxBuilder>()
+            })
             .or(self.eth_provider.transaction_by_hash(hash).await?))
     }
 }

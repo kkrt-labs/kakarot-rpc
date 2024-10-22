@@ -12,9 +12,9 @@ COPY --from=planner /app/recipe.json recipe.json
 COPY . .
 # Install system dependencies
 RUN apt-get update && \
-    apt-get -y upgrade && \ 
+    apt-get -y upgrade && \
     apt-get install --no-install-recommends -y libclang-dev
-RUN cargo build --release --bin kakarot-rpc
+RUN --mount=type=cache,target=/root/.cache/cargo cargo build --release --bin kakarot-rpc
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /usr/src/app

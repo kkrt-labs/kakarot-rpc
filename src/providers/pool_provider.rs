@@ -1,12 +1,11 @@
 use super::eth_provider::TxPoolProvider;
 use crate::providers::eth_provider::provider::EthApiResult;
+use alloy_primitives::Address;
+use alloy_rpc_types::Transaction;
+use alloy_rpc_types_txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use reth_primitives::Address;
-use reth_rpc_types::{
-    txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus},
-    Transaction, WithOtherFields,
-};
 
 #[async_trait]
 #[auto_impl(Arc, &)]
@@ -49,7 +48,7 @@ impl<P: TxPoolProvider + Send + Sync + 'static> PoolProvider for PoolDataProvide
                     TxpoolInspectSummary {
                         to: transaction.to,
                         value: transaction.value,
-                        gas: transaction.gas,
+                        gas: transaction.gas.into(),
                         gas_price: transaction.gas_price.unwrap_or_default(),
                     },
                 );
@@ -64,7 +63,7 @@ impl<P: TxPoolProvider + Send + Sync + 'static> PoolProvider for PoolDataProvide
                     TxpoolInspectSummary {
                         to: transaction.to,
                         value: transaction.value,
-                        gas: transaction.gas,
+                        gas: transaction.gas.into(),
                         gas_price: transaction.gas_price.unwrap_or_default(),
                     },
                 );

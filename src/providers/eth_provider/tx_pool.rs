@@ -1,8 +1,10 @@
 use crate::providers::eth_provider::provider::EthApiResult;
+use alloy_rpc_types::Transaction;
+use alloy_rpc_types_txpool::TxpoolContent;
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_rpc_types::{txpool::TxpoolContent, Transaction, WithOtherFields};
 
 /// Ethereum provider trait. Used to abstract away the database and the network.
 #[async_trait]

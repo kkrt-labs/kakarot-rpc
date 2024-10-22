@@ -43,7 +43,7 @@ run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --tag v1.0.0-alpha.12 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --tag v1.0.0-alpha.14 katana
 
 katana-genesis: install-katana
 	cargo run --bin katana_genesis --features testing
@@ -53,6 +53,9 @@ run-katana: katana-genesis
 
 test: katana-genesis load-env
 	cargo test --all --features testing
+
+test-ci: load-env
+	cargo nextest run --all --features testing --profile ci
 
 # Example: `make test-target TARGET=test_raw_transaction`
 test-target: load-env

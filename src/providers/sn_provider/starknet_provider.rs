@@ -6,7 +6,7 @@ use crate::{
         utils::{class_hash_not_declared, contract_not_found},
     },
 };
-use reth_primitives::U256;
+use alloy_primitives::U256;
 use starknet::{
     core::types::{BlockId, Felt},
     providers::Provider,

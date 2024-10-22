@@ -1,5 +1,5 @@
+use alloy_primitives::{U128, U256};
 use cainome::cairo_serde::Error;
-use reth_primitives::{U128, U256};
 use starknet::{
     core::types::{ContractErrorData, StarknetError},
     providers::ProviderError,

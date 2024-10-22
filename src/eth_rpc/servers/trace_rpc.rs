@@ -2,8 +2,9 @@ use crate::{
     eth_rpc::api::trace_api::TraceApiServer, providers::eth_provider::provider::EthereumProvider,
     tracing::builder::TracerBuilder,
 };
-use jsonrpsee::core::{async_trait, RpcResult as Result};
-use reth_rpc_types::{trace::parity::LocalizedTransactionTrace, BlockId};
+use alloy_rpc_types::BlockId;
+use alloy_rpc_types_trace::parity::LocalizedTransactionTrace;
+use jsonrpsee::core::{async_trait, RpcResult};
 use revm_inspectors::tracing::TracingInspectorConfig;
 use std::sync::Arc;
 
@@ -22,9 +23,8 @@ impl<P: EthereumProvider> TraceRpc<P> {
 #[async_trait]
 impl<P: EthereumProvider + Send + Sync + 'static> TraceApiServer for TraceRpc<P> {
     /// Returns the parity traces for the given block.
-    #[allow(clippy::blocks_in_conditions)]
     #[tracing::instrument(skip(self), err)]
-    async fn trace_block(&self, block_id: BlockId) -> Result<Option<Vec<LocalizedTransactionTrace>>> {
+    async fn trace_block(&self, block_id: BlockId) -> RpcResult<Option<Vec<LocalizedTransactionTrace>>> {
         tracing::info!("Serving debug_traceBlock");
         let tracer = TracerBuilder::new(Arc::new(&self.eth_provider))
             .await?

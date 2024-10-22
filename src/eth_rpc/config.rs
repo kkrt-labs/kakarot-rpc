@@ -1,6 +1,6 @@
 use eyre::{eyre, Result};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RPCConfig {
     pub socket_addr: String,
 }
@@ -25,14 +25,15 @@ impl RPCConfig {
         }
         Ok(config)
     }
+}
 
-    #[cfg(feature = "testing")]
+#[cfg(feature = "testing")]
+impl RPCConfig {
     pub fn new_test_config() -> Self {
         // Hardcode the socket address for testing environment
         Self::new("127.0.0.1:3030".to_string())
     }
 
-    #[cfg(feature = "testing")]
     pub fn new_test_config_from_port(port: u16) -> Self {
         let mut config = Self::new_test_config();
         // Remove port from socket address and replace it with provided port

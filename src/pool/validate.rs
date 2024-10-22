@@ -4,10 +4,11 @@ use crate::providers::eth_provider::{
     database::state::EthDatabase, provider::EthereumProvider,
     starknet::kakarot_core::get_white_listed_eip_155_transaction_hashes,
 };
+use alloy_rpc_types::BlockNumberOrTag;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{
-    BlockId, GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID,
-    EIP4844_TX_TYPE_ID, LEGACY_TX_TYPE_ID,
+    GotExpected, InvalidTransactionError, SealedBlock, EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID,
+    LEGACY_TX_TYPE_ID,
 };
 use reth_revm::DatabaseRef;
 use reth_transaction_pool::{
@@ -312,13 +313,8 @@ where
             return TransactionValidationOutcome::Invalid(transaction, err);
         }
 
-        let handle = tokio::runtime::Handle::current();
-        let block = match tokio::task::block_in_place(|| handle.block_on(self.provider.block_number())) {
-            Ok(b) => b,
-            Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),
-        };
-        let db = EthDatabase::new(Arc::new(&self.provider), BlockId::from(block.to::<u64>()));
-
+        // Fetch the account state for the Pending block
+        let db = EthDatabase::new(Arc::new(&self.provider), BlockNumberOrTag::Pending.into());
         let account = match db.basic_ref(transaction.sender()) {
             Ok(account) => account.unwrap_or_default(),
             Err(err) => return TransactionValidationOutcome::Error(*transaction.hash(), Box::new(err)),

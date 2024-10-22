@@ -1,9 +1,9 @@
 #![allow(clippy::too_many_arguments)]
 
 use crate::into_via_wrapper;
+use alloy_primitives::{Address, B256};
 use cainome::rs::abigen_legacy;
 use dotenvy::dotenv;
-use reth_primitives::{Address, B256};
 use starknet::{
     core::{types::Felt, utils::get_contract_address},
     macros::selector,

@@ -7,14 +7,15 @@ use crate::providers::eth_provider::{
         CollectionName, Database,
     },
 };
+use alloy_primitives::{B256, U256};
+use alloy_rpc_types::Transaction;
 use arbitrary::Arbitrary;
 use mongodb::{
     bson::{self, doc, Document},
     options::{DatabaseOptions, ReadConcern, UpdateModifications, UpdateOptions, WriteConcern},
     Client,
 };
-use reth_primitives::{TxType, B256, U256};
-use reth_rpc_types::Transaction;
+use reth_primitives::TxType;
 use serde::Serialize;
 use std::sync::LazyLock;
 use strum::{EnumIter, IntoEnumIterator};
@@ -207,7 +208,7 @@ impl MongoFuzzer {
         let mut receipt = StoredTransactionReceipt::arbitrary(&mut unstructured).unwrap();
 
         // Ensure the block number in receipt is equal to the block number in transaction.
-        let mut modified_logs = (*receipt.receipt.inner.as_receipt_with_bloom().unwrap()).clone();
+        let mut modified_logs = (*receipt.receipt.inner.inner.as_receipt_with_bloom().unwrap()).clone();
         for log in &mut modified_logs.receipt.logs {
             log.block_number = Some(transaction.block_number.unwrap_or_default());
             log.block_hash = transaction.block_hash;
@@ -219,12 +220,12 @@ impl MongoFuzzer {
         receipt.receipt.to = transaction.to;
         receipt.receipt.block_number = transaction.block_number;
         receipt.receipt.block_hash = transaction.block_hash;
-        receipt.receipt.inner = match transaction.transaction_type.unwrap_or_default().try_into() {
-            Ok(TxType::Legacy) => reth_rpc_types::ReceiptEnvelope::Legacy(modified_logs),
-            Ok(TxType::Eip2930) => reth_rpc_types::ReceiptEnvelope::Eip2930(modified_logs),
-            Ok(TxType::Eip1559) => reth_rpc_types::ReceiptEnvelope::Eip1559(modified_logs),
-            Ok(TxType::Eip4844) => reth_rpc_types::ReceiptEnvelope::Eip4844(modified_logs),
-            Ok(TxType::Eip7702) => reth_rpc_types::ReceiptEnvelope::Eip7702(modified_logs),
+        receipt.receipt.inner.inner = match transaction.transaction_type.unwrap_or_default().try_into() {
+            Ok(TxType::Legacy) => alloy_rpc_types::ReceiptEnvelope::Legacy(modified_logs),
+            Ok(TxType::Eip2930) => alloy_rpc_types::ReceiptEnvelope::Eip2930(modified_logs),
+            Ok(TxType::Eip1559) => alloy_rpc_types::ReceiptEnvelope::Eip1559(modified_logs),
+            Ok(TxType::Eip4844) => alloy_rpc_types::ReceiptEnvelope::Eip4844(modified_logs),
+            Ok(TxType::Eip7702) => alloy_rpc_types::ReceiptEnvelope::Eip7702(modified_logs),
             Err(_) => unreachable!(),
         };
         receipt

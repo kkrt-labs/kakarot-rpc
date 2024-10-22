@@ -11,9 +11,9 @@ use crate::providers::eth_provider::{
     provider::{EthApiResult, EthDataProvider},
     BlockProvider,
 };
+use alloy_rpc_types::{Filter, FilterChanges};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use reth_rpc_types::{Filter, FilterChanges};
 
 #[async_trait]
 #[auto_impl(Arc, &)]

@@ -2,9 +2,9 @@ use crate::providers::eth_provider::constant::{
     ADDRESS_HEX_STRING_LEN, BLOCK_NUMBER_HEX_STRING_LEN, HASH_HEX_STRING_LEN, LOGS_TOPICS_HEX_STRING_LEN,
     U64_HEX_STRING_LEN,
 };
+use alloy_primitives::{Address, B256};
+use alloy_rpc_types::{BlockHashOrNumber, Index, Topic};
 use mongodb::bson::{doc, Document};
-use reth_primitives::{Address, B256};
-use reth_rpc_types::{BlockHashOrNumber, Index, Topic};
 use std::fmt::{Display, LowerHex};
 
 /// A trait that defines possible key filters for blocks in the
@@ -279,7 +279,7 @@ where
 mod tests {
     use super::*;
     use alloy_primitives::b256;
-    use reth_rpc_types::FilterSet;
+    use alloy_rpc_types::FilterSet;
 
     #[test]
     fn test_into_filter_with_padding() {

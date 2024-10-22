@@ -2,7 +2,7 @@
 #![cfg(feature = "testing")]
 
 use alloy_dyn_abi::DynSolValue;
-use alloy_primitives::address;
+use alloy_primitives::{address, Address, U256};
 use kakarot_rpc::{
     models::{
         felt::Felt252Wrapper,
@@ -16,7 +16,6 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::{Address, U256};
 use rstest::*;
 use serde_json::Value;
 

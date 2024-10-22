@@ -9,6 +9,7 @@ use super::{
     },
 };
 use crate::{
+    constants::ETH_CHAIN_ID,
     into_via_try_wrapper, into_via_wrapper,
     models::block::{EthBlockId, EthBlockNumberOrTag},
     providers::{
@@ -16,13 +17,14 @@ use crate::{
         sn_provider::StarknetProvider,
     },
 };
+use alloy_primitives::{TxKind, U256};
+use alloy_rpc_types::{BlockHashOrNumber, TransactionRequest};
 use cainome::cairo_serde::CairoArrayLegacy;
 use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
-use reth_primitives::{BlockId, BlockNumberOrTag, TxKind, U256};
-use reth_rpc_types::{BlockHashOrNumber, TransactionRequest};
+use reth_primitives::{BlockId, BlockNumberOrTag};
 use starknet::core::types::Felt;
 use tracing::{instrument, Instrument};
 #[cfg(feature = "hive")]
@@ -32,7 +34,7 @@ use {
         account_contract::AccountContractReader, starknet_address,
     },
     crate::providers::eth_provider::utils::contract_not_found,
-    reth_primitives::Address,
+    alloy_primitives::Address,
 };
 
 /// A type alias representing a result type for Ethereum API operations.
@@ -86,14 +88,8 @@ impl<SP> EthDataProvider<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    pub async fn try_new(database: Database, starknet_provider: StarknetProvider<SP>) -> Result<Self> {
-        // We take the chain_id modulo u32::MAX to ensure compatibility with tooling
-        // see: https://github.com/ethereum/EIPs/issues/2294
-        // Note: Metamask is breaking for a chain_id = u64::MAX - 1
-        let chain_id =
-            (Felt::from(u32::MAX).to_biguint() & starknet_provider.chain_id().await?.to_biguint()).try_into().unwrap(); // safe unwrap
-
-        Ok(Self { database, starknet_provider, chain_id })
+    pub fn new(database: Database, starknet_provider: StarknetProvider<SP>) -> Self {
+        Self { database, starknet_provider, chain_id: *ETH_CHAIN_ID }
     }
 
     /// Prepare the call input for an estimate gas or call from a transaction request.
@@ -149,7 +145,7 @@ where
     }
 
     /// Call the Kakarot contract with the given request.
-    pub(crate) async fn call_helper(
+    pub(crate) async fn call_inner(
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
@@ -188,7 +184,7 @@ where
     }
 
     /// Estimate the gas used in Kakarot for the given request.
-    pub(crate) async fn estimate_gas(
+    pub(crate) async fn estimate_gas_inner(
         &self,
         request: TransactionRequest,
         block_id: Option<BlockId>,
@@ -229,9 +225,9 @@ where
     #[instrument(skip_all, ret)]
     pub async fn to_starknet_block_id(
         &self,
-        block_id: impl Into<Option<BlockId>>,
+        block_id: Option<BlockId>,
     ) -> EthApiResult<starknet::core::types::BlockId> {
-        match block_id.into() {
+        match block_id {
             Some(BlockId::Hash(hash)) => {
                 Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(EthereumDataFormatError::from)?)
             }

@@ -5,13 +5,8 @@ import { padString } from "../utils/hex.ts";
 import { BlockHeader } from "../deps.ts";
 
 // Eth
-import {
-  bigIntToHex,
-  Bloom,
-  bytesToHex,
-  JsonRpcBlock as Block,
-  PrefixedHexString,
-} from "../deps.ts";
+import { bigIntToHex, Bloom, bytesToHex, PrefixedHexString } from "../deps.ts";
+import { JsonRpcBlock } from "./types.ts";
 import { KAKAROT } from "../provider.ts";
 
 // Constant
@@ -159,14 +154,10 @@ export async function toEthHeader({
     // Empty array for withdrawals (unused in this context)
     withdrawals: [],
     // Root hash of an empty trie.
-    // <https://github.com/paradigmxyz/reth/blob/main/crates/primitives/src/constants/mod.rs#L138>
+    // <https://github.com/alloy-rs/alloy/blob/e201df849552ee8e3279723de18add7ccf21e1ab/crates/consensus/src/constants.rs#L59>
     withdrawalsRoot:
       "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
     // Convert base fee per gas to padded hexadecimal string
     baseFeePerGas: padString(bigIntToHex(baseFee), 32),
   };
 }
-
-export type JsonRpcBlock = Omit<Block, "hash"> & {
-  hash: string | null;
-};

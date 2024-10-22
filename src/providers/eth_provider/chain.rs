@@ -2,10 +2,10 @@ use crate::providers::eth_provider::{
     error::KakarotError,
     provider::{EthApiResult, EthDataProvider},
 };
+use alloy_primitives::{U256, U64};
+use alloy_rpc_types::{SyncInfo, SyncStatus};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use reth_primitives::{U256, U64};
-use reth_rpc_types::{SyncInfo, SyncStatus};
 use starknet::core::types::SyncStatusType;
 use tracing::Instrument;
 

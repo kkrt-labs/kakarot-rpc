@@ -34,10 +34,6 @@ pub use prometheus::{
     exponential_buckets, Error as PrometheusError, Histogram, HistogramOpts, HistogramVec, Opts, Registry,
 };
 
-mod sourced;
-
-pub use sourced::{MetricSource, SourcedCounter, SourcedGauge, SourcedMetric};
-
 pub fn register<T: Clone + Collector + 'static>(metric: T, registry: &Registry) -> Result<T, PrometheusError> {
     registry.register(Box::new(metric.clone()))?;
     Ok(metric)

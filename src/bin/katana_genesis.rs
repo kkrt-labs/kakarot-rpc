@@ -1,6 +1,6 @@
+use alloy_primitives::{B256, U256};
 use dotenvy::dotenv;
 use kakarot_rpc::test_utils::katana::genesis::KatanaGenesisBuilder;
-use reth_primitives::{B256, U256};
 use starknet::core::types::Felt;
 use std::{
     env::var,

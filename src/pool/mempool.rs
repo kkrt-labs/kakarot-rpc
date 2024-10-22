@@ -3,15 +3,17 @@
 use super::validate::KakarotTransactionValidator;
 use crate::{
     client::EthClient,
+    constants::KAKAROT_RPC_CONFIG,
     into_via_try_wrapper,
-    providers::eth_provider::{
-        constant::RPC_CONFIG, database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider,
-    },
+    pool::constants::ONE_TENTH_ETH,
+    providers::eth_provider::{database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider},
 };
+use alloy_primitives::{Address, U256};
 use futures::future::select_all;
+use rand::{seq::SliceRandom, SeedableRng};
 use reth_chainspec::ChainSpec;
 use reth_execution_types::ChangedAccount;
-use reth_primitives::{Address, BlockNumberOrTag, IntoRecoveredTransaction, U256};
+use reth_primitives::BlockNumberOrTag;
 use reth_revm::DatabaseRef;
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, BlockInfo, CanonicalStateUpdate, CoinbaseTipOrdering, EthPooledTransaction, Pool,
@@ -23,6 +25,7 @@ use starknet::{
 };
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
+use tracing::instrument;
 
 /// A type alias for the Kakarot Transaction Validator.
 /// Uses the Reth implementation [`TransactionValidationTaskExecutor`].
@@ -66,8 +69,13 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     }
 
     /// Starts the account manager task that periodically checks account balances and processes transactions.
+    #[instrument(skip_all, name = "mempool")]
     pub fn start(self) {
         let this = Arc::new(self);
+
+        // Start the nonce updater in a separate task
+        this.clone().start_nonce_updater();
+
         tokio::spawn(async move {
             loop {
                 // TODO: add a listener on the pool and only try to call [`best_transaction`]
@@ -94,7 +102,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let maybe_relayer = manager.lock_account().await;
                         if maybe_relayer.is_err() {
                             // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
-                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap(), "failed to fetch relayer");
+                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap_err(), "failed to fetch relayer");
                             let _ = manager
                                 .eth_client
                                 .mempool()
@@ -109,7 +117,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
                             // If the relayer failed to relay the transaction, we need to reposition it in the mempool
-                            tracing::error!(target: "account_manager", err = ?res.unwrap(), "failed to relay transaction");
+                            tracing::error!(target: "account_manager", err = ?res.unwrap_err(), "failed to relay transaction");
                             let _ = manager
                                 .eth_client
                                 .mempool()
@@ -117,6 +125,8 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                                 .await;
                             return;
                         }
+
+                        tracing::info!(target: "account_manager", starknet_hash = ?res.expect("not error"), ethereum_hash = ?transaction_signed.hash());
 
                         // Increment account_nonce after sending a transaction
                         let nonce = relayer.nonce_mut();
@@ -134,38 +144,49 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
-        let mut accounts = self.accounts.iter().collect::<HashMap<_, _>>();
+        // Use `StdRng` instead of `ThreadRng` as it is `Send`
+        let mut rng = rand::rngs::StdRng::from_entropy();
+
+        // Collect the accounts into a vector for shuffling
+        let mut accounts: Vec<_> = self.accounts.iter().collect();
+
+        // Shuffle the accounts randomly before iterating
+        accounts.shuffle(&mut rng);
+
         loop {
             if accounts.is_empty() {
                 return Err(eyre::eyre!("failed to fetch funded account"));
             }
+
+            // Create the future locks with indices for more efficient removal
             // use [`select_all`] to poll an iterator over impl Future<Output = (Felt, MutexGuard<Felt>)>
             // We use Box::pin because this Future doesn't implement `Unpin`.
-            let fut_locks = accounts.iter().map(|(address, nonce)| Box::pin(async { (*address, nonce.lock().await) }));
-            let ((account_address, guard), _, _) = select_all(fut_locks).await;
+            let fut_locks = accounts
+                .iter()
+                .enumerate()
+                .map(|(index, (address, nonce))| Box::pin(async move { (index, *address, nonce.lock().await) }));
+
+            // Select the first account that gets unlocked
+            let ((index, account_address, guard), _, _) = select_all(fut_locks).await;
 
             // Fetch the balance of the selected account
-            let balance = self
-                .get_balance(*account_address)
-                .await
-                .inspect_err(|err| {
-                    tracing::error!(target: "account_manager", ?account_address, ?err, "failed to fetch balance");
-                })
-                .unwrap_or_default();
+            let balance = self.get_balance(*account_address).await?;
 
-            // If the balance is lower than the threshold, continue
-            if balance < U256::from(u128::pow(10, 18)) {
-                accounts.remove(account_address);
+            // If the balance is lower than the threshold, remove the account using swap_remove
+            if balance < U256::from(ONE_TENTH_ETH) {
+                accounts.swap_remove(index);
                 continue;
             }
 
             let balance = into_via_try_wrapper!(balance)?;
+            let chain_id = self.eth_client.starknet_provider().chain_id().await?;
+
             let account = LockedRelayer::new(
                 guard,
                 *account_address,
                 balance,
-                JsonRpcClient::new(HttpTransport::new(RPC_CONFIG.network_url.clone())),
-                self.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
+                JsonRpcClient::new(HttpTransport::new(KAKAROT_RPC_CONFIG.network_url.clone())),
+                chain_id,
             );
 
             // Return the account address and the guard on the nonce
@@ -181,6 +202,31 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
             .balance_at(account_address, starknet::core::types::BlockId::Tag(BlockTag::Pending))
             .await
             .map_err(Into::into)
+    }
+
+    /// Update the nonces for all accounts every minute.
+    pub fn start_nonce_updater(self: Arc<Self>) {
+        tokio::spawn(async move {
+            loop {
+                for (address, nonce_mutex) in &self.accounts {
+                    // Query the updated nonce for the account from the provider
+                    let new_nonce = self
+                        .eth_client
+                        .starknet_provider()
+                        .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), *address)
+                        .await
+                        .unwrap_or_default();
+
+                    let mut nonce = nonce_mutex.lock().await;
+                    *nonce = new_nonce;
+
+                    tracing::info!(target: "account_manager", ?address, ?new_nonce);
+                }
+
+                // Sleep for 1 minute before the next update
+                tokio::time::sleep(Duration::from_secs(60)).await;
+            }
+        });
     }
 }
 
@@ -252,7 +298,7 @@ where
                             ChainSpec { chain: eth_client.eth_provider().chain_id.into(), ..Default::default() };
                         let info = BlockInfo {
                             block_gas_limit: latest_header.gas_limit,
-                            last_seen_block_hash: latest_header.hash(),
+                            last_seen_block_hash: hash,
                             last_seen_block_number: latest_header.number,
                             pending_basefee: latest_header
                                 .next_block_base_fee(
@@ -278,7 +324,7 @@ where
                         }
 
                         let sealed_block = latest_block.seal(hash);
-                        let mined_transactions = sealed_block.body.iter().map(|tx| tx.hash).collect();
+                        let mined_transactions = sealed_block.body.transactions.iter().map(|tx| tx.hash).collect();
 
                         // Canonical update
                         let update = CanonicalStateUpdate {

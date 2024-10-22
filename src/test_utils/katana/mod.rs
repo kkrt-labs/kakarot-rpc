@@ -1,5 +1,3 @@
-#![allow(deprecated)]
-
 pub mod genesis;
 
 use super::mongo::MongoImage;
@@ -19,6 +17,8 @@ use crate::{
     },
     test_utils::eoa::KakarotEOA,
 };
+use alloy_primitives::{Address, Bytes, U256};
+use alloy_rpc_types::Log;
 use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
 use katana_primitives::{
     chain::ChainId,
@@ -29,17 +29,22 @@ use mongodb::{
     bson::{doc, Document},
     options::{UpdateModifications, UpdateOptions},
 };
-use reth_primitives::{Address, Bytes};
-use reth_rpc_types::Log;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
     super::mongo::MongoFuzzer,
-    dojo_test_utils::sequencer::SequencerConfig,
-    reth_primitives::B256,
-    reth_rpc_types::{Header, Transaction, WithOtherFields},
+    alloy_primitives::B256,
+    alloy_rpc_types::Header,
+    alloy_rpc_types::Transaction,
+    alloy_serde::WithOtherFields,
+    katana_node::config::{
+        rpc::{ApiKind, RpcConfig},
+        Config, SequencingConfig,
+    },
+    katana_primitives::chain_spec::ChainSpec,
+    std::collections::HashSet,
     std::str::FromStr as _,
 };
 
@@ -51,27 +56,26 @@ fn load_genesis() -> Genesis {
     .expect("Failed to convert GenesisJson to Genesis")
 }
 
-/// Returns a `StarknetConfig` instance customized for Kakarot.
-/// If `with_dumped_state` is true, the config will be initialized with the dumped state.
-pub fn katana_config() -> StarknetConfig {
-    let max_steps = u32::MAX;
-    StarknetConfig {
-        disable_fee: true,
-        env: Environment {
-            // Since kaka_test > u32::MAX, we should return the last 4 bytes of the chain_id: test
-            chain_id: ChainId::parse("test").unwrap(),
-            invoke_max_steps: max_steps,
-            validate_max_steps: max_steps,
-        },
-        genesis: load_genesis(),
-        ..Default::default()
-    }
-}
-
 /// Returns a `TestSequencer` configured for Kakarot.
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 pub async fn katana_sequencer() -> TestSequencer {
-    TestSequencer::start(SequencerConfig { no_mining: false, block_time: None }, katana_config()).await
+    TestSequencer::start(Config {
+        chain: ChainSpec { id: ChainId::parse("kaka_test").unwrap(), genesis: load_genesis() },
+        starknet: StarknetConfig {
+            env: Environment { invoke_max_steps: u32::MAX, validate_max_steps: u32::MAX },
+            ..Default::default()
+        },
+        sequencing: SequencingConfig { block_time: None, no_mining: false },
+        rpc: RpcConfig {
+            addr: "127.0.0.1".parse().expect("Failed to parse IP address"),
+            port: 0,
+            max_connections: 100,
+            allowed_origins: None,
+            apis: HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]),
+        },
+        ..Default::default()
+    })
+    .await
 }
 
 /// Represents the Katana test environment.
@@ -109,7 +113,8 @@ impl<'a> Katana {
 
     #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
     pub async fn new_empty() -> Self {
-        use reth_primitives::{constants::EMPTY_ROOT_HASH, B64, U256};
+        use alloy_primitives::{B256, B64};
+        use reth_primitives::constants::EMPTY_ROOT_HASH;
 
         let sequencer = katana_sequencer().await;
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));
@@ -121,6 +126,9 @@ impl<'a> Katana {
 
         // Set the relayer private key in the environment variables.
         std::env::set_var("RELAYER_PRIVATE_KEY", format!("0x{:x}", sequencer.raw_account().private_key));
+
+        // Set the starknet network in the environment variables.
+        std::env::set_var("STARKNET_NETWORK", format!("{}", sequencer.url()));
 
         // Initialize a MongoFuzzer instance with the specified random bytes size.
         let mut mongo_fuzzer = MongoFuzzer::new(0).await;
@@ -143,9 +151,7 @@ impl<'a> Katana {
         let database = mongo_fuzzer.finalize().await;
 
         // Initialize the EthClient
-        let eth_client = EthClient::try_new(starknet_provider, Default::default(), database)
-            .await
-            .expect("failed to start eth client");
+        let eth_client = EthClient::new(starknet_provider, Default::default(), database);
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
@@ -178,6 +184,9 @@ impl<'a> Katana {
         // Set the relayer private key in the environment variables.
         std::env::set_var("RELAYER_PRIVATE_KEY", format!("0x{:x}", sequencer.raw_account().private_key));
 
+        // Set the starknet network in the environment variables.
+        std::env::set_var("STARKNET_NETWORK", format!("{}", sequencer.url()));
+
         // Initialize a MongoFuzzer instance with the specified random bytes size.
         let mut mongo_fuzzer = MongoFuzzer::new(rnd_bytes_size).await;
 
@@ -189,9 +198,7 @@ impl<'a> Katana {
         let database = mongo_fuzzer.finalize().await;
 
         // Initialize the EthClient
-        let eth_client = EthClient::try_new(starknet_provider, Default::default(), database)
-            .await
-            .expect("failed to start eth client");
+        let eth_client = EthClient::new(starknet_provider, Default::default(), database);
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
@@ -225,7 +232,6 @@ impl<'a> Katana {
         &self.eoa
     }
 
-    #[allow(dead_code)]
     pub const fn sequencer(&self) -> &TestSequencer {
         &self.sequencer
     }

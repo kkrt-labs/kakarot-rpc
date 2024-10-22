@@ -1,7 +1,7 @@
 #![allow(unreachable_pub)]
 use crate::providers::eth_provider::utils::split_u256;
-use alloy_primitives::Bytes;
-use reth_primitives::{alloy_primitives::keccak256, Address, KECCAK_EMPTY, U256};
+use alloy_primitives::{keccak256, Address, Bytes, U256};
+use reth_primitives::KECCAK_EMPTY;
 use revm_interpreter::analysis::to_analysed;
 use revm_primitives::Bytecode;
 use starknet::core::utils::get_storage_var_address;
@@ -162,7 +162,7 @@ fn pack_byte_array_to_starkfelt_array(bytes: &[u8]) -> impl Iterator<Item = Felt
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reth_primitives::Bytes;
+    use alloy_primitives::Bytes;
 
     #[test]
     fn test_pack_byte_array_to_starkfelt_array() {

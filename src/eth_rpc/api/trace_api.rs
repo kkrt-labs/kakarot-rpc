@@ -1,5 +1,6 @@
-use jsonrpsee::{core::RpcResult as Result, proc_macros::rpc};
-use reth_rpc_types::{trace::parity::LocalizedTransactionTrace, BlockId};
+use alloy_rpc_types::BlockId;
+use alloy_rpc_types_trace::parity::LocalizedTransactionTrace;
+use jsonrpsee::{core::RpcResult, proc_macros::rpc};
 
 /// Trace API
 #[rpc(server, namespace = "trace")]
@@ -7,5 +8,5 @@ use reth_rpc_types::{trace::parity::LocalizedTransactionTrace, BlockId};
 pub trait TraceApi {
     /// Returns the parity traces for the given block.
     #[method(name = "block")]
-    async fn trace_block(&self, block_id: BlockId) -> Result<Option<Vec<LocalizedTransactionTrace>>>;
+    async fn trace_block(&self, block_id: BlockId) -> RpcResult<Option<Vec<LocalizedTransactionTrace>>>;
 }

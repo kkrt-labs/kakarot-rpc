@@ -11,20 +11,21 @@ use crate::{
         BlockProvider, ChainProvider,
     },
 };
+use alloy_primitives::{Address, Bytes, B256, U256};
+use alloy_rpc_types::{
+    serde_helpers::JsonStorageKey,
+    state::{EvmOverrides, StateOverride},
+    BlockOverrides, TransactionRequest,
+};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
 use reth_evm_ethereum::EthEvmConfig;
 use reth_node_api::ConfigureEvm;
-use reth_primitives::{Address, BlockId, Bytes, B256, U256};
+use reth_primitives::BlockId;
 use reth_revm::db::CacheDB;
 use reth_rpc_eth_types::error::ensure_success;
-use reth_rpc_types::{
-    serde_helpers::JsonStorageKey,
-    state::{EvmOverrides, StateOverride},
-    BlockOverrides, TransactionRequest,
-};
 use starknet::core::utils::get_storage_var_address;
 use std::sync::Arc;
 use tracing::Instrument;
@@ -175,7 +176,7 @@ where
         }
 
         // If no state or block overrides are present, call the helper function to execute the call.
-        let output = self.call_helper(request, block_id).await?;
+        let output = self.call_inner(request, block_id).await?;
         Ok(Bytes::from(output.0.into_iter().filter_map(|x| x.to_u8()).collect::<Vec<_>>()))
     }
 }

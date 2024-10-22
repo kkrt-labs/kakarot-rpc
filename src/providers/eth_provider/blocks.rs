@@ -3,11 +3,13 @@ use crate::providers::eth_provider::{
     database::ethereum::EthereumTransactionStore,
     provider::{EthApiResult, EthDataProvider},
 };
+use alloy_primitives::{B256, U256, U64};
+use alloy_rpc_types::{Block, Header, Transaction};
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag, B256, U256, U64};
-use reth_rpc_types::{Block, Header, Transaction, WithOtherFields};
+use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
 
 /// Ethereum block provider trait.
@@ -105,7 +107,7 @@ where
         block_id: Option<BlockId>,
     ) -> EthApiResult<Option<Vec<WithOtherFields<Transaction>>>> {
         let block_hash_or_number = self
-            .block_id_into_block_number_or_hash(block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)))
+            .block_id_into_block_number_or_hash(block_id.unwrap_or_else(|| BlockNumberOrTag::Latest.into()))
             .await?;
         if !self.database().block_exists(block_hash_or_number).await? {
             return Ok(None);

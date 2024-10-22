@@ -6,7 +6,7 @@ use {
     super::mongo::RANDOM_BYTES_SIZE,
     crate::test_utils::evm_contract::KakarotEvmContract,
     alloy_dyn_abi::DynSolValue,
-    reth_primitives::{Address, U256},
+    alloy_primitives::{Address, U256},
 };
 
 /// This fixture deploys a counter contract on Katana.

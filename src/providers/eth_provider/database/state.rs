@@ -1,11 +1,11 @@
 use crate::providers::eth_provider::{error::EthApiError, provider::EthereumProvider};
-use reth_primitives::{Address, B256, U256};
+use alloy_primitives::{Address, B256, U256};
+use alloy_rpc_types::{serde_helpers::JsonStorageKey, BlockHashOrNumber, BlockId, BlockNumberOrTag};
 use reth_revm::{
     db::CacheDB,
     primitives::{AccountInfo, Bytecode},
     DatabaseRef,
 };
-use reth_rpc_types::{serde_helpers::JsonStorageKey, BlockHashOrNumber, BlockId, BlockNumberOrTag};
 use tokio::runtime::Handle;
 
 #[derive(Debug, Clone)]
@@ -13,7 +13,6 @@ pub struct EthCacheDatabase<P: EthereumProvider + Send + Sync>(pub CacheDB<EthDa
 
 /// Ethereum database type.
 #[derive(Debug, Clone)]
-#[allow(clippy::redundant_pub_crate)]
 pub struct EthDatabase<P: EthereumProvider + Send + Sync> {
     /// The Ethereum provider.
     provider: P,

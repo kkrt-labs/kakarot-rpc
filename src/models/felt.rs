@@ -1,5 +1,5 @@
 use crate::providers::eth_provider::error::EthereumDataFormatError;
-use reth_primitives::{Address, B256, U256, U64};
+use alloy_primitives::{Address, B256, U256, U64};
 use starknet::core::types::{EthAddress, Felt};
 use std::ops::{Deref, DerefMut};
 
@@ -18,10 +18,8 @@ impl From<Felt252Wrapper> for Felt {
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl From<Address> for Felt252Wrapper {
     fn from(address: Address) -> Self {
-        // safe unwrap since H160 is 20 bytes
         Self(Felt::from_bytes_be_slice(address.as_slice()))
     }
 }

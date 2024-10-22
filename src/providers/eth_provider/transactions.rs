@@ -12,11 +12,13 @@ use crate::{
         ChainProvider,
     },
 };
+use alloy_primitives::{Address, B256, U256};
+use alloy_rpc_types::{Index, Transaction};
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_primitives::{Address, BlockId, BlockNumberOrTag, B256, U256};
-use reth_rpc_types::{Index, Transaction, WithOtherFields};
+use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
 
 #[async_trait]
@@ -90,18 +92,6 @@ where
             return Ok(U256::ZERO);
         }
         let nonce = maybe_nonce.map_err(ExecutionError::from)?.nonce;
-
-        // Get the protocol nonce as well, in edge cases where the protocol nonce is higher than the account nonce.
-        // This can happen when an underlying Starknet transaction reverts => Account storage changes are reverted,
-        // but the protocol nonce is still incremented.
-        let span = tracing::span!(tracing::Level::INFO, "sn::protocol_nonce");
-        let protocol_nonce = self
-            .starknet_provider_inner()
-            .get_nonce(starknet_block_id, address)
-            .instrument(span)
-            .await
-            .unwrap_or_default();
-        let nonce = nonce.max(protocol_nonce);
 
         Ok(into_via_wrapper!(nonce))
     }
