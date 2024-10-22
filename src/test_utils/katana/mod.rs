@@ -328,23 +328,6 @@ impl<'a> Katana {
             .expect("Failed to update block number");
     }
 
-    // Upserts a transaction receipt into the database.
-    pub async fn upsert_transaction_receipt(&self, transaction_receipt: WithOtherFields<TransactionReceipt>) {
-        let provider = self.eth_provider();
-        let database = provider.database();
-
-        // Build the filter to find the existing transaction receipt by its transaction hash.
-        let filter = EthDatabaseFilterBuilder::<filter::Receipt>::default()
-            .with_tx_hash(&transaction_receipt.transaction_hash)
-            .build();
-
-        // Create a stored transaction receipt from the provided transaction receipt.
-        let stored_receipt = StoredTransactionReceipt { receipt: transaction_receipt };
-
-        // Upsert the transaction receipt into the database.
-        database.update_one(stored_receipt, filter, true).await.expect("Failed to upsert transaction receipt");
-    }
-
     /// Retrieves the first stored transaction
     pub fn first_transaction(&self) -> Option<WithOtherFields<Transaction>> {
         self.transactions.first().map(Into::into)
@@ -363,13 +346,18 @@ impl<'a> Katana {
             .map(Into::into)
     }
 
-    // Retrieves the stored transaction receipts at a given block number
-    pub fn receipts_at(&self, block_number: u64) -> Vec<WithOtherFields<TransactionReceipt>> {
+    pub fn most_recent_run_out_of_resources_receipt(&self) -> Option<WithOtherFields<TransactionReceipt>> {
         self.receipts
             .iter()
-            .filter(|stored_receipt| stored_receipt.receipt.inner.block_number.unwrap_or_default() == block_number)
-            .map(|stored_receipt| stored_receipt.receipt.clone())
-            .collect()
+            .filter_map(|stored_receipt| {
+                let receipt = WithOtherFields::from(stored_receipt.clone());
+                if receipt.other.contains_key("isRunOutOfRessources") {
+                    Some(receipt)
+                } else {
+                    None
+                }
+            })
+            .max_by_key(|receipt| receipt.block_number.unwrap_or_default())
     }
 
     /// Retrieves the stored header by hash
