@@ -4,10 +4,10 @@ cat /genesis.json
 mv /genesis.json /genesis/hive-genesis.json
 echo "Creating the genesis file..."
 hive_genesis \
-  -k genesis/contracts \
-  --hive-genesis genesis/hive-genesis.json \
-  -g genesis.json \
-  -m manifest.json
+	-k genesis/contracts \
+	--hive-genesis genesis/hive-genesis.json \
+	-g genesis.json \
+	-m manifest.json
 mv /genesis/hive-genesis.json /hive-genesis.json && rm -fr /genesis
 
 # 2. Start Katana
@@ -40,9 +40,9 @@ if test -f "/chain.rlp"; then
 	echo "Launching Hive Chain..."
 	# THIS needs to be changed if Katana ever updates their predeployed accounts
 	hive_chain \
-	  --chain-path /chain.rlp \
-	  --relayer-address 0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca \
-	  --relayer-pk 0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a
+		--chain-path /chain.rlp \
+		--relayer-address 0xb3ff441a68610b30fd5e2abbf3a1548eb6ba6f3559f2862bf2dc757e5828ca \
+		--relayer-pk 0x2bbf4f9fd0bbb2e60b0316c1fe0b76cf7a4d0198bd493ced9b8df2a3a24d68a
 fi
 
 # 3. Start the Indexer service: DNA Indexer, Indexer transformer, and MongoDB
