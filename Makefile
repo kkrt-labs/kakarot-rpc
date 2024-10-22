@@ -27,7 +27,8 @@ usage:
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
-	cd lib/kakarot && make setup && make build && make build-sol && \
+	cp .env.example .env
+	cd lib/kakarot && uv sync --all-extras --dev && make build && make build-sol && \
 	mv build/ssj/contracts_Cairo1Helpers.contract_class.json build/cairo1_helpers.json && rm -fr build/ssj
 	./scripts/extract_abi.sh
 
