@@ -103,6 +103,9 @@ where
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
+        let hash = transaction_signed.hash();
+        let to = transaction_signed.to();
+
         let transaction_signed_ec_recovered =
             TransactionSignedEcRecovered::from_signed_transaction(transaction_signed.clone(), signer);
 
@@ -115,7 +118,11 @@ where
         self.eth_provider.deploy_evm_transaction_signer(signer).await?;
 
         // Add the transaction to the pool and wait for it to be picked up by a relayer
-        let hash = self.pool.add_transaction(TransactionOrigin::Local, pool_transaction).await?;
+        let hash = self
+            .pool
+            .add_transaction(TransactionOrigin::Local, pool_transaction)
+            .await
+            .inspect_err(|err| tracing::error!(?err, ?hash, ?to, from = ?signer))?;
 
         Ok(hash)
     }
