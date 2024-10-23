@@ -2,15 +2,16 @@ use crate::{
     client::{EthClient, KakarotTransactions, TransactionHashProvider},
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
-        constant::MAX_PRIORITY_FEE_PER_GAS, error::EthApiError, BlockProvider, ChainProvider, GasProvider, LogProvider,
-        ReceiptProvider, StateProvider, TransactionProvider,
+        constant::MAX_PRIORITY_FEE_PER_GAS,
+        database::types::{header::ExtendedBlock, transaction::ExtendedTransaction},
+        error::EthApiError,
+        BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
 };
 use alloy_primitives::{Address, Bytes, B256, B64, U256, U64};
 use alloy_rpc_types::{
-    serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, Block, BlockOverrides,
-    EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, SyncStatus, Transaction, TransactionReceipt,
-    TransactionRequest, Work,
+    serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, BlockOverrides, EIP1186AccountProofResponse,
+    FeeHistory, Filter, FilterChanges, Index, SyncStatus, TransactionReceipt, TransactionRequest, Work,
 };
 use alloy_serde::WithOtherFields;
 use jsonrpsee::core::{async_trait, RpcResult};
@@ -67,20 +68,12 @@ where
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn block_by_hash(
-        &self,
-        hash: B256,
-        full: bool,
-    ) -> RpcResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
+    async fn block_by_hash(&self, hash: B256, full: bool) -> RpcResult<Option<ExtendedBlock>> {
         Ok(self.eth_client.eth_provider().block_by_hash(hash, full).await?)
     }
 
     #[tracing::instrument(skip(self), err)]
-    async fn block_by_number(
-        &self,
-        number: BlockNumberOrTag,
-        full: bool,
-    ) -> RpcResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
+    async fn block_by_number(&self, number: BlockNumberOrTag, full: bool) -> RpcResult<Option<ExtendedBlock>> {
         Ok(self.eth_client.eth_provider().block_by_number(number, full).await?)
     }
 
@@ -104,11 +97,7 @@ where
         Ok(U256::ZERO)
     }
 
-    async fn uncle_by_block_hash_and_index(
-        &self,
-        _hash: B256,
-        _index: Index,
-    ) -> RpcResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
+    async fn uncle_by_block_hash_and_index(&self, _hash: B256, _index: Index) -> RpcResult<Option<ExtendedBlock>> {
         tracing::warn!("Kakarot chain does not produce uncles");
         Ok(None)
     }
@@ -117,13 +106,13 @@ where
         &self,
         _number: BlockNumberOrTag,
         _index: Index,
-    ) -> RpcResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
+    ) -> RpcResult<Option<ExtendedBlock>> {
         tracing::warn!("Kakarot chain does not produce uncles");
         Ok(None)
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn transaction_by_hash(&self, hash: B256) -> RpcResult<Option<WithOtherFields<Transaction>>> {
+    async fn transaction_by_hash(&self, hash: B256) -> RpcResult<Option<ExtendedTransaction>> {
         Ok(self.eth_client.transaction_by_hash(hash).await?)
     }
 
@@ -132,7 +121,7 @@ where
         &self,
         hash: B256,
         index: Index,
-    ) -> RpcResult<Option<WithOtherFields<Transaction>>> {
+    ) -> RpcResult<Option<ExtendedTransaction>> {
         Ok(self.eth_client.eth_provider().transaction_by_block_hash_and_index(hash, index).await?)
     }
 
@@ -141,7 +130,7 @@ where
         &self,
         number: BlockNumberOrTag,
         index: Index,
-    ) -> RpcResult<Option<WithOtherFields<Transaction>>> {
+    ) -> RpcResult<Option<ExtendedTransaction>> {
         Ok(self.eth_client.eth_provider().transaction_by_block_number_and_index(number, index).await?)
     }
 

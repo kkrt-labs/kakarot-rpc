@@ -9,7 +9,10 @@ use crate::{
             ethereum::EthereumTransactionStore,
             filter::{self, format_hex, EthDatabaseFilterBuilder},
             types::{
-                header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+                header::StoredHeader,
+                log::StoredLog,
+                receipt::StoredTransactionReceipt,
+                transaction::{ExtendedTransaction, StoredTransaction},
             },
             CollectionName,
         },
@@ -37,7 +40,7 @@ use {
     super::mongo::MongoFuzzer,
     alloy_primitives::B256,
     alloy_rpc_types::Header,
-    alloy_rpc_types::{Transaction, TransactionReceipt},
+    alloy_rpc_types::TransactionReceipt,
     alloy_serde::WithOtherFields,
     katana_node::config::{
         rpc::{ApiKind, RpcConfig},
@@ -281,11 +284,7 @@ impl<'a> Katana {
     }
 
     /// Adds transactions to the database along with a corresponding header.
-    pub async fn add_transactions_with_header_to_database(
-        &self,
-        txs: Vec<WithOtherFields<Transaction>>,
-        header: Header,
-    ) {
+    pub async fn add_transactions_with_header_to_database(&self, txs: Vec<ExtendedTransaction>, header: Header) {
         let provider = self.eth_provider();
         let database = provider.database();
         let Header { number, .. } = header;
@@ -329,7 +328,7 @@ impl<'a> Katana {
     }
 
     /// Retrieves the first stored transaction
-    pub fn first_transaction(&self) -> Option<WithOtherFields<Transaction>> {
+    pub fn first_transaction(&self) -> Option<ExtendedTransaction> {
         self.transactions.first().map(Into::into)
     }
 
@@ -339,7 +338,7 @@ impl<'a> Katana {
     }
 
     /// Retrieves the most recent stored transaction based on block number
-    pub fn most_recent_transaction(&self) -> Option<WithOtherFields<Transaction>> {
+    pub fn most_recent_transaction(&self) -> Option<ExtendedTransaction> {
         self.transactions
             .iter()
             .max_by_key(|stored_transaction| stored_transaction.block_number.unwrap_or_default())

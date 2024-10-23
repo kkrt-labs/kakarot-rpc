@@ -1,4 +1,6 @@
-use alloy_rpc_types::Header;
+use super::transaction::ExtendedTransaction;
+use alloy_rpc_types::{Block, Header};
+use alloy_serde::WithOtherFields;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
@@ -7,6 +9,9 @@ use {
     arbitrary::Arbitrary,
     reth_primitives::constants::EMPTY_ROOT_HASH,
 };
+
+// This a type alias that is defined to simplify its usages and management through the basecode
+pub type ExtendedBlock = WithOtherFields<Block<ExtendedTransaction>>;
 
 /// A header as stored in the database
 #[derive(Debug, Serialize, Deserialize, Hash, Clone, PartialEq, Eq)]

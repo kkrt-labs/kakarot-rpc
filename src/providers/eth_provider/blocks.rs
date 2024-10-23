@@ -1,19 +1,21 @@
-use super::{database::ethereum::EthereumBlockStore, error::KakarotError};
+use super::{
+    database::{
+        ethereum::EthereumBlockStore,
+        types::{header::ExtendedBlock, transaction::ExtendedTransaction},
+    },
+    error::KakarotError,
+};
 use crate::providers::eth_provider::{
     database::ethereum::EthereumTransactionStore,
     provider::{EthApiResult, EthDataProvider},
 };
 use alloy_primitives::{B256, U256, U64};
-use alloy_rpc_types::{Block, Header, Transaction};
-use alloy_serde::WithOtherFields;
+use alloy_rpc_types::Header;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
 use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
-
-pub type ExtendedTransaction = WithOtherFields<Transaction>;
-pub type ExtendedBlock = WithOtherFields<Block<ExtendedTransaction>>;
 /// Ethereum block provider trait.
 #[async_trait]
 #[auto_impl(Arc, &)]
