@@ -11,7 +11,7 @@ use {
     reth_primitives::transaction::legacy_parity,
     reth_testing_utils::generators::{self},
 };
-// This a type alias that is defined to simplify its usages and management through the basecode
+/// Type alias for a transaction with additional fields.
 pub type ExtendedTransaction = WithOtherFields<Transaction>;
 
 /// A full transaction as stored in the database

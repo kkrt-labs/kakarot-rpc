@@ -10,7 +10,7 @@ use {
     reth_primitives::constants::EMPTY_ROOT_HASH,
 };
 
-// This a type alias that is defined to simplify its usages and management through the basecode
+/// Type alias for a block that contains extended transactions and additional fields.
 pub type ExtendedBlock = WithOtherFields<Block<ExtendedTransaction>>;
 
 /// A header as stored in the database
