@@ -1,9 +1,7 @@
 use super::eth_provider::TxPoolProvider;
-use crate::providers::eth_provider::provider::EthApiResult;
+use crate::providers::eth_provider::{database::types::transaction::ExtendedTransaction, provider::EthApiResult};
 use alloy_primitives::Address;
-use alloy_rpc_types::Transaction;
 use alloy_rpc_types_txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
-use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 
@@ -12,9 +10,8 @@ use auto_impl::auto_impl;
 pub trait PoolProvider {
     async fn txpool_status(&self) -> EthApiResult<TxpoolStatus>;
     async fn txpool_inspect(&self) -> EthApiResult<TxpoolInspect>;
-    async fn txpool_content_from(&self, from: Address)
-        -> EthApiResult<TxpoolContentFrom<WithOtherFields<Transaction>>>;
-    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>>;
+    async fn txpool_content_from(&self, from: Address) -> EthApiResult<TxpoolContentFrom<ExtendedTransaction>>;
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<ExtendedTransaction>>;
 }
 
 #[derive(Debug, Clone)]
@@ -73,14 +70,11 @@ impl<P: TxPoolProvider + Send + Sync + 'static> PoolProvider for PoolDataProvide
         Ok(inspect)
     }
 
-    async fn txpool_content_from(
-        &self,
-        from: Address,
-    ) -> EthApiResult<TxpoolContentFrom<WithOtherFields<Transaction>>> {
+    async fn txpool_content_from(&self, from: Address) -> EthApiResult<TxpoolContentFrom<ExtendedTransaction>> {
         Ok(self.eth_provider.txpool_content().await?.remove_from(&from))
     }
 
-    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>> {
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<ExtendedTransaction>> {
         Ok(self.eth_provider.txpool_content().await?)
     }
 }

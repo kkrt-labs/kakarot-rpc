@@ -1,8 +1,9 @@
+use crate::providers::eth_provider::database::types::receipt::ExtendedTxReceipt;
 use alloy_primitives::{Address, Bytes, B256, B64, U256, U64};
 use alloy_rpc_types::{
     serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, Block, BlockOverrides,
     EIP1186AccountProofResponse, FeeHistory, Filter, FilterChanges, Index, SyncStatus, Transaction as EthTransaction,
-    TransactionReceipt, TransactionRequest, Work,
+    TransactionRequest, Work,
 };
 use alloy_serde::WithOtherFields;
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
@@ -103,7 +104,7 @@ pub trait EthApi {
 
     /// Returns the receipt of a transaction by transaction hash.
     #[method(name = "getTransactionReceipt")]
-    async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<WithOtherFields<TransactionReceipt>>>;
+    async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<ExtendedTxReceipt>>;
 
     /// Returns the balance of the account of given address.
     #[method(name = "getBalance")]
@@ -268,8 +269,5 @@ pub trait EthApi {
 
     /// Returns all transaction receipts for a given block.
     #[method(name = "getBlockReceipts")]
-    async fn block_receipts(
-        &self,
-        block_id: Option<BlockId>,
-    ) -> RpcResult<Option<Vec<WithOtherFields<TransactionReceipt>>>>;
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> RpcResult<Option<Vec<ExtendedTxReceipt>>>;
 }

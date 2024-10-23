@@ -1,17 +1,21 @@
-use super::{database::ethereum::EthereumBlockStore, error::KakarotError};
+use super::{
+    database::{
+        ethereum::EthereumBlockStore,
+        types::{header::ExtendedBlock, transaction::ExtendedTransaction},
+    },
+    error::KakarotError,
+};
 use crate::providers::eth_provider::{
     database::ethereum::EthereumTransactionStore,
     provider::{EthApiResult, EthDataProvider},
 };
 use alloy_primitives::{B256, U256, U64};
-use alloy_rpc_types::{Block, Header, Transaction};
-use alloy_serde::WithOtherFields;
+use alloy_rpc_types::Header;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
 use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
-
 /// Ethereum block provider trait.
 #[async_trait]
 #[auto_impl(Arc, &)]
@@ -23,18 +27,11 @@ pub trait BlockProvider {
     async fn block_number(&self) -> EthApiResult<U64>;
 
     /// Returns a block by hash. Block can be full or just the hashes of the transactions.
-    async fn block_by_hash(
-        &self,
-        hash: B256,
-        full: bool,
-    ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
+    async fn block_by_hash(&self, hash: B256, full: bool) -> EthApiResult<Option<ExtendedBlock>>;
 
     /// Returns a block by number. Block can be full or just the hashes of the transactions.
-    async fn block_by_number(
-        &self,
-        number_or_tag: BlockNumberOrTag,
-        full: bool,
-    ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
+    async fn block_by_number(&self, number_or_tag: BlockNumberOrTag, full: bool)
+        -> EthApiResult<Option<ExtendedBlock>>;
 
     /// Returns the transaction count for a block by hash.
     async fn block_transaction_count_by_hash(&self, hash: B256) -> EthApiResult<Option<U256>>;
@@ -43,10 +40,7 @@ pub trait BlockProvider {
     async fn block_transaction_count_by_number(&self, number_or_tag: BlockNumberOrTag) -> EthApiResult<Option<U256>>;
 
     /// Returns the transactions for a block.
-    async fn block_transactions(
-        &self,
-        block_id: Option<BlockId>,
-    ) -> EthApiResult<Option<Vec<WithOtherFields<Transaction>>>>;
+    async fn block_transactions(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<ExtendedTransaction>>>;
 }
 
 #[async_trait]
@@ -76,11 +70,7 @@ where
         Ok(block_number)
     }
 
-    async fn block_by_hash(
-        &self,
-        hash: B256,
-        full: bool,
-    ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
+    async fn block_by_hash(&self, hash: B256, full: bool) -> EthApiResult<Option<ExtendedBlock>> {
         Ok(self.database().block(hash.into(), full).await?)
     }
 
@@ -88,7 +78,7 @@ where
         &self,
         number_or_tag: BlockNumberOrTag,
         full: bool,
-    ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>> {
+    ) -> EthApiResult<Option<ExtendedBlock>> {
         let block_number = self.tag_into_block_number(number_or_tag).await?;
         Ok(self.database().block(block_number.into(), full).await?)
     }
@@ -102,10 +92,7 @@ where
         self.database().transaction_count(block_number.into()).await
     }
 
-    async fn block_transactions(
-        &self,
-        block_id: Option<BlockId>,
-    ) -> EthApiResult<Option<Vec<WithOtherFields<Transaction>>>> {
+    async fn block_transactions(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<ExtendedTransaction>>> {
         let block_hash_or_number = self
             .block_id_into_block_number_or_hash(block_id.unwrap_or_else(|| BlockNumberOrTag::Latest.into()))
             .await?;

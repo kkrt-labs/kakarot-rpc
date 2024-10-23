@@ -1,13 +1,15 @@
 use super::{Tracer, TracerResult};
 use crate::providers::eth_provider::{
-    database::state::{EthCacheDatabase, EthDatabase},
+    database::{
+        state::{EthCacheDatabase, EthDatabase},
+        types::transaction::ExtendedTransaction,
+    },
     error::{EthApiError, TransactionError},
     provider::EthereumProvider,
 };
 use alloy_primitives::{B256, U256};
-use alloy_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header, Transaction};
+use alloy_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header};
 use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions};
-use alloy_serde::WithOtherFields;
 use reth_revm::{
     db::CacheDB,
     primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId},
@@ -90,7 +92,7 @@ impl From<GethDebugTracingCallOptions> for TracingOptions {
 pub struct TracerBuilder<P: EthereumProvider + Send + Sync + Clone, Status = Floating> {
     eth_provider: P,
     env: Env,
-    block: Block<WithOtherFields<Transaction>>,
+    block: Block<ExtendedTransaction>,
     tracing_options: TracingOptions,
     _phantom: std::marker::PhantomData<Status>,
 }
@@ -150,7 +152,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
     /// # Returns
     ///
     /// Returns the block if it exists, otherwise returns None
-    async fn block(&self, block_id: BlockId) -> TracerResult<alloy_rpc_types::Block<WithOtherFields<Transaction>>> {
+    async fn block(&self, block_id: BlockId) -> TracerResult<alloy_rpc_types::Block<ExtendedTransaction>> {
         let block = match block_id {
             BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.block_hash, true).await?,
             BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,

@@ -1,12 +1,10 @@
 use crate::providers::eth_provider::{
-    provider::EthApiResult, BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider,
-    TransactionProvider,
+    database::types::{header::ExtendedBlock, receipt::ExtendedTxReceipt, transaction::ExtendedTransaction},
+    provider::EthApiResult,
+    BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
 };
 use alloy_primitives::{Address, Bytes, B256, U256, U64};
-use alloy_rpc_types::{
-    Block, Filter, FilterChanges, Header, SyncStatus, Transaction, TransactionReceipt, TransactionRequest,
-};
-use alloy_serde::WithOtherFields;
+use alloy_rpc_types::{Filter, FilterChanges, Header, SyncStatus, TransactionRequest};
 use async_trait::async_trait;
 use mockall::mock;
 use reth_primitives::{BlockId, BlockNumberOrTag};
@@ -26,19 +24,19 @@ mock! {
             &self,
             hash: B256,
             full: bool,
-        ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
+        ) -> EthApiResult<Option<ExtendedBlock>>;
 
         async fn block_by_number(
             &self,
             number: BlockNumberOrTag,
             full: bool,
-        ) -> EthApiResult<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>>;
+        ) -> EthApiResult<Option<ExtendedBlock>>;
 
         async fn block_transaction_count_by_hash(&self, hash: B256) -> EthApiResult<Option<U256>>;
 
         async fn block_transaction_count_by_number(&self, number_or_tag: BlockNumberOrTag) -> EthApiResult<Option<U256>>;
 
-        async fn block_transactions(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<WithOtherFields<Transaction>>>>;
+        async fn block_transactions(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<ExtendedTransaction>>>;
     }
 
     #[async_trait]
@@ -64,9 +62,9 @@ mock! {
 
     #[async_trait]
     impl ReceiptProvider for EthereumProviderStruct {
-        async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<TransactionReceipt>>>;
+        async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<ExtendedTxReceipt>>;
 
-        async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<WithOtherFields<TransactionReceipt>>>>;
+        async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<ExtendedTxReceipt>>>;
     }
 
     #[async_trait]
@@ -82,11 +80,11 @@ mock! {
 
     #[async_trait]
     impl TransactionProvider for EthereumProviderStruct {
-        async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
+        async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<ExtendedTransaction>>;
 
-        async fn transaction_by_block_hash_and_index(&self, hash: B256, index: alloy_rpc_types::Index) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
+        async fn transaction_by_block_hash_and_index(&self, hash: B256, index: alloy_rpc_types::Index) -> EthApiResult<Option<ExtendedTransaction>>;
 
-        async fn transaction_by_block_number_and_index(&self, number_or_tag: BlockNumberOrTag, index: alloy_rpc_types::Index) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
+        async fn transaction_by_block_number_and_index(&self, number_or_tag: BlockNumberOrTag, index: alloy_rpc_types::Index) -> EthApiResult<Option<ExtendedTransaction>>;
 
         async fn transaction_count(&self, address: Address, block_id: Option<BlockId>) -> EthApiResult<U256>;
     }
