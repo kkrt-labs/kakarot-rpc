@@ -4,6 +4,9 @@ use alloy_serde::WithOtherFields;
 use reth_primitives::Receipt;
 use serde::{Deserialize, Serialize};
 
+/// Type alias for a transaction receipt with additional fields.
+pub type ExtendedTxReceipt = WithOtherFields<TransactionReceipt>;
+
 /// A transaction receipt as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredTransactionReceipt {

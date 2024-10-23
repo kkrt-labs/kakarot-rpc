@@ -11,7 +11,7 @@ use crate::{
             types::{
                 header::StoredHeader,
                 log::StoredLog,
-                receipt::StoredTransactionReceipt,
+                receipt::{ExtendedTxReceipt, StoredTransactionReceipt},
                 transaction::{ExtendedTransaction, StoredTransaction},
             },
             CollectionName,
@@ -40,7 +40,6 @@ use {
     super::mongo::MongoFuzzer,
     alloy_primitives::B256,
     alloy_rpc_types::Header,
-    alloy_rpc_types::TransactionReceipt,
     alloy_serde::WithOtherFields,
     katana_node::config::{
         rpc::{ApiKind, RpcConfig},
@@ -345,7 +344,7 @@ impl<'a> Katana {
             .map(Into::into)
     }
 
-    pub fn most_recent_run_out_of_resources_receipt(&self) -> Option<WithOtherFields<TransactionReceipt>> {
+    pub fn most_recent_run_out_of_resources_receipt(&self) -> Option<ExtendedTxReceipt> {
         self.receipts
             .iter()
             .filter_map(|stored_receipt| {

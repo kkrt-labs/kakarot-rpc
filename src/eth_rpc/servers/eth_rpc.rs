@@ -3,7 +3,7 @@ use crate::{
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
         constant::MAX_PRIORITY_FEE_PER_GAS,
-        database::types::{header::ExtendedBlock, transaction::ExtendedTransaction},
+        database::types::{header::ExtendedBlock, receipt::ExtendedTxReceipt, transaction::ExtendedTransaction},
         error::EthApiError,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
@@ -11,9 +11,8 @@ use crate::{
 use alloy_primitives::{Address, Bytes, B256, B64, U256, U64};
 use alloy_rpc_types::{
     serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, BlockOverrides, EIP1186AccountProofResponse,
-    FeeHistory, Filter, FilterChanges, Index, SyncStatus, TransactionReceipt, TransactionRequest, Work,
+    FeeHistory, Filter, FilterChanges, Index, SyncStatus, TransactionRequest, Work,
 };
-use alloy_serde::WithOtherFields;
 use jsonrpsee::core::{async_trait, RpcResult};
 use reth_primitives::{BlockId, BlockNumberOrTag};
 use serde_json::Value;
@@ -135,7 +134,7 @@ where
     }
 
     #[tracing::instrument(skip(self), ret, err)]
-    async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<WithOtherFields<TransactionReceipt>>> {
+    async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<ExtendedTxReceipt>> {
         Ok(self.eth_client.eth_provider().transaction_receipt(hash).await?)
     }
 
@@ -292,10 +291,7 @@ where
         Err(EthApiError::Unsupported("eth_getFilterLogs").into())
     }
 
-    async fn block_receipts(
-        &self,
-        block_id: Option<BlockId>,
-    ) -> RpcResult<Option<Vec<WithOtherFields<TransactionReceipt>>>> {
+    async fn block_receipts(&self, block_id: Option<BlockId>) -> RpcResult<Option<Vec<ExtendedTxReceipt>>> {
         Ok(self.eth_client.eth_provider().block_receipts(block_id).await?)
     }
 }

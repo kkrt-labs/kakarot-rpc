@@ -1,11 +1,10 @@
 use crate::providers::eth_provider::{
-    database::types::{header::ExtendedBlock, transaction::ExtendedTransaction},
+    database::types::{header::ExtendedBlock, receipt::ExtendedTxReceipt, transaction::ExtendedTransaction},
     provider::EthApiResult,
     BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
 };
 use alloy_primitives::{Address, Bytes, B256, U256, U64};
-use alloy_rpc_types::{Filter, FilterChanges, Header, SyncStatus, TransactionReceipt, TransactionRequest};
-use alloy_serde::WithOtherFields;
+use alloy_rpc_types::{Filter, FilterChanges, Header, SyncStatus, TransactionRequest};
 use async_trait::async_trait;
 use mockall::mock;
 use reth_primitives::{BlockId, BlockNumberOrTag};
@@ -63,9 +62,9 @@ mock! {
 
     #[async_trait]
     impl ReceiptProvider for EthereumProviderStruct {
-        async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<TransactionReceipt>>>;
+        async fn transaction_receipt(&self, hash: B256) -> EthApiResult<Option<ExtendedTxReceipt>>;
 
-        async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<WithOtherFields<TransactionReceipt>>>>;
+        async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<ExtendedTxReceipt>>>;
     }
 
     #[async_trait]
