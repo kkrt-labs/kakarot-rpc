@@ -1,6 +1,7 @@
 use alloy_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr, sync::LazyLock};
+use url::Url;
 
 /// Maximum priority fee per gas
 pub static MAX_PRIORITY_FEE_PER_GAS: LazyLock<u64> = LazyLock::new(|| 0);
@@ -77,3 +78,8 @@ pub mod hive {
         })
     });
 }
+
+pub static MAIN_RPC_URL: LazyLock<Url> = LazyLock::new(|| {
+    Url::parse(&std::env::var("MAIN_RPC_URL").expect("Missing MAIN_RPC_URL environment variable"))
+        .expect("Invalid MAIN_RPC_URL environment variable")
+});
