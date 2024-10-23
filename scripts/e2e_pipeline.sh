@@ -78,7 +78,7 @@ if [ "${ENV}" = "sepolia" ]; then
 elif [ "${ENV}" = "kakarot-staging" ]; then
 	export EVM_PRIVATE_KEY="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 	export KAKAROT_STAGING_RPC_URL="https://juno-kakarot-sepolia.karnot.xyz/"
-	export KAKAROT_STAGING_ACCOUNT_ADDRESS="0x48fc2888aad166304e63af35a48e00e32da9831e49fe30a22148fdecdb7e66f"
+	export KAKAROT_STAGING_ACCOUNT_ADDRESS="0x06b23fc7c18611614fef21f11620bf033888ae9eae2316af44100debc9faa01a"
 	export WEB3_HTTP_PROVIDER_URI="https://rpc-kakarot-sepolia-staging.karnot.xyz/"
 	if [ -z "${KAKAROT_STAGING_PRIVATE_KEY}" ]; then
 		echo "Please provide the KAKAROT_STAGING_PRIVATE_KEY environment variable. The private key should be loaded using gpg: gpg -r recipient@kakarot.org --decrypt path/to/encrypted/key.gpg"
