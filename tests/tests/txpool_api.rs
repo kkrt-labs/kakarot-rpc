@@ -68,7 +68,7 @@ async fn test_txpool_content(#[future] katana_empty: Katana, _setup: ()) {
 
     // Insert the transaction into the mempool
     let _tx_hash = katana_empty
-        .eth_client
+        .eth_client()
         .mempool()
         .add_transaction(TransactionOrigin::Local, transaction)
         .await
@@ -79,7 +79,7 @@ async fn test_txpool_content(#[future] katana_empty: Katana, _setup: ()) {
         request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
 
     // Get updated mempool size
-    let mempool_size = katana_empty.eth_client.mempool().pool_size();
+    let mempool_size = katana_empty.eth_client().mempool().pool_size();
     // Check pending, queued and total transactions
     assert_eq!(mempool_size.pending, 1);
     assert_eq!(mempool_size.queued, 0);
@@ -122,7 +122,7 @@ async fn test_txpool_content_from(#[future] katana_empty: Katana, _setup: ()) {
 
     // Insert the transaction into the mempool
     let _tx_hash = katana_empty
-        .eth_client
+        .eth_client()
         .mempool()
         .add_transaction(TransactionOrigin::Local, transaction)
         .await
@@ -166,7 +166,7 @@ async fn test_txpool_status(#[future] katana_empty: Katana, _setup: ()) {
 
     // Insert the transaction into the mempool
     let _tx_hash = katana_empty
-        .eth_client
+        .eth_client()
         .mempool()
         .add_transaction(TransactionOrigin::Local, transaction)
         .await
@@ -201,7 +201,7 @@ async fn test_txpool_inspect(#[future] katana_empty: Katana, _setup: ()) {
 
     // Insert the transaction into the mempool
     let _tx_hash = katana_empty
-        .eth_client
+        .eth_client()
         .mempool()
         .add_transaction(TransactionOrigin::Local, transaction)
         .await
