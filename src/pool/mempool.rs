@@ -20,8 +20,8 @@ use reth_transaction_pool::{
     TransactionOrigin, TransactionPool, TransactionPoolExt,
 };
 use starknet::{
-    core::types::{BlockTag, Felt},
-    providers::{jsonrpc::HttpTransport, JsonRpcClient},
+    core::types::{requests::GetNonceRequest, BlockId, BlockTag, Felt},
+    providers::{jsonrpc::HttpTransport, JsonRpcClient, ProviderRequestData, ProviderResponseData},
 };
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
@@ -208,19 +208,33 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     pub fn start_nonce_updater(self: Arc<Self>) {
         tokio::spawn(async move {
             loop {
-                for (address, nonce_mutex) in &self.accounts {
-                    // Query the updated nonce for the account from the provider
-                    let new_nonce = self
-                        .eth_client
-                        .starknet_provider()
-                        .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), *address)
-                        .await
-                        .unwrap_or_default();
+                // Convert the account addresses into batch requests
+                let requests = self
+                    .accounts
+                    .keys()
+                    .map(|add| {
+                        ProviderRequestData::GetNonce(GetNonceRequest {
+                            contract_address: *add,
+                            block_id: BlockId::Tag(BlockTag::Latest),
+                        })
+                    })
+                    .collect::<Vec<_>>();
 
-                    let mut nonce = nonce_mutex.lock().await;
-                    *nonce = new_nonce;
+                // Try to make the request to the provider. If it fails, display error and retry 1 minute later.
+                let maybe_new_nonces = self.eth_client.starknet_provider().batch_requests(requests).await;
+                if maybe_new_nonces.is_err() {
+                    tracing::error!(target: "account_manager", err = ?maybe_new_nonces.unwrap_err(), "failed to get nonces");
+                    // Sleep for 1 minute before the next update
+                    tokio::time::sleep(Duration::from_secs(60)).await;
+                    continue;
+                }
+                let new_nonces = maybe_new_nonces.expect("not error");
 
-                    tracing::info!(target: "account_manager", ?address, ?new_nonce);
+                for ((address, old_nonce), new_nonce) in self.accounts.iter().zip(new_nonces) {
+                    if let ProviderResponseData::GetNonce(new_nonce) = new_nonce {
+                        *old_nonce.lock().await = new_nonce;
+                        tracing::info!(target: "account_manager", ?address, ?new_nonce);
+                    };
                 }
 
                 // Sleep for 1 minute before the next update
