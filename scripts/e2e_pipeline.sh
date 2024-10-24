@@ -67,15 +67,15 @@ if [ "${ENV}" = "sepolia" ]; then
 	export MAX_WAIT=50
 	export WEB3_HTTP_PROVIDER_URI="https://rpc-kakarot-sepolia.karnot.xyz/"
 	if [ -z "${STARKNET_SEPOLIA_ACCOUNT_ADDRESS}" ]; then
-		echo "Please provide the STARKNET_SEPOLIA_ACCOUNT_ADDRESS environment variable"
+		echo "Please provide the STARKNET_SEPOLIA_ACCOUNT_ADDRESS environment variable."
 		exit 1
 	fi
 	if [ -z "${STARKNET_SEPOLIA_PRIVATE_KEY}" ]; then
-		echo "Please provide the STARKNET_SEPOLIA_PRIVATE_KEY environment variable"
+		echo "Please provide the STARKNET_SEPOLIA_PRIVATE_KEY environment variable."
 		exit 1
 	fi
 	if [ -z "${EVM_PRIVATE_KEY}" ]; then
-		echo "Please provide the EVM_PRIVATE_KEY environment variable"
+		echo "Please provide the EVM_PRIVATE_KEY environment variable."
 		exit 1
 	fi
 	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles --ignore tests/end_to_end/EvmPrecompiles --ignore tests/end_to_end/test_kakarot.py"
@@ -87,11 +87,11 @@ elif [ "${ENV}" = "sepolia-staging" ]; then
 	export MAX_WAIT=50
 	export WEB3_HTTP_PROVIDER_URI="https://rpc-kakarot-sepolia-staging.karnot.xyz/"
 	if [ -z "${STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS}" ]; then
-		echo "Please provide the STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS environment variable. The private key should be loaded using gpg: gpg -r recipient@kakarot.org --decrypt path/to/encrypted/key.gpg"
+		echo "Please provide the STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS environment variable."
 		exit 1
 	fi
 	if [ -z "${STARKNET_SEPOLIA_STAGING_PRIVATE_KEY}" ]; then
-		echo "Please provide the STARKNET_SEPOLIA_STAGING_PRIVATE_KEY environment variable. The private key should be loaded using gpg: gpg -r recipient@kakarot.org --decrypt path/to/encrypted/key.gpg"
+		echo "Please provide the STARKNET_SEPOLIA_STAGING_PRIVATE_KEY environment variable."
 		exit 1
 	fi
 
