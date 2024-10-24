@@ -8,7 +8,7 @@ use crate::providers::eth_provider::{
     provider::EthereumProvider,
 };
 use alloy_primitives::{B256, U256};
-use alloy_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header};
+use alloy_rpc_types::{Block, BlockId, BlockTransactions, Header};
 use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions};
 use reth_revm::{
     db::CacheDB,
@@ -159,14 +159,12 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
         }
         .ok_or(match block_id {
             BlockId::Hash(hash) => EthApiError::UnknownBlock(hash.block_hash.into()),
-            BlockId::Number(number) => {
-                EthApiError::UnknownBlock(BlockHashOrNumber::Number(number.as_number().unwrap_or_default()))
-            }
+            BlockId::Number(number) => EthApiError::UnknownBlock(number.as_number().unwrap_or_default().into()),
         })?;
 
         // we can't trace a pending block
         if block.header.hash.is_zero() {
-            return Err(EthApiError::UnknownBlock(BlockHashOrNumber::Hash(B256::ZERO)));
+            return Err(EthApiError::UnknownBlock(B256::ZERO.into()));
         }
 
         Ok(block.inner)
