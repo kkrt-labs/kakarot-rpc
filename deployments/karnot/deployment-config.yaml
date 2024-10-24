@@ -29,7 +29,7 @@ environments:
     id: 4912672c-533c-4198-9834-a8999c0b2db0
     repos:
       kakarot-rpc:
-        image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.7.4
+        image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.7.5-alpha0
         config:
           KAKAROT_ADDRESS: "0x48fc2888aad166304e63af35a48e00e32da9831e49fe30a22148fdecdb7e66f"
           UNINITIALIZED_ACCOUNT_CLASS_HASH: "0x7b2de5e73ff7eb338d76c967dd5aa3f3004574d326b8c1402bb819d4983b8b6"
@@ -37,7 +37,7 @@ environments:
           WHITE_LISTED_EIP_155_TRANSACTION_HASHES: "0xeddf9e61fb9d8f5111840daef55e5fde0041f5702856532cdbb5a02998033d26,0x07471adfe8f4ec553c1199f495be97fc8be8e0626ae307281c22534460184ed1,0xb6274b80bc7cda162df89894c7748a5cb7ba2eaa6004183c41a1837c3b072f1e"
           RUST_LOG: debug
       kakarot-indexer:
-        image: ghcr.io/kkrt-labs/kakarot-rpc/indexer:v0.7.4
+        image: ghcr.io/kkrt-labs/kakarot-rpc/indexer:v0.7.5-alpha0
         config:
           KAKAROT_ADDRESS: "0x48fc2888aad166304e63af35a48e00e32da9831e49fe30a22148fdecdb7e66f"
           ACCOUNT_CONTRACT_CLASS_HASH: "0x25d4b4889979f3df8171991f6a0163b42b756daebf313bcd0dec74cacf903f9"
