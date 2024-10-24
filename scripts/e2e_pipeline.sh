@@ -95,7 +95,7 @@ elif [ "${ENV}" = "sepolia-staging" ]; then
 		exit 1
 	fi
 
-	SKIP="--ignore tests/end_to_end/L1L2Messaging"
+	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles"
 fi
 
 # Deploy the contracts if the deploy command is provided
@@ -118,5 +118,5 @@ if ${run_test}; then
 	export UNINITIALIZED_ACCOUNT_CLASS_HASH="${UNINITIALIZED_ACCOUNT_CLASS_HASH}"
 	export ACCOUNT_CONTRACT_CLASS_HASH="${ACCOUNT_CONTRACT_CLASS_HASH}"
 
-	eval "uv run pytest -s tests/end_to_end -k 'test_should_return_data_median_for_query' ${SKIP}"
+	eval "uv run pytest -s tests/end_to_end ${SKIP}"
 fi
