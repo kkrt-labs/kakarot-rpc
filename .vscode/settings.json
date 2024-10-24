@@ -3,7 +3,8 @@
   "files.exclude": {
     "**/.git": false
   },
-  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.command": "check",
+  "rust-analyzer.checkOnSave": false,
   "rust-analyzer.cargo.features": "all",
   "deno.enable": true,
   "deno.suggest.imports.autoDiscover": true,
