@@ -1,7 +1,6 @@
+use super::database::types::transaction::ExtendedTransaction;
 use crate::providers::eth_provider::provider::EthApiResult;
-use alloy_rpc_types::Transaction;
 use alloy_rpc_types_txpool::TxpoolContent;
-use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
@@ -11,8 +10,8 @@ use mongodb::bson::doc;
 #[auto_impl(Arc, &)]
 pub trait TxPoolProvider {
     /// Returns a vec of pending pool transactions.
-    fn content(&self) -> TxpoolContent<WithOtherFields<Transaction>>;
+    fn content(&self) -> TxpoolContent<ExtendedTransaction>;
 
     /// Returns the content of the pending pool.
-    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>>;
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<ExtendedTransaction>>;
 }

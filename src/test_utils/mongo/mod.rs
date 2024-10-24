@@ -2,14 +2,16 @@ use crate::providers::eth_provider::{
     constant::U64_HEX_STRING_LEN,
     database::{
         types::{
-            header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+            header::StoredHeader,
+            log::StoredLog,
+            receipt::{ExtendedTxReceipt, StoredTransactionReceipt},
+            transaction::StoredTransaction,
         },
         CollectionName, Database,
     },
 };
 use alloy_primitives::{B256, U256};
-use alloy_rpc_types::{Transaction, TransactionReceipt};
-use alloy_serde::WithOtherFields;
+use alloy_rpc_types::Transaction;
 use arbitrary::Arbitrary;
 use mongodb::{
     bson::{self, doc, Document},
@@ -213,7 +215,7 @@ impl MongoFuzzer {
         // Generate a receipt for the transaction.
         let receipt = self.generate_transaction_receipt(&transaction.tx);
         // add an isRunOutOfRessources field to the receipt
-        let mut receipt_with_other_fields: WithOtherFields<TransactionReceipt> = receipt.into();
+        let mut receipt_with_other_fields: ExtendedTxReceipt = receipt.into();
         receipt_with_other_fields.other.insert("isRunOutOfRessources".to_string(), serde_json::Value::Bool(true));
 
         let stored_receipt = StoredTransactionReceipt { receipt: receipt_with_other_fields };
