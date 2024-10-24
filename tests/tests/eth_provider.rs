@@ -98,7 +98,7 @@ async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     let block_number = katana.block_number();
 
     // When: Retrieving block by specific block number
-    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), false).await.unwrap().unwrap();
+    let block = eth_provider.block_by_number(block_number.into(), false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has the expected block number
     assert_eq!(block.header.number, block_number);
@@ -168,16 +168,14 @@ async fn test_block_transaction_count_by_number(#[future] katana: Katana, _setup
     let header = katana.header_by_hash(first_tx.block_hash.unwrap()).unwrap();
 
     // When: Retrieving transaction count for a specific block number
-    let count =
-        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(header.number)).await.unwrap().unwrap();
+    let count = eth_provider.block_transaction_count_by_number(header.number.into()).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved transaction count matches the expected value
     assert_eq!(count, U256::from(1));
 
     // When: Retrieving transaction count for the block of the most recent transaction
     let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
-    let count =
-        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(block_number)).await.unwrap().unwrap();
+    let count = eth_provider.block_transaction_count_by_number(block_number.into()).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved transaction count matches the expected value
     assert_eq!(count, U256::from(1));
@@ -558,8 +556,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let nbr_blocks = katana.headers.len();
 
     // Call the fee_history method of the Ethereum provider.
-    let fee_history =
-        eth_provider.fee_history(U64::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
+    let fee_history = eth_provider.fee_history(U64::from(block_count), newest_block.into(), None).await.unwrap();
 
     // Verify that the length of the base_fee_per_gas list in the fee history is equal
     // to the total number of blocks plus one.
@@ -640,13 +637,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     let transaction = katana.most_recent_transaction().unwrap();
 
     // Then: Retrieve receipts by block number
-    let receipts = eth_provider
-        .block_receipts(Some(alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(
-            transaction.block_number.unwrap(),
-        ))))
-        .await
-        .unwrap()
-        .unwrap();
+    let receipts = eth_provider.block_receipts(Some(transaction.block_number.unwrap().into())).await.unwrap().unwrap();
     assert_eq!(receipts.len(), 1);
     let receipt = receipts.first().unwrap();
     assert_eq!(receipt.transaction_index, transaction.transaction_index);

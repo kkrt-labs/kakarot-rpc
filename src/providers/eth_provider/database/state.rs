@@ -1,6 +1,6 @@
 use crate::providers::eth_provider::{error::EthApiError, provider::EthereumProvider};
 use alloy_primitives::{Address, B256, U256};
-use alloy_rpc_types::{serde_helpers::JsonStorageKey, BlockHashOrNumber, BlockId, BlockNumberOrTag};
+use alloy_rpc_types::{serde_helpers::JsonStorageKey, BlockId};
 use reth_revm::{
     db::CacheDB,
     primitives::{AccountInfo, Bytecode},
@@ -98,9 +98,9 @@ impl<P: EthereumProvider + Send + Sync> DatabaseRef for EthDatabase<P> {
             let hash = Handle::current().block_on(async {
                 let hash = self
                     .provider
-                    .block_by_number(BlockNumberOrTag::Number(block_number), false)
+                    .block_by_number(block_number.into(), false)
                     .await?
-                    .ok_or(EthApiError::UnknownBlock(BlockHashOrNumber::Number(block_number)))?
+                    .ok_or(EthApiError::UnknownBlock(block_number.into()))?
                     .header
                     .hash;
                 Result::<_, EthApiError>::Ok(hash)

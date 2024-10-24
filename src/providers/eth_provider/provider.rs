@@ -280,7 +280,7 @@ where
         block_id: BlockId,
     ) -> EthApiResult<BlockHashOrNumber> {
         match block_id {
-            BlockId::Hash(hash) => Ok(BlockHashOrNumber::Hash(hash.into())),
+            BlockId::Hash(hash) => Ok(hash.into()),
             BlockId::Number(number_or_tag) => Ok(self.tag_into_block_number(number_or_tag).await?.into()),
         }
     }

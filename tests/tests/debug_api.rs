@@ -14,9 +14,7 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::{
-    Block, BlockNumberOrTag, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered,
-};
+use reth_primitives::{Block, Log, Receipt, ReceiptWithBloom, TransactionSigned, TransactionSignedEcRecovered};
 use reth_rpc_types_compat::transaction::from_recovered_with_block_context;
 use rstest::*;
 use serde_json::Value;
@@ -149,13 +147,8 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
     // Get the Ethereum provider from the Katana instance.
     let eth_provider = katana.eth_provider();
 
-    for (i, actual_tx) in eth_provider
-        .block_transactions(Some(alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
-        .await
-        .unwrap()
-        .unwrap()
-        .iter()
-        .enumerate()
+    for (i, actual_tx) in
+        eth_provider.block_transactions(Some(block_number.into())).await.unwrap().unwrap().iter().enumerate()
     {
         // Fetch the transaction for the current transaction hash.
         let tx = katana.eth_client.transaction_by_hash(actual_tx.hash).await.unwrap().unwrap();
@@ -240,13 +233,8 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
     // Get eth provider
     let eth_provider = katana.eth_provider();
 
-    for (i, receipt) in eth_provider
-        .block_receipts(Some(alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(block_number))))
-        .await
-        .unwrap()
-        .unwrap()
-        .iter()
-        .enumerate()
+    for (i, receipt) in
+        eth_provider.block_receipts(Some(block_number.into())).await.unwrap().unwrap().iter().enumerate()
     {
         // Fetch the transaction receipt for the current receipt hash.
         let tx_receipt = eth_provider.transaction_receipt(receipt.transaction_hash).await.unwrap().unwrap();
@@ -389,7 +377,7 @@ async fn test_raw_header(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
 
     // Fetch the transaction receipt for the current receipt hash.
-    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), true).await.unwrap().unwrap();
+    let block = eth_provider.block_by_number(block_number.into(), true).await.unwrap().unwrap();
 
     // Encode header into RLP bytes and assert equality with RLP bytes fetched by block number.
     let mut data = vec![];
