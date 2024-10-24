@@ -25,7 +25,7 @@ environments:
           MONGO_REPLACE_DATA_INSIDE_TRANSACTION: "true"
           STARTING_BLOCK: "0"
 
-  - project: "sepolia"
+  - project: "staging"
     id: 4912672c-533c-4198-9834-a8999c0b2db0
     repos:
       kakarot-rpc:
