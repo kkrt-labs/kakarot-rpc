@@ -215,7 +215,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                     .map(|add| {
                         ProviderRequestData::GetNonce(GetNonceRequest {
                             contract_address: *add,
-                            block_id: BlockId::Tag(BlockTag::Latest),
+                            block_id: BlockId::Tag(BlockTag::Pending),
                         })
                     })
                     .collect::<Vec<_>>();
