@@ -129,7 +129,7 @@ services:
       - redis
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.6.20
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.7.5
     ports:
       - 3030:3030
     environment:
@@ -157,7 +157,7 @@ services:
       - internal
 
   apibara-dna:
-    image: quay.io/apibara/starknet:1.5.0
+    image: quay.io/apibara/starknet:1.6.0
     command:
       - start
       - --rpc=http://starknet:5050
