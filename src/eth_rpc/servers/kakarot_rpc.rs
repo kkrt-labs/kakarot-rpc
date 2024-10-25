@@ -20,6 +20,7 @@ impl KakarotApiServer for KakarotRpc {
             starknet_network: String::from(starknet_config.network_url),
             max_felts_in_calldata: *MAX_FELTS_IN_CALLDATA,
             white_listed_eip_155_transaction_hashes: get_white_listed_eip_155_transaction_hashes(),
+            kakarot_address: starknet_config.kakarot_address,
         })
     }
 }
