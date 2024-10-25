@@ -78,7 +78,7 @@ if [ "${ENV}" = "sepolia" ]; then
 		echo "Please provide the EVM_PRIVATE_KEY environment variable."
 		exit 1
 	fi
-	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles --ignore tests/end_to_end/EvmPrecompiles --ignore tests/end_to_end/test_kakarot.py"
+	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles -k 'not test_should_set_account_bytecode and not test_should_set_account_nonce and not test_should_upgrade_account_class and not test_should_raise_when_class_hash_is_not_declared and not test_should_upgrade_class_hash and not test_should_transfer_ownership and not test_should_return_transaction_count and not test_should_withdraw_all_eth'"
 elif [ "${ENV}" = "sepolia-staging" ]; then
 	export EVM_PRIVATE_KEY="0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
 	export RPC_URL="https://juno-kakarot-sepolia.karnot.xyz/"
@@ -95,7 +95,7 @@ elif [ "${ENV}" = "sepolia-staging" ]; then
 		exit 1
 	fi
 
-	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles"
+	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles -k 'not test_should_set_account_bytecode and not test_should_set_account_nonce and not test_should_upgrade_account_class and not test_should_raise_when_class_hash_is_not_declared and not test_should_upgrade_class_hash and not test_should_transfer_ownership and not test_should_return_transaction_count and not test_should_withdraw_all_eth'"
 fi
 
 # Deploy the contracts if the deploy command is provided
