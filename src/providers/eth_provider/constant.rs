@@ -1,5 +1,6 @@
 use alloy_primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
+use starknet::core::types::Felt;
 use std::{str::FromStr, sync::LazyLock};
 
 /// Maximum priority fee per gas
@@ -35,6 +36,8 @@ pub struct Constant {
     pub max_felts_in_calldata: usize,
     /// List of whitelisted hashes allow to submit pre EIP-155 transactions.
     pub white_listed_eip_155_transaction_hashes: Vec<B256>,
+    /// Kakarot address the RPC points to.
+    pub kakarot_address: Felt,
 }
 
 #[cfg(feature = "hive")]
