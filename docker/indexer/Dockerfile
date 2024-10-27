@@ -1,6 +1,6 @@
 FROM debian:latest as apibara-build
 
-RUN apt-get update && apt-get install --yes jq curl gzip
+RUN apt-get update --quiet && apt-get install --yes --quiet jq curl gzip
 
 ARG APIBARA_DOWNLOAD_URL
 
