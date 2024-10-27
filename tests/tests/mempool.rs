@@ -390,8 +390,8 @@ async fn test_maintain_mempool(#[future] katana: Katana, _setup: ()) {
     // Start maintaining the transaction pool
     //
     // This task will periodically prune the mempool based on the given prune_duration.
-    // For testing purposes, we set the prune_duration to 1 second.
-    let prune_duration = Duration::from_secs(1);
+    // For testing purposes, we set the prune_duration to 100 milliseconds.
+    let prune_duration = Duration::from_millis(100);
     let eth_client_clone = Arc::clone(&eth_client);
     let maintain_task = tokio::spawn(async move {
         maintain_transaction_pool(eth_client_clone, prune_duration);
@@ -402,8 +402,8 @@ async fn test_maintain_mempool(#[future] katana: Katana, _setup: ()) {
 
     // Loop to simulate new blocks being added to the blockchain every 100 milliseconds.
     for _ in 0..10 {
-        // Sleep for 100 milliseconds to simulate the passage of time between blocks.
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        // Sleep for 10 milliseconds to simulate the passage of time between blocks.
+        tokio::time::sleep(Duration::from_millis(10)).await;
 
         // Increment the block number to simulate the blockchain progressing.
         last_block_number += 1;
@@ -460,7 +460,7 @@ async fn test_maintain_mempool(#[future] katana: Katana, _setup: ()) {
     }
 
     // Sleep for some additional time to allow the pruning to occur.
-    tokio::time::sleep(Duration::from_secs(1)).await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
 
     // Verify that both transactions have been pruned from the mempool after the pruning duration.
     assert!(!eth_client.mempool().contains(transaction1.hash()), "Transaction 1 should be pruned after 1 second");
