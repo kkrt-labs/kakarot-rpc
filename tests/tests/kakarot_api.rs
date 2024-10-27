@@ -11,6 +11,7 @@ use kakarot_rpc::{
 };
 use rstest::*;
 use serde_json::Value;
+use starknet::core::types::Felt;
 use std::str::FromStr;
 
 #[rstest]
@@ -28,6 +29,7 @@ async fn test_kakarot_get_config(#[future] katana: Katana, _setup: ()) {
     std::env::set_var("WHITE_LISTED_EIP_155_TRANSACTION_HASHES", white_listed_eip_155_transaction_hashes);
     std::env::set_var("MAX_LOGS", max_logs.to_string());
     std::env::set_var("MAX_FELTS_IN_CALLDATA", max_felts_in_calldata.to_string());
+    std::env::set_var("KAKAROT_ADDRESS", "0x03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb");
 
     // Hardcoded expected values
     let expected_constant = Constant {
@@ -35,6 +37,7 @@ async fn test_kakarot_get_config(#[future] katana: Katana, _setup: ()) {
         starknet_network: (starknet_network).to_string(),
         max_felts_in_calldata,
         white_listed_eip_155_transaction_hashes: vec![B256::from_str(white_listed_eip_155_transaction_hashes).unwrap()],
+        kakarot_address: Felt::from_hex("0x03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb").unwrap(),
     };
 
     // Start the Kakarot RPC server

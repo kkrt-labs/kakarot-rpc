@@ -34,7 +34,7 @@ where
     }
 
     async fn block_receipts(&self, block_id: Option<BlockId>) -> EthApiResult<Option<Vec<ExtendedTxReceipt>>> {
-        match block_id.unwrap_or(BlockId::Number(BlockNumberOrTag::Latest)) {
+        match block_id.unwrap_or_else(|| BlockNumberOrTag::Latest.into()) {
             BlockId::Number(number_or_tag) => {
                 let block_number = self.tag_into_block_number(number_or_tag).await?;
                 if !self.database().block_exists(block_number.into()).await? {
