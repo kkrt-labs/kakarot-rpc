@@ -1,59 +1,57 @@
+# Use cargo-chef to handle Rust dependencies
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
+# Prepare the recipe for caching dependencies
 FROM chef AS planner
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
+# Install build dependencies and build the application
 FROM chef AS builder 
 COPY --from=planner /app/recipe.json recipe.json
 
-# Build application
-COPY . .
-# Install system dependencies
+# Install necessary system dependencies once
 RUN apt-get update && \
     apt-get -y upgrade && \
-    apt-get install --no-install-recommends -y libclang-dev
+    apt-get install --no-install-recommends -y libclang-dev libssl-dev ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# Builds dependencies
+# Build dependencies for caching
 RUN cargo chef cook --release --recipe-path recipe.json
 
-# Build application
+# Build the application using cached dependencies
 COPY . .
-RUN --mount=type=cache,target=/root/.cache/cargo cargo build --release --bin kakarot-rpc
+RUN --mount=type=cache,target=/root/.cache cargo build --release --bin kakarot-rpc
 
+# Runtime stage with minimal dependencies
 FROM debian:bookworm-slim AS runtime
 WORKDIR /usr/src/app
-COPY --chmod=111 --from=builder /app/target/release/kakarot-rpc /usr/local/bin
 
-# Expose the port that the RPC server will run on
-EXPOSE 9545
-EXPOSE 3030
+# Install runtime dependencies and clean up
+RUN apt-get update && \
+    apt-get -y upgrade && \
+    apt-get install --no-install-recommends -y tini curl && \
+    rm -rf /var/lib/apt/lists/*
 
-# Expose prometheus endpoint
-EXPOSE 9615
+# Copy only the necessary binaries
+COPY --from=builder /app/target/release/kakarot-rpc /usr/local/bin/kakarot-rpc
+COPY ./indexer /usr/src/indexer
 
-# this is required to have exposing ports work from docker, the default is not this.
+# Expose necessary ports
+EXPOSE 9545 3030 9615
+
+# Configure environment variables
 ENV KAKAROT_RPC_URL="0.0.0.0:3030"
 
-# Add a health check to make sure the service is healthy
+# Add a health check for the RPC server
 HEALTHCHECK --interval=3s --timeout=5s --start-period=1s --retries=5 \
     CMD curl --request POST \
     --header "Content-Type: application/json" \
     --data '{"jsonrpc": "2.0", "method": "eth_chainId", "id": 1}' http://${KAKAROT_RPC_URL} || exit 1
 
-RUN apt-get update && \
-    apt-get -y upgrade && \
-    apt-get install --no-install-recommends -y libssl-dev ca-certificates tini curl && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy the indexer code into the RPC
-COPY ./indexer /usr/src/indexer
-
-# Seen in https://github.com/eqlabs/pathfinder/blob/4ab915a830953ed6f02af907937b46cb447d9a92/Dockerfile#L120 - 
-# Allows for passing args down to the underlying binary easily
+# Set up the entry point using tini
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/kakarot-rpc"]
 
-# empty CMD is needed and cannot be --help because otherwise configuring from
-# environment variables only would be impossible and require a workaround.
+# Empty CMD to allow configuration via environment variables
 CMD []
