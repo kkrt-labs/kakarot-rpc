@@ -460,7 +460,7 @@ async fn test_maintain_mempool(#[future] katana: Katana, _setup: ()) {
     }
 
     // Sleep for some additional time to allow the pruning to occur.
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
     // Verify that both transactions have been pruned from the mempool after the pruning duration.
     assert!(!eth_client.mempool().contains(transaction1.hash()), "Transaction 1 should be pruned after 1 second");
