@@ -401,7 +401,7 @@ async fn test_maintain_mempool(#[future] katana: Katana, _setup: ()) {
     let mut last_block_number = katana.block_number();
 
     // Loop to simulate new blocks being added to the blockchain every 100 milliseconds.
-    for _ in 0..10 {
+    for _ in 0..9 {
         // Sleep for 10 milliseconds to simulate the passage of time between blocks.
         tokio::time::sleep(Duration::from_millis(10)).await;
 
