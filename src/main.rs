@@ -1,12 +1,13 @@
-use std::{env::var, str::FromStr, sync::Arc};
-
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
     client::EthClient,
     constants::{KAKAROT_RPC_CONFIG, RPC_CONFIG},
     eth_rpc::{rpc::KakarotRpcModuleBuilder, run_server},
-    pool::mempool::{maintain_transaction_pool, AccountManager},
+    pool::{
+        constants::PRUNE_DURATION,
+        mempool::{maintain_transaction_pool, AccountManager},
+    },
     providers::eth_provider::{
         database::Database,
         starknet::kakarot_core::{core::KakarotCoreReader, KAKAROT_ADDRESS},
@@ -19,6 +20,7 @@ use starknet::{
     core::types::{BlockId, BlockTag, Felt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
+use std::{env::var, str::FromStr, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
@@ -64,7 +66,7 @@ async fn main() -> Result<()> {
     AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?.start();
 
     // Start the maintenance of the mempool
-    maintain_transaction_pool(Arc::clone(&eth_client));
+    maintain_transaction_pool(Arc::clone(&eth_client), PRUNE_DURATION);
 
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;

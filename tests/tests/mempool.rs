@@ -1,19 +1,35 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
-use alloy_consensus::TxEip1559;
+use alloy_consensus::{TxEip1559, EMPTY_ROOT_HASH};
 use alloy_eips::eip2718::Encodable2718;
-use alloy_primitives::{Address, TxKind, U256};
+use alloy_primitives::{Address, TxKind, B64, U256};
+use alloy_rpc_types::Header;
 use kakarot_rpc::{
-    providers::eth_provider::{error::SignatureError, ChainProvider},
+    pool::mempool::maintain_transaction_pool,
+    providers::eth_provider::{
+        constant::U64_HEX_STRING_LEN,
+        database::{
+            filter::{self, format_hex, EthDatabaseFilterBuilder},
+            types::header::StoredHeader,
+        },
+        error::SignatureError,
+        ChainProvider,
+    },
     test_utils::{
         eoa::Eoa,
-        fixtures::{katana_empty, setup},
+        fixtures::{katana, katana_empty, setup},
         katana::Katana,
     },
 };
+use mongodb::{
+    bson::doc,
+    options::{UpdateModifications, UpdateOptions},
+};
 use reth_primitives::{sign_message, Transaction, TransactionSigned, TransactionSignedEcRecovered};
-use reth_transaction_pool::{EthPooledTransaction, TransactionOrigin, TransactionPool};
+use reth_transaction_pool::{EthPooledTransaction, PoolTransaction, TransactionOrigin, TransactionPool};
+use revm_primitives::B256;
 use rstest::*;
+use std::{sync::Arc, time::Duration};
 
 #[rstest]
 #[awt]
@@ -350,4 +366,106 @@ pub async fn create_sample_transactions(
         transactions.push((eth_pooled_transaction, transaction_signed));
     }
     Ok(transactions)
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_maintain_mempool(#[future] katana: Katana, _setup: ()) {
+    let eth_client = Arc::new(katana.eth_client());
+
+    // Create two sample transactions at once
+    let transactions = create_sample_transactions(&katana, 2).await.expect("Failed to create sample transactions");
+
+    // Extract and ensure we have two valid transactions from the transaction list.
+    let ((transaction1, _), (transaction2, _)) = (
+        transactions.first().expect("Expected at least one transaction").clone(),
+        transactions.get(1).expect("Expected at least two transactions").clone(),
+    );
+
+    // Add transactions to the mempool
+    eth_client.mempool().add_transaction(TransactionOrigin::Private, transaction1.clone()).await.unwrap();
+    eth_client.mempool().add_transaction(TransactionOrigin::Private, transaction2.clone()).await.unwrap();
+
+    // Start maintaining the transaction pool
+    //
+    // This task will periodically prune the mempool based on the given prune_duration.
+    // For testing purposes, we set the prune_duration to 100 milliseconds.
+    let prune_duration = Duration::from_millis(100);
+    let eth_client_clone = Arc::clone(&eth_client);
+    let maintain_task = tokio::spawn(async move {
+        maintain_transaction_pool(eth_client_clone, prune_duration);
+    });
+
+    // Initialize the block number based on the current blockchain state from katana.
+    let mut last_block_number = katana.block_number();
+
+    // Loop to simulate new blocks being added to the blockchain every 100 milliseconds.
+    for _ in 0..9 {
+        // Sleep for 10 milliseconds to simulate the passage of time between blocks.
+        tokio::time::sleep(Duration::from_millis(10)).await;
+
+        // Increment the block number to simulate the blockchain progressing.
+        last_block_number += 1;
+
+        // Format the block number in both padded and unpadded hexadecimal formats.
+        let unpadded_block_number = format_hex(last_block_number, 0);
+        let padded_block_number = format_hex(last_block_number, U64_HEX_STRING_LEN);
+
+        // Get the block header collection from the database.
+        let header_collection = eth_client.eth_provider().database().collection::<StoredHeader>();
+
+        // Build a filter for updating the header based on the new block number.
+        let filter = EthDatabaseFilterBuilder::<filter::Header>::default().with_block_number(last_block_number).build();
+
+        // Insert a new header for the new block number in the database.
+        eth_client
+            .eth_provider()
+            .database()
+            .update_one(
+                StoredHeader {
+                    header: Header {
+                        hash: B256::random(),
+                        total_difficulty: Some(U256::default()),
+                        mix_hash: Some(B256::default()),
+                        nonce: Some(B64::default()),
+                        withdrawals_root: Some(EMPTY_ROOT_HASH),
+                        base_fee_per_gas: Some(0),
+                        blob_gas_used: Some(0),
+                        excess_blob_gas: Some(0),
+                        number: last_block_number,
+                        ..Default::default()
+                    },
+                },
+                filter,
+                true,
+            )
+            .await
+            .expect("Failed to update header in database");
+
+        // Update the header collection with the padded block number in the database.
+        header_collection
+            .update_one(
+                doc! {"header.number": unpadded_block_number},
+                UpdateModifications::Document(doc! {"$set": {"header.number": padded_block_number}}),
+            )
+            .with_options(UpdateOptions::builder().upsert(true).build())
+            .await
+            .expect("Failed to update block number");
+
+        // Check if both transactions are still in the mempool.
+        // We expect them to still be in the mempool until 1 second has elapsed.
+        assert!(eth_client.mempool().contains(transaction1.hash()), "Transaction 1 should still be in the mempool");
+        assert!(eth_client.mempool().contains(transaction2.hash()), "Transaction 2 should still be in the mempool");
+    }
+
+    // Sleep for some additional time to allow the pruning to occur.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // Verify that both transactions have been pruned from the mempool after the pruning duration.
+    assert!(!eth_client.mempool().contains(transaction1.hash()), "Transaction 1 should be pruned after 1 second");
+    assert!(!eth_client.mempool().contains(transaction2.hash()), "Transaction 2 should be pruned after 1 second");
+
+    // Ensure the background task is stopped gracefully.
+    maintain_task.abort();
 }
