@@ -368,7 +368,7 @@ where
                             // - And the transaction is in the mempool right now
                             if now.duration_since(timestamp) > prune_duration && eth_client.mempool().contains(&tx_hash)
                             {
-                                tracing::warn!(target: "maintain_transaction_pool", tx_hash, "pruning");
+                                tracing::warn!(target: "maintain_transaction_pool", ?tx_hash, "pruning");
 
                                 // Add the transaction to the mined transactions so that it can be pruned
                                 mined_transactions.push(tx_hash);
