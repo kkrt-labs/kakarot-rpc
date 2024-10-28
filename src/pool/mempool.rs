@@ -363,18 +363,18 @@ where
                         // Prune transactions that have been in the mempool for more than 5 minutes
                         let now = Instant::now();
 
-                        for (tx_hash, timestamp) in &mempool_transactions.clone() {
+                        for (tx_hash, timestamp) in mempool_transactions.clone() {
                             // - If the transaction has been in the mempool for more than 5 minutes
                             // - And the transaction is in the mempool right now
-                            if now.duration_since(*timestamp) > prune_duration && eth_client.mempool().contains(tx_hash)
+                            if now.duration_since(timestamp) > prune_duration && eth_client.mempool().contains(&tx_hash)
                             {
                                 tracing::warn!("Transaction {} in mempool for more than 5 minutes. Pruning.", tx_hash);
 
                                 // Add the transaction to the mined transactions so that it can be pruned
-                                mined_transactions.push(*tx_hash);
+                                mined_transactions.push(tx_hash);
 
                                 // Remove the transaction from the mempool mapping
-                                mempool_transactions.remove(tx_hash);
+                                mempool_transactions.remove(&tx_hash);
                             }
                         }
 
