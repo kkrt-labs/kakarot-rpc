@@ -1,19 +1,13 @@
 services:
   starknet:
-    image: nethermind/juno:v0.11.1
+    image: nethermind/juno:v0.12.2
     ports:
       - 6060:6060
     volumes:
-      - juno_files_prod:/var/lib/juno
+      - $HOME/snapshots/juno_sepolia:/var/lib/juno
     command: >
       --pending-poll-interval "1s" --http --http-host 0.0.0.0 --http-port 6060
-      --db-path /var/lib/juno --eth-node ${ETH_NODE_WS} --cn-name
-      kakarot-sepolia --cn-feeder-url
-      https://gateway.kakarot.sw-dev.io/feeder_gateway/ --cn-gateway-url
-      https://gateway.kakarot.sw-dev.io/gateway/ --cn-l1-chain-id 0xaa36a7
-      --cn-l2-chain-id kkrt --cn-core-contract-address
-      0x74Ca1aC5BD4c3c97006d2B7b9375Dd3B6C17ACcD --cn-unverifiable-range
-      0,1000000
+      --db-path /var/lib/juno --eth-node ${ETH_NODE_WS:?} --network sepolia
     networks:
       - internal_prod
   starknet-explorer:
@@ -116,14 +110,14 @@ services:
       # These values are unique to Sepolia Testnet
       # They'll need to be manually changed in case the testnet is reset
       # To add robustness: parse the `deployments/kakarot-sepolia` folder in `kkrt-labs/kakarot` repo
-      - KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
-      - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x600f6862938312a05a0cfecba0dcaf37693efc9e4075a6adfb62e196022678e
-      - ACCOUNT_CONTRACT_CLASS_HASH=0x1276d0b017701646f8646b69de6c3b3584edce71879678a679f28c07a9971cf
+      - KAKAROT_ADDRESS=0x1d2e513630d8120666fc6e7d52ad0c01479fd99c183baac79fff9135f46e359
+      - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x7b2de5e73ff7eb338d76c967dd5aa3f3004574d326b8c1402bb819d4983b8b6
+      - ACCOUNT_CONTRACT_CLASS_HASH=0x25d4b4889979f3df8171991f6a0163b42b756daebf313bcd0dec74cacf903f9
       - MAX_FELTS_IN_CALLDATA=30000
       - MAX_LOGS=10000
       - WHITE_LISTED_EIP_155_TRANSACTION_HASHES=0xeddf9e61fb9d8f5111840daef55e5fde0041f5702856532cdbb5a02998033d26,0xb6274b80bc7cda162df89894c7748a5cb7ba2eaa6004183c41a1837c3b072f1e,0x07471adfe8f4ec553c1199f495be97fc8be8e0626ae307281c22534460184ed1,0xb95343413e459a0f97461812111254163ae53467855c0d73e0f1e7c5b8442fa3
-      - RELAYER_PRIVATE_KEY=0x1234
-      - RELAYERS_ADDRESSES=0x12,0x34
+      - RELAYER_PRIVATE_KEY=${RELAYERS_PRIVATE_KEY:?}
+      - RELAYERS_ADDRESSES=${RELAYERS_ADDRESSES:?}
     restart: on-failure
     volumes:
       # Mount the indexer code
@@ -182,7 +176,7 @@ services:
       - STARKNET_NETWORK=http://starknet:6060
       - ALLOW_NET=
       - MONGO_REPLACE_DATA_INSIDE_TRANSACTION=false
-      - KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
+      - KAKAROT_ADDRESS=0x1d2e513630d8120666fc6e7d52ad0c01479fd99c183baac79fff9135f46e359
       - DEFAULT_BLOCK_GAS_LIMIT=7000000
     restart: on-failure
     volumes:
