@@ -20,7 +20,7 @@ use kakarot_rpc::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredTransaction},
         provider::EthereumProvider,
-        starknet::relayer::LockedRelayer,
+        starknet::relayer::Relayer,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
     test_utils::{
@@ -41,7 +41,6 @@ use starknet::{
     providers::Provider,
 };
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[rstest]
 #[awt]
@@ -754,17 +753,14 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
         .await
         .unwrap_or_default();
 
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let _ = LockedRelayer::new(
-        current_nonce.lock().await,
+    let _ = Relayer::new(
         katana.eoa.relayer.address(),
         relayer_balance,
         &(*(*eth_client.starknet_provider())),
         eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
-    .relay_transaction(&transaction_signed)
+    .relay_transaction(&transaction_signed, nonce)
     .await
     .expect("Failed to relay transaction");
 
@@ -1012,17 +1008,14 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
         .await
         .unwrap_or_default();
 
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let starknet_transaction_hash = LockedRelayer::new(
-        current_nonce.lock().await,
+    let starknet_transaction_hash = Relayer::new(
         katana.eoa.relayer.address(),
         relayer_balance,
         &(*(*katana.eth_client.starknet_provider())),
         katana.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
-    .relay_transaction(&transaction_signed)
+    .relay_transaction(&transaction_signed, nonce)
     .await
     .expect("Failed to relay transaction");
 
@@ -1374,17 +1367,14 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         .await
         .unwrap_or_default();
 
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let _ = LockedRelayer::new(
-        current_nonce.lock().await,
+    let _ = Relayer::new(
         katana_empty.eoa.relayer.address(),
         relayer_balance,
         &(*(*katana_empty.eth_client.starknet_provider())),
         katana_empty.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
-    .relay_transaction(&transaction_signed)
+    .relay_transaction(&transaction_signed, nonce)
     .await
     .expect("Failed to relay transaction");
 

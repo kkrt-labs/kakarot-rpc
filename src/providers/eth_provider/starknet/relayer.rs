@@ -14,7 +14,6 @@ use starknet::{
     signers::{LocalWallet, SigningKey},
 };
 use std::{env::var, ops::Deref, str::FromStr, sync::LazyLock};
-use tokio::sync::MutexGuard;
 
 /// Signer for all relayers
 static RELAYER_SIGNER: LazyLock<LocalWallet> = LazyLock::new(|| {
@@ -24,33 +23,35 @@ static RELAYER_SIGNER: LazyLock<LocalWallet> = LazyLock::new(|| {
     ))
 });
 
-/// A relayer holding a lock on a mutex on an account and connected to the Starknet network.
+/// A relayer holding an account and a balance.
+///
 /// The relayer is used to sign  transactions and broadcast them on the network.
 #[derive(Debug)]
-pub struct LockedRelayer<'a, SP: Provider + Send + Sync> {
+pub struct Relayer<SP: Provider + Send + Sync> {
     /// The account used to sign and broadcast the transaction
     account: SingleOwnerAccount<SP, LocalWallet>,
     /// The balance of the relayer
     balance: Felt,
-    /// The locked nonce held by the relayer
-    nonce: MutexGuard<'a, Felt>,
 }
 
-impl<'a, SP> LockedRelayer<'a, SP>
+impl<SP> Relayer<SP>
 where
     SP: Provider + Send + Sync,
 {
-    /// Create a new relayer with the provided Starknet provider, address, balance and nonce.
-    pub fn new(lock: MutexGuard<'a, Felt>, address: Felt, balance: Felt, provider: SP, chain_id: Felt) -> Self {
+    /// Create a new relayer with the provided Starknet provider, address, balance.
+    pub fn new(address: Felt, balance: Felt, provider: SP, chain_id: Felt) -> Self {
         let relayer =
             SingleOwnerAccount::new(provider, RELAYER_SIGNER.clone(), address, chain_id, ExecutionEncoding::New);
 
-        Self { account: relayer, balance, nonce: lock }
+        Self { account: relayer, balance }
     }
 
     /// Relay the provided Ethereum transaction on the Starknet network.
+    /// The relayer nonce is directly fetched from the chain to have the most up-to-date value.
+    /// This is a way to avoid nonce issues.
+    ///
     /// Returns the corresponding Starknet transaction hash.
-    pub async fn relay_transaction(&self, transaction: &TransactionSigned) -> EthApiResult<Felt> {
+    pub async fn relay_transaction(&self, transaction: &TransactionSigned, relayer_nonce: Felt) -> EthApiResult<Felt> {
         // Transform the transaction's data to Starknet calldata
         let relayer_address = self.account.address();
         let calldata = transaction_data_to_starknet_calldata(transaction, relayer_address)?;
@@ -62,7 +63,7 @@ where
         // Construct the call
         let call = starknet::core::types::Call { to: eoa_address, selector: *EXECUTE_FROM_OUTSIDE, calldata };
         let mut execution = ExecutionV1::new(vec![call], &self.account);
-        execution = execution.nonce(*self.nonce);
+        execution = execution.nonce(relayer_nonce);
 
         // We set the max fee to the balance of the account / 5. This means that the account could
         // send up to 5 transactions before hitting a feeder gateway error.
@@ -74,12 +75,12 @@ where
         Ok(res.transaction_hash)
     }
 
-    pub fn nonce_mut(&mut self) -> &mut Felt {
-        &mut self.nonce
+    pub fn address(&self) -> Felt {
+        self.account.address()
     }
 }
 
-impl<'a, SP> Deref for LockedRelayer<'a, SP>
+impl<SP> Deref for Relayer<SP>
 where
     SP: Provider + Send + Sync,
 {
