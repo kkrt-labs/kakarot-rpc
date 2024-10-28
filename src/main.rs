@@ -4,7 +4,10 @@ use kakarot_rpc::{
     client::EthClient,
     constants::{KAKAROT_RPC_CONFIG, RPC_CONFIG},
     eth_rpc::{rpc::KakarotRpcModuleBuilder, run_server},
-    pool::mempool::{maintain_transaction_pool, AccountManager},
+    pool::{
+        constants::PRUNE_DURATION,
+        mempool::{maintain_transaction_pool, AccountManager},
+    },
     providers::eth_provider::database::Database,
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
@@ -14,7 +17,7 @@ use starknet::{
     core::types::Felt,
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
-use std::{env::var, str::FromStr, sync::Arc, time::Duration};
+use std::{env::var, str::FromStr, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
@@ -56,11 +59,8 @@ async fn main() -> Result<()> {
         var("RELAYERS_ADDRESSES")?.split(',').filter_map(|addr| Felt::from_str(addr).ok()).collect::<Vec<_>>();
     AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?.start();
 
-    // Transactions should be pruned after 5 minutes in the mempool
-    let prune_duration = Duration::from_secs(300);
-
     // Start the maintenance of the mempool
-    maintain_transaction_pool(Arc::clone(&eth_client), prune_duration);
+    maintain_transaction_pool(Arc::clone(&eth_client), PRUNE_DURATION);
 
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;
