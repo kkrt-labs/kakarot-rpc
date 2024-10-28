@@ -4,7 +4,10 @@ use kakarot_rpc::{
     client::EthClient,
     constants::{KAKAROT_RPC_CONFIG, RPC_CONFIG},
     eth_rpc::{rpc::KakarotRpcModuleBuilder, run_server},
-    pool::mempool::{maintain_transaction_pool, AccountManager},
+    pool::{
+        constants::PRUNE_DURATION,
+        mempool::{maintain_transaction_pool, AccountManager},
+    },
     providers::eth_provider::{
         database::Database,
         starknet::kakarot_core::{core::KakarotCoreReader, KAKAROT_ADDRESS},
