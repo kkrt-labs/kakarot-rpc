@@ -256,7 +256,7 @@ impl<T: Default> EthDatabaseFilterBuilder<T> {
     }
 }
 
-pub(crate) fn format_hex(value: impl LowerHex, width: usize) -> String {
+pub fn format_hex(value: impl LowerHex, width: usize) -> String {
     // Add 2 to the width to account for the 0x prefix.
     let s = format!("{:#0width$x}", value, width = width + 2);
     // `s.len() < width` can happen because of the LowerHex implementation
