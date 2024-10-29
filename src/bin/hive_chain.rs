@@ -4,9 +4,8 @@ use alloy_primitives::bytes::{Buf, BytesMut};
 use alloy_rlp::Decodable;
 use clap::Parser;
 use kakarot_rpc::{
-    constants::STARKNET_CHAIN_ID,
     into_via_try_wrapper,
-    providers::{eth_provider::starknet::relayer::LockedRelayer, sn_provider::StarknetProvider},
+    providers::{eth_provider::starknet::relayer::Relayer, sn_provider::StarknetProvider},
 };
 use reth_primitives::{Block, BlockBody};
 use starknet::{
@@ -14,7 +13,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, JsonRpcClient, Provider},
 };
 use std::{path::PathBuf, str::FromStr};
-use tokio::{fs::File, io::AsyncReadExt, sync::Mutex};
+use tokio::{fs::File, io::AsyncReadExt};
 use tokio_stream::StreamExt;
 use tokio_util::codec::{Decoder, FramedRead};
 use url::Url;
@@ -72,13 +71,10 @@ async fn main() -> eyre::Result<()> {
     let relayer_balance = starknet_provider.balance_at(args.relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
     let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-    let current_nonce = Mutex::new(Felt::ZERO);
-    let mut relayer = LockedRelayer::new(
-        current_nonce.lock().await,
+    let relayer = Relayer::new(
         args.relayer_address,
         relayer_balance,
         JsonRpcClient::new(HttpTransport::new(Url::from_str(STARKNET_RPC_URL)?)),
-        *STARKNET_CHAIN_ID,
     );
 
     // Read the rlp file
@@ -107,10 +103,6 @@ async fn main() -> eyre::Result<()> {
         for transaction in &body.transactions {
             relayer.relay_transaction(transaction).await?;
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-            // Increase the relayer's nonce
-            let nonce = relayer.nonce_mut();
-            *nonce += Felt::ONE;
         }
     }
 
