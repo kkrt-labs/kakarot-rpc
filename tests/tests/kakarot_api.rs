@@ -10,9 +10,9 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::{sign_message, Address, Bytes, Transaction, TransactionSigned, TxEip1559, TxKind, B256, U256};
 use rstest::*;
 use serde_json::Value;
+use starknet::core::types::Felt;
 use std::str::FromStr;
 
 #[cfg(feature = "forwarding")]

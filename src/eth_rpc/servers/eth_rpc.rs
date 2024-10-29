@@ -2,7 +2,7 @@ use crate::{
     client::{EthClient, TransactionHashProvider},
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
-        constant::{MAX_PRIORITY_FEE_PER_GAS, MAIN_RPC_URL},
+        constant::MAX_PRIORITY_FEE_PER_GAS,
         database::types::{header::ExtendedBlock, receipt::ExtendedTxReceipt, transaction::ExtendedTransaction},
         error::EthApiError,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
@@ -246,7 +246,7 @@ where
 
         #[cfg(feature = "forwarding")]
         {
-            use crate::providers::eth_provider::constant::MAIN_RPC_URL;
+            use crate::providers::eth_provider::{constant::MAIN_RPC_URL, error::TransactionError};
             use alloy_provider::{Provider as _, ProviderBuilder};
             use url::Url;
 
