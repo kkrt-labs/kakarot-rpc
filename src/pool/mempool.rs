@@ -99,16 +99,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         // Send the Ethereum transaction using the relayer
                         let transaction_signed = transaction.to_recovered_transaction().into_signed();
 
-                        // Query the updated nonce for the account from the provider.
-                        // Via on chain query we have the most up-to-date nonce.
-                        let relayer_nonce = manager
-                            .eth_client
-                            .starknet_provider()
-                            .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), relayer.address())
-                            .await
-                            .unwrap_or_default();
-
-                        let res = relayer.relay_transaction(&transaction_signed, relayer_nonce).await;
+                        let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
                             // If the relayer failed to relay the transaction, we need to reposition it in the mempool
                             tracing::error!(target: "account_manager", err = ?res.unwrap_err(), "failed to relay transaction");

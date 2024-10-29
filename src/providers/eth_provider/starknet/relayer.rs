@@ -9,8 +9,8 @@ use crate::{
 };
 use reth_primitives::TransactionSigned;
 use starknet::{
-    accounts::{Account, ExecutionEncoding, ExecutionV1, SingleOwnerAccount},
-    core::types::{Felt, NonZeroFelt},
+    accounts::{Account, ConnectedAccount, ExecutionEncoding, ExecutionV1, SingleOwnerAccount},
+    core::types::{BlockTag, Felt, NonZeroFelt},
     providers::Provider,
     signers::{LocalWallet, SigningKey},
 };
@@ -57,7 +57,7 @@ where
     /// This is a way to avoid nonce issues.
     ///
     /// Returns the corresponding Starknet transaction hash.
-    pub async fn relay_transaction(&self, transaction: &TransactionSigned, relayer_nonce: Felt) -> EthApiResult<Felt> {
+    pub async fn relay_transaction(&self, transaction: &TransactionSigned) -> EthApiResult<Felt> {
         // Transform the transaction's data to Starknet calldata
         let relayer_address = self.account.address();
         let calldata = transaction_data_to_starknet_calldata(transaction, relayer_address)?;
@@ -69,6 +69,15 @@ where
         // Construct the call
         let call = starknet::core::types::Call { to: eoa_address, selector: *EXECUTE_FROM_OUTSIDE, calldata };
         let mut execution = ExecutionV1::new(vec![call], &self.account);
+
+        // Fetch the relayer nonce from the Starknet provider
+        let relayer_nonce = self
+            .account
+            .provider()
+            .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), relayer_address)
+            .await
+            .unwrap_or_default();
+
         execution = execution.nonce(relayer_nonce);
 
         // We set the max fee to the balance of the account / 5. This means that the account could

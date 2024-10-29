@@ -38,7 +38,6 @@ use rstest::*;
 use starknet::{
     accounts::Account,
     core::types::{BlockId, BlockTag, Felt},
-    providers::Provider,
 };
 use std::sync::Arc;
 
@@ -747,15 +746,9 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
     // Relay the transaction
     let _ = Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*eth_client.starknet_provider())))
-        .relay_transaction(&transaction_signed, nonce)
+        .relay_transaction(&transaction_signed)
         .await
         .expect("Failed to relay transaction");
 
@@ -996,17 +989,10 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = katana
-        .eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
     // Relay the transaction
     let starknet_transaction_hash =
         Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*katana.eth_client.starknet_provider())))
-            .relay_transaction(&transaction_signed, nonce)
+            .relay_transaction(&transaction_signed)
             .await
             .expect("Failed to relay transaction");
 
@@ -1351,20 +1337,13 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = katana_empty
-        .eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana_empty.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
     // Relay the transaction
     let _ = Relayer::new(
         katana_empty.eoa.relayer.address(),
         relayer_balance,
         &(*(*katana_empty.eth_client.starknet_provider())),
     )
-    .relay_transaction(&transaction_signed, nonce)
+    .relay_transaction(&transaction_signed)
     .await
     .expect("Failed to relay transaction");
 

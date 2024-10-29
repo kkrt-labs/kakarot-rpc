@@ -156,16 +156,9 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             .await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-        let nonce = self
-            .eth_client
-            .starknet_provider()
-            .get_nonce(BlockId::Tag(BlockTag::Latest), self.relayer.address())
-            .await
-            .unwrap_or_default();
-
         // Relay the transaction
         let starknet_transaction_hash = Relayer::new(self.relayer.address(), relayer_balance, self.starknet_provider())
-            .relay_transaction(&tx_signed, nonce)
+            .relay_transaction(&tx_signed)
             .await
             .expect("Failed to relay transaction");
 
@@ -232,16 +225,9 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             .await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-        let nonce = self
-            .eth_client
-            .starknet_provider()
-            .get_nonce(BlockId::Tag(BlockTag::Latest), self.relayer.address())
-            .await
-            .unwrap_or_default();
-
         // Relay the transaction
         let starknet_transaction_hash = Relayer::new(self.relayer.address(), relayer_balance, self.starknet_provider())
-            .relay_transaction(&tx_signed, nonce)
+            .relay_transaction(&tx_signed)
             .await
             .expect("Failed to relay transaction");
 

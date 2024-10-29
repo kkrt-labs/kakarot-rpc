@@ -71,7 +71,6 @@ async fn main() -> eyre::Result<()> {
     let relayer_balance = starknet_provider.balance_at(args.relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
     let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-    let mut current_nonce = Felt::ZERO;
     let relayer = Relayer::new(
         args.relayer_address,
         relayer_balance,
@@ -102,11 +101,8 @@ async fn main() -> eyre::Result<()> {
         }
 
         for transaction in &body.transactions {
-            relayer.relay_transaction(transaction, current_nonce).await?;
+            relayer.relay_transaction(transaction).await?;
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-            // Increase the relayer's nonce
-            current_nonce += Felt::ONE;
         }
     }
 
