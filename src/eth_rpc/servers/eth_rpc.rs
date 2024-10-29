@@ -246,7 +246,7 @@ where
 
         #[cfg(feature = "forwarding")]
         {
-            use crate::providers::eth_provider::{constant::MAIN_RPC_URL, error::TransactionError};
+            use crate::providers::eth_provider::{constant::forwarding::MAIN_RPC_URL, error::TransactionError};
             use alloy_provider::{Provider as _, ProviderBuilder};
             use url::Url;
 
@@ -260,7 +260,10 @@ where
         }
 
         #[cfg(not(feature = "forwarding"))]
-        Ok(self.eth_client.send_raw_transaction(bytes).await?)
+        {
+            use crate::client::KakarotTransactions;
+            Ok(self.eth_client.send_raw_transaction(bytes).await?)
+        }
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> RpcResult<Bytes> {
