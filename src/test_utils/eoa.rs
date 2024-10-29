@@ -2,7 +2,7 @@ use crate::{
     client::{EthClient, KakarotTransactions},
     into_via_try_wrapper,
     providers::eth_provider::{
-        starknet::{kakarot_core::starknet_address, relayer::LockedRelayer},
+        starknet::{kakarot_core::starknet_address, relayer::Relayer},
         ChainProvider, TransactionProvider,
     },
     test_utils::{
@@ -28,7 +28,6 @@ use starknet::{
     signers::LocalWallet,
 };
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 pub const TX_GAS_LIMIT: u64 = 5_000_000;
 pub const TX_GAS_PRICE: u64 = 10;
@@ -157,26 +156,11 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             .await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-        let nonce = self
-            .eth_client
-            .starknet_provider()
-            .get_nonce(BlockId::Tag(BlockTag::Latest), self.relayer.address())
-            .await
-            .unwrap_or_default();
-
-        let current_nonce = Mutex::new(nonce);
-
         // Relay the transaction
-        let starknet_transaction_hash = LockedRelayer::new(
-            current_nonce.lock().await,
-            self.relayer.address(),
-            relayer_balance,
-            self.starknet_provider(),
-            self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
-        )
-        .relay_transaction(&tx_signed)
-        .await
-        .expect("Failed to relay transaction");
+        let starknet_transaction_hash = Relayer::new(self.relayer.address(), relayer_balance, self.starknet_provider())
+            .relay_transaction(&tx_signed)
+            .await
+            .expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),
@@ -241,26 +225,11 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             .await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
-        let nonce = self
-            .eth_client
-            .starknet_provider()
-            .get_nonce(BlockId::Tag(BlockTag::Latest), self.relayer.address())
-            .await
-            .unwrap_or_default();
-
-        let current_nonce = Mutex::new(nonce);
-
         // Relay the transaction
-        let starknet_transaction_hash = LockedRelayer::new(
-            current_nonce.lock().await,
-            self.relayer.address(),
-            relayer_balance,
-            self.starknet_provider(),
-            self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
-        )
-        .relay_transaction(&tx_signed)
-        .await
-        .expect("Failed to relay transaction");
+        let starknet_transaction_hash = Relayer::new(self.relayer.address(), relayer_balance, self.starknet_provider())
+            .relay_transaction(&tx_signed)
+            .await
+            .expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),

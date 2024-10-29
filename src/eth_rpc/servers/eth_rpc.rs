@@ -1,5 +1,5 @@
 use crate::{
-    client::{EthClient, KakarotTransactions, TransactionHashProvider},
+    client::{EthClient, TransactionHashProvider},
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
         constant::MAX_PRIORITY_FEE_PER_GAS,
@@ -243,7 +243,27 @@ where
     #[tracing::instrument(skip_all, ret, err)]
     async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256> {
         tracing::info!("Serving eth_sendRawTransaction");
-        Ok(self.eth_client.send_raw_transaction(bytes).await?)
+
+        #[cfg(feature = "forwarding")]
+        {
+            use crate::providers::eth_provider::{constant::forwarding::MAIN_RPC_URL, error::TransactionError};
+            use alloy_provider::{Provider as _, ProviderBuilder};
+            use url::Url;
+
+            let provider = ProviderBuilder::new().on_http(Url::parse(MAIN_RPC_URL.as_ref()).unwrap());
+            let tx_hash = provider
+                .send_raw_transaction(&bytes)
+                .await
+                .map_err(|e| EthApiError::Transaction(TransactionError::Broadcast(e.into())))?;
+
+            return Ok(*tx_hash.tx_hash());
+        }
+
+        #[cfg(not(feature = "forwarding"))]
+        {
+            use crate::client::KakarotTransactions;
+            Ok(self.eth_client.send_raw_transaction(bytes).await?)
+        }
     }
 
     async fn sign(&self, _address: Address, _message: Bytes) -> RpcResult<Bytes> {
