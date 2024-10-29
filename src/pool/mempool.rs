@@ -52,7 +52,7 @@ pub struct AccountManager<SP: starknet::providers::Provider + Send + Sync + Clon
 impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountManager<SP> {
     /// Initialize the account manager with a set of passed accounts.
     pub const fn new(accounts: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> Self {
-       Self { accounts, eth_client }
+        Self { accounts, eth_client }
     }
 
     /// Starts the account manager task that periodically checks account balances and processes transactions.

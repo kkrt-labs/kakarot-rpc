@@ -754,14 +754,10 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
         .unwrap_or_default();
 
     // Relay the transaction
-    let _ = Relayer::new(
-        katana.eoa.relayer.address(),
-        relayer_balance,
-        &(*(*eth_client.starknet_provider())),
-    )
-    .relay_transaction(&transaction_signed, nonce)
-    .await
-    .expect("Failed to relay transaction");
+    let _ = Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*eth_client.starknet_provider())))
+        .relay_transaction(&transaction_signed, nonce)
+        .await
+        .expect("Failed to relay transaction");
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
@@ -1008,14 +1004,11 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
         .unwrap_or_default();
 
     // Relay the transaction
-    let starknet_transaction_hash = Relayer::new(
-        katana.eoa.relayer.address(),
-        relayer_balance,
-        &(*(*katana.eth_client.starknet_provider())),
-    )
-    .relay_transaction(&transaction_signed, nonce)
-    .await
-    .expect("Failed to relay transaction");
+    let starknet_transaction_hash =
+        Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*katana.eth_client.starknet_provider())))
+            .relay_transaction(&transaction_signed, nonce)
+            .await
+            .expect("Failed to relay transaction");
 
     watch_tx(
         eth_provider.starknet_provider_inner(),

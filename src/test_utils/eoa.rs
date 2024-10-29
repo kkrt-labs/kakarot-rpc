@@ -164,14 +164,10 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             .unwrap_or_default();
 
         // Relay the transaction
-        let starknet_transaction_hash = Relayer::new(
-            self.relayer.address(),
-            relayer_balance,
-            self.starknet_provider(),
-        )
-        .relay_transaction(&tx_signed, nonce)
-        .await
-        .expect("Failed to relay transaction");
+        let starknet_transaction_hash = Relayer::new(self.relayer.address(), relayer_balance, self.starknet_provider())
+            .relay_transaction(&tx_signed, nonce)
+            .await
+            .expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),
@@ -244,14 +240,10 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             .unwrap_or_default();
 
         // Relay the transaction
-        let starknet_transaction_hash = Relayer::new(
-            self.relayer.address(),
-            relayer_balance,
-            self.starknet_provider(),
-        )
-        .relay_transaction(&tx_signed, nonce)
-        .await
-        .expect("Failed to relay transaction");
+        let starknet_transaction_hash = Relayer::new(self.relayer.address(), relayer_balance, self.starknet_provider())
+            .relay_transaction(&tx_signed, nonce)
+            .await
+            .expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),
