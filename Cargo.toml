@@ -201,31 +201,32 @@ tempfile = "3.8"
 
 [features]
 testing = [
+  "alloy-consensus",
   "alloy-json-abi",
   "alloy-signer-local",
   "alloy-signer",
-  "alloy-consensus",
   "anyhow",
   "dep:arbitrary",
   "dojo-test-utils",
-  "katana-node",
   "foundry-config",
+  "katana-node",
   "katana-primitives",
   "mockall",
+  "mockito",
   "rayon",
   "reth-testing-utils",
+  "revm-interpreter",
+  "revm-primitives",
   "rstest",
   "serde_with",
+  "starknet_api",
+  "starknet-crypto",
   "strum",
   "strum_macros",
   "testcontainers",
   "tokio-stream",
   "tokio-util",
   "walkdir",
-  "starknet_api",
-  "revm-interpreter",
-  "revm-primitives",
-  "starknet-crypto",
 ]
 binaries = ["clap"]
 hive = []
