@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+
 use alloy_primitives::B256;
 use kakarot_rpc::{
     providers::eth_provider::constant::Constant,
@@ -14,14 +15,18 @@ use rstest::*;
 use serde_json::Value;
 use std::str::FromStr;
 
-#[cfg(feature = "rpc_forwarding")]
+#[cfg(feature = "forwarding")]
 #[rstest]
 #[awt]
 #[tokio::test(flavor = "multi_thread")]
-async fn test_send_raw_transaction_rpc_forwarding(#[future] katana: Katana, _setup: ()) {
+async fn test_send_raw_transaction_forwarding(#[future] katana: Katana, _setup: ()) {
+    use alloy_primitives::Bytes;
+    use alloy_provider::{Provider as _, ProviderBuilder};
     use mockito::Server;
     use std::env;
-    let mut server = Server::new();
+    use url::Url;
+
+    let mut server = Server::new_async().await;
     let mock_server = server
         .mock("POST", "/")
         .with_status(200)
@@ -31,27 +36,28 @@ async fn test_send_raw_transaction_rpc_forwarding(#[future] katana: Katana, _set
         )
         .create();
 
-    let (_, _) = start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
-
     // Set the MAIN_RPC_URL environment variable
     env::set_var("MAIN_RPC_URL", server.url());
-    drop(server);
 
-    let eth_client = katana.eth_client();
+    // Start the Kakarot RPC
+    let (address, handle) = start_kakarot_rpc_server(&katana).await.expect("Error setting up Kakarot RPC server");
+
+    // Get an Ethereum provider
+    let provider = ProviderBuilder::new().on_http(Url::parse(&format!("http://localhost:{}", address.port())).unwrap());
 
     // Create a sample raw transaction
     let raw_tx = Bytes::from(vec![1, 2, 3, 4]);
 
-    // Call the function
-    let result = eth_client.send_raw_transaction(raw_tx).await;
-
-    // Assert the result
-    assert!(result.is_ok());
-    let tx_hash = result.unwrap();
-    assert_eq!(tx_hash, B256::from_str("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").unwrap());
+    let pending_transaction = provider.send_raw_transaction(&raw_tx).await.unwrap();
+    let tx_hash = pending_transaction.tx_hash();
+    assert_eq!(*tx_hash, B256::from_str("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef").unwrap());
 
     // Verify that the mock was called
     mock_server.assert();
+
+    // Drop the handles at the end of the test
+    drop(handle);
+    drop(server);
 }
 
 #[rstest]

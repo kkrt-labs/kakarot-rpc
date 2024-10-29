@@ -1,5 +1,5 @@
 use crate::{
-    client::{EthClient, KakarotTransactions, TransactionHashProvider},
+    client::{EthClient, TransactionHashProvider},
     eth_rpc::api::eth_api::EthApiServer,
     providers::eth_provider::{
         constant::{MAX_PRIORITY_FEE_PER_GAS, MAIN_RPC_URL},
@@ -18,12 +18,6 @@ use reth_primitives::{BlockId, BlockNumberOrTag};
 use serde_json::Value;
 use starknet::providers::Provider;
 use std::sync::Arc;
-#[cfg(feature = "rpc_forwarding")]
-use {
-    crate::providers::eth_provider::constant::MAIN_RPC_URL,
-    alloy_provider::{Provider as provider_alloy, ProviderBuilder},
-    url::Url,
-};
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
@@ -249,8 +243,13 @@ where
     #[tracing::instrument(skip_all, ret, err)]
     async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256> {
         tracing::info!("Serving eth_sendRawTransaction");
-        #[cfg(feature = "rpc_forwarding")]
+
+        #[cfg(feature = "forwarding")]
         {
+            use crate::providers::eth_provider::constant::MAIN_RPC_URL;
+            use alloy_provider::{Provider as _, ProviderBuilder};
+            use url::Url;
+
             let provider = ProviderBuilder::new().on_http(Url::parse(MAIN_RPC_URL.as_ref()).unwrap());
             let tx_hash = provider
                 .send_raw_transaction(&bytes)
@@ -259,7 +258,8 @@ where
 
             return Ok(*tx_hash.tx_hash());
         }
-        #[cfg(not(feature = "rpc_forwarding"))]
+
+        #[cfg(not(feature = "forwarding"))]
         Ok(self.eth_client.send_raw_transaction(bytes).await?)
     }
 
