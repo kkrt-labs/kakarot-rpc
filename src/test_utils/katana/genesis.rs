@@ -15,10 +15,9 @@ use katana_primitives::{
     contract::{ContractAddress, StorageKey, StorageValue},
     genesis::{
         allocation::DevAllocationsGenerator,
-        constant::{DEFAULT_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE},
+        constant::{DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_PREFUNDED_ACCOUNT_BALANCE},
         json::{
-            ClassNameOrHash, FeeTokenConfigJson, GenesisAccountJson, GenesisClassJson, GenesisContractJson,
-            GenesisJson, PathOrFullArtifact,
+            ClassNameOrHash, GenesisAccountJson, GenesisClassJson, GenesisContractJson, GenesisJson, PathOrFullArtifact,
         },
     },
 };
@@ -201,7 +200,7 @@ impl KatanaGenesisBuilder<Loaded> {
             &UdcUniqueness::NotUnique,
             &[
                 Felt::ZERO,
-                DEFAULT_FEE_TOKEN_ADDRESS.0,
+                DEFAULT_ETH_FEE_TOKEN_ADDRESS.0,
                 account_contract_class_hash,
                 uninitialized_account_class_hash,
                 cairo1_helpers_class_hash,
@@ -215,7 +214,7 @@ impl KatanaGenesisBuilder<Loaded> {
 
         // Construct the kakarot contract storage.
         let kakarot_storage = [
-            (storage_addr(KAKAROT_NATIVE_TOKEN_ADDRESS)?, *DEFAULT_FEE_TOKEN_ADDRESS),
+            (storage_addr(KAKAROT_NATIVE_TOKEN_ADDRESS)?, *DEFAULT_ETH_FEE_TOKEN_ADDRESS),
             (storage_addr(KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH)?, account_contract_class_hash),
             (storage_addr(KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH)?, uninitialized_account_class_hash),
             (storage_addr(KAKAROT_CAIRO1_HELPERS_CLASS_HASH)?, cairo1_helpers_class_hash),
@@ -315,13 +314,6 @@ impl KatanaGenesisBuilder<Initialized> {
         Ok(GenesisJson {
             sequencer_address: self.compute_starknet_address(self.coinbase)?,
             classes: self.classes,
-            fee_token: FeeTokenConfigJson {
-                name: "Ether".to_string(),
-                symbol: "ETH".to_string(),
-                decimals: 18,
-                storage: Some(self.fee_token_storage),
-                ..Default::default()
-            },
             accounts: self.accounts,
             contracts: self.contracts,
             ..Default::default()

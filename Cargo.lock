@@ -1497,7 +1497,7 @@ dependencies = [
 [[package]]
 name = "blockifier"
 version = "0.8.0-rc.3"
-source = "git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.1#dd69217cdec340f9b5267b781be38eef972ac401"
+source = "git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.2#d6951f24fc2082c7aa89cdbc063648915b131d74"
 dependencies = [
  "anyhow",
  "ark-ec",
@@ -1529,7 +1529,7 @@ dependencies = [
  "sha2",
  "sha3",
  "starknet-types-core",
- "starknet_api 0.13.0-rc.1 (git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.1)",
+ "starknet_api 0.13.0-rc.1 (git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.2)",
  "strum 0.25.0",
  "strum_macros 0.25.3",
  "thiserror",
@@ -2410,6 +2410,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58363ad8065ed891e3b14a8191b707677c7c7cb5b9d10030822506786d8d8108"
 dependencies = [
  "anyhow",
+ "arbitrary",
  "bincode 2.0.0-rc.3",
  "bitvec",
  "generic-array",
@@ -3241,8 +3242,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-lang"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "cairo-lang-compiler",
@@ -3280,8 +3281,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-metrics"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "hyper 0.14.30",
@@ -3294,13 +3295,14 @@ dependencies = [
  "metrics-util",
  "thiserror",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
 [[package]]
 name = "dojo-test-utils"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "assert_fs",
@@ -3325,8 +3327,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-types"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "cainome",
  "crypto-bigint",
@@ -3343,8 +3345,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-utils"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "futures",
@@ -3357,8 +3359,8 @@ dependencies = [
 
 [[package]]
 name = "dojo-world"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6231,8 +6233,8 @@ dependencies = [
 
 [[package]]
 name = "katana-cairo"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
@@ -6242,13 +6244,13 @@ dependencies = [
  "cairo-lang-starknet-classes",
  "cairo-lang-utils",
  "cairo-vm",
- "starknet_api 0.13.0-rc.1 (git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.1)",
+ "starknet_api 0.13.0-rc.1 (git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.2)",
 ]
 
 [[package]]
 name = "katana-core"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "alloy-contract",
  "alloy-network 0.3.6",
@@ -6270,6 +6272,7 @@ dependencies = [
  "katana-tasks",
  "lazy_static",
  "metrics",
+ "num-traits 0.2.19",
  "parking_lot 0.12.3",
  "reqwest 0.12.8",
  "serde",
@@ -6283,8 +6286,8 @@ dependencies = [
 
 [[package]]
 name = "katana-db"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "dojo-metrics",
@@ -6304,8 +6307,8 @@ dependencies = [
 
 [[package]]
 name = "katana-executor"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "blockifier",
  "katana-cairo",
@@ -6319,8 +6322,8 @@ dependencies = [
 
 [[package]]
 name = "katana-node"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "dojo-metrics",
@@ -6333,11 +6336,9 @@ dependencies = [
  "katana-pipeline",
  "katana-pool",
  "katana-primitives",
- "katana-provider",
  "katana-rpc",
  "katana-rpc-api",
  "katana-tasks",
- "num-traits 0.2.19",
  "serde_json",
  "starknet",
  "strum 0.25.0",
@@ -6349,8 +6350,8 @@ dependencies = [
 
 [[package]]
 name = "katana-pipeline"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6360,13 +6361,14 @@ dependencies = [
  "katana-pool",
  "katana-tasks",
  "thiserror",
+ "tokio",
  "tracing",
 ]
 
 [[package]]
 name = "katana-pool"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "futures",
  "katana-executor",
@@ -6379,11 +6381,12 @@ dependencies = [
 
 [[package]]
 name = "katana-primitives"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "alloy-primitives",
  "anyhow",
+ "arbitrary",
  "base64 0.21.7",
  "derive_more 0.99.18",
  "flate2",
@@ -6397,14 +6400,14 @@ dependencies = [
  "serde_with",
  "starknet",
  "starknet-crypto 0.7.2",
- "strum_macros 0.25.3",
+ "starknet-types-core",
  "thiserror",
 ]
 
 [[package]]
 name = "katana-provider"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -6420,8 +6423,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "dojo-metrics",
@@ -6444,8 +6447,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-api"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "jsonrpsee 0.16.3",
  "katana-core",
@@ -6456,8 +6459,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "alloy-primitives",
  "anyhow",
@@ -6480,8 +6483,8 @@ dependencies = [
 
 [[package]]
 name = "katana-rpc-types-builder"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "anyhow",
  "katana-executor",
@@ -6493,8 +6496,8 @@ dependencies = [
 
 [[package]]
 name = "katana-tasks"
-version = "1.0.0-alpha.15"
-source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.15#f56c4f90eca84b92f348303dc85ff6e126609f16"
+version = "1.0.0-alpha.19"
+source = "git+https://github.com/dojoengine/dojo?tag=v1.0.0-alpha.19#ef696ea9bbaa22d3f6db392d9692b4821578c23c"
 dependencies = [
  "futures",
  "rayon",
@@ -11499,6 +11502,7 @@ version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fa1b9e01ccb217ab6d475c5cda05dbb22c30029f7bb52b192a010a00d77a3d74"
 dependencies = [
+ "arbitrary",
  "lambdaworks-crypto",
  "lambdaworks-math",
  "lazy_static",
@@ -11535,7 +11539,7 @@ dependencies = [
 [[package]]
 name = "starknet_api"
 version = "0.13.0-rc.1"
-source = "git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.1#dd69217cdec340f9b5267b781be38eef972ac401"
+source = "git+https://github.com/dojoengine/sequencer?tag=v0.8.0-rc3.2#d6951f24fc2082c7aa89cdbc063648915b131d74"
 dependencies = [
  "bitvec",
  "cairo-lang-starknet-classes",
