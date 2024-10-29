@@ -7,7 +7,15 @@ import {
 } from "./utils/filter.ts";
 
 // Constants
-import { AUTH_TOKEN, NULL_HASH, SINK_OPTIONS, SINK_TYPE, STARTING_BLOCK, STREAM_URL, TRANSACTION_EXECUTED } from "./constants.ts";
+import {
+  AUTH_TOKEN,
+  NULL_HASH,
+  SINK_OPTIONS,
+  SINK_TYPE,
+  STARTING_BLOCK,
+  STREAM_URL,
+  TRANSACTION_EXECUTED,
+} from "./constants.ts";
 
 // Types
 import {
