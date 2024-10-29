@@ -14,10 +14,12 @@ services:
     restart: on-failure
 
   starknet:
-    image: ghcr.io/dojoengine/dojo:v1.0.0-alpha.14
+    image: ghcr.io/dojoengine/dojo:v1.0.0-alpha.16
     command:
       - katana
       - --disable-fee
+      - --host
+      - 0.0.0.0
       - --validate-max-steps
       - "16777216"
       - --invoke-max-steps
@@ -40,7 +42,7 @@ services:
     restart: on-failure
 
   kakarot-deployer:
-    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.8.5
+    image: ghcr.io/kkrt-labs/kakarot/deployer:v0.9.4
     # Always pull the latest image, until we use release tags
     pull_policy: always
     environment:
@@ -58,8 +60,7 @@ services:
       starknet:
         condition: service_started
     restart: on-failure
-    networks:
-      - internal
+    network_mode: service:anvil
 
   deployments-parser:
     image: apteno/alpine-jq:2023-07-24
@@ -70,8 +71,8 @@ services:
       # First line overrides an existing .env, if any.
       # This is to make sure that it is clean even though docker volume was not cleaned.
       - |
-        echo "KAKAROT_ADDRESS=$$(jq -r '.kakarot.address' /deployments/katana/deployments.json)" > /deployments/.env;
-        echo "DEPLOYER_ACCOUNT_ADDRESS=$$(jq -r '.deployer_account.address' /deployments/katana/deployments.json)" >> /deployments/.env;
+        echo "KAKAROT_ADDRESS=$$(jq -r '.kakarot' /deployments/katana/deployments.json)" > /deployments/.env;
+        echo "DEPLOYER_ACCOUNT_ADDRESS=$$(jq -r '.deployer_account' /deployments/katana/deployments.json)" >> /deployments/.env;
         echo "UNINITIALIZED_ACCOUNT_CLASS_HASH=$$(jq -r '.uninitialized_account' /deployments/katana/declarations.json)" >> /deployments/.env
         echo "ACCOUNT_CONTRACT_CLASS_HASH=$$(jq -r '.account_contract' /deployments/katana/declarations.json)" >> /deployments/.env
     volumes:
