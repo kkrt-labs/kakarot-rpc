@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
     // Start the relayer manager
     let addresses =
         var("RELAYERS_ADDRESSES")?.split(',').filter_map(|addr| Felt::from_str(addr).ok()).collect::<Vec<_>>();
-    AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?.start();
+    AccountManager::new(addresses, Arc::clone(&eth_client)).start();
 
     // Start the maintenance of the mempool
     maintain_transaction_pool(Arc::clone(&eth_client), PRUNE_DURATION);
