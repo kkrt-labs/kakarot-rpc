@@ -758,7 +758,6 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
         katana.eoa.relayer.address(),
         relayer_balance,
         &(*(*eth_client.starknet_provider())),
-        eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
     .relay_transaction(&transaction_signed, nonce)
     .await
@@ -1013,7 +1012,6 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
         katana.eoa.relayer.address(),
         relayer_balance,
         &(*(*katana.eth_client.starknet_provider())),
-        katana.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
     .relay_transaction(&transaction_signed, nonce)
     .await
@@ -1372,7 +1370,6 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         katana_empty.eoa.relayer.address(),
         relayer_balance,
         &(*(*katana_empty.eth_client.starknet_provider())),
-        katana_empty.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
     .relay_transaction(&transaction_signed, nonce)
     .await

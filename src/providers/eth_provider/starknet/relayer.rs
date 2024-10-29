@@ -5,7 +5,7 @@ use crate::{
         provider::EthApiResult,
         starknet::kakarot_core::{starknet_address, EXECUTE_FROM_OUTSIDE},
     },
-};
+};use crate::constants::STARKNET_CHAIN_ID;
 use reth_primitives::TransactionSigned;
 use starknet::{
     accounts::{Account, ExecutionEncoding, ExecutionV1, SingleOwnerAccount},
@@ -39,9 +39,9 @@ where
     SP: Provider + Send + Sync,
 {
     /// Create a new relayer with the provided Starknet provider, address, balance.
-    pub fn new(address: Felt, balance: Felt, provider: SP, chain_id: Felt) -> Self {
+    pub fn new(address: Felt, balance: Felt, provider: SP) -> Self {
         let relayer =
-            SingleOwnerAccount::new(provider, RELAYER_SIGNER.clone(), address, chain_id, ExecutionEncoding::New);
+            SingleOwnerAccount::new(provider, RELAYER_SIGNER.clone(), address, *STARKNET_CHAIN_ID, ExecutionEncoding::New);
 
         Self { account: relayer, balance }
     }

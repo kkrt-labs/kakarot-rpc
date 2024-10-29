@@ -168,7 +168,6 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             self.relayer.address(),
             relayer_balance,
             self.starknet_provider(),
-            self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
         )
         .relay_transaction(&tx_signed, nonce)
         .await
@@ -249,7 +248,6 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
             self.relayer.address(),
             relayer_balance,
             self.starknet_provider(),
-            self.starknet_provider().chain_id().await.expect("Failed to get chain id"),
         )
         .relay_transaction(&tx_signed, nonce)
         .await

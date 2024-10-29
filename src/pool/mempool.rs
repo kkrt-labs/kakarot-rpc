@@ -51,14 +51,8 @@ pub struct AccountManager<SP: starknet::providers::Provider + Send + Sync + Clon
 
 impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountManager<SP> {
     /// Initialize the account manager with a set of passed accounts.
-    pub fn from_addresses(addresses: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Self> {
-        let mut accounts = Vec::new();
-
-        for add in addresses {
-            accounts.push(add);
-        }
-
-        Ok(Self { accounts, eth_client })
+    pub const fn new(accounts: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> Self {
+       Self { accounts, eth_client }
     }
 
     /// Starts the account manager task that periodically checks account balances and processes transactions.
@@ -100,7 +94,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                                 .await;
                             return;
                         }
-                        let relayer = maybe_relayer.expect("maybe_lock is not error");
+                        let relayer = maybe_relayer.expect("not error");
 
                         // Send the Ethereum transaction using the relayer
                         let transaction_signed = transaction.to_recovered_transaction().into_signed();
@@ -158,8 +152,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 continue;
             }
 
-            // Retrieve chain ID for the Ethereum context
-            let chain_id = self.eth_client.starknet_provider().chain_id().await?;
+            // Convert the balance to `Felt`
             let balance = into_via_try_wrapper!(balance)?;
 
             // Construct the `Relayer` with the account address and other relevant data
@@ -167,7 +160,6 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 account_address,
                 balance,
                 JsonRpcClient::new(HttpTransport::new(KAKAROT_RPC_CONFIG.network_url.clone())),
-                chain_id,
             );
 
             // Return the locked relayer instance

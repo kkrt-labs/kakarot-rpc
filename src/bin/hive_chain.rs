@@ -4,7 +4,6 @@ use alloy_primitives::bytes::{Buf, BytesMut};
 use alloy_rlp::Decodable;
 use clap::Parser;
 use kakarot_rpc::{
-    constants::STARKNET_CHAIN_ID,
     into_via_try_wrapper,
     providers::{eth_provider::starknet::relayer::Relayer, sn_provider::StarknetProvider},
 };
@@ -77,7 +76,6 @@ async fn main() -> eyre::Result<()> {
         args.relayer_address,
         relayer_balance,
         JsonRpcClient::new(HttpTransport::new(Url::from_str(STARKNET_RPC_URL)?)),
-        *STARKNET_CHAIN_ID,
     );
 
     // Read the rlp file
