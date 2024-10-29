@@ -20,7 +20,7 @@ use kakarot_rpc::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredTransaction},
         provider::EthereumProvider,
-        starknet::relayer::LockedRelayer,
+        starknet::relayer::Relayer,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
     test_utils::{
@@ -38,10 +38,8 @@ use rstest::*;
 use starknet::{
     accounts::Account,
     core::types::{BlockId, BlockTag, Felt},
-    providers::Provider,
 };
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[rstest]
 #[awt]
@@ -748,25 +746,11 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let _ = LockedRelayer::new(
-        current_nonce.lock().await,
-        katana.eoa.relayer.address(),
-        relayer_balance,
-        &(*(*eth_client.starknet_provider())),
-        eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
-    )
-    .relay_transaction(&transaction_signed)
-    .await
-    .expect("Failed to relay transaction");
+    let _ = Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*eth_client.starknet_provider())))
+        .relay_transaction(&transaction_signed)
+        .await
+        .expect("Failed to relay transaction");
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
@@ -1005,26 +989,12 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = katana
-        .eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let starknet_transaction_hash = LockedRelayer::new(
-        current_nonce.lock().await,
-        katana.eoa.relayer.address(),
-        relayer_balance,
-        &(*(*katana.eth_client.starknet_provider())),
-        katana.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
-    )
-    .relay_transaction(&transaction_signed)
-    .await
-    .expect("Failed to relay transaction");
+    let starknet_transaction_hash =
+        Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*katana.eth_client.starknet_provider())))
+            .relay_transaction(&transaction_signed)
+            .await
+            .expect("Failed to relay transaction");
 
     watch_tx(
         eth_provider.starknet_provider_inner(),
@@ -1367,22 +1337,11 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = katana_empty
-        .eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana_empty.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let _ = LockedRelayer::new(
-        current_nonce.lock().await,
+    let _ = Relayer::new(
         katana_empty.eoa.relayer.address(),
         relayer_balance,
         &(*(*katana_empty.eth_client.starknet_provider())),
-        katana_empty.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
     .relay_transaction(&transaction_signed)
     .await
