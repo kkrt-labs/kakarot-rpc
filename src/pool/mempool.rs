@@ -6,10 +6,9 @@ use crate::{
     constants::KAKAROT_RPC_CONFIG,
     into_via_try_wrapper,
     pool::constants::ONE_TENTH_ETH,
-    providers::eth_provider::{database::state::EthDatabase, starknet::relayer::LockedRelayer, BlockProvider},
+    providers::eth_provider::{database::state::EthDatabase, starknet::relayer::Relayer, BlockProvider},
 };
 use alloy_primitives::{Address, U256};
-use futures::future::select_all;
 use rand::{seq::SliceRandom, SeedableRng};
 use reth_chainspec::ChainSpec;
 use reth_execution_types::ChangedAccount;
@@ -24,7 +23,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::sync::Mutex;
+use tokio::time::Instant;
 use tracing::instrument;
 
 /// A type alias for the Kakarot Transaction Validator.
@@ -38,43 +37,28 @@ pub type TransactionOrdering = CoinbaseTipOrdering<EthPooledTransaction>;
 /// A type alias for the Kakarot Sequencer Mempool.
 pub type KakarotPool<Client> = Pool<Validator<Client>, TransactionOrdering, NoopBlobStore>;
 
-/// Manages a collection of accounts and their associated nonces, interfacing with an Ethereum client.
+/// Manages a collection of accounts addresses, interfacing with an Ethereum client.
 ///
 /// This struct provides functionality to initialize account data from a file, monitor account balances,
 /// and process transactions for accounts with sufficient balance.
 #[derive(Debug)]
 pub struct AccountManager<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> {
-    /// A shared, mutable collection of accounts and their nonces.
-    accounts: HashMap<Felt, Arc<Mutex<Felt>>>,
+    /// A collection of account addresses.
+    accounts: Vec<Felt>,
     /// The Ethereum client used to interact with the blockchain.
     eth_client: Arc<EthClient<SP>>,
 }
 
 impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountManager<SP> {
     /// Initialize the account manager with a set of passed accounts.
-    pub async fn from_addresses(addresses: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> eyre::Result<Self> {
-        let mut accounts = HashMap::new();
-
-        for add in addresses {
-            // Query the initial account_nonce for the account from the provider
-            let nonce = eth_client
-                .starknet_provider()
-                .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), add)
-                .await
-                .unwrap_or_default();
-            accounts.insert(add, Arc::new(Mutex::new(nonce)));
-        }
-
-        Ok(Self { accounts, eth_client })
+    pub const fn new(accounts: Vec<Felt>, eth_client: Arc<EthClient<SP>>) -> Self {
+        Self { accounts, eth_client }
     }
 
     /// Starts the account manager task that periodically checks account balances and processes transactions.
     #[instrument(skip_all, name = "mempool")]
     pub fn start(self) {
         let this = Arc::new(self);
-
-        // Start the nonce updater in a separate task
-        this.clone().start_nonce_updater();
 
         tokio::spawn(async move {
             loop {
@@ -99,7 +83,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                     let manager = this.clone();
                     tokio::spawn(async move {
                         // Lock the relayer account
-                        let maybe_relayer = manager.lock_account().await;
+                        let maybe_relayer = manager.get_relayer().await;
                         if maybe_relayer.is_err() {
                             // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
                             tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap_err(), "failed to fetch relayer");
@@ -110,10 +94,11 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                                 .await;
                             return;
                         }
-                        let mut relayer = maybe_relayer.expect("maybe_lock is not error");
+                        let relayer = maybe_relayer.expect("not error");
 
                         // Send the Ethereum transaction using the relayer
                         let transaction_signed = transaction.to_recovered_transaction().into_signed();
+
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
                             // If the relayer failed to relay the transaction, we need to reposition it in the mempool
@@ -127,10 +112,6 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         }
 
                         tracing::info!(target: "account_manager", starknet_hash = ?res.expect("not error"), ethereum_hash = ?transaction_signed.hash());
-
-                        // Increment account_nonce after sending a transaction
-                        let nonce = relayer.nonce_mut();
-                        *nonce = *nonce + 1;
                     });
                 }
 
@@ -140,58 +121,43 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
     }
 
     /// Returns the next available account from the manager.
-    pub async fn lock_account(&self) -> eyre::Result<LockedRelayer<'_, JsonRpcClient<HttpTransport>>>
+    pub async fn get_relayer(&self) -> eyre::Result<Relayer<JsonRpcClient<HttpTransport>>>
     where
         SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
     {
         // Use `StdRng` instead of `ThreadRng` as it is `Send`
         let mut rng = rand::rngs::StdRng::from_entropy();
 
-        // Collect the accounts into a vector for shuffling
-        let mut accounts: Vec<_> = self.accounts.iter().collect();
+        // Shuffle indices of accounts randomly
+        let mut account_indices: Vec<_> = (0..self.accounts.len()).collect();
+        account_indices.shuffle(&mut rng);
 
-        // Shuffle the accounts randomly before iterating
-        accounts.shuffle(&mut rng);
+        for index in account_indices {
+            let account_address = self.accounts[index];
 
-        loop {
-            if accounts.is_empty() {
-                return Err(eyre::eyre!("failed to fetch funded account"));
-            }
+            // Retrieve the balance of the selected account
+            let balance = self.get_balance(account_address).await?;
 
-            // Create the future locks with indices for more efficient removal
-            // use [`select_all`] to poll an iterator over impl Future<Output = (Felt, MutexGuard<Felt>)>
-            // We use Box::pin because this Future doesn't implement `Unpin`.
-            let fut_locks = accounts
-                .iter()
-                .enumerate()
-                .map(|(index, (address, nonce))| Box::pin(async move { (index, *address, nonce.lock().await) }));
-
-            // Select the first account that gets unlocked
-            let ((index, account_address, guard), _, _) = select_all(fut_locks).await;
-
-            // Fetch the balance of the selected account
-            let balance = self.get_balance(*account_address).await?;
-
-            // If the balance is lower than the threshold, remove the account using swap_remove
+            // Skip accounts with insufficient balance
             if balance < U256::from(ONE_TENTH_ETH) {
-                accounts.swap_remove(index);
                 continue;
             }
 
+            // Convert the balance to `Felt`
             let balance = into_via_try_wrapper!(balance)?;
-            let chain_id = self.eth_client.starknet_provider().chain_id().await?;
 
-            let account = LockedRelayer::new(
-                guard,
-                *account_address,
+            // Construct the `Relayer` with the account address and other relevant data
+            let account = Relayer::new(
+                account_address,
                 balance,
                 JsonRpcClient::new(HttpTransport::new(KAKAROT_RPC_CONFIG.network_url.clone())),
-                chain_id,
             );
 
-            // Return the account address and the guard on the nonce
+            // Return the locked relayer instance
             return Ok(account);
         }
+
+        Err(eyre::eyre!("failed to fetch funded account"))
     }
 
     /// Retrieves the balance of the specified account address for the [`BlockTag::Pending`]
@@ -202,31 +168,6 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
             .balance_at(account_address, starknet::core::types::BlockId::Tag(BlockTag::Pending))
             .await
             .map_err(Into::into)
-    }
-
-    /// Update the nonces for all accounts every minute.
-    pub fn start_nonce_updater(self: Arc<Self>) {
-        tokio::spawn(async move {
-            loop {
-                for (address, nonce_mutex) in &self.accounts {
-                    // Query the updated nonce for the account from the provider
-                    let new_nonce = self
-                        .eth_client
-                        .starknet_provider()
-                        .get_nonce(starknet::core::types::BlockId::Tag(BlockTag::Pending), *address)
-                        .await
-                        .unwrap_or_default();
-
-                    let mut nonce = nonce_mutex.lock().await;
-                    *nonce = new_nonce;
-
-                    tracing::info!(target: "account_manager", ?address, ?new_nonce);
-                }
-
-                // Sleep for 1 minute before the next update
-                tokio::time::sleep(Duration::from_secs(60)).await;
-            }
-        });
     }
 }
 
@@ -268,13 +209,27 @@ where
 
 /// Maintains the transaction pool by periodically polling the database in order to
 /// fetch the latest block and mark the block's transactions as mined by the node.
-pub fn maintain_transaction_pool<SP>(eth_client: Arc<EthClient<SP>>)
+pub fn maintain_transaction_pool<SP>(eth_client: Arc<EthClient<SP>>, prune_duration: Duration)
 where
     SP: starknet::providers::Provider + Send + Sync + Clone + 'static,
 {
     tokio::spawn(async move {
         let mut block_number = 0u64;
+
+        // Mapping to store the transactions in the mempool with a timestamp to potentially prune them
+        let mut mempool_transactions = HashMap::new();
+
         loop {
+            // Adding the transactions to the mempool mapping with a timestamp
+            for tx in eth_client
+                .mempool()
+                .queued_transactions()
+                .into_iter()
+                .chain(eth_client.mempool().pending_transactions())
+            {
+                mempool_transactions.entry(*tx.hash()).or_insert_with(Instant::now);
+            }
+
             // Fetch the latest block number
             let Ok(current_block_number) = eth_client.eth_provider().block_number().await else {
                 tracing::error!(target: "maintain_transaction_pool", "failed to fetch current block number");
@@ -305,7 +260,7 @@ where
                                     chain_spec.base_fee_params_at_timestamp(latest_header.timestamp + 12),
                                 )
                                 .unwrap_or_default(),
-                            pending_blob_fee: latest_header.next_block_blob_fee(),
+                            pending_blob_fee: None,
                         };
                         eth_client.mempool().set_block_info(info);
 
@@ -324,7 +279,31 @@ where
                         }
 
                         let sealed_block = latest_block.seal(hash);
-                        let mined_transactions = sealed_block.body.transactions.iter().map(|tx| tx.hash).collect();
+                        let mut mined_transactions: Vec<_> =
+                            sealed_block.body.transactions.iter().map(|tx| tx.hash).collect();
+
+                        // Prune mined transactions from the mempool mapping
+                        for tx_hash in &mined_transactions {
+                            mempool_transactions.remove(tx_hash);
+                        }
+
+                        // Prune transactions that have been in the mempool for more than 5 minutes
+                        let now = Instant::now();
+
+                        for (tx_hash, timestamp) in mempool_transactions.clone() {
+                            // - If the transaction has been in the mempool for more than 5 minutes
+                            // - And the transaction is in the mempool right now
+                            if now.duration_since(timestamp) > prune_duration && eth_client.mempool().contains(&tx_hash)
+                            {
+                                tracing::warn!(target: "maintain_transaction_pool", ?tx_hash, "pruning");
+
+                                // Add the transaction to the mined transactions so that it can be pruned
+                                mined_transactions.push(tx_hash);
+
+                                // Remove the transaction from the mempool mapping
+                                mempool_transactions.remove(&tx_hash);
+                            }
+                        }
 
                         // Canonical update
                         let update = CanonicalStateUpdate {

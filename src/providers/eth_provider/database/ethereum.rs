@@ -1,17 +1,20 @@
 use super::{
     filter,
     filter::EthDatabaseFilterBuilder,
-    types::{header::StoredHeader, transaction::StoredTransaction},
+    types::{
+        header::{ExtendedBlock, StoredHeader},
+        transaction::{ExtendedTransaction, StoredTransaction},
+    },
     Database,
 };
-use crate::providers::eth_provider::error::{EthApiError, EthereumDataFormatError};
+use crate::providers::eth_provider::error::EthApiError;
 use alloy_primitives::{B256, U256};
 use alloy_rlp::Encodable;
-use alloy_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header, Transaction};
+use alloy_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header};
 use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use mongodb::bson::doc;
-use reth_primitives::{constants::EMPTY_ROOT_HASH, TransactionSigned};
+use reth_primitives::{constants::EMPTY_ROOT_HASH, BlockBody};
 use tracing::instrument;
 
 /// Trait for interacting with a database that stores Ethereum typed
@@ -20,20 +23,20 @@ use tracing::instrument;
 pub trait EthereumTransactionStore {
     /// Returns the transaction with the given hash. Returns None if the
     /// transaction is not found.
-    async fn transaction(&self, hash: &B256) -> Result<Option<WithOtherFields<Transaction>>, EthApiError>;
+    async fn transaction(&self, hash: &B256) -> Result<Option<ExtendedTransaction>, EthApiError>;
     /// Returns all transactions for the given block hash or number.
     async fn transactions(
         &self,
         block_hash_or_number: BlockHashOrNumber,
-    ) -> Result<Vec<WithOtherFields<Transaction>>, EthApiError>;
+    ) -> Result<Vec<ExtendedTransaction>, EthApiError>;
     /// Upserts the given transaction.
-    async fn upsert_transaction(&self, transaction: WithOtherFields<Transaction>) -> Result<(), EthApiError>;
+    async fn upsert_transaction(&self, transaction: ExtendedTransaction) -> Result<(), EthApiError>;
 }
 
 #[async_trait]
 impl EthereumTransactionStore for Database {
     #[instrument(skip_all, name = "db::transaction", err)]
-    async fn transaction(&self, hash: &B256) -> Result<Option<WithOtherFields<Transaction>>, EthApiError> {
+    async fn transaction(&self, hash: &B256) -> Result<Option<ExtendedTransaction>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(hash).build();
         Ok(self.get_one::<StoredTransaction>(filter, None).await?.map(Into::into))
     }
@@ -42,7 +45,7 @@ impl EthereumTransactionStore for Database {
     async fn transactions(
         &self,
         block_hash_or_number: BlockHashOrNumber,
-    ) -> Result<Vec<WithOtherFields<Transaction>>, EthApiError> {
+    ) -> Result<Vec<ExtendedTransaction>, EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default()
             .with_block_hash_or_number(block_hash_or_number)
             .build();
@@ -51,7 +54,7 @@ impl EthereumTransactionStore for Database {
     }
 
     #[instrument(skip_all, name = "db::upsert_transaction", err)]
-    async fn upsert_transaction(&self, transaction: WithOtherFields<Transaction>) -> Result<(), EthApiError> {
+    async fn upsert_transaction(&self, transaction: ExtendedTransaction) -> Result<(), EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&transaction.hash).build();
         Ok(self.update_one(StoredTransaction::from(transaction), filter, true).await?)
     }
@@ -72,7 +75,7 @@ pub trait EthereumBlockStore {
         &self,
         block_hash_or_number: BlockHashOrNumber,
         full: bool,
-    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>, EthApiError>;
+    ) -> Result<Option<ExtendedBlock>, EthApiError>;
     /// Returns true if the block with the given hash or number exists.
     #[instrument(skip(self), name = "db::block_exists", err)]
     async fn block_exists(&self, block_hash_or_number: BlockHashOrNumber) -> Result<bool, EthApiError> {
@@ -110,7 +113,7 @@ impl EthereumBlockStore for Database {
         &self,
         block_hash_or_number: BlockHashOrNumber,
         full: bool,
-    ) -> Result<Option<WithOtherFields<Block<WithOtherFields<Transaction>>>>, EthApiError> {
+    ) -> Result<Option<ExtendedBlock>, EthApiError> {
         let maybe_header = self.header(block_hash_or_number).await?;
         if maybe_header.is_none() {
             return Ok(None);
@@ -132,19 +135,13 @@ impl EthereumBlockStore for Database {
             BlockTransactions::Hashes(transactions.iter().map(|tx| tx.hash).collect())
         };
 
-        let signed_transactions = transactions
-            .into_iter()
-            .map(|tx| TransactionSigned::try_from(tx).map_err(|_| EthereumDataFormatError::TransactionConversion))
-            .collect::<Result<Vec<_>, _>>()?;
-
         let block = reth_primitives::Block {
-            body: reth_primitives::BlockBody {
-                transactions: signed_transactions,
+            body: BlockBody {
+                transactions: transactions.into_iter().map(TryFrom::try_from).collect::<Result<_, _>>()?,
                 withdrawals: Some(Default::default()),
                 ..Default::default()
             },
-            header: reth_primitives::Header::try_from(header.clone())
-                .map_err(|_| EthereumDataFormatError::Primitive)?,
+            header: header.clone().try_into()?,
         };
 
         // This is how Reth computes the block size.
@@ -309,8 +306,8 @@ mod tests {
 
         let block_hash = header.hash;
 
-        let block: WithOtherFields<Block<WithOtherFields<Transaction>>> = {
-            let transactions: Vec<WithOtherFields<Transaction>> = mongo_fuzzer
+        let block: ExtendedBlock = {
+            let transactions: Vec<ExtendedTransaction> = mongo_fuzzer
                 .transactions
                 .iter()
                 .filter_map(|stored_transaction| {
@@ -325,10 +322,10 @@ mod tests {
             let block_transactions = BlockTransactions::Full(transactions.clone());
 
             let signed_transactions =
-                transactions.into_iter().map(TransactionSigned::try_from).collect::<Result<Vec<_>, _>>().unwrap();
+                transactions.into_iter().map(TryFrom::try_from).collect::<Result<_, _>>().unwrap();
 
             let block = reth_primitives::Block {
-                body: reth_primitives::BlockBody {
+                body: BlockBody {
                     transactions: signed_transactions,
                     withdrawals: Some(Default::default()),
                     ..Default::default()

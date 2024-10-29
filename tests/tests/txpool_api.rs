@@ -1,14 +1,15 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use crate::tests::mempool::create_sample_transactions;
-use alloy_rpc_types::Transaction;
 use alloy_rpc_types_txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
-use alloy_serde::WithOtherFields;
 use jsonrpsee::server::ServerHandle;
-use kakarot_rpc::test_utils::{
-    fixtures::{katana_empty, setup},
-    katana::Katana,
-    rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
+use kakarot_rpc::{
+    providers::eth_provider::database::types::transaction::ExtendedTransaction,
+    test_utils::{
+        fixtures::{katana_empty, setup},
+        katana::Katana,
+        rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
+    },
 };
 use reth_transaction_pool::{TransactionOrigin, TransactionPool};
 use rstest::*;
@@ -74,7 +75,7 @@ async fn test_txpool_content(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to insert transaction into the mempool");
 
     // Fetch the transaction pool content
-    let tx_pool_content: TxpoolContent<WithOtherFields<Transaction>> =
+    let tx_pool_content: TxpoolContent<ExtendedTransaction> =
         request("txpool_content", server_addr.port(), Vec::<String>::new()).await;
 
     // Get updated mempool size
@@ -131,7 +132,7 @@ async fn test_txpool_content_from(#[future] katana_empty: Katana, _setup: ()) {
     let transaction_signer = transaction_signed.recover_signer().unwrap();
 
     // Fetch the transaction pool content from the sender
-    let tx_pool_content: TxpoolContentFrom<WithOtherFields<Transaction>> =
+    let tx_pool_content: TxpoolContentFrom<ExtendedTransaction> =
         request("txpool_contentFrom", server_addr.port(), vec![transaction_signer.to_string()]).await;
 
     // Assert that we recovered a single pending transaction

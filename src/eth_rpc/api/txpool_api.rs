@@ -1,7 +1,6 @@
+use crate::providers::eth_provider::database::types::transaction::ExtendedTransaction;
 use alloy_primitives::Address;
-use alloy_rpc_types::Transaction;
 use alloy_rpc_types_txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolStatus};
-use alloy_serde::WithOtherFields;
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
 
 /// Txpool API
@@ -27,12 +26,12 @@ pub trait TxPoolApi {
     ///
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_contentFrom) for more details
     #[method(name = "contentFrom")]
-    async fn txpool_content_from(&self, from: Address) -> RpcResult<TxpoolContentFrom<WithOtherFields<Transaction>>>;
+    async fn txpool_content_from(&self, from: Address) -> RpcResult<TxpoolContentFrom<ExtendedTransaction>>;
 
     /// Returns the details of all transactions currently pending for inclusion in the next
     /// block(s), grouped by nonce.
     ///
     /// See [here](https://geth.ethereum.org/docs/rpc/ns-txpool#txpool_content) for more details
     #[method(name = "content")]
-    async fn txpool_content(&self) -> RpcResult<TxpoolContent<WithOtherFields<Transaction>>>;
+    async fn txpool_content(&self) -> RpcResult<TxpoolContent<ExtendedTransaction>>;
 }

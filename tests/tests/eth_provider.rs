@@ -20,7 +20,7 @@ use kakarot_rpc::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
         database::{ethereum::EthereumTransactionStore, types::transaction::StoredTransaction},
         provider::EthereumProvider,
-        starknet::relayer::LockedRelayer,
+        starknet::relayer::Relayer,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
     test_utils::{
@@ -38,10 +38,8 @@ use rstest::*;
 use starknet::{
     accounts::Account,
     core::types::{BlockId, BlockTag, Felt},
-    providers::Provider,
 };
 use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[rstest]
 #[awt]
@@ -98,7 +96,7 @@ async fn test_block_by_number(#[future] katana: Katana, _setup: ()) {
     let block_number = katana.block_number();
 
     // When: Retrieving block by specific block number
-    let block = eth_provider.block_by_number(BlockNumberOrTag::Number(block_number), false).await.unwrap().unwrap();
+    let block = eth_provider.block_by_number(block_number.into(), false).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved block has the expected block number
     assert_eq!(block.header.number, block_number);
@@ -168,16 +166,14 @@ async fn test_block_transaction_count_by_number(#[future] katana: Katana, _setup
     let header = katana.header_by_hash(first_tx.block_hash.unwrap()).unwrap();
 
     // When: Retrieving transaction count for a specific block number
-    let count =
-        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(header.number)).await.unwrap().unwrap();
+    let count = eth_provider.block_transaction_count_by_number(header.number.into()).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved transaction count matches the expected value
     assert_eq!(count, U256::from(1));
 
     // When: Retrieving transaction count for the block of the most recent transaction
     let block_number = katana.most_recent_transaction().unwrap().block_number.unwrap();
-    let count =
-        eth_provider.block_transaction_count_by_number(BlockNumberOrTag::Number(block_number)).await.unwrap().unwrap();
+    let count = eth_provider.block_transaction_count_by_number(block_number.into()).await.unwrap().unwrap();
 
     // Then: Ensure the retrieved transaction count matches the expected value
     assert_eq!(count, U256::from(1));
@@ -558,8 +554,7 @@ async fn test_fee_history(#[future] katana: Katana, _setup: ()) {
     let nbr_blocks = katana.headers.len();
 
     // Call the fee_history method of the Ethereum provider.
-    let fee_history =
-        eth_provider.fee_history(U64::from(block_count), BlockNumberOrTag::Number(newest_block), None).await.unwrap();
+    let fee_history = eth_provider.fee_history(U64::from(block_count), newest_block.into(), None).await.unwrap();
 
     // Verify that the length of the base_fee_per_gas list in the fee history is equal
     // to the total number of blocks plus one.
@@ -640,13 +635,7 @@ async fn test_block_receipts(#[future] katana: Katana, _setup: ()) {
     let transaction = katana.most_recent_transaction().unwrap();
 
     // Then: Retrieve receipts by block number
-    let receipts = eth_provider
-        .block_receipts(Some(alloy_rpc_types::BlockId::Number(BlockNumberOrTag::Number(
-            transaction.block_number.unwrap(),
-        ))))
-        .await
-        .unwrap()
-        .unwrap();
+    let receipts = eth_provider.block_receipts(Some(transaction.block_number.unwrap().into())).await.unwrap().unwrap();
     assert_eq!(receipts.len(), 1);
     let receipt = receipts.first().unwrap();
     assert_eq!(receipt.transaction_index, transaction.transaction_index);
@@ -757,25 +746,11 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let _ = LockedRelayer::new(
-        current_nonce.lock().await,
-        katana.eoa.relayer.address(),
-        relayer_balance,
-        &(*(*eth_client.starknet_provider())),
-        eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
-    )
-    .relay_transaction(&transaction_signed)
-    .await
-    .expect("Failed to relay transaction");
+    let _ = Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*eth_client.starknet_provider())))
+        .relay_transaction(&transaction_signed)
+        .await
+        .expect("Failed to relay transaction");
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
@@ -1014,26 +989,12 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = katana
-        .eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let starknet_transaction_hash = LockedRelayer::new(
-        current_nonce.lock().await,
-        katana.eoa.relayer.address(),
-        relayer_balance,
-        &(*(*katana.eth_client.starknet_provider())),
-        katana.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
-    )
-    .relay_transaction(&transaction_signed)
-    .await
-    .expect("Failed to relay transaction");
+    let starknet_transaction_hash =
+        Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*katana.eth_client.starknet_provider())))
+            .relay_transaction(&transaction_signed)
+            .await
+            .expect("Failed to relay transaction");
 
     watch_tx(
         eth_provider.starknet_provider_inner(),
@@ -1376,22 +1337,11 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
-    let nonce = katana_empty
-        .eth_client
-        .starknet_provider()
-        .get_nonce(BlockId::Tag(BlockTag::Latest), katana_empty.eoa.relayer.address())
-        .await
-        .unwrap_or_default();
-
-    let current_nonce = Mutex::new(nonce);
-
     // Relay the transaction
-    let _ = LockedRelayer::new(
-        current_nonce.lock().await,
+    let _ = Relayer::new(
         katana_empty.eoa.relayer.address(),
         relayer_balance,
         &(*(*katana_empty.eth_client.starknet_provider())),
-        katana_empty.eth_client.starknet_provider().chain_id().await.expect("Failed to get chain id"),
     )
     .relay_transaction(&transaction_signed)
     .await
@@ -1419,4 +1369,18 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         katana_empty.eth_client.transaction_by_hash(transaction.tx.hash).await.unwrap().unwrap(),
         transaction.tx
     );
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_with_other_fields(#[future] katana: Katana, _setup: ()) {
+    let eth_provider = katana.eth_provider();
+    let run_out_of_resources_receipt = katana.most_recent_run_out_of_resources_receipt().unwrap();
+
+    let receipt_from_db =
+        eth_provider.transaction_receipt(run_out_of_resources_receipt.transaction_hash).await.unwrap();
+    // Verify the receipt
+    assert_eq!(run_out_of_resources_receipt.other.get("isRunOutOfRessources"), Some(&serde_json::Value::Bool(true)));
+    assert_eq!(receipt_from_db.unwrap(), run_out_of_resources_receipt);
 }

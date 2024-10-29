@@ -1,13 +1,15 @@
 use super::{Tracer, TracerResult};
 use crate::providers::eth_provider::{
-    database::state::{EthCacheDatabase, EthDatabase},
+    database::{
+        state::{EthCacheDatabase, EthDatabase},
+        types::transaction::ExtendedTransaction,
+    },
     error::{EthApiError, TransactionError},
     provider::EthereumProvider,
 };
 use alloy_primitives::{B256, U256};
-use alloy_rpc_types::{Block, BlockHashOrNumber, BlockId, BlockTransactions, Header, Transaction};
+use alloy_rpc_types::{Block, BlockId, BlockTransactions, Header};
 use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions};
-use alloy_serde::WithOtherFields;
 use reth_revm::{
     db::CacheDB,
     primitives::{BlockEnv, CfgEnv, Env, EnvWithHandlerCfg, HandlerCfg, SpecId},
@@ -90,7 +92,7 @@ impl From<GethDebugTracingCallOptions> for TracingOptions {
 pub struct TracerBuilder<P: EthereumProvider + Send + Sync + Clone, Status = Floating> {
     eth_provider: P,
     env: Env,
-    block: Block<WithOtherFields<Transaction>>,
+    block: Block<ExtendedTransaction>,
     tracing_options: TracingOptions,
     _phantom: std::marker::PhantomData<Status>,
 }
@@ -150,21 +152,19 @@ impl<P: EthereumProvider + Send + Sync + Clone> TracerBuilder<P, Floating> {
     /// # Returns
     ///
     /// Returns the block if it exists, otherwise returns None
-    async fn block(&self, block_id: BlockId) -> TracerResult<alloy_rpc_types::Block<WithOtherFields<Transaction>>> {
+    async fn block(&self, block_id: BlockId) -> TracerResult<alloy_rpc_types::Block<ExtendedTransaction>> {
         let block = match block_id {
             BlockId::Hash(hash) => self.eth_provider.block_by_hash(hash.block_hash, true).await?,
             BlockId::Number(number) => self.eth_provider.block_by_number(number, true).await?,
         }
         .ok_or(match block_id {
             BlockId::Hash(hash) => EthApiError::UnknownBlock(hash.block_hash.into()),
-            BlockId::Number(number) => {
-                EthApiError::UnknownBlock(BlockHashOrNumber::Number(number.as_number().unwrap_or_default()))
-            }
+            BlockId::Number(number) => EthApiError::UnknownBlock(number.as_number().unwrap_or_default().into()),
         })?;
 
         // we can't trace a pending block
         if block.header.hash.is_zero() {
-            return Err(EthApiError::UnknownBlock(BlockHashOrNumber::Hash(B256::ZERO)));
+            return Err(EthApiError::UnknownBlock(B256::ZERO.into()));
         }
 
         Ok(block.inner)

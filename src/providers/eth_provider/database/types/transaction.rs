@@ -11,6 +11,8 @@ use {
     reth_primitives::transaction::legacy_parity,
     reth_testing_utils::generators::{self},
 };
+/// Type alias for a transaction with additional fields.
+pub type ExtendedTransaction = WithOtherFields<Transaction>;
 
 /// A full transaction as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]

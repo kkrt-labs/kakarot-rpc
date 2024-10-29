@@ -1,21 +1,26 @@
-use std::{env::var, str::FromStr, sync::Arc};
-
 use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
     client::EthClient,
     constants::{KAKAROT_RPC_CONFIG, RPC_CONFIG},
     eth_rpc::{rpc::KakarotRpcModuleBuilder, run_server},
-    pool::mempool::{maintain_transaction_pool, AccountManager},
-    providers::eth_provider::database::Database,
+    pool::{
+        constants::PRUNE_DURATION,
+        mempool::{maintain_transaction_pool, AccountManager},
+    },
+    providers::eth_provider::{
+        database::Database,
+        starknet::kakarot_core::{core::KakarotCoreReader, KAKAROT_ADDRESS},
+    },
 };
 use mongodb::options::{DatabaseOptions, ReadConcern, WriteConcern};
 use opentelemetry_sdk::runtime::Tokio;
 use reth_transaction_pool::PoolConfig;
 use starknet::{
-    core::types::Felt,
+    core::types::{BlockId, BlockTag, Felt},
     providers::{jsonrpc::HttpTransport, JsonRpcClient},
 };
+use std::{env::var, str::FromStr, sync::Arc};
 use tracing_opentelemetry::MetricsLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
@@ -46,19 +51,22 @@ async fn main() -> Result<()> {
     let starknet_provider = Arc::new(starknet_provider);
 
     // Get the pool config
-    // TODO call Kakarot.get_base_fee
-    let config = PoolConfig { minimal_protocol_basefee: 0, ..Default::default() };
+    let contract_reader = KakarotCoreReader::new(*KAKAROT_ADDRESS, starknet_provider.clone());
+    let base_fee = contract_reader.get_base_fee().block_id(BlockId::Tag(BlockTag::Pending)).call().await?.base_fee;
+    let base_fee = base_fee.try_into()?;
+    let config = PoolConfig { minimal_protocol_basefee: base_fee, ..Default::default() };
 
+    // Init the Ethereum Client
     let eth_client = EthClient::new(starknet_provider, config, db.clone());
     let eth_client = Arc::new(eth_client);
 
     // Start the relayer manager
     let addresses =
         var("RELAYERS_ADDRESSES")?.split(',').filter_map(|addr| Felt::from_str(addr).ok()).collect::<Vec<_>>();
-    AccountManager::from_addresses(addresses, Arc::clone(&eth_client)).await?.start();
+    AccountManager::new(addresses, Arc::clone(&eth_client)).start();
 
     // Start the maintenance of the mempool
-    maintain_transaction_pool(Arc::clone(&eth_client));
+    maintain_transaction_pool(Arc::clone(&eth_client), PRUNE_DURATION);
 
     // Setup the RPC module
     let kakarot_rpc_module = KakarotRpcModuleBuilder::new(eth_client).rpc_module()?;

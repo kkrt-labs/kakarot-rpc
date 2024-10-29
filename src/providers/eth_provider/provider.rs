@@ -1,7 +1,7 @@
 use super::{
     constant::CALL_REQUEST_GAS_LIMIT,
     database::{ethereum::EthereumBlockStore, Database},
-    error::{EthApiError, EthereumDataFormatError, EvmError, ExecutionError, TransactionError},
+    error::{EthApiError, EvmError, ExecutionError, TransactionError},
     starknet::kakarot_core::{
         self,
         core::{CallInput, KakarotCoreReader, Uint256},
@@ -228,9 +228,7 @@ where
         block_id: Option<BlockId>,
     ) -> EthApiResult<starknet::core::types::BlockId> {
         match block_id {
-            Some(BlockId::Hash(hash)) => {
-                Ok(EthBlockId::new(BlockId::Hash(hash)).try_into().map_err(EthereumDataFormatError::from)?)
-            }
+            Some(BlockId::Hash(hash)) => Ok(EthBlockId::new(BlockId::Hash(hash)).try_into()?),
             Some(BlockId::Number(number_or_tag)) => {
                 // There is a need to separate the BlockNumberOrTag case into three subcases
                 // because pending Starknet blocks don't have a number.
@@ -282,7 +280,7 @@ where
         block_id: BlockId,
     ) -> EthApiResult<BlockHashOrNumber> {
         match block_id {
-            BlockId::Hash(hash) => Ok(BlockHashOrNumber::Hash(hash.into())),
+            BlockId::Hash(hash) => Ok(hash.into()),
             BlockId::Number(number_or_tag) => Ok(self.tag_into_block_number(number_or_tag).await?.into()),
         }
     }
@@ -296,7 +294,10 @@ where
     /// Deploy the EVM transaction signer if a corresponding contract is not found on
     /// Starknet.
     pub(crate) async fn deploy_evm_transaction_signer(&self, signer: Address) -> EthApiResult<()> {
-        use crate::providers::eth_provider::constant::hive::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE};
+        use crate::providers::eth_provider::{
+            constant::hive::{DEPLOY_WALLET, DEPLOY_WALLET_NONCE},
+            error::EthereumDataFormatError,
+        };
         use starknet::{
             accounts::ExecutionV1,
             core::{

@@ -3,6 +3,5 @@ docs/*
 rpc-call-examples/*
 .github/*
 .vscode/*
-.env.example
 target/*
 Dockerfile

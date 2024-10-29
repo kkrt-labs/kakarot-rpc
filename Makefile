@@ -27,7 +27,8 @@ usage:
 setup: .gitmodules
 	chmod +x ./scripts/extract_abi.sh
 	git submodule update --init --recursive
-	cd lib/kakarot && make setup && make build && make build-sol && \
+	cp .env.example .env
+	cd lib/kakarot && uv sync --all-extras --dev && make build && make build-sol && \
 	mv build/ssj/contracts_Cairo1Helpers.contract_class.json build/cairo1_helpers.json && rm -fr build/ssj
 	./scripts/extract_abi.sh
 
@@ -43,7 +44,7 @@ run-dev: load-env
 	RUST_LOG=trace cargo run --bin kakarot-rpc
 
 install-katana:
-	cargo install --git https://github.com/dojoengine/dojo --locked --tag v1.0.0-alpha.14 katana
+	cargo install --git https://github.com/dojoengine/dojo --locked --tag v1.0.0-alpha.15 katana
 
 katana-genesis: install-katana
 	cargo run --bin katana_genesis --features testing
@@ -55,7 +56,7 @@ test: katana-genesis load-env
 	cargo test --all --features testing
 
 test-ci: load-env
-	cargo nextest run --all --features testing --profile ci
+	cargo nextest run --all --features "testing,forwarding" --profile ci
 
 # Example: `make test-target TARGET=test_raw_transaction`
 test-target: load-env

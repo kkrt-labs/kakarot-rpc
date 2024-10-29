@@ -6,8 +6,8 @@ use crate::{
     },
     providers::{
         eth_provider::{
-            database::Database,
-            error::{EthApiError, EthereumDataFormatError, SignatureError},
+            database::{types::transaction::ExtendedTransaction, Database},
+            error::SignatureError,
             provider::{EthApiResult, EthDataProvider},
             TransactionProvider, TxPoolProvider,
         },
@@ -17,9 +17,7 @@ use crate::{
 use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
-use alloy_rpc_types::Transaction;
 use alloy_rpc_types_txpool::TxpoolContent;
-use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
@@ -40,7 +38,7 @@ pub trait KakarotTransactions {
 #[async_trait]
 pub trait TransactionHashProvider {
     /// Returns the transaction by hash.
-    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>>;
+    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<ExtendedTransaction>>;
 }
 
 /// Provides a wrapper structure around the Ethereum Provider
@@ -99,8 +97,7 @@ where
 {
     async fn send_raw_transaction(&self, transaction: Bytes) -> EthApiResult<B256> {
         // Decode the transaction data
-        let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())
-            .map_err(|_| EthApiError::EthereumDataFormat(EthereumDataFormatError::TransactionConversion))?;
+        let transaction_signed = TransactionSigned::decode(&mut transaction.0.as_ref())?;
 
         // Recover the signer from the transaction
         let signer = transaction_signed.recover_signer().ok_or(SignatureError::Recovery)?;
@@ -134,11 +131,11 @@ impl<SP> TxPoolProvider for EthClient<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    fn content(&self) -> TxpoolContent<WithOtherFields<Transaction>> {
+    fn content(&self) -> TxpoolContent<ExtendedTransaction> {
         #[inline]
         fn insert<T: PoolTransaction<Consensus = TransactionSignedEcRecovered>>(
             tx: &T,
-            content: &mut BTreeMap<Address, BTreeMap<String, WithOtherFields<Transaction>>>,
+            content: &mut BTreeMap<Address, BTreeMap<String, ExtendedTransaction>>,
         ) {
             content.entry(tx.sender()).or_default().insert(
                 tx.nonce().to_string(),
@@ -161,7 +158,7 @@ where
         content
     }
 
-    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<WithOtherFields<Transaction>>> {
+    async fn txpool_content(&self) -> EthApiResult<TxpoolContent<ExtendedTransaction>> {
         Ok(self.content())
     }
 }
@@ -171,7 +168,7 @@ impl<SP> TransactionHashProvider for EthClient<SP>
 where
     SP: starknet::providers::Provider + Send + Sync,
 {
-    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<WithOtherFields<Transaction>>> {
+    async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<ExtendedTransaction>> {
         Ok(self
             .pool
             .get(&hash)
