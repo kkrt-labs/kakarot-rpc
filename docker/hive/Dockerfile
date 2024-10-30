@@ -48,7 +48,7 @@ RUN case $BUILDPLATFORM in \
 FROM mongo:6.0.8 as mongo
 
 # Ethereum RPC Server
-### Build the Cairo programs artifacts
+### Build the Cairo program artifacts
 FROM python:3.10.13 as compiler
 ENV PATH="$PATH:/root/.local/bin:/root/.foundry/bin:/root/.cargo/bin"
 
@@ -94,7 +94,7 @@ RUN --mount=type=cache,target=/root/.cache \
 COPY . .
 
 ### Build the RPC server
-# Define ARG for build platform
+# Define ARG for building the platform
 FROM lukemathwalker/cargo-chef:latest-rust-1 AS chef
 WORKDIR /app
 
