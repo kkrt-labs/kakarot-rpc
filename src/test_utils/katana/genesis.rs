@@ -311,11 +311,22 @@ impl KatanaGenesisBuilder<Initialized> {
 
     /// Consume the [`KatanaGenesisBuilder`] and returns the corresponding [`GenesisJson`].
     pub fn build(self) -> Result<GenesisJson> {
+        let mut contracts = self.contracts.clone();
+        contracts.insert(
+            DEFAULT_ETH_FEE_TOKEN_ADDRESS,
+            GenesisContractJson {
+                balance: None,
+                nonce: None,
+                class: None,
+                storage: Some(self.fee_token_storage.clone()),
+            },
+        );
+
         Ok(GenesisJson {
             sequencer_address: self.compute_starknet_address(self.coinbase)?,
             classes: self.classes,
             accounts: self.accounts,
-            contracts: self.contracts,
+            contracts,
             ..Default::default()
         })
     }

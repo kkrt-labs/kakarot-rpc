@@ -128,15 +128,13 @@ impl HiveGenesisConfig {
 
         // Add the fee token storage to the genesis.
         genesis
-            .accounts
+            .contracts
             .entry(DEFAULT_ETH_FEE_TOKEN_ADDRESS)
-            .or_insert_with(|| katana_primitives::genesis::json::GenesisAccountJson {
-                public_key: Felt::ZERO,
+            .or_insert_with(|| katana_primitives::genesis::json::GenesisContractJson {
                 balance: None,
                 nonce: None,
                 class: None,
                 storage: Some(BTreeMap::new()),
-                private_key: None,
             })
             .storage
             .get_or_insert_with(BTreeMap::new)
