@@ -5,6 +5,7 @@ use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{Address, TxKind, B64, U256};
 use alloy_rpc_types::Header;
 use kakarot_rpc::{
+    constants::KKRT_BLOCK_GAS_LIMIT,
     pool::mempool::maintain_transaction_pool,
     providers::eth_provider::{
         constant::U64_HEX_STRING_LEN,
@@ -457,6 +458,9 @@ async fn test_maintain_mempool(#[future] katana: Katana, _setup: ()) {
         // We expect them to still be in the mempool until 1 second has elapsed.
         assert!(eth_client.mempool().contains(transaction1.hash()), "Transaction 1 should still be in the mempool");
         assert!(eth_client.mempool().contains(transaction2.hash()), "Transaction 2 should still be in the mempool");
+
+        // Check the gas limit for Kakarot blocks
+        assert_eq!(eth_client.mempool().config().gas_limit, KKRT_BLOCK_GAS_LIMIT);
     }
 
     // Sleep for some additional time to allow the pruning to occur.
@@ -466,6 +470,19 @@ async fn test_maintain_mempool(#[future] katana: Katana, _setup: ()) {
     assert!(!eth_client.mempool().contains(transaction1.hash()), "Transaction 1 should be pruned after 1 second");
     assert!(!eth_client.mempool().contains(transaction2.hash()), "Transaction 2 should be pruned after 1 second");
 
+    // Check the gas limit for Kakarot blocks
+    assert_eq!(eth_client.mempool().config().gas_limit, KKRT_BLOCK_GAS_LIMIT);
+
     // Ensure the background task is stopped gracefully.
     maintain_task.abort();
+}
+
+#[rstest]
+#[awt]
+#[tokio::test(flavor = "multi_thread")]
+async fn test_mempool_config(#[future] katana: Katana, _setup: ()) {
+    let eth_client = Arc::new(katana.eth_client());
+
+    // Check the gas limit for Kakarot blocks
+    assert_eq!(eth_client.mempool().config().gas_limit, KKRT_BLOCK_GAS_LIMIT);
 }
