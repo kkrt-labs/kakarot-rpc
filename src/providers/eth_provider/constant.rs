@@ -80,3 +80,14 @@ pub mod hive {
         })
     });
 }
+
+#[cfg(feature = "forwarding")]
+pub mod forwarding {
+    use super::LazyLock;
+    use url::Url;
+
+    pub static MAIN_RPC_URL: LazyLock<Url> = LazyLock::new(|| {
+        Url::parse(&std::env::var("MAIN_RPC_URL").expect("Missing MAIN_RPC_URL environment variable"))
+            .expect("Invalid MAIN_RPC_URL environment variable")
+    });
+}

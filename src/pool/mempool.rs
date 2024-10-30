@@ -3,7 +3,7 @@
 use super::validate::KakarotTransactionValidator;
 use crate::{
     client::EthClient,
-    constants::KAKAROT_RPC_CONFIG,
+    constants::{KAKAROT_RPC_CONFIG, KKRT_BLOCK_GAS_LIMIT},
     into_via_try_wrapper,
     pool::constants::ONE_TENTH_ETH,
     providers::eth_provider::{database::state::EthDatabase, starknet::relayer::Relayer, BlockProvider},
@@ -249,10 +249,13 @@ where
                         let latest_header = latest_block.header.clone().seal(hash);
 
                         // Update the block information in the pool
-                        let chain_spec =
-                            ChainSpec { chain: eth_client.eth_provider().chain_id.into(), ..Default::default() };
+                        let chain_spec = ChainSpec {
+                            chain: eth_client.eth_provider().chain_id.into(),
+                            max_gas_limit: KKRT_BLOCK_GAS_LIMIT,
+                            ..Default::default()
+                        };
                         let info = BlockInfo {
-                            block_gas_limit: latest_header.gas_limit,
+                            block_gas_limit: KKRT_BLOCK_GAS_LIMIT,
                             last_seen_block_hash: hash,
                             last_seen_block_number: latest_header.number,
                             pending_basefee: latest_header

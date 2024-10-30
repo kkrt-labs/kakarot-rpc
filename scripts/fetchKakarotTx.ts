@@ -11,20 +11,19 @@ import { TRANSACTION_EXECUTED } from "../indexer/src/constants.ts";
 import {
   EXPECTED_TRANSFORM_DATA_FILE,
   TRANSACTIONS_DATA_FILE,
-} from "../indexer/src/testConstants.ts";
+} from "../indexer/tests/constants";
 import { padString } from "../indexer/src/utils/hex.ts";
 import transform from "../indexer/src/main.ts";
 import { toTypedEthTx } from "../indexer/src/types/transaction.ts";
 
 // Initialize the provider with the specified node URL
 const provider = new RpcProvider({
-  nodeUrl: "https://juno-kakarot-dev.karnot.xyz/",
+  nodeUrl: "https://juno-kakarot-sepolia.karnot.xyz/",
 });
 
 // Function to fetch a block by its number
 async function fetchBlock(blockNumber: number) {
-  const block = await provider.getBlock(blockNumber);
-  return block;
+  return await provider.getBlock(blockNumber);
 }
 
 // Function to collect transactions until a target count is reached

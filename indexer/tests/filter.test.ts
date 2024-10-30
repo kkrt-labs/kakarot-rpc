@@ -227,7 +227,7 @@ Deno.test(
       "0x0",
       "0x0",
       "0x0",
-      "0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda",
+      "0x1d2e513630d8120666fc6e7d52ad0c01479fd99c183baac79fff9135f46e359",
     ];
     const transaction: Transaction = {
       invokeV1: {
