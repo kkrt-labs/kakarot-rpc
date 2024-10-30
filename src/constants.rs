@@ -29,3 +29,6 @@ pub static KAKAROT_RPC_CONFIG: LazyLock<KakarotRpcConfig> =
 /// The RPC configuration.
 pub static RPC_CONFIG: LazyLock<RPCConfig> =
     LazyLock::new(|| RPCConfig::from_env().expect("failed to load RPC config"));
+
+/// The gas limit for Kakarot blocks.
+pub const KAKAROT_BLOCK_GAS_LIMIT: u64 = 7_000_000;
