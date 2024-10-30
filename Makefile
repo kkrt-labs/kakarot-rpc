@@ -62,9 +62,6 @@ test-ci: load-env
 test-target: load-env
 	cargo test --tests --all-features $(TARGET) -- --nocapture
 
-test-target1: load-env
-	cargo test --package kakarot-rpc --test entry --all-features -- tests::mempool::test_maintain_mempool --exact --show-output
-
 benchmark:
 	cd benchmarks && bun i && bun run benchmark
 
