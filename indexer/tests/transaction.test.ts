@@ -788,7 +788,7 @@ Deno.test(
   },
 );
 
-Deno.test.ignore("toTypedEthTx with real data", () => {
+Deno.test("toTypedEthTx with real data", () => {
   transactionsData.transactionsList.forEach(
     (transactions: TransactionWithReceipt[], outerIndex: number) => {
       transactions.map((transaction, innerIndex) => {
