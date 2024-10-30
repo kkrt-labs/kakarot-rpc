@@ -38,7 +38,7 @@ jobs:
       - name: Run Tests with Coverage on base branch
         run:
           DEFAULT_BLOCK_GAS_LIMIT=7000000 STARKNET_NETWORK=http://0.0.0.0:1010
-          KAKAROT_ADDRESS=0x11c5faab8a76b3caff6e243b8d13059a7fb723a0ca12bbaadde95fb9e501bda
+          KAKAROT_ADDRESS=0x1d2e513630d8120666fc6e7d52ad0c01479fd99c183baac79fff9135f46e359
           deno test --allow-env --allow-read --coverage=cov_profile_main
       - name: Generate HTML report from for the base branch
         run: deno coverage cov_profile_main --html
