@@ -2,7 +2,7 @@ use dotenvy::dotenv;
 use eyre::Result;
 use kakarot_rpc::{
     client::EthClient,
-    constants::{KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_RPC_CONFIG, RPC_CONFIG},
+    constants::{KAKAROT_RPC_CONFIG, KKRT_BLOCK_GAS_LIMIT, RPC_CONFIG},
     eth_rpc::{rpc::KakarotRpcModuleBuilder, run_server},
     pool::{
         constants::PRUNE_DURATION,
@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
     let base_fee = contract_reader.get_base_fee().block_id(BlockId::Tag(BlockTag::Pending)).call().await?.base_fee;
     let base_fee = base_fee.try_into()?;
     let config =
-        PoolConfig { minimal_protocol_basefee: base_fee, gas_limit: KAKAROT_BLOCK_GAS_LIMIT, ..Default::default() };
+        PoolConfig { minimal_protocol_basefee: base_fee, gas_limit: KKRT_BLOCK_GAS_LIMIT, ..Default::default() };
 
     // Init the Ethereum Client
     let eth_client = EthClient::new(starknet_provider, config, db.clone());

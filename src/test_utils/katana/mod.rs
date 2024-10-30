@@ -3,6 +3,7 @@ pub mod genesis;
 use super::mongo::MongoImage;
 use crate::{
     client::EthClient,
+    constants::KKRT_BLOCK_GAS_LIMIT,
     providers::eth_provider::{
         constant::U64_HEX_STRING_LEN,
         database::{
@@ -32,6 +33,7 @@ use mongodb::{
     bson::{doc, Document},
     options::{UpdateModifications, UpdateOptions},
 };
+use reth_transaction_pool::PoolConfig;
 use starknet::providers::{jsonrpc::HttpTransport, JsonRpcClient};
 use std::{path::Path, sync::Arc};
 use testcontainers::ContainerAsync;
@@ -153,7 +155,11 @@ impl<'a> Katana {
         let database = mongo_fuzzer.finalize().await;
 
         // Initialize the EthClient
-        let eth_client = EthClient::new(starknet_provider, Default::default(), database);
+        let eth_client = EthClient::new(
+            starknet_provider,
+            PoolConfig { gas_limit: KKRT_BLOCK_GAS_LIMIT, ..Default::default() },
+            database,
+        );
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());
@@ -200,7 +206,11 @@ impl<'a> Katana {
         let database = mongo_fuzzer.finalize().await;
 
         // Initialize the EthClient
-        let eth_client = EthClient::new(starknet_provider, Default::default(), database);
+        let eth_client = EthClient::new(
+            starknet_provider,
+            PoolConfig { gas_limit: KKRT_BLOCK_GAS_LIMIT, ..Default::default() },
+            database,
+        );
 
         // Create a new Kakarot EOA instance with the private key and EthDataProvider instance.
         let eoa = KakarotEOA::new(pk, Arc::new(eth_client.clone()), sequencer.account());

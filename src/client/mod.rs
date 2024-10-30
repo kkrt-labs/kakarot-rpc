@@ -1,5 +1,5 @@
 use crate::{
-    constants::{ETH_CHAIN_ID, KAKAROT_BLOCK_GAS_LIMIT},
+    constants::{ETH_CHAIN_ID, KKRT_BLOCK_GAS_LIMIT},
     pool::{
         mempool::{KakarotPool, TransactionOrdering},
         validate::KakarotTransactionValidatorBuilder,
@@ -65,7 +65,7 @@ where
 
         let validator = KakarotTransactionValidatorBuilder::new(&Arc::new(ChainSpec {
             chain: (*ETH_CHAIN_ID).into(),
-            max_gas_limit: KAKAROT_BLOCK_GAS_LIMIT,
+            max_gas_limit: KKRT_BLOCK_GAS_LIMIT,
             ..Default::default()
         }))
         .build::<_, EthPooledTransaction>(eth_provider.clone());
