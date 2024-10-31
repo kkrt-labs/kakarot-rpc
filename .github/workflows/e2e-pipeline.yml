@@ -49,8 +49,7 @@ jobs:
             ${{ secrets.STARKNET_SEPOLIA_STAGING_PRIVATE_KEY }}
           STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS:
             ${{ secrets.STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS }}
-          INFURA_KEY:
-            ${{ secrets.INFURA_KEY }}
+          INFURA_KEY: ${{ secrets.INFURA_KEY }}
         run: |
           cd scripts
           sh e2e_pipeline.sh ${{ github.event.inputs.action }} --${{ github.event.inputs.environment }}
@@ -69,6 +68,8 @@ jobs:
           private-key: ${{ secrets.KAKAROT_BOT_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
       - name: Create PR for deployment updates
+        with:
+          token: ${{ steps.github_token.outputs.token }}
         if: ${{ env.has_diff == 1 }}
         run: |
           set +e
