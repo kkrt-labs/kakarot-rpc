@@ -5,14 +5,17 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: Environment to use
+        description: Environment to run the action on.
         required: true
         type: choice
         options:
           - sepolia
           - staging
       action:
-        description: Action to perform on the selected environment
+        description:
+          Action to perform on the selected environment. `Deploy` will
+          upgrade/deploy the Kakarot contracts, while `test` will run the end 2
+          end tests on the currently deployed stack.
         required: true
         type: choice
         options:
