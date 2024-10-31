@@ -240,7 +240,7 @@ where
         Err(EthApiError::Unsupported("eth_sendTransaction").into())
     }
 
-    #[tracing::instrument(skip_all, ret, err)]
+    #[tracing::instrument(skip_all, ret, err(level = Level::WARN))]
     async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256> {
         tracing::info!("Serving eth_sendRawTransaction");
 

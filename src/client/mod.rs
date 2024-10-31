@@ -120,7 +120,7 @@ where
             .pool
             .add_transaction(TransactionOrigin::Local, pool_transaction)
             .await
-            .inspect_err(|err| tracing::error!(?err, ?hash, ?to, from = ?signer))?;
+            .inspect_err(|err| tracing::warn!(?err, ?hash, ?to, from = ?signer))?;
 
         Ok(hash)
     }
