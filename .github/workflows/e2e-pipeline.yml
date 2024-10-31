@@ -68,9 +68,9 @@ jobs:
           private-key: ${{ secrets.KAKAROT_BOT_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
       - name: Create PR for deployment updates
-        with:
-          token: ${{ steps.github_token.outputs.token }}
         if: ${{ env.has_diff == 1 }}
+        env:
+          GH_TOKEN: ${{ steps.github_token.outputs.token }}
         run: |
           set +e
           cd lib/kakarot
