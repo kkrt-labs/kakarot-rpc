@@ -83,10 +83,11 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                     let manager = this.clone();
                     tokio::spawn(async move {
                         // Lock the relayer account
+                        let hash = transaction.hash();
                         let maybe_relayer = manager.get_relayer().await;
                         if maybe_relayer.is_err() {
                             // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
-                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap_err(), "failed to fetch relayer");
+                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap_err(), ?hash, "failed to fetch relayer");
                             let _ = manager
                                 .eth_client
                                 .mempool()
@@ -102,7 +103,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
                             // If the relayer failed to relay the transaction, we need to reposition it in the mempool
-                            tracing::error!(target: "account_manager", err = ?res.unwrap_err(), "failed to relay transaction");
+                            tracing::error!(target: "account_manager", err = ?res.unwrap_err(), ?hash, "failed to relay transaction");
                             let _ = manager
                                 .eth_client
                                 .mempool()
