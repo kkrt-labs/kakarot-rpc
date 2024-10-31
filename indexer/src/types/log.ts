@@ -2,7 +2,10 @@
 import { padBigint } from "../utils/hex.ts";
 
 // Constants
-import { KAKAROT_ADDRESS, NULL_HASH } from "../constants.ts";
+import { IGNORED_KEYS, KAKAROT_ADDRESS, NULL_HASH } from "../constants.ts";
+
+// Types
+import { JsonRpcLog } from "./types.ts";
 
 // Starknet
 import { Event, hash } from "../deps.ts";
@@ -15,18 +18,6 @@ import {
   Log,
   PrefixedHexString,
 } from "../deps.ts";
-
-import { JsonRpcLog } from "./types.ts";
-
-// Events containing these keys are not
-// ETH logs and should be ignored.
-export const IGNORED_KEYS = [
-  BigInt(hash.getSelectorFromName("transaction_executed")),
-  BigInt(hash.getSelectorFromName("evm_contract_deployed")),
-  BigInt(hash.getSelectorFromName("Transfer")),
-  BigInt(hash.getSelectorFromName("Approval")),
-  BigInt(hash.getSelectorFromName("OwnershipTransferred")),
-];
 
 /**
  * @param transaction - A Ethereum transaction.
