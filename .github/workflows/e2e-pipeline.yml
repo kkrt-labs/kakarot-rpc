@@ -43,9 +43,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version-file: lib/kakarot/.python-version
-      - uses: software-mansion/setup-scarb@v1
-        with:
-          scarb-version: 0.7.0
+      - name: Install asdf & tools
+        uses: asdf-vm/actions/setup@v3
+      - name: install scarb
+        run: |
+          asdf plugin add scarb
+          asdf install scarb 2.8.3
+          asdf install scarb 2.6.5
+          asdf install scarb 0.7.0
       - name: Run staging script
         env:
           STARKNET_SEPOLIA_STAGING_PRIVATE_KEY:
