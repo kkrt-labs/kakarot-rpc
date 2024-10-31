@@ -3,7 +3,7 @@
 use super::validate::KakarotTransactionValidator;
 use crate::{
     client::EthClient,
-    constants::KAKAROT_RPC_CONFIG,
+    constants::{KAKAROT_RPC_CONFIG, KKRT_BLOCK_GAS_LIMIT},
     into_via_try_wrapper,
     pool::constants::ONE_TENTH_ETH,
     providers::eth_provider::{database::state::EthDatabase, starknet::relayer::Relayer, BlockProvider},
@@ -83,10 +83,11 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                     let manager = this.clone();
                     tokio::spawn(async move {
                         // Lock the relayer account
+                        let hash = transaction.hash();
                         let maybe_relayer = manager.get_relayer().await;
                         if maybe_relayer.is_err() {
                             // If we fail to fetch a relayer, we need to re-insert the transaction in the pool
-                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap_err(), "failed to fetch relayer");
+                            tracing::error!(target: "account_manager", err = ?maybe_relayer.unwrap_err(), ?hash, "failed to fetch relayer");
                             let _ = manager
                                 .eth_client
                                 .mempool()
@@ -102,7 +103,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                         let res = relayer.relay_transaction(&transaction_signed).await;
                         if res.is_err() {
                             // If the relayer failed to relay the transaction, we need to reposition it in the mempool
-                            tracing::error!(target: "account_manager", err = ?res.unwrap_err(), "failed to relay transaction");
+                            tracing::error!(target: "account_manager", err = ?res.unwrap_err(), ?hash, "failed to relay transaction");
                             let _ = manager
                                 .eth_client
                                 .mempool()
@@ -249,10 +250,13 @@ where
                         let latest_header = latest_block.header.clone().seal(hash);
 
                         // Update the block information in the pool
-                        let chain_spec =
-                            ChainSpec { chain: eth_client.eth_provider().chain_id.into(), ..Default::default() };
+                        let chain_spec = ChainSpec {
+                            chain: eth_client.eth_provider().chain_id.into(),
+                            max_gas_limit: KKRT_BLOCK_GAS_LIMIT,
+                            ..Default::default()
+                        };
                         let info = BlockInfo {
-                            block_gas_limit: latest_header.gas_limit,
+                            block_gas_limit: KKRT_BLOCK_GAS_LIMIT,
                             last_seen_block_hash: hash,
                             last_seen_block_number: latest_header.number,
                             pending_basefee: latest_header
