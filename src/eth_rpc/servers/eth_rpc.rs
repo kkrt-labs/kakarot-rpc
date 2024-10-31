@@ -18,6 +18,7 @@ use reth_primitives::{BlockId, BlockNumberOrTag};
 use serde_json::Value;
 use starknet::providers::Provider;
 use std::sync::Arc;
+use tracing::Level;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
