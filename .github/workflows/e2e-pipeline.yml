@@ -1,7 +1,26 @@
 ---
-name: staging
+name: e2e pipeline
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to run the action on.
+        required: true
+        type: choice
+        options:
+          - sepolia
+          - staging
+      action:
+        description:
+          Action to perform on the selected environment. `Deploy` will
+          upgrade/deploy the Kakarot contracts, while `test` will run the end 2
+          end tests on the currently deployed stack.
+        required: true
+        type: choice
+        options:
+          - deploy
+          - test
 
 jobs:
   stage:
@@ -12,7 +31,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-          token: ${{ secrets.GH_TOKEN }}
       - name: install foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
@@ -30,23 +48,32 @@ jobs:
           scarb-version: 0.7.0
       - name: Run staging script
         env:
-          KAKAROT_STAGING_PRIVATE_KEY:
-            ${{ secrets.KAKAROT_STAGING_PRIVATE_KEY }}
+          STARKNET_SEPOLIA_STAGING_PRIVATE_KEY:
+            ${{ secrets.STARKNET_SEPOLIA_STAGING_PRIVATE_KEY }}
+          STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS:
+            ${{ secrets.STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS }}
+          INFURA_KEY: ${{ secrets.INFURA_KEY }}
         run: |
           cd scripts
-          sh upgrade.sh deploy test --staging
+          sh e2e_pipeline.sh ${{ github.event.inputs.action }} --${{ github.event.inputs.environment }}
       - name: Check diff in deployments
         run: |
           cd lib/kakarot
           set +e
-          git diff --no-patch --exit-code -- deployments/kakarot-staging/
+          git diff --no-patch --exit-code -- deployments/
           has_diff=$?
           set -e
           echo "has_diff=$has_diff" >> $GITHUB_ENV
+      - uses: actions/create-github-app-token@v1
+        id: github_token
+        with:
+          app-id: ${{ secrets.KAKAROT_BOT_APP_ID }}
+          private-key: ${{ secrets.KAKAROT_BOT_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
       - name: Create PR for deployment updates
         if: ${{ env.has_diff == 1 }}
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ steps.github_token.outputs.token }}
         run: |
           set +e
           cd lib/kakarot
