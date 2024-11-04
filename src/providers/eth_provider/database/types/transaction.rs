@@ -19,7 +19,7 @@ pub type ExtendedTransaction = WithOtherFields<Transaction>;
 /// A mapping between an Ethereum transaction hash and a Starknet transaction hash.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct StoredEthStarknetTransactionHash {
-    /// Contains both Ethereum and StarkNet transaction hashes.
+    /// Contains both Ethereum and Starknet transaction hashes.
     #[serde(deserialize_with = "crate::providers::eth_provider::database::types::serde::deserialize_intermediate")]
     pub hashes: EthStarknetHashes,
 }
@@ -30,7 +30,7 @@ impl From<EthStarknetHashes> for StoredEthStarknetTransactionHash {
     }
 }
 
-/// Inner struct that holds the Ethereum and StarkNet transaction hashes.
+/// Inner struct that holds the Ethereum and Starknet transaction hashes.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct EthStarknetHashes {
     /// The Ethereum transaction hash.

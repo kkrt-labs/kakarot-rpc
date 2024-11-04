@@ -31,7 +31,6 @@ use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
     TransactionOrigin, TransactionPool,
 };
-use serde_json::to_string;
 use starknet::providers::Provider;
 use std::{collections::BTreeMap, sync::Arc};
 
