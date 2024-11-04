@@ -32,6 +32,28 @@ pub trait LogFiltering {
     fn address(&self) -> &'static str;
 }
 
+/// A type used for a mapping between:
+/// - An Ethereum transaction hash
+/// - A Starknet transaction hash.
+#[derive(Debug, Default)]
+pub struct EthStarknetTransactionHash;
+
+impl Display for EthStarknetTransactionHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "hashes")
+    }
+}
+
+impl TransactionFiltering for EthStarknetTransactionHash {
+    fn transaction_hash(&self) -> &'static str {
+        "eth_hash"
+    }
+
+    fn transaction_index(&self) -> &'static str {
+        ""
+    }
+}
+
 /// A transaction type used as a target for the filter.
 #[derive(Debug, Default)]
 pub struct Transaction;

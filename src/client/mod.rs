@@ -6,7 +6,12 @@ use crate::{
     },
     providers::{
         eth_provider::{
-            database::{types::transaction::ExtendedTransaction, Database},
+            database::{
+                filter,
+                filter::EthDatabaseFilterBuilder,
+                types::transaction::{ExtendedTransaction, StoredEthStarknetTransactionHash},
+                Database,
+            },
             error::SignatureError,
             provider::{EthApiResult, EthDataProvider},
             TransactionProvider, TxPoolProvider,
@@ -26,6 +31,7 @@ use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
     TransactionOrigin, TransactionPool,
 };
+use serde_json::to_string;
 use starknet::providers::Provider;
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -170,13 +176,36 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<ExtendedTransaction>> {
-        Ok(self
+        // Try to get the information from:
+        // 1. The pool if the transaction is in the pool.
+        // 2. The Ethereum provider if the transaction is not in the pool.
+        let mut tx = self
             .pool
             .get(&hash)
             .map(|transaction| {
                 TransactionSource::Pool(transaction.transaction.transaction().clone())
                     .into_transaction::<reth_rpc::eth::EthTxBuilder>()
             })
-            .or(self.eth_provider.transaction_by_hash(hash).await?))
+            .or(self.eth_provider.transaction_by_hash(hash).await?);
+
+        if let Some(ref mut transaction) = tx {
+            // Fetch the Starknet transaction hash if it exists.
+            let filter = EthDatabaseFilterBuilder::<filter::EthStarknetTransactionHash>::default()
+                .with_tx_hash(&transaction.hash)
+                .build();
+
+            let hash_mapping: Option<StoredEthStarknetTransactionHash> =
+                self.eth_provider.database().get_one(filter, None).await?;
+
+            // Add the Starknet transaction hash to the transaction fields.
+            if let Some(hash_mapping) = hash_mapping {
+                transaction.other.insert(
+                    "starknet_transaction_hash".to_string(),
+                    serde_json::Value::String(hash_mapping.hashes.starknet_hash.to_fixed_hex_string()),
+                );
+            }
+        }
+
+        Ok(tx)
     }
 }

@@ -152,6 +152,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
                 account_address,
                 balance,
                 JsonRpcClient::new(HttpTransport::new(KAKAROT_RPC_CONFIG.network_url.clone())),
+                Some(Arc::new(self.eth_client.eth_provider().database().clone())),
             );
 
             // Return the locked relayer instance

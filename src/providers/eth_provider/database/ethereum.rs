@@ -7,7 +7,10 @@ use super::{
     },
     Database,
 };
-use crate::providers::eth_provider::error::EthApiError;
+use crate::providers::eth_provider::{
+    database::types::transaction::{EthStarknetHashes, StoredEthStarknetTransactionHash},
+    error::EthApiError,
+};
 use alloy_primitives::{B256, U256};
 use alloy_rlp::Encodable;
 use alloy_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header};
@@ -31,6 +34,8 @@ pub trait EthereumTransactionStore {
     ) -> Result<Vec<ExtendedTransaction>, EthApiError>;
     /// Upserts the given transaction.
     async fn upsert_transaction(&self, transaction: ExtendedTransaction) -> Result<(), EthApiError>;
+    /// Upserts the given transaction hash mapping (Ethereum -> Starknet).
+    async fn upsert_transaction_hashes(&self, transaction_hashes: EthStarknetHashes) -> Result<(), EthApiError>;
 }
 
 #[async_trait]
@@ -57,6 +62,14 @@ impl EthereumTransactionStore for Database {
     async fn upsert_transaction(&self, transaction: ExtendedTransaction) -> Result<(), EthApiError> {
         let filter = EthDatabaseFilterBuilder::<filter::Transaction>::default().with_tx_hash(&transaction.hash).build();
         Ok(self.update_one(StoredTransaction::from(transaction), filter, true).await?)
+    }
+
+    #[instrument(skip_all, name = "db::upsert_transaction_hashes", err)]
+    async fn upsert_transaction_hashes(&self, transaction_hashes: EthStarknetHashes) -> Result<(), EthApiError> {
+        let filter = EthDatabaseFilterBuilder::<filter::EthStarknetTransactionHash>::default()
+            .with_tx_hash(&transaction_hashes.eth_hash)
+            .build();
+        Ok(self.update_one(StoredEthStarknetTransactionHash::from(transaction_hashes), filter, true).await?)
     }
 }
 
@@ -177,6 +190,7 @@ mod tests {
     use crate::test_utils::mongo::{MongoFuzzer, RANDOM_BYTES_SIZE};
     use arbitrary::Arbitrary;
     use rand::{self, Rng};
+    use starknet::core::types::Felt;
 
     #[tokio::test(flavor = "multi_thread")]
     async fn test_ethereum_transaction_store() {
@@ -391,5 +405,60 @@ mod tests {
 
         // Test retrieving non-existing transaction count by block number
         assert_eq!(database.transaction_count(rng.gen::<u64>().into()).await.unwrap(), None);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_upsert_transaction_hashes() {
+        // Initialize MongoDB fuzzer
+        let mut mongo_fuzzer = MongoFuzzer::new(RANDOM_BYTES_SIZE).await;
+
+        // Mock a database with sample data
+        let database = mongo_fuzzer.mock_database(1).await;
+
+        // Generate random Ethereum and Starknet hashes
+        let eth_hash = B256::random();
+        let starknet_hash =
+            Felt::from_hex("0x03d937c035c878245caf64531a5756109c53068da139362728feb561405371cb").unwrap();
+
+        // Define an EthStarknetHashes instance for testing
+        let transaction_hashes = EthStarknetHashes { eth_hash, starknet_hash };
+
+        // First, upsert the transaction hash mapping (should insert as it doesn't exist initially)
+        database
+            .upsert_transaction_hashes(transaction_hashes.clone())
+            .await
+            .expect("Failed to upsert transaction hash mapping");
+
+        // Retrieve the inserted transaction hash mapping and verify it matches the inserted values
+        let filter =
+            EthDatabaseFilterBuilder::<filter::EthStarknetTransactionHash>::default().with_tx_hash(&eth_hash).build();
+        let stored_mapping: Option<StoredEthStarknetTransactionHash> =
+            database.get_one(filter.clone(), None).await.expect("Failed to retrieve transaction hash mapping");
+
+        assert_eq!(
+            stored_mapping,
+            Some(StoredEthStarknetTransactionHash::from(transaction_hashes.clone())),
+            "The transaction hash mapping was not inserted correctly"
+        );
+
+        // Now, modify the Starknet hash and upsert the modified transaction hash mapping
+        let new_starknet_hash =
+            Felt::from_hex("0x0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a").unwrap();
+        let updated_transaction_hashes = EthStarknetHashes { eth_hash, starknet_hash: new_starknet_hash };
+
+        database
+            .upsert_transaction_hashes(updated_transaction_hashes.clone())
+            .await
+            .expect("Failed to update transaction hash mapping");
+
+        // Retrieve the updated transaction hash mapping and verify it matches the updated values
+        let updated_mapping: Option<StoredEthStarknetTransactionHash> =
+            database.get_one(filter, None).await.expect("Failed to retrieve updated transaction hash mapping");
+
+        assert_eq!(
+            updated_mapping,
+            Some(StoredEthStarknetTransactionHash::from(updated_transaction_hashes)),
+            "The transaction hash mapping was not updated correctly"
+        );
     }
 }
