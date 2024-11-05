@@ -11,7 +11,7 @@
 
 Returns the current price per gas in wei.
 
-Kakarot specifity: since Kakarot does not have a fee market as of January 2024,
+Kakarot specificity: since Kakarot does not have a fee market as of January 2024,
 transactions are ordered on a "First Come First Serve" basis.
 
 For this reason:
