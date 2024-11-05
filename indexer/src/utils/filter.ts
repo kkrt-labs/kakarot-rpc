@@ -69,16 +69,15 @@ export function ethValidationFailed(event: Event): boolean {
 }
 
 /**
- * Checks if a transaction receipt indicates that it was reverted due to running out of resources.
+ * Checks if a transaction receipt indicates that it was reverted.
  *
  * @param {TransactionReceipt} receipt - The transaction receipt to check.
- * @returns {boolean} - Returns true if the transaction was reverted due to out of resources, otherwise false.
+ * @returns {boolean} - Returns true if the transaction was reverted, otherwise false.
  */
-export function isRevertedWithOutOfResources(
+export function isReverted(
   receipt: TransactionReceipt,
 ): boolean {
   return (
-    receipt.executionStatus.includes("REVERTED") &&
-    (receipt.revertReason ?? "").includes("RunResources has no remaining steps")
+    receipt.executionStatus.includes("REVERTED")
   );
 }

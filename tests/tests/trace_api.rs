@@ -101,7 +101,8 @@ pub async fn tracing(
         // Add an out of resources field to the last transaction.
         if i == TRACING_TRANSACTIONS_COUNT - 1 {
             let mut out_of_resources = std::collections::BTreeMap::new();
-            out_of_resources.insert(String::from("isRunOutOfResources"), serde_json::Value::Bool(true));
+            out_of_resources
+                .insert(String::from("reverted"), serde_json::Value::String("A custom revert reason".to_string()));
             tx.other = OtherFields::new(out_of_resources);
         }
 

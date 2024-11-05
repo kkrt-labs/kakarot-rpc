@@ -354,12 +354,12 @@ impl<'a> Katana {
             .map(Into::into)
     }
 
-    pub fn most_recent_run_out_of_resources_receipt(&self) -> Option<ExtendedTxReceipt> {
+    pub fn most_recent_reverted_receipt(&self) -> Option<ExtendedTxReceipt> {
         self.receipts
             .iter()
             .filter_map(|stored_receipt| {
                 let receipt = WithOtherFields::from(stored_receipt.clone());
-                if receipt.other.contains_key("isRunOutOfRessources") {
+                if receipt.other.contains_key("reverted") {
                     Some(receipt)
                 } else {
                     None
