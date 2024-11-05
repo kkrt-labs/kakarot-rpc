@@ -75,6 +75,7 @@ async fn main() -> eyre::Result<()> {
         args.relayer_address,
         relayer_balance,
         JsonRpcClient::new(HttpTransport::new(Url::from_str(STARKNET_RPC_URL)?)),
+        None,
     );
 
     // Read the rlp file

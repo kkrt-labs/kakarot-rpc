@@ -2,6 +2,7 @@ use alloy_primitives::B256;
 use alloy_rpc_types::Transaction;
 use alloy_serde::WithOtherFields;
 use serde::{Deserialize, Serialize};
+use starknet::core::types::Felt;
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
@@ -11,8 +12,32 @@ use {
     reth_primitives::transaction::legacy_parity,
     reth_testing_utils::generators::{self},
 };
+
 /// Type alias for a transaction with additional fields.
 pub type ExtendedTransaction = WithOtherFields<Transaction>;
+
+/// A mapping between an Ethereum transaction hash and a Starknet transaction hash.
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+pub struct StoredEthStarknetTransactionHash {
+    /// Contains both Ethereum and Starknet transaction hashes.
+    #[serde(deserialize_with = "crate::providers::eth_provider::database::types::serde::deserialize_intermediate")]
+    pub hashes: EthStarknetHashes,
+}
+
+impl From<EthStarknetHashes> for StoredEthStarknetTransactionHash {
+    fn from(hashes: EthStarknetHashes) -> Self {
+        Self { hashes }
+    }
+}
+
+/// Inner struct that holds the Ethereum and Starknet transaction hashes.
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+pub struct EthStarknetHashes {
+    /// The Ethereum transaction hash.
+    pub eth_hash: B256,
+    /// The Starknet transaction hash.
+    pub starknet_hash: Felt,
+}
 
 /// A full transaction as stored in the database
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]

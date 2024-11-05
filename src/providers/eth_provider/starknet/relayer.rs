@@ -2,6 +2,7 @@ use crate::{
     constants::STARKNET_CHAIN_ID,
     models::transaction::transaction_data_to_starknet_calldata,
     providers::eth_provider::{
+        database::{ethereum::EthereumTransactionStore, types::transaction::EthStarknetHashes, Database},
         error::{SignatureError, TransactionError},
         provider::EthApiResult,
         starknet::kakarot_core::{starknet_address, EXECUTE_FROM_OUTSIDE},
@@ -14,7 +15,12 @@ use starknet::{
     providers::Provider,
     signers::{LocalWallet, SigningKey},
 };
-use std::{env::var, ops::Deref, str::FromStr, sync::LazyLock};
+use std::{
+    env::var,
+    ops::Deref,
+    str::FromStr,
+    sync::{Arc, LazyLock},
+};
 
 /// Signer for all relayers
 static RELAYER_SIGNER: LazyLock<LocalWallet> = LazyLock::new(|| {
@@ -33,6 +39,8 @@ pub struct Relayer<SP: Provider + Send + Sync> {
     account: SingleOwnerAccount<SP, LocalWallet>,
     /// The balance of the relayer
     balance: Felt,
+    /// The database used to store the relayer's transaction hashes map (Ethereum -> Starknet)
+    database: Option<Arc<Database>>,
 }
 
 impl<SP> Relayer<SP>
@@ -40,7 +48,7 @@ where
     SP: Provider + Send + Sync,
 {
     /// Create a new relayer with the provided Starknet provider, address, balance.
-    pub fn new(address: Felt, balance: Felt, provider: SP) -> Self {
+    pub fn new(address: Felt, balance: Felt, provider: SP, database: Option<Arc<Database>>) -> Self {
         let relayer = SingleOwnerAccount::new(
             provider,
             RELAYER_SIGNER.clone(),
@@ -49,7 +57,7 @@ where
             ExecutionEncoding::New,
         );
 
-        Self { account: relayer, balance }
+        Self { account: relayer, balance, database }
     }
 
     /// Relay the provided Ethereum transaction on the Starknet network.
@@ -86,6 +94,17 @@ where
 
         let prepared = execution.prepared().map_err(|_| SignatureError::SigningFailure)?;
         let res = prepared.send().await.map_err(|err| TransactionError::Broadcast(err.into()))?;
+
+        // Store a transaction hash mapping from Ethereum to Starknet in the database
+
+        if let Some(database) = &self.database {
+            database
+                .upsert_transaction_hashes(EthStarknetHashes {
+                    eth_hash: transaction.hash,
+                    starknet_hash: res.transaction_hash,
+                })
+                .await?;
+        }
 
         Ok(res.transaction_hash)
     }
