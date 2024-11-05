@@ -8,7 +8,10 @@ use account::{Account, KakarotAccount};
 use alloy_primitives::{Address, Bytes, B256, U256, U64};
 use katana_primitives::{
     contract::ContractAddress,
-    genesis::json::{ClassNameOrHash, GenesisContractJson, GenesisJson},
+    genesis::{
+        constant::DEFAULT_ETH_FEE_TOKEN_ADDRESS,
+        json::{ClassNameOrHash, GenesisContractJson, GenesisJson},
+    },
 };
 use serde::{Deserialize, Serialize};
 use starknet::core::{types::Felt, utils::get_storage_var_address};
@@ -123,7 +126,19 @@ impl HiveGenesisConfig {
             contract.storage.get_or_insert_with(BTreeMap::new).extend(additional_kakarot_storage);
         });
 
-        genesis.fee_token.storage.get_or_insert_with(BTreeMap::new).extend(fee_token_storage);
+        // Add the fee token storage to the genesis.
+        genesis
+            .contracts
+            .entry(DEFAULT_ETH_FEE_TOKEN_ADDRESS)
+            .or_insert_with(|| katana_primitives::genesis::json::GenesisContractJson {
+                balance: None,
+                nonce: None,
+                class: None,
+                storage: Some(BTreeMap::new()),
+            })
+            .storage
+            .get_or_insert_with(BTreeMap::new)
+            .extend(fee_token_storage);
 
         // Add the contracts to the genesis.
         genesis.contracts.extend(contracts);

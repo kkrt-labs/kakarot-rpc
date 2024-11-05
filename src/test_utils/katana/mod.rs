@@ -23,10 +23,16 @@ use crate::{
 };
 use alloy_primitives::{Address, Bytes, U256};
 use alloy_rpc_types::Log;
-use dojo_test_utils::sequencer::{Environment, StarknetConfig, TestSequencer};
+use dojo_test_utils::sequencer::TestSequencer;
+use katana_node::config::execution::ExecutionConfig;
 use katana_primitives::{
     chain::ChainId,
-    genesis::{json::GenesisJson, Genesis},
+    chain_spec::FeeContracts,
+    genesis::{
+        constant::{DEFAULT_ETH_FEE_TOKEN_ADDRESS, DEFAULT_STRK_FEE_TOKEN_ADDRESS},
+        json::GenesisJson,
+        Genesis,
+    },
 };
 use mongodb::{
     bson,
@@ -64,9 +70,10 @@ fn load_genesis() -> Genesis {
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 pub async fn katana_sequencer() -> TestSequencer {
     TestSequencer::start(Config {
-        chain: ChainSpec { id: ChainId::parse("kaka_test").unwrap(), genesis: load_genesis() },
-        starknet: StarknetConfig {
-            env: Environment { invoke_max_steps: u32::MAX, validate_max_steps: u32::MAX },
+        chain: ChainSpec {
+            id: ChainId::parse("kaka_test").unwrap(),
+            genesis: load_genesis(),
+            fee_contracts: FeeContracts { eth: DEFAULT_ETH_FEE_TOKEN_ADDRESS, strk: DEFAULT_STRK_FEE_TOKEN_ADDRESS },
             ..Default::default()
         },
         sequencing: SequencingConfig { block_time: None, no_mining: false },
@@ -76,6 +83,11 @@ pub async fn katana_sequencer() -> TestSequencer {
             max_connections: 100,
             allowed_origins: None,
             apis: HashSet::from([ApiKind::Starknet, ApiKind::Dev, ApiKind::Saya, ApiKind::Torii]),
+        },
+        execution: ExecutionConfig {
+            invocation_max_steps: u32::MAX,
+            validation_max_steps: u32::MAX,
+            ..Default::default()
         },
         ..Default::default()
     })

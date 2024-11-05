@@ -165,9 +165,9 @@ alloy-signer = { version = "0.4.2", default-features = false, optional = true }
 alloy-serde = { version = "0.4.2", default-features = false }
 
 # Starknet
-dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.15", default-features = false, optional = true }
-katana-node = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.15", default-features = false, optional = true }
-katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.15", default-features = false, features = [
+dojo-test-utils = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.19", default-features = false, optional = true }
+katana-node = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.19", default-features = false, optional = true }
+katana-primitives = { git = 'https://github.com/dojoengine/dojo', tag = "v1.0.0-alpha.19", default-features = false, features = [
   "serde",
 ], optional = true }
 starknet_api = { version = "0.13.0-rc.0", optional = true }
