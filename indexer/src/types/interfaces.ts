@@ -41,8 +41,8 @@ export interface TransactionContext {
 export interface ExtendedJsonRpcTx extends JsonRpcTx {
   /** The y parity of the signature. */
   yParity?: string;
-  /** Indicates if the transaction is reverted due to running out of resources. */
-  isRunOutOfResources?: boolean;
+  /** Indicates the reverted message if the transaction was reverted. */
+  reverted?: string;
 }
 
 /**

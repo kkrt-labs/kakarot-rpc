@@ -11,7 +11,7 @@ import { TRANSACTION_EXECUTED } from "../indexer/src/constants.ts";
 import {
   EXPECTED_TRANSFORM_DATA_FILE,
   TRANSACTIONS_DATA_FILE,
-} from "../indexer/tests/constants";
+} from "../indexer/tests/constants.ts";
 import { padString } from "../indexer/src/utils/hex.ts";
 import transform from "../indexer/src/main.ts";
 import { toTypedEthTx } from "../indexer/src/types/transaction.ts";

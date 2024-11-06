@@ -5,7 +5,7 @@ import {
 import {
   ethValidationFailed,
   isKakarotTransaction,
-  isRevertedWithOutOfResources,
+  isReverted,
 } from "../src/utils/filter.ts";
 import { Event, Transaction, TransactionReceipt } from "../src/deps.ts";
 
@@ -247,7 +247,7 @@ Deno.test(
 );
 
 Deno.test(
-  "isRevertedWithOutOfResources: true on status reverted and revert reason",
+  "isReverted: true on status reverted and revert reason",
   () => {
     const receipt: TransactionReceipt = {
       executionStatus: "EXECUTION_STATUS_REVERTED",
@@ -260,12 +260,12 @@ Deno.test(
       revertReason:
         "Could not reach the end of the program. RunResources has no remaining steps",
     };
-    assert(isRevertedWithOutOfResources(receipt));
+    assert(isReverted(receipt));
   },
 );
 
 Deno.test(
-  "isRevertedWithOutOfResources: false on status reverted and no revert reason",
+  "isReverted: true on status reverted and no revert reason",
   () => {
     const receipt: TransactionReceipt = {
       executionStatus: "EXECUTION_STATUS_REVERTED",
@@ -276,11 +276,11 @@ Deno.test(
       l2ToL1Messages: [],
       events: [],
     };
-    assertFalse(isRevertedWithOutOfResources(receipt));
+    assert(isReverted(receipt));
   },
 );
 
-Deno.test("isRevertedWithOutOfResources: false on status succeeded", () => {
+Deno.test("isReverted: false on status succeeded", () => {
   const receipt: TransactionReceipt = {
     executionStatus: "EXECUTION_STATUS_SUCCEEDED",
     transactionHash: "0x01",
@@ -292,11 +292,11 @@ Deno.test("isRevertedWithOutOfResources: false on status succeeded", () => {
     revertReason:
       "Could not reach the end of the program. RunResources has no remaining steps",
   };
-  assertFalse(isRevertedWithOutOfResources(receipt));
+  assertFalse(isReverted(receipt));
 });
 
 Deno.test(
-  "isRevertedWithOutOfResources: false on incorrect revert reason",
+  "isReverted: true no matter the revert reason if status is reverted",
   () => {
     const receipt: TransactionReceipt = {
       executionStatus: "EXECUTION_STATUS_REVERTED",
@@ -308,6 +308,6 @@ Deno.test(
       events: [],
       revertReason: "eth validation failed",
     };
-    assertFalse(isRevertedWithOutOfResources(receipt));
+    assert(isReverted(receipt));
   },
 );

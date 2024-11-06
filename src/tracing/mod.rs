@@ -339,21 +339,19 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         while let Some(tx) = transactions.next() {
             let env = env_with_tx(&self.env, tx.clone())?;
 
-            let (res, state_changes) =
-                if tx.other.get("isRunOutOfResources").and_then(serde_json::Value::as_bool).unwrap_or(false) {
-                    (TracingResult::default_failure(&self.tracing_options, tx), HashMap::default())
-                } else {
-                    match &self.tracing_options {
-                        TracingOptions::Geth(opts) => Self::trace_geth(env, &db, tx, opts.clone())?,
-                        TracingOptions::Parity(tracing_config) => Self::trace_parity(env, &db, tx, *tracing_config)?,
-                        TracingOptions::GethCall(_) => {
-                            return Err(EthApiError::Transaction(TransactionError::Tracing(
-                                eyre!("`TracingOptions::GethCall` is not supported in `trace_transactions` context")
-                                    .into(),
-                            )))
-                        }
+            let (res, state_changes) = if tx.other.get("reverted").is_some() {
+                (TracingResult::default_failure(&self.tracing_options, tx), HashMap::default())
+            } else {
+                match &self.tracing_options {
+                    TracingOptions::Geth(opts) => Self::trace_geth(env, &db, tx, opts.clone())?,
+                    TracingOptions::Parity(tracing_config) => Self::trace_parity(env, &db, tx, *tracing_config)?,
+                    TracingOptions::GethCall(_) => {
+                        return Err(EthApiError::Transaction(TransactionError::Tracing(
+                            eyre!("`TracingOptions::GethCall` is not supported in `trace_transactions` context").into(),
+                        )))
                     }
-                };
+                }
+            };
 
             if let Some(result) = convert_result(&res) {
                 traces.append(&mut result.clone());

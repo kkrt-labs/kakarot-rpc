@@ -3,7 +3,7 @@ import { padString, toHexString } from "./utils/hex.ts";
 import {
   ethValidationFailed,
   isKakarotTransaction,
-  isRevertedWithOutOfResources,
+  isReverted,
 } from "./utils/filter.ts";
 
 // Constants
@@ -256,7 +256,7 @@ function processTransactions(
   return (transactions ?? [])
     .filter(
       (tx) =>
-        isRevertedWithOutOfResources(tx.receipt) &&
+        isReverted(tx.receipt) &&
         isKakarotTransaction(tx.transaction),
     )
     .map((tx) => createProcessedTransaction(tx, blockInfo, cumulativeGasUsages))
