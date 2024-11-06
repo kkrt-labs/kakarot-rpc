@@ -167,7 +167,7 @@ impl<SP: starknet::providers::Provider + Send + Sync + Clone + 'static> AccountM
         // Get the balance of the address for the Pending block.
         self.eth_client
             .starknet_provider()
-            .balance_at(account_address, starknet::core::types::BlockId::Tag(BlockTag::Pending))
+            .strk_balance_at(account_address, starknet::core::types::BlockId::Tag(BlockTag::Pending))
             .await
             .map_err(Into::into)
     }

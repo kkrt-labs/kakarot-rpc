@@ -1,16 +1,16 @@
 use crate::{
     constants::STARKNET_CHAIN_ID,
-    models::transaction::transaction_data_to_starknet_calldata,
+    models::{felt::Felt252Wrapper, transaction::transaction_data_to_starknet_calldata},
     providers::eth_provider::{
         database::{ethereum::EthereumTransactionStore, types::transaction::EthStarknetHashes, Database},
-        error::{SignatureError, TransactionError},
+        error::{KakarotError, SignatureError, TransactionError},
         provider::EthApiResult,
         starknet::kakarot_core::{starknet_address, EXECUTE_FROM_OUTSIDE},
     },
 };
 use reth_primitives::TransactionSigned;
 use starknet::{
-    accounts::{Account, ConnectedAccount, ExecutionEncoding, ExecutionV1, SingleOwnerAccount},
+    accounts::{Account, ConnectedAccount, ExecutionEncoding, ExecutionV3, SingleOwnerAccount},
     core::types::{BlockTag, Felt, NonZeroFelt},
     providers::Provider,
     signers::{LocalWallet, SigningKey},
@@ -37,7 +37,7 @@ static RELAYER_SIGNER: LazyLock<LocalWallet> = LazyLock::new(|| {
 pub struct Relayer<SP: Provider + Send + Sync> {
     /// The account used to sign and broadcast the transaction
     account: SingleOwnerAccount<SP, LocalWallet>,
-    /// The balance of the relayer
+    /// The balance of the relayer in STRK
     balance: Felt,
     /// The database used to store the relayer's transaction hashes map (Ethereum -> Starknet)
     database: Option<Arc<Database>>,
@@ -76,7 +76,7 @@ where
 
         // Construct the call
         let call = starknet::core::types::Call { to: eoa_address, selector: *EXECUTE_FROM_OUTSIDE, calldata };
-        let mut execution = ExecutionV1::new(vec![call], &self.account);
+        let mut execution = ExecutionV3::new(vec![call], &self.account);
 
         // Fetch the relayer nonce from the Starknet provider
         let relayer_nonce = self
@@ -88,9 +88,31 @@ where
 
         execution = execution.nonce(relayer_nonce);
 
-        // We set the max fee to the balance of the account / 5. This means that the account could
+        // Fetch the current gas price from the Starknet provider
+        // TODO: fetch the gas price in background and cache it
+        let fri_gas_price = self
+            .account
+            .provider()
+            .get_block_with_tx_hashes(starknet::core::types::BlockId::Tag(BlockTag::Pending))
+            .await
+            .map_err(KakarotError::from)?
+            .l1_gas_price()
+            .price_in_fri;
+
+        // We set the gas to the balance of the account / 5. This means that the account could
         // send up to 5 transactions before hitting a feeder gateway error.
-        execution = execution.max_fee(self.balance.floor_div(&NonZeroFelt::from_felt_unchecked(5.into())));
+        let max_fee = self.balance.floor_div(&NonZeroFelt::from_felt_unchecked(5.into()));
+
+        let max_gas_price = fri_gas_price.double();
+        let max_gas = max_fee.floor_div(&NonZeroFelt::from_felt_unchecked(if max_gas_price == Felt::ZERO {
+            Felt::from(1)
+        } else {
+            max_gas_price
+        }));
+
+        execution = execution
+            .gas(Felt252Wrapper::from(max_gas).try_into()?)
+            .gas_price(Felt252Wrapper::from(max_gas_price).try_into()?);
 
         let prepared = execution.prepared().map_err(|_| SignatureError::SigningFailure)?;
         let res = prepared.send().await.map_err(|err| TransactionError::Broadcast(err.into()))?;
