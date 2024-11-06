@@ -48,7 +48,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
     let transaction = TransactionSigned::decode_2718(&mut rlp_bytes.unwrap().as_ref()).unwrap();
     let signer = transaction.recover_signer().unwrap();
 
-    let mut transaction = from_recovered_with_block_context::<reth_rpc::eth::EthTxBuilder>(
+    let mut transaction = from_recovered_with_block_context(
         TransactionSignedEcRecovered::from_signed_transaction(transaction, signer),
         TransactionInfo {
             hash: Some(tx.hash),
@@ -57,6 +57,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
             base_fee: header.base_fee_per_gas.map(Into::into),
             index: tx.transaction_index,
         },
+        &reth_rpc::eth::EthTxBuilder {},
     );
 
     let res = reqwest_client
@@ -84,7 +85,7 @@ async fn test_raw_transaction(#[future] katana: Katana, _setup: ()) {
         transaction.gas_price = rpc_transaction.gas_price;
     }
 
-    assert_eq!(transaction, WithOtherFields::new(rpc_transaction));
+    assert_eq!(transaction, rpc_transaction);
 
     drop(server_handle);
 }
@@ -157,7 +158,7 @@ async fn test_raw_transactions(#[future] katana: Katana, _setup: ()) {
         // Convert the transaction to a primitives transactions and encode it.
         let rlp_bytes = TransactionSigned::from_transaction_and_signature(
             tx.try_into().unwrap(),
-            reth_primitives::Signature::from_rs_and_parity(
+            alloy_primitives::Signature::from_rs_and_parity(
                 signature.r,
                 signature.s,
                 signature.y_parity.map_or(false, |v| v.0),
@@ -240,7 +241,7 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
         let tx_receipt = eth_provider.transaction_receipt(receipt.transaction_hash).await.unwrap().unwrap();
 
         // Construct a Receipt instance from the transaction receipt data.
-        let r = ReceiptWithBloom {
+        let r: Bytes = ReceiptWithBloom {
             receipt: Receipt {
                 tx_type: Into::<u8>::into(tx_receipt.transaction_type()).try_into().unwrap(),
                 success: tx_receipt.inner.status(),
@@ -255,7 +256,8 @@ async fn test_raw_receipts(#[future] katana: Katana, _setup: ()) {
             },
             bloom: *receipt.inner.inner.logs_bloom(),
         }
-        .envelope_encoded();
+        .encoded_2718()
+        .into();
 
         // Assert the equality of the constructed receipt with the corresponding receipt from both block hash and block number.
         assert_eq!(rlp_bytes_by_block_number[i], r);

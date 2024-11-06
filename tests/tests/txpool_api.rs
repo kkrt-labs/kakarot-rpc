@@ -1,6 +1,7 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
 use crate::tests::mempool::create_sample_transactions;
+use alloy_consensus::Transaction;
 use alloy_rpc_types_txpool::{TxpoolContent, TxpoolContentFrom, TxpoolInspect, TxpoolInspectSummary, TxpoolStatus};
 use jsonrpsee::server::ServerHandle;
 use kakarot_rpc::{

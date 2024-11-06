@@ -117,8 +117,8 @@ impl<'a> Katana {
 
     #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
     pub async fn new_empty() -> Self {
+        use alloy_consensus::constants::EMPTY_ROOT_HASH;
         use alloy_primitives::{B256, B64};
-        use reth_primitives::constants::EMPTY_ROOT_HASH;
 
         let sequencer = katana_sequencer().await;
         let starknet_provider = Arc::new(JsonRpcClient::new(HttpTransport::new(sequencer.url())));

@@ -1,7 +1,7 @@
 #![allow(unreachable_pub)]
 use crate::providers::eth_provider::utils::split_u256;
+use alloy_consensus::constants::KECCAK_EMPTY;
 use alloy_primitives::{keccak256, Address, Bytes, U256};
-use reth_primitives::KECCAK_EMPTY;
 use revm_interpreter::analysis::to_analysed;
 use revm_primitives::Bytecode;
 use starknet::core::utils::get_storage_var_address;

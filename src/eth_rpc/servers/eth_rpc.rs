@@ -8,13 +8,13 @@ use crate::{
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{Address, Bytes, B256, B64, U256, U64};
 use alloy_rpc_types::{
     serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, BlockOverrides, EIP1186AccountProofResponse,
     FeeHistory, Filter, FilterChanges, Index, SyncStatus, TransactionRequest, Work,
 };
 use jsonrpsee::core::{async_trait, RpcResult};
-use reth_primitives::{BlockId, BlockNumberOrTag};
 use serde_json::Value;
 use starknet::providers::Provider;
 use std::sync::Arc;

@@ -6,13 +6,13 @@ use crate::{
         provider::{EthApiResult, EthereumProvider},
     },
 };
+use alloy_eips::BlockNumberOrTag;
 use alloy_primitives::{Address, U256};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use eyre::Result;
 use futures::future::join_all;
 use mongodb::bson::doc;
-use reth_primitives::BlockNumberOrTag;
 
 #[async_trait]
 #[auto_impl(Arc, &)]

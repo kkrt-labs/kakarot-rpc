@@ -64,7 +64,6 @@ impl<'a> arbitrary::Arbitrary<'a> for StoredTransactionReceipt {
                 from: Address::arbitrary(u)?,
                 to: Some(Address::arbitrary(u)?),
                 contract_address: Some(Address::arbitrary(u)?),
-                state_root: Some(B256::arbitrary(u)?),
                 inner: match u.int_in_range(0..=3)? {
                     0 => alloy_consensus::ReceiptEnvelope::Legacy(receipt),
                     1 => alloy_consensus::ReceiptEnvelope::Eip2930(receipt),

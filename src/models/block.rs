@@ -2,8 +2,8 @@ use crate::{
     into_via_try_wrapper,
     providers::eth_provider::{constant::STARKNET_MODULUS, error::EthereumDataFormatError},
 };
+use alloy_eips::{BlockId as EthereumBlockId, BlockNumberOrTag};
 use alloy_primitives::U256;
-use reth_primitives::{BlockId as EthereumBlockId, BlockNumberOrTag};
 use starknet::core::types::{BlockId as StarknetBlockId, BlockTag};
 
 #[derive(Debug)]

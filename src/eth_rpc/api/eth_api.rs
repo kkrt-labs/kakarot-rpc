@@ -1,4 +1,5 @@
 use crate::providers::eth_provider::database::types::receipt::ExtendedTxReceipt;
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{Address, Bytes, B256, B64, U256, U64};
 use alloy_rpc_types::{
     serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, Block, BlockOverrides,
@@ -7,7 +8,6 @@ use alloy_rpc_types::{
 };
 use alloy_serde::WithOtherFields;
 use jsonrpsee::{core::RpcResult, proc_macros::rpc};
-use reth_primitives::{BlockId, BlockNumberOrTag};
 
 /// Ethereum JSON-RPC API Trait
 /// Mostly based on <https://github.com/paradigmxyz/reth/blob/559124ac5a0b25030250203babcd8a94693df648/crates/rpc/rpc-api/src/eth.rs#L15>

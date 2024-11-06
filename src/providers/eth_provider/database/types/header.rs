@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
+    alloy_consensus::constants::EMPTY_ROOT_HASH,
     alloy_primitives::{B256, B64, U256},
     arbitrary::Arbitrary,
-    reth_primitives::constants::EMPTY_ROOT_HASH,
 };
 
 /// Type alias for a block that contains extended transactions and additional fields.
