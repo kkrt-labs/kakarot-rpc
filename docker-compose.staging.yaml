@@ -97,7 +97,7 @@ services:
       - redis
 
   kakarot-rpc:
-    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.7.5
+    image: ghcr.io/kkrt-labs/kakarot-rpc/node:v0.7.6
     pull_policy: always
     ports:
       - 3030:3030
