@@ -234,7 +234,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
                 };
             }
 
-            let env = env_with_tx(&self.env, tx.clone())?;
+            let env = env_with_tx(&self.env, &tx)?;
             let eth_evm_config = EthEvmConfig::new(Arc::new(Default::default()));
 
             let mut evm = eth_evm_config.evm_with_env(&mut self.db.0, env);
@@ -337,7 +337,7 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
         let mut db = self.db;
 
         while let Some(tx) = transactions.next() {
-            let env = env_with_tx(&self.env, tx.clone())?;
+            let env = env_with_tx(&self.env, tx)?;
 
             let (res, state_changes) =
                 if tx.other.get("isRunOutOfResources").and_then(serde_json::Value::as_bool).unwrap_or(false) {
@@ -372,10 +372,10 @@ impl<P: EthereumProvider + Send + Sync + Clone> Tracer<P> {
 /// Returns the environment with the transaction env updated to the given transaction.
 fn env_with_tx(
     env: &EnvWithHandlerCfg,
-    tx: WithOtherFields<alloy_rpc_types::Transaction>,
+    tx: &WithOtherFields<alloy_rpc_types::Transaction>,
 ) -> TracerResult<EnvWithHandlerCfg> {
     // Convert the transaction to an ec recovered transaction and update the env with it.
-    let tx_env = EthEvmConfig::new(Arc::new(Default::default())).tx_env(&tx.try_into()?);
+    let tx_env = EthEvmConfig::new(Arc::new(Default::default())).tx_env(&tx.clone().try_into()?, tx.from);
 
     Ok(EnvWithHandlerCfg {
         env: Env::boxed(env.env.cfg.clone(), env.env.block.clone(), tx_env),

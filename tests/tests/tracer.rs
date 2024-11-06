@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use alloy_consensus::Transaction;
 use alloy_dyn_abi::DynSolValue;
 use alloy_primitives::{Address, Bytes, B256, B64, U256};
 use alloy_rpc_types_trace::{

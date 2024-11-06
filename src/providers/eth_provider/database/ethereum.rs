@@ -11,13 +11,14 @@ use crate::providers::eth_provider::{
     database::types::transaction::{EthStarknetHashes, StoredEthStarknetTransactionHash},
     error::EthApiError,
 };
+use alloy_consensus::constants::EMPTY_ROOT_HASH;
 use alloy_primitives::{B256, U256};
 use alloy_rlp::Encodable;
 use alloy_rpc_types::{Block, BlockHashOrNumber, BlockTransactions, Header};
 use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use mongodb::bson::doc;
-use reth_primitives::{constants::EMPTY_ROOT_HASH, BlockBody};
+use reth_primitives::BlockBody;
 use tracing::instrument;
 
 /// Trait for interacting with a database that stores Ethereum typed

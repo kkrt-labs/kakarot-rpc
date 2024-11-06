@@ -5,14 +5,14 @@ use crate::{
     },
     tracing::builder::TracerBuilder,
 };
-use alloy_eips::eip2718::Encodable2718;
+use alloy_eips::{eip2718::Encodable2718, BlockId, BlockNumberOrTag};
 use alloy_primitives::{Bytes, B256};
 use alloy_rlp::Encodable;
 use alloy_rpc_types::TransactionRequest;
 use alloy_rpc_types_trace::geth::{GethDebugTracingCallOptions, GethDebugTracingOptions, GethTrace, TraceResult};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
-use reth_primitives::{Block, BlockId, BlockNumberOrTag, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned};
+use reth_primitives::{Block, Header, Log, Receipt, ReceiptWithBloom, TransactionSigned};
 use std::sync::Arc;
 
 #[async_trait]
@@ -88,7 +88,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
             let signature = tx.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 tx.try_into()?,
-                reth_primitives::Signature::from_rs_and_parity(
+                alloy_primitives::Signature::from_rs_and_parity(
                     signature.r,
                     signature.s,
                     signature.y_parity.map_or(false, |v| v.0),
@@ -111,7 +111,7 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
             let signature = t.signature.ok_or_else(|| EthApiError::from(SignatureError::MissingSignature))?;
             let bytes = TransactionSigned::from_transaction_and_signature(
                 t.try_into()?,
-                reth_primitives::Signature::from_rs_and_parity(
+                alloy_primitives::Signature::from_rs_and_parity(
                     signature.r,
                     signature.s,
                     signature.y_parity.map_or(false, |v| v.0),
@@ -157,7 +157,8 @@ impl<P: EthereumProvider + Send + Sync + 'static> DebugProvider for DebugDataPro
                     },
                     bloom: *receipt.inner.inner.logs_bloom(),
                 }
-                .envelope_encoded(),
+                .encoded_2718()
+                .into(),
             );
         }
 

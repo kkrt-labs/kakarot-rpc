@@ -8,11 +8,11 @@ use crate::{
     pool::constants::ONE_TENTH_ETH,
     providers::eth_provider::{database::state::EthDatabase, starknet::relayer::Relayer, BlockProvider},
 };
+use alloy_eips::BlockNumberOrTag;
 use alloy_primitives::{Address, U256};
 use rand::{seq::SliceRandom, SeedableRng};
 use reth_chainspec::ChainSpec;
 use reth_execution_types::ChangedAccount;
-use reth_primitives::BlockNumberOrTag;
 use reth_revm::DatabaseRef;
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, BlockInfo, CanonicalStateUpdate, CoinbaseTipOrdering, EthPooledTransaction, Pool,

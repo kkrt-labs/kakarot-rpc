@@ -23,9 +23,11 @@ use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
 use alloy_rpc_types_txpool::TxpoolContent;
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
+use reth_rpc::eth::EthTxBuilder;
 use reth_rpc_eth_types::TransactionSource;
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
@@ -145,8 +147,11 @@ where
         ) {
             content.entry(tx.sender()).or_default().insert(
                 tx.nonce().to_string(),
-                reth_rpc_types_compat::transaction::from_recovered::<reth_rpc::eth::EthTxBuilder>(
-                    tx.clone().into_consensus(),
+                WithOtherFields::new(
+                    reth_rpc_types_compat::transaction::from_recovered::<reth_rpc::eth::EthTxBuilder>(
+                        tx.clone().into_consensus(),
+                        &EthTxBuilder {},
+                    ),
                 ),
             );
         }
@@ -182,8 +187,10 @@ where
             .pool
             .get(&hash)
             .map(|transaction| {
-                TransactionSource::Pool(transaction.transaction.transaction().clone())
-                    .into_transaction::<reth_rpc::eth::EthTxBuilder>()
+                WithOtherFields::new(
+                    TransactionSource::Pool(transaction.transaction.transaction().clone())
+                        .into_transaction(&EthTxBuilder {}),
+                )
             })
             .or(self.eth_provider.transaction_by_hash(hash).await?);
 

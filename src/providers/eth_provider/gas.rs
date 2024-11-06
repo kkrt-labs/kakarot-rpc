@@ -10,13 +10,13 @@ use crate::{
         provider::{EthApiResult, EthDataProvider},
     },
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{U256, U64};
 use alloy_rpc_types::{FeeHistory, TransactionRequest};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use eyre::eyre;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
 
 #[async_trait]

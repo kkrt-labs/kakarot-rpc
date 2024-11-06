@@ -7,11 +7,11 @@ use crate::providers::eth_provider::{
     },
     provider::{EthApiResult, EthDataProvider},
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::B256;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag};
 
 #[async_trait]
 #[auto_impl(Arc, &)]

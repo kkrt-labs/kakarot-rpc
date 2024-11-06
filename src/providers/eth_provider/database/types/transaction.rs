@@ -6,6 +6,7 @@ use starknet::core::types::Felt;
 use std::ops::Deref;
 #[cfg(any(test, feature = "arbitrary", feature = "testing"))]
 use {
+    alloy_consensus::Transaction as _,
     alloy_primitives::U256,
     arbitrary::Arbitrary,
     rand::Rng,

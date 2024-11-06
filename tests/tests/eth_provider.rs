@@ -2,8 +2,8 @@
 #![cfg(feature = "testing")]
 use crate::tests::mempool::create_sample_transactions;
 use alloy_consensus::{TxEip1559, TxLegacy};
-use alloy_eips::eip2718::Encodable2718;
-use alloy_primitives::{address, bytes, Address, Bytes, TxKind, B256, U256, U64};
+use alloy_eips::{eip2718::Encodable2718, BlockNumberOrTag};
+use alloy_primitives::{address, bytes, Address, Bytes, Signature, TxKind, B256, U256, U64};
 use alloy_rpc_types::{
     request::TransactionInput,
     serde_helpers::JsonStorageKey,
@@ -37,7 +37,7 @@ use kakarot_rpc::{
     },
 };
 use rand::Rng;
-use reth_primitives::{sign_message, transaction::Signature, BlockNumberOrTag, Transaction, TransactionSigned};
+use reth_primitives::{sign_message, Transaction, TransactionSigned};
 use reth_transaction_pool::{TransactionOrigin, TransactionPool};
 use rstest::*;
 use starknet::{

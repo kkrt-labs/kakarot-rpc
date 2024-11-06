@@ -55,7 +55,7 @@ pub trait Eoa<P: Provider + Send + Sync + Clone> {
         Ok(eth_provider.transaction_count(evm_address, None).await?)
     }
 
-    fn sign_payload(&self, payload: B256) -> Result<reth_primitives::Signature, eyre::Error> {
+    fn sign_payload(&self, payload: B256) -> Result<alloy_primitives::Signature, eyre::Error> {
         let pk = self.private_key();
         let signature = sign_message(pk, payload)?;
         Ok(signature)
