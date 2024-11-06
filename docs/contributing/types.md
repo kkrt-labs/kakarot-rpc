@@ -2,13 +2,13 @@
 
 ## Hex encoding
 
-Every value is Hex encoded, starts with `0x` and contains at least one
+Every value is Hex-encoded, starts with `0x`, and contains at least one
 hexadecimal digit
 
 - ✅ 0x1
 - ✅ 0x01
 - ✅ 0x0
-- ❌ 0x
+- ❌ 0x // Invalid, missing hexadecimal digits
 - ❌ 0x4000 // no leading zeroes allowed
 - ❌ ff // must be prefixed with `0x`
 
