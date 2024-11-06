@@ -30,7 +30,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+      - name: Checkout specific tag for Kakarot submodule
+        run: |
+          git submodule update --init
+          cd lib/kakarot
+          git fetch --tags
+          git checkout v0.9.6
       - name: install foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
