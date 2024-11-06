@@ -118,5 +118,7 @@ if ${run_test}; then
 	export UNINITIALIZED_ACCOUNT_CLASS_HASH="${UNINITIALIZED_ACCOUNT_CLASS_HASH}"
 	export ACCOUNT_CONTRACT_CLASS_HASH="${ACCOUNT_CONTRACT_CLASS_HASH}"
 
+	uv sync --all-extras --dev && make build-sol && make build
+
 	eval "uv run pytest -s tests/end_to_end ${SKIP}"
 fi
