@@ -74,8 +74,16 @@ if [ "${ENV}" = "sepolia" ]; then
 		echo "Please provide the STARKNET_SEPOLIA_PRIVATE_KEY environment variable."
 		exit 1
 	fi
-	if [ -z "${EVM_PRIVATE_KEY}" ]; then
+	if [ -z "${STARKNET_SEPOLIA_EVM_PRIVATE_KEY}" ]; then
 		echo "Please provide the EVM_PRIVATE_KEY environment variable."
+		exit 1
+	fi
+	if [ -z "${STARKNET_SEPOLIA_RELAYER_ACCOUNT_ADDRESS}" ]; then
+		echo "Please provide the STARKNET_SEPOLIA_RELAYER_ACCOUNT_ADDRESS environment variable."
+		exit 1
+	fi
+	if [ -z "${STARKNET_SEPOLIA_RELAYER_PRIVATE_KEY}" ]; then
+		echo "Please provide the STARKNET_SEPOLIA_RELAYER_PRIVATE_KEY environment variable."
 		exit 1
 	fi
 	SKIP="--ignore tests/end_to_end/L1L2Messaging --ignore tests/end_to_end/CairoPrecompiles -k 'not test_should_set_account_bytecode and not test_should_set_account_nonce and not test_should_upgrade_account_class and not test_should_raise_when_class_hash_is_not_declared and not test_should_upgrade_class_hash and not test_should_transfer_ownership and not test_should_return_transaction_count and not test_should_withdraw_all_eth'"
@@ -92,6 +100,18 @@ elif [ "${ENV}" = "sepolia-staging" ]; then
 	fi
 	if [ -z "${STARKNET_SEPOLIA_STAGING_PRIVATE_KEY}" ]; then
 		echo "Please provide the STARKNET_SEPOLIA_STAGING_PRIVATE_KEY environment variable."
+		exit 1
+	fi
+	if [ -z "${STARKNET_SEPOLIA_STAGING_RELAYER_ACCOUNT_ADDRESS}" ]; then
+		echo "Please provide the STARKNET_SEPOLIA_STAGING_RELAYER_ACCOUNT_ADDRESS environment variable."
+		exit 1
+	fi
+	if [ -z "${STARKNET_SEPOLIA_STAGING_RELAYER_PRIVATE_KEY}" ]; then
+		echo "Please provide the STARKNET_SEPOLIA_STAGING_RELAYER_PRIVATE_KEY environment variable."
+		exit 1
+	fi
+	if [ -z "${STARKNET_SEPOLIA_STAGING_EVM_PRIVATE_KEY}" ]; then
+		echo "Please provide the EVM_PRIVATE_KEY environment variable."
 		exit 1
 	fi
 
