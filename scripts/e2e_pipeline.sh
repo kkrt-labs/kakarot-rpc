@@ -74,7 +74,7 @@ if [ "${ENV}" = "sepolia" ]; then
 		echo "Please provide the STARKNET_SEPOLIA_PRIVATE_KEY environment variable."
 		exit 1
 	fi
-	if [ -z "${EVM_PRIVATE_KEY}" ]; then
+	if [ -z "${STARKNET_SEPOLIA_EVM_PRIVATE_KEY}" ]; then
 		echo "Please provide the EVM_PRIVATE_KEY environment variable."
 		exit 1
 	fi
@@ -108,6 +108,10 @@ elif [ "${ENV}" = "sepolia-staging" ]; then
 	fi
 	if [ -z "${STARKNET_SEPOLIA_STAGING_RELAYER_PRIVATE_KEY}" ]; then
 		echo "Please provide the STARKNET_SEPOLIA_STAGING_RELAYER_PRIVATE_KEY environment variable."
+		exit 1
+	fi
+	if [ -z "${STARKNET_SEPOLIA_STAGING_EVM_PRIVATE_KEY}" ]; then
+		echo "Please provide the EVM_PRIVATE_KEY environment variable."
 		exit 1
 	fi
 
