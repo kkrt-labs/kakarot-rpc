@@ -109,7 +109,7 @@ services:
       - MONGO_DATABASE_NAME=kakarot-local
       # These values are unique to Sepolia Testnet
       # They'll need to be manually changed in case the testnet is reset
-      # To add robustness: parse the `deployments/starknet-sepolia` folder in `kkrt-labs/kakarot` repo
+      # To add robustness: parse the `deployments/staging` folder in `kkrt-labs/kakarot` repo
       - KAKAROT_ADDRESS=0x48fc2888aad166304e63af35a48e00e32da9831e49fe30a22148fdecdb7e66f
       - UNINITIALIZED_ACCOUNT_CLASS_HASH=0x7b2de5e73ff7eb338d76c967dd5aa3f3004574d326b8c1402bb819d4983b8b6
       - ACCOUNT_CONTRACT_CLASS_HASH=0x25d4b4889979f3df8171991f6a0163b42b756daebf313bcd0dec74cacf903f9

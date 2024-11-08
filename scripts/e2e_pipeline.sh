@@ -130,9 +130,9 @@ fi
 if ${run_test}; then
 	echo "Running tests for the ${ENV} environment. Skipping: ${SKIP}"
 
-	KAKAROT_ADDRESS=$(jq -r '.kakarot' ./deployments/starknet-"${ENV}"/deployments.json)
-	UNINITIALIZED_ACCOUNT_CLASS_HASH=$(jq -r '.uninitialized_account' ./deployments/starknet-"${ENV}"/declarations.json)
-	ACCOUNT_CONTRACT_CLASS_HASH=$(jq -r '.account_contract' ./deployments/starknet-"${ENV}"/declarations.json)
+	KAKAROT_ADDRESS=$(jq -r '.kakarot' ./deployments/"${ENV}"/deployments.json)
+	UNINITIALIZED_ACCOUNT_CLASS_HASH=$(jq -r '.uninitialized_account' ./deployments/"${ENV}"/declarations.json)
+	ACCOUNT_CONTRACT_CLASS_HASH=$(jq -r '.account_contract' ./deployments/"${ENV}"/declarations.json)
 
 	export KAKAROT_ADDRESS="${KAKAROT_ADDRESS}"
 	export UNINITIALIZED_ACCOUNT_CLASS_HASH="${UNINITIALIZED_ACCOUNT_CLASS_HASH}"
