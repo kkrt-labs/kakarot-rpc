@@ -1,6 +1,7 @@
 ---
 name: Add a New RPC Method
 about:
+
   Provide information about an RPC method to be added to the Kakarot RPC server.
 title: "feat: "
 labels: "new-feature"
@@ -9,7 +10,7 @@ assignees: ""
 
 # <METHOD_NAME>
 
-## Metadatax
+## Metadata
 
 - name:
 - prefix:
