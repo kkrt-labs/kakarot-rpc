@@ -53,8 +53,10 @@ jobs:
           asdf install scarb 0.7.0
       - name: Run staging script
         env:
-          STARKNET_SEPOLIA_STAGING_PRIVATE_KEY: ${{ secrets.STARKNET_SEPOLIA_STAGING_PRIVATE_KEY }}
-          STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS: ${{ secrets.STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS }}
+          STARKNET_SEPOLIA_STAGING_PRIVATE_KEY:
+            ${{ secrets.STARKNET_SEPOLIA_STAGING_PRIVATE_KEY }}
+          STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS:
+            ${{ secrets.STARKNET_SEPOLIA_STAGING_ACCOUNT_ADDRESS }}
           INFURA_KEY: ${{ secrets.INFURA_KEY }}
         run: |
           cd scripts
