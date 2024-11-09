@@ -15,16 +15,18 @@ export const SINK_OPTIONS: {
   connectionString?: string;
   database?: string;
   collectionNames: string[];
-} = SINK_TYPE === "mongo"
-  ? {
-    connectionString: Deno.env.get("MONGO_CONNECTION_STRING") ??
-      "mongodb://mongo:mongo@mongo:27017",
-    database: Deno.env.get("MONGO_DATABASE_NAME") ?? "kakarot-test-db",
-    collectionNames: ["headers", "transactions", "receipts", "logs"],
-  }
-  : {
-    collectionNames: [],
-  };
+} =
+  SINK_TYPE === "mongo"
+    ? {
+        connectionString:
+          Deno.env.get("MONGO_CONNECTION_STRING") ??
+          "mongodb://mongo:mongo@mongo:27017",
+        database: Deno.env.get("MONGO_DATABASE_NAME") ?? "kakarot-test-db",
+        collectionNames: ["headers", "transactions", "receipts", "logs"],
+      }
+    : {
+        collectionNames: [],
+      };
 
 // Get the starting block or returns 0 if the value is null or undefined
 export const STARTING_BLOCK: number = (() => {
@@ -32,16 +34,16 @@ export const STARTING_BLOCK: number = (() => {
   return Number.isSafeInteger(startingBlock) && startingBlock >= 0
     ? startingBlock
     : (() => {
-      throw new Error("Invalid STARTING_BLOCK");
-    })();
+        throw new Error("Invalid STARTING_BLOCK");
+      })();
 })();
 
 // Get authentication token from Apibara or returns an empty string if the value is null or undefined
 export const AUTH_TOKEN: string = Deno.env.get("APIBARA_AUTH_TOKEN") ?? "";
 
 // Get stream URL or returns "http://localhost:7171" if the value is null or undefined
-export const STREAM_URL: string = Deno.env.get("STREAM_URL") ??
-  "http://localhost:7171";
+export const STREAM_URL: string =
+  Deno.env.get("STREAM_URL") ?? "http://localhost:7171";
 
 // Creates string that starts with "0x" and is padded to a total length of 64 chars
 export const NULL_HASH: string = padString("0x", 32);

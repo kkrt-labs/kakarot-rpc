@@ -23,10 +23,13 @@ export enum Collection {
  */
 export type StoreItem<C = Collection> = {
   collection: C;
-  data: C extends Collection.Transactions ? { tx: JsonRpcTx }
-    : C extends Collection.Logs ? { log: JsonRpcLog }
-    : C extends Collection.Receipts ? { receipt: JsonRpcReceipt }
-    : { header: JsonRpcBlock };
+  data: C extends Collection.Transactions
+    ? { tx: JsonRpcTx }
+    : C extends Collection.Logs
+      ? { log: JsonRpcLog }
+      : C extends Collection.Receipts
+        ? { receipt: JsonRpcReceipt }
+        : { header: JsonRpcBlock };
 };
 
 /**

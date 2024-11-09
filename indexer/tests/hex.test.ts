@@ -27,19 +27,25 @@ Deno.test("padString pads hex string to specified length", () => {
   assertEquals(paddedX, expected);
 });
 
-Deno.test("padString does not pad when hex string length is equal to specified length", () => {
-  const x = "0x010203";
-  const expected = "0x010203";
-  const paddedX = padString(x, 3);
-  assertEquals(paddedX, expected);
-});
+Deno.test(
+  "padString does not pad when hex string length is equal to specified length",
+  () => {
+    const x = "0x010203";
+    const expected = "0x010203";
+    const paddedX = padString(x, 3);
+    assertEquals(paddedX, expected);
+  },
+);
 
-Deno.test("padString handles hex string with length equal to specified length", () => {
-  const x = "0x010203";
-  const expected = "0x010203";
-  const paddedX = padString(x, 2);
-  assertEquals(paddedX, expected);
-});
+Deno.test(
+  "padString handles hex string with length equal to specified length",
+  () => {
+    const x = "0x010203";
+    const expected = "0x010203";
+    const paddedX = padString(x, 2);
+    assertEquals(paddedX, expected);
+  },
+);
 
 Deno.test("padString pads hex string to specified length", () => {
   const x = "0x0000000000010203";
@@ -104,19 +110,25 @@ Deno.test("padBytes pads Uint8Array to specified length", () => {
   assertEquals(paddedX, expected);
 });
 
-Deno.test("padBytes pads Uint8Array with larger data to specified length", () => {
-  const x = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  const expected = "0x010203040506070809";
-  const paddedX = padBytes(x, 8);
-  assertEquals(paddedX, expected);
-});
+Deno.test(
+  "padBytes pads Uint8Array with larger data to specified length",
+  () => {
+    const x = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const expected = "0x010203040506070809";
+    const paddedX = padBytes(x, 8);
+    assertEquals(paddedX, expected);
+  },
+);
 
-Deno.test("padBytes pads Uint8Array with larger data to specified length (and zeros", () => {
-  const x = new Uint8Array([0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  const expected = "0x0000010203040506070809";
-  const paddedX = padBytes(x, 8);
-  assertEquals(paddedX, expected);
-});
+Deno.test(
+  "padBytes pads Uint8Array with larger data to specified length (and zeros",
+  () => {
+    const x = new Uint8Array([0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const expected = "0x0000010203040506070809";
+    const paddedX = padBytes(x, 8);
+    assertEquals(paddedX, expected);
+  },
+);
 
 Deno.test("padBytes pads Uint8Array to exact specified length", () => {
   const x = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]);

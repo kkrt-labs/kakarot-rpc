@@ -214,37 +214,34 @@ Deno.test(
   },
 );
 
-Deno.test(
-  "isKakarotTransaction: `to` address matching KAKAROT_ADDRESS",
-  () => {
-    const starknetTxCalldata: `0x${string}`[] = [
-      "0x0",
-      "0x0",
-      "0x0",
-      "0x0",
-      "0x0",
-      "0x0",
-      "0x0",
-      "0x0",
-      "0x0",
-      "0x1d2e513630d8120666fc6e7d52ad0c01479fd99c183baac79fff9135f46e359",
-    ];
-    const transaction: Transaction = {
-      invokeV1: {
-        senderAddress: "0x01",
-        calldata: starknetTxCalldata,
-      },
-      meta: {
-        hash: "0x01",
-        maxFee: "0x01",
-        nonce: "0x01",
-        signature: ["0x1", "0x2", "0x3", "0x4", "0x1"],
-        version: "1",
-      },
-    };
-    assert(isKakarotTransaction(transaction));
-  },
-);
+Deno.test("isKakarotTransaction: `to` address matching KAKAROT_ADDRESS", () => {
+  const starknetTxCalldata: `0x${string}`[] = [
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x0",
+    "0x1d2e513630d8120666fc6e7d52ad0c01479fd99c183baac79fff9135f46e359",
+  ];
+  const transaction: Transaction = {
+    invokeV1: {
+      senderAddress: "0x01",
+      calldata: starknetTxCalldata,
+    },
+    meta: {
+      hash: "0x01",
+      maxFee: "0x01",
+      nonce: "0x01",
+      signature: ["0x1", "0x2", "0x3", "0x4", "0x1"],
+      version: "1",
+    },
+  };
+  assert(isKakarotTransaction(transaction));
+});
 
 Deno.test(
   "isRevertedWithOutOfResources: true on status reverted and revert reason",

@@ -392,9 +392,7 @@ function addSignature(
         s,
       });
 
-      if (
-        v < 35 && Number(v) !== 27 && Number(v) !== 28
-      ) {
+      if (v < 35 && Number(v) !== 27 && Number(v) !== 28) {
         throw new Error(
           `Legacy txs need either v = 27/28 or v >= 35 (EIP-155 replay protection), got v = ${v}`,
         );

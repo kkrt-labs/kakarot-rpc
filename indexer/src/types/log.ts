@@ -54,7 +54,8 @@ export function toEthLog({
   //
   // We also want to filter out ignored events which aren't ETH logs.
   if (
-    keys?.length < 1 || keys.length % 2 !== 1 ||
+    keys?.length < 1 ||
+    keys.length % 2 !== 1 ||
     IGNORED_KEYS.includes(BigInt(keys[0]))
   ) {
     return null;

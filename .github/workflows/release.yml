@@ -156,8 +156,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           file: ./docker/indexer/Dockerfile
           labels: ${{ steps.meta.outputs.labels }}
-          outputs:
-            type=image,name=${{ env.INDEXER_IMAGE
+          outputs: type=image,name=${{ env.INDEXER_IMAGE
             }},push-by-digest=true,name-canonical=true,push=true
           build-args: |
             APIBARA_DOWNLOAD_URL=${{ matrix.apibara_download_url }}

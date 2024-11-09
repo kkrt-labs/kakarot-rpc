@@ -65,12 +65,13 @@ export async function toEthHeader({
   ): Promise<bigint> => {
     try {
       // Make the KAKAROT RPC call to retrieve blockchain data
-      const response =
-        (await KAKAROT.call(method, [], { blockIdentifier })) as {
-          coinbase?: bigint;
-          base_fee?: bigint;
-          block_gas_limit?: bigint;
-        };
+      const response = (await KAKAROT.call(method, [], {
+        blockIdentifier,
+      })) as {
+        coinbase?: bigint;
+        base_fee?: bigint;
+        block_gas_limit?: bigint;
+      };
 
       // Extract and return the specific field from the response, or fallback to default value
       switch (method) {

@@ -30,9 +30,7 @@ import {
 } from "./constants.ts";
 
 // Transaction data including headers, events, and transactions
-const jsonTransactionsData = await Deno.readTextFile(
-  TRANSACTIONS_DATA_FILE,
-);
+const jsonTransactionsData = await Deno.readTextFile(TRANSACTIONS_DATA_FILE);
 const transactionsData = JSON.parse(jsonTransactionsData);
 
 // Expected output after transform and toTypedEthTx transformation for comparison in tests
@@ -556,14 +554,17 @@ Deno.test(
   () => {
     // Given
     const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-    const tx = new LegacyTransaction({
-      nonce: 1n,
-      gasPrice: 2n,
-      gasLimit: 3n,
-      to: "0x0000000000000000000000000000000000000001",
-      value: 4n,
-      data: new Uint8Array([0x12, 0x34]),
-    }, { common });
+    const tx = new LegacyTransaction(
+      {
+        nonce: 1n,
+        gasPrice: 2n,
+        gasLimit: 3n,
+        to: "0x0000000000000000000000000000000000000001",
+        value: 4n,
+        data: new Uint8Array([0x12, 0x34]),
+      },
+      { common },
+    );
     const raw = RLP.encode(tx.getMessageToSign());
     const bytesLength = raw.byteLength;
 
@@ -630,21 +631,26 @@ Deno.test(
   () => {
     // Given
     const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-    const tx = new FeeMarketEIP1559Transaction({
-      nonce: 1n,
-      maxFeePerGas: 4n,
-      maxPriorityFeePerGas: 3n,
-      gasLimit: 4n,
-      to: "0x0000000000000000000000000000000000000001",
-      value: 5n,
-      data: new Uint8Array([0x12, 0x34]),
-      accessList: [{
-        address: "0x0000000000000000000000000000000000000002",
-        storageKeys: [
-          "0x0000000000000000000000000000000000000000000000000000000000000001",
+    const tx = new FeeMarketEIP1559Transaction(
+      {
+        nonce: 1n,
+        maxFeePerGas: 4n,
+        maxPriorityFeePerGas: 3n,
+        gasLimit: 4n,
+        to: "0x0000000000000000000000000000000000000001",
+        value: 5n,
+        data: new Uint8Array([0x12, 0x34]),
+        accessList: [
+          {
+            address: "0x0000000000000000000000000000000000000002",
+            storageKeys: [
+              "0x0000000000000000000000000000000000000000000000000000000000000001",
+            ],
+          },
         ],
-      }],
-    }, { common });
+      },
+      { common },
+    );
 
     const raw = tx.getMessageToSign();
     const bytesLength = raw.byteLength;
@@ -712,20 +718,25 @@ Deno.test(
   () => {
     // Given
     const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-    const tx = new AccessListEIP2930Transaction({
-      nonce: 1n,
-      gasPrice: 2n,
-      gasLimit: 3n,
-      to: "0x0000000000000000000000000000000000000001",
-      value: 4n,
-      data: new Uint8Array([0x12, 0x34]),
-      accessList: [{
-        address: "0x0000000000000000000000000000000000000002",
-        storageKeys: [
-          "0x0000000000000000000000000000000000000000000000000000000000000001",
+    const tx = new AccessListEIP2930Transaction(
+      {
+        nonce: 1n,
+        gasPrice: 2n,
+        gasLimit: 3n,
+        to: "0x0000000000000000000000000000000000000001",
+        value: 4n,
+        data: new Uint8Array([0x12, 0x34]),
+        accessList: [
+          {
+            address: "0x0000000000000000000000000000000000000002",
+            storageKeys: [
+              "0x0000000000000000000000000000000000000000000000000000000000000001",
+            ],
+          },
         ],
-      }],
-    }, { common });
+      },
+      { common },
+    );
 
     const raw = tx.getMessageToSign();
     const bytesLength = raw.byteLength;
@@ -798,8 +809,9 @@ Deno.test("toTypedEthTx with real data", () => {
         assertEquals(
           JSON.stringify(ethTx),
           JSON.stringify(
-            expectedTransformData
-              .expectedToTypedEthTxTransactions[outerIndex][innerIndex],
+            expectedTransformData.expectedToTypedEthTxTransactions[outerIndex][
+              innerIndex
+            ],
           ),
         );
       });
@@ -818,25 +830,28 @@ Deno.test("toEthTx returns null for invalid transaction", () => {
   assertEquals(result, null);
 });
 
-Deno.test("chainId calculates chain ID from v value for legacy transaction", () => {
-  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-  const tx = new LegacyTransaction(
-    {
-      nonce: 1n,
-      gasPrice: 2n,
-      gasLimit: 3n,
-      to: "0x0000000000000000000000000000000000000001",
-      value: 4n,
-      data: new Uint8Array([0x12, 0x34]),
-    },
-    { common },
-  );
-  const jsonTx = tx.toJSON();
-  jsonTx.v = "0x25"; // 37 in decimal, which corresponds to chain ID 1 (mainnet)
+Deno.test(
+  "chainId calculates chain ID from v value for legacy transaction",
+  () => {
+    const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+    const tx = new LegacyTransaction(
+      {
+        nonce: 1n,
+        gasPrice: 2n,
+        gasLimit: 3n,
+        to: "0x0000000000000000000000000000000000000001",
+        value: 4n,
+        data: new Uint8Array([0x12, 0x34]),
+      },
+      { common },
+    );
+    const jsonTx = tx.toJSON();
+    jsonTx.v = "0x25"; // 37 in decimal, which corresponds to chain ID 1 (mainnet)
 
-  const result = chainId(tx, jsonTx);
-  assertEquals(result, "0x1");
-});
+    const result = chainId(tx, jsonTx);
+    assertEquals(result, "0x1");
+  },
+);
 
 Deno.test("chainId returns chainId directly when isLegacyTx is false", () => {
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
@@ -934,70 +949,85 @@ Deno.test("setYParityFlag adds yParity field for EIP2930 transaction", () => {
   assertEquals(result.yParity, "0x1");
 });
 
-Deno.test("setYParityFlag does not add yParity field for legacy transaction", () => {
-  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-  const tx = new LegacyTransaction(
-    {
-      nonce: 1n,
-      gasPrice: 2n,
-      gasLimit: 3n,
-      to: "0x0000000000000000000000000000000000000001",
-      value: 4n,
-      data: new Uint8Array([0x12, 0x34]),
-    },
-    { common },
-  );
-  const jsonTx = tx.toJSON();
-  jsonTx.v = "0x1";
+Deno.test(
+  "setYParityFlag does not add yParity field for legacy transaction",
+  () => {
+    const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+    const tx = new LegacyTransaction(
+      {
+        nonce: 1n,
+        gasPrice: 2n,
+        gasLimit: 3n,
+        to: "0x0000000000000000000000000000000000000001",
+        value: 4n,
+        data: new Uint8Array([0x12, 0x34]),
+      },
+      { common },
+    );
+    const jsonTx = tx.toJSON();
+    jsonTx.v = "0x1";
 
-  const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
-  setYParityFlag(tx, jsonTx, result);
-  assertEquals(result.yParity, undefined);
-});
+    const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
+    setYParityFlag(tx, jsonTx, result);
+    assertEquals(result.yParity, undefined);
+  },
+);
 
-Deno.test("setFlagRunOutOfResources does not add isRunOutOfResources flag for successful transaction", () => {
-  const receipt = createReceipt({
-    executionStatus: "EXECUTION_STATUS_SUCCEEDED",
-  });
-  const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
-  setFlagRunOutOfResources(receipt, result);
-  assertEquals(result.isRunOutOfResources, undefined);
-});
+Deno.test(
+  "setFlagRunOutOfResources does not add isRunOutOfResources flag for successful transaction",
+  () => {
+    const receipt = createReceipt({
+      executionStatus: "EXECUTION_STATUS_SUCCEEDED",
+    });
+    const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
+    setFlagRunOutOfResources(receipt, result);
+    assertEquals(result.isRunOutOfResources, undefined);
+  },
+);
 
-Deno.test("setFlagRunOutOfResources adds isRunOutOfResources flag for out of resources transaction", () => {
-  const receipt = createReceipt({
-    executionStatus: "EXECUTION_STATUS_REVERTED",
-    revertReason: "RunResources has no remaining steps",
-  }); // Indicating out of resources
-  const result: ExtendedJsonRpcTx = {
-    isRunOutOfResources: false,
-  } as ExtendedJsonRpcTx;
+Deno.test(
+  "setFlagRunOutOfResources adds isRunOutOfResources flag for out of resources transaction",
+  () => {
+    const receipt = createReceipt({
+      executionStatus: "EXECUTION_STATUS_REVERTED",
+      revertReason: "RunResources has no remaining steps",
+    }); // Indicating out of resources
+    const result: ExtendedJsonRpcTx = {
+      isRunOutOfResources: false,
+    } as ExtendedJsonRpcTx;
 
-  setFlagRunOutOfResources(receipt, result);
-  assertEquals(result.isRunOutOfResources, true);
-});
+    setFlagRunOutOfResources(receipt, result);
+    assertEquals(result.isRunOutOfResources, true);
+  },
+);
 
-Deno.test("typedTransactionToEthTx returns null for unsigned transaction", () => {
-  const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
-  const tx = new LegacyTransaction({
-    nonce: 1n,
-    gasPrice: 2n,
-    gasLimit: 3n,
-    to: "0x0000000000000000000000000000000000000001",
-    value: 4n,
-    data: new Uint8Array([0x12, 0x34]),
-  }, { common });
+Deno.test(
+  "typedTransactionToEthTx returns null for unsigned transaction",
+  () => {
+    const common = new Common({ chain: "mainnet", hardfork: "shanghai" });
+    const tx = new LegacyTransaction(
+      {
+        nonce: 1n,
+        gasPrice: 2n,
+        gasLimit: 3n,
+        to: "0x0000000000000000000000000000000000000001",
+        value: 4n,
+        data: new Uint8Array([0x12, 0x34]),
+      },
+      { common },
+    );
 
-  const ethTx = typedTransactionToEthTx({
-    typedTransaction: tx,
-    receipt: {} as TransactionReceipt,
-    blockNumber: "0x1",
-    blockHash: "0x123",
-    isPendingBlock: false,
-  });
+    const ethTx = typedTransactionToEthTx({
+      typedTransaction: tx,
+      receipt: {} as TransactionReceipt,
+      blockNumber: "0x1",
+      blockHash: "0x123",
+      isPendingBlock: false,
+    });
 
-  assertEquals(ethTx, null);
-});
+    assertEquals(ethTx, null);
+  },
+);
 
 Deno.test("typedTransactionToEthTx handles missing transaction index", () => {
   const common = new Common({ chain: "mainnet", hardfork: "shanghai" });

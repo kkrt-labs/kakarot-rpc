@@ -24,8 +24,7 @@ lint:
     - name: clippy
       commands:
         - name: lint
-          run:
-            cargo clippy --message-format json --locked --all-targets
+          run: cargo clippy --message-format json --locked --all-targets
             --all-features -- --cap-lints=warn --no-deps
   enabled:
     - actionlint@1.7.3

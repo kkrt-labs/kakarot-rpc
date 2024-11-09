@@ -118,8 +118,7 @@ services:
       - 4000:4000
     networks:
       - internal
-    command:
-      [
+    command: [
         /bin/sh,
         -c,
         bin/blockscout eval "Elixir.Explorer.ReleaseTasks.create_and_migrate()

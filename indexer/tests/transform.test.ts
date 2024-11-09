@@ -9,9 +9,7 @@ import {
 } from "./constants.ts";
 
 // Transaction data including headers, events, and transactions
-const jsonTransactionsData = await Deno.readTextFile(
-  TRANSACTIONS_DATA_FILE,
-);
+const jsonTransactionsData = await Deno.readTextFile(TRANSACTIONS_DATA_FILE);
 const transactionsData = JSON.parse(jsonTransactionsData);
 
 // Expected output after transform and toTypedEthTx transformation for comparison in tests

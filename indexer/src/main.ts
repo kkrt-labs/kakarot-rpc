@@ -87,9 +87,10 @@ export default async function transform({
     // Can be false if the transaction is not related to a specific instance of the Kakarot contract.
     // This is typically the case if there are multiple Kakarot contracts on the same chain.
     // Skip if the transaction_executed event contains "eth validation failed".
-    .filter((event) =>
-      isKakarotTransaction(event.transaction) &&
-      !ethValidationFailed(event.event)
+    .filter(
+      (event) =>
+        isKakarotTransaction(event.transaction) &&
+        !ethValidationFailed(event.event),
     )
     .map(processEvent(blockInfo))
     .filter((event): event is ProcessedEvent => event !== null);
@@ -103,7 +104,7 @@ export default async function transform({
         transactionIndex: Number(event!.ethTx.transactionIndex),
         typedTransaction: event!.typedEthTx,
         receipt: event!.ethReceipt,
-      })
+      }),
     )
     .filter((x) => x !== null);
 
@@ -202,20 +203,22 @@ function accumulateGasAndUpdateStore(
     // Update the cumulative gas used in the receipt
     event.ethReceipt.cumulativeGasUsed = `0x${cumulativeGasUsed.toString(16)}`;
 
-    store.push(...[
-      {
-        collection: Collection.Transactions,
-        data: { tx: event.ethTx },
-      },
-      {
-        collection: Collection.Receipts,
-        data: { receipt: event.ethReceipt },
-      },
-      ...event.ethLogs.map((log) => ({
-        collection: Collection.Logs,
-        data: { log },
-      })),
-    ]);
+    store.push(
+      ...[
+        {
+          collection: Collection.Transactions,
+          data: { tx: event.ethTx },
+        },
+        {
+          collection: Collection.Receipts,
+          data: { receipt: event.ethReceipt },
+        },
+        ...event.ethLogs.map((log) => ({
+          collection: Collection.Logs,
+          data: { log },
+        })),
+      ],
+    );
     updateBlockLogsBloom(blockLogsBloom, event);
   });
 
@@ -233,14 +236,16 @@ async function computeBlooms(
   const transactionTrie = new Trie();
   const receiptTrie = new Trie();
 
-  trieData.sort((a, b) =>
-    Number(a.encodedTransactionIndex) - Number(b.encodedTransactionIndex)
+  trieData.sort(
+    (a, b) =>
+      Number(a.encodedTransactionIndex) - Number(b.encodedTransactionIndex),
   );
 
-  for (
-    const { encodedTransactionIndex, encodedTransaction, encodedReceipt }
-      of trieData
-  ) {
+  for (const {
+    encodedTransactionIndex,
+    encodedTransaction,
+    encodedReceipt,
+  } of trieData) {
     await transactionTrie.put(encodedTransactionIndex, encodedTransaction);
     await receiptTrie.put(encodedTransactionIndex, encodedReceipt);
   }
@@ -281,11 +286,12 @@ function createProcessedTransaction(
   // const cumulativeGasUsages = [300n, undefined, undefined, 200n, undefined, 100n, undefined, undefined, 10n, undefined];
   // const ethTx = { transactionIndex: 5 };
   // const revertedTransactionCumulativeGasUsed = 100n;
-  const revertedTransactionCumulativeGasUsed = cumulativeGasUsages.find(
-    (gas, i) =>
-      Number(ethTx.transactionIndex) >= cumulativeGasUsages.length - 1 - i &&
-      gas,
-  ) ?? 0n;
+  const revertedTransactionCumulativeGasUsed =
+    cumulativeGasUsages.find(
+      (gas, i) =>
+        Number(ethTx.transactionIndex) >= cumulativeGasUsages.length - 1 - i &&
+        gas,
+    ) ?? 0n;
 
   const ethReceipt = toRevertedOutOfResourcesReceipt({
     transaction: ethTx as JsonRpcTx,

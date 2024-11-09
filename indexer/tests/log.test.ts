@@ -343,9 +343,7 @@ Deno.test("toEthLog with ignored keys", () => {
   };
 
   // Loop through all ignored keys.
-  for (
-    const ignoredKey of IGNORED_KEYS
-  ) {
+  for (const ignoredKey of IGNORED_KEYS) {
     const event: Event = {
       index: 1,
       fromAddress: "0x123456",
