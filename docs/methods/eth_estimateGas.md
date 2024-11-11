@@ -15,5 +15,5 @@ transaction to complete.
 Kakarot Specificity:
 
 - Call the Kakarot Cairo smart contract's entrypoint: `eth_call` with the EVM
-  transaction fields as argument and get the returned `gas_used` variable. This
+  transaction fields as arguments and get the returned `gas_used` variable. This
   value is the estimated gas needed to complete the transaction.
