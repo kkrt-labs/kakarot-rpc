@@ -73,7 +73,7 @@ async fn test_chain_id(#[future] katana: Katana, _setup: ()) {
     let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default();
 
     // Then
-    // Chain ID should correspond to "kaka_test"
+    // Chain ID should correspond to "kaka_test" % max safe chain id
     assert_eq!(chain_id, U64::from_str_radix("b615f74ebad2c", 16).unwrap());
 }
 
