@@ -32,12 +32,13 @@ fn main() {
     let hive_genesis_content = std::fs::read_to_string(hive_genesis_path).expect("Failed to read hive genesis file");
     let hive_genesis: HiveGenesisConfig =
         serde_json::from_str(&hive_genesis_content).expect("Failed to parse hive genesis json");
+    let chain_id = hive_genesis.config.chain_id.into();
 
     // Convert the hive genesis to a katana genesis.
     let genesis_json =
         hive_genesis.try_into_genesis_json(builder.clone()).expect("Failed to convert hive genesis to katana genesis");
 
-    let builder = builder.with_kakarot(Felt::ZERO).expect("Failed to set up Kakarot");
+    let builder = builder.with_kakarot(Felt::ZERO, chain_id).expect("Failed to set up Kakarot");
     let manifest = builder.manifest();
 
     // Write the genesis json to the file.

@@ -3,8 +3,8 @@ use crate::{
     test_utils::constants::{
         ACCOUNT_AUTHORIZED_MESSAGE_HASHES, ACCOUNT_CAIRO1_HELPERS_CLASS_HASH, ACCOUNT_EVM_ADDRESS,
         ACCOUNT_IMPLEMENTATION, EIP_155_AUTHORIZED_MESSAGE_HASHES, KAKAROT_ACCOUNT_CONTRACT_CLASS_HASH,
-        KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_COINBASE,
-        KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO,
+        KAKAROT_BASE_FEE, KAKAROT_BLOCK_GAS_LIMIT, KAKAROT_CAIRO1_HELPERS_CLASS_HASH, KAKAROT_CHAIN_ID,
+        KAKAROT_COINBASE, KAKAROT_EVM_TO_STARKNET_ADDRESS, KAKAROT_NATIVE_TOKEN_ADDRESS, KAKAROT_PREV_RANDAO,
         KAKAROT_UNINITIALIZED_ACCOUNT_CLASS_HASH, OWNABLE_OWNER,
     },
 };
@@ -152,6 +152,11 @@ impl KatanaGenesisBuilder<Uninitialized> {
             .par_bridge()
             .filter_map(|entry| {
                 let path = entry.unwrap().path().to_path_buf();
+                // Skip class_hashes.json file
+                if path.file_name().map_or(false, |name| name == "class_hashes.json") {
+                    return None;
+                }
+
                 let artifact = fs::read_to_string(&path).expect("Failed to read artifact");
                 let artifact = serde_json::from_str(&artifact).expect("Failed to parse artifact");
                 let class_hash = compute_class_hash(&artifact)
@@ -186,13 +191,14 @@ impl KatanaGenesisBuilder<Uninitialized> {
 impl KatanaGenesisBuilder<Loaded> {
     /// Add the Kakarot contract to the genesis. Updates the state to [Initialized].
     /// Once in the [Initialized] status, the builder can be built.
-    pub fn with_kakarot(mut self, coinbase_address: Felt) -> Result<KatanaGenesisBuilder<Initialized>> {
+    pub fn with_kakarot(mut self, coinbase_address: Felt, chain_id: Felt) -> Result<KatanaGenesisBuilder<Initialized>> {
         let kakarot_class_hash = self.kakarot_class_hash()?;
 
         let account_contract_class_hash = self.account_contract_class_hash()?;
         let uninitialized_account_class_hash = self.uninitialized_account_class_hash()?;
         let cairo1_helpers_class_hash = self.cairo1_helpers_class_hash()?;
         let block_gas_limit = 20_000_000u64.into();
+
         // Construct the kakarot contract address. Based on the constructor args from
         // https://github.com/kkrt-labs/kakarot/blob/main/src/kakarot/kakarot.cairo#L23
         let kakarot_address = ContractAddress::new(get_udc_deployed_address(
@@ -205,8 +211,8 @@ impl KatanaGenesisBuilder<Loaded> {
                 account_contract_class_hash,
                 uninitialized_account_class_hash,
                 cairo1_helpers_class_hash,
-                coinbase_address,
                 block_gas_limit,
+                chain_id,
             ],
         ));
         // Cache the address for later use.
@@ -223,6 +229,7 @@ impl KatanaGenesisBuilder<Loaded> {
             (storage_addr(KAKAROT_BASE_FEE)?, Felt::ZERO),
             (storage_addr(KAKAROT_PREV_RANDAO)?, Felt::ZERO),
             (storage_addr(KAKAROT_BLOCK_GAS_LIMIT)?, block_gas_limit),
+            (storage_addr(KAKAROT_CHAIN_ID)?, chain_id),
         ]
         .into_iter()
         .collect();
