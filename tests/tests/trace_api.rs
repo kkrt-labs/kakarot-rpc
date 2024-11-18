@@ -1,6 +1,8 @@
 #![allow(clippy::used_underscore_binding)]
 #![cfg(feature = "testing")]
+use alloy_consensus::Transaction;
 use alloy_dyn_abi::DynSolValue;
+use alloy_eips::BlockId;
 use alloy_primitives::{Address, TxKind, B256, U256};
 use alloy_rpc_types::{request::TransactionInput, TransactionRequest};
 use alloy_rpc_types_trace::geth::{
@@ -19,7 +21,6 @@ use kakarot_rpc::{
         rpc::{start_kakarot_rpc_server, RawRpcParamsBuilder},
     },
 };
-use reth_primitives::BlockId;
 use rstest::*;
 use serde_json::Value;
 use starknet::{core::types::MaybePendingBlockWithTxHashes, providers::Provider};
@@ -101,7 +102,8 @@ pub async fn tracing(
         // Add an out of resources field to the last transaction.
         if i == TRACING_TRANSACTIONS_COUNT - 1 {
             let mut out_of_resources = std::collections::BTreeMap::new();
-            out_of_resources.insert(String::from("isRunOutOfResources"), serde_json::Value::Bool(true));
+            out_of_resources
+                .insert(String::from("reverted"), serde_json::Value::String("A custom revert reason".to_string()));
             tx.other = OtherFields::new(out_of_resources);
         }
 

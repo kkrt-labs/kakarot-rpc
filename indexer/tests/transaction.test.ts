@@ -13,7 +13,7 @@ import {
 import {
   chainId,
   packCallData,
-  setFlagRunOutOfResources,
+  setRevertedFlag,
   setYParityFlag,
   toEthTx,
   toTypedEthTx,
@@ -788,7 +788,7 @@ Deno.test(
   },
 );
 
-Deno.test.ignore("toTypedEthTx with real data", () => {
+Deno.test("toTypedEthTx with real data", () => {
   transactionsData.transactionsList.forEach(
     (transactions: TransactionWithReceipt[], outerIndex: number) => {
       transactions.map((transaction, innerIndex) => {
@@ -955,26 +955,39 @@ Deno.test("setYParityFlag does not add yParity field for legacy transaction", ()
   assertEquals(result.yParity, undefined);
 });
 
-Deno.test("setFlagRunOutOfResources does not add isRunOutOfResources flag for successful transaction", () => {
+Deno.test("setRevertedFlag does not add reverted flag for successful transaction", () => {
   const receipt = createReceipt({
     executionStatus: "EXECUTION_STATUS_SUCCEEDED",
   });
   const result: ExtendedJsonRpcTx = {} as ExtendedJsonRpcTx;
-  setFlagRunOutOfResources(receipt, result);
-  assertEquals(result.isRunOutOfResources, undefined);
+  setRevertedFlag(receipt, result);
+  assertEquals(result.reverted, undefined);
 });
 
-Deno.test("setFlagRunOutOfResources adds isRunOutOfResources flag for out of resources transaction", () => {
+Deno.test("setRevertedFlag adds reverted flag for out of resources transaction", () => {
   const receipt = createReceipt({
     executionStatus: "EXECUTION_STATUS_REVERTED",
     revertReason: "RunResources has no remaining steps",
   }); // Indicating out of resources
   const result: ExtendedJsonRpcTx = {
-    isRunOutOfResources: false,
+    reverted: undefined,
   } as ExtendedJsonRpcTx;
 
-  setFlagRunOutOfResources(receipt, result);
-  assertEquals(result.isRunOutOfResources, true);
+  setRevertedFlag(receipt, result);
+  assertEquals(result.reverted, "RunResources has no remaining steps");
+});
+
+Deno.test("setRevertedFlag adds reverted flag for custom error", () => {
+  const receipt = createReceipt({
+    executionStatus: "EXECUTION_STATUS_REVERTED",
+    revertReason: "My custom error",
+  }); // A custom error
+  const result: ExtendedJsonRpcTx = {
+    reverted: undefined,
+  } as ExtendedJsonRpcTx;
+
+  setRevertedFlag(receipt, result);
+  assertEquals(result.reverted, "My custom error");
 });
 
 Deno.test("typedTransactionToEthTx returns null for unsigned transaction", () => {

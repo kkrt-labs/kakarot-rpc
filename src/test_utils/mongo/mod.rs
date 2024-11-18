@@ -214,9 +214,11 @@ impl MongoFuzzer {
 
         // Generate a receipt for the transaction.
         let receipt = self.generate_transaction_receipt(&transaction.tx);
-        // add an isRunOutOfRessources field to the receipt
+        // add an reverted field to the receipt
         let mut receipt_with_other_fields: ExtendedTxReceipt = receipt.into();
-        receipt_with_other_fields.other.insert("isRunOutOfRessources".to_string(), serde_json::Value::Bool(true));
+        receipt_with_other_fields
+            .other
+            .insert("reverted".to_string(), serde_json::Value::String("A custom revert reason".to_string()));
 
         let stored_receipt = StoredTransactionReceipt { receipt: receipt_with_other_fields };
 

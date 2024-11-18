@@ -53,7 +53,7 @@ impl HiveGenesisConfig {
     /// marker type indicates that the Kakarot contract classes need to have been loaded into the builder.
     pub fn try_into_genesis_json(self, builder: KatanaGenesisBuilder<Loaded>) -> Result<GenesisJson, eyre::Error> {
         let coinbase_address = Felt::from_bytes_be_slice(self.coinbase.as_slice());
-        let builder = builder.with_kakarot(coinbase_address)?;
+        let builder = builder.with_kakarot(coinbase_address, self.config.chain_id.into())?;
 
         // Get the current state of the builder.
         let kakarot_address = builder.cache_load("kakarot_address")?;
@@ -151,8 +151,10 @@ mod tests {
     });
     static GENESIS_BUILDER_LOADED: LazyLock<KatanaGenesisBuilder<Loaded>> =
         LazyLock::new(|| KatanaGenesisBuilder::default().load_classes(ROOT.join("lib/kakarot/build")));
-    static GENESIS_BUILDER: LazyLock<KatanaGenesisBuilder<Initialized>> =
-        LazyLock::new(|| GENESIS_BUILDER_LOADED.clone().with_kakarot(Felt::ZERO).unwrap());
+    static GENESIS_BUILDER: LazyLock<KatanaGenesisBuilder<Initialized>> = LazyLock::new(|| {
+        // The chain ID is hardcoded in the hive genesis file src/test_utils/hive/test_data/genesis.json
+        GENESIS_BUILDER_LOADED.clone().with_kakarot(Felt::ZERO, Felt::from_hex_unchecked("7")).unwrap()
+    });
     static GENESIS: LazyLock<GenesisJson> =
         LazyLock::new(|| HIVE_GENESIS.clone().try_into_genesis_json(GENESIS_BUILDER_LOADED.clone()).unwrap());
 

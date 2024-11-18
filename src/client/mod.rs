@@ -1,12 +1,17 @@
 use crate::{
-    constants::ETH_CHAIN_ID,
+    constants::{ETH_CHAIN_ID, KKRT_BLOCK_GAS_LIMIT},
     pool::{
         mempool::{KakarotPool, TransactionOrdering},
         validate::KakarotTransactionValidatorBuilder,
     },
     providers::{
         eth_provider::{
-            database::{types::transaction::ExtendedTransaction, Database},
+            database::{
+                filter,
+                filter::EthDatabaseFilterBuilder,
+                types::transaction::{ExtendedTransaction, StoredEthStarknetTransactionHash},
+                Database,
+            },
             error::SignatureError,
             provider::{EthApiResult, EthDataProvider},
             TransactionProvider, TxPoolProvider,
@@ -18,9 +23,11 @@ use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::Decodable;
 use alloy_rpc_types_txpool::TxpoolContent;
+use alloy_serde::WithOtherFields;
 use async_trait::async_trait;
 use reth_chainspec::ChainSpec;
 use reth_primitives::{TransactionSigned, TransactionSignedEcRecovered};
+use reth_rpc::eth::EthTxBuilder;
 use reth_rpc_eth_types::TransactionSource;
 use reth_transaction_pool::{
     blobstore::NoopBlobStore, AllPoolTransactions, EthPooledTransaction, PoolConfig, PoolTransaction,
@@ -65,6 +72,7 @@ where
 
         let validator = KakarotTransactionValidatorBuilder::new(&Arc::new(ChainSpec {
             chain: (*ETH_CHAIN_ID).into(),
+            max_gas_limit: KKRT_BLOCK_GAS_LIMIT,
             ..Default::default()
         }))
         .build::<_, EthPooledTransaction>(eth_provider.clone());
@@ -120,7 +128,7 @@ where
             .pool
             .add_transaction(TransactionOrigin::Local, pool_transaction)
             .await
-            .inspect_err(|err| tracing::error!(?err, ?hash, ?to, from = ?signer))?;
+            .inspect_err(|err| tracing::warn!(?err, ?hash, ?to, from = ?signer))?;
 
         Ok(hash)
     }
@@ -139,8 +147,11 @@ where
         ) {
             content.entry(tx.sender()).or_default().insert(
                 tx.nonce().to_string(),
-                reth_rpc_types_compat::transaction::from_recovered::<reth_rpc::eth::EthTxBuilder>(
-                    tx.clone().into_consensus(),
+                WithOtherFields::new(
+                    reth_rpc_types_compat::transaction::from_recovered::<reth_rpc::eth::EthTxBuilder>(
+                        tx.clone().into_consensus(),
+                        &EthTxBuilder {},
+                    ),
                 ),
             );
         }
@@ -169,13 +180,38 @@ where
     SP: starknet::providers::Provider + Send + Sync,
 {
     async fn transaction_by_hash(&self, hash: B256) -> EthApiResult<Option<ExtendedTransaction>> {
-        Ok(self
+        // Try to get the information from:
+        // 1. The pool if the transaction is in the pool.
+        // 2. The Ethereum provider if the transaction is not in the pool.
+        let mut tx = self
             .pool
             .get(&hash)
             .map(|transaction| {
-                TransactionSource::Pool(transaction.transaction.transaction().clone())
-                    .into_transaction::<reth_rpc::eth::EthTxBuilder>()
+                WithOtherFields::new(
+                    TransactionSource::Pool(transaction.transaction.transaction().clone())
+                        .into_transaction(&EthTxBuilder {}),
+                )
             })
-            .or(self.eth_provider.transaction_by_hash(hash).await?))
+            .or(self.eth_provider.transaction_by_hash(hash).await?);
+
+        if let Some(ref mut transaction) = tx {
+            // Fetch the Starknet transaction hash if it exists.
+            let filter = EthDatabaseFilterBuilder::<filter::EthStarknetTransactionHash>::default()
+                .with_tx_hash(&transaction.hash)
+                .build();
+
+            let hash_mapping: Option<StoredEthStarknetTransactionHash> =
+                self.eth_provider.database().get_one(filter, None).await?;
+
+            // Add the Starknet transaction hash to the transaction fields.
+            if let Some(hash_mapping) = hash_mapping {
+                transaction.other.insert(
+                    "starknet_transaction_hash".to_string(),
+                    serde_json::Value::String(hash_mapping.hashes.starknet_hash.to_fixed_hex_string()),
+                );
+            }
+        }
+
+        Ok(tx)
     }
 }

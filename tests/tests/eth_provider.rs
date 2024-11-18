@@ -2,8 +2,8 @@
 #![cfg(feature = "testing")]
 use crate::tests::mempool::create_sample_transactions;
 use alloy_consensus::{TxEip1559, TxLegacy};
-use alloy_eips::eip2718::Encodable2718;
-use alloy_primitives::{address, bytes, Address, Bytes, TxKind, B256, U256, U64};
+use alloy_eips::{eip2718::Encodable2718, BlockNumberOrTag};
+use alloy_primitives::{address, bytes, Address, Bytes, Signature, TxKind, B256, U256, U64};
 use alloy_rpc_types::{
     request::TransactionInput,
     serde_helpers::JsonStorageKey,
@@ -18,7 +18,12 @@ use kakarot_rpc::{
     models::felt::Felt252Wrapper,
     providers::eth_provider::{
         constant::{MAX_LOGS, STARKNET_MODULUS},
-        database::{ethereum::EthereumTransactionStore, types::transaction::StoredTransaction},
+        database::{
+            ethereum::EthereumTransactionStore,
+            filter,
+            filter::EthDatabaseFilterBuilder,
+            types::transaction::{EthStarknetHashes, StoredEthStarknetTransactionHash, StoredTransaction},
+        },
         provider::EthereumProvider,
         starknet::relayer::Relayer,
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
@@ -32,7 +37,7 @@ use kakarot_rpc::{
     },
 };
 use rand::Rng;
-use reth_primitives::{sign_message, transaction::Signature, BlockNumberOrTag, Transaction, TransactionSigned};
+use reth_primitives::{sign_message, Transaction, TransactionSigned};
 use reth_transaction_pool::{TransactionOrigin, TransactionPool};
 use rstest::*;
 use starknet::{
@@ -68,7 +73,7 @@ async fn test_chain_id(#[future] katana: Katana, _setup: ()) {
     let chain_id = eth_provider.chain_id().await.unwrap().unwrap_or_default();
 
     // Then
-    // Chain ID should correspond to "kaka_test"
+    // Chain ID should correspond to "kaka_test" % max safe chain id
     assert_eq!(chain_id, U64::from_str_radix("b615f74ebad2c", 16).unwrap());
 }
 
@@ -747,10 +752,39 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
     // Relay the transaction
-    let _ = Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*eth_client.starknet_provider())))
-        .relay_transaction(&transaction_signed)
+    let starknet_hash = Relayer::new(
+        katana.eoa.relayer.address(),
+        relayer_balance,
+        &(*(*eth_client.starknet_provider())),
+        Some(Arc::new(eth_client.eth_provider().database().clone())),
+    )
+    .relay_transaction(&transaction_signed)
+    .await
+    .expect("Failed to relay transaction");
+
+    // Retrieve the hash mapping from the database (Ethereum -> StarkNet)
+    // 1. Prepare the filter
+    let filter = EthDatabaseFilterBuilder::<filter::EthStarknetTransactionHash>::default()
+        .with_tx_hash(&transaction_signed.hash)
+        .build();
+
+    // 2. Retrieve the hash mapping
+    let hash_mapping: Option<StoredEthStarknetTransactionHash> = eth_client
+        .eth_provider()
+        .database()
+        .get_one(filter, None)
         .await
-        .expect("Failed to relay transaction");
+        .expect("Failed to retrieve updated transaction hash mapping");
+
+    // 3. Prepare the transaction hashes
+    let transaction_hashes = EthStarknetHashes { eth_hash: transaction_signed.hash, starknet_hash };
+
+    // 4. Assert that the hash mapping was inserted correctly
+    assert_eq!(
+        hash_mapping,
+        Some(StoredEthStarknetTransactionHash::from(transaction_hashes)),
+        "The transaction hash mapping was not inserted correctly"
+    );
 
     // Retrieve the current size of the mempool
     let mempool_size_after_send = eth_client.mempool().pool_size();
@@ -990,11 +1024,15 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
 
     // Relay the transaction
-    let starknet_transaction_hash =
-        Relayer::new(katana.eoa.relayer.address(), relayer_balance, &(*(*katana.eth_client.starknet_provider())))
-            .relay_transaction(&transaction_signed)
-            .await
-            .expect("Failed to relay transaction");
+    let starknet_transaction_hash = Relayer::new(
+        katana.eoa.relayer.address(),
+        relayer_balance,
+        &(*(*katana.eth_client.starknet_provider())),
+        Some(Arc::new(katana.eth_client.eth_provider().database().clone())),
+    )
+    .relay_transaction(&transaction_signed)
+    .await
+    .expect("Failed to relay transaction");
 
     watch_tx(
         eth_provider.starknet_provider_inner(),
@@ -1309,8 +1347,29 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         .await
         .expect("Failed to insert transaction into the mempool");
 
+    // Add a hash mapping to the database
+    let starknet_hash = Felt::from_hex("0x0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a").unwrap();
+    let updated_transaction_hashes = EthStarknetHashes { eth_hash: tx_hash, starknet_hash };
+
+    katana_empty
+        .eth_client
+        .eth_provider()
+        .database()
+        .upsert_transaction_hashes(updated_transaction_hashes.clone())
+        .await
+        .expect("Failed to update transaction hash mapping");
+
     // Check if the first transaction is returned correctly by the `transaction_by_hash` method
-    assert!(katana_empty.eth_client.transaction_by_hash(transaction.transaction().hash).await.unwrap().is_some());
+    let tx = katana_empty.eth_client.transaction_by_hash(tx_hash).await.unwrap();
+    assert!(tx.is_some());
+
+    assert_eq!(
+        *tx.unwrap()
+            .other
+            .get("starknet_transaction_hash")
+            .expect("Expected starknet_transaction_hash in the transaction"),
+        serde_json::Value::String("0x0208a0a10250e382e1e4bbe2880906c2791bf6275695e02fbbc6aeff9cd8b31a".to_string())
+    );
 
     // Check if a non-existent transaction returns None
     assert!(katana_empty.eth_client.transaction_by_hash(B256::random()).await.unwrap().is_none());
@@ -1342,6 +1401,7 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
         katana_empty.eoa.relayer.address(),
         relayer_balance,
         &(*(*katana_empty.eth_client.starknet_provider())),
+        Some(Arc::new(katana_empty.eth_client.eth_provider().database().clone())),
     )
     .relay_transaction(&transaction_signed)
     .await
@@ -1376,11 +1436,14 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_with_other_fields(#[future] katana: Katana, _setup: ()) {
     let eth_provider = katana.eth_provider();
-    let run_out_of_resources_receipt = katana.most_recent_run_out_of_resources_receipt().unwrap();
+    let run_out_of_resources_receipt = katana.most_recent_reverted_receipt().unwrap();
 
     let receipt_from_db =
         eth_provider.transaction_receipt(run_out_of_resources_receipt.transaction_hash).await.unwrap();
     // Verify the receipt
-    assert_eq!(run_out_of_resources_receipt.other.get("isRunOutOfRessources"), Some(&serde_json::Value::Bool(true)));
+    assert_eq!(
+        run_out_of_resources_receipt.other.get("reverted"),
+        Some(&serde_json::Value::String("A custom revert reason".to_string()))
+    );
     assert_eq!(receipt_from_db.unwrap(), run_out_of_resources_receipt);
 }

@@ -55,7 +55,7 @@ pub trait Eoa<P: Provider + Send + Sync + Clone> {
         Ok(eth_provider.transaction_count(evm_address, None).await?)
     }
 
-    fn sign_payload(&self, payload: B256) -> Result<reth_primitives::Signature, eyre::Error> {
+    fn sign_payload(&self, payload: B256) -> Result<alloy_primitives::Signature, eyre::Error> {
         let pk = self.private_key();
         let signature = sign_message(pk, payload)?;
         Ok(signature)
@@ -157,10 +157,15 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
         // Relay the transaction
-        let starknet_transaction_hash = Relayer::new(self.relayer.address(), relayer_balance, self.starknet_provider())
-            .relay_transaction(&tx_signed)
-            .await
-            .expect("Failed to relay transaction");
+        let starknet_transaction_hash = Relayer::new(
+            self.relayer.address(),
+            relayer_balance,
+            self.starknet_provider(),
+            Some(Arc::new(self.eth_client.eth_provider().database().clone())),
+        )
+        .relay_transaction(&tx_signed)
+        .await
+        .expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),
@@ -226,10 +231,15 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
         // Relay the transaction
-        let starknet_transaction_hash = Relayer::new(self.relayer.address(), relayer_balance, self.starknet_provider())
-            .relay_transaction(&tx_signed)
-            .await
-            .expect("Failed to relay transaction");
+        let starknet_transaction_hash = Relayer::new(
+            self.relayer.address(),
+            relayer_balance,
+            self.starknet_provider(),
+            Some(Arc::new(self.eth_client.eth_provider().database().clone())),
+        )
+        .relay_transaction(&tx_signed)
+        .await
+        .expect("Failed to relay transaction");
 
         watch_tx(
             self.eth_client.eth_provider().starknet_provider_inner(),

@@ -10,13 +10,13 @@ use crate::{
         provider::{EthApiResult, EthDataProvider},
     },
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{U256, U64};
 use alloy_rpc_types::{FeeHistory, TransactionRequest};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use eyre::eyre;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
 
 #[async_trait]
@@ -48,10 +48,10 @@ where
 
         let gas_used = self.estimate_gas_inner(request, block_id).await?;
 
-        // Increase the gas used by 200% to make sure the transaction will not fail due to gas.
+        // Increase the gas used by 40% to make sure the transaction will not fail due to gas.
         // This is a temporary solution until we have a proper gas estimation.
         // Does not apply to Hive feature otherwise end2end tests will fail.
-        let gas_used = if cfg!(feature = "hive") { gas_used } else { gas_used * 2 };
+        let gas_used = if cfg!(feature = "hive") { gas_used } else { gas_used * 140 / 100 };
         Ok(U256::from(gas_used))
     }
 

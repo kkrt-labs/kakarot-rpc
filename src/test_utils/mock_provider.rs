@@ -3,11 +3,11 @@ use crate::providers::eth_provider::{
     provider::EthApiResult,
     BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{Address, Bytes, B256, U256, U64};
 use alloy_rpc_types::{Filter, FilterChanges, Header, SyncStatus, TransactionRequest};
 use async_trait::async_trait;
 use mockall::mock;
-use reth_primitives::{BlockId, BlockNumberOrTag};
 
 mock! {
     #[derive(Clone, Debug)]

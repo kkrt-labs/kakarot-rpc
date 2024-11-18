@@ -17,6 +17,7 @@ use crate::{
         sn_provider::StarknetProvider,
     },
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{TxKind, U256};
 use alloy_rpc_types::{BlockHashOrNumber, TransactionRequest};
 use cainome::cairo_serde::CairoArrayLegacy;
@@ -24,7 +25,6 @@ use eyre::Result;
 use itertools::Itertools;
 use mongodb::bson::doc;
 use num_traits::cast::ToPrimitive;
-use reth_primitives::{BlockId, BlockNumberOrTag};
 use starknet::core::types::Felt;
 use tracing::{instrument, Instrument};
 #[cfg(feature = "hive")]

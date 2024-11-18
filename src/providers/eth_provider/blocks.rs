@@ -9,12 +9,12 @@ use crate::providers::eth_provider::{
     database::ethereum::EthereumTransactionStore,
     provider::{EthApiResult, EthDataProvider},
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{B256, U256, U64};
 use alloy_rpc_types::Header;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
 /// Ethereum block provider trait.
 #[async_trait]

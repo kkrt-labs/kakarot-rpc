@@ -5,7 +5,10 @@ pub mod types;
 
 use super::error::KakarotError;
 use crate::providers::eth_provider::database::types::{
-    header::StoredHeader, log::StoredLog, receipt::StoredTransactionReceipt, transaction::StoredTransaction,
+    header::StoredHeader,
+    log::StoredLog,
+    receipt::StoredTransactionReceipt,
+    transaction::{StoredEthStarknetTransactionHash, StoredTransaction},
 };
 use futures::TryStreamExt;
 use itertools::Itertools;
@@ -233,5 +236,12 @@ impl CollectionName for StoredTransactionReceipt {
 impl CollectionName for StoredLog {
     fn collection_name() -> &'static str {
         "logs"
+    }
+}
+
+/// Implement [`CollectionName`] for [`StoredEthStarknetTransactionHash`]
+impl CollectionName for StoredEthStarknetTransactionHash {
+    fn collection_name() -> &'static str {
+        "transaction_hashes"
     }
 }

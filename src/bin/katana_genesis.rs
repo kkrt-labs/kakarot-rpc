@@ -20,6 +20,8 @@ static KAKAROT_CONTRACTS_PATH: LazyLock<PathBuf> =
 /// Mock coinbase address.
 static COINBASE_ADDRESS: LazyLock<Felt> = LazyLock::new(|| 0x12345u32.into());
 
+static CHAIN_ID: LazyLock<Felt> = LazyLock::new(|| Felt::from_str("0xb615f74ebad2c").expect("Invalid chain ID"));
+
 fn main() {
     // Load the env vars.
     dotenv().ok();
@@ -31,7 +33,7 @@ fn main() {
     // Read all the classes.
     let mut builder = KatanaGenesisBuilder::default()
         .load_classes(KAKAROT_CONTRACTS_PATH.clone())
-        .with_kakarot(*COINBASE_ADDRESS)
+        .with_kakarot(*COINBASE_ADDRESS, *CHAIN_ID)
         .expect("Failed to set up Kakarot");
     builder = builder.with_eoa(pk).expect("Failed to set up EOA").fund(pk, U256::from(u128::MAX)).unwrap();
     builder = builder.with_dev_allocation(10);

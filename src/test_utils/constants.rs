@@ -19,3 +19,4 @@ pub const KAKAROT_COINBASE: &str = "Kakarot_coinbase";
 pub const KAKAROT_BASE_FEE: &str = "Kakarot_base_fee";
 pub const KAKAROT_PREV_RANDAO: &str = "Kakarot_prev_randao";
 pub const KAKAROT_BLOCK_GAS_LIMIT: &str = "Kakarot_block_gas_limit";
+pub const KAKAROT_CHAIN_ID: &str = "Kakarot_chain_id";

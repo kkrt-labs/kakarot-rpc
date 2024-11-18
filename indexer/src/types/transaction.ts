@@ -1,6 +1,6 @@
 // Utils
 import { padBigint, padBytes } from "../utils/hex.ts";
-import { isRevertedWithOutOfResources } from "../utils/filter.ts";
+import { isReverted } from "../utils/filter.ts";
 
 // Starknet
 import { Transaction, TransactionReceipt, uint256 } from "../deps.ts";
@@ -121,20 +121,19 @@ export function setYParityFlag(
 }
 
 /**
- * Adds the isRunOutOfResources flag to the transaction result if the transaction
- * was reverted due to running out of resources.
+ * Adds the reverted field to the transaction result if the transaction was reverted.
  *
  * @param receipt - The transaction receipt object.
  * @param result - The transaction result object in Ethereum format.
  */
-export function setFlagRunOutOfResources(
+export function setRevertedFlag(
   receipt: TransactionReceipt,
   result: ExtendedJsonRpcTx,
 ): void {
   // Check if the transaction was reverted due to running out of resources
-  if (isRevertedWithOutOfResources(receipt)) {
-    // Set the isRunOutOfResources flag to true in the result
-    result.isRunOutOfResources = true;
+  if (isReverted(receipt)) {
+    // Set the reverted field to the result
+    result.reverted = receipt.revertReason;
   }
 }
 
@@ -236,7 +235,7 @@ export function typedTransactionToEthTx({
 
   setYParityFlag(typedTransaction, jsonTx, result);
 
-  setFlagRunOutOfResources(receipt, result);
+  setRevertedFlag(receipt, result);
 
   return result;
 }

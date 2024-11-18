@@ -8,16 +8,17 @@ use crate::{
         BlockProvider, ChainProvider, GasProvider, LogProvider, ReceiptProvider, StateProvider, TransactionProvider,
     },
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{Address, Bytes, B256, B64, U256, U64};
 use alloy_rpc_types::{
     serde_helpers::JsonStorageKey, state::StateOverride, AccessListResult, BlockOverrides, EIP1186AccountProofResponse,
     FeeHistory, Filter, FilterChanges, Index, SyncStatus, TransactionRequest, Work,
 };
 use jsonrpsee::core::{async_trait, RpcResult};
-use reth_primitives::{BlockId, BlockNumberOrTag};
 use serde_json::Value;
 use starknet::providers::Provider;
 use std::sync::Arc;
+use tracing::Level;
 
 /// The RPC module for the Ethereum protocol required by Kakarot.
 #[derive(Debug)]
@@ -240,7 +241,7 @@ where
         Err(EthApiError::Unsupported("eth_sendTransaction").into())
     }
 
-    #[tracing::instrument(skip_all, ret, err)]
+    #[tracing::instrument(skip_all, ret, err(level = Level::WARN))]
     async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256> {
         tracing::info!("Serving eth_sendRawTransaction");
 

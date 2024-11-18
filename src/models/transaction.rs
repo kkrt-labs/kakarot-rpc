@@ -3,6 +3,7 @@ use crate::providers::eth_provider::{
     starknet::kakarot_core::{ETH_SEND_TRANSACTION, KAKAROT_ADDRESS},
     utils::split_u256,
 };
+use alloy_consensus::transaction::Transaction as _;
 use alloy_rlp::Encodable;
 use reth_primitives::{transaction::legacy_parity, Transaction, TransactionSigned};
 use starknet::core::types::Felt;
@@ -90,9 +91,8 @@ pub fn transaction_data_to_starknet_calldata(
 mod tests {
     use super::*;
     use alloy_consensus::TxEip2930;
-    use alloy_primitives::{bytes, hex, TxKind, U256};
+    use alloy_primitives::{bytes, hex, Signature, TxKind, U256};
     use alloy_rlp::Decodable;
-    use reth_primitives::Signature;
     use std::str::FromStr;
 
     #[test]

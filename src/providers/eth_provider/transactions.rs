@@ -15,12 +15,12 @@ use crate::{
         ChainProvider,
     },
 };
+use alloy_eips::{BlockId, BlockNumberOrTag};
 use alloy_primitives::{Address, B256, U256};
 use alloy_rpc_types::Index;
 use async_trait::async_trait;
 use auto_impl::auto_impl;
 use mongodb::bson::doc;
-use reth_primitives::{BlockId, BlockNumberOrTag};
 use tracing::Instrument;
 
 #[async_trait]
