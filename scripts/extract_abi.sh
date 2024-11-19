@@ -31,7 +31,7 @@ find "${src_dir}" -type f -name '*.json' | while read -r src_file; do
 	# Check and create a subdirectory structure in destination if needed
 	sub_dir=$(dirname "${src_file}")
 	sub_dir=${sub_dir#"${src_dir}"}
-	echo "Creating subdirectories in ${root_dir}${dest_dir}${sub_dir} and ${root_dir}${build_dir}${sub_dir}"
+	echo "Creating subdirectories in ${root_dir}${dest_dir}/${sub_dir} and ${root_dir}${build_dir}/${sub_dir}"
 	mkdir -p "${root_dir}${dest_dir}${sub_dir}"
 	mkdir -p "${root_dir}${build_dir}${sub_dir}"
 
