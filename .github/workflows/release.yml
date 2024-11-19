@@ -1,125 +1,264 @@
----
 name: release
 
 on:
   release:
     types: [published]
 
+# Environment variables
 env:
   REGISTRY_IMAGE: ghcr.io/${{ github.repository }}/node
-  DOCKER_USERNAME: ${{ github.actor }}
   INDEXER_IMAGE: ghcr.io/${{ github.repository }}/indexer
+  DOCKER_USERNAME: ${{ github.actor }}
+  RUST_VERSION: "1.82.0"    # In var now 
+  SCARB_VERSION: "2.6.5"    # In var now
+  CACHE_TTL: "7"           # Cache retention
+  CARGO_TERM_COLOR: always # Improved log readability
 
 jobs:
   prepare:
     runs-on: ubuntu-latest-16-cores
     timeout-minutes: 30
+    # Explicit permissions for security
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           submodules: recursive
-      # Install Foundry
-      - name: install foundry
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Add cache
+      - name: Cache tools installation
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo
+            ~/.asdf
+            ~/.cache/uv
+            lib/kakarot/.kakarot
+          key: ${{ runner.os }}-tools-${{ hashFiles('**/Cargo.lock', '**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-tools-
+
+      # Foundry installation with caching
+      - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
-      # Install UV
-      - uses: astral-sh/setup-uv@v2
+          cache: true
+
+      # UV setup with caching
+      - name: Setup UV and Python
+        uses: astral-sh/setup-uv@v2
         with:
           enable-cache: true
           cache-dependency-glob: lib/kakarot/uv.lock
-      - uses: actions/setup-python@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version-file: lib/kakarot/.python-version
-      - name: Install asdf & tools
+          cache: 'uv'
+          cache-dependency-path: lib/kakarot/uv.lock
+
+      - name: Install ASDF
         uses: asdf-vm/actions/setup@v3
-      - name: install scarb
+
+      - name: Configure ASDF and tools
         run: |
-          asdf plugin add scarb
-          asdf install scarb 2.6.5
+          echo "ASDF_DATA_DIR=$HOME/.asdf" >> $GITHUB_ENV
+          asdf plugin add scarb || true
+          asdf install scarb ${{ env.SCARB_VERSION }}
           asdf install scarb 0.7.0
-      - name: Setup the Kakarot submodule
+          asdf global scarb ${{ env.SCARB_VERSION }}
+
+      - name: Setup Kakarot
         run: make setup
+
+      # Upload artifactwith configurable retention
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: artifacts
           path: ./.kakarot
           include-hidden-files: true
+          retention-days: ${{ env.CACHE_TTL }}
 
-  # Inspired by Reth CI.
-  # <https://github.com/paradigmxyz/reth/blob/027d50fc105fd527dca0bf56fe51b7240f119e66/.github/workflows/docker.yml>
   build:
-    runs-on: ubuntu-latest-16-cores
     needs: prepare
+    runs-on: ubuntu-latest-16-cores
+    timeout-minutes: 30
     strategy:
       matrix:
         include:
           - platform: amd64
             target: x86_64-unknown-linux-gnu
+            rust_flags: "-C target-feature=+crt-static"
           - platform: arm64
             target: aarch64-unknown-linux-gnu
-    timeout-minutes: 60
+            rust_flags: "-C target-feature=+crt-static"
+      fail-fast: true # If one build fails, all remaining builds are canceled
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           name: artifacts
           path: ./.kakarot
-      - uses: dtolnay/rust-toolchain@stable
+
+      # Rust setup with analysis components
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           target: ${{ matrix.target }}
-          toolchain: 1.82.0
-      - uses: Swatinem/rust-cache@v2
+          toolchain: ${{ env.RUST_VERSION }}
+          components: clippy, rustfmt
+
+      # Rust cache
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
-      - uses: taiki-e/install-action@cross
-      - name: Build
+          cache-directories: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-rust-${{ matrix.target }}
+
+      - name: Install Cross
+        uses: taiki-e/install-action@cross
+
+      # Security audit
+      - name: Audit dependencies
         run: |
-          RUSTFLAGS="-C link-arg=-lgcc -Clink-arg=-static-libgcc" \
-            cross build --bin kakarot-rpc --release --target ${{ matrix.target }}
-          mkdir -p ./bin/${{ matrix.platform }}
-          mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.platform }}/kakarot-rpc
+          cargo audit
+          cargo deny check
+
+      # Code verification 
+      - name: Check formatting
+        run: cargo fmt -- --check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      # Build with retry and optimizations
+      - name: Build with retry
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          command: |
+            RUSTFLAGS="${{ matrix.rust_flags }} -C opt-level=3" \
+            cross build --bin kakarot-rpc --release --target ${{ matrix.target }} \
+              --locked \
+              --jobs $(nproc)
+            
+            mkdir -p ./bin/${{ matrix.platform }}
+            mv target/${{ matrix.target }}/release/kakarot-rpc ./bin/${{ matrix.platform }}/kakarot-rpc
+
+      # Binary validation ( to valide with Kakarot )
+      - name: Validate binary
+        run: |
+          chmod +x ./bin/${{ matrix.platform }}/kakarot-rpc
+          ./bin/${{ matrix.platform }}/kakarot-rpc --version
+          
+          # amd64 check all dependencies for binary
+          if [[ "${{ matrix.platform }}" == "amd64" ]]; then
+            ldd ./bin/${{ matrix.platform }}/kakarot-rpc || true
+          fi
+          
+          ls -lh ./bin/${{ matrix.platform }}/kakarot-rpc
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ matrix.platform }}
           path: ./bin/${{ matrix.platform }}/kakarot-rpc
+          retention-days: ${{ env.CACHE_TTL }}
 
   build-push-docker:
-    runs-on: ubuntu-latest
     needs: build
+    runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      packages: write
+      contents: read
+    
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+
+      - name: Download AMD64 artifact
+        uses: actions/download-artifact@v4
         with:
           name: build-amd64
           path: ./bin/amd64/kakarot-rpc
-      - uses: actions/download-artifact@v4
+
+      - name: Download ARM64 artifact
+        uses: actions/download-artifact@v4
         with:
           name: build-arm64
           path: ./bin/arm64/kakarot-rpc
-      - name: Log in to Docker
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io --username ${DOCKER_USERNAME} --password-stdin
-      - name: Set up Docker builder
-        run: |
-          docker run --privileged --rm tonistiigi/binfmt --install amd64,arm64
-          docker buildx create --use --name cross-builder
-      - name: Build and push image, tag as "latest"
-        run: |
-          docker buildx build \
-            --file ./docker/rpc/Dockerfile.cross . \
-            --platform linux/amd64,linux/arm64 \
-            --tag ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }} \
-            --tag ${{ env.REGISTRY_IMAGE }}:latest \
-            --push
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Buildx setup for multi-arch -> Use last version of buildkit / network host (accelerate CI)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+          use: true
+          driver-opts: |
+            image=moby/buildkit:master
+            network=host
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Docker build with cache and new labels
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/rpc/Dockerfile.cross
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }}
+            ${{ env.REGISTRY_IMAGE }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max  # use cache from github
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ github.ref_name }}
+
+      # Security scanning with Trivy
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY_IMAGE }}:${{ github.ref_name }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
 
   build-push-indexer-docker:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Multi-arch build strategy
     strategy:
       matrix:
         include:
@@ -127,27 +266,35 @@ jobs:
             apibara_download_url: https://github.com/apibara/dna/releases/download/sink-mongo%2Fv0.9.2/sink-mongo-x86_64-linux.gz
           - platform: linux/arm64
             apibara_download_url: https://github.com/apibara/dna/releases/download/sink-mongo%2Fv0.9.2/sink-mongo-aarch64-linux.gz
+      fail-fast: true # If one build fails, all remaining builds are canceled
+
     steps:
       - name: Prepare
         run: |
           platform=${{ matrix.platform }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
       - uses: actions/checkout@v4
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.INDEXER_IMAGE }}
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push
         id: build
         uses: docker/build-push-action@v5
@@ -156,16 +303,17 @@ jobs:
           platforms: ${{ matrix.platform }}
           file: ./docker/indexer/Dockerfile
           labels: ${{ steps.meta.outputs.labels }}
-          outputs:
-            type=image,name=${{ env.INDEXER_IMAGE
-            }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.INDEXER_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           build-args: |
             APIBARA_DOWNLOAD_URL=${{ matrix.apibara_download_url }}
+
+      # Export digest for manifest ( groupe all image version in 1 ref )
       - name: Export digest
         run: |
           mkdir -p /tmp/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "/tmp/digests/${digest#sha256:}"
+
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
@@ -174,35 +322,50 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  # Multi-architecture image merger
   merge-indexer:
     runs-on: ubuntu-latest
-    needs:
-      - build-push-indexer-docker
+    needs: build-push-indexer-docker
+    # Explicit permissions for security
+    permissions:
+      packages: write
+    
     steps:
+      # Download and merge all digests
       - name: Download digests
         uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
           pattern: digests-*
           merge-multiple: true
+
+      # Setup buildx for manifest handling
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      # Generate Docker metadata for tagging
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.INDEXER_IMAGE }}
+
+      # Secure registry login
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Create and push multi-arch manifest
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
             $(printf '${{ env.INDEXER_IMAGE }}@sha256:%s ' *)
+
+      # Add Verify final image
       - name: Inspect image
         run: |
           docker buildx imagetools inspect ${{ env.INDEXER_IMAGE }}:${{ steps.meta.outputs.version }}
