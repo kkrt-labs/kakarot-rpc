@@ -25,7 +25,7 @@ jobs:
       - name: install foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: nightly-a79dfaed6fc6f88cda5f314a25d1b484d9d8c051
       # Install UV
       - uses: astral-sh/setup-uv@v2
         with:
