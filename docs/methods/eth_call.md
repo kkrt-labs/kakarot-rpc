@@ -9,7 +9,7 @@
 
 ## Description
 
-Submits an EVM call by wrapping the EVM compatible transaction object into a
+Submits an EVM call by wrapping the EVM-compatible transaction object into a
 Starknet call.
 
 Kakarot Specificity:
