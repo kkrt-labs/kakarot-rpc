@@ -52,6 +52,28 @@ impl TryFrom<Felt252Wrapper> for Address {
     }
 }
 
+impl TryFrom<Felt252Wrapper> for u64 {
+    type Error = EthereumDataFormatError;
+
+    fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
+        match felt.to_be_digits() {
+            [0, 0, 0, d] => Ok(d),
+            _ => Err(EthereumDataFormatError::Primitive),
+        }
+    }
+}
+
+impl TryFrom<Felt252Wrapper> for u128 {
+    type Error = EthereumDataFormatError;
+
+    fn try_from(felt: Felt252Wrapper) -> Result<Self, Self::Error> {
+        match felt.to_be_digits() {
+            [0, 0, d1, d2] => Ok(Self::from(d1) << 64 | Self::from(d2)),
+            _ => Err(EthereumDataFormatError::Primitive),
+        }
+    }
+}
+
 impl From<B256> for Felt252Wrapper {
     fn from(value: B256) -> Self {
         Self(Felt::from_bytes_be(value.as_ref()))
@@ -190,5 +212,37 @@ mod tests {
 
         // When
         assert_eq!(Felt252Wrapper::from(hash).0, Felt::ZERO,);
+    }
+
+    #[test]
+    fn test_u64_try_from_felt_should_pass() {
+        let value = Felt::from(u64::MAX);
+
+        let value = u64::try_from(Felt252Wrapper::from(value)).unwrap();
+        assert_eq!(u64::MAX, value);
+    }
+
+    #[test]
+    fn test_u64_try_from_felt_should_fail() {
+        let value = Felt::from(u64::MAX) + Felt::ONE;
+
+        let value = u64::try_from(Felt252Wrapper::from(value));
+        assert!(value.is_err());
+    }
+
+    #[test]
+    fn test_u128_try_from_felt_should_pass() {
+        let value = Felt::from(u128::MAX);
+
+        let value = u128::try_from(Felt252Wrapper::from(value)).unwrap();
+        assert_eq!(u128::MAX, value);
+    }
+
+    #[test]
+    fn test_u128_try_from_felt_should_fail() {
+        let value = Felt::from(u128::MAX) + Felt::ONE;
+
+        let value = u128::try_from(Felt252Wrapper::from(value));
+        assert!(value.is_err());
     }
 }

@@ -746,7 +746,7 @@ async fn test_send_raw_transaction(#[future] katana_empty: Katana, _setup: ()) {
     // Prepare the relayer
     let relayer_balance = eth_client
         .starknet_provider()
-        .balance_at(katana.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
+        .balance_at_native(katana.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
         .await
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
@@ -1018,7 +1018,7 @@ async fn test_send_raw_transaction_pre_eip_155(#[future] katana_empty: Katana, _
     let relayer_balance = katana
         .eth_client
         .starknet_provider()
-        .balance_at(katana.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
+        .balance_at_native(katana.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
         .await
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");
@@ -1391,7 +1391,7 @@ async fn test_transaction_by_hash(#[future] katana_empty: Katana, _setup: ()) {
     let relayer_balance = katana_empty
         .eth_client
         .starknet_provider()
-        .balance_at(katana_empty.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
+        .balance_at_native(katana_empty.eoa.relayer.address(), BlockId::Tag(BlockTag::Latest))
         .await
         .expect("Failed to get relayer balance");
     let relayer_balance = into_via_try_wrapper!(relayer_balance).expect("Failed to convert balance");

@@ -66,7 +66,7 @@ where
         // Convert the optional Ethereum block ID to a Starknet block ID.
         let starknet_block_id = self.to_starknet_block_id(block_id).await?;
         // Get the balance of the address at the given block ID.
-        self.starknet_provider().balance_at(starknet_address(address), starknet_block_id).await.map_err(Into::into)
+        self.starknet_provider().eth_balance_at(starknet_address(address), starknet_block_id).await.map_err(Into::into)
     }
 
     async fn storage_at(

@@ -152,7 +152,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let relayer_balance = self
             .eth_client
             .starknet_provider()
-            .balance_at(self.relayer.address(), BlockId::Tag(BlockTag::Latest))
+            .balance_at_native(self.relayer.address(), BlockId::Tag(BlockTag::Latest))
             .await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
@@ -226,7 +226,7 @@ impl<P: Provider + Send + Sync + Clone> KakarotEOA<P> {
         let relayer_balance = self
             .eth_client
             .starknet_provider()
-            .balance_at(self.relayer.address(), BlockId::Tag(BlockTag::Latest))
+            .balance_at_native(self.relayer.address(), BlockId::Tag(BlockTag::Latest))
             .await?;
         let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 

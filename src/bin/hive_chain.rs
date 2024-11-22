@@ -68,7 +68,8 @@ async fn main() -> eyre::Result<()> {
     std::env::set_var("STARKNET_NETWORK", STARKNET_RPC_URL);
 
     // Prepare the relayer
-    let relayer_balance = starknet_provider.balance_at(args.relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
+    let relayer_balance =
+        starknet_provider.balance_at_native(args.relayer_address, BlockId::Tag(BlockTag::Latest)).await?;
     let relayer_balance = into_via_try_wrapper!(relayer_balance)?;
 
     let relayer = Relayer::new(
