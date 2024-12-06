@@ -9,7 +9,7 @@ assignees: ""
 
 # <METHOD_NAME>
 
-## Metadatax
+## Metadata
 
 - name:
 - prefix:
