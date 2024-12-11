@@ -39,7 +39,7 @@ _Why not directly modify a CairoVM client?_
   [Madara](https://madara-docs.vercel.app/)).
 
 <details>
-<summary>For reference, click to see how the above mentioned monolithic architecture
+<summary>For reference, click to see how the above-mentioned monolithic architecture
 would look like (note that it is not the current architecture of Kakarot zkEVM):
 </summary>
 
