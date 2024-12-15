@@ -35,7 +35,7 @@ _Why not directly modify a CairoVM client?_
   more stability to directly fork/modify a client. New engines, storage
   technologies and other innovations are being developed by talented teams (e.g.
   [Starknet](https://starkware.co/starknet/),
-  [Katana](https://book.dojoengine.org/toolchain/katana/overview.html),
+  [Katana](https://book.dojoengine.org/toolchain/katana),
   [Madara](https://madara-docs.vercel.app/)).
 
 <details>
